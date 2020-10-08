@@ -7,7 +7,7 @@ Purpose of this Agent is to subscribe on any topic and to map the payload to the
 ## Configuration
 Just add the necessary details like MQTT Broker, credentials and URL to the [applications.properties](./src/main/resources/application.properties).
 Part of this Microservice is an REST endpoint which allows to dynamically subscribe and unsubscribe on topics. 
-Once deployed you can call `https://{yourC8YTenant}/{microserviceName}/service/subscribe` with POST to subscribe and DELETE to unsubscribe.
+Once deployed you can call `https://{yourC8YTenant}/service/{microserviceName}/subscribe` with POST to subscribe and DELETE to unsubscribe.
 
 The topic should be part of the body with the Content-Type "text/plain". Example Body: `device/123412/t`
 
