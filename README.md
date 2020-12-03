@@ -2,7 +2,7 @@
 
 ## Description
 This is an Agent which uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect to any MQTT Broker and uses the [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
-Purpose of this Agent is to subscribe on any topic and to map the payload to the [Cumulocity Domain Mode]((https://cumulocity.com/guides/concepts/domain-model/)).
+Purpose of this Agent is to subscribe on any topic and to map the payload to the [Cumulocity Domain Model]((https://cumulocity.com/guides/concepts/domain-model/)).
 
 ## Configuration
 Just add the necessary details like MQTT Broker, credentials and URL to the [applications.properties](./src/main/resources/application.properties).
