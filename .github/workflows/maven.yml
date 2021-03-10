@@ -27,7 +27,7 @@ jobs:
       run: mvn -B package --file pom.xml
     - name: Get Version
       id: get_version
-      run: echo "::set-output name=version::mvn org.apache.maven.plugins:maven-help-plugin:3.1.0:evaluate -Dexpression=project.version -q -DforceStdout"
+      run: echo ::set-output name=version::$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
