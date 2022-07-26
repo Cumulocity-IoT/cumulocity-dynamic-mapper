@@ -1,6 +1,5 @@
 package mqttagent.services;
 
-
 import c8y.IsDevice;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -110,16 +109,18 @@ public class C8yAgent {
             }
         });
         /* Connecting to MQTT Client */
-        try {
-            mqttClient.init();
-            mqttClient.connect();
-            /* Uncomment this if you want to subscribe on start on "#" */
-            mqttClient.subscribe("#", null);
-            mqttClient.subscribe("$SYS/#", null);
-        } catch (Exception e) {
-            logger.error("Error on MQTT Connection: ", e);
-            mqttClient.reconnect();
+        if (mqttClient.init()) {
+            try {
+                mqttClient.connect();
+                /* Uncomment this if you want to subscribe on start on "#" */
+                mqttClient.subscribe("#", null);
+                mqttClient.subscribe("$SYS/#", null);
+            } catch (Exception e) {
+                logger.error("Error on MQTT Connection: ", e);
+                mqttClient.reconnect();
+            }
         }
+
     }
 
     @PreDestroy
@@ -133,9 +134,8 @@ public class C8yAgent {
         return this.tenant;
     }
 
-
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
-                                                      String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
+            String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
             throws SDKException {
 
         MeasurementRepresentation measure = new MeasurementRepresentation();
@@ -156,7 +156,6 @@ public class C8yAgent {
         return measure;
     }
 
-
     public ExternalIDRepresentation getExternalId(String externalId, String type) {
         if (type == null) {
             type = "c8y_Serial";
@@ -172,7 +171,6 @@ public class C8yAgent {
         }
         return extId;
     }
-
 
     public void unregisterDevice(String externalId) {
         ExternalIDRepresentation retExternalId = getExternalId(externalId, null);
@@ -204,12 +202,12 @@ public class C8yAgent {
     }
 
     public void addChildDevice(ManagedObjectReferenceRepresentation child2Ref,
-                               ManagedObjectRepresentation parent) {
+            ManagedObjectRepresentation parent) {
         inventoryApi.getManagedObjectApi(parent.getId()).addChildAssets(child2Ref);
     }
 
-
-    public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor, DateTime dateTime, HashMap<String, MeasurementValue> mvMap) {
+    public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
+            DateTime dateTime, HashMap<String, MeasurementValue> mvMap) {
         try {
             MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
             measurementRepresentation.set(mvMap, name);
@@ -224,8 +222,8 @@ public class C8yAgent {
         }
     }
 
-
-    public AlarmRepresentation createAlarm(String severity, String message, String type, DateTime alarmTime, ManagedObjectRepresentation parentMor) {
+    public AlarmRepresentation createAlarm(String severity, String message, String type, DateTime alarmTime,
+            ManagedObjectRepresentation parentMor) {
         AlarmRepresentation alarmRep = new AlarmRepresentation();
         alarmRep.setSeverity(severity);
         alarmRep.setSource(parentMor);
