@@ -1,0 +1,75 @@
+{
+  "name": "mqtt-configuration",
+  "version": "1.0.0",
+  "description": "This is the Cumulocity module federation plugin. Plugins can be developed like any Cumulocity application, but can be used at runtime by other applications. Therefore, they export an Angular module which can then be imported by any other application. The exports are defined in `package.json`:",
+  "scripts": {
+    "start": "c8ycli server -u ${url}",
+    "start:admin": "npm start -- --shell administration",
+    "build": "c8ycli build",
+    "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
+    "postinstall": "ngcc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@angular/animations": "12.2.14",
+    "@angular/cdk": "12.2.13",
+    "@angular/common": "12.2.14",
+    "@angular/compiler": "12.2.14",
+    "@angular/core": "12.2.14",
+    "@angular/forms": "12.2.14",
+    "@angular/platform-browser": "12.2.14",
+    "@angular/platform-browser-dynamic": "12.2.14",
+    "@angular/router": "12.2.14",
+    "@angular/upgrade": "12.2.14",
+    "@c8y/client": "1013.0.178",
+    "@c8y/ngx-components": "1013.0.178",
+    "@ngx-translate/core": "13.0.0",
+    "rxjs": "~6.6.3",
+    "zone.js": "~0.11.4",
+    "@c8y/style": "1013.0.178"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "12.2.14",
+    "@angular/compiler-cli": "12.2.14",
+    "@angular/language-service": "12.2.14",
+    "@angular/service-worker": "12.2.14",
+    "@angular/localize": "12.2.14",
+    "@types/jest": "^27.0.3",
+    "@types/webpack": "^5.28.0",
+    "file-loader": "^6.2.0",
+    "jest": "^27.4.5",
+    "jest-preset-angular": "^11.0.1",
+    "typescript": "4.2.4",
+    "@c8y/cli": "1013.0.178"
+  },
+  "c8y": {
+    "application": {
+      "name": "mqtt-configuration",
+      "contextPath": "mqtt-configuration",
+      "key": "mqtt-configuration-application-key",
+      "globalTitle": "Custom widget with Module Federation",
+      "tabsHorizontal": true,
+      "isPackage": true,
+      "package": "plugin",
+      "exports": [
+        {
+          "name": "MQTT configuration plugin",
+          "module": "MQTTServiceConfigurationModule",
+          "path": "./src/service-configuration.module",
+          "description": "Adds a MQTT configuration plugin"
+        }
+      ],
+      "remotes": {
+        "mqtt-configuration": [
+          "MQTTServiceConfigurationModule"
+        ]
+      }
+    },
+    "cli": {}
+  },
+  "browserslist": [
+    "last 2 major versions"
+  ]
+}
