@@ -1,8 +1,16 @@
 package mqttagent.services;
 
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import org.apache.commons.lang3.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import mqttagent.callbacks.GenericCallback;
+import mqttagent.configuration.TO_MQTTConfiguration;
 import mqttagent.configuration.MQTTConfiguration;
+
+import java.util.Optional;
+
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -11,14 +19,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 
 @Service
 public class MQTTClient {
 
     private final Logger logger = LoggerFactory.getLogger(MQTTClient.class);
 
+
+    TO_MQTTConfiguration mqttConfiguration;
+
     @Autowired
-    MQTTConfiguration mqttConfiguration;
+    private CredentialsConfigurationService configurationService;
 
     private MqttClient mqttClient;
 
@@ -32,10 +44,21 @@ public class MQTTClient {
     private GenericCallback genericCallback;
 
     public void init() throws MqttException {
-        String prefix = mqttConfiguration.getUseTLS() ? "ssl://" : "tcp://";
-        String broker = prefix + mqttConfiguration.getHost() + ":" + mqttConfiguration.getPort();
-        logger.info("Connecting to MQTT Broker {}", broker);
-        this.mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
+        final Optional<TO_MQTTConfiguration> optionalConfiguration = configurationService.loadConfiguration();
+        if (optionalConfiguration.isEmpty()) {
+            logger.info("No configuration found");
+            return;
+        }
+
+        try {
+            final TO_MQTTConfiguration mqttConfiguration = optionalConfiguration.get();
+            String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
+            String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
+            logger.info("Connecting to MQTT Broker {}", broker);
+            this.mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
+        } catch (HttpServerErrorException exception) {
+            logger.error("Failed to authenticate to MQTT broker", exception);
+        }
     }
 
     public void reconnect() {
@@ -123,4 +146,29 @@ public class MQTTClient {
             logger.info("Successfully unsubscribed on topic {}", topic);
         }
     }
+
+    public void clearConnection() {
+        configurationService.deleteConfiguration();
+    }
+
+    public Optional<TO_MQTTConfiguration> getConnectionDetails() {
+        return configurationService.loadConfiguration();
+    }
+
+    public void configureConnection(final TO_MQTTConfiguration configuration) {
+        try {
+            configurationService.saveConfiguration(configuration);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to store configuration");
+        }
+    }
+
+    public boolean isValidConfigurationAvailable() {
+        return !StringUtils.isEmpty(mqttConfiguration.mqttHost) &&
+        !(mqttConfiguration.mqttPort == 0) &&
+        !StringUtils.isEmpty(mqttConfiguration.user) &&
+        !StringUtils.isEmpty(mqttConfiguration.password) &&
+        !StringUtils.isEmpty(mqttConfiguration.clientId);
+    }
+
 }

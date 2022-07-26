@@ -22,5 +22,8 @@
     "ROLE_MEASUREMENT_READ"
   ],
   "roles":[
-  ]
+  ],
+  "buildSpec": {
+    "targetBuildArchitectures": ["amd64"]
+  }
 }
