@@ -163,6 +163,8 @@ public class MQTTClient {
 
     public void configureConnection(final TO_MQTTConfiguration configuration) {
         try {
+            // update current configuration
+            mqttConfiguration = configuration;
             configurationService.saveConfiguration(configuration);
             //reconnect after configuration changed
             reconnect();
