@@ -11,6 +11,8 @@ import mqttagent.configuration.MQTTConfiguration;
 
 import java.util.Optional;
 
+import javax.sound.midi.Receiver;
+
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -43,34 +45,38 @@ public class MQTTClient {
     @Autowired
     private GenericCallback genericCallback;
 
-    public void init() throws MqttException {
+    public boolean init() {
         final Optional<TO_MQTTConfiguration> optionalConfiguration = configurationService.loadConfiguration();
         if (optionalConfiguration.isEmpty()) {
             logger.info("No configuration found");
-            return;
+            return false;
         }
-
         try {
-            final TO_MQTTConfiguration mqttConfiguration = optionalConfiguration.get();
+            mqttConfiguration = optionalConfiguration.get();
             String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
             String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
             logger.info("Connecting to MQTT Broker {}", broker);
             this.mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
-        } catch (HttpServerErrorException exception) {
-            logger.error("Failed to authenticate to MQTT broker", exception);
+            return true;
+        } catch (HttpServerErrorException e) {
+            logger.error("Failed to authenticate to MQTT broker", e);
+            return false;
+        } catch (MqttException e){
+            logger.error("Failed to connect to MQTT broker", e);
+            return false;
         }
     }
 
     public void reconnect() {
         this.disconnect();
-        while (!isConnected()) {
+       // while (!isConnected()) {
             logger.info("Try to reestablish the MQTT connection in 5s ...");
 
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                logger.error("Error on reconnect: ", e);
-            }
+            // try {
+            //     Thread.sleep(5000);
+            // } catch (InterruptedException e) {
+            //     logger.error("Error on reconnect: ", e);
+            // }
             try {
                 connect();
                 //Uncomment this if you want to subscribe on start on "#"
@@ -79,7 +85,7 @@ public class MQTTClient {
             } catch (MqttException e) {
                 logger.error("Error on reconnect: ", e);
             }
-        }
+        //}
     }
 
     public void connect() throws MqttException {
@@ -100,7 +106,7 @@ public class MQTTClient {
     }
 
     public void disconnect() {
-        logger.error("Disconnecting from MQTT Broker "+ mqttClient.getServerURI());
+        logger.error("Disconnecting from MQTT Broker!");
         try {
             if (this.mqttClient != null && this.mqttClient.isConnected()) {
                 this.mqttClient.unsubscribe("#");
@@ -158,6 +164,8 @@ public class MQTTClient {
     public void configureConnection(final TO_MQTTConfiguration configuration) {
         try {
             configurationService.saveConfiguration(configuration);
+            //reconnect after configuration changed
+            reconnect();
         } catch (JsonProcessingException e) {
             logger.error("Failed to store configuration");
         }
