@@ -32,3 +32,6 @@ logs/
 bin/
 .idea/*
 *.iml
+
+frontend/mqtt_configuration/dist
+frontend/mqtt-configuration/node_modules

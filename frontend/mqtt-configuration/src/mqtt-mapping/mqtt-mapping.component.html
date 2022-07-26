@@ -1,0 +1,26 @@
+<c8y-title translate>MQTT</c8y-title>
+<div class="card">
+  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-6 bg-white">
+    <div class="card-header separator j-c-between">
+      <h4 class="card-title" translate>Mapping</h4>
+    </div>
+    <div class="card-block">
+      <c8y-data-grid [title]="'Mapping Details' | translate" [columns]="columns" [rows]="mqttMappings"
+        [pagination]="pagination" [actionControls]="actionControls" [displayOptions]="displayOptions">
+      </c8y-data-grid>
+    </div>
+    <div class="card-footer separator">
+      <div class="form-group">
+        <button
+          type="button"
+          name="save"
+          class="btn btn-primary"
+          (click)="onSaveButtonClicked()"
+          translate
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
