@@ -70,6 +70,7 @@ public class MQTTClient {
         this.disconnect();
        // while (!isConnected()) {
             logger.info("Try to reestablish the MQTT connection in 5s ...");
+            //TODO If MQTT Connection is down due to MQTT Broker issues it will not reconnect.
 
             // try {
             //     Thread.sleep(5000);
@@ -166,6 +167,8 @@ public class MQTTClient {
             mqttConfiguration = configuration;
             configurationService.saveConfiguration(configuration);
             //reconnect after configuration changed
+
+            //TODO We should actually do the initial connect() here and not the reconnect(). In the reconnect we can then enable the retries again.
             reconnect();
         } catch (JsonProcessingException e) {
             logger.error("Failed to store configuration");
