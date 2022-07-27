@@ -109,6 +109,9 @@ public class C8yAgent {
             }
         });
         /* Connecting to MQTT Client */
+        /* TODO When no tenant options provided the microservice will not start unless unsubscribed + subscribed
+        We should add logic to fetch tenant options regulary e.g. all 60 seconds until they could be retrieved or on REST Request when configuration is set
+        */
         if (mqttClient.init()) {
             try {
                 mqttClient.connect();
