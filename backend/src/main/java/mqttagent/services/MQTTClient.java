@@ -6,7 +6,6 @@ import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import mqttagent.callbacks.GenericCallback;
-import mqttagent.configuration.TO_MQTTConfiguration;
 import mqttagent.configuration.MQTTConfiguration;
 
 import java.util.Optional;
@@ -29,7 +28,7 @@ public class MQTTClient {
     private final Logger logger = LoggerFactory.getLogger(MQTTClient.class);
 
 
-    TO_MQTTConfiguration mqttConfiguration;
+    MQTTConfiguration mqttConfiguration;
 
     @Autowired
     private CredentialsConfigurationService configurationService;
@@ -46,7 +45,7 @@ public class MQTTClient {
     private GenericCallback genericCallback;
 
     public boolean init() {
-        final Optional<TO_MQTTConfiguration> optionalConfiguration = configurationService.loadConfiguration();
+        final Optional<MQTTConfiguration> optionalConfiguration = configurationService.loadConfiguration();
         if (optionalConfiguration.isEmpty()) {
             logger.info("No configuration found");
             return false;
@@ -157,11 +156,11 @@ public class MQTTClient {
         configurationService.deleteConfiguration();
     }
 
-    public Optional<TO_MQTTConfiguration> getConnectionDetails() {
+    public Optional<MQTTConfiguration> getConnectionDetails() {
         return configurationService.loadConfiguration();
     }
 
-    public void configureConnection(final TO_MQTTConfiguration configuration) {
+    public void configureConnection(final MQTTConfiguration configuration) {
         try {
             // update current configuration
             mqttConfiguration = configuration;

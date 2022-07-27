@@ -1,6 +1,6 @@
 package mqttagent.rest;
 
-import mqttagent.configuration.TO_MQTTConfiguration;
+import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.services.MQTTClient;
 import mqttagent.services.ServiceStatus;
 
@@ -55,7 +55,7 @@ public class MQTTRestController {
 
 
     @RequestMapping(value = "/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity configureConnectionToMQTT(@Valid @RequestBody TO_MQTTConfiguration configuration) {
+    public ResponseEntity configureConnectionToMQTT(@Valid @RequestBody MQTTConfiguration configuration) {
         logger.info("Getting mqtt broker configuration: {}", configuration.toString());
         try {
             mqttClient.configureConnection(configuration);
@@ -67,15 +67,15 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TO_MQTTConfiguration> getConnectionDetails() {
+    public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
         logger.info("get connection details");
         try {
-            final Optional<TO_MQTTConfiguration> configurationOptional = mqttClient.getConnectionDetails();
+            final Optional<MQTTConfiguration> configurationOptional = mqttClient.getConnectionDetails();
             if (configurationOptional.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            final TO_MQTTConfiguration configuration = configurationOptional.get();
+            final MQTTConfiguration configuration = configurationOptional.get();
             configuration.setPassword("");
 
             return new ResponseEntity<>(configuration, HttpStatus.OK);

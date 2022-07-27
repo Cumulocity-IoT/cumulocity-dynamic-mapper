@@ -8,7 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import mqttagent.configuration.TO_MQTTConfiguration;
+import mqttagent.configuration.MQTTConfiguration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,7 @@ public class CredentialsConfigurationService {
         this.tenantOptionApi = tenantOptionApi;
     }
 
-    public void saveConfiguration(final TO_MQTTConfiguration configuration) throws JsonProcessingException {
+    public void saveConfiguration(final MQTTConfiguration configuration) throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
@@ -47,13 +47,13 @@ public class CredentialsConfigurationService {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public Optional<TO_MQTTConfiguration> loadConfiguration() {
+    public Optional<MQTTConfiguration> loadConfiguration() {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final TO_MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), TO_MQTTConfiguration.class);
+            final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
             return Optional.of(configuration);
         } catch (SDKException exception) {
             logger.info("No configuration found, returning empty element!");
