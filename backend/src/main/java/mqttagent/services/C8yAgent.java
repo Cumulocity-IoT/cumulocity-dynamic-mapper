@@ -112,18 +112,17 @@ public class C8yAgent {
         /* TODO When no tenant options provided the microservice will not start unless unsubscribed + subscribed
         We should add logic to fetch tenant options regulary e.g. all 60 seconds until they could be retrieved or on REST Request when configuration is set
         */
-        if (mqttClient.init()) {
-            try {
-                mqttClient.connect();
-                /* Uncomment this if you want to subscribe on start on "#" */
-                mqttClient.subscribe("#", null);
-                mqttClient.subscribe("$SYS/#", null);
-            } catch (Exception e) {
-                logger.error("Error on MQTT Connection: ", e);
-                mqttClient.reconnect();
-            }
+        try {
+            mqttClient.init();
+            mqttClient.reconnect();
+            mqttClient.startReporting();
+            /* Uncomment this if you want to subscribe on start on "#" */
+            mqttClient.subscribe("#", null);
+            mqttClient.subscribe("$SYS/#", null);
+        } catch (Exception e) {
+            logger.error("Error on MQTT Connection: ", e);
+            mqttClient.reconnect();
         }
-
     }
 
     @PreDestroy
