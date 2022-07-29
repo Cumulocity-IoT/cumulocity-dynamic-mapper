@@ -36,3 +36,10 @@ bin/
 frontend/mqtt_configuration/dist
 frontend/mqtt-configuration/node_modules
 frontend/.DS_Store
+backend/src/.DS_Store
+backend/src/main/.DS_Store
+backend/.DS_Store
+.DS_Store
+.gitignore
+backend/.DS_Store
+backend/src/main/java/mqttagent/Test.java

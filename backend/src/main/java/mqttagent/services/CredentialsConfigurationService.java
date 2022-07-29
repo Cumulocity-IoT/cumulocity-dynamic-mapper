@@ -54,6 +54,7 @@ public class CredentialsConfigurationService {
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
+            logger.info("Returning configuration found: {}:", configuration.mqttHost );
             return Optional.of(configuration);
         } catch (SDKException exception) {
             logger.info("No configuration found, returning empty element!");
@@ -63,7 +64,6 @@ public class CredentialsConfigurationService {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
         return Optional.empty();
     }
 
