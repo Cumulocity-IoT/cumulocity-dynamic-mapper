@@ -23,9 +23,14 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 
+@Configuration
+@EnableScheduling
 @Service
 public class MQTTClient {
 
@@ -53,10 +58,8 @@ public class MQTTClient {
 
     private Future initTask;
 
-    private Future reportingTask;
-    
     private boolean initilized = false;
-    
+
     private void runInit() {
         while (!isInitilized()) {
             logger.info("Try to retrieve MQTT connection configuration now ...");
@@ -70,7 +73,7 @@ public class MQTTClient {
                         String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                         String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
                         mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
-                        setInitilized (true);
+                        setInitilized(true);
                         logger.info("Connecting to MQTT Broker {}", broker);
                     } catch (HttpServerErrorException e) {
                         logger.error("Failed to authenticate to MQTT broker", e);
@@ -101,30 +104,30 @@ public class MQTTClient {
     }
 
     private void runReconnect() {
-        //subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-            logger.info("Try to reestablish the MQTT connection now I");
-            disconnect();
-            while (!isConnected()) {
-                logger.debug("Try to reestablish the MQTT connection now II");
-                // TODO If MQTT Connection is down due to MQTT Broker issues it will not
-                // reconnect.
-                init();
-                try {
-                    connect();
-                    // Uncomment this if you want to subscribe on start on "#"
-                    subscribe("#", null);
-                    subscribe("$SYS/#", null);
-                } catch (MqttException e) {
-                    logger.error("Error on reconnect: ", e);
-                }
-
-                try {
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    logger.error("Error on reconnect: ", e);
-                }
+        // subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
+        logger.info("Try to reestablish the MQTT connection now I");
+        disconnect();
+        while (!isConnected()) {
+            logger.debug("Try to reestablish the MQTT connection now II");
+            // TODO If MQTT Connection is down due to MQTT Broker issues it will not
+            // reconnect.
+            init();
+            try {
+                connect();
+                // Uncomment this if you want to subscribe on start on "#"
+                subscribe("#", null);
+                subscribe("$SYS/#", null);
+            } catch (MqttException e) {
+                logger.error("Error on reconnect: ", e);
             }
-       // });
+
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                logger.error("Error on reconnect: ", e);
+            }
+        }
+        // });
 
     }
 
@@ -140,23 +143,16 @@ public class MQTTClient {
         }
     }
 
+    @Scheduled(fixedRate = 30000)
     public void startReporting() {
-        reportingTask = newCachedThreadPool.submit(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(5000);
-                    String statusReconnectTask = (reconnectTask == null ? "stopped"
-                            : reconnectTask.isDone() ? "stopped" : "running");
-                    String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
-                    String statusReportTask = (reportingTask == null ? "stopped"
-                            : reportingTask.isDone() ? "stopped" : "running");
-                    logger.info("Status of reconnectTask: {}, initTask {}, reportTask {}, isConnected {}", statusReconnectTask,
-                            statusInitTask, statusReportTask, isConnected());
-                } catch (InterruptedException e) {
-                    // logger.error("Error on reconnect: ", e);
-                }
-            }
-        });
+
+        String statusReconnectTask = (reconnectTask == null ? "stopped"
+                : reconnectTask.isDone() ? "stopped" : "running");
+        String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
+
+        logger.info("Status of reconnectTask: {}, initTask {}, isConnected {}", statusReconnectTask,
+                statusInitTask, isConnected());
+
     }
 
     private void connect() throws MqttException {
@@ -183,7 +179,7 @@ public class MQTTClient {
     public void disconnect() {
         logger.info("Disconnecting from MQTT Broker: {}, {}", mqttClient, isInitilized());
         try {
-            if (isInitilized() &&  mqttClient != null && mqttClient.isConnected()) {
+            if (isInitilized() && mqttClient != null && mqttClient.isConnected()) {
                 logger.debug("Disconnected from MQTT Broker I: {}", mqttClient.getServerURI());
                 mqttClient.unsubscribe("#");
                 mqttClient.unsubscribe("$SYS");
