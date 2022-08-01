@@ -16,7 +16,7 @@ import { MQTTTerminateConnectionModalComponent } from './mqtt-configuration/term
 import { CommonModule } from '@angular/common';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
-import { MonacoEditorModule, MONACO_PATH } from '@materia-ui/ngx-monaco-editor';
+import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 
 
 
@@ -76,11 +76,14 @@ import { MonacoEditorModule, MONACO_PATH } from '@materia-ui/ngx-monaco-editor';
         },
       ] as Route[],
       multi: true,
-    },
-    {
-      provide: MONACO_PATH,
-      useValue: 'https://unpkg.com/monaco-editor@0.24.0/min/vs'
     }
   ],
 })
-export class MQTTServiceConfigurationModule {}
+export class MQTTServiceConfigurationModule {
+  constructor(
+    private monacco: MonacoEditorLoaderService
+  ) {
+    this.monacco.monacoPath = '/apps/mqtt-configuration/assets/monaco-editor/min/vs';
+    this.monacco.loadMonaco();
+  }
+}
