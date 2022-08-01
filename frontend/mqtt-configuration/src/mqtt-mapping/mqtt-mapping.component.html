@@ -1,32 +1,60 @@
 <c8y-title translate>MQTT</c8y-title>
-<div class="card">
-  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-6 bg-white">
+
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="addMapping()">
+    <i c8yIcon="plus-circle"></i>
+    {{ 'Add mapping' | translate }}
+  </button>
+
+  <button class="btn btn-link" title="{{ 'Save changes' | translate }}" (click)="onSaveButtonClicked()">
+    <i c8yIcon="save"></i>
+    {{ 'Save changes' | translate }}
+  </button>
+</c8y-action-bar-item>
+<div class="card w-75">
+  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
     <div class="card-header separator j-c-between">
-      <h4 class="card-title" translate>Mapping</h4>
+      <p class="card-title" translate>Mapping</p>
     </div>
     <div class="card-block">
-      <c8y-data-grid [title]="'Mapping Details' | translate" [columns]="columns" [rows]="mqttMappings"
+      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mqttMappings"
         [pagination]="pagination" [actionControls]="actionControls" [displayOptions]="displayOptions">
       </c8y-data-grid>
     </div>
-    <div class="card-footer separator">
-      <div class="form-group">
-        <button
-          type="button"
-          name="save"
-          class="btn btn-primary"
-          (click)="onSaveButtonClicked()"
-          translate
-        >
-          Save
-        </button>
+    <div class="card-block">
+      <div class="card-header separator j-c-between">
+        <h4 style="font-weight:300 !important;" translate>Edit Mapping</h4>
+      </div>
+      <div [formGroup]="mappingForm">
+        <c8y-form-group>
+          <label for="id" translate>Id</label>
+          <input formControlName="id" type="text" class="form-control" #idRef
+            required readonly />
+        </c8y-form-group>
+        <c8y-form-group>
+          <label for="topic" translate>Topic</label>
+          <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
+            required />
+        </c8y-form-group>
+         <div class="row">
+          <div class="col-lg-6" style="height:300px">
+            <ngx-monaco-editor  formControlName="source" [options]="editorOptions" [(ngModel)]="mappingForm.source">
+            </ngx-monaco-editor>
+          </div>
+          <div class="col-lg-6" style="height:300px">
+            <ngx-monaco-editor formControlName="target" [options]="editorOptions" [(ngModel)]="mappingForm.target">
+            </ngx-monaco-editor>
+          </div>
+        </div> 
       </div>
     </div>
+    <div class="form-group">
+      <button type="button" name="save" class="btn btn-primary" (click)="onCommitButtonClicked()" translate>
+        Commit changes
+      </button>
+      <button type="button" name="format" class="btn btn-primary" (click)="onFormatButtonClicked()" translate>
+        Format Templates
+      </button>
+    </div>
   </div>
-</div>
-
-<div class="card">
-<ngx-monaco-editor [options]="{theme: 'vs-dark',language: 'json'}" [(ngModel)]="code">
-</ngx-monaco-editor>
-
 </div>

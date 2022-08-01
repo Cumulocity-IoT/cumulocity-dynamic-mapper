@@ -8,7 +8,7 @@ export interface MQTTAuthentication {
 }
 
 export interface MQTTMapping {
-  id: string,
+  id: number,
   topic: string,
   source: string,
   target: string

@@ -4,9 +4,9 @@
   "description": "This is the Cumulocity module federation plugin. Plugins can be developed like any Cumulocity application, but can be used at runtime by other applications. Therefore, they export an Angular module which can then be imported by any other application. The exports are defined in `package.json`:",
   "scripts": {
     "start": "c8ycli server -u ${url}",
-    "start:admin": "npm start -- --shell administration",
+    "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpackI.config.js",
     "build": "c8ycli build",
-    "build:extraI": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
+    "build:extraI": "c8ycli build --env.extraWebpackConfig=./extra-webpackI.config.js",
     "build:extraII": "c8ycli build --env.extraWebpackConfig=./extra-webpackII.config.js",
     "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
     "postinstall": "ngcc"
@@ -32,7 +32,6 @@
     "@monaco-editor/loader": "^1.3.2",
     "@ngx-translate/core": "13.0.0",
     "monaco-editor": "^0.24.0",
-    "monaco-editor-webpack-plugin": "^3.1.0",
     "ngx-monaco-editor": "^12.0.0",
     "rxjs": "~6.6.3",
     "zone.js": "~0.11.4"
