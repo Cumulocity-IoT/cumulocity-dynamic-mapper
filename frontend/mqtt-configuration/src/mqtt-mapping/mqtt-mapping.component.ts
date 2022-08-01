@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, Column, ColumnDataType, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
@@ -10,6 +10,18 @@ import { MQTTMapping } from 'src/mqtt-configuration.model';
   templateUrl: 'mqtt-mapping.component.html',
 })
 export class MQTTMappingComponent implements OnInit {
+
+  editorOptions = {
+    theme: 'vs-dark',
+    language: 'json',
+    onMonacoLoad: () => {
+      console.log("In monaco onload");
+    }
+  };
+
+  editor: any;
+
+  code: string; //= '{ "p1": "v3","p2": false, "P3": 10}';
   isConnectionToMQTTEstablished: boolean;
 
   mqttMappings: MQTTMapping[];
@@ -49,6 +61,7 @@ export class MQTTMappingComponent implements OnInit {
     },
   ]
 
+  value: string;
 
   pagination: Pagination = {
     pageSize: 30,

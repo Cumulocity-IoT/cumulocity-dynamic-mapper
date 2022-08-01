@@ -6,6 +6,8 @@
     "start": "c8ycli server -u ${url}",
     "start:admin": "npm start -- --shell administration",
     "build": "c8ycli build",
+    "build:extraI": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
+    "build:extraII": "c8ycli build --env.extraWebpackConfig=./extra-webpackII.config.js",
     "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
     "postinstall": "ngcc"
   },
@@ -25,24 +27,29 @@
     "@angular/upgrade": "12.2.14",
     "@c8y/client": "1013.0.178",
     "@c8y/ngx-components": "1013.0.178",
+    "@c8y/style": "1013.0.178",
+    "@materia-ui/ngx-monaco-editor": "^5.1.0",
+    "@monaco-editor/loader": "^1.3.2",
     "@ngx-translate/core": "13.0.0",
+    "monaco-editor": "^0.24.0",
+    "monaco-editor-webpack-plugin": "^3.1.0",
+    "ngx-monaco-editor": "^12.0.0",
     "rxjs": "~6.6.3",
-    "zone.js": "~0.11.4",
-    "@c8y/style": "1013.0.178"
+    "zone.js": "~0.11.4"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "12.2.14",
     "@angular/compiler-cli": "12.2.14",
     "@angular/language-service": "12.2.14",
-    "@angular/service-worker": "12.2.14",
     "@angular/localize": "12.2.14",
+    "@angular/service-worker": "12.2.14",
+    "@c8y/cli": "1013.0.178",
     "@types/jest": "^27.0.3",
     "@types/webpack": "^5.28.0",
     "file-loader": "^6.2.0",
     "jest": "^27.4.5",
     "jest-preset-angular": "^11.0.1",
-    "typescript": "4.2.4",
-    "@c8y/cli": "1013.0.178"
+    "typescript": "4.2.4"
   },
   "c8y": {
     "application": {

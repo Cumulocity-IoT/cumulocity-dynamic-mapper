@@ -16,6 +16,9 @@ import { MQTTTerminateConnectionModalComponent } from './mqtt-configuration/term
 import { CommonModule } from '@angular/common';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
+import { MonacoEditorModule, MONACO_PATH } from '@materia-ui/ngx-monaco-editor';
+
+
 
 @NgModule({
   imports: [
@@ -23,6 +26,8 @@ import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    MonacoEditorModule,
+
     RouterModule.forChild([
       {
         path: 'mqtt/configuration',
@@ -72,6 +77,10 @@ import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
       ] as Route[],
       multi: true,
     },
+    {
+      provide: MONACO_PATH,
+      useValue: 'https://unpkg.com/monaco-editor@0.24.0/min/vs'
+    }
   ],
 })
 export class MQTTServiceConfigurationModule {}
