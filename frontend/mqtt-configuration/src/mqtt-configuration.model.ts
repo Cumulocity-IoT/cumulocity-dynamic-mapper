@@ -5,11 +5,14 @@ export interface MQTTAuthentication {
   password: string;
   clientId: string;
   useTLS: boolean;
+  active:boolean
 }
 
 export interface MQTTMapping {
   id: number,
   topic: string,
+  targetAPI: string,
   source: string,
-  target: string
+  target: string,
+  lastUpdate: number
 }

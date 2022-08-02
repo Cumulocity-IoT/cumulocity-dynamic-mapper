@@ -10,7 +10,9 @@ import { MQTTTerminateConnectionModalComponent } from './terminate-connection-mo
   templateUrl: 'mqtt-configuration.component.html',
 })
 export class MQTTConfigurationComponent implements OnInit {
-  isConnectionToMQTTEstablished: boolean;
+
+  isConnectionToMQTTInitialized: boolean;
+  isConnectionToMQTTActivated: boolean;
 
   mqttForm: FormGroup;
 
@@ -27,8 +29,17 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async initConnectionStatus(): Promise<void> {
-    this.isConnectionToMQTTEstablished =
-      await this.mqttConfigurationService.isConnectionConfigured();
+    this.isConnectionToMQTTInitialized = false;
+    this.isConnectionToMQTTActivated = false;
+    let status = await this.mqttConfigurationService.getConnectionStatus();
+    console.log("Retrieved status:", status)
+    if (status === "ACTIVATED") {
+      this.isConnectionToMQTTInitialized = true;
+      this.isConnectionToMQTTActivated = true;
+    } else if (status === "ONLY_CONFIGURED") {
+      this.isConnectionToMQTTInitialized = true;
+      this.isConnectionToMQTTActivated = false;
+    }
   }
 
   private initForm(): void {
@@ -44,6 +55,7 @@ export class MQTTConfigurationComponent implements OnInit {
 
   private async initConnectionDetails(): Promise<void> {
     const connectionDetails = await this.mqttConfigurationService.getConnectionDetails();
+    console.log("Connection details", connectionDetails)
     if (!connectionDetails) {
       return;
     }
@@ -59,28 +71,47 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   async onConnectButtonClicked() {
-    this.sendConnectionDetailsToMQTT();
+    this.connectToMQTTBroker();
   }
 
   async onDisconnectButtonClicked() {
     this.showTerminateConnectionModal();
   }
 
-  private async sendConnectionDetailsToMQTT() {
-    const response = await this.mqttConfigurationService.connect({
+
+  async onUpdateButtonClicked() {
+    this.updateConnectionDetails();
+  }
+
+  private async updateConnectionDetails() {
+    const response = await this.mqttConfigurationService.updateConnectionDetails({
       mqttHost: this.mqttForm.value.mqttHost,
       mqttPort: this.mqttForm.value.mqttPort,
       user: this.mqttForm.value.user,
       password: this.mqttForm.value.password,
       clientId: this.mqttForm.value.clientId,
       useTLS: this.mqttForm.value.useTLS,
+      active: false
     });
 
     if (response.status === 201) {
+      this.alertservice.success(gettext('Update successful'));
+      this.isConnectionToMQTTInitialized = true;
+      this.isConnectionToMQTTActivated = false;
+    } else {
+      this.alertservice.danger(gettext('Failed to update connection'));
+      this.isConnectionToMQTTActivated = false;
+    }
+  }
+
+  private async connectToMQTTBroker() {
+    const response = await this.mqttConfigurationService.connect();
+    if (response.status === 200) {
       this.alertservice.success(gettext('Connection successful'));
-      this.isConnectionToMQTTEstablished = true;
+      this.isConnectionToMQTTActivated = true;
     } else {
       this.alertservice.danger(gettext('Failed to establish connection'));
+      this.isConnectionToMQTTActivated = false;
     }
   }
 
@@ -103,10 +134,10 @@ export class MQTTConfigurationComponent implements OnInit {
     const response = await this.mqttConfigurationService.disconnect();
 
     if (response.status === 200) {
-      this.isConnectionToMQTTEstablished = false;
-      this.alertservice.success(gettext('Successfully Disconnected'));
+      this.isConnectionToMQTTActivated = false;
+      this.alertservice.success(gettext('Successfully disconnected'));
     } else {
-      this.alertservice.danger(gettext('Failed to Disconnect'));
+      this.alertservice.danger(gettext('Failed to disconnect'));
     }
   }
 }

@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.configuration.MQTTConfiguration;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +23,6 @@ public class CredentialsConfigurationService {
     private static final String OPTION_KEY_CONFIGURATION = "credentials.mqttclient.configuration";
 
     private final TenantOptionApi tenantOptionApi;
-
-    final Logger logger = LoggerFactory.getLogger(CredentialsConfigurationService.class);
 
     @Autowired
     public CredentialsConfigurationService(final TenantOptionApi tenantOptionApi) {
@@ -54,10 +50,10 @@ public class CredentialsConfigurationService {
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
-            logger.info("Returning configuration found: {}:", configuration.mqttHost );
+            log.info("Returning configuration found: {}:", configuration.mqttHost );
             return Optional.of(configuration);
         } catch (SDKException exception) {
-            logger.info("No configuration found, returning empty element!");
+            log.info("No configuration found, returning empty element!");
             //exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();
@@ -73,5 +69,31 @@ public class CredentialsConfigurationService {
         optionPK.setCategory(OPTION_CATEGORY_CONFIGURATION);
 
         tenantOptionApi.delete(optionPK);
+    }
+
+    public MQTTConfiguration setConfigurationActive( boolean active) {
+        final OptionPK option = new OptionPK();
+        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setKey(OPTION_KEY_CONFIGURATION);
+        try {
+            final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
+            final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
+            configuration.active = active;
+            log.info("Setting connection: {}:", configuration.active );
+            final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
+            optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
+            optionRepresentation.setKey(OPTION_KEY_CONFIGURATION);
+            optionRepresentation.setValue(configurationJson);
+            tenantOptionApi.save(optionRepresentation);
+            return configuration;
+        } catch (SDKException exception) {
+            log.info("No configuration found, returning empty element!");
+            //exception.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -2,24 +2,21 @@ package mqttagent.callbacks.handler;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.measurement.MeasurementValue;
+
+import lombok.extern.slf4j.Slf4j;
 import mqttagent.services.C8yAgent;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 
+@Slf4j
 @Service
 public class SysHandler {
-
-
-    private final Logger logger = LoggerFactory.getLogger(SysHandler.class);
 
     private final String BYTES_RECEIVED = "$SYS/broker/load/bytes/received";
 

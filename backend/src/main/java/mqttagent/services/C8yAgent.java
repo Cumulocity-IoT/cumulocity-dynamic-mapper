@@ -1,6 +1,8 @@
 package mqttagent.services;
 
 import c8y.IsDevice;
+import lombok.extern.slf4j.Slf4j;
+
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
@@ -14,28 +16,29 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
-import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
+import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+
+@Slf4j
 @Service
 public class C8yAgent {
-
-    private final Logger logger = LoggerFactory.getLogger(C8yAgent.class);
 
     @Autowired
     private EventApi eventApi;
@@ -53,9 +56,6 @@ public class C8yAgent {
     private AlarmApi alarmApi;
 
     @Autowired
-    private DeviceControlApi deviceControlApi;
-
-    @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
     @Autowired
@@ -65,12 +65,14 @@ public class C8yAgent {
 
     private final String AGENT_ID = "MQTT_AGENT";
     private final String AGENT_NAME = "Generic MQTT Agent";
+    private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_type";
+    private final String MQTT_MAPPING_FRAGMENT ="c8y_mqttMapping";
     public String tenant = null;
 
     @EventListener
     public void init(MicroserviceSubscriptionAddedEvent event) {
         this.tenant = event.getCredentials().getTenant();
-        logger.info("Event received for Tenant {}", tenant);
+        log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 
         /* Connecting to Cumulocity */
@@ -79,10 +81,10 @@ public class C8yAgent {
             try {
                 agentIdRep = getExternalId(AGENT_ID, null);
             } catch (Exception e) {
-                logger.error(e.getMessage());
+                log.error(e.getMessage());
             }
             if (agentIdRep != null) {
-                logger.info("Agent with ID {} already exists {}", AGENT_ID, agentIdRep);
+                log.info("Agent with ID {} already exists {}", AGENT_ID, agentIdRep);
                 this.agentMOR = agentIdRep.getManagedObject();
             } else {
                 ID id = new ID();
@@ -94,7 +96,7 @@ public class C8yAgent {
                 agent.set(new Agent());
                 agent.set(new IsDevice());
                 this.agentMOR = inventoryApi.create(agent);
-                logger.info("Agent has been created with ID {}", agentMOR.getId());
+                log.info("Agent has been created with ID {}", agentMOR.getId());
                 ExternalIDRepresentation externalAgentId = new ExternalIDRepresentation();
                 externalAgentId.setType("c8y_Serial");
                 externalAgentId.setExternalId(AGENT_ID);
@@ -103,9 +105,9 @@ public class C8yAgent {
                 try {
                     identityApi.create(externalAgentId);
                 } catch (SDKException e) {
-                    logger.error(e.getMessage());
+                    log.error(e.getMessage());
                 }
-                logger.info("ExternalId created: {}", externalAgentId.getExternalId());
+                log.info("ExternalId created: {}", externalAgentId.getExternalId());
             }
         });
         /* Connecting to MQTT Client */
@@ -120,7 +122,7 @@ public class C8yAgent {
             mqttClient.subscribe("#", null);
             mqttClient.subscribe("$SYS/#", null);
         } catch (Exception e) {
-            logger.error("Error on MQTT Connection: ", e);
+            log.error("Error on MQTT Connection: ", e);
             mqttClient.reconnect();
         }
     }
@@ -154,7 +156,7 @@ public class C8yAgent {
 
         }
         measure = measurementApi.create(measure);
-        logger.info("Created " + eventType + " Measurement: " + measure.getSelf() + " for device: " + mor.getSelf());
+        log.info("Created " + eventType + " Measurement: " + measure.getSelf() + " for device: " + mor.getSelf());
         return measure;
     }
 
@@ -169,7 +171,7 @@ public class C8yAgent {
         try {
             extId = identityApi.getExternalId(id);
         } catch (SDKException e) {
-            logger.info("External ID {} not found", externalId);
+            log.info("External ID {} not found", externalId);
         }
         return extId;
     }
@@ -216,10 +218,10 @@ public class C8yAgent {
             measurementRepresentation.setType(type);
             measurementRepresentation.setSource(mor);
             measurementRepresentation.setDateTime(dateTime);
-            logger.debug("Creating Measurement {}", measurementRepresentation);
+            log.debug("Creating Measurement {}", measurementRepresentation);
             return measurementApi.create(measurementRepresentation);
         } catch (SDKException e) {
-            logger.error("Error creating Measurement", e);
+            log.error("Error creating Measurement", e);
             return null;
         }
     }
@@ -245,5 +247,28 @@ public class C8yAgent {
         eventRep.setDateTime(eventTime);
         eventRep.setType(type);
         this.eventApi.createAsync(eventRep);
+    }
+
+    public List<MQTTMapping> getMQTTMappings() {
+        InventoryFilter inventoryFilter = new InventoryFilter();
+        List<MQTTMapping> result = new ArrayList<MQTTMapping>();
+		inventoryFilter.byType(MQTT_MAPPING_TYPE);
+        List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
+        if (moc.size() > 0 ) {
+            final List<Map> l = (ArrayList<Map>) moc.get(0).get(MQTT_MAPPING_FRAGMENT);
+            l.forEach(mm -> {
+                MQTTMapping m = new MQTTMapping( (long) mm.get("id"),
+                (String) mm.get("topic"), 
+                (String) mm.get("targetAPI"), 
+                (String) mm.get("source"), 
+                (String) mm.get("target"),
+                (long) mm.get("lastUpdate")) ;
+                result.add( m );
+            });
+            log.info("Found MQTTMapping {} {}", result, l.getClass());
+        } else {
+            log.info("No MQTTMapping found!");
+        }
+        return result;
     }
 }

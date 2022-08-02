@@ -4,7 +4,7 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class MQTTConfiguration {
+public class MQTTConfiguration implements Cloneable {
 
     @NotNull
     public String mqttHost;
@@ -23,5 +23,14 @@ public class MQTTConfiguration {
 
     @NotNull
     public boolean useTLS;
+
+    @NotNull
+    public boolean active;
+
+
+    public Object clone() throws CloneNotSupportedException
+    {
+        return super.clone();
+    }
 }
 

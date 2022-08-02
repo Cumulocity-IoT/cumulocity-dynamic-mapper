@@ -14,13 +14,22 @@ export class MQTTConfigurationService {
 
   constructor(private client: FetchClient) {}
 
-  connect(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
+  updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify(mqttConfiguration),
       method: 'POST',
+    });
+  }
+
+  connect(): Promise<IFetchResponse> {
+    return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      method: 'PUT',
     });
   }
 
@@ -48,12 +57,11 @@ export class MQTTConfigurationService {
     return (await response.json()) as MQTTAuthentication;
   }
 
-  async isConnectionConfigured(): Promise<boolean> {
+  async getConnectionStatus(): Promise<string> {
     const response = await this.client.fetch(`${this.BASE_URL}/${this.PATH_STATUS_ENDPOINT}`, {
       method: 'GET',
     });
     const { status } = await response.json();
-
-    return status === this.STATUS_READY;
+    return status;
   }
 }

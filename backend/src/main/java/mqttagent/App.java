@@ -2,12 +2,10 @@ package mqttagent;
 
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.cumulocity.microservice.context.inject.TenantScope;
-import mqttagent.callbacks.GenericCallback;
+
+import lombok.extern.slf4j.Slf4j;
 import mqttagent.services.C8yAgent;
 import mqttagent.services.MQTTClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,17 +14,14 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import javax.annotation.PostConstruct;
-import java.util.TimeZone;
 
+@Slf4j
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
 @EnableAsync
 public class App {
-
-    Logger logger = LoggerFactory.getLogger(App.class);
-
+    
     @Autowired
     C8yAgent c8yAgent;
 
