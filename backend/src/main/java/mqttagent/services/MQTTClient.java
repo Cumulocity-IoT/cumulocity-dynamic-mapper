@@ -1,27 +1,24 @@
 package mqttagent.services;
 
-import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import javax.sound.midi.Receiver;
-
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -29,12 +26,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 
+@Slf4j
 @Configuration
 @EnableScheduling
 @Service
 public class MQTTClient {
-
-    private final Logger logger = LoggerFactory.getLogger(MQTTClient.class);
 
     MQTTConfiguration mqttConfiguration;
 
@@ -62,33 +58,32 @@ public class MQTTClient {
 
     private void runInit() {
         while (!isInitilized()) {
-            logger.info("Try to retrieve MQTT connection configuration now ...");
+            log.info("Try to retrieve MQTT connection configuration now ...");
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                 final Optional<MQTTConfiguration> optionalConfiguration = configurationService.loadConfiguration();
-                if (optionalConfiguration.isEmpty()) {
-                    logger.info("No configuration found");
-                } else {
+                if (!optionalConfiguration.isEmpty() && optionalConfiguration.get().active) {
+                    log.info("Active configuration found");
                     try {
                         mqttConfiguration = optionalConfiguration.get();
                         String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                         String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
                         mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
                         setInitilized(true);
-                        logger.info("Connecting to MQTT Broker {}", broker);
+                        log.info("Connecting to MQTT Broker {}", broker);
                     } catch (HttpServerErrorException e) {
-                        logger.error("Failed to authenticate to MQTT broker", e);
+                        log.error("Failed to authenticate to MQTT broker", e);
 
                     } catch (MqttException e) {
-                        logger.error("Failed to connect to MQTT broker", e);
+                        log.error("Failed to connect to MQTT broker", e);
                     }
                 }
             });
             if (!isInitilized()) {
                 try {
-                    logger.info("Try to retrieve MQTT connection configuration in 30s ...");
+                    log.info("Try to retrieve MQTT connection configuration in 30s ...");
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
-                    logger.error("Error on reconnect: ", e);
+                    log.error("Error on reconnect: ", e);
                 }
 
             }
@@ -97,7 +92,7 @@ public class MQTTClient {
 
     public void init() {
         // test if init task is still running, then we don't need to start another task
-        logger.info("Called init(): {}", initTask == null ? false : initTask.isDone());
+        log.info("Called init(): {}", initTask == null ? false : initTask.isDone());
         if ((initTask != null && initTask.isDone()) || initTask == null) {
             initTask = newCachedThreadPool.submit(() -> runInit());
         }
@@ -105,10 +100,10 @@ public class MQTTClient {
 
     private void runReconnect() {
         // subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-        logger.info("Try to reestablish the MQTT connection now I");
+        log.info("Try to reestablish the MQTT connection now I");
         disconnect();
         while (!isConnected()) {
-            logger.debug("Try to reestablish the MQTT connection now II");
+            log.debug("Try to reestablish the MQTT connection now II");
             // TODO If MQTT Connection is down due to MQTT Broker issues it will not
             // reconnect.
             init();
@@ -118,13 +113,13 @@ public class MQTTClient {
                 subscribe("#", null);
                 subscribe("$SYS/#", null);
             } catch (MqttException e) {
-                logger.error("Error on reconnect: ", e);
+                log.error("Error on reconnect: ", e);
             }
 
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
-                logger.error("Error on reconnect: ", e);
+                log.error("Error on reconnect: ", e);
             }
         }
         // });
@@ -134,7 +129,7 @@ public class MQTTClient {
     public void reconnect() {
         // test if reconnect task is still running, then we don't need to start another
         // task
-        logger.info("Called reconnect(): {}, {}", reconnectTask,
+        log.info("Called reconnect(): {}",
                 reconnectTask == null ? false : reconnectTask.isDone());
         if ((reconnectTask != null && reconnectTask.isDone()) || reconnectTask == null) {
             reconnectTask = newCachedThreadPool.submit(() -> {
@@ -150,20 +145,20 @@ public class MQTTClient {
                 : reconnectTask.isDone() ? "stopped" : "running");
         String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
 
-        logger.info("Status of reconnectTask: {}, initTask {}, isConnected {}", statusReconnectTask,
+        log.info("Status of reconnectTask: {}, initTask {}, isConnected {}", statusReconnectTask,
                 statusInitTask, isConnected());
 
     }
 
     private void connect() throws MqttException {
-        if (isValidConfigurationAvailable()) {
+        if (isConnectionConfigured() && !isConnected()) {
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(true);
             connOpts.setAutomaticReconnect(true);
             connOpts.setUserName(mqttConfiguration.getUser());
             connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
             mqttClient.connect(connOpts);
-            logger.info("Successfully connected to Broker {}", mqttClient.getServerURI());
+            log.info("Successfully connected to Broker {}", mqttClient.getServerURI());
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                 c8yAgent.createEvent("Successfully connected to Broker " + mqttClient.getServerURI(),
                         "mqtt_status_event",
@@ -177,57 +172,56 @@ public class MQTTClient {
     }
 
     public void disconnect() {
-        logger.info("Disconnecting from MQTT Broker: {}, {}", mqttClient, isInitilized());
+        log.info("Disconnecting from MQTT Broker: {}, {}", (mqttClient == null ? null :mqttClient.getServerURI()), isInitilized());
         try {
             if (isInitilized() && mqttClient != null && mqttClient.isConnected()) {
-                logger.debug("Disconnected from MQTT Broker I: {}", mqttClient.getServerURI());
+                log.debug("Disconnected from MQTT Broker I: {}", mqttClient.getServerURI());
                 mqttClient.unsubscribe("#");
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
-                logger.debug("Disconnected from MQTT Broker II: {}", mqttClient.getServerURI());
+                log.debug("Disconnected from MQTT Broker II: {}", mqttClient.getServerURI());
             }
         } catch (MqttException e) {
-            logger.error("Error on disconnecting MQTT Client: ", e);
+            log.error("Error on disconnecting MQTT Client: ", e);
         }
     }
 
     public void subscribe(String topic, Integer qos) throws MqttException {
         if (isInitilized() && mqttClient != null) {
-            logger.info("Subscribing on topic {}", topic);
+            log.info("Subscribing on topic {}", topic);
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                 c8yAgent.createEvent("Subscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
             });
             mqttClient.setCallback(genericCallback);
-            if (mqttClient.isConnected())
-                if (qos != null)
-                    mqttClient.subscribe(topic, qos);
-                else
-                    mqttClient.subscribe(topic);
-            else {
-                connect();
-                if (qos != null)
-                    mqttClient.subscribe(topic, qos);
-                else
-                    mqttClient.subscribe(topic);
-            }
-            logger.info("Successfully subscribed on topic {}", topic);
+            if (qos != null)
+                mqttClient.subscribe(topic, qos);
+            else
+                mqttClient.subscribe(topic);
+            log.info("Successfully subscribed on topic {}", topic);
         }
     }
 
     public void unsubscribe(String topic) throws MqttException {
         if (isInitilized() && mqttClient != null) {
-            logger.info("Unsubscribing on topic {}", topic);
+            log.info("Unsubscribing on topic {}", topic);
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                 c8yAgent.createEvent("Unsubscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
             });
             mqttClient.unsubscribe(topic);
-            logger.info("Successfully unsubscribed on topic {}", topic);
+            log.info("Successfully unsubscribed on topic {}", topic);
         }
     }
 
-    public void clearConnection() {
-        configurationService.deleteConfiguration();
+    public void disconnectFromBroker() {
+        mqttConfiguration = configurationService.setConfigurationActive(false);
+        disconnect();
     }
+
+    public void connectToBroker() {
+        mqttConfiguration = configurationService.setConfigurationActive(true);
+        reconnect();
+    }
+    
 
     public Optional<MQTTConfiguration> getConnectionDetails() {
         return configurationService.loadConfiguration();
@@ -236,21 +230,25 @@ public class MQTTClient {
     public void configureConnection(final MQTTConfiguration configuration) {
         try {
             configurationService.saveConfiguration(configuration);
-            // reconnect after configuration changed
-            // TODO We should actually do the initial connect() here and not the
-            // reconnect(). In the reconnect we can then enable the retries again.
+            // invalidate broker client
+            setInitilized(false);
             reconnect();
         } catch (JsonProcessingException e) {
-            logger.error("Failed to store configuration");
+            log.error("Failed to store configuration");
         }
     }
 
-    public boolean isValidConfigurationAvailable() {
+    public boolean isConnectionConfigured() {
         return (mqttConfiguration != null) && !StringUtils.isEmpty(mqttConfiguration.mqttHost) &&
                 !(mqttConfiguration.mqttPort == 0) &&
                 !StringUtils.isEmpty(mqttConfiguration.user) &&
                 !StringUtils.isEmpty(mqttConfiguration.password) &&
                 !StringUtils.isEmpty(mqttConfiguration.clientId);
+    }
+
+
+    public boolean isConnectionActicated() {
+        return (mqttConfiguration != null) && mqttConfiguration.active;
     }
 
     private boolean isInitilized() {
@@ -259,6 +257,21 @@ public class MQTTClient {
 
     private void setInitilized(boolean init) {
         initilized = init;
+    }
+
+    public void reloadMappings() {
+        subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
+            c8yAgent.getMQTTMappings();
+        });
+    }
+
+    public List<MQTTMapping> getMappings() {
+        List<MQTTMapping> result = new ArrayList<MQTTMapping>();
+        // TODO enhance method for multi tenancy
+        subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
+            result.addAll(c8yAgent.getMQTTMappings());
+        });
+        return result;
     }
 
 }

@@ -28,33 +28,40 @@
       <div [formGroup]="mappingForm">
         <c8y-form-group>
           <label for="id" translate>Id</label>
-          <input formControlName="id" type="text" class="form-control" #idRef
-            required readonly />
+          <input formControlName="id" type="text" class="form-control" #idRef required readonly />
         </c8y-form-group>
         <c8y-form-group>
           <label for="topic" translate>Topic</label>
           <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
             required />
         </c8y-form-group>
-         <div class="row">
+        <c8y-form-group>
+            <label for="targetAPI" translate>Target API</label>
+            <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+              <option *ngFor="let api of APIs" [ngValue]="api">
+                {{ api }}
+              </option>
+            </select>
+        </c8y-form-group>
+        <div class="row">
           <div class="col-lg-6" style="height:300px">
-            <ngx-monaco-editor  formControlName="source" [options]="editorOptions" [(ngModel)]="mappingForm.source">
+            <ngx-monaco-editor formControlName="source" [options]="editorOptions" [(ngModel)]="mappingForm.source">
             </ngx-monaco-editor>
           </div>
           <div class="col-lg-6" style="height:300px">
             <ngx-monaco-editor formControlName="target" [options]="editorOptions" [(ngModel)]="mappingForm.target">
             </ngx-monaco-editor>
           </div>
-        </div> 
+        </div>
       </div>
     </div>
-    <div class="form-group">
-      <button type="button" name="save" class="btn btn-primary" (click)="onCommitButtonClicked()" translate>
-        Commit changes
-      </button>
-      <button type="button" name="format" class="btn btn-primary" (click)="onFormatButtonClicked()" translate>
-        Format Templates
-      </button>
-    </div>
+  </div>
+  <div class="form-group">
+    <button type="button" name="save" class="btn btn-primary" (click)="onCommitButtonClicked()" translate>
+      Commit changes
+    </button>
+    <button type="button" name="format" class="btn btn-primary" (click)="onFormatButtonClicked()" translate>
+      Format Templates
+    </button>
   </div>
 </div>
