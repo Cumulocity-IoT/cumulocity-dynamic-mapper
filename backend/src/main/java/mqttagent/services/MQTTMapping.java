@@ -23,9 +23,16 @@ public class MQTTMapping {
     @NotNull
     public String target;
 
+    
+    @NotNull
+    public boolean active;
+    
+    @NotNull
+    public long qos;
+
     @NotNull
     public long lastUpdate;
-}
+  }
 
 /**
  * export interface MQTTMapping {

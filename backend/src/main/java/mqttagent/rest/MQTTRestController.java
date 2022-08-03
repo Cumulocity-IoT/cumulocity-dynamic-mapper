@@ -120,10 +120,10 @@ public class MQTTRestController {
         return new ResponseEntity<>(ServiceStatus.notReady(), HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/mapping", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity reloadMappings() {
+    @RequestMapping(value = "/mapping", method = RequestMethod.PUT, consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity reloadMappings(@Valid @RequestBody String tenant) {
         log.info("update mappings");
-        mqttClient.reloadMappings();
+        mqttClient.reloadMappings(tenant);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 

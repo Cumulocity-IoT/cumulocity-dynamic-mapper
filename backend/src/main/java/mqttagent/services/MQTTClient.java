@@ -9,7 +9,9 @@ import mqttagent.callbacks.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -54,6 +56,9 @@ public class MQTTClient {
     private Future initTask;
 
     private boolean initilized = false;
+
+    // mappings: tenant -> ( topic -> mqtt_mappping)
+    private Map<String, Map<String, MQTTMapping>> instanceMappings = new HashMap<String, Map<String, MQTTMapping>>();
 
     private void runInit() {
         while (!isInitilized()) {
@@ -107,8 +112,8 @@ public class MQTTClient {
             try {
                 connect();
                 // Uncomment this if you want to subscribe on start on "#"
-                subscribe("#", null);
-                subscribe("$SYS/#", null);
+                subscribe("#", 0);
+                subscribe("$SYS/#", 0);
             } catch (MqttException e) {
                 log.error("Error on reconnect: ", e);
             }
@@ -217,9 +222,61 @@ public class MQTTClient {
         initilized = init;
     }
 
-    public void reloadMappings() {
-        subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-            c8yAgent.getMQTTMappings();
+    // TODO change this to respect the tenant name
+    public void reloadMappings(String tenant) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            List<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
+            // convert list -> map
+            Map<String, MQTTMapping> updatedMappingsMap = new HashMap<String, MQTTMapping>();
+            mappings.forEach(m -> updatedMappingsMap.put(m.topic, m));
+            // process changes
+            final Map<String, MQTTMapping> activeMappingsMap = instanceMappings.getOrDefault(tenant,
+                    new HashMap<String, MQTTMapping>());
+
+            // unsubscribe not used topics
+            activeMappingsMap.forEach((topic, map) -> {
+                boolean unsubscribe = false;
+                // topic was deleted -> unsubscribe
+                if (updatedMappingsMap.get(topic) == null) {
+                    unsubscribe = true;
+                    // test if existing mapping was updated
+                } else if (updatedMappingsMap.get(topic) != null
+                        && updatedMappingsMap.get(topic).lastUpdate != activeMappingsMap.get(topic).lastUpdate) {
+                    unsubscribe = true;
+                }
+                if (unsubscribe) {
+                    try {
+                        log.info("Could not unsubscribe topic: {}", topic);
+                        unsubscribe(topic);
+                    } catch (MqttException e) {
+                        // TODO Auto-generated catch block
+                        log.error("Could not unsubscribe topic: {}", topic);
+                    }
+                }
+            });
+
+            // subscribe to new topics
+            updatedMappingsMap.forEach((topic, map) -> {
+                boolean subscribe = false;
+                // topic was deleted -> unsubscribe
+                if (activeMappingsMap.get(topic) == null) {
+                    subscribe = true;
+                    // test if existing mapping was updated
+                } else if (activeMappingsMap.get(topic) != null
+                        && activeMappingsMap.get(topic).lastUpdate != updatedMappingsMap.get(topic).lastUpdate) {
+                    subscribe = true;
+                }
+                if (subscribe && map.active) {
+                    try {
+                        log.info("Could not subscribe topic: {}", topic);
+                        subscribe(topic, map);
+                    } catch (MqttException e) {
+                        // TODO Auto-generated catch block
+                        log.error("Could not subscribe topic: {}", topic);
+                    }
+                }
+            });
+            // process changes
         });
     }
 
@@ -241,6 +298,21 @@ public class MQTTClient {
             mqttClient.setCallback(genericCallback);
             if (qos != null)
                 mqttClient.subscribe(topic, qos);
+            else
+                mqttClient.subscribe(topic);
+            log.info("Successfully subscribed on topic {}", topic);
+        }
+    }
+
+    private void subscribe(String topic, MQTTMapping map) throws MqttException {
+        if (isInitilized() && mqttClient != null) {
+            log.info("Subscribing on topic {}", topic);
+            subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
+                c8yAgent.createEvent("Subscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
+            });
+            mqttClient.setCallback(genericCallback);
+            if (map != null)
+                mqttClient.subscribe(topic, (int) map.qos);
             else
                 mqttClient.subscribe(topic);
             log.info("Successfully subscribed on topic {}", topic);

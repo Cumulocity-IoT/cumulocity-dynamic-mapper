@@ -17,6 +17,7 @@ import { CommonModule } from '@angular/common';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
 import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
+import { StatusRendererComponent } from './mqtt-mapping/status-cell.renderer.component';
 
 
 
@@ -46,18 +47,21 @@ import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-m
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTTerminateConnectionModalComponent,
+    StatusRendererComponent
   ],
   entryComponents: [
     MQTTServiceConfigurationComponent,
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTTerminateConnectionModalComponent,
+    StatusRendererComponent
   ],
   declarations: [
     MQTTServiceConfigurationComponent,
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTTerminateConnectionModalComponent,
+    StatusRendererComponent
   ],
   providers: [
     MQTTOverviewGuard,

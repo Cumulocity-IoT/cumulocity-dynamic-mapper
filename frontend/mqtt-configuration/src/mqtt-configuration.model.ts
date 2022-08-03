@@ -14,5 +14,7 @@ export interface MQTTMapping {
   targetAPI: string,
   source: string,
   target: string,
-  lastUpdate: number
+  lastUpdate: number,
+  active: boolean,
+  qos: number
 }

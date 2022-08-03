@@ -262,6 +262,8 @@ public class C8yAgent {
                 (String) mm.get("targetAPI"), 
                 (String) mm.get("source"), 
                 (String) mm.get("target"),
+                (boolean) mm.get("active"),
+                (long) mm.get("qos"),
                 (long) mm.get("lastUpdate")) ;
                 result.add( m );
             });

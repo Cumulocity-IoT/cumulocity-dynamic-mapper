@@ -36,12 +36,24 @@
             required />
         </c8y-form-group>
         <c8y-form-group>
-            <label for="targetAPI" translate>Target API</label>
-            <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-              <option *ngFor="let api of APIs" [ngValue]="api">
-                {{ api }}
-              </option>
-            </select>
+          <label for="targetAPI" translate>Target API</label>
+          <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+            <option *ngFor="let api of APIs" [ngValue]="api">
+              {{ api }}
+            </option>
+          </select>
+        </c8y-form-group>
+        <c8y-form-group>
+          <label for="qos" translate>QOS</label>
+          <select class="form-control" formControlName="qos" #qosRef>
+            <option *ngFor="let q of QOSs" [ngValue]="q.value">
+              {{ q.name }}
+            </option>
+          </select>
+        </c8y-form-group>
+        <c8y-form-group>
+          <label for="active" translate>Mapping Active</label>
+          <input formControlName="active" type="checkbox" class="form-control" #activeRef />
         </c8y-form-group>
         <div class="row">
           <div class="col-lg-6" style="height:300px">

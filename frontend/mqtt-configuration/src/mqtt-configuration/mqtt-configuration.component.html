@@ -82,7 +82,7 @@
           Update
         </button>
         <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-          [disabled]="!isConnectionToMQTTInitialized" translate>
+          [disabled]="!isConnectionToMQTTInitialized || isConnectionToMQTTActivated" translate>
           Connect
         </button>
         <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
