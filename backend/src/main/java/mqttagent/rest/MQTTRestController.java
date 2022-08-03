@@ -6,7 +6,6 @@ import mqttagent.services.MQTTMapping;
 import mqttagent.services.ServiceStatus;
 
 import java.util.List;
-import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -59,7 +58,7 @@ public class MQTTRestController {
     public ResponseEntity configureConnectionToBroker(@Valid @RequestBody MQTTConfiguration configuration) {
         log.info("Getting mqtt broker configuration: {}", configuration.toString());
         try {
-            mqttClient.configureConnection(configuration);
+            mqttClient.saveConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -71,12 +70,10 @@ public class MQTTRestController {
     public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
         log.info("get connection details");
         try {
-            final Optional<MQTTConfiguration> configurationOptional = mqttClient.getConnectionDetails();
-            if (configurationOptional.isEmpty()) {
+            final MQTTConfiguration configuration = mqttClient.getConnectionDetails();
+            if (configuration == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
-
-            final MQTTConfiguration configuration = configurationOptional.get();
             // don't modify original copy
             final MQTTConfiguration configuration_clone = (MQTTConfiguration) configuration.clone();
             configuration_clone.setPassword("");

@@ -13,8 +13,6 @@ import mqttagent.configuration.MQTTConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Slf4j
 @Service
 public class CredentialsConfigurationService {
@@ -43,7 +41,7 @@ public class CredentialsConfigurationService {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public Optional<MQTTConfiguration> loadConfiguration() {
+    public MQTTConfiguration loadConfiguration() {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONFIGURATION);
@@ -51,7 +49,7 @@ public class CredentialsConfigurationService {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
             log.info("Returning configuration found: {}:", configuration.mqttHost );
-            return Optional.of(configuration);
+            return configuration;
         } catch (SDKException exception) {
             log.info("No configuration found, returning empty element!");
             //exception.printStackTrace();
@@ -60,7 +58,7 @@ public class CredentialsConfigurationService {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        return Optional.empty();
+        return null;
     }
 
     public void deleteConfiguration() {
