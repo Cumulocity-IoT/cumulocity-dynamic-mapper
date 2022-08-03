@@ -8,6 +8,8 @@ export class MQTTConfigurationService {
 
   private readonly PATH_STATUS_ENDPOINT = 'status';
 
+  private readonly PATH_MAPPING_ENDPOINT = 'mapping';
+
   private readonly BASE_URL = 'service/generic-mqtt-agent';
 
   private readonly STATUS_READY = 'READY';
@@ -64,4 +66,5 @@ export class MQTTConfigurationService {
     const { status } = await response.json();
     return status;
   }
+
 }

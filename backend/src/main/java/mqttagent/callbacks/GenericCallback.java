@@ -44,8 +44,13 @@ public class GenericCallback implements MqttCallback {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                // byte[] payload = Base64.getEncoder().encode(mqttMessage.getPayload());
                 String payloadString = mqttMessage.getPayload() != null ? new String(mqttMessage.getPayload(), Charset.defaultCharset()) : "";
+
+                // find appropriate mapping
+                // subscriptionsService.runForEachTenant( (tenant) -> {
+                //     c8yAgent.createEvent(payloadString, topic, DateTime.now(), null);
+                // });
+                // byte[] payload = Base64.getEncoder().encode(mqttMessage.getPayload());
                 log.info("Message received on topic {} with message {}", topic, payloadString);
                 subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                     c8yAgent.createEvent(payloadString, topic, DateTime.now(), null);
