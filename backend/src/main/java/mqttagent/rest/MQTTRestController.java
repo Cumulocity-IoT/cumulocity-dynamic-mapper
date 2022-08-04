@@ -122,7 +122,7 @@ public class MQTTRestController {
 
     @RequestMapping(value = "/mapping", method = RequestMethod.PUT, consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity reloadMappings(@Valid @RequestBody String tenant) {
-        log.info("update mappings");
+        log.info("Update mappings: {}", tenant);
         mqttClient.reloadMappings(tenant);
         return ResponseEntity.status(HttpStatus.OK).build();
     }

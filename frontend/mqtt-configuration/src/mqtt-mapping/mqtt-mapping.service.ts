@@ -33,7 +33,7 @@ export class MQTTMappingService {
     const response : IResultList<IManagedObject> = await this.inventory.listQuery(query, filter);
     if ( response.data && response.data.length > 0) {
       this.mappingId = response.data[0].id;
-      console.log("Found mqtt mapping:", this.mappingId)
+      console.log("Found mqtt mapping:", this.mappingId,response.data[0][this.MAPPING_FRAGMENT] )
       return response.data[0][this.MAPPING_FRAGMENT] as MQTTMapping[];
     } else {
       console.log("No mqtt mapping found!")
@@ -43,7 +43,7 @@ export class MQTTMappingService {
 
   async saveMappings(mappings: MQTTMapping[]): Promise<IResult<IManagedObject>> {
     return this.inventory.update({
-      c8y_MQTTMapping: mappings,
+      c8y_mqttMapping: mappings,
       id: this.mappingId,
     });
   }
@@ -51,9 +51,10 @@ export class MQTTMappingService {
   async reloadMappings(): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_MAPPING_ENDPOINT}`, {
       headers: {
-        'content-type': 'application/json',
+        'content-type': 'text/plain',
       },
-      body: JSON.stringify({"tenant": this.client.tenant}),
+      body: this.client.tenant,
+      //body: JSON.stringify({"tenant": this.client.tenant}),
       method: 'PUT',
     });
   }

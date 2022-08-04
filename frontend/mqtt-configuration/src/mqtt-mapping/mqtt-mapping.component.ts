@@ -6,6 +6,7 @@ import { MQTTMapping } from 'src/mqtt-configuration.model';
 import { MonacoEditorComponent } from '@materia-ui/ngx-monaco-editor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { StatusRendererComponent } from './status-cell.renderer.component';
+import { QOSRendererComponent } from './qos-cell.renderer.component';
 
 @Component({
   selector: 'mqtt-mapping',
@@ -69,14 +70,14 @@ export class MQTTMappingComponent implements OnInit {
       path: 'id',
       filterable: true,
       dataType: ColumnDataType.TextShort,
-      cellCSSClassName: 'col'
+      gridTrackSize: '5%'
     },
     {
       header: 'Topic',
       name: 'topic',
       path: 'topic',
       filterable: true,
-      cellCSSClassName: 'col'
+      gridTrackSize: '10%'
     },
     {
       name: 'targetAPI',
@@ -84,21 +85,21 @@ export class MQTTMappingComponent implements OnInit {
       path: 'targetAPI',
       filterable: true,
       dataType: ColumnDataType.TextShort,
-      cellCSSClassName: 'col'
+      gridTrackSize: '10%'
     },
     {
       header: 'Source',
       name: 'source',
       path: 'source',
       filterable: true,
-      cellCSSClassName: 'col-4'
+      gridTrackSize: '25%'
     },
     {
       header: 'Target',
       name: 'target',
       path: 'target',
       filterable: true,
-      cellCSSClassName: 'col-4'
+      gridTrackSize: '25%'
     },
     {
       header: 'Active',
@@ -106,14 +107,15 @@ export class MQTTMappingComponent implements OnInit {
       path: 'active',
       filterable: true,
       cellRendererComponent: StatusRendererComponent,
-      cellCSSClassName: 'col'
+      gridTrackSize: '5%'
     },
     {
       header: 'QOS',
       name: 'qos',
       path: 'qos',
       filterable: true,
-      cellCSSClassName: 'col'
+      cellRendererComponent: QOSRendererComponent,
+      gridTrackSize: '10%'
     },
   ]
 
