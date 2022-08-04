@@ -21,6 +21,7 @@ import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
+import com.cumulocity.sdk.client.RestConnector;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -39,6 +40,9 @@ import java.util.TimeZone;
 @Slf4j
 @Service
 public class C8yAgent {
+
+    @Autowired
+    private RestConnector restConnector;
 
     @Autowired
     private EventApi eventApi;
@@ -267,10 +271,23 @@ public class C8yAgent {
                 (long) mm.get("lastUpdate")) ;
                 result.add( m );
             });
-            log.info("Found MQTTMapping {} {}", result, l.getClass());
+            log.info("Found MQTTMapping {}", result);
         } else {
             log.info("No MQTTMapping found!");
         }
         return result;
+    }
+
+    public void createC8Y_MEA(String targetAPI, String payload, DateTime now) {
+        if ( targetAPI == "event"){
+            EventRepresentation event = restConnector.postText("/event/events", payload, EventRepresentation.class);
+            log.info ("New event posted: {}", event);
+        } else if (targetAPI == "alarm"){
+            AlarmRepresentation alarm = restConnector.postText("/alarm/alarms", payload, AlarmRepresentation.class);
+            log.info ("New alarm posted: {}", alarm);
+        } else if (targetAPI == "measurement") {
+            MeasurementRepresentation measurement = restConnector.postText("/measurement/measurements", payload, MeasurementRepresentation.class);
+            log.info ("New measurement posted: {}", measurement);
+        }
     }
 }

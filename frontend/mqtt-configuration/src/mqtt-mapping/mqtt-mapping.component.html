@@ -22,39 +22,49 @@
       </c8y-data-grid>
     </div>
     <div class="card-block">
-      <div class="card-header separator j-c-between">
+      <div class="card-header separator j-c-between" style=" margin-bottom: 30px;">
         <h4 style="font-weight:300 !important;" translate>Edit Mapping</h4>
       </div>
-      <div [formGroup]="mappingForm">
-        <c8y-form-group>
-          <label for="id" translate>Id</label>
-          <input formControlName="id" type="text" class="form-control" #idRef required readonly />
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="topic" translate>Topic</label>
-          <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
+      <div [formGroup]="mappingForm" class="form-horizontal">
+        <div class="form-group">
+          <label for="id" class="col-sm-2" translate>Id</label>
+          <div class="col-sm-4">
+            <input formControlName="id" type="text" class="form-control" #idRef required readonly />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="topic" class="col-sm-2" translate>Topic</label>
+          <div class="col-sm-4">
+            <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
             required />
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="targetAPI" translate>Target API</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="targetAPI" class="col-sm-2" translate>Target API</label>
+          <div class="col-sm-4">
           <select class="form-control" formControlName="targetAPI" #targetAPIRef>
             <option *ngFor="let api of APIs" [ngValue]="api">
               {{ api }}
             </option>
           </select>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="qos" translate>QOS</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="qos" class="col-sm-2" translate>QOS</label>
+          <div class="col-sm-4">
           <select class="form-control" formControlName="qos" #qosRef>
             <option *ngFor="let q of QOSs" [ngValue]="q.value">
               {{ q.name }}
             </option>
           </select>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="active" translate>Mapping Active</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="active" class="col-sm-2" translate>Mapping Active</label>
+          <div class="col-sm-4">
           <input formControlName="active" type="checkbox" class="form-control" #activeRef />
-        </c8y-form-group>
+          </div>
+        </div>
         <div class="row">
           <div class="col-lg-6" style="height:300px">
             <ngx-monaco-editor formControlName="source" [options]="editorOptions" [(ngModel)]="mappingForm.source">

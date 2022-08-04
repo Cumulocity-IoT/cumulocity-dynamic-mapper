@@ -228,13 +228,17 @@ public class MQTTClient {
             List<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
             // convert list -> map
             Map<String, MQTTMapping> updatedMappingsMap = new HashMap<String, MQTTMapping>();
-            mappings.forEach(m -> updatedMappingsMap.put(m.topic, m));
+            mappings.forEach(m -> {
+                updatedMappingsMap.put(m.topic, m);
+                log.info("Processing addition for topic: {}", m.topic);
+                });
             // process changes
             final Map<String, MQTTMapping> activeMappingsMap = instanceMappings.getOrDefault(tenant,
                     new HashMap<String, MQTTMapping>());
 
             // unsubscribe not used topics
             activeMappingsMap.forEach((topic, map) -> {
+                log.info("Processing unsubscribe for topic: {}", topic);
                 boolean unsubscribe = false;
                 // topic was deleted -> unsubscribe
                 if (updatedMappingsMap.get(topic) == null) {
@@ -246,7 +250,7 @@ public class MQTTClient {
                 }
                 if (unsubscribe) {
                     try {
-                        log.info("Could not unsubscribe topic: {}", topic);
+                        log.info("Unsubscribe topic: {}", topic);
                         unsubscribe(topic);
                     } catch (MqttException e) {
                         // TODO Auto-generated catch block
@@ -257,6 +261,7 @@ public class MQTTClient {
 
             // subscribe to new topics
             updatedMappingsMap.forEach((topic, map) -> {
+                log.info("Processing subscribe for topic: {}", topic);
                 boolean subscribe = false;
                 // topic was deleted -> unsubscribe
                 if (activeMappingsMap.get(topic) == null) {
@@ -268,7 +273,7 @@ public class MQTTClient {
                 }
                 if (subscribe && map.active) {
                     try {
-                        log.info("Could not subscribe topic: {}", topic);
+                        log.info("Subscribe topic: {}", topic);
                         subscribe(topic, map);
                     } catch (MqttException e) {
                         // TODO Auto-generated catch block
@@ -276,7 +281,8 @@ public class MQTTClient {
                     }
                 }
             });
-            // process changes
+            // update mappings
+            instanceMappings.put(tenant, updatedMappingsMap);
         });
     }
 
@@ -341,4 +347,11 @@ public class MQTTClient {
                 statusInitTask, isConnected());
 
     }
+
+    public Map<String, MQTTMapping> getMappingsPerTenant (String tenant){
+        //private Map<String, Map<String, MQTTMapping>> instanceMappings = new HashMap<String, Map<String, MQTTMapping>>();
+        return instanceMappings.get(tenant);
+    }
+
+
 }
