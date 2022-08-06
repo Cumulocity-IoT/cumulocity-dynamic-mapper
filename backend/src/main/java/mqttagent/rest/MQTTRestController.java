@@ -98,7 +98,7 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/connection", method = RequestMethod.PUT)
-    public ResponseEntity deleteConnectionToBroker() {
+    public ResponseEntity connectToBroker() {
         log.info("Disconnect from broker");
         try {
             mqttClient.connectToBroker();

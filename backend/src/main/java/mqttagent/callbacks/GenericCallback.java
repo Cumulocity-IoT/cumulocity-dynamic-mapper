@@ -59,7 +59,8 @@ public class GenericCallback implements MqttCallback {
                 String payloadString = mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "";
-                String normalizedTopic = topic.replaceFirst(".*/(.*)$", "#");
+                String normalizedTopic = topic.replaceFirst("([^///]+$)", "#");
+                String deviceIdentifier = topic.replaceFirst("^(.*[\\/])", "");
                 log.info("Message received on topic {},{} with message {}", topic, normalizedTopic, payloadString);
 
                 // find appropriate mapping
@@ -69,24 +70,28 @@ public class GenericCallback implements MqttCallback {
                 // byte[] payload = Base64.getEncoder().encode(mqttMessage.getPayload());
 
                 Map<String, MQTTMapping> mappings = mqttClient.getMappingsPerTenant(c8yAgent.tenant);
+                
                 MQTTMapping map1 = mappings.get(topic);
+                log.info("Looking for appropriate mappings I: {},{},{}", c8yAgent.tenant, topic, map1);
                 if (map1 != null) {
                     subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                         String payload = "{\"source\": {    \"id\":\"490229\" }, \"type\": \"c8y_LoraBellEvent\",  \"text\": \"Elevator was called\",  \"time\": \"current_time\"}";
                         String date = sdf.format(new Date());
-                        payload.replaceFirst("current_time", date);
-                        c8yAgent.createC8Y_MEA(map1.targetAPI, payload, DateTime.now());
+                        payload = payload.replaceFirst("current_time", date);
+                        log.info("Posting payload: {}", payload);
+                        c8yAgent.createC8Y_MEA(map1.targetAPI, payload);
                     });
                 } else {
                     // exact topic not found, look for topic without device identifier
                     // e.g. /temperature/9090 -> /temperature/#
                     MQTTMapping map2 = mappings.get(normalizedTopic);
+                    log.info("Looking for appropriate mappings II: {},{},{}", c8yAgent.tenant, normalizedTopic, map2);
                     if (map2 != null) {
                         subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-                            String payload = "{\"source\": {    \"id\":\"490229\" }, \"type\": \"c8y_LoraBellEvent\",  \"text\": \"Elevator was called\",  \"time\": \"{{current_time}}\"}";
+                            String payload = "{\"source\": {    \"id\":\"490229\" }, \"type\": \"c8y_LoraBellEvent\",  \"text\": \"Elevator was called\",  \"time\": \"current_time\"}";
                             String date = sdf.format(new Date());
-                            payload.replaceFirst("{{current_time}}", date);
-                            c8yAgent.createC8Y_MEA(map2.targetAPI, payload, DateTime.now());
+                            payload = payload.replaceFirst("current_time", date);
+                            c8yAgent.createC8Y_MEA(map2.targetAPI, payload);
                         });
 
                     }
