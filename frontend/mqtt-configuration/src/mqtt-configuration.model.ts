@@ -21,6 +21,8 @@ export interface MQTTMapping {
   target: string,
   lastUpdate: number,
   active: boolean,
+  tested: boolean,
+  createNoExistingDevice: boolean,
   qos: number,
   substitutions?: MQTTMappingSubstitution[]
 }

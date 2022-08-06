@@ -124,7 +124,7 @@ export class MQTTMappingComponent implements OnInit {
       gridTrackSize: '25%'
     },
     {
-      header: 'Active',
+      header: 'Active-Tested',
       name: 'active',
       path: 'active',
       filterable: true,
@@ -193,6 +193,7 @@ export class MQTTMappingComponent implements OnInit {
   mappingForm: FormGroup;
 
   jsonPathForm: FormGroup;
+  mapping: MQTTMapping;
 
   constructor(
     private bsModalService: BsModalService,
@@ -222,8 +223,9 @@ export class MQTTMappingComponent implements OnInit {
       source: new FormControl('', Validators.required),
       target: new FormControl('', Validators.required),
       active: new FormControl('', Validators.required),
+      tested: new FormControl('', Validators.required),
+      createNoExistingDevice: new FormControl('', Validators.required),
       qos: new FormControl('', Validators.required),
-      substitutions: new FormControl('', Validators.required),
     });
 
     this.jsonPathForm = new FormGroup({
@@ -244,6 +246,8 @@ export class MQTTMappingComponent implements OnInit {
       source: '{}',
       target: this.SAMPLE_TEMPLATES['measurement'],
       active: false,
+      tested: false,
+      createNoExistingDevice: false,
       qos: 1,
       substitutions: [],
       lastUpdate: Date.now()
@@ -254,6 +258,7 @@ export class MQTTMappingComponent implements OnInit {
 
 
   editMapping(mapping: MQTTMapping) {
+    this.mapping = mapping;
     console.log("Editing mapping", mapping)
     this.mappingForm.patchValue({
       id: mapping.id,
@@ -262,6 +267,8 @@ export class MQTTMappingComponent implements OnInit {
       source: mapping.source,
       target: mapping.target,
       active: mapping.active,
+      tested: mapping.tested,
+      createNoExistingDevice: mapping.createNoExistingDevice,
       qos: mapping.qos,
     });
     this.monacoComponents.forEach(mc => {
@@ -310,8 +317,10 @@ export class MQTTMappingComponent implements OnInit {
       source: this.mappingForm.get('source').value,
       target: this.mappingForm.get('target').value,
       active: this.mappingForm.get('active').value,
+      tested: this.mappingForm.get('tested').value||false,
+      createNoExistingDevice: this.mappingForm.get('createNoExistingDevice').value||false,
       qos: this.mappingForm.get('qos').value,
-      substitutions: this.mappingForm.get('substitutions').value,
+      substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
     }
     console.log("Changed mapping:", changed_mapping);
@@ -327,8 +336,9 @@ export class MQTTMappingComponent implements OnInit {
 
   private normalizeTopic(topic: string) {
     let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+    console.log("Topic test", topic, nt);
     // append trailing slash if last character is not wildcard #
-    nt = nt.concat(nt.endsWith("#") ? '' : '#')
+    nt = nt.concat(nt.endsWith("#") ? '' : '/')
     return nt
   }
 
@@ -357,31 +367,29 @@ export class MQTTMappingComponent implements OnInit {
 
   onMappingJsonPathChanged() {
     this.isSubstitutionValid = this.checkSubstitutions();
-    if (this.isSubstitutionValid) {
-      const n = this.jsonPathForm.get('variableNames').value.split(",");
-      const p = this.jsonPathForm.get('variableJsonPathes').value.split(",");
-      let s: MQTTMappingSubstitution[] = [];
-      for (let index = 0; index < p.length; index++) {
-        s.push({
-          name: n[index].trim(),
-          jsonPath: p[index].trim()
-        });
-      }
-      this.mappingForm.patchValue({
-        substitutions: s,
+    //if (this.isSubstitutionValid) {
+    const n = this.jsonPathForm.get('variableNames').value.split(",");
+    const p = this.jsonPathForm.get('variableJsonPathes').value.split(",");
+    let s: MQTTMappingSubstitution[] = [];
+    for (let index = 0; index < p.length; index++) {
+      s.push({
+        name: n[index].trim(),
+        jsonPath: p[index].trim()
       });
     }
+    this.mapping.substitutions = s;
+    //}
   }
 
 
   checkSubstitutions(): boolean {
     const p = this.jsonPathForm.get('variableJsonPathes').value;
     const n = this.jsonPathForm.get('variableNames').value;
-    console.log ("Test if substitution is complete:", p, n);
+    console.log("Test if substitution is complete:", p, n);
     if (p != '' && n != '') {
       const pl = (p.match(/,/g) || []).length;
       const nl = (n.match(/,/g) || []).length;
-      console.log ("Test if substitution is complete:", pl, nl);
+      console.log("Test if substitution is complete:", pl, nl);
       if (nl == pl) {
         return true;
       }
@@ -394,8 +402,8 @@ export class MQTTMappingComponent implements OnInit {
     // variable name:$1, $2, $3
     //const v = p.match(/\$\d/g)||[];
     // variable name:${wert}, ${time}, ${type}
-    const v = p.match(/\$\{(\w+)\}/g)||[];
-    
+    const v = p.match(/\$\{(\w+)\}/g) || [];
+
     //console.log("Variable:", v, p)
     return v.join();
   }
@@ -423,6 +431,8 @@ export class MQTTMappingComponent implements OnInit {
       source: this.mappingForm.get('source').value,
       target: this.mappingForm.get('target').value,
       active: this.mappingForm.get('active').value,
+      tested: this.mappingForm.get('tested').value,
+      createNoExistingDevice: this.mappingForm.get('accreateNoExistingDevicetive').value,
       qos: this.mappingForm.get('qos').value,
       substitutions: this.mappingForm.get('substitutions').value,
       lastUpdate: Date.now(),

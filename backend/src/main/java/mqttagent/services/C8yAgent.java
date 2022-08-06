@@ -294,6 +294,8 @@ public class C8yAgent {
                 (String) mm.get("source"), 
                 (String) mm.get("target"),
                 (boolean) mm.get("active"),
+                (boolean) mm.getOrDefault("tested", false),
+                (boolean) mm.getOrDefault("createNoExistingDevice", false),
                 (long) mm.get("qos"),
                 ss,
                 (long) mm.get("lastUpdate")) ;

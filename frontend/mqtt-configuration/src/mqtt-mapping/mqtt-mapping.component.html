@@ -71,12 +71,6 @@
                 <input formControlName="active" type="checkbox" class="form-control" #activeRef />
               </div>
             </div>
-            <div class="form-group">
-              <label for="substitutions" class="" translate>Substitutions</label>
-              <div class="">
-                <input formControlName="substitutions" type="text" class="form-control" #substitutionsRef readonly/>
-              </div>
-            </div>
           </div>
         </div>
         <div class="row">
@@ -107,7 +101,7 @@
               <label for="path" class="" translate>Json path</label>
               <div class="">
                 <input formControlName="path" type="text" class="form-control" (change)="onJsonPathChanged()"
-                  placeholder="e.g. $.device" #pathRef required />
+                  placeholder="e.g. $.device" #pathRef/>
               </div>
             </div>
             <div class="form-group">
@@ -144,7 +138,7 @@
   </div>
   <div class="form-group">
     <button type="button" name="commit" class="btn btn-primary" (click)="onCommitButtonClicked()"
-      [disabled]="!isSubstitutionValid" translate>
+      [disabled]="false" translate>
       Commit changes
     </button>
     <button type="button" name="format" class="btn btn-default" (click)="onFormatButtonClicked()" translate>
