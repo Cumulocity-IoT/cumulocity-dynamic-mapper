@@ -2,7 +2,7 @@ import { Component, OnInit, QueryList, ViewChild, ViewChildren, ViewEncapsulatio
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { MQTTMapping } from 'src/mqtt-configuration.model';
+import { MQTTMapping, MQTTMappingSubstitution } from 'src/mqtt-configuration.model';
 import { MonacoEditorComponent } from '@materia-ui/ngx-monaco-editor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { StatusRendererComponent } from './status-cell.renderer.component';
@@ -17,6 +17,9 @@ import { JSONPath } from 'jsonpath-plus';
 })
 
 export class MQTTMappingComponent implements OnInit {
+
+
+  isSubstitutionValid: boolean;
 
   editorOptionsJson = {
     theme: 'vs-dark',
@@ -40,6 +43,8 @@ export class MQTTMappingComponent implements OnInit {
     glyphMargin: false,
     lineNumbers: 'off',
     folding: true,
+    readOnly: true,
+    domReadOnly: true,
     lineDecorationsWidth: 0,
     lineNumbersMinChars: 0,
     minimap: {
@@ -203,10 +208,10 @@ export class MQTTMappingComponent implements OnInit {
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)
     },
-    {
-      type: BuiltInActionType.Delete,
-      callback: this.deleteMapping.bind(this)
-    });
+      {
+        type: BuiltInActionType.Delete,
+        callback: this.deleteMapping.bind(this)
+      });
   }
 
   private initForm(): void {
@@ -218,12 +223,15 @@ export class MQTTMappingComponent implements OnInit {
       target: new FormControl('', Validators.required),
       active: new FormControl('', Validators.required),
       qos: new FormControl('', Validators.required),
+      substitutions: new FormControl('', Validators.required),
     });
 
     this.jsonPathForm = new FormGroup({
       path: new FormControl('', Validators.required),
       result: new FormControl('', Validators.required),
-      variables: new FormControl('', Validators.required),
+      variableNames: new FormControl('', Validators.required),
+      variableJsonPathes: new FormControl('', Validators.required),
+      testResult: new FormControl('', Validators.required),
     });
   }
 
@@ -237,6 +245,7 @@ export class MQTTMappingComponent implements OnInit {
       target: this.SAMPLE_TEMPLATES['measurement'],
       active: false,
       qos: 1,
+      substitutions: [],
       lastUpdate: Date.now()
     })
     console.log("Add mappping", l, this.mqttMappings)
@@ -261,7 +270,12 @@ export class MQTTMappingComponent implements OnInit {
       }
     });
 
-    this.trackVariables();
+    this.jsonPathForm.patchValue({
+      variableJsonPathes: this.getVariableJsonPathes(mapping),
+      variableNames: this.getVariableNames(mapping),
+    });
+
+    this.isSubstitutionValid = this.checkSubstitutions();
   }
 
   deleteMapping(mapping: MQTTMapping) {
@@ -278,7 +292,7 @@ export class MQTTMappingComponent implements OnInit {
     }
   }
 
-  onJSONPathChanged() {
+  onJsonPathChanged() {
     const p = this.jsonPathForm.get('path').value;
     const d = JSON.parse(this.mappingForm.get('source').value);
     const r = JSON.stringify(JSONPath({ path: p, json: d }), null, 4);
@@ -297,6 +311,7 @@ export class MQTTMappingComponent implements OnInit {
       target: this.mappingForm.get('target').value,
       active: this.mappingForm.get('active').value,
       qos: this.mappingForm.get('qos').value,
+      substitutions: this.mappingForm.get('substitutions').value,
       lastUpdate: Date.now(),
     }
     console.log("Changed mapping:", changed_mapping);
@@ -339,12 +354,92 @@ export class MQTTMappingComponent implements OnInit {
     });
   }
 
-  trackVariables(){
+
+  onMappingJsonPathChanged() {
+    this.isSubstitutionValid = this.checkSubstitutions();
+    if (this.isSubstitutionValid) {
+      const n = this.jsonPathForm.get('variableNames').value.split(",");
+      const p = this.jsonPathForm.get('variableJsonPathes').value.split(",");
+      let s: MQTTMappingSubstitution[] = [];
+      for (let index = 0; index < p.length; index++) {
+        s.push({
+          name: n[index].trim(),
+          jsonPath: p[index].trim()
+        });
+      }
+      this.mappingForm.patchValue({
+        substitutions: s,
+      });
+    }
+  }
+
+
+  checkSubstitutions(): boolean {
+    const p = this.jsonPathForm.get('variableJsonPathes').value;
+    const n = this.jsonPathForm.get('variableNames').value;
+    console.log ("Test if substitution is complete:", p, n);
+    if (p != '' && n != '') {
+      const pl = (p.match(/,/g) || []).length;
+      const nl = (n.match(/,/g) || []).length;
+      console.log ("Test if substitution is complete:", pl, nl);
+      if (nl == pl) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  getVariableNames(mapping: MQTTMapping): string {
+    const p = mapping.target;
+    // variable name:$1, $2, $3
+    //const v = p.match(/\$\d/g)||[];
+    // variable name:${wert}, ${time}, ${type}
+    const v = p.match(/\$\{(\w+)\}/g)||[];
+    
+    //console.log("Variable:", v, p)
+    return v.join();
+  }
+
+  getVariableJsonPathes(mapping: MQTTMapping): string {
+    let p = '';
+    if (!mapping.substitutions) mapping.substitutions = [];
+    mapping.substitutions.forEach((m, i) => {
+      if (i !== mapping.substitutions.length - 1) {
+        p = p.concat(m.jsonPath).concat(', ')
+      } else {
+        p = p.concat(m.jsonPath)
+      }
+    }
+    )
+    //console.log("Variable:", v, p)
+    return p;
+  }
+
+  async onTestClicked() {
+    let test_mapping: MQTTMapping = {
+      id: this.mappingForm.get('id').value,
+      topic: this.normalizeTopic(this.mappingForm.get('topic').value),
+      targetAPI: this.mappingForm.get('targetAPI').value,
+      source: this.mappingForm.get('source').value,
+      target: this.mappingForm.get('target').value,
+      active: this.mappingForm.get('active').value,
+      qos: this.mappingForm.get('qos').value,
+      substitutions: this.mappingForm.get('substitutions').value,
+      lastUpdate: Date.now(),
+    }
+    let testResult = await this.mqttMappingService.testResult(test_mapping);
+    this.jsonPathForm.patchValue({
+      testResult: testResult,
+    });
+  }
+
+  trackVariables() {
     const p = this.mappingForm.get('target').value;
-    const v = p.match(/\$\d/g);
+    //const v = p.match(/\$\d/g);
+    const v = p.match(/\$\{(\w+)\}/g)
     console.log("Variable:", v, p)
     this.jsonPathForm.patchValue({
-      variables: v.join(),
+      variableNames: v.join(),
     });
   }
 
@@ -358,7 +453,6 @@ export class MQTTMappingComponent implements OnInit {
     });
   }
 
-
   private async saveMappings() {
     const response1 = await this.mqttMappingService.saveMappings(this.mqttMappings);
     const response2 = await this.mqttMappingService.reloadMappings();
@@ -369,7 +463,6 @@ export class MQTTMappingComponent implements OnInit {
     } else {
       this.alertservice.danger(gettext('Failed to save mappings'));
     }
-
   }
 
 }

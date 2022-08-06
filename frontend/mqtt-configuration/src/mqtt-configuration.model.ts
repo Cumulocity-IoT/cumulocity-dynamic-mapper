@@ -8,6 +8,11 @@ export interface MQTTAuthentication {
   active:boolean
 }
 
+export interface MQTTMappingSubstitution {
+  name: string,
+  jsonPath: string,
+}
+
 export interface MQTTMapping {
   id: number,
   topic: string,
@@ -16,5 +21,6 @@ export interface MQTTMapping {
   target: string,
   lastUpdate: number,
   active: boolean,
-  qos: number
+  qos: number,
+  substitutions?: MQTTMappingSubstitution[]
 }

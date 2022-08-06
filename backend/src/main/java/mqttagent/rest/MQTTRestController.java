@@ -1,8 +1,8 @@
 package mqttagent.rest;
 
 import mqttagent.configuration.MQTTConfiguration;
+import mqttagent.configuration.MQTTMapping;
 import mqttagent.services.MQTTClient;
-import mqttagent.services.MQTTMapping;
 import mqttagent.services.ServiceStatus;
 
 import java.util.List;
