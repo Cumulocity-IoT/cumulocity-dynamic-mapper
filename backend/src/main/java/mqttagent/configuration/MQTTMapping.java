@@ -25,6 +25,12 @@ public class MQTTMapping {
 
     @NotNull
     public boolean active;
+
+    @NotNull
+    public boolean tested;
+
+    @NotNull
+    public boolean createNoExistingDevice;
     
     @NotNull
     public long qos;
