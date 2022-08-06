@@ -26,55 +26,89 @@
         <h4 style="font-weight:300 !important;" translate>Edit Mapping</h4>
       </div>
       <div [formGroup]="mappingForm" class="form-horizontal">
-        <div class="form-group">
+        <!--         <div class="form-group">
           <label for="id" class="col-sm-2" translate>Id</label>
           <div class="col-sm-4">
             <input formControlName="id" type="text" class="form-control" #idRef required readonly />
           </div>
-        </div>
+        </div> -->
         <div class="form-group">
           <label for="topic" class="col-sm-2" translate>Topic</label>
           <div class="col-sm-4">
             <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
-            required />
+              required />
           </div>
         </div>
         <div class="form-group">
           <label for="targetAPI" class="col-sm-2" translate>Target API</label>
           <div class="col-sm-4">
-          <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-            <option *ngFor="let api of APIs" [ngValue]="api">
-              {{ api }}
-            </option>
-          </select>
+            <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+              <option *ngFor="let api of APIs" [ngValue]="api">
+                {{ api }}
+              </option>
+            </select>
           </div>
         </div>
         <div class="form-group">
           <label for="qos" class="col-sm-2" translate>QOS</label>
           <div class="col-sm-4">
-          <select class="form-control" formControlName="qos" #qosRef>
-            <option *ngFor="let q of QOSs" [ngValue]="q.value">
-              {{ q.name }}
-            </option>
-          </select>
+            <select class="form-control" formControlName="qos" #qosRef>
+              <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                {{ q.name }}
+              </option>
+            </select>
           </div>
         </div>
         <div class="form-group">
           <label for="active" class="col-sm-2" translate>Mapping Active</label>
           <div class="col-sm-4">
-          <input formControlName="active" type="checkbox" class="form-control" #activeRef />
+            <input formControlName="active" type="checkbox" class="form-control" #activeRef />
           </div>
         </div>
         <div class="row">
           <div class="col-lg-6" style="height:300px">
-            <ngx-monaco-editor formControlName="source" [options]="editorOptions" [(ngModel)]="mappingForm.source">
+            <ngx-monaco-editor formControlName="source" [options]="editorOptionsJson" [(ngModel)]="mappingForm.source">
             </ngx-monaco-editor>
           </div>
           <div class="col-lg-6" style="height:300px">
-            <ngx-monaco-editor formControlName="target" [options]="editorOptions" [(ngModel)]="mappingForm.target">
+            <ngx-monaco-editor formControlName="target" [options]="editorOptionsJson" [(ngModel)]="mappingForm.target" (change)="trackVariables()">
             </ngx-monaco-editor>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="card-block">
+      <div class="card-header separator j-c-between" style=" margin-bottom: 30px;">
+        <h4 style="font-weight:300 !important;" translate>Explore source payload</h4>
+      </div>
+      <div [formGroup]="jsonPathForm" class="form-horizontal">
+        <div class="row">
+          <div class="form-group">
+            <label for="path" class="col-sm-2" translate>JSON path</label>
+            <div class="col-sm-4">
+              <input formControlName="path" type="text" class="form-control" (change)="onJSONPathChanged()" placeholder="e.g. $.device"
+                #pathRef required  />
+            </div>
+          </div>
+<!--           <div class="form-group">
+            <label for="active" class="col-sm-2" translate>Result </label>
+            <div class="col-sm-4">
+              <textarea formControlName="result" class="form-control" #resultRef readonly></textarea>
+            </div>
+          </div> -->
+          <div class="row">
+            <div class="col-lg-6" style="height:300px">
+              <ngx-monaco-editor  id="jsonPathResult" formControlName="result" [options]="editorOptionsResult" [(ngModel)]="jsonPathForm.result">
+              </ngx-monaco-editor>
+            </div>
+            <div class="col-lg-6" style="height:300px">
+              <ngx-monaco-editor  id="variables" formControlName="variables" [options]="editorOptionsResult" [(ngModel)]="jsonPathForm.variables">
+              </ngx-monaco-editor>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -82,8 +116,11 @@
     <button type="button" name="save" class="btn btn-primary" (click)="onCommitButtonClicked()" translate>
       Commit changes
     </button>
-    <button type="button" name="format" class="btn btn-primary" (click)="onFormatButtonClicked()" translate>
+    <button type="button" name="format" class="btn btn-default" (click)="onFormatButtonClicked()" translate>
       Format Templates
+    </button>
+    <button type="button" name="format" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
+      Sample Target Template
     </button>
   </div>
 </div>

@@ -7,6 +7,7 @@ import { MonacoEditorComponent } from '@materia-ui/ngx-monaco-editor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
+import { JSONPath } from 'jsonpath-plus';
 
 @Component({
   selector: 'mqtt-mapping',
@@ -17,9 +18,25 @@ import { QOSRendererComponent } from './qos-cell.renderer.component';
 
 export class MQTTMappingComponent implements OnInit {
 
-  editorOptions = {
+  editorOptionsJson = {
     theme: 'vs-dark',
     language: 'json',
+    glyphMargin: false,
+    lineNumbers: 'off',
+    folding: true,
+    lineDecorationsWidth: 0,
+    lineNumbersMinChars: 0,
+    minimap: {
+      enabled: false
+    },
+    onMonacoLoad: () => {
+      console.log("In monaco onload");
+    }
+  };
+
+  editorOptionsResult = {
+    theme: 'vs-dark',
+    language: 'javascript',
     glyphMargin: false,
     lineNumbers: 'off',
     folding: true,
@@ -88,7 +105,7 @@ export class MQTTMappingComponent implements OnInit {
       gridTrackSize: '10%'
     },
     {
-      header: 'Source',
+      header: 'Sample payload',
       name: 'source',
       path: 'source',
       filterable: true,
@@ -119,6 +136,41 @@ export class MQTTMappingComponent implements OnInit {
     },
   ]
 
+  SAMPLE_TEMPLATES = {
+    measurement: `
+    {                                               
+      \"c8y_TemperatureMeasurement\": {
+          \"T\": {
+              \"value\": 25,
+                \"unit\": \"C\" }
+            },
+        \"time\":\"2013-06-22T17:03:14.000+02:00\",
+        \"source\": {
+          \"id\":\"10200\" },
+        \"type\": \"c8y_TemperatureMeasurement\"
+    }`,
+    alarm: `
+    {                                            
+      \"source\": {
+      \"id\": \"251982\"
+      },        \
+      \"type\": \"c8y_UnavailabilityAlarm\",
+      \"text\": \"No data received from the device within the required interval.\",
+      \"severity\": \"MAJOR\",
+      \"status\": \"ACTIVE\",
+      \"time\": \"2020-03-19T12:03:27.845Z\"
+    }`,
+    event: `
+    { 
+      \"source\": {
+      \"id\": \"251982\"
+      },
+      \"text\": \"Sms sent: Alarm occurred\",
+      \"time\": \"2020-03-19T12:03:27.845Z\",
+      \"type\": \"c8y_OutgoingSmsLog\"
+   }`
+  }
+
   APIs = ['measurement', 'event', 'alarm']
 
   QOSs = [{ name: 'At most once', value: 0 },
@@ -135,6 +187,7 @@ export class MQTTMappingComponent implements OnInit {
 
   mappingForm: FormGroup;
 
+  jsonPathForm: FormGroup;
 
   constructor(
     private bsModalService: BsModalService,
@@ -150,10 +203,10 @@ export class MQTTMappingComponent implements OnInit {
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)
     },
-      {
-        type: BuiltInActionType.Delete,
-        callback: this.deleteMapping.bind(this)
-      });
+    {
+      type: BuiltInActionType.Delete,
+      callback: this.deleteMapping.bind(this)
+    });
   }
 
   private initForm(): void {
@@ -166,6 +219,12 @@ export class MQTTMappingComponent implements OnInit {
       active: new FormControl('', Validators.required),
       qos: new FormControl('', Validators.required),
     });
+
+    this.jsonPathForm = new FormGroup({
+      path: new FormControl('', Validators.required),
+      result: new FormControl('', Validators.required),
+      variables: new FormControl('', Validators.required),
+    });
   }
 
   async addMapping() {
@@ -173,9 +232,9 @@ export class MQTTMappingComponent implements OnInit {
     this.mqttMappings.push({
       id: l + 1,
       topic: '',
-      targetAPI: '',
+      targetAPI: 'measurement',
       source: '{}',
-      target: '{}',
+      target: this.SAMPLE_TEMPLATES['measurement'],
       active: false,
       qos: 1,
       lastUpdate: Date.now()
@@ -196,7 +255,13 @@ export class MQTTMappingComponent implements OnInit {
       active: mapping.active,
       qos: mapping.qos,
     });
-    this.onFormatButtonClicked();
+    this.monacoComponents.forEach(mc => {
+      if (mc.options && mc.options.language == 'json') {
+        mc.editor.getAction('editor.action.formatDocument').run()
+      }
+    });
+
+    this.trackVariables();
   }
 
   deleteMapping(mapping: MQTTMapping) {
@@ -211,6 +276,16 @@ export class MQTTMappingComponent implements OnInit {
     if (!this.mqttMappings) {
       return;
     }
+  }
+
+  onJSONPathChanged() {
+    const p = this.jsonPathForm.get('path').value;
+    const d = JSON.parse(this.mappingForm.get('source').value);
+    const r = JSON.stringify(JSONPath({ path: p, json: d }), null, 4);
+    console.log("Changed jsonPath: ", p, d, r);
+    this.jsonPathForm.patchValue({
+      result: r,
+    });
   }
 
   async onCommitButtonClicked() {
@@ -236,7 +311,10 @@ export class MQTTMappingComponent implements OnInit {
   }
 
   private normalizeTopic(topic: string) {
-    return topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+    let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+    // append trailing slash if last character is not wildcard #
+    nt = nt.concat(nt.endsWith("#") ? '' : '#')
+    return nt
   }
 
   private isUniqueTopic(new_map: MQTTMapping): boolean {
@@ -253,9 +331,33 @@ export class MQTTMappingComponent implements OnInit {
     this.saveMappings();
   }
 
-  async onFormatButtonClicked() {
-    this.monacoComponents.forEach(mc => mc.editor.getAction('editor.action.formatDocument').run());
+  onFormatButtonClicked() {
+    this.monacoComponents.forEach(mc => {
+      if (mc.options && mc.options.language == 'json') {
+        mc.editor.getAction('editor.action.formatDocument').run()
+      }
+    });
   }
+
+  trackVariables(){
+    const p = this.mappingForm.get('target').value;
+    const v = p.match(/\$\d/g);
+    console.log("Variable:", v, p)
+    this.jsonPathForm.patchValue({
+      variables: v.join(),
+    });
+  }
+
+  async onSampleButtonClicked() {
+    let curret_target_api = this.mappingForm.get('targetAPI').value;
+    this.mappingForm.patchValue({
+      target: this.SAMPLE_TEMPLATES[curret_target_api],
+    });
+    this.monacoComponents.forEach(mc => {
+      mc.editor.getAction('editor.action.formatDocument').run();
+    });
+  }
+
 
   private async saveMappings() {
     const response1 = await this.mqttMappingService.saveMappings(this.mqttMappings);

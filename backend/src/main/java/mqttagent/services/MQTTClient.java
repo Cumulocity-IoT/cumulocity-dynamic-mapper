@@ -250,7 +250,7 @@ public class MQTTClient {
                 }
                 if (unsubscribe) {
                     try {
-                        log.info("Unsubscribe topic: {}", topic);
+                        log.debug("Unsubscribe from topic: {} ...", topic);
                         unsubscribe(topic);
                     } catch (MqttException e) {
                         // TODO Auto-generated catch block
@@ -273,7 +273,7 @@ public class MQTTClient {
                 }
                 if (subscribe && map.active) {
                     try {
-                        log.info("Subscribe topic: {}", topic);
+                        log.debug("Subscribing to topic: {} ...", topic);
                         subscribe(topic, map);
                     } catch (MqttException e) {
                         // TODO Auto-generated catch block
@@ -306,7 +306,7 @@ public class MQTTClient {
                 mqttClient.subscribe(topic, qos);
             else
                 mqttClient.subscribe(topic);
-            log.info("Successfully subscribed on topic {}", topic);
+            log.debug("Successfully subscribed on topic {}", topic);
         }
     }
 
@@ -321,18 +321,18 @@ public class MQTTClient {
                 mqttClient.subscribe(topic, (int) map.qos);
             else
                 mqttClient.subscribe(topic);
-            log.info("Successfully subscribed on topic {}", topic);
+            log.debug("Successfully subscribed on topic {}", topic);
         }
     }
 
     public void unsubscribe(String topic) throws MqttException {
         if (isInitilized() && mqttClient != null) {
-            log.info("Unsubscribing on topic {}", topic);
+            log.info("Unsubscribing from topic {}", topic);
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
                 c8yAgent.createEvent("Unsubscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
             });
             mqttClient.unsubscribe(topic);
-            log.info("Successfully unsubscribed on topic {}", topic);
+            log.debug("Successfully unsubscribed from topic {}", topic);
         }
     }
 

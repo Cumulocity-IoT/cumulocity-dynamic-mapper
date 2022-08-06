@@ -21,12 +21,18 @@ import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
-import com.cumulocity.sdk.client.RestConnector;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import java.util.ArrayList;
@@ -40,9 +46,6 @@ import java.util.TimeZone;
 @Slf4j
 @Service
 public class C8yAgent {
-
-    @Autowired
-    private RestConnector restConnector;
 
     @Autowired
     private EventApi eventApi;
@@ -64,6 +67,8 @@ public class C8yAgent {
 
     @Autowired
     private MQTTClient mqttClient;
+
+    private ObjectMapper objectMapper;
 
     private ManagedObjectRepresentation agentMOR;
 
@@ -129,6 +134,18 @@ public class C8yAgent {
             log.error("Error on MQTT Connection: ", e);
             mqttClient.reconnect();
         }
+    }
+
+    @PostConstruct
+    private void createObjectMapper() {
+        objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
+        objectMapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.setDateFormat(new RFC3339DateFormat());
+        objectMapper.registerModule(new JavaTimeModule());
     }
 
     @PreDestroy
@@ -271,23 +288,34 @@ public class C8yAgent {
                 (long) mm.get("lastUpdate")) ;
                 result.add( m );
             });
-            log.info("Found MQTTMapping {}", result);
+            log.info("Found MQTTMapping {}", result.size());
         } else {
             log.info("No MQTTMapping found!");
         }
         return result;
     }
 
-    public void createC8Y_MEA(String targetAPI, String payload, DateTime now) {
-        if ( targetAPI == "event"){
-            EventRepresentation event = restConnector.postText("/event/events", payload, EventRepresentation.class);
-            log.info ("New event posted: {}", event);
-        } else if (targetAPI == "alarm"){
-            AlarmRepresentation alarm = restConnector.postText("/alarm/alarms", payload, AlarmRepresentation.class);
-            log.info ("New alarm posted: {}", alarm);
-        } else if (targetAPI == "measurement") {
-            MeasurementRepresentation measurement = restConnector.postText("/measurement/measurements", payload, MeasurementRepresentation.class);
-            log.info ("New measurement posted: {}", measurement);
+    public void createC8Y_MEA(String targetAPI, String payload) {
+        try {
+            if ( targetAPI.equals("event")){
+                EventRepresentation  er = objectMapper.readValue(payload, EventRepresentation.class);
+                er = eventApi.create(er);
+                log.info ("New event posted: {}", er);
+            } else if (targetAPI.equals("alarm")){
+                AlarmRepresentation  ar = objectMapper.readValue(payload, AlarmRepresentation.class);
+                ar = alarmApi.create(ar);
+                log.info ("New alarm posted: {}", ar);
+            } else if (targetAPI.equals("measurement")) {
+                MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
+                mr = measurementApi.create(mr);
+                log.info ("New measurement posted: {}", mr);
+            } else {
+                log.error ("Not existing API!");
+            }
+        } catch (JsonProcessingException e) { 
+            log.error ("Could not map payload: {} {}", targetAPI, payload);   
+        } catch ( SDKException s){
+            log.error ("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);  
         }
     }
 }
