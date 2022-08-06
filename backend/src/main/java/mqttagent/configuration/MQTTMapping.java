@@ -1,4 +1,4 @@
-package mqttagent.services;
+package mqttagent.configuration;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,12 +23,14 @@ public class MQTTMapping {
     @NotNull
     public String target;
 
-    
     @NotNull
     public boolean active;
     
     @NotNull
     public long qos;
+
+    @NotNull
+    public MQTTMappingSubstitution[] substitutions;
 
     @NotNull
     public long lastUpdate;

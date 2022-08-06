@@ -32,46 +32,64 @@
             <input formControlName="id" type="text" class="form-control" #idRef required readonly />
           </div>
         </div> -->
-        <div class="form-group">
-          <label for="topic" class="col-sm-2" translate>Topic</label>
-          <div class="col-sm-4">
-            <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
-              required />
+        <div class="row">
+          <div class ="col-lg-5">
+            <div class="form-group">
+              <label for="topic" class="" translate>Topic</label>
+              <div class="">
+                <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110" #idRef
+                  required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="targetAPI" class="" translate>Target API</label>
+              <div class="">
+                <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+                  <option *ngFor="let api of APIs" [ngValue]="api">
+                    {{ api }}
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="qos" class="" translate>QOS</label>
+              <div class="">
+                <select class="form-control" formControlName="qos" #qosRef>
+                  <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                    {{ q.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label for="targetAPI" class="col-sm-2" translate>Target API</label>
-          <div class="col-sm-4">
-            <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-              <option *ngFor="let api of APIs" [ngValue]="api">
-                {{ api }}
-              </option>
-            </select>
+          <div class="col-lg-1">
           </div>
-        </div>
-        <div class="form-group">
-          <label for="qos" class="col-sm-2" translate>QOS</label>
-          <div class="col-sm-4">
-            <select class="form-control" formControlName="qos" #qosRef>
-              <option *ngFor="let q of QOSs" [ngValue]="q.value">
-                {{ q.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="active" class="col-sm-2" translate>Mapping Active</label>
-          <div class="col-sm-4">
-            <input formControlName="active" type="checkbox" class="form-control" #activeRef />
+          <div class="col-lg-5">
+            <div class="form-group">
+              <label for="active" class="" translate>Mapping Active</label>
+              <div class="">
+                <input formControlName="active" type="checkbox" class="form-control" #activeRef />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="substitutions" class="" translate>Substitutions</label>
+              <div class="">
+                <input formControlName="substitutions" type="text" class="form-control" #substitutionsRef readonly/>
+              </div>
+            </div>
           </div>
         </div>
         <div class="row">
-          <div class="col-lg-6" style="height:300px">
+          <div class="col-lg-5" style="height:200px">
+            <label for="jsonPathResult" class="" translate>Template message - source</label>
             <ngx-monaco-editor formControlName="source" [options]="editorOptionsJson" [(ngModel)]="mappingForm.source">
             </ngx-monaco-editor>
           </div>
-          <div class="col-lg-6" style="height:300px">
-            <ngx-monaco-editor formControlName="target" [options]="editorOptionsJson" [(ngModel)]="mappingForm.target" (change)="trackVariables()">
+          <div class="col-lg-1"></div>
+          <div class="col-lg-5" style="height:200px">
+            <label for="jsonPathResult" class="" translate>Cumulocity message - target</label>
+            <ngx-monaco-editor formControlName="target" [options]="editorOptionsJson" [(ngModel)]="mappingForm.target"
+              (change)="trackVariables()">
             </ngx-monaco-editor>
           </div>
         </div>
@@ -84,43 +102,59 @@
       </div>
       <div [formGroup]="jsonPathForm" class="form-horizontal">
         <div class="row">
-          <div class="form-group">
-            <label for="path" class="col-sm-2" translate>JSON path</label>
-            <div class="col-sm-4">
-              <input formControlName="path" type="text" class="form-control" (change)="onJSONPathChanged()" placeholder="e.g. $.device"
-                #pathRef required  />
+          <div class="col-lg-5">
+            <div class="form-group">
+              <label for="path" class="" translate>Json path</label>
+              <div class="">
+                <input formControlName="path" type="text" class="form-control" (change)="onJsonPathChanged()"
+                  placeholder="e.g. $.device" #pathRef required />
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="" style="height:200px">
+                <ngx-monaco-editor id="jsonPathResult" formControlName="result" [options]="editorOptionsResult"
+                  [(ngModel)]="jsonPathForm.result">
+                </ngx-monaco-editor>
+              </div>
             </div>
           </div>
-<!--           <div class="form-group">
-            <label for="active" class="col-sm-2" translate>Result </label>
-            <div class="col-sm-4">
-              <textarea formControlName="result" class="form-control" #resultRef readonly></textarea>
-            </div>
-          </div> -->
-          <div class="row">
-            <div class="col-lg-6" style="height:300px">
-              <ngx-monaco-editor  id="jsonPathResult" formControlName="result" [options]="editorOptionsResult" [(ngModel)]="jsonPathForm.result">
-              </ngx-monaco-editor>
-            </div>
-            <div class="col-lg-6" style="height:300px">
-              <ngx-monaco-editor  id="variables" formControlName="variables" [options]="editorOptionsResult" [(ngModel)]="jsonPathForm.variables">
-              </ngx-monaco-editor>
-            </div>
+          <div class="col-lg-1"></div>
+          <div class="col-lg-5">
+              <div class="form-group">
+                <label for="variableNames" class="" translate>Names of substitution variables</label>
+                <input formControlName="variableNames" type="text" class="form-control"
+                #variableNamesRef readonly />
+              </div>
+              <div class="form-group">
+                <label for="variableJsonPathes" class="" translate>Json path for every variable</label>
+                <input formControlName="variableJsonPathes" type="text" class="form-control"
+                  (change)="onMappingJsonPathChanged()"
+                  placeholder="JsonPath for ervery variable, separested by comms (,) e.g. $.device,$.value, $.timestamp"
+                  #variableJsonPathesRef required />
+              </div>
+              <div style="height:100px" class="form-group">
+                <label for="testResult" class="" translate>Cumulocity message - test</label>
+                 <ngx-monaco-editor [options]="editorOptionsResult" formControlName="testResult" [(ngModel)]="testResult">
+                </ngx-monaco-editor>
+              </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
   <div class="form-group">
-    <button type="button" name="save" class="btn btn-primary" (click)="onCommitButtonClicked()" translate>
+    <button type="button" name="commit" class="btn btn-primary" (click)="onCommitButtonClicked()"
+      [disabled]="!isSubstitutionValid" translate>
       Commit changes
     </button>
     <button type="button" name="format" class="btn btn-default" (click)="onFormatButtonClicked()" translate>
-      Format Templates
+      Format templates
     </button>
-    <button type="button" name="format" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
-      Sample Target Template
+    <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
+      Sample target template
+    </button>
+    <button type="button" name="test" class="btn btn-default" (click)="onTestClicked()" [disabled]="!isSubstitutionValid" translate>
+      Send test message
     </button>
   </div>
 </div>

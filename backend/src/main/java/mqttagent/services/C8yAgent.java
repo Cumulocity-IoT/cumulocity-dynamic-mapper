@@ -2,6 +2,8 @@ package mqttagent.services;
 
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
+import mqttagent.configuration.MQTTMapping;
+import mqttagent.configuration.MQTTMappingSubstitution;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -278,6 +280,14 @@ public class C8yAgent {
         if (moc.size() > 0 ) {
             final List<Map> l = (ArrayList<Map>) moc.get(0).get(MQTT_MAPPING_FRAGMENT);
             l.forEach(mm -> {
+                final ArrayList<Map> sl =(ArrayList<Map>)mm.getOrDefault("substitutions", new HashMap<>());
+                final MQTTMappingSubstitution[] ss = new MQTTMappingSubstitution[sl.size()];
+                int i = 0;
+                for (Map sub : sl) {
+                    ss[i]= new MQTTMappingSubstitution((String)sub.get("name"), (String)sub.get("jsonPath"));
+                    i++;
+                }
+                
                 MQTTMapping m = new MQTTMapping( (long) mm.get("id"),
                 (String) mm.get("topic"), 
                 (String) mm.get("targetAPI"), 
@@ -285,6 +295,7 @@ public class C8yAgent {
                 (String) mm.get("target"),
                 (boolean) mm.get("active"),
                 (long) mm.get("qos"),
+                ss,
                 (long) mm.get("lastUpdate")) ;
                 result.add( m );
             });

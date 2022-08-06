@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
+import mqttagent.configuration.MQTTMapping;
 
 import java.util.ArrayList;
 import java.util.HashMap;
