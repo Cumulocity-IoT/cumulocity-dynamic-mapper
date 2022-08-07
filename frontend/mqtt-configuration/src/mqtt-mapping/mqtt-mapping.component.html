@@ -128,7 +128,7 @@
               </div>
               <div style="height:100px" class="form-group">
                 <label for="testResult" class="" translate>Cumulocity message - test</label>
-                 <ngx-monaco-editor [options]="editorOptionsResult" formControlName="testResult" [(ngModel)]="testResult">
+                 <ngx-monaco-editor [options]="editorOptionsJson" formControlName="testResult" [(ngModel)]="testResult">
                 </ngx-monaco-editor>
               </div>
           </div>
@@ -147,7 +147,10 @@
     <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
       Sample target template
     </button>
-    <button type="button" name="test" class="btn btn-default" (click)="onTestClicked()" [disabled]="!isSubstitutionValid" translate>
+    <button type="button" name="test" class="btn btn-default" (click)="onTransformClicked()" [disabled]="!isSubstitutionValid" translate>
+      Transform test message
+    </button>
+    <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()" [disabled]="!isSubstitutionValid" translate>
       Send test message
     </button>
   </div>
