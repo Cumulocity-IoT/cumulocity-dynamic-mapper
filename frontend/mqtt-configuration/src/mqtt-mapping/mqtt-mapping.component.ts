@@ -18,7 +18,6 @@ import { JSONPath } from 'jsonpath-plus';
 
 export class MQTTMappingComponent implements OnInit {
 
-
   isSubstitutionValid: boolean;
 
   editorOptionsJson = {
@@ -196,9 +195,8 @@ export class MQTTMappingComponent implements OnInit {
   mapping: MQTTMapping;
 
   constructor(
-    private bsModalService: BsModalService,
     public mqttMappingService: MQTTMappingService,
-    public alertservice: AlertService
+    public alertService: AlertService
   ) { }
 
 
@@ -255,7 +253,6 @@ export class MQTTMappingComponent implements OnInit {
     console.log("Add mappping", l, this.mqttMappings)
     this.mappingGridComponent.reload();
   }
-
 
   editMapping(mapping: MQTTMapping) {
     this.mapping = mapping;
@@ -317,8 +314,8 @@ export class MQTTMappingComponent implements OnInit {
       source: this.mappingForm.get('source').value,
       target: this.mappingForm.get('target').value,
       active: this.mappingForm.get('active').value,
-      tested: this.mappingForm.get('tested').value||false,
-      createNoExistingDevice: this.mappingForm.get('createNoExistingDevice').value||false,
+      tested: this.mapping.tested||false,
+      createNoExistingDevice: this.mapping.createNoExistingDevice||false,
       qos: this.mappingForm.get('qos').value,
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
@@ -330,7 +327,7 @@ export class MQTTMappingComponent implements OnInit {
       this.mqttMappings[i] = changed_mapping;
       this.mappingGridComponent.reload();
     } else {
-      this.alertservice.danger(gettext('Topic is already used: ' + changed_mapping.topic + ". Please use a different topic."));
+      this.alertService.danger(gettext('Topic is already used: ' + changed_mapping.topic + ". Please use a different topic."));
     }
   }
 
@@ -363,7 +360,6 @@ export class MQTTMappingComponent implements OnInit {
       }
     });
   }
-
 
   onMappingJsonPathChanged() {
     this.isSubstitutionValid = this.checkSubstitutions();
@@ -423,7 +419,7 @@ export class MQTTMappingComponent implements OnInit {
     return p;
   }
 
-  async onTestClicked() {
+  async onTransformClicked() {
     let test_mapping: MQTTMapping = {
       id: this.mappingForm.get('id').value,
       topic: this.normalizeTopic(this.mappingForm.get('topic').value),
@@ -432,15 +428,43 @@ export class MQTTMappingComponent implements OnInit {
       target: this.mappingForm.get('target').value,
       active: this.mappingForm.get('active').value,
       tested: this.mappingForm.get('tested').value,
-      createNoExistingDevice: this.mappingForm.get('accreateNoExistingDevicetive').value,
+      createNoExistingDevice: this.mappingForm.get('createNoExistingDevice').value,
       qos: this.mappingForm.get('qos').value,
-      substitutions: this.mappingForm.get('substitutions').value,
+      substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
     }
-    let testResult = await this.mqttMappingService.testResult(test_mapping);
+    let testResult = await this.mqttMappingService.testResult(test_mapping, false);
     this.jsonPathForm.patchValue({
       testResult: testResult,
     });
+  }
+
+  async onSendTestClicked() {
+    let test_mapping: MQTTMapping = {
+      id: this.mappingForm.get('id').value,
+      topic: this.normalizeTopic(this.mappingForm.get('topic').value),
+      targetAPI: this.mappingForm.get('targetAPI').value,
+      source: this.mappingForm.get('source').value,
+      target: this.mappingForm.get('target').value,
+      active: this.mappingForm.get('active').value,
+      tested: this.mappingForm.get('tested').value,
+      createNoExistingDevice: this.mappingForm.get('createNoExistingDevice').value,
+      qos: this.mappingForm.get('qos').value,
+      substitutions: this.mapping.substitutions,
+      lastUpdate: Date.now(),
+    }
+    let { data, res } = await this.mqttMappingService.sendTestResult(test_mapping);
+    console.log ("My data:", data );
+    this.jsonPathForm.patchValue({
+       testResult: JSON.stringify(data, null, 4)
+     });
+    if (res.status == 200 || res.status == 201) {
+      this.alertService.success ("Successfully tested mapping!");
+      this.mapping.tested = true;
+    } else {
+      let error = await res.text();
+      this.alertService.danger ("Failed to tested mapping: " + error);
+    }
   }
 
   trackVariables() {
@@ -468,10 +492,10 @@ export class MQTTMappingComponent implements OnInit {
     const response2 = await this.mqttMappingService.reloadMappings();
 
     if (response1.res.status === 200 && response2.status === 200) {
-      this.alertservice.success(gettext('Mappings saved and activated successfully'));
+      this.alertService.success(gettext('Mappings saved and activated successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
-      this.alertservice.danger(gettext('Failed to save mappings'));
+      this.alertService.danger(gettext('Failed to save mappings'));
     }
   }
 

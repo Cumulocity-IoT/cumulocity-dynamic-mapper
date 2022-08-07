@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import {
   CoreModule,
@@ -18,7 +18,10 @@ import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
 import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 import { StatusRendererComponent } from './mqtt-mapping/status-cell.renderer.component';
-import {QOSRendererComponent} from './mqtt-mapping/qos-cell.renderer.component'
+import { QOSRendererComponent } from './mqtt-mapping/qos-cell.renderer.component'
+import { initWithDependencyFactory, MQTTMappingService } from './mqtt-mapping/mqtt-mapping.service';
+import { InventoryService } from '@c8y/client';
+
 
 
 
@@ -84,7 +87,13 @@ import {QOSRendererComponent} from './mqtt-mapping/qos-cell.renderer.component'
         },
       ] as Route[],
       multi: true,
-    }
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initWithDependencyFactory,
+      deps: [InventoryService],
+      multi: true,
+    },
   ],
 })
 export class MQTTServiceConfigurationModule {
