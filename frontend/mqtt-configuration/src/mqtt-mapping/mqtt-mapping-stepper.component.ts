@@ -142,7 +142,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
 
   onJsonPathChanged() {
-    const p = this.jsonPathForm.get('path').value;
+    const p = this.jsonPathForm.get('jsonPath').value;
     const d = JSON.parse(this.templateForm.get('source').value);
     const r = JSON.stringify(JSONPath({ path: p, json: d }), null, 4);
     console.log("Changed jsonPath: ", p, d, r);
