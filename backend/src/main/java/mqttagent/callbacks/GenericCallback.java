@@ -5,6 +5,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.handler.SysHandler;
 import mqttagent.configuration.MQTTMapping;
+import mqttagent.configuration.MQTTMappingSubstitution;
 import mqttagent.services.C8yAgent;
 import mqttagent.services.MQTTClient;
 
@@ -17,9 +18,11 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 
 @Slf4j
 @Service
@@ -56,42 +59,63 @@ public class GenericCallback implements MqttCallback {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                String payloadString = mqttMessage.getPayload() != null
+                String payloadMessage = mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "";
-                String normalizedTopic = topic.replaceFirst("([^///]+$)", "#");
+                String wildcardTopic = topic.replaceFirst("([^///]+$)", "#");
                 String deviceIdentifier = topic.replaceFirst("^(.*[\\/])", "");
-                log.info("Message received on topic {},{} with message {}", topic, normalizedTopic, payloadString);
-
-                // find appropriate mapping
-                // subscriptionsService.runForEachTenant( (tenant) -> {
-                // c8yAgent.createEvent(payloadString, topic, DateTime.now(), null);
-                // });
-                // byte[] payload = Base64.getEncoder().encode(mqttMessage.getPayload());
+                log.info("Message received on topic {},{},{} with message {}", topic, deviceIdentifier, wildcardTopic, payloadMessage);
 
                 Map<String, MQTTMapping> mappings = mqttClient.getMappingsPerTenant(c8yAgent.tenant);
-                
                 MQTTMapping map1 = mappings.get(topic);
-                log.info("Looking for appropriate mappings I: {},{},{}", c8yAgent.tenant, topic, map1);
+                log.info("Looking for exact matching of topics: {},{},{}", c8yAgent.tenant, topic, map1);
                 if (map1 != null) {
                     subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-                        String payload = "{\"source\": {    \"id\":\"490229\" }, \"type\": \"c8y_LoraBellEvent\",  \"text\": \"Elevator was called\",  \"time\": \"current_time\"}";
-                        String date = sdf.format(new Date());
-                        payload = payload.replaceFirst("current_time", date);
-                        log.info("Posting payload: {}", payload);
-                        c8yAgent.createC8Y_MEA(map1.targetAPI, payload);
+                        var payloadTarget = map1.target;
+                        for ( MQTTMappingSubstitution sub:  map1.substitutions) {
+                            var substitute = "";
+                            try {
+                                if (sub.jsonPath.equals("$.TOPIC")
+                                    && deviceIdentifier != null 
+                                    && !deviceIdentifier.equals("")) {
+                                    substitute = deviceIdentifier;
+                                } else {
+                                    substitute = (String) JsonPath.parse(payloadMessage).read(sub.jsonPath);
+                                }
+                            } catch (PathNotFoundException p){
+                                log.error("No substitution for: {}, {}, {}", sub.jsonPath, payloadTarget, payloadMessage);                   
+                            }
+                            payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
+                        }
+                        log.info("Posting payload: {}", payloadTarget);
+                        c8yAgent.createC8Y_MEA(map1.targetAPI, payloadTarget);
                     });
                 } else {
                     // exact topic not found, look for topic without device identifier
                     // e.g. /temperature/9090 -> /temperature/#
-                    MQTTMapping map2 = mappings.get(normalizedTopic);
-                    log.info("Looking for appropriate mappings II: {},{},{}", c8yAgent.tenant, normalizedTopic, map2);
+                    MQTTMapping map2 = mappings.get(wildcardTopic);
+                    log.info("Looking for wildcard matching of topics: {},{},{}", c8yAgent.tenant, wildcardTopic, map2);
                     if (map2 != null) {
                         subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-                            String payload = "{\"source\": {    \"id\":\"490229\" }, \"type\": \"c8y_LoraBellEvent\",  \"text\": \"Elevator was called\",  \"time\": \"current_time\"}";
-                            String date = sdf.format(new Date());
-                            payload = payload.replaceFirst("current_time", date);
-                            c8yAgent.createC8Y_MEA(map2.targetAPI, payload);
+                            var payloadTarget = map2.target;
+                            for ( MQTTMappingSubstitution sub:  map2.substitutions) {
+                                var substitute = "";
+                                try {
+                                    if (sub.jsonPath.equals("$.TOPIC")
+                                        && map2.topic.endsWith("#")
+                                        && deviceIdentifier != null 
+                                        && !deviceIdentifier.equals("")) {
+                                        substitute = deviceIdentifier;
+                                    } else {
+                                        substitute = (String) JsonPath.parse(payloadMessage).read(sub.jsonPath);
+                                    }
+                                } catch (PathNotFoundException p){
+                                  log.error("No substitution for: {}, {}, {}", sub.jsonPath, payloadTarget, payloadMessage);
+                                }
+                                payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
+                            }
+                            log.info("Posting payload: {}", payloadTarget);
+                            c8yAgent.createC8Y_MEA(map2.targetAPI, payloadTarget);
                         });
 
                     }

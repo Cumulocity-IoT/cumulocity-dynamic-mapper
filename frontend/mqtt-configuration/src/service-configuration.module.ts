@@ -19,8 +19,9 @@ import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
 import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 import { StatusRendererComponent } from './mqtt-mapping/status-cell.renderer.component';
 import { QOSRendererComponent } from './mqtt-mapping/qos-cell.renderer.component'
-import { initWithDependencyFactory, MQTTMappingService } from './mqtt-mapping/mqtt-mapping.service';
+import { initWithDependencyFactory } from './mqtt-mapping/mqtt-mapping.service';
 import { InventoryService } from '@c8y/client';
+import { MQTTMappingStepperComponent } from './mqtt-mapping/mqtt-mapping-stepper.component';
 
 
 
@@ -50,6 +51,7 @@ import { InventoryService } from '@c8y/client';
     MQTTServiceConfigurationComponent,
     MQTTConfigurationComponent,
     MQTTMappingComponent,
+    MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
@@ -58,6 +60,7 @@ import { InventoryService } from '@c8y/client';
     MQTTServiceConfigurationComponent,
     MQTTConfigurationComponent,
     MQTTMappingComponent,
+    MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent
@@ -66,6 +69,7 @@ import { InventoryService } from '@c8y/client';
     MQTTServiceConfigurationComponent,
     MQTTConfigurationComponent,
     MQTTMappingComponent,
+    MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent
@@ -98,9 +102,9 @@ import { InventoryService } from '@c8y/client';
 })
 export class MQTTServiceConfigurationModule {
   constructor(
-    private monacco: MonacoEditorLoaderService
+    private monaco: MonacoEditorLoaderService
   ) {
-    this.monacco.monacoPath = '/apps/mqtt-configuration/assets/monaco-editor/min/vs';
-    this.monacco.loadMonaco();
+    this.monaco.monacoPath = '/apps/mqtt-configuration/assets/monaco-editor/min/vs';
+    this.monaco.loadMonaco();
   }
 }
