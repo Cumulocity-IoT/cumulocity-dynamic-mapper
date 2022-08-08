@@ -1,0 +1,230 @@
+<div [ngClass]="{ drawerOpen: showConfigMapping }">
+  <div class="bottom-drawer">
+
+    <c8y-stepper class="flex-col flex-nowrap no-align-items fit-h c8y-stepper--no-btns"
+      [disableDefaultIcons]="{ edit: true, done: false }"
+      [customClasses]="['col-md-6', 'col-md-offset-3', 'p-t-16', 'p-b-32', 'flex-no-shrink']" linear>
+      <!-- override icons -->
+      <ng-template c8yStepperIcon="final">
+        <span [c8yIcon]="'hand-peace-o'"></span>
+      </ng-template>
+      <cdk-step [stepControl]="propertiesForm" label="Define topic">
+        <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+          <div class="row">
+            <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+              <h4 class="text-center text-medium">
+                Define topic
+              </h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12 flex-grow no-gutter">
+          <div class="card-inner-scroll fit-h">
+            <div class="card-block p-b-0">
+              <div [formGroup]="propertiesForm">
+
+                <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+                  <c8y-form-group>
+                    <label for="topic" class="" translate>Topic</label>
+                    <div class="">
+                      <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110"
+                        #idRef required (change)="checkTopic($event)" />
+                    </div>
+                    <c8y-messages>
+                      <c8y-message *ngIf="!isTopicUnique" translate>This Topic must be unique.</c8y-message>
+                    </c8y-messages>
+                  </c8y-form-group>
+                  <div class="form-group">
+                    <label for="targetAPI" class="" translate>Target API</label>
+                    <div class="">
+                      <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+                        <option *ngFor="let api of APIs" [ngValue]="api">
+                          {{ api }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="qos" class="" translate>QOS</label>
+                    <div class="">
+                      <select class="form-control" formControlName="qos" #qosRef>
+                        <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                          {{ q.name }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="active" class="" translate>Mapping Active</label>
+                    <div class="">
+                      <input formControlName="active" type="checkbox" class="form-control" #activeRef />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="createNoExistingDevice" class="" translate>Create device if not existing</label>
+                    <div class="">
+                      <input formControlName="createNoExistingDevice" type="checkbox" class="form-control"
+                        #createNoExistingDeviceRef />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+          [labels]="{ next: 'Next', cancel: 'Cancel' }">
+        </c8y-stepper-buttons>
+      </cdk-step>
+
+      <cdk-step [stepControl]="templateForm" label="Define templates">
+        <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+          <div class="row">
+            <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-4">
+              <h4 class="text-center text-medium">
+                Define templates
+              </h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12 flex-grow no-gutter">
+          <div class="card-inner-scroll fit-h">
+            <div class="card-block p-b-0">
+              <div [formGroup]="templateForm">
+                <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+                  <div class="form-group">
+                    <label translate>Template message - source</label>
+                    <div style="height:200px">
+                      <ngx-monaco-editor formControlName="source" [options]="editorOptionsJson">
+                      </ngx-monaco-editor>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label translate>Cumulocity message - target</label>
+                    <div style="height:200px">
+                      <ngx-monaco-editor formControlName="target" [options]="editorOptionsJson"
+                        (change)="updateVariables()">
+                      </ngx-monaco-editor>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" name="format" class="btn btn-default" (click)="onFormatButtonClicked()" translate>
+            Format templates
+          </button>
+          <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
+            Sample target template
+          </button>
+        </div>
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()" (onNext)="onNextSelected($event)"
+        [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+      </cdk-step>
+      <cdk-step [stepControl]="jsonPathForm" label="Define mapping">
+        <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+          <div class="row">
+            <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+              <h4 class="text-center text-medium">
+                Define mapping
+              </h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12 flex-grow no-gutter">
+          <div class="card-inner-scroll fit-h">
+            <div class="card-block p-b-0">
+
+              <div [formGroup]="jsonPathForm" class="form-horizontal">
+                <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+                  <div class="form-group">
+                    <label translate>Template message - source</label>
+                    <div style="height:200px">
+                      <ngx-monaco-editor formControlName="source" [options]="editorOptionsReadOnlyJson">
+                      </ngx-monaco-editor>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="jsonPath" class="" translate>Json path</label>
+                    <div class="">
+                      <input formControlName="jsonPath" type="text" class="form-control" (change)="onJsonPathChanged()"
+                        placeholder="e.g. $.device" #pathRef un/>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div style="height:200px">
+                      <ngx-monaco-editor id="jsonPathResult" formControlName="jsonPathResult" [options]="editorOptionsResult">
+                      </ngx-monaco-editor>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="variableNames" class="" translate>Names of substitution variables</label>
+                    <input formControlName="variableNames" type="text" class="form-control" #variableNamesRef
+                      readonly />
+                  </div>
+                  <div class="form-group">
+                    <label for="variableJsonPathes" class="" translate>Json path for every variable</label>
+                    <input formControlName="variableJsonPathes" type="text" class="form-control"
+                      (change)="onMappingJsonPathChanged()"
+                      placeholder="JsonPath for ervery variable, separested by comms (,) e.g. $.device,$.value, $.timestamp"
+                      #variableJsonPathesRef required />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+          [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+      </cdk-step>
+
+      <cdk-step state="final" [stepControl]="testForm" label="Test mapping">
+        <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+          <div class="row">
+            <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
+              <h4 class="text-center text-medium">
+                Test mapping
+              </h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12 flex-grow no-gutter">
+          <div class="card-inner-scroll fit-h">
+            <div class="card-block p-b-0">
+              <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+                <div [formGroup]="testForm">
+                  <div class="form-group">
+                    <label for="testResult" class="" translate>Cumulocity message - test</label>
+                    <div style="height:200px">
+                        <ngx-monaco-editor [options]="editorOptionsJson" formControlName="testResult"
+                          [(ngModel)]="testResult">
+                        </ngx-monaco-editor>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
+          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()"
+            [disabled]="!isSubstitutionValid" translate>
+            Transform test message
+          </button>
+          <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()"
+            [disabled]="!isSubstitutionValid" translate>
+            Send test message
+          </button>
+       </div>
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButtonClicked()"
+          [labels]="{ custom: 'Confirm'}">
+        </c8y-stepper-buttons>
+      </cdk-step>
+
+    </c8y-stepper>
+
+  </div>
+</div>
