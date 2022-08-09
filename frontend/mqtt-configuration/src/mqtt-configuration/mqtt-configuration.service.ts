@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, IFetchResponse } from '@c8y/client';
+import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
 import { MQTTAuthentication } from '../mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
@@ -14,7 +14,32 @@ export class MQTTConfigurationService {
 
   private readonly STATUS_READY = 'READY';
 
-  constructor(private client: FetchClient) {}
+  private isMQTTAgentCreated = false;
+
+  constructor(private client: FetchClient,
+    private identity: IdentityService,) { }
+
+  async initializeMQTTAgent(): Promise<void> {
+    const identity: IExternalIdentity = {
+      type: 'c8y_Serial',
+      externalId: 'MQTT_AGENT'
+    };
+
+    try {
+      const { data, res } = await this.identity.detail(identity);
+      console.log("Configuration result code: {}", res.status);
+      this.isMQTTAgentCreated = true;
+
+    } catch (error) {
+      console.error("Configuration result code: {}", error);
+      this.isMQTTAgentCreated = false;
+    }
+  }
+
+
+  getMQTTAgentCreated(): boolean {
+    return this.isMQTTAgentCreated;
+  }
 
   updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {

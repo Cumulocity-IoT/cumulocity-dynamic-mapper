@@ -13,6 +13,7 @@ export class MQTTConfigurationComponent implements OnInit {
 
   isConnectionToMQTTInitialized: boolean;
   isConnectionToMQTTActivated: boolean;
+  isMQTTAgentCreated: boolean;
 
   mqttForm: FormGroup;
 
@@ -26,6 +27,7 @@ export class MQTTConfigurationComponent implements OnInit {
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
+    this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated()
   }
 
   private async initConnectionStatus(): Promise<void> {

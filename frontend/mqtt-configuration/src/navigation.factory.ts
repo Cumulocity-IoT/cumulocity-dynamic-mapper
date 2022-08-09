@@ -25,9 +25,7 @@ export class MQTTConfigurationNavigationFactory implements NavigatorNodeFactory 
           console.error('MQTT Generic Microservice not subscribed!');
           return [];
         }
-
-        console.log('navigation node: ', this.NAVIGATION_NODE_MQTT);
-
+        //console.log('navigation node: ', this.NAVIGATION_NODE_MQTT);
         return this.NAVIGATION_NODE_MQTT;
       });
   }
