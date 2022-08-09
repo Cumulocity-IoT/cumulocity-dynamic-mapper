@@ -254,7 +254,6 @@ public class MQTTClient {
                         log.debug("Unsubscribe from topic: {} ...", topic);
                         unsubscribe(topic);
                     } catch (MqttException e) {
-                        // TODO Auto-generated catch block
                         log.error("Could not unsubscribe topic: {}", topic);
                     }
                 }
@@ -276,8 +275,7 @@ public class MQTTClient {
                     try {
                         log.debug("Subscribing to topic: {} ...", topic);
                         subscribe(topic, map);
-                    } catch (MqttException e) {
-                        // TODO Auto-generated catch block
+                    } catch (MqttException | IllegalArgumentException e) {
                         log.error("Could not subscribe topic: {}", topic);
                     }
                 }
