@@ -29,31 +29,6 @@ public class MQTTRestController {
     @Autowired
     MQTTClient mqttClient;
 
-    @RequestMapping(value = "/subscribe", method = RequestMethod.POST, consumes = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity subscribe(@RequestBody String topic) {
-        log.info("Subscription Messages received for topic {}", topic);
-        try {
-            mqttClient.subscribe(topic, null);
-            return ResponseEntity.ok().build();
-        } catch (MqttException e) {
-            log.error("Error for subscribing on topic {}", topic, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error for subscribing on topic "+topic);
-        }
-    }
-
-    @RequestMapping(value = "/subscribe", method = RequestMethod.DELETE, consumes = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity unsubscribe(@RequestBody String topic) {
-        log.info("Unsubscription Message received for topic {}", topic);
-        try {
-            mqttClient.unsubscribe(topic);
-            return ResponseEntity.ok().build();
-        } catch (MqttException e) {
-            log.error("Error for unsubscribing on topic {}", topic, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error for unsubscribing on topic "+topic);
-        }
-    }
-
-
     @RequestMapping(value = "/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity configureConnectionToBroker(@Valid @RequestBody MQTTConfiguration configuration) {
         log.info("Getting mqtt broker configuration: {}", configuration.toString());
