@@ -1,8 +1,7 @@
-import { Injectable, OnInit } from '@angular/core';
-import { EventService, FetchClient, IdentityService, IEvent, IAlarm, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult, IResultList, MeasurementService, IMeasurement, AlarmService } from '@c8y/client';
-import { MQTTMapping } from '../mqtt-configuration.model';
+import { Injectable } from '@angular/core';
+import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { JSONPath } from 'jsonpath-plus';
-import { AlertService } from '@c8y/ngx-components';
+import { MQTTMapping } from '../mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTMappingService {
@@ -31,22 +30,18 @@ export class MQTTMappingService {
 
   private readonly BASE_URL = 'service/generic-mqtt-agent';
 
-  async findMQTTAgent(identity: InventoryService): Promise<IResult<IManagedObject>> {
-    console.log("Search agent id!");
-    const id: IExternalIdentity = {
-      type: 'c8y_Serial',
-      externalId: 'MQTT_AGENT'
-    };
-    return identity.detail(id);
-  }
 
-  async getMQTTAgent(): Promise<IResult<IExternalIdentity>> {
-    console.log("Search agent id!");
-    const identity: IExternalIdentity = {
-      type: 'c8y_Serial',
-      externalId: 'MQTT_AGENT'
-    };
-    return this.identity.detail(identity);
+  async initializeMQTTAgent(): Promise<string>{
+    if (!this.agentId) {
+      const identity: IExternalIdentity = {
+        type: 'c8y_Serial',
+        externalId: 'MQTT_AGENT'
+      };
+
+      const { data, res } = await this.identity.detail(identity);
+      this.agentId = data.managedObject.id.toString();
+      return this.agentId;
+    }
   }
 
   async loadMappings(): Promise<MQTTMapping[]> {
@@ -89,34 +84,34 @@ export class MQTTMappingService {
 
 
   async testResult(mapping: MQTTMapping, simulation: boolean): Promise <string> {
-    if (!this.agentId) {
-      const { data, res } = await this.getMQTTAgent();
-      this.agentId = data.managedObject.id.toString();
-      console.log("Found MQTTAgent:", this.agentId);
-    }
-
-    let s = mapping.source;
     let result = mapping.target;
-    mapping.substitutions.forEach(sub => {
-      let s = JSONPath({ path: sub.jsonPath, json: JSON.parse(mapping.source), wrap: false });
-      if (!s || s == '') {
-        if (sub.jsonPath != '$.TOPIC') {
-          console.error("No substitution for:", sub.jsonPath, s, mapping.source);
-          throw Error("Error: substitution not found:" + sub.jsonPath);
-        } else {
-          s = this.agentId;
+    if (!this.agentId) {
+      console.error("Need to intialize MQTTAgent:", this.agentId);
+      result = '';
+    } else {
+      console.log("MQTTAgent is already intialized:", this.agentId);
+      mapping.substitutions.forEach(sub => {
+        let s = JSONPath({ path: sub.jsonPath, json: JSON.parse(mapping.source), wrap: false });
+        if (!s || s == '') {
+          if (sub.jsonPath != '$.TOPIC') {
+            console.error("No substitution for:", sub.jsonPath, s, mapping.source);
+            throw Error("Error: substitution not found:" + sub.jsonPath);
+          } else {
+            s = this.agentId;
+          }
         }
+        result = result.replace(sub.name, s);
+      })
+  
+      // for simulation replace source id with agentId
+      if (simulation) {
+        const payload = JSON.parse(result);
+        payload.source.id = this.agentId;
+        payload.time = new Date().toISOString();
+        result = JSON.stringify(payload);
       }
-      result = result.replace(sub.name, s);
-    })
-
-    // for simulation replace source id with agentId
-    if (simulation) {
-      const payload = JSON.parse(result);
-      payload.source.id = this.agentId;
-      payload.time = new Date().toISOString();
-      result = JSON.stringify(payload);
     }
+
     // The producing code (this may take some time)
     return result;
   }
@@ -150,13 +145,4 @@ export class MQTTMappingService {
     return null;
   }
 
-}
-
-export function initWithDependencyFactory(identify: InventoryService): Promise<IResult<IManagedObject>> {
-  console.log("Search agent id!");
-  const identity: IExternalIdentity = {
-    type: 'c8y_Serial',
-    externalId: 'MQTT_AGENT'
-  };
-  return identify.detail(identity);
 }

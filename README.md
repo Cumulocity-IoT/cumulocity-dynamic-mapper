@@ -27,28 +27,32 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 
 ### Configuration MQTT Connection to broker
 
-![Configuration MQTT Connection to broker](image/Generic_MQTT_Connection.png)
+![Configuration MQTT Connection to broker](resources/image/Generic_MQTT_Connection.png)
 
 ### Table of MQTT Mappings
 
-![Table of MQTT Mappings](image/Generic_MQTT_MappingTable.png)
+![Table of MQTT Mappings](resources/image/Generic_MQTT_MappingTable.png)
 
 ### Define message Templates for source and target (Cumulocity REST format)
 
-![Define Templates](image/Generic_MQTT_MappingTemplate.png)
+![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
 
 
 ### Define message Mapping for Source and Target (Cumulocity REST format)
 
-![Define Templates](image/Generic_MQTT_MappingDefinition.png)
+![Define Templates](resources/image/Generic_MQTT_MappingDefinition.png)
 
 ### Test transformation of Source to Target message (Cumulocity REST format)
 
-![Test Transformation](image/Generic_MQTT_TestTransformation.png)
+![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
 ### Send transformed Test Message to test device in Cumulocity
 
-![Send Test Message](image/Generic_MQTT_SendTestMessageToCumulocity.png)
+![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
+
+### Setup Sample MQTTMappings
+
+A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
