@@ -27,11 +27,11 @@
                   <c8y-form-group>
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
-                      <input formControlName="topic" type="text" class="form-control" placeholder="e.g. /device/110"
-                        #idRef required (change)="checkTopic($event)" />
+                      <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
+                        #idRef required (change)="checkTopicUnique($event)" />
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="!isTopicUnique" translate>This Topic must be unique.</c8y-message>
+                      <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
                   <div class="form-group">
@@ -72,7 +72,7 @@
             </div>
           </div>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()" (onNext)="onNextSelected($event)"
           [labels]="{ next: 'Next', cancel: 'Cancel' }">
         </c8y-stepper-buttons>
       </cdk-step>
@@ -141,6 +141,11 @@
               <div [formGroup]="jsonPathForm" class="form-horizontal">
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="form-group">
+                    <label for="variableNames" class="" translate>Names of substitution variables</label>
+                    <input formControlName="variableNames" type="text" class="form-control" #variableNamesRef
+                      readonly />
+                  </div>
+                  <div class="form-group">
                     <label translate>Template message - source</label>
                     <div style="height:200px">
                       <ngx-monaco-editor formControlName="source" [options]="editorOptionsReadOnlyJson">
@@ -149,27 +154,24 @@
                   </div>
                   <div class="form-group">
                     <label for="jsonPath" class="" translate>Json path</label>
-                    <div class="">
-                      <input formControlName="jsonPath" type="text" class="form-control" (change)="onJsonPathChanged()"
-                        placeholder="e.g. $.device" #pathRef un/>
+                      <div class="input-group">
+                        <input formControlName="jsonPath" type="text" class="form-control" (change)="onJsonPathChanged()" placeholder="e.g. $.device" #pathRef/>
+                        <div class="input-group-btn">
+                          <button class="btn btn-primary" (click)="appendJsonPath()">Append</button>
+                        </div>              
                     </div>
                   </div>
                   <div class="form-group">
-                    <div style="height:200px">
+                    <div style="height:100px">
                       <ngx-monaco-editor id="jsonPathResult" formControlName="jsonPathResult" [options]="editorOptionsResult">
                       </ngx-monaco-editor>
                     </div>
                   </div>
                   <div class="form-group">
-                    <label for="variableNames" class="" translate>Names of substitution variables</label>
-                    <input formControlName="variableNames" type="text" class="form-control" #variableNamesRef
-                      readonly />
-                  </div>
-                  <div class="form-group">
                     <label for="variableJsonPathes" class="" translate>Json path for every variable</label>
                     <input formControlName="variableJsonPathes" type="text" class="form-control"
                       (change)="onMappingJsonPathChanged()"
-                      placeholder="JsonPath for ervery variable, separested by comms (,) e.g. $.device,$.value, $.timestamp"
+                      placeholder="JsonPath for every variable, separested by comms (,) e.g. $.device,$.value, $.timestamp"
                       #variableJsonPathesRef required />
                   </div>
                 </div>
@@ -177,7 +179,7 @@
             </div>
           </div>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"  (onNext)="onNextSelected($event)"
           [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
       </cdk-step>
 

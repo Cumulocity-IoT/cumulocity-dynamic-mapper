@@ -28,37 +28,34 @@ export interface MQTTMapping {
 }
 
 export const SAMPLE_TEMPLATES = {
-  measurement: `
-  {                                               
+  measurement: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
-            \"value\": 25,
+            \"value\": \${value},
               \"unit\": \"C\" }
           },
-      \"time\":\"2013-06-22T17:03:14.000+02:00\",
+      \"time\":\"\${time}\",
       \"source\": {
-        \"id\":\"10200\" },
-      \"type\": \"c8y_TemperatureMeasurement\"
+        \"id\":\"\${device}\" },
+      \"type\": \"\${type}\"
   }`,
-  alarm: `
-  {                                            
+  alarm: `{                                            
     \"source\": {
-    \"id\": \"251982\"
-    },        \
-    \"type\": \"c8y_UnavailabilityAlarm\",
-    \"text\": \"No data received from the device within the required interval.\",
-    \"severity\": \"MAJOR\",
-    \"status\": \"ACTIVE\",
-    \"time\": \"2020-03-19T12:03:27.845Z\"
+    \"id\": \"\${device}\"
+    },\
+    \"type\": \"\${type}\",
+    \"text\": \"\${text}\",
+    \"severity\": \"\${severity}\",
+    \"status\": \"\${status}\",
+    \"time\": \"\${time}\"
   }`,
-  event: `
-  { 
+  event: `{ 
     \"source\": {
-    \"id\": \"251982\"
+    \"id\": \"\${device}\"
     },
-    \"text\": \"Sms sent: Alarm occurred\",
-    \"time\": \"2020-03-19T12:03:27.845Z\",
-    \"type\": \"c8y_OutgoingSmsLog\"
+    \"text\": \"\${text}\",
+    \"time\": \"\${time}\",
+    \"type\": \"\${type}\"
  }`
 }
 

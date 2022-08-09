@@ -25,6 +25,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   APIs = APIs;
   QOSs = QOSs;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
+  TOPIC_WILDCARD = "#"
 
   isSubstitutionValid: boolean;
 
@@ -77,7 +78,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  
+
   showConfigMapping: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
@@ -89,24 +90,27 @@ export class MQTTMappingStepperComponent implements OnInit {
   jsonPathForm: FormGroup;
   testForm: FormGroup;
 
-  isTopicUnique: boolean;
+  topicUnique: boolean;
+  wildcardTopic: boolean;
+
+  TOPIC_JSON_PATH = "$.TOPIC";
 
   constructor(
     public mqttMappingService: MQTTMappingService,
     public alertService: AlertService,
     private monacoLoaderService: MonacoEditorLoaderService) {
-      this.monacoLoaderService.isMonacoLoaded$
-        .pipe(
-          filter(isLoaded => isLoaded),
-          take(1)
-        )
-        .subscribe(() => {
-          //console.log("Monaco editor loaded!");
-          monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-            validate: false,
-          });
+    this.monacoLoaderService.isMonacoLoaded$
+      .pipe(
+        filter(isLoaded => isLoaded),
+        take(1)
+      )
+      .subscribe(() => {
+        //console.log("Monaco editor loaded!");
+        monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+          validate: false,
         });
-    }
+      });
+  }
 
   ngOnInit() {
     //console.log("Mapping to be updated:", this.mapping);
@@ -115,11 +119,11 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private initForm(): void {
     this.propertiesForm = new FormGroup({
-      topic: new FormControl(this.isUpdateExistingMapping()? this.mapping.topic: '', Validators.required),
-      targetAPI: new FormControl(this.isUpdateExistingMapping()? this.mapping.targetAPI: '', Validators.required),
-      active: new FormControl(this.isUpdateExistingMapping()? this.mapping.active: '', Validators.required),
-      createNoExistingDevice: new FormControl(this.isUpdateExistingMapping()? this.mapping.createNoExistingDevice: '', Validators.required),
-      qos: new FormControl(this.isUpdateExistingMapping()? this.mapping.qos: '', Validators.required),
+      topic: new FormControl(this.isUpdateExistingMapping() ? this.mapping.topic : '', Validators.required),
+      targetAPI: new FormControl(this.isUpdateExistingMapping() ? this.mapping.targetAPI : '', Validators.required),
+      active: new FormControl(this.isUpdateExistingMapping() ? this.mapping.active : '', Validators.required),
+      createNoExistingDevice: new FormControl(this.isUpdateExistingMapping() ? this.mapping.createNoExistingDevice : '', Validators.required),
+      qos: new FormControl(this.isUpdateExistingMapping() ? this.mapping.qos : '', Validators.required),
     });
 
     this.templateForm = new FormGroup({
@@ -144,14 +148,33 @@ export class MQTTMappingStepperComponent implements OnInit {
   onJsonPathChanged() {
     const p = this.jsonPathForm.get('jsonPath').value;
     const d = JSON.parse(this.templateForm.get('source').value);
-    const r = JSON.stringify(JSONPath({ path: p, json: d }), null, 4);
+    const r = JSONPath({ path: p, json: d, wrap: false });
     console.log("Changed jsonPath: ", p, d, r);
     this.jsonPathForm.patchValue({
       jsonPathResult: r,
     });
   }
 
-  public checkTopic(e): boolean {
+  appendJsonPath(): void {
+    const p = this.jsonPathForm.get('jsonPath').value;
+    let ps = this.jsonPathForm.get('variableJsonPathes').value;
+    if (ps != '') {
+      ps = ps.concat(", ").concat(p);
+    } else {
+      ps = ps.concat(p);
+    }
+    this.jsonPathForm.patchValue({ variableJsonPathes: ps })
+  }
+
+  isWildcardTopic(): boolean {
+    //let topic : string = e.target.value;
+    const topic = this.propertiesForm.get('topic').value;
+    const result = topic.endsWith(this.TOPIC_WILDCARD);
+    this.wildcardTopic = result;
+    return result;
+  }
+
+  public checkTopicUnique(e): boolean {
     let topic = e.target.value;
     console.log("Changed topic: ", topic);
     let result = true;
@@ -163,9 +186,9 @@ export class MQTTMappingStepperComponent implements OnInit {
       }
     })
     console.log("Check if topic is unique: ", this.mapping, topic, result, this.mappings);
-    this.isTopicUnique = result;
+    this.topicUnique = result;
     // invalidate fields, since entry is not valid
-    if (!result) this.propertiesForm.controls['topic'].setErrors({'incorrect': true});
+    if (!result) this.propertiesForm.controls['topic'].setErrors({ 'incorrect': true });
     return result;
   }
 
@@ -177,8 +200,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       source: this.templateForm.get('source').value,
       target: this.templateForm.get('target').value,
       active: this.propertiesForm.get('active').value,
-      tested: this.mapping.tested||false,
-      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value||false,
+      tested: this.mapping.tested || false,
+      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value || false,
       qos: this.propertiesForm.get('qos').value,
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
@@ -190,7 +213,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
     console.log("Topic test", topic, nt);
     // append trailing slash if last character is not wildcard #
-    nt = nt.concat(nt.endsWith("#") ? '' : '/')
+    nt = nt.concat(nt.endsWith(this.TOPIC_WILDCARD) ? '' : '/')
     return nt
   }
 
@@ -203,7 +226,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   onMappingJsonPathChanged() {
-    this.updateSubstitutions();
+    this.checkIsSubstitutionsValid();
     //if (this.isSubstitutionValid) {
     const n = this.jsonPathForm.get('variableNames').value.split(",");
     const p = this.jsonPathForm.get('variableJsonPathes').value.split(",");
@@ -219,7 +242,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
 
-  updateSubstitutions(): boolean {
+  checkIsSubstitutionsValid(): boolean {
     let result = false;
     const p = this.jsonPathForm.get('variableJsonPathes').value;
     const n = this.jsonPathForm.get('variableNames').value;
@@ -228,9 +251,12 @@ export class MQTTMappingStepperComponent implements OnInit {
       const pl = (p.match(/,/g) || []).length;
       const nl = (n.match(/,/g) || []).length;
       console.log("Test if substitution is complete:", pl, nl);
-      if (nl == pl) {
+      if (nl == pl ) {
         result = true;
-      }
+      } 
+ /*      else if (this.wildcardTopic && nl+1 == pl){
+        result = true;
+      } */
     }
     this.isSubstitutionValid = result;
     return result;
@@ -265,6 +291,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   public isUpdateExistingMapping(): boolean {
     return !!this.mapping;
   }
+
   async onTestTransformationClicked() {
     let test_mapping: MQTTMapping = {
       id: this.mapping.id,
@@ -273,8 +300,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       source: this.templateForm.get('source').value,
       target: this.templateForm.get('target').value,
       active: this.propertiesForm.get('active').value,
-      tested: this.mapping.tested||false,
-      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value||false,
+      tested: this.mapping.tested || false,
+      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value || false,
       qos: this.propertiesForm.get('qos').value,
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
@@ -293,8 +320,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       source: this.templateForm.get('source').value,
       target: this.templateForm.get('target').value,
       active: this.propertiesForm.get('active').value,
-      tested: this.mapping.tested||false,
-      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value||false,
+      tested: this.mapping.tested || false,
+      createNoExistingDevice: this.propertiesForm.get('createNoExistingDevice').value || false,
       qos: this.propertiesForm.get('qos').value,
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
@@ -302,18 +329,18 @@ export class MQTTMappingStepperComponent implements OnInit {
     let { data, res } = await this.mqttMappingService.sendTestResult(test_mapping);
     //console.log ("My data:", data );
     this.testForm.patchValue({
-       testResult: JSON.stringify(data, null, 4)
-     });
+      testResult: JSON.stringify(data, null, 4)
+    });
     if (res.status == 200 || res.status == 201) {
-      this.alertService.success ("Successfully tested mapping!");
+      this.alertService.success("Successfully tested mapping!");
       this.mapping.tested = true;
     } else {
       let error = await res.text();
-      this.alertService.danger ("Failed to tested mapping: " + error);
+      this.alertService.danger("Failed to tested mapping: " + error);
     }
   }
 
-  updateVariables(): void  {
+  updateVariables(): void {
     const p = this.templateForm.get('target').value;
     //const v = p.match(/\$\d/g);
     const v = p.match(/\$\{(\w+)\}/g)
@@ -339,17 +366,35 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   public onNextSelected(event: { stepper: C8yStepper; step: CdkStep }): void {
     const source = this.templateForm.get('source').value
+    const target = this.templateForm.get('target').value
+    const targetAPI = this.propertiesForm.get('targetAPI').value
     //console.log("Source", source,this.mapping.source, event.step)
-    console.log("Source", event.step, event)
+    console.log("OnNextSelected: /" + target + "/", event.step.label, targetAPI, target, target == '')
     if (event.step.label == "Define templates") {
       // path jsonPathForm
-      this.jsonPathForm.patchValue ({
+      this.jsonPathForm.patchValue({
         source: source,
       });
       this.updateVariables()
-      this.updateSubstitutions()
-      
-    } 
+      this.checkIsSubstitutionsValid()
+
+    } else if (event.step.label == "Define topic") {
+      console.log("Populate jsonPath if wildcard:", event.step.label, this.isWildcardTopic(), this.mapping.substitutions.length)
+      if (this.mapping.substitutions.length == 0 && this.isWildcardTopic()) {
+        this.jsonPathForm.patchValue({
+          variableJsonPathes: this.TOPIC_JSON_PATH,
+        });
+      }
+      if (target == '') {
+        // define target template for new mappings, i.e. target is not yet defined
+        this.templateForm.patchValue({
+          target: this.SAMPLE_TEMPLATES[targetAPI],
+        });
+      }
+    } else if (event.step.label == "Define mapping") {
+
+    }
+
     event.stepper.next();
   }
 

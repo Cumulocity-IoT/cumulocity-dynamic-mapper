@@ -55,6 +55,8 @@ public class GenericCallback implements MqttCallback {
         sdf.setTimeZone(TimeZone.getTimeZone("CET"));
     }
 
+    static String TOKEN_DEVICE_TOPIC = "$.TOPIC";
+
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
@@ -75,7 +77,7 @@ public class GenericCallback implements MqttCallback {
                         for ( MQTTMappingSubstitution sub:  map1.substitutions) {
                             var substitute = "";
                             try {
-                                if (sub.jsonPath.equals("$.TOPIC")
+                                if (sub.jsonPath.equals(TOKEN_DEVICE_TOPIC)
                                     && deviceIdentifier != null 
                                     && !deviceIdentifier.equals("")) {
                                     substitute = deviceIdentifier;
@@ -101,7 +103,7 @@ public class GenericCallback implements MqttCallback {
                             for ( MQTTMappingSubstitution sub:  map2.substitutions) {
                                 var substitute = "";
                                 try {
-                                    if (sub.jsonPath.equals("$.TOPIC")
+                                    if (sub.jsonPath.equals(TOKEN_DEVICE_TOPIC)
                                         && map2.topic.endsWith("#")
                                         && deviceIdentifier != null 
                                         && !deviceIdentifier.equals("")) {
