@@ -27,61 +27,67 @@ export class MQTTMappingStepperComponent implements OnInit {
   TOPIC_WILDCARD = "#"
 
   isSubstitutionValid: boolean;
+  substitutions: string;
 
   pathSource: string;
   pathTarget: string;
   dataSource: any;
   dataTarget: any;
 
+  private setSelectionSource = function (node: any, event: any) {
+    if (event.type == "click") {
+      var path = "";
+      for (let i = 0; i < node.path.length; i++) {
+        if (typeof node.path[i] === 'number') {
+          path = path.substring(0, path.length - 1);
+          path += '[' + node.path[i] + ']';
+
+        } else {
+          path += node.path[i];
+        }
+        if (i !== node.path.length - 1) path += ".";
+      }
+      this.pathSource = path;
+      console.log("Set pathSource:", path);
+    }
+  }.bind(this)
+
+
+  private setSelectionTarget = function (node: any, event: any) {
+    if (event.type == "click") {
+      var path = "";
+      for (let i = 0; i < node.path.length; i++) {
+        if (typeof node.path[i] === 'number') {
+          path = path.substring(0, path.length - 1);
+          path += '[' + node.path[i] + ']';
+
+        } else {
+          path += node.path[i];
+        }
+        if (i !== node.path.length - 1) path += ".";
+      }
+      this.pathTarget = path;
+      console.log("Set pathTarget:", path);
+    }
+  }.bind(this)
+
   editorOptionsSource: any = {
-    modes: ['code', 'tree'],
+    modes: ['tree', 'code'],
     statusBar: false,
     enableSort: false,
     enableTransform: false,
     enableSearch: false,
-    onEvent: function (node: any, event: any) {
-      if (event.type == "click") {
-        var path = "";
-        for (let i = 0; i < node.path.length; i++) {
-          if (typeof node.path[i] === 'number') {
-            path = path.substring(0, path.length - 1);
-            path += '[' + node.path[i] + ']';
-
-          } else {
-            path += node.path[i];
-          }
-          if (i !== node.path.length - 1) path += ".";
-        }
-        this.pathSource = path;
-        console.log("Path:", path);
-      }
-    },
+    onEvent: this.setSelectionSource,
     schema: SCHEMA_EVENT
   };
 
   editorOptionsTarget: any = {
-    modes: ['code', 'tree'],
+    modes: ['tree', 'code'],
     statusBar: false,
     enableSort: false,
     enableTransform: false,
     enableSearch: false,
-    onEvent: function (node: any, event: any) {
-      if (event.type == "click") {
-        var path = "";
-        for (let i = 0; i < node.path.length; i++) {
-          if (typeof node.path[i] === 'number') {
-            path = path.substring(0, path.length - 1);
-            path += '[' + node.path[i] + ']';
-
-          } else {
-            path += node.path[i];
-          }
-          if (i !== node.path.length - 1) path += ".";
-        }
-        this.pathTarget = path;
-        console.log("Path:", path);
-      }
-    },
+    onEvent: this.setSelectionTarget,
     schema: SCHEMA_EVENT
   };
 
@@ -100,13 +106,12 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   propertiesForm: FormGroup;
   templateForm: FormGroup;
-  jsonPathForm: FormGroup;
-  testForm: FormGroup;
 
   topicUnique: boolean;
   wildcardTopic: boolean;
 
   TOPIC_JSON_PATH = "$.TOPIC";
+  dataResult: string;
 
   constructor(
     public mqttMappingService: MQTTMappingService,
@@ -132,39 +137,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       target: new FormControl(this.mapping.target, Validators.required),
     });
 
-    this.jsonPathForm = new FormGroup({
-      source: new FormControl(this.mapping.source),
-      jsonPath: new FormControl(''),
-      jsonPathResult: new FormControl(''),
-      variableNames: new FormControl(this.getVariableNames(), Validators.required),
-      variableJsonPathes: new FormControl(this.getVariableJsonPathes(), Validators.required),
-    });
-
-    this.testForm = new FormGroup({
-      testResult: new FormControl(''),
-    });
-  }
-
-
-  onJsonPathChanged() {
-    const p = this.jsonPathForm.get('jsonPath').value;
-    const d = JSON.parse(this.templateForm.get('source').value);
-    const r = JSONPath({ path: p, json: d, wrap: false });
-    console.log("Changed jsonPath: ", p, d, r);
-    this.jsonPathForm.patchValue({
-      jsonPathResult: r,
-    });
-  }
-
-  appendJsonPath(): void {
-    const p = this.jsonPathForm.get('jsonPath').value;
-    let ps = this.jsonPathForm.get('variableJsonPathes').value;
-    if (ps != '') {
-      ps = ps.concat(", ").concat(p);
-    } else {
-      ps = ps.concat(p);
-    }
-    this.jsonPathForm.patchValue({ variableJsonPathes: ps })
   }
 
   isWildcardTopic(): boolean {
@@ -218,42 +190,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     return nt
   }
 
-  onMappingJsonPathChanged() {
-    this.checkIsSubstitutionsValid();
-    //if (this.isSubstitutionValid) {
-    const n = this.jsonPathForm.get('variableNames').value.split(",");
-    const p = this.jsonPathForm.get('variableJsonPathes').value.split(",");
-    let s: MQTTMappingSubstitution[] = [];
-    for (let index = 0; index < p.length; index++) {
-      s.push({
-        name: n[index].trim(),
-        jsonPath: p[index].trim()
-      });
-    }
-    this.mapping.substitutions = s;
-    //}
-  }
-
-
-  checkIsSubstitutionsValid(): boolean {
-    let result = false;
-    const p = this.jsonPathForm.get('variableJsonPathes').value;
-    const n = this.jsonPathForm.get('variableNames').value;
-    console.log("Test if substitution is complete:", p, n);
-    if (p != '' && n != '') {
-      const pl = (p.match(/,/g) || []).length;
-      const nl = (n.match(/,/g) || []).length;
-      console.log("Test if substitution is complete:", pl, nl);
-      if (nl == pl) {
-        result = true;
-      }
-      /*      else if (this.wildcardTopic && nl+1 == pl){
-             result = true;
-           } */
-    }
-    this.isSubstitutionValid = result;
-    return result;
-  }
 
   getVariableNames(): string {
     const p = this.mapping.target;
@@ -266,20 +202,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     return v.join();
   }
 
-  getVariableJsonPathes(): string {
-    let p = '';
-    if (!this.mapping.substitutions) this.mapping.substitutions = [];
-    this.mapping.substitutions.forEach((m, i) => {
-      if (i !== this.mapping.substitutions.length - 1) {
-        p = p.concat(m.jsonPath).concat(', ')
-      } else {
-        p = p.concat(m.jsonPath)
-      }
-    }
-    )
-    //console.log("Variable:", v, p)
-    return p;
-  }
 
   public isUpdateExistingMapping(): boolean {
     return !!this.mapping;
@@ -299,10 +221,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
     }
-    let testResult = await this.mqttMappingService.testResult(test_mapping, false);
-    this.testForm.patchValue({
-      testResult: testResult,
-    });
+    let dataResult = await this.mqttMappingService.testResult(test_mapping, false);
+    this.dataResult = dataResult;
   }
 
   async onSendTestClicked() {
@@ -321,9 +241,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
     let { data, res } = await this.mqttMappingService.sendTestResult(test_mapping);
     //console.log ("My data:", data );
-    this.testForm.patchValue({
-      testResult: JSON.stringify(data, null, 4)
-    });
     if (res.status == 200 || res.status == 201) {
       this.alertService.success("Successfully tested mapping!");
       this.mapping.tested = true;
@@ -333,15 +250,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }
 
-  updateVariables(): void {
-    const p = this.templateForm.get('target').value;
-    //const v = p.match(/\$\d/g);
-    const v = p.match(/\$\{(\w+)\}/g)
-    console.log("Variable:", v, p)
-    this.jsonPathForm.patchValue({
-      variableNames: v.join(),
-    });
-  }
 
   async onSampleButtonClicked() {
     let current_target_api = this.propertiesForm.get('targetAPI').value;
@@ -359,21 +267,13 @@ export class MQTTMappingStepperComponent implements OnInit {
     const target = this.templateForm.get('target').value
     const targetAPI = this.propertiesForm.get('targetAPI').value
     //console.log("Source", source,this.mapping.source, event.step)
-    console.log("OnNextSelected: /" + target + "/", event.step.label, targetAPI, target, target == '')
+    console.log("OnNextSelected: /" + target + "/", event.step.label, targetAPI, this.mapping.source, target == '')
     if (event.step.label == "Define templates") {
-      // path jsonPathForm
-      this.jsonPathForm.patchValue({
-        source: source,
-      });
-      this.updateVariables()
-      this.checkIsSubstitutionsValid()
 
     } else if (event.step.label == "Define topic") {
       console.log("Populate jsonPath if wildcard:", event.step.label, this.isWildcardTopic(), this.mapping.substitutions.length)
       if (this.mapping.substitutions.length == 0 && this.isWildcardTopic()) {
-        this.jsonPathForm.patchValue({
-          variableJsonPathes: this.TOPIC_JSON_PATH,
-        });
+        this.mapping.substitutions.push({pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id"})
       }
       if (target == '') {
         // define target template for new mappings, i.e. target is not yet defined
@@ -392,8 +292,8 @@ export class MQTTMappingStepperComponent implements OnInit {
         this.editorOptionsTarget.schema = SCHEMA_MEASUREMENT;
       }
 
-      //this.dataSource = JSON.parse(this.mapping.source);
-      this.dataSource = {
+      this.dataSource = JSON.parse(this.mapping.source);
+/*       this.dataSource = {
         'source': {
           'id': '11111111111'
         },
@@ -401,7 +301,7 @@ export class MQTTMappingStepperComponent implements OnInit {
         'text': 'This door is locked and it is an alrm!',
         'time': '2022-08-05T00:14:49.389+02:00',
         'severity': 'MINOR'
-      };
+      }; */
       this.dataTarget = JSON.parse(this.mapping.target);
     } else if (event.step.label == "Define mapping") {
 
@@ -410,6 +310,25 @@ export class MQTTMappingStepperComponent implements OnInit {
     event.stepper.next();
   }
 
+  public onAddMappingClicked(){
+    let sub: MQTTMappingSubstitution  = {
+      pathSource: this.pathSource,
+      pathTarget: this.pathTarget
+    }
+    this.mapping.substitutions.push(sub);
+    this.substitutions = "";
+    this.mapping.substitutions.forEach( s => {
+      //console.log ("New mapping:", s.pathSource, s.pathTarget);
+      this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
+    } )
+    console.log ("New mapping:", sub);
+  }
+
+  public onClearMappingsClicked(){
+    this.mapping.substitutions = [];
+    this.substitutions = "";
+    console.log ("Cleared mappings!");
+  }
 
   setSelectionToPath(editor: JsonEditorComponent, path: string) {
 

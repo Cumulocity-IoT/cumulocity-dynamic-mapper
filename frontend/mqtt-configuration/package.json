@@ -56,7 +56,6 @@
       "tabsHorizontal": true,
       "isPackage": true,
       "package": "plugin",
-      "brandingEntry": "./branding/branding.less",
       "exports": [
         {
           "name": "MQTT configuration plugin",

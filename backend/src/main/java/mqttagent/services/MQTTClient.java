@@ -294,7 +294,7 @@ public class MQTTClient {
         return result;
     }
 
-    private void subscribe(String topic, Integer qos) throws MqttException {
+    public void subscribe(String topic, Integer qos) throws MqttException {
         if (isInitilized() && mqttClient != null) {
             log.info("Subscribing on topic {}", topic);
             subscriptionsService.runForTenant(c8yAgent.tenant, () -> {

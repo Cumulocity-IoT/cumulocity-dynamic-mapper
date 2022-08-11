@@ -77,17 +77,18 @@ public class GenericCallback implements MqttCallback {
                         for ( MQTTMappingSubstitution sub:  map1.substitutions) {
                             var substitute = "";
                             try {
-                                if (sub.jsonPath.equals(TOKEN_DEVICE_TOPIC)
+                                if (sub.pathSource.equals(TOKEN_DEVICE_TOPIC)
                                     && deviceIdentifier != null 
                                     && !deviceIdentifier.equals("")) {
                                     substitute = deviceIdentifier;
                                 } else {
-                                    substitute = (String) JsonPath.parse(payloadMessage).read(sub.jsonPath);
+                                    substitute = (String) JsonPath.parse(payloadMessage).read(sub.pathTarget);
                                 }
                             } catch (PathNotFoundException p){
-                                log.error("No substitution for: {}, {}, {}", sub.jsonPath, payloadTarget, payloadMessage);                   
+                                log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget, payloadMessage);                   
                             }
-                            payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
+                            //TODO use dot notation
+                            //payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
                         }
                         log.info("Posting payload: {}", payloadTarget);
                         c8yAgent.createC8Y_MEA(map1.targetAPI, payloadTarget);
@@ -103,18 +104,19 @@ public class GenericCallback implements MqttCallback {
                             for ( MQTTMappingSubstitution sub:  map2.substitutions) {
                                 var substitute = "";
                                 try {
-                                    if (sub.jsonPath.equals(TOKEN_DEVICE_TOPIC)
+                                    if (sub.pathSource.equals(TOKEN_DEVICE_TOPIC)
                                         && map2.topic.endsWith("#")
                                         && deviceIdentifier != null 
                                         && !deviceIdentifier.equals("")) {
                                         substitute = deviceIdentifier;
                                     } else {
-                                        substitute = (String) JsonPath.parse(payloadMessage).read(sub.jsonPath);
+                                        substitute = (String) JsonPath.parse(payloadMessage).read(sub.pathSource);
                                     }
                                 } catch (PathNotFoundException p){
-                                  log.error("No substitution for: {}, {}, {}", sub.jsonPath, payloadTarget, payloadMessage);
+                                  log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget, payloadMessage);
                                 }
-                                payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
+                                //TODO use dot notation
+                                //payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.pathSource), substitute);
                             }
                             log.info("Posting payload: {}", payloadTarget);
                             c8yAgent.createC8Y_MEA(map2.targetAPI, payloadTarget);

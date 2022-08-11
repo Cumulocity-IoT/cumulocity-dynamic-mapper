@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { JsonEditorComponent, JsonEditorOptions } from '@maaxgr/ang-jsoneditor';
 import { FormBuilder } from '@angular/forms';
 import { schema, schema_alarm, schema_event } from './schema.value';
+import { JSONPath } from 'jsonpath-plus';
 
 @Component({
   selector: 'mqtt-testing',
@@ -73,34 +74,7 @@ export class MqttTestingComponent implements OnInit {
 
   ngOnInit() {
 
-/*     this.showData = this.data = {
-      'randomNumber': 2,
-      'products': [
-        {
-          'name': 'car',
-          'product':
-            [
-              {
-                'name': 'honda',
-                'model': [
-                  { 'id': 'civic', 'name': 'civic' },
-                  { 'id': 'accord', 'name': 'accord' }, { 'id': 'crv', 'name': 'crv' },
-                  { 'id': 'pilot', 'name': 'pilot' }, { 'id': 'odyssey', 'name': 'odyssey' }
-                ]
-              }
-            ]
-        }
-      ]
-    }; */
 
-/*     this.showData = this.data = {
-      'source': {
-        'id': '11111111111'
-      },
-      'type': 'c8y_LockEvent',
-      'text': 'This door is locked!',
-      'time': '2022-08-05T00:14:49.389+02:00'
-    }; */
 
     this.showData = this.data = {
       'source': {
@@ -111,6 +85,54 @@ export class MqttTestingComponent implements OnInit {
       'time': '2022-08-05T00:14:49.389+02:00',
       'severity': 'MINOR'
     };
+
+    let books = {
+      "store": {
+        "book": [
+          {
+            "category": "fiction",
+            "author": "Evelyn Waugh",
+            "title": "Sword of Honour",
+            "price": 12.99
+          },
+          {
+            "category": "fiction",
+            "author": "Herman Melville",
+            "title": "Moby Dick",
+            "isbn": "0-553-21311-3",
+            "price": 8.99
+          },
+          {
+            "category": "fiction",
+            "author": "J. R. R. Tolkien",
+            "title": "The Lord of the Rings",
+            "isbn": "0-395-19395-8",
+            "price": 22.99
+          }
+        ],
+        "bicycle": {
+          "color": "red",
+          "price": 19.95
+        }
+      }
+    }
+    
+    let callback = (payload, type, obj) => {
+      console.log("Log payload:", JSON.stringify(payload,null,' '))
+      payload.category = 'foo';
+      return payload;
+    };
+    
+    const rs = JSONPath({
+      path: '$..book[?(@.price<10)]',
+      resultType: "all",
+      json: books,
+      callback
+    });
+    console.log("Result:", JSON.stringify(rs,null,' '))
+
+
+
 
     //     'time': '2022-08-05T00:14:49.389+02:00'
 

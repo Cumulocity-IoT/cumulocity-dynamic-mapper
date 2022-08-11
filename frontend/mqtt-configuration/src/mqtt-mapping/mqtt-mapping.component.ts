@@ -9,7 +9,8 @@ import { JSONPath } from 'jsonpath-plus';
 @Component({
   selector: 'mqtt-mapping',
   templateUrl: 'mqtt-mapping.component.html',
-  styleUrls: ['./mqtt-mapping.style.css'],
+  styleUrls: ['./mqtt-mapping.style.css', 
+  '../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
