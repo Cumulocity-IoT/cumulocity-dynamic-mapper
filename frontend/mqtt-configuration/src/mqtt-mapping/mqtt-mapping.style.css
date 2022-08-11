@@ -1,5 +1,3 @@
-@import "~jsoneditor/dist/jsoneditor.min.css";
-
 c8y-data-grid button[title="Reload"] {
   display: none;
 }

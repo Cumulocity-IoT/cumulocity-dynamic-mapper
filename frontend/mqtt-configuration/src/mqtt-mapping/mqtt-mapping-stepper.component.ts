@@ -410,4 +410,21 @@ export class MQTTMappingStepperComponent implements OnInit {
     event.stepper.next();
   }
 
+
+  setSelectionToPath(editor: JsonEditorComponent, path: string) {
+
+    console.log("Set selection to path:", path);
+    const ns = path.split(".");
+    const selection = {path: ns};
+    editor.setSelection(selection, selection)
+  }
+
+  jsonPathChanged(event: any) {
+    let p: string = event.target.value;
+    console.log(p);
+    const ns = p.split(".");
+    const selection = {path: ns};
+    //this.editor.setSelection(selection, selection)
+  }
+
 }
