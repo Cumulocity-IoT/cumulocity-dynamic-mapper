@@ -15,11 +15,18 @@ export class MQTTConfigurationTabFactory implements TabFactory {
         label: 'Configuration',
         icon: 'lock',
         orientation: 'horizontal',
-      } as Tab)
+      } as Tab);
       tabs.push({
         path: 'mqtt/mapping',
         priority: 1000,
         label: 'Mapping',
+        icon: 'split-table',
+        orientation: 'horizontal',
+      } as Tab)
+      tabs.push({
+        path: 'mqtt/testing',
+        priority: 1000,
+        label: 'Testing',
         icon: 'split-table',
         orientation: 'horizontal',
       } as Tab);
