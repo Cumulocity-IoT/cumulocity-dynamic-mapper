@@ -1,7 +1,7 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
-module.exports = function config(env) {
+/* module.exports = function config(env) {
     return {
         output: {
             path: path.join(__dirname, './dist/apps/mqtt-configuration')
@@ -13,5 +13,13 @@ module.exports = function config(env) {
                 ],
             })
         ],
+    }
+}; */
+
+
+
+module.exports = function config(env) {
+    return {
+
     }
 };

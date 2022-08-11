@@ -2,11 +2,10 @@ import { Component, EventEmitter, Inject, Input, OnInit, Output, QueryList, View
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { MQTTMapping, MQTTMappingSubstitution, SAMPLE_TEMPLATES, APIs, QOSs } from "../mqtt-configuration.model"
-import { MonacoEditorComponent, MonacoEditorLoaderService } from '@materia-ui/ngx-monaco-editor';
+import { MQTTMapping, MQTTMappingSubstitution, SAMPLE_TEMPLATES, APIs, QOSs, SCHEMA_EVENT, SCHEMA_ALARM, SCHEMA_MEASUREMENT } from "../mqtt-configuration.model"
 import { JSONPath } from 'jsonpath-plus';
-import { filter, take } from "rxjs/operators";
 import { CdkStep } from '@angular/cdk/stepper';
+import { JsonEditorComponent, JsonEditorOptions } from '@maaxgr/ang-jsoneditor';
 
 @Component({
   selector: 'mqtt-mapping-stepper',
@@ -29,52 +28,66 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   isSubstitutionValid: boolean;
 
-  editorOptionsJson = {
-    theme: 'vs-dark',
-    language: 'json',
-    glyphMargin: false,
-    lineNumbers: 'off',
-    folding: true,
-    lineDecorationsWidth: 0,
-    lineNumbersMinChars: 0,
-    minimap: {
-      enabled: false
-    }
-  };
+  pathSource: string;
+  pathTarget: string;
+  dataSource: any;
+  dataTarget: any;
 
-  editorOptionsReadOnlyJson = {
-    theme: 'vs-dark',
-    language: 'json',
-    glyphMargin: false,
-    lineNumbers: 'off',
-    folding: true,
-    readOnly: true,
-    lineDecorationsWidth: 0,
-    lineNumbersMinChars: 0,
-    minimap: {
-      enabled: false
-    }
-  };
+  editorOptionsSource: any = {
+    modes: ['code', 'tree'],
+    statusBar: false,
+    enableSort: false,
+    enableTransform: false,
+    enableSearch: false,
+    onEvent: function (node: any, event: any) {
+      if (event.type == "click") {
+        var path = "";
+        for (let i = 0; i < node.path.length; i++) {
+          if (typeof node.path[i] === 'number') {
+            path = path.substring(0, path.length - 1);
+            path += '[' + node.path[i] + ']';
 
-  editorOptionsResult = {
-    theme: 'vs-dark',
-    language: 'javascript',
-    glyphMargin: false,
-    lineNumbers: 'off',
-    folding: true,
-    readOnly: true,
-    domReadOnly: true,
-    lineDecorationsWidth: 0,
-    lineNumbersMinChars: 0,
-    minimap: {
-      enabled: false
+          } else {
+            path += node.path[i];
+          }
+          if (i !== node.path.length - 1) path += ".";
+        }
+        this.pathSource = path;
+        console.log("Path:", path);
+      }
     },
-    onMonacoLoad: () => {
-      console.log("In monaco onload");
-    }
+    schema: SCHEMA_EVENT
   };
 
-  @ViewChildren(MonacoEditorComponent) monacoComponents: QueryList<MonacoEditorComponent>
+  editorOptionsTarget: any = {
+    modes: ['code', 'tree'],
+    statusBar: false,
+    enableSort: false,
+    enableTransform: false,
+    enableSearch: false,
+    onEvent: function (node: any, event: any) {
+      if (event.type == "click") {
+        var path = "";
+        for (let i = 0; i < node.path.length; i++) {
+          if (typeof node.path[i] === 'number') {
+            path = path.substring(0, path.length - 1);
+            path += '[' + node.path[i] + ']';
+
+          } else {
+            path += node.path[i];
+          }
+          if (i !== node.path.length - 1) path += ".";
+        }
+        this.pathTarget = path;
+        console.log("Path:", path);
+      }
+    },
+    schema: SCHEMA_EVENT
+  };
+
+
+  @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
+  @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
@@ -98,19 +111,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   constructor(
     public mqttMappingService: MQTTMappingService,
     public alertService: AlertService,
-    private monacoLoaderService: MonacoEditorLoaderService) {
-    this.monacoLoaderService.isMonacoLoaded$
-      .pipe(
-        filter(isLoaded => isLoaded),
-        take(1)
-      )
-      .subscribe(() => {
-        //console.log("Monaco editor loaded!");
-        monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-          validate: false,
-        });
-      });
-  }
+  ) { }
 
   ngOnInit() {
     //console.log("Mapping to be updated:", this.mapping);
@@ -217,14 +218,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     return nt
   }
 
-  onFormatButtonClicked() {
-    this.monacoComponents.forEach(mc => {
-      if (mc.options && mc.options.language == 'json') {
-        mc.editor.getAction('editor.action.formatDocument').run()
-      }
-    });
-  }
-
   onMappingJsonPathChanged() {
     this.checkIsSubstitutionsValid();
     //if (this.isSubstitutionValid) {
@@ -251,12 +244,12 @@ export class MQTTMappingStepperComponent implements OnInit {
       const pl = (p.match(/,/g) || []).length;
       const nl = (n.match(/,/g) || []).length;
       console.log("Test if substitution is complete:", pl, nl);
-      if (nl == pl ) {
+      if (nl == pl) {
         result = true;
-      } 
- /*      else if (this.wildcardTopic && nl+1 == pl){
-        result = true;
-      } */
+      }
+      /*      else if (this.wildcardTopic && nl+1 == pl){
+             result = true;
+           } */
     }
     this.isSubstitutionValid = result;
     return result;
@@ -355,9 +348,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.templateForm.patchValue({
       target: SAMPLE_TEMPLATES[current_target_api],
     });
-    this.monacoComponents.forEach(mc => {
-      mc.editor.getAction('editor.action.formatDocument').run();
-    });
   }
 
   async onCancelButtonClicked() {
@@ -391,6 +381,28 @@ export class MQTTMappingStepperComponent implements OnInit {
           target: this.SAMPLE_TEMPLATES[targetAPI],
         });
       }
+      if (targetAPI == "event") {
+        this.editorOptionsSource.schema = SCHEMA_EVENT;
+        this.editorOptionsTarget.schema = SCHEMA_EVENT;
+      } else if (targetAPI == "alarm") {
+        this.editorOptionsSource.schema = SCHEMA_ALARM;
+        this.editorOptionsTarget.schema = SCHEMA_ALARM;
+      } else if (targetAPI == "measurement") {
+        this.editorOptionsSource.schema = SCHEMA_MEASUREMENT;
+        this.editorOptionsTarget.schema = SCHEMA_MEASUREMENT;
+      }
+
+      //this.dataSource = JSON.parse(this.mapping.source);
+      this.dataSource = {
+        'source': {
+          'id': '11111111111'
+        },
+        'type': 'c8y_LockAlarm',
+        'text': 'This door is locked and it is an alrm!',
+        'time': '2022-08-05T00:14:49.389+02:00',
+        'severity': 'MINOR'
+      };
+      this.dataTarget = JSON.parse(this.mapping.target);
     } else if (event.step.label == "Define mapping") {
 
     }

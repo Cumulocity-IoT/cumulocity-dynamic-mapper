@@ -94,18 +94,15 @@
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="form-group">
                     <label translate>Template message - source</label>
-                    <div style="height:200px">
-                      <ngx-monaco-editor formControlName="source" [options]="editorOptionsJson">
-                      </ngx-monaco-editor>
-                    </div>
+                    <div style="height:200px;">
+                      <json-editor [options]="editorOptionsSource" (jsonChange)="changeLog($event)"  [data]="dataSource" #editorSource></json-editor>
+                  </div>
                   </div>
                   <div class="form-group">
                     <label translate>Cumulocity message - target</label>
-                    <div style="height:200px">
-                      <ngx-monaco-editor formControlName="target" [options]="editorOptionsJson"
-                        (change)="updateVariables()">
-                      </ngx-monaco-editor>
-                    </div>
+                    <div style="height:200px;">
+                      <json-editor [options]="editorOptionsTarget" (jsonChange)="changeLog($event)"  [data]="dataTarget" #editorTarget></json-editor>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -114,9 +111,6 @@
         </div>
 
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" name="format" class="btn btn-default" (click)="onFormatButtonClicked()" translate>
-            Format templates
-          </button>
           <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
             Sample target template
           </button>
@@ -148,8 +142,7 @@
                   <div class="form-group">
                     <label translate>Template message - source</label>
                     <div style="height:200px">
-                      <ngx-monaco-editor formControlName="source" [options]="editorOptionsReadOnlyJson">
-                      </ngx-monaco-editor>
+                      <p>Template message - source</p>
                     </div>
                   </div>
                   <div class="form-group">
@@ -163,8 +156,7 @@
                   </div>
                   <div class="form-group">
                     <div style="height:100px">
-                      <ngx-monaco-editor id="jsonPathResult" formControlName="jsonPathResult" [options]="editorOptionsResult">
-                      </ngx-monaco-editor>
+                      <p>jsonPathResult</p>
                     </div>
                   </div>
                   <div class="form-group">
@@ -201,9 +193,7 @@
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
                     <div style="height:200px">
-                        <ngx-monaco-editor [options]="editorOptionsJson" formControlName="testResult"
-                          [(ngModel)]="testResult">
-                        </ngx-monaco-editor>
+                        <p>testResult</p>
                       </div>
                     </div>
                   </div>
