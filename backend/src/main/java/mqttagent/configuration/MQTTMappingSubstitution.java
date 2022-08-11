@@ -8,8 +8,8 @@ import javax.validation.constraints.NotNull;
 @AllArgsConstructor
 public class MQTTMappingSubstitution {
     @NotNull
-    public String name;
+    public String pathSource;
 
     @NotNull
-    public String jsonPath;
+    public String pathTarget;
 }

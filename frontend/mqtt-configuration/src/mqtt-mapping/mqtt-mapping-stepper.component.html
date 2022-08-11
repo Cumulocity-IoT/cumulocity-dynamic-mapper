@@ -1,5 +1,3 @@
-@import "~jsoneditor/dist/jsoneditor.min.css";
-
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
 
@@ -74,8 +72,8 @@
             </div>
           </div>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()" (onNext)="onNextSelected($event)"
-          [labels]="{ next: 'Next', cancel: 'Cancel' }">
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+          (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }">
         </c8y-stepper-buttons>
       </cdk-step>
 
@@ -96,15 +94,23 @@
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="form-group">
                     <label translate>Template message - source</label>
-                    <div style="height:200px;">
-                      <json-editor [options]="editorOptionsSource" (jsonChange)="changeLog($event)"  [data]="dataSource" #editorSource></json-editor>
-                  </div>
+                    <div style="height:300px;">
+                      <json-editor [options]="editorOptionsSource" (jsonChange)="changeLog($event)" [data]="dataSource"
+                        #editorSource></json-editor>
+                    </div>
                   </div>
                   <div class="form-group">
                     <label translate>Cumulocity message - target</label>
-                    <div style="height:200px;">
-                      <json-editor [options]="editorOptionsTarget" (jsonChange)="changeLog($event)"  [data]="dataTarget" #editorTarget></json-editor>
+                    <div style="height:300px;">
+                      <json-editor [options]="editorOptionsTarget" (jsonChange)="changeLog($event)" [data]="dataTarget"
+                        #editorTarget></json-editor>
+                    </div>
                   </div>
+                  <div class="form-group">
+                    <label translate>Define mapppings</label>
+                    <div >
+                      <span>{{substitutions}}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -116,65 +122,15 @@
           <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
             Sample target template
           </button>
+          <button type="button" name="sample" class="btn btn-default" (click)="onAddMappingClicked()" translate>
+            Add mapping
+          </button>
+          <button type="button" name="sample" class="btn btn-default" (click)="onClearMappingsClicked()" translate>
+            Clear mappings
+          </button>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()" (onNext)="onNextSelected($event)"
-        [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
-      </cdk-step>
-      <cdk-step [stepControl]="jsonPathForm" label="Define mapping">
-        <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-          <div class="row">
-            <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
-              <h4 class="text-center text-medium">
-                Define mapping
-              </h4>
-            </div>
-          </div>
-        </div>
-        <div class="col-xs-12 flex-grow no-gutter">
-          <div class="card-inner-scroll fit-h">
-            <div class="card-block p-b-0">
-
-              <div [formGroup]="jsonPathForm" class="form-horizontal">
-                <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-                  <div class="form-group">
-                    <label for="variableNames" class="" translate>Names of substitution variables</label>
-                    <input formControlName="variableNames" type="text" class="form-control" #variableNamesRef
-                      readonly />
-                  </div>
-                  <div class="form-group">
-                    <label translate>Template message - source</label>
-                    <div style="height:200px">
-                      <p>Template message - source</p>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label for="jsonPath" class="" translate>Json path</label>
-                      <div class="input-group">
-                        <input formControlName="jsonPath" type="text" class="form-control" (change)="onJsonPathChanged()" placeholder="e.g. $.device" #pathRef/>
-                        <div class="input-group-btn">
-                          <button class="btn btn-primary" (click)="appendJsonPath()">Append</button>
-                        </div>              
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <div style="height:100px">
-                      <p>jsonPathResult</p>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label for="variableJsonPathes" class="" translate>Json path for every variable</label>
-                    <input formControlName="variableJsonPathes" type="text" class="form-control"
-                      (change)="onMappingJsonPathChanged()"
-                      placeholder="JsonPath for every variable, separested by comms (,) e.g. $.device,$.value, $.timestamp"
-                      #variableJsonPathesRef required />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"  (onNext)="onNextSelected($event)"
-          [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+          (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
       </cdk-step>
 
       <cdk-step state="final" [stepControl]="testForm" label="Test mapping">
@@ -191,28 +147,29 @@
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
               <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-                <div [formGroup]="testForm">
+                <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
                     <div style="height:200px">
-                        <p>testResult</p>
-                      </div>
+                      <json-editor [options]="editorOptionsTarget" [data]="dataResult"
+                      #editorResult></json-editor>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
           <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()"
-            [disabled]="!isSubstitutionValid" translate>
+             translate>
             Transform test message
           </button>
           <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()"
-            [disabled]="!isSubstitutionValid" translate>
+             translate>
             Send test message
           </button>
-       </div>
+        </div>
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButtonClicked()"
           [labels]="{ custom: 'Confirm'}">
         </c8y-stepper-buttons>

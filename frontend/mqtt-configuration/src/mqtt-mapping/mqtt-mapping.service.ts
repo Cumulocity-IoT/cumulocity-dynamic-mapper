@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { JSONPath } from 'jsonpath-plus';
 import { MQTTMapping } from '../mqtt-configuration.model';
+import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTMappingService {
@@ -20,9 +21,7 @@ export class MQTTMappingService {
 
   agentId: string;
 
-  private readonly MAPPING_TYPE = 'c8y_mqttMapping_type';
-
-  private readonly MAPPING_AGENT_TYPE = 'c8y_mqttMapping_type';
+  private readonly MAPPING_TYPE = 'c8y_mqttMapping_v2_type';
 
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
 
@@ -83,32 +82,31 @@ export class MQTTMappingService {
   }
 
 
-  async testResult(mapping: MQTTMapping, simulation: boolean): Promise <string> {
-    let result = mapping.target;
+  async testResult(mapping: MQTTMapping, simulation: boolean): Promise <any> {
+    let result = JSON.parse(mapping.target);
     if (!this.agentId) {
       console.error("Need to intialize MQTTAgent:", this.agentId);
-      result = '';
+      result = JSON.stringify(mapping.target);
     } else {
-      console.log("MQTTAgent is already intialized:", this.agentId);
+      console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {
-        let s = JSONPath({ path: sub.jsonPath, json: JSON.parse(mapping.source), wrap: false });
+        console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
+        let s = JSONPath({ path: "$."+ sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
         if (!s || s == '') {
-          if (sub.jsonPath != '$.TOPIC') {
-            console.error("No substitution for:", sub.jsonPath, s, mapping.source);
-            throw Error("Error: substitution not found:" + sub.jsonPath);
+          if (sub.pathSource != '$.TOPIC') {
+            console.error("No substitution for:", sub.pathSource, s, mapping.source);
+            throw Error("Error: substitution not found:" + sub.pathSource);
           } else {
             s = this.agentId;
           }
         }
-        result = result.replace(sub.name, s);
+        _.set(result, sub.pathTarget, s)
       })
   
       // for simulation replace source id with agentId
       if (simulation) {
-        const payload = JSON.parse(result);
-        payload.source.id = this.agentId;
-        payload.time = new Date().toISOString();
-        result = JSON.stringify(payload);
+        result.source.id = this.agentId;
+        result.time = new Date().toISOString();
       }
     }
 
@@ -117,8 +115,7 @@ export class MQTTMappingService {
   }
 
   async sendTestResult(mapping: MQTTMapping): Promise<IResult<IEvent | IAlarm | IMeasurement>> {
-    let test_payload_string = await this.testResult(mapping, true);
-    let test_payload = JSON.parse(test_payload_string);
+    let test_payload = await this.testResult(mapping, true);
 
     if (mapping.targetAPI == 'event') {
       let p: IEvent = test_payload as IEvent;

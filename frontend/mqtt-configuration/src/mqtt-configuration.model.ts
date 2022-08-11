@@ -9,8 +9,8 @@ export interface MQTTAuthentication {
 }
 
 export interface MQTTMappingSubstitution {
-  name: string,
-  jsonPath: string,
+  pathSource: string,
+  pathTarget: string,
 }
 
 export interface MQTTMapping {
