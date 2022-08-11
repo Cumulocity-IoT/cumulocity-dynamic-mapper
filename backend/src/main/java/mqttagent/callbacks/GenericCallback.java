@@ -18,11 +18,16 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
+
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 @Slf4j
 @Service
@@ -73,25 +78,29 @@ public class GenericCallback implements MqttCallback {
                 log.info("Looking for exact matching of topics: {},{},{}", c8yAgent.tenant, topic, map1);
                 if (map1 != null) {
                     subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-                        var payloadTarget = map1.target;
+                        var payloadTarget = new JSONObject (map1.target);
                         for ( MQTTMappingSubstitution sub:  map1.substitutions) {
                             var substitute = "";
                             try {
-                                if (sub.pathSource.equals(TOKEN_DEVICE_TOPIC)
+                                if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
                                     && deviceIdentifier != null 
                                     && !deviceIdentifier.equals("")) {
                                     substitute = deviceIdentifier;
                                 } else {
-                                    substitute = (String) JsonPath.parse(payloadMessage).read(sub.pathTarget);
+                                    substitute = (String) JsonPath.parse(payloadMessage).read("$." + sub.pathSource);
                                 }
                             } catch (PathNotFoundException p){
-                                log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget, payloadMessage);                   
+                                log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget, payloadMessage);                   
                             }
-                            //TODO use dot notation
-                            //payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.name), substitute);
+
+                            String[] path = sub.pathTarget.split(Pattern.quote("."));
+                            if (path == null) {
+                                path = new String[] {sub.pathTarget};
+                            }
+                            addValue(substitute, payloadTarget, path);
                         }
                         log.info("Posting payload: {}", payloadTarget);
-                        c8yAgent.createC8Y_MEA(map1.targetAPI, payloadTarget);
+                        c8yAgent.createC8Y_MEA(map1.targetAPI, payloadTarget.toString());
                     });
                 } else {
                     // exact topic not found, look for topic without device identifier
@@ -100,26 +109,29 @@ public class GenericCallback implements MqttCallback {
                     log.info("Looking for wildcard matching of topics: {},{},{}", c8yAgent.tenant, wildcardTopic, map2);
                     if (map2 != null) {
                         subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-                            var payloadTarget = map2.target;
+                            var payloadTarget = new JSONObject (map2.target);
                             for ( MQTTMappingSubstitution sub:  map2.substitutions) {
                                 var substitute = "";
                                 try {
-                                    if (sub.pathSource.equals(TOKEN_DEVICE_TOPIC)
+                                    if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
                                         && map2.topic.endsWith("#")
                                         && deviceIdentifier != null 
                                         && !deviceIdentifier.equals("")) {
                                         substitute = deviceIdentifier;
                                     } else {
-                                        substitute = (String) JsonPath.parse(payloadMessage).read(sub.pathSource);
+                                        substitute = (String) JsonPath.parse(payloadMessage).read("$." + sub.pathSource);
                                     }
                                 } catch (PathNotFoundException p){
-                                  log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget, payloadMessage);
+                                  log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget, payloadMessage);
                                 }
-                                //TODO use dot notation
-                                //payloadTarget = payloadTarget.replaceAll(Pattern.quote(sub.pathSource), substitute);
+                                String[] path = sub.pathTarget.split(Pattern.quote("."));
+                                if (path == null) {
+                                    path = new String[] {sub.pathTarget};
+                                }
+                                addValue(substitute, payloadTarget, path);
                             }
                             log.info("Posting payload: {}", payloadTarget);
-                            c8yAgent.createC8Y_MEA(map2.targetAPI, payloadTarget);
+                            c8yAgent.createC8Y_MEA(map2.targetAPI, payloadTarget.toString());
                         });
 
                     }
@@ -129,6 +141,21 @@ public class GenericCallback implements MqttCallback {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
     }
+
+    public JSONObject addValue(String value, JSONObject jsonObject, String[] keys) throws JSONException {
+        String currentKey = keys[0];
+        
+        if (keys.length == 1) {
+          return jsonObject.put(currentKey, value);
+        } else if (!jsonObject.has(currentKey)) {
+          throw new JSONException(currentKey + "is not a valid key.");
+        }
+    
+        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JSONObject updatedNestedValue = addValue(value, nestedJsonObjectVal, remainingKeys);
+        return jsonObject.put(currentKey, updatedNestedValue);
+      }
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {

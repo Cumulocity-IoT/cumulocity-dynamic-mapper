@@ -284,7 +284,7 @@ public class C8yAgent {
                 final MQTTMappingSubstitution[] ss = new MQTTMappingSubstitution[sl.size()];
                 int i = 0;
                 for (Map sub : sl) {
-                    ss[i]= new MQTTMappingSubstitution((String)sub.get("name"), (String)sub.get("jsonPath"));
+                    ss[i]= new MQTTMappingSubstitution((String)sub.get("pathSource"), (String)sub.get("pathTarget"));
                     i++;
                 }
                 
