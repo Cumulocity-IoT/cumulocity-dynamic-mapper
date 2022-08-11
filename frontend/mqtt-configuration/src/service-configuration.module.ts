@@ -9,7 +9,6 @@ import {
   HOOK_TABS,
   Route
 } from '@c8y/ngx-components';
-import { MonacoEditorLoaderService, MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 import { MQTTConfigurationComponent } from './mqtt-configuration/mqtt-configuration.component';
 import { MQTTConfigurationService } from './mqtt-configuration/mqtt-configuration.service';
 import { MQTTTerminateConnectionModalComponent } from './mqtt-configuration/terminate-connection-modal/terminate-connection-modal.component';
@@ -22,6 +21,7 @@ import { MQTTConfigurationNavigationFactory } from './navigation.factory';
 import { MQTTServiceConfigurationComponent } from './service-configuration.component';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTConfigurationTabFactory } from './tab.factory';
+import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
 
 @NgModule({
   imports: [
@@ -29,8 +29,7 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    MonacoEditorModule,
-
+    NgJsonEditorModule,
     RouterModule.forChild([
       {
         path: 'mqtt/configuration',
@@ -93,12 +92,9 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
 })
 export class MQTTServiceConfigurationModule {
   constructor(
-    private monaco: MonacoEditorLoaderService,
     private mapping: MQTTMappingService,
     private config: MQTTConfigurationService
   ) {
-    this.monaco.monacoPath = '/apps/mqtt-configuration/assets/monaco-editor/min/vs';
-    this.monaco.loadMonaco();
     this.mapping.initializeMQTTAgent().then(  (agent) => {
       console.log("Found MQTTAgent in mapping:", agent);
     });
