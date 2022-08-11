@@ -19,6 +19,7 @@ import { QOSRendererComponent } from './mqtt-mapping/qos-cell.renderer.component
 import { StatusRendererComponent } from './mqtt-mapping/status-cell.renderer.component';
 import { MQTTConfigurationNavigationFactory } from './navigation.factory';
 import { MQTTServiceConfigurationComponent } from './service-configuration.component';
+import { MqttTestingComponent } from './mqtt-testing/mqtt-testing.component';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTConfigurationTabFactory } from './tab.factory';
 import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
@@ -49,6 +50,7 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
+    MqttTestingComponent,
     StatusRendererComponent,
     QOSRendererComponent,
   ],
@@ -58,6 +60,7 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
+    MqttTestingComponent,
     StatusRendererComponent,
     QOSRendererComponent
   ],
@@ -67,6 +70,7 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
+    MqttTestingComponent,
     StatusRendererComponent,
     QOSRendererComponent
   ],
@@ -84,6 +88,10 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
         {
           path: 'mqtt/mapping',
           component: MQTTMappingComponent,
+        },
+        {
+          path: 'mqtt/testing',
+          component: MqttTestingComponent,
         },
       ] as Route[],
       multi: true,

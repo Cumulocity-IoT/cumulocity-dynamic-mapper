@@ -11,6 +11,11 @@ module.exports = function config(env) {
                 patterns: [
                     { from: 'node_modules/jsoneditor/dist/jsoneditor.min.css', to:  path.join(__dirname, './jsoneditor.min.css') },
                 ],
+            }),
+            new CopyPlugin({
+                patterns: [
+                    { from: 'node_modules/jsoneditor/dist/jsoneditor.min.css', to:  path.join(__dirname, '/assets/dist/jsoneditor.min.css') },
+                ],
             })
         ],
     }
