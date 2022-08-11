@@ -95,14 +95,14 @@
                   <div class="form-group">
                     <label translate>Template message - source</label>
                     <div style="height:300px;">
-                      <json-editor [options]="editorOptionsSource" (jsonChange)="changeLog($event)" [data]="dataSource"
+                      <json-editor [options]="editorOptionsSource" [data]="dataSource"
                         #editorSource></json-editor>
                     </div>
                   </div>
                   <div class="form-group">
                     <label translate>Cumulocity message - target</label>
                     <div style="height:300px;">
-                      <json-editor [options]="editorOptionsTarget" (jsonChange)="changeLog($event)" [data]="dataTarget"
+                      <json-editor [options]="editorOptionsTarget"  [data]="dataTarget"
                         #editorTarget></json-editor>
                     </div>
                   </div>
@@ -127,6 +127,9 @@
           </button>
           <button type="button" name="sample" class="btn btn-default" (click)="onClearMappingsClicked()" translate>
             Clear mappings
+          </button>
+          <button type="button" name="sample" class="btn btn-default" (click)="onShowSubstitutionsClicked()" translate>
+            Show mappings
           </button>
         </div>
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"

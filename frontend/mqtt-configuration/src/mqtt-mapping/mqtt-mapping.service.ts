@@ -91,9 +91,9 @@ export class MQTTMappingService {
       console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        let s = JSONPath({ path: "$."+ sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
+        let s = JSONPath({ path: "$." + sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
         if (!s || s == '') {
-          if (sub.pathSource != '$.TOPIC') {
+          if ("$." + sub.pathSource != '$.TOPIC') {
             console.error("No substitution for:", sub.pathSource, s, mapping.source);
             throw Error("Error: substitution not found:" + sub.pathSource);
           } else {

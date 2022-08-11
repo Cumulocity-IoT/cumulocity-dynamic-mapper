@@ -27,7 +27,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   TOPIC_WILDCARD = "#"
 
   isSubstitutionValid: boolean;
-  substitutions: string;
+  substitutions: string = '';
 
   pathSource: string;
   pathTarget: string;
@@ -78,7 +78,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     enableTransform: false,
     enableSearch: false,
     onEvent: this.setSelectionSource,
-    schema: SCHEMA_EVENT
+    //no default schema for source json schema: SCHEMA_EVENT
   };
 
   editorOptionsTarget: any = {
@@ -104,13 +104,16 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   value: string;
 
+  counterShowSubstitutions: number = 0;
+
   propertiesForm: FormGroup;
   templateForm: FormGroup;
+  testForm: FormGroup;
 
   topicUnique: boolean;
   wildcardTopic: boolean;
 
-  TOPIC_JSON_PATH = "$.TOPIC";
+  TOPIC_JSON_PATH = "TOPIC";
   dataResult: string;
 
   constructor(
@@ -275,6 +278,12 @@ export class MQTTMappingStepperComponent implements OnInit {
       if (this.mapping.substitutions.length == 0 && this.isWildcardTopic()) {
         this.mapping.substitutions.push({pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id"})
       }
+
+      this.mapping.substitutions.forEach( s => {
+        //console.log ("New mapping:", s.pathSource, s.pathTarget);
+        this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
+      } )
+
       if (target == '') {
         // define target template for new mappings, i.e. target is not yet defined
         this.templateForm.patchValue({
@@ -282,13 +291,10 @@ export class MQTTMappingStepperComponent implements OnInit {
         });
       }
       if (targetAPI == "event") {
-        this.editorOptionsSource.schema = SCHEMA_EVENT;
         this.editorOptionsTarget.schema = SCHEMA_EVENT;
       } else if (targetAPI == "alarm") {
-        this.editorOptionsSource.schema = SCHEMA_ALARM;
         this.editorOptionsTarget.schema = SCHEMA_ALARM;
       } else if (targetAPI == "measurement") {
-        this.editorOptionsSource.schema = SCHEMA_MEASUREMENT;
         this.editorOptionsTarget.schema = SCHEMA_MEASUREMENT;
       }
 
@@ -316,11 +322,11 @@ export class MQTTMappingStepperComponent implements OnInit {
       pathTarget: this.pathTarget
     }
     this.mapping.substitutions.push(sub);
-    this.substitutions = "";
-    this.mapping.substitutions.forEach( s => {
+    this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}]`;
+/*     this.mapping.substitutions.forEach( s => {
       //console.log ("New mapping:", s.pathSource, s.pathTarget);
       this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
-    } )
+    } ) */
     console.log ("New mapping:", sub);
   }
 
@@ -330,8 +336,21 @@ export class MQTTMappingStepperComponent implements OnInit {
     console.log ("Cleared mappings!");
   }
 
-  setSelectionToPath(editor: JsonEditorComponent, path: string) {
+  public onShowSubstitutionsClicked(){
+    if ( this.counterShowSubstitutions < this.mapping.substitutions.length) {
+      this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.counterShowSubstitutions].pathSource)
+      this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
+      this.counterShowSubstitutions = this.counterShowSubstitutions + 1;
+    }
 
+    if ( this.counterShowSubstitutions >= this.mapping.substitutions.length) {
+      this.counterShowSubstitutions = 0;
+    }
+    console.log ("Show substitutions!");
+  }
+
+
+  setSelectionToPath(editor: JsonEditorComponent, path: string) {
     console.log("Set selection to path:", path);
     const ns = path.split(".");
     const selection = {path: ns};
