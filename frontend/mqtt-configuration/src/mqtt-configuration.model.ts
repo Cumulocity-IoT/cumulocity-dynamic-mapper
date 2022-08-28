@@ -31,31 +31,31 @@ export const SAMPLE_TEMPLATES = {
   measurement: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
-            \"value\": \${value},
+            \"value\": 110,
               \"unit\": \"C\" }
           },
-      \"time\":\"\${time}\",
+      \"time\":\"2022-08-05T00:14:49.389+02:00\",
       \"source\": {
-        \"id\":\"\${device}\" },
-      \"type\": \"\${type}\"
+        \"id\":\"909090\" },
+      \"type\": \"c8y_TemperatureMeasurement\"
   }`,
   alarm: `{                                            
     \"source\": {
-    \"id\": \"\${device}\"
+    \"id\": \"909090\"
     },\
-    \"type\": \"\${type}\",
-    \"text\": \"\${text}\",
-    \"severity\": \"\${severity}\",
-    \"status\": \"\${status}\",
-    \"time\": \"\${time}\"
+    \"type\": \"c8y_TestAlarm\",
+    \"text\": \"This is a new test alarm!\",
+    \"severity\": \"MAJOR\",
+    \"status\": \"ACTIVE\",
+    \"time\": \"2022-08-05T00:14:49.389+02:00\"
   }`,
   event: `{ 
     \"source\": {
-    \"id\": \"\${device}\"
+    \"id\": \"909090\"
     },
-    \"text\": \"\${text}\",
-    \"time\": \"\${time}\",
-    \"type\": \"\${type}\"
+    \"text\": \"This is a new test event.\",
+    \"time\": \"2022-08-05T00:14:49.389+02:00\",
+    \"type\": \"c8y_TestEvent\"
  }`
 }
 
@@ -199,4 +199,25 @@ export const SCHEMA_MEASUREMENT = {
         'pattern': '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[\+-]\\d{2}:\\d{2})?)$'
       }
     }
+}
+
+
+export const SCHEMA_PAYLOAD = {
+  'definitions': {},
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  '$id': 'http://example.com/root.json',
+  'type': 'object',
+  'title': 'Payload',
+  'required': [
+    ],
+}
+
+export function getSchema(targetAPI: string): any {
+  if (targetAPI == "alarm") {
+    return SCHEMA_ALARM;
+  } else if (targetAPI == "event"){
+    return SCHEMA_EVENT;
+  } else {
+    return SCHEMA_MEASUREMENT;
+  }
 }

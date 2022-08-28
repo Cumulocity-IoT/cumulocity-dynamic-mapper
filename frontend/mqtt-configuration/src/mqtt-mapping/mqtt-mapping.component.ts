@@ -4,7 +4,6 @@ import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType,
 import { MQTTMapping, SAMPLE_TEMPLATES } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
-import { JSONPath } from 'jsonpath-plus';
 
 @Component({
   selector: 'mqtt-mapping',
@@ -25,6 +24,8 @@ export class MQTTMappingComponent implements OnInit {
   isConnectionToMQTTEstablished: boolean;
 
   mqttMappings: MQTTMapping[];
+  mappingToUpdate: MQTTMapping;
+  editMode: boolean;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -77,6 +78,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'active',
       filterable: true,
       cellRendererComponent: StatusRendererComponent,
+      cellCSSClassName: 'textAlignCenter',
       gridTrackSize: '5%'
     },
     {
@@ -96,8 +98,6 @@ export class MQTTMappingComponent implements OnInit {
     currentPage: 1,
   };
   actionControls: ActionControl[] = [];
-
-  mappingToUpdate: MQTTMapping;
 
   constructor(
     public mqttMappingService: MQTTMappingService,
@@ -122,13 +122,14 @@ export class MQTTMappingComponent implements OnInit {
   }
 
   async addMapping() {
+    this.editMode = false;
     let l = Math.max(...this.mqttMappings.map(item => item.id));
     let mapping = {
       id: l + 1,
       topic: '',
       targetAPI: 'measurement',
       source: '{}',
-      target: '',
+      target: SAMPLE_TEMPLATES['measurement'],
       active: false,
       tested: false,
       createNoExistingDevice: false,
@@ -143,6 +144,7 @@ export class MQTTMappingComponent implements OnInit {
   }
 
   editMapping(mapping: MQTTMapping) {
+    this.editMode = true;
     this.mappingToUpdate = mapping;
     console.log("Editing mapping", mapping)
     this.showConfigMapping = true;
