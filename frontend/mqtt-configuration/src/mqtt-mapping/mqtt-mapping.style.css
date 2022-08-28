@@ -50,10 +50,6 @@ div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
   background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
 }
 
-/* .jsoneditor-menu > .jsoneditor-modes > button {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
-} */
-
 .jsoneditor-search button {
   background: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
 }
@@ -64,4 +60,14 @@ div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
 
 .jsoneditor-statusbar > .jsoneditor-parse-error-icon {
   background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+}
+
+
+
+button.jsoneditor-button.jsoneditor-dragarea {
+  display: none !important;
+}
+
+.textAlignCenter {
+  text-align: center;
 }

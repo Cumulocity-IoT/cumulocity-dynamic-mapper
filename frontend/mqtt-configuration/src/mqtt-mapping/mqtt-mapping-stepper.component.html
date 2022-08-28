@@ -8,7 +8,7 @@
       <ng-template c8yStepperIcon="final">
         <span [c8yIcon]="'hand-peace-o'"></span>
       </ng-template>
-      <cdk-step [stepControl]="propertiesForm" label="Define topic">
+      <cdk-step [stepControl]="propertyForm" label="Define topic">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
             <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
@@ -21,7 +21,7 @@
         <div class="col-xs-12 flex-grow no-gutter">
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
-              <div [formGroup]="propertiesForm">
+              <div [formGroup]="propertyForm">
 
                 <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
                   <c8y-form-group>
@@ -94,20 +94,26 @@
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="form-group">
                     <label translate>Template message - source</label>
-                    <div style="height:300px;">
-                      <json-editor [options]="editorOptionsSource" [data]="dataSource"
+                    <div style="overflow:scroll; height:200px;">
+                      <json-editor [options]="editorOptionsSource" [data]="dataSource" 
                         #editorSource></json-editor>
                     </div>
+                    <c8y-messages>
+                      <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!</c8y-message>
+                    </c8y-messages>
                   </div>
                   <div class="form-group">
                     <label translate>Cumulocity message - target</label>
-                    <div style="height:300px;">
+                    <div style="overflow:scroll; height:200px;">
                       <json-editor [options]="editorOptionsTarget"  [data]="dataTarget"
                         #editorTarget></json-editor>
                     </div>
+                    <c8y-messages>
+                      <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!</c8y-message>
+                    </c8y-messages>
                   </div>
                   <div class="form-group">
-                    <label translate>Define mapppings</label>
+                    <label translate>Defined substitutions</label>
                     <div >
                       <span>{{substitutions}}</span>
                     </div>
@@ -122,14 +128,14 @@
           <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
             Sample target template
           </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onAddMappingClicked()" translate>
-            Add mapping
+          <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()" translate>
+            Add substitution
           </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onClearMappingsClicked()" translate>
-            Clear mappings
+          <button type="button" name="sample" class="btn btn-default" (click)="onClearSubstitutionsClicked()" translate>
+            Clear substitutions
           </button>
           <button type="button" name="sample" class="btn btn-default" (click)="onShowSubstitutionsClicked()" translate>
-            Show mappings
+            Show substitutions
           </button>
         </div>
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
@@ -154,8 +160,8 @@
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
                     <div style="height:200px">
-                      <json-editor [options]="editorOptionsTarget" [data]="dataResult"
-                      #editorResult></json-editor>
+                      <json-editor [options]="editorOptionsTesting" [data]="dataTesting"
+                      #editorResting></json-editor>
                     </div>
                   </div>
                 </div>
