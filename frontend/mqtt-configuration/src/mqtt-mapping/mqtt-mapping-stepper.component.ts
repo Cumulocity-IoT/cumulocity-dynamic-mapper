@@ -33,6 +33,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   pathTarget: string = '';
   dataSource: any;
   dataTarget: any;
+  dataTesting: any;
   pathSourceMissing: boolean;
   pathTargetMissing: boolean;
 
@@ -81,7 +82,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
-
+ 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
 
@@ -94,14 +95,12 @@ export class MQTTMappingStepperComponent implements OnInit {
   counterShowSubstitutions: number = 0;
 
   propertyForm: FormGroup;
-  templateForm: FormGroup;
   testForm: FormGroup;
 
   topicUnique: boolean;
   wildcardTopic: boolean;
 
   TOPIC_JSON_PATH = "TOPIC";
-  dataTesting: string;
 
   constructor(
     public mqttMappingService: MQTTMappingService,
@@ -111,7 +110,6 @@ export class MQTTMappingStepperComponent implements OnInit {
   ngOnInit() {
     //console.log("Mapping to be updated:", this.mapping);
     this.initPropertyForm();
-    this.initTemplateForm();
     this.editorOptionsSource = {
       modes: ['tree', 'code'],
       statusBar: false,
@@ -144,6 +142,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       onEvent: this.setSelectionSource,
       schema: SCHEMA_PAYLOAD
     };
+
   }
 
   private initPropertyForm(): void {
@@ -156,14 +155,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     });
 
     this.onChangesProperty();
-  }
-
-  private initTemplateForm(): void {
-    this.templateForm = new FormGroup({
-      // source: new FormControl(this.mapping.source, Validators.required),
-      // target: new FormControl(this.mapping.target, Validators.required),
-    });
-
   }
 
   private onChangesProperty(): void {
@@ -329,12 +320,12 @@ export class MQTTMappingStepperComponent implements OnInit {
     } else if (event.step.label == "Define templates") {
       //console.log("Templates target from editor:", this.dataTarget)
       //remove dummy field "TOPIC", since it should not be stored
-      let dts = JSON.parse(this.editorSource.getText())
+      let dts = this.editorSource.get()
       delete dts.TOPIC;
       this.mapping.source = JSON.stringify(dts);
       this.mapping.target = this.editorTarget.getText();
       console.log("Templates source from editor:", this.dataSource, this.editorSource.getText(), this.mapping)
-      this.dataTesting = JSON.parse(this.editorSource.getText());
+      this.dataTesting = this.editorSource.get();
     } else if (event.step.label == "Test mapping") {
 
     }
