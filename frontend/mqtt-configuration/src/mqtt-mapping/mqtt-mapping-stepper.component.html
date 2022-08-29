@@ -28,7 +28,7 @@
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
                       <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
-                        #idRef required (change)="checkTopicUnique($event)" />
+                        #idRef required (change)="checkTopicIsUnique($event)" />
                     </div>
                     <c8y-messages>
                       <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
@@ -95,7 +95,7 @@
                   <div class="form-group">
                     <label translate>Template message - source</label>
                     <div style="overflow:scroll; height:200px;">
-                      <json-editor [options]="editorOptionsSource" [data]="dataSource" 
+                      <json-editor [options]="editorOptionsSource" [data]="templateSource" 
                         #editorSource></json-editor>
                     </div>
                     <c8y-messages>
@@ -105,7 +105,7 @@
                   <div class="form-group">
                     <label translate>Cumulocity message - target</label>
                     <div style="overflow:scroll; height:200px;">
-                      <json-editor [options]="editorOptionsTarget"  [data]="dataTarget"
+                      <json-editor [options]="editorOptionsTarget"  [data]="templateTarget"
                         #editorTarget></json-editor>
                     </div>
                     <c8y-messages>

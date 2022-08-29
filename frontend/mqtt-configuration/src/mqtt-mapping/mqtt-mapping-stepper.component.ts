@@ -31,8 +31,8 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   pathSource: string = '';
   pathTarget: string = '';
-  dataSource: any;
-  dataTarget: any;
+  templateSource: any;
+  templateTarget: any;
   dataTesting: any;
   pathSourceMissing: boolean;
   pathTargetMissing: boolean;
@@ -90,15 +90,12 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  value: string;
-
   counterShowSubstitutions: number = 0;
 
   propertyForm: FormGroup;
   testForm: FormGroup;
 
   topicUnique: boolean;
-  wildcardTopic: boolean;
 
   TOPIC_JSON_PATH = "TOPIC";
 
@@ -147,34 +144,30 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
-      topic: new FormControl(this.isUpdateExistingMapping() ? this.mapping.topic : '', Validators.required),
-      targetAPI: new FormControl(this.isUpdateExistingMapping() ? this.mapping.targetAPI : '', Validators.required),
-      active: new FormControl(this.isUpdateExistingMapping() ? this.mapping.active : '', Validators.required),
-      createNoExistingDevice: new FormControl(this.isUpdateExistingMapping() ? this.mapping.createNoExistingDevice : '', Validators.required),
-      qos: new FormControl(this.isUpdateExistingMapping() ? this.mapping.qos : '', Validators.required),
+      topic: new FormControl( this.mapping.topic, Validators.required),
+      targetAPI: new FormControl( this.mapping.targetAPI, Validators.required),
+      active: new FormControl(this.mapping.active, Validators.required),
+      createNoExistingDevice: new FormControl( this.mapping.createNoExistingDevice, Validators.required),
+      qos: new FormControl( this.mapping.qos, Validators.required),
     });
 
-    this.onChangesProperty();
   }
 
-  private onChangesProperty(): void {
-    this.propertyForm.get('topic').valueChanges.subscribe(val => {
-      //console.log( `topic ${val}`);
-    });
-    this.propertyForm.get('targetAPI').valueChanges.subscribe(val => {
-      //console.log( `targetAPI ${val}`);
-    });
+  private setSelectionToPath(editor: JsonEditorComponent, path: string) {
+    console.log("Set selection to path:", path);
+    const ns = path.split(".");
+    const selection = {path: ns};
+    editor.setSelection(selection, selection)
   }
 
-  isWildcardTopic(): boolean {
-    //let topic : string = e.target.value;
+
+  private isWildcardTopic(): boolean {
     const topic = this.propertyForm.get('topic').value;
     const result = topic.endsWith(this.TOPIC_WILDCARD);
-    this.wildcardTopic = result;
     return result;
   }
 
-  public checkTopicUnique(e): boolean {
+  checkTopicIsUnique(e): boolean {
     let topic = e.target.value;
     console.log("Changed topic: ", topic);
     let result = true;
@@ -191,24 +184,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (!result) this.propertyForm.controls['topic'].setErrors({ 'incorrect': true });
     return result;
   }
-
-  async onCommitButtonClicked() {
-    let changed_mapping: MQTTMapping = {
-      id: this.mapping.id,
-      topic: this.normalizeTopic(this.propertyForm.get('topic').value),
-      targetAPI: this.propertyForm.get('targetAPI').value,
-      source: this.mapping.source,
-      target: this.mapping.target,
-      active: this.propertyForm.get('active').value,
-      tested: this.mapping.tested || false,
-      createNoExistingDevice: this.propertyForm.get('createNoExistingDevice').value || false,
-      qos: this.propertyForm.get('qos').value,
-      substitutions: this.mapping.substitutions,
-      lastUpdate: Date.now(),
-    }
-    this.onCommit.emit(changed_mapping);
-  }
-
+  
   private normalizeTopic(topic: string) {
     let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
     console.log("Topic test", topic, nt);
@@ -217,29 +193,17 @@ export class MQTTMappingStepperComponent implements OnInit {
     return nt
   }
 
+  private getCurrentMapping(): MQTTMapping {
+    //remove dummy field "TOPIC", since it should not be stored
+    let dts = this.editorSource.get()
+    delete dts['TOPIC'];
+    let st = JSON.stringify(dts);
 
-  getVariableNames(): string {
-    const p = this.mapping.target;
-    // variable name:$1, $2, $3
-    //const v = p.match(/\$\d/g)||[];
-    // variable name:${wert}, ${time}, ${type}
-    const v = p.match(/\$\{(\w+)\}/g) || [];
-
-    //console.log("Variable:", v, p)
-    return v.join();
-  }
-
-
-  public isUpdateExistingMapping(): boolean {
-    return !!this.mapping;
-  }
-
-  async onTestTransformationClicked() {
-    let test_mapping: MQTTMapping = {
+    return {
       id: this.mapping.id,
       topic: this.normalizeTopic(this.propertyForm.get('topic').value),
       targetAPI: this.propertyForm.get('targetAPI').value,
-      source: this.editorSource.getText(),
+      source: st,
       target: this.editorTarget.getText(),
       active: this.propertyForm.get('active').value,
       tested: this.mapping.tested || false,
@@ -247,26 +211,20 @@ export class MQTTMappingStepperComponent implements OnInit {
       qos: this.propertyForm.get('qos').value,
       substitutions: this.mapping.substitutions,
       lastUpdate: Date.now(),
-    }
-    let dataTesting = await this.mqttMappingService.testResult(test_mapping, false);
+    };
+  }
+
+  async onCommitButtonClicked() {
+    this.onCommit.emit(this.getCurrentMapping());
+  }
+
+  async onTestTransformationClicked() {
+    let dataTesting = await this.mqttMappingService.testResult(this.getCurrentMapping(), false);
     this.dataTesting = dataTesting;
   }
 
   async onSendTestClicked() {
-    let test_mapping: MQTTMapping = {
-      id: this.mapping.id,
-      topic: this.normalizeTopic(this.propertyForm.get('topic').value),
-      targetAPI: this.propertyForm.get('targetAPI').value,
-      source: this.editorSource.getText(),
-      target: this.editorTarget.getText(),
-      active: this.propertyForm.get('active').value,
-      tested: this.mapping.tested || false,
-      createNoExistingDevice: this.propertyForm.get('createNoExistingDevice').value || false,
-      qos: this.propertyForm.get('qos').value,
-      substitutions: this.mapping.substitutions,
-      lastUpdate: Date.now(),
-    }
-    let { data, res } = await this.mqttMappingService.sendTestResult(test_mapping);
+    let { data, res } = await this.mqttMappingService.sendTestResult(this.getCurrentMapping());
     //console.log ("My data:", data );
     if (res.status == 200 || res.status == 201) {
       this.alertService.success("Successfully tested mapping!");
@@ -279,8 +237,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   async onSampleButtonClicked() {
-    let current_target_api = this.propertyForm.get('targetAPI').value;
-    this.dataTarget = JSON.parse(SAMPLE_TEMPLATES[current_target_api]);
+    this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.propertyForm.get('targetAPI').value]);
   }
 
   async onCancelButtonClicked() {
@@ -303,50 +260,45 @@ export class MQTTMappingStepperComponent implements OnInit {
         this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
       } )
 
-      this.dataSource = JSON.parse(this.mapping.source);
+      this.templateSource = JSON.parse(this.mapping.source);
       //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
       if (this.isWildcardTopic()) {
-        this.dataSource = {
-          ...this.dataSource,
+        this.templateSource = {
+          ...this.templateSource,
           TOPIC: "909090"
         }
       }
       this.editorTarget.setSchema(getSchema (targetAPI), null);
-      this.dataTarget = JSON.parse(this.mapping.target);
+      this.templateTarget = JSON.parse(this.mapping.target);
       if ( !this.editMode ){
-        this.dataTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
-        console.log("Sample template",this.dataTarget, getSchema (targetAPI))
+        this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
+        console.log("Sample template",this.templateTarget, getSchema (targetAPI))
       }
     } else if (event.step.label == "Define templates") {
-      //console.log("Templates target from editor:", this.dataTarget)
-      //remove dummy field "TOPIC", since it should not be stored
-      let dts = this.editorSource.get()
-      delete dts.TOPIC;
-      this.mapping.source = JSON.stringify(dts);
-      this.mapping.target = this.editorTarget.getText();
-      console.log("Templates source from editor:", this.dataSource, this.editorSource.getText(), this.mapping)
+      console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
     } else if (event.step.label == "Test mapping") {
 
     }
-
     event.stepper.next();
+
   }
 
   public onAddSubstitutionsClicked(){
-    if (this.pathSource != '' && this.pathTarget != '') {
-      this.pathSourceMissing = false;
-      this.pathTargetMissing = false;
+    this.pathSourceMissing = this.pathSource != '' ? false: true;
+    this.pathTargetMissing = this.pathTarget != '' ? false: true;
+
+    if (!this.pathSourceMissing && !this.pathTargetMissing ) {
       let sub: MQTTMappingSubstitution  = {
         pathSource: this.pathSource,
         pathTarget: this.pathTarget
       }
-      this.mapping.substitutions.push(sub);
-      this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}]`;
+      this.addSubstitution(sub);
       console.log ("New substitution", sub);
-    } else {
-      this.pathSourceMissing = this.pathSource != '' ? false: true;
-      this.pathTargetMissing = this.pathTarget != '' ? false: true;
+      this.pathSource = '';
+      this.pathTarget = '';
+      this.pathSourceMissing = false;
+      this.pathTargetMissing = false;
     }
   }
 
@@ -358,8 +310,7 @@ export class MQTTMappingStepperComponent implements OnInit {
         pathSource: this.TOPIC_JSON_PATH,
         pathTarget: "source.id"
       }
-      this.mapping.substitutions.push(sub);
-      this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}]`;
+      this.addSubstitution(sub);
     }
     console.log ("Cleared substitutions!");
   }
@@ -377,20 +328,9 @@ export class MQTTMappingStepperComponent implements OnInit {
     console.log ("Show substitutions!");
   }
 
-
-  setSelectionToPath(editor: JsonEditorComponent, path: string) {
-    console.log("Set selection to path:", path);
-    const ns = path.split(".");
-    const selection = {path: ns};
-    editor.setSelection(selection, selection)
-  }
-
-  jsonPathChanged(event: any) {
-    let p: string = event.target.value;
-    console.log(p);
-    const ns = p.split(".");
-    const selection = {path: ns};
-    //this.editor.setSelection(selection, selection)
+  private addSubstitution(sub: MQTTMappingSubstitution) {
+    this.mapping.substitutions.push(sub);
+    this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}]`;
   }
 
 }
