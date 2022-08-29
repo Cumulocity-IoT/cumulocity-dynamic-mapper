@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
@@ -21,11 +21,13 @@ export class MQTTMappingStepperComponent implements OnInit {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<MQTTMapping>();
 
+  COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#80ced6']
   APIs = APIs;
   QOSs = QOSs;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
   TOPIC_WILDCARD = "#"
 
+  paletteCounter:number = 0;
   isSubstitutionValid: boolean;
   substitutions: string = '';
 
@@ -36,6 +38,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   dataTesting: any;
   pathSourceMissing: boolean;
   pathTargetMissing: boolean;
+  selectionList: any = [];
 
   private setSelectionSource = function (node: any, event: any) {
     if (event.type == "click") {
@@ -51,6 +54,10 @@ export class MQTTMappingStepperComponent implements OnInit {
         if (i !== node.path.length - 1) path += ".";
       }
       this.pathSource = path;
+      for (let item of this.selectionList) {
+        console.log("Reset item:", item);
+        item.setAttribute('style',null);
+      }
       this.setSelectionToPath(this.editorSource, path)
       console.log("Set pathSource:", path);
     }
@@ -71,18 +78,22 @@ export class MQTTMappingStepperComponent implements OnInit {
         if (i !== node.path.length - 1) path += ".";
       }
       this.pathTarget = path;
+      for (let item of this.selectionList) {
+        console.log("Reset item:", item);
+        item.setAttribute('style', null);
+      }
       this.setSelectionToPath(this.editorTarget, path)
       console.log("Set pathTarget:", path);
     }
   }.bind(this)
 
-  editorOptionsSource: any 
-  editorOptionsTarget: any 
-  editorOptionsTesting: any 
+  editorOptionsSource: any
+  editorOptionsTarget: any
+  editorOptionsTesting: any
 
   @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
- 
+
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
 
@@ -102,10 +113,12 @@ export class MQTTMappingStepperComponent implements OnInit {
   constructor(
     public mqttMappingService: MQTTMappingService,
     public alertService: AlertService,
+    private elementRef: ElementRef
   ) { }
 
   ngOnInit() {
     //console.log("Mapping to be updated:", this.mapping);
+    console.log ("ElementRef:", this.elementRef.nativeElement);
     this.initPropertyForm();
     this.editorOptionsSource = {
       modes: ['tree', 'code'],
@@ -117,7 +130,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       onEvent: this.setSelectionSource,
       schema: SCHEMA_PAYLOAD
     };
-  
+
     this.editorOptionsTarget = {
       modes: ['tree', 'code'],
       statusBar: false,
@@ -144,11 +157,11 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
-      topic: new FormControl( this.mapping.topic, Validators.required),
-      targetAPI: new FormControl( this.mapping.targetAPI, Validators.required),
+      topic: new FormControl(this.mapping.topic, Validators.required),
+      targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       active: new FormControl(this.mapping.active, Validators.required),
-      createNoExistingDevice: new FormControl( this.mapping.createNoExistingDevice, Validators.required),
-      qos: new FormControl( this.mapping.qos, Validators.required),
+      createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
+      qos: new FormControl(this.mapping.qos, Validators.required),
     });
 
   }
@@ -156,7 +169,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {
     console.log("Set selection to path:", path);
     const ns = path.split(".");
-    const selection = {path: ns};
+    const selection = { path: ns };
     editor.setSelection(selection, selection)
   }
 
@@ -167,8 +180,8 @@ export class MQTTMappingStepperComponent implements OnInit {
     return result;
   }
 
-  checkTopicIsUnique(e): boolean {
-    let topic = e.target.value;
+  checkTopicIsUnique(evt): boolean {
+    let topic = evt.target.value;
     console.log("Changed topic: ", topic);
     let result = true;
     result = this.mappings.every(m => {
@@ -184,7 +197,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (!result) this.propertyForm.controls['topic'].setErrors({ 'incorrect': true });
     return result;
   }
-  
+
   private normalizeTopic(topic: string) {
     let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
     console.log("Topic test", topic, nt);
@@ -253,12 +266,12 @@ export class MQTTMappingStepperComponent implements OnInit {
       console.log("Populate jsonPath if wildcard:", this.isWildcardTopic(), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       if (this.mapping.substitutions.length == 0 && this.isWildcardTopic()) {
-        this.mapping.substitutions.push({pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id"})
+        this.mapping.substitutions.push({ pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id" })
       }
-      this.mapping.substitutions.forEach( s => {
+      this.mapping.substitutions.forEach(s => {
         //console.log ("New mapping:", s.pathSource, s.pathTarget);
         this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
-      } )
+      })
 
       this.templateSource = JSON.parse(this.mapping.source);
       //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
@@ -268,11 +281,11 @@ export class MQTTMappingStepperComponent implements OnInit {
           TOPIC: "909090"
         }
       }
-      this.editorTarget.setSchema(getSchema (targetAPI), null);
+      this.editorTarget.setSchema(getSchema(targetAPI), null);
       this.templateTarget = JSON.parse(this.mapping.target);
-      if ( !this.editMode ){
+      if (!this.editMode) {
         this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
-        console.log("Sample template",this.templateTarget, getSchema (targetAPI))
+        console.log("Sample template", this.templateTarget, getSchema(targetAPI))
       }
     } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
@@ -284,48 +297,64 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   }
 
-  public onAddSubstitutionsClicked(){
-    this.pathSourceMissing = this.pathSource != '' ? false: true;
-    this.pathTargetMissing = this.pathTarget != '' ? false: true;
+  public onAddSubstitutionsClicked() {
+    this.pathSourceMissing = this.pathSource != '' ? false : true;
+    this.pathTargetMissing = this.pathTarget != '' ? false : true;
 
-    if (!this.pathSourceMissing && !this.pathTargetMissing ) {
-      let sub: MQTTMappingSubstitution  = {
+    if (!this.pathSourceMissing && !this.pathTargetMissing) {
+      let sub: MQTTMappingSubstitution = {
         pathSource: this.pathSource,
         pathTarget: this.pathTarget
       }
       this.addSubstitution(sub);
-      console.log ("New substitution", sub);
+      console.log("New substitution", sub);
       this.pathSource = '';
       this.pathTarget = '';
-      this.pathSourceMissing = false;
-      this.pathTargetMissing = false;
+      this.pathSourceMissing = true;
+      this.pathTargetMissing = true;
     }
   }
 
-  public onClearSubstitutionsClicked(){
+  public onClearSubstitutionsClicked() {
     this.mapping.substitutions = [];
     this.substitutions = "";
     if (this.mapping.substitutions.length == 0 && this.isWildcardTopic()) {
-      let sub: MQTTMappingSubstitution  = {
+      let sub: MQTTMappingSubstitution = {
         pathSource: this.TOPIC_JSON_PATH,
         pathTarget: "source.id"
       }
       this.addSubstitution(sub);
     }
-    console.log ("Cleared substitutions!");
+    console.log("Cleared substitutions!");
   }
 
-  public onShowSubstitutionsClicked(){
-    if ( this.counterShowSubstitutions < this.mapping.substitutions.length) {
+  public onShowSubstitutionsClicked() {
+    let nextColor = this.COLOR_PALETTE[this.paletteCounter];
+    this.paletteCounter++;
+    if (this.paletteCounter >= this.COLOR_PALETTE.length) {
+      this.paletteCounter = 0;
+    }
+    if (this.counterShowSubstitutions < this.mapping.substitutions.length) {
+      // reset background color of old selection list
+      for (let item of this.selectionList) {
+        item.setAttribute('style', null);
+      }
+
       this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.counterShowSubstitutions].pathSource)
       this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
+      console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
+      //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
+      this.selectionList  = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
+      for (let item of this.selectionList) {
+        item.setAttribute('style', `background: ${nextColor};`);
+      }
       this.counterShowSubstitutions = this.counterShowSubstitutions + 1;
     }
 
-    if ( this.counterShowSubstitutions >= this.mapping.substitutions.length) {
+    if (this.counterShowSubstitutions >= this.mapping.substitutions.length) {
       this.counterShowSubstitutions = 0;
     }
-    console.log ("Show substitutions!");
+    console.log("Show substitutions!");
   }
 
   private addSubstitution(sub: MQTTMappingSubstitution) {
