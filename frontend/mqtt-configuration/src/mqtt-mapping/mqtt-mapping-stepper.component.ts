@@ -21,7 +21,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<MQTTMapping>();
 
-  COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#80ced6']
+  COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#fefbd8', '#618685', '#ffef96', '#50394c', '#b2b2b2', '#f4e1d2']
   APIs = APIs;
   QOSs = QOSs;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
@@ -348,18 +348,19 @@ export class MQTTMappingStepperComponent implements OnInit {
       for (let item of this.selectionList) {
         item.setAttribute('style', `background: ${nextColor};`);
       }
-      this.counterShowSubstitutions = this.counterShowSubstitutions + 1;
+      this.counterShowSubstitutions++;
     }
 
     if (this.counterShowSubstitutions >= this.mapping.substitutions.length) {
       this.counterShowSubstitutions = 0;
+      this.paletteCounter = 0;
     }
     console.log("Show substitutions!");
   }
 
   private addSubstitution(sub: MQTTMappingSubstitution) {
     this.mapping.substitutions.push(sub);
-    this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}]`;
+    this.substitutions = this.substitutions + `[ ${sub.pathSource} -> ${sub.pathTarget}] `;
   }
 
 }

@@ -80,7 +80,7 @@
       <cdk-step label="Define templates">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
-            <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-4">
+            <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
               <h4 class="text-center text-medium">
                 Define templates
               </h4>
@@ -90,36 +90,63 @@
         <div class="col-xs-12 flex-grow no-gutter">
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
-            
-                <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-                  <div class="form-group">
-                    <label translate>Template message - source</label>
-                    <div style="overflow:scroll; height:200px;">
-                      <json-editor [options]="editorOptionsSource" [data]="templateSource" 
-                        #editorSource></json-editor>
+
+              <!-- <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3"> -->
+
+              <div class="container">
+                <div class="row">
+                  <div class="col-lg-5  vcenter">
+                    <div class="form-group">
+                      <label translate>Template message - source</label>
+                      <div style="overflow:scroll; height:300px;">
+                        <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
+                        </json-editor>
+                      </div>
+                      <c8y-messages>
+                        <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!
+                        </c8y-message>
+                      </c8y-messages>
                     </div>
-                    <c8y-messages>
-                      <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!</c8y-message>
-                    </c8y-messages>
+
                   </div>
-                  <div class="form-group">
-                    <label translate>Cumulocity message - target</label>
-                    <div style="overflow:scroll; height:200px;">
-                      <json-editor [options]="editorOptionsTarget"  [data]="templateTarget"
-                        #editorTarget></json-editor>
+                  <div class="col-lg-2 vcenter" style="text-align:center;">
+                    <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()"
+                      translate>
+                      Map ->
+                    </button>
+
+                  </div>
+                  <div class="col-lg-5 vcenter">
+                    <div class="form-group">
+                      <label translate>Cumulocity message - target</label>
+                      <div style="overflow:scroll; height:300px;">
+                        <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
+                        </json-editor>
+                      </div>
+                      <c8y-messages>
+                        <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!
+                        </c8y-message>
+                      </c8y-messages>
                     </div>
-                    <c8y-messages>
-                      <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!</c8y-message>
-                    </c8y-messages>
+
                   </div>
-                  <div class="form-group">
-                    <label translate>Defined substitutions</label>
-                    <div >
-                      <span>{{substitutions}}</span>
+
+                </div>
+
+              </div>
+              <div class="container">
+                <div class="row">
+                  <div class="col-lg-5 vcenter">
+                    <div class="form-group">
+                      <label translate>Defined substitutions</label>
+                      <div>
+                        <span>{{substitutions}}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-            
+              </div>
+
             </div>
           </div>
         </div>
@@ -128,9 +155,9 @@
           <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
             Sample target template
           </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()" translate>
+          <!--           <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()" translate>
             Add substitution
-          </button>
+          </button> -->
           <button type="button" name="sample" class="btn btn-default" (click)="onClearSubstitutionsClicked()" translate>
             Clear substitutions
           </button>
@@ -160,8 +187,7 @@
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
                     <div style="height:200px">
-                      <json-editor [options]="editorOptionsTesting" [data]="dataTesting"
-                      #editorResting></json-editor>
+                      <json-editor [options]="editorOptionsTesting" [data]="dataTesting" #editorResting></json-editor>
                     </div>
                   </div>
                 </div>
@@ -170,12 +196,10 @@
           </div>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()"
-             translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()" translate>
             Transform test message
           </button>
-          <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()"
-             translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()" translate>
             Send test message
           </button>
         </div>

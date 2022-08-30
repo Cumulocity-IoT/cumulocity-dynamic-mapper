@@ -71,3 +71,9 @@ button.jsoneditor-button.jsoneditor-dragarea {
 .textAlignCenter {
   text-align: center;
 }
+
+.vcenter {
+  display: inline-block;
+  vertical-align: middle;
+  float: none;
+}
