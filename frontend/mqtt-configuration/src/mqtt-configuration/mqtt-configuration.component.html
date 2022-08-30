@@ -5,15 +5,15 @@
       <h4 class="card-title" translate>Authentication</h4>
       <div class="c8y-realtime">
         <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isConnectionToMQTTInitialized,
-            inactive: !isConnectionToMQTTInitialized
+            active: isMQTTConnected,
+            inactive: !isMQTTConnected
           }"></span>
-        {{ 'Initialized' | translate }}
+        {{ 'Connected' | translate }}
       </div>
       <div class="c8y-realtime">
         <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isConnectionToMQTTActivated,
-            inactive: !isConnectionToMQTTActivated
+            active: isMQTTActivated,
+            inactive: !isMQTTActivated
           }"></span>
         {{ 'Active' | translate }}
       </div>
@@ -22,7 +22,7 @@
             active: isMQTTAgentCreated,
             inactive: !isMQTTAgentCreated
           }"></span>
-        {{ 'MQTTAgent' | translate }}
+        {{ 'MQTTAgent registered' | translate }}
       </div>
     </div>
     <div class="card-block">
@@ -89,11 +89,11 @@
           Update
         </button>
         <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-          [disabled]="!isConnectionToMQTTInitialized || isConnectionToMQTTActivated" translate>
+          [disabled]="!isMQTTInitialized || isMQTTActivated" translate>
           Connect
         </button>
         <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
-          [disabled]="!isConnectionToMQTTActivated" translate>
+          [disabled]="!isMQTTActivated" translate>
           Disconnect
         </button>
       </div>

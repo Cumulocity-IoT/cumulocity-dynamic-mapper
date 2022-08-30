@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 public class MQTTRestController {
 
-
     @Autowired
     MQTTClient mqttClient;
 
@@ -87,10 +86,13 @@ public class MQTTRestController {
     @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getStatus() {
         log.info("query status: {}", mqttClient.isConnectionConfigured());
-        if (mqttClient.isConnectionActicated()) {
-           return new ResponseEntity<>(ServiceStatus.activated(), HttpStatus.OK);
+         
+        if (mqttClient.isConnected()) {
+            return new ResponseEntity<>(ServiceStatus.connected(), HttpStatus.OK);
+        } else if (mqttClient.isConnectionActicated()) {
+            return new ResponseEntity<>(ServiceStatus.activated(), HttpStatus.OK);
         } else if (mqttClient.isConnectionConfigured()) {
-            return new ResponseEntity<>(ServiceStatus.onlyConfigured(), HttpStatus.OK);
+            return new ResponseEntity<>(ServiceStatus.configured(), HttpStatus.OK);
         }
         return new ResponseEntity<>(ServiceStatus.notReady(), HttpStatus.OK);
     }

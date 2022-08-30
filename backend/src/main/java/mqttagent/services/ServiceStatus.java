@@ -4,8 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 enum Status {
-    ONLY_CONFIGURED,
+    CONNECTED,
     ACTIVATED,
+    CONFIGURED,
     NOT_READY
 }
 
@@ -13,13 +14,17 @@ enum Status {
 @AllArgsConstructor
 public class ServiceStatus {
     private Status status;
-
-    public static ServiceStatus onlyConfigured() {
-        return new ServiceStatus(Status.ONLY_CONFIGURED);
+    
+    public static ServiceStatus connected() {
+        return new ServiceStatus(Status.CONNECTED);
     }
-
+    
     public static ServiceStatus activated() {
         return new ServiceStatus(Status.ACTIVATED);
+    }
+    
+    public static ServiceStatus configured() {
+        return new ServiceStatus(Status.CONFIGURED);
     }
 
     public static ServiceStatus notReady() {
