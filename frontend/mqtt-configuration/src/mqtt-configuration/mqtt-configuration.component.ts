@@ -11,8 +11,9 @@ import { MQTTTerminateConnectionModalComponent } from './terminate-connection-mo
 })
 export class MQTTConfigurationComponent implements OnInit {
 
-  isConnectionToMQTTInitialized: boolean;
-  isConnectionToMQTTActivated: boolean;
+  isMQTTInitialized: boolean;
+  isMQTTActivated: boolean;
+  isMQTTConnected: boolean;
   isMQTTAgentCreated: boolean;
 
   mqttForm: FormGroup;
@@ -31,16 +32,23 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async initConnectionStatus(): Promise<void> {
-    this.isConnectionToMQTTInitialized = false;
-    this.isConnectionToMQTTActivated = false;
+    this.isMQTTInitialized = false;
+    this.isMQTTActivated = false;
+    this.isMQTTConnected = false;
     let status = await this.mqttConfigurationService.getConnectionStatus();
     console.log("Retrieved status:", status)
     if (status === "ACTIVATED") {
-      this.isConnectionToMQTTInitialized = true;
-      this.isConnectionToMQTTActivated = true;
+      this.isMQTTConnected = false;
+      this.isMQTTInitialized = true;
+      this.isMQTTActivated = true;
+    } else if (status === "CONNECTED") {
+      this.isMQTTConnected = true;
+      this.isMQTTInitialized = true;
+      this.isMQTTActivated = true;
     } else if (status === "ONLY_CONFIGURED") {
-      this.isConnectionToMQTTInitialized = true;
-      this.isConnectionToMQTTActivated = false;
+      this.isMQTTConnected = false;
+      this.isMQTTInitialized = true;
+      this.isMQTTActivated = false;
     }
   }
 
@@ -98,11 +106,11 @@ export class MQTTConfigurationComponent implements OnInit {
 
     if (response.status === 201) {
       this.alertservice.success(gettext('Update successful'));
-      this.isConnectionToMQTTInitialized = true;
-      this.isConnectionToMQTTActivated = false;
+      this.isMQTTInitialized = true;
+      this.isMQTTActivated = false;
     } else {
       this.alertservice.danger(gettext('Failed to update connection'));
-      this.isConnectionToMQTTActivated = false;
+      this.isMQTTActivated = false;
     }
   }
 
@@ -110,10 +118,10 @@ export class MQTTConfigurationComponent implements OnInit {
     const response = await this.mqttConfigurationService.connect();
     if (response.status === 200) {
       this.alertservice.success(gettext('Connection successful'));
-      this.isConnectionToMQTTActivated = true;
+      this.isMQTTActivated = true;
     } else {
       this.alertservice.danger(gettext('Failed to establish connection'));
-      this.isConnectionToMQTTActivated = false;
+      this.isMQTTActivated = false;
     }
   }
 
@@ -136,7 +144,7 @@ export class MQTTConfigurationComponent implements OnInit {
     const response = await this.mqttConfigurationService.disconnect();
 
     if (response.status === 200) {
-      this.isConnectionToMQTTActivated = false;
+      this.isMQTTActivated = false;
       this.alertservice.success(gettext('Successfully disconnected'));
     } else {
       this.alertservice.danger(gettext('Failed to disconnect'));
