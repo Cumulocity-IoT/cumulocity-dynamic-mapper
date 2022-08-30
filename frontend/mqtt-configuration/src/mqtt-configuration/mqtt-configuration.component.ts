@@ -4,6 +4,7 @@ import { MQTTConfigurationService } from './mqtt-configuration.service';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { MQTTTerminateConnectionModalComponent } from './terminate-connection-modal/terminate-connection-modal.component';
+import { MQTTMappingService } from '../mqtt-mapping/mqtt-mapping.service';
 
 @Component({
   selector: 'mqtt-configuration',
@@ -21,6 +22,7 @@ export class MQTTConfigurationComponent implements OnInit {
   constructor(
     private bsModalService: BsModalService,
     public mqttConfigurationService: MQTTConfigurationService,
+    public mqttMappingService: MQTTMappingService,
     public alertservice: AlertService
   ) {}
 
@@ -115,8 +117,9 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async connectToMQTTBroker() {
-    const response = await this.mqttConfigurationService.connect();
-    if (response.status === 200) {
+    const response1 = await this.mqttConfigurationService.connect();
+    const response2 = await this.mqttMappingService.reloadMappings();
+    if (response1.status === 200 && response2.status === 200) {
       this.alertservice.success(gettext('Connection successful'));
       this.isMQTTActivated = true;
     } else {
