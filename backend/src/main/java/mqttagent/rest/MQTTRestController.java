@@ -1,7 +1,7 @@
 package mqttagent.rest;
 
-import mqttagent.configuration.MQTTConfiguration;
-import mqttagent.configuration.MQTTMapping;
+import mqttagent.model.MQTTConfiguration;
+import mqttagent.model.MQTTMapping;
 import mqttagent.services.MQTTClient;
 import mqttagent.services.ServiceStatus;
 
@@ -9,11 +9,11 @@ import java.util.List;
 
 import javax.validation.Valid;
 
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -99,16 +99,22 @@ public class MQTTRestController {
 
     @RequestMapping(value = "/mapping", method = RequestMethod.PUT, consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity reloadMappings(@Valid @RequestBody String tenant) {
-        log.info("Update mappings: {}", tenant);
+        log.info("Reload mappings: {}", tenant);
         mqttClient.reloadMappings(tenant);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MQTTMapping>> getMappings() {
-        log.info("update mappings");
+        log.info("Get mappings");
         List<MQTTMapping> result = mqttClient.getMappings();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    @RequestMapping(value = "/mapping//{tenant}/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> deleteMapping (@PathVariable String tenant, @PathVariable Long id) {
+        log.info("Delete mapping {} from tenant {} ", id, tenant);
+        Long result = mqttClient.deleteMapping(tenant, id);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 }

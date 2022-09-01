@@ -1,13 +1,23 @@
-package mqttagent.configuration;
+package mqttagent.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+import java.io.Serializable;
+
 import javax.validation.constraints.NotNull;
 
 
 @Data
+@Getter
+@NoArgsConstructor
 @AllArgsConstructor
-public class MQTTMapping {
+@ToString(exclude = {"id", "topic", "targetAPI", "source", "target", "active", "tested", "createNoExistingDevice", "qos", "substitutions", "lastUpdate"})
+public class MQTTMapping  implements Serializable {
+
     @NotNull
     public long id;
     

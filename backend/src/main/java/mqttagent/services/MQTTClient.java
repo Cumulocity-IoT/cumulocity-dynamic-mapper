@@ -3,11 +3,12 @@ package mqttagent.services;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.commons.lang3.mutable.MutableInt;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.GenericCallback;
-import mqttagent.configuration.MQTTConfiguration;
-import mqttagent.configuration.MQTTMapping;
+import mqttagent.model.MQTTConfiguration;
+import mqttagent.model.MQTTMapping;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -232,7 +233,7 @@ public class MQTTClient {
             mappings.forEach(m -> {
                 updatedMappingsMap.put(m.topic, m);
                 log.info("Processing addition for topic: {}", m.topic);
-                });
+            });
             // process changes
             final Map<String, MQTTMapping> activeMappingsMap = instanceMappings.getOrDefault(tenant,
                     new HashMap<String, MQTTMapping>());
@@ -347,10 +348,34 @@ public class MQTTClient {
 
     }
 
-    public Map<String, MQTTMapping> getMappingsPerTenant (String tenant){
-        //private Map<String, Map<String, MQTTMapping>> instanceMappings = new HashMap<String, Map<String, MQTTMapping>>();
+    public Map<String, MQTTMapping> getMappingsPerTenant(String tenant) {
+        // private Map<String, Map<String, MQTTMapping>> instanceMappings = new
+        // HashMap<String, Map<String, MQTTMapping>>();
         return instanceMappings.get(tenant);
     }
 
-
+    public Long deleteMapping(String tenant, Long id) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            List<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
+            List<MQTTMapping> updatedMappings = new ArrayList <MQTTMapping>();
+            MutableInt i = new MutableInt(0);
+            mappings.forEach(m -> {
+                if (m.id == id) {
+                    log.info("Deleted mapping with id: {}", m.id);
+                } else {
+                    updatedMappings.add(m);
+                }
+                i.increment();
+            });
+            try {
+                c8yAgent.saveMQTTMappings(updatedMappings);
+            } catch (JsonProcessingException ex) {
+                log.error("Cound not process parse mappings as json: {}", ex);
+                throw new RuntimeException(ex);
+            }
+        });
+        // update cached mappings
+        reloadMappings(tenant);
+        return id;
+    }
 }

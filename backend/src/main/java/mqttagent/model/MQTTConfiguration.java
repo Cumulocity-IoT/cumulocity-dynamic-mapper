@@ -1,4 +1,4 @@
-package mqttagent.configuration;
+package mqttagent.model;
 import javax.validation.constraints.NotNull;
 
 import lombok.Data;
