@@ -1,10 +1,18 @@
 package mqttagent.services;
 
-import c8y.IsDevice;
-import lombok.extern.slf4j.Slf4j;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingSubstitution;
-import mqttagent.model.MQTTMappingsRepresentation;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+
+import javax.annotation.PreDestroy;
+
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -25,25 +33,12 @@ import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import c8y.IsDevice;
+import lombok.extern.slf4j.Slf4j;
+import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingsRepresentation;
 
 
 @Slf4j
@@ -82,7 +77,6 @@ public class C8yAgent {
     private final String AGENT_ID = "MQTT_AGENT";
     private final String AGENT_NAME = "Generic MQTT Agent";
     private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_v2_type";
-    private final String MQTT_MAPPING_FRAGMENT ="c8y_mqttMapping";
     public String tenant = null;
 
     @EventListener
@@ -312,7 +306,6 @@ public class C8yAgent {
         List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
         //TODO what happensif more mo are returned
         if (moc.size() > 0 ) {
-            //final List<Map> l = (ArrayList<Map>) moc.get(0).get(MQTT_MAPPING_FRAGMENT);
             final ManagedObjectRepresentation mo = moc.get(0);
             ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
             moUpdate.setId(mo.getId());

@@ -33,7 +33,7 @@ export class MQTTConfigurationComponent implements OnInit {
     this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated()
   }
 
-  private async initConnectionStatus(): Promise<void> {
+  async initConnectionStatus(): Promise<void> {
     this.isMQTTInitialized = false;
     this.isMQTTActivated = false;
     this.isMQTTConnected = false;
@@ -119,7 +119,8 @@ export class MQTTConfigurationComponent implements OnInit {
   private async connectToMQTTBroker() {
     const response1 = await this.mqttConfigurationService.connect();
     const response2 = await this.mqttMappingService.reloadMappings();
-    if (response1.status === 200 && response2.status === 200) {
+    console.log("Details connectToMQTTBroker", response1, response2)
+    if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext('Connection successful'));
       this.isMQTTActivated = true;
     } else {
@@ -145,7 +146,7 @@ export class MQTTConfigurationComponent implements OnInit {
 
   private async disconnectFromMQTT() {
     const response = await this.mqttConfigurationService.disconnect();
-
+    console.log("Details disconnectFromMQTT", response)
     if (response.status === 200) {
       this.isMQTTActivated = false;
       this.alertservice.success(gettext('Successfully disconnected'));
