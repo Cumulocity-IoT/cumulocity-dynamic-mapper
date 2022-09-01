@@ -202,7 +202,7 @@ export class MQTTMappingComponent implements OnInit {
     const response1 = await this.mqttMappingService.saveMappings(this.mqttMappings);
     const response2 = await this.mqttMappingService.reloadMappings();
 
-    if (response1.res.status === 200 && response2.status === 200) {
+    if (response1.res.status === 200 && response2.status === 201) {
       this.alertService.success(gettext('Mappings saved and activated successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
