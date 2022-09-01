@@ -8,11 +8,10 @@ export class MQTTConfigurationService {
 
   private readonly PATH_STATUS_ENDPOINT = 'status';
 
-  private readonly PATH_MAPPING_ENDPOINT = 'mapping';
+
+  private readonly PATH_OPERATION_ENDPOINT = 'operation';
 
   private readonly BASE_URL = 'service/generic-mqtt-agent';
-
-  private readonly STATUS_READY = 'READY';
 
   private isMQTTAgentCreated = false;
 
@@ -52,20 +51,22 @@ export class MQTTConfigurationService {
   }
 
   connect(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
+    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      method: 'PUT',
+      body: JSON.stringify({"tenant": this.client.tenant, "operation": "CONNECT"}),
+      method: 'POST',
     });
   }
 
   disconnect(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
+    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      method: 'DELETE',
+      body: JSON.stringify({"tenant": this.client.tenant, "operation": "DISCONNECT"}),
+      method: 'POST',
     });
   }
 

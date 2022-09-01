@@ -4,11 +4,12 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableLong;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.GenericCallback;
-import mqttagent.model.MQTTConfiguration;
 import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingsRepresentation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -378,4 +379,68 @@ public class MQTTClient {
         reloadMappings(tenant);
         return id;
     }
+
+	public Long addMapping(String tenant, MQTTMapping mapping) {
+        MutableLong result = null;
+        subscriptionsService.runForTenant(tenant, () -> {
+            ArrayList<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
+            if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
+                mapping.lastUpdate = System.currentTimeMillis();
+                mappings.add(mapping);
+                result.setValue(mapping.id);;
+            } else {
+                throw new RuntimeException("Topic name is not unique!");
+            }
+            try {
+                c8yAgent.saveMQTTMappings(mappings);
+            } catch (JsonProcessingException ex) {
+                log.error("Cound not process parse mappings as json: {}", ex);
+                throw new RuntimeException(ex);
+            }
+        });
+        // update cached mappings
+        reloadMappings(tenant);
+        return result.getValue();
+	}
+    
+    public Long updateMapping(String tenant, Long id, MQTTMapping mapping) {
+        MutableLong result = null;
+        subscriptionsService.runForTenant(tenant, () -> {
+            ArrayList<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
+            if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
+                MutableInt i = new MutableInt(0);
+                mappings.forEach(m -> {
+                    if (m.id == id) {
+                        log.info("Update mapping with id: {}", m.id);
+                        m.copyFrom(mapping);
+                        m.lastUpdate = System.currentTimeMillis();
+                    }
+                    i.increment();
+                });
+                result.setValue(mapping.id);;
+            } else {
+                throw new RuntimeException("Topic name is not unique!");
+            }
+            try {
+                c8yAgent.saveMQTTMappings(mappings);
+            } catch (JsonProcessingException ex) {
+                log.error("Cound not process parse mappings as json: {}", ex);
+                throw new RuntimeException(ex);
+            }
+        });
+        // update cached mappings
+        reloadMappings(tenant);
+        return result.getValue();
+    }
+
+    public void runOperation(ServiceOperation operation) {
+        if ( operation.getOperation().equals(Operation.RELOAD)){
+            reloadMappings(operation.getTenant());
+        } else if ( operation.getOperation().equals(Operation.CONNECT)){
+            connectToBroker();
+        } else if ( operation.getOperation().equals(Operation.DISCONNECT)){
+            disconnectFromBroker();
+        }
+    }
+
 }

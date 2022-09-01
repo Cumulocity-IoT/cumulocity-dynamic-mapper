@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
+
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,6 +20,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MQTTMappingsRepresentation implements Serializable {
+
+    static String  TOPIC_WILDCARD ="#";
     
     @JsonProperty("id")
     private String id;
@@ -48,4 +52,22 @@ public class MQTTMappingsRepresentation implements Serializable {
         }
         this.dynamicProperties.put(key, value);
     }
+
+    static public boolean checkTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
+        var topic = mapping.topic;
+        MutableBoolean result = new MutableBoolean(true);
+        mappings.forEach(m -> {
+          if (topic.equals(m.topic) && !(mapping.id != m.id)) {
+            result.setFalse();
+          } 
+        });
+        return result.booleanValue();
+      }
+    
+    static public String normalizeTopic(String topic){
+        String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
+        // append trailing slash if last character is not wildcard #
+        nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? "" : "/");
+        return nt;
+      }
 }
