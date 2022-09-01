@@ -77,6 +77,7 @@ public class C8yAgent {
     private final String AGENT_ID = "MQTT_AGENT";
     private final String AGENT_NAME = "Generic MQTT Agent";
     private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_v2_type";
+    private final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
     public String tenant = null;
 
     @EventListener
@@ -304,12 +305,12 @@ public class C8yAgent {
         InventoryFilter inventoryFilter = new InventoryFilter();
 		inventoryFilter.byType(MQTT_MAPPING_TYPE);
         List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
-        //TODO what happensif more mo are returned
+        //TODO what happens if more mo are returned
         if (moc.size() > 0 ) {
             final ManagedObjectRepresentation mo = moc.get(0);
             ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
             moUpdate.setId(mo.getId());
-            moUpdate.setProperty(MQTT_MAPPING_TYPE + "_UPDATED", mappings);
+            moUpdate.setProperty(MQTT_MAPPING_FRAGMENT + "_UPDATED", mappings);
             inventoryApi.update(moUpdate);
             log.info("Updated MQTTMapping after deletion!");
         }

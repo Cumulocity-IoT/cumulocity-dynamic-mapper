@@ -386,6 +386,7 @@ public class MQTTClient {
             ArrayList<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
             if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
                 mapping.lastUpdate = System.currentTimeMillis();
+                mapping.id = MQTTMappingsRepresentation.nextId(mappings);
                 mappings.add(mapping);
                 result.setValue(mapping.id);;
             } else {

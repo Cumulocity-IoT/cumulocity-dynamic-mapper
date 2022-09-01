@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
@@ -69,5 +70,13 @@ public class MQTTMappingsRepresentation implements Serializable {
         // append trailing slash if last character is not wildcard #
         nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? "" : "/");
         return nt;
+      }
+
+      static public Long nextId (ArrayList<MQTTMapping> mappings){
+        Long max = mappings
+        .stream()
+        .mapToLong(v -> v.id)
+        .max().orElseThrow(NoSuchElementException::new);
+        return max + 1L;
       }
 }
