@@ -1,8 +1,9 @@
 package mqttagent.rest;
 
-import mqttagent.model.MQTTConfiguration;
 import mqttagent.model.MQTTMapping;
 import mqttagent.services.MQTTClient;
+import mqttagent.services.MQTTConfiguration;
+import mqttagent.services.ServiceOperation;
 import mqttagent.services.ServiceStatus;
 
 import java.util.List;
@@ -40,6 +41,18 @@ public class MQTTRestController {
         }
     }
 
+    @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity runOperation(@Valid @RequestBody ServiceOperation operation) {
+        log.info("Getting operation: {}", operation.toString());
+        try {
+            mqttClient.runOperation(operation);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception ex) {
+            log.error("Error getting mqtt broker configuration {}", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
         log.info("get connection details");
@@ -59,30 +72,6 @@ public class MQTTRestController {
         }
     }
 
-    @RequestMapping(value = "/connection", method = RequestMethod.DELETE)
-    public ResponseEntity disconnectFromBroker() {
-        log.info("Connect to broker");
-        try {
-            mqttClient.disconnectFromBroker();
-            return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (Exception ex) {
-            log.error("Error getting oAuth token {}", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    @RequestMapping(value = "/connection", method = RequestMethod.PUT)
-    public ResponseEntity connectToBroker() {
-        log.info("Disconnect from broker");
-        try {
-            mqttClient.connectToBroker();
-            return ResponseEntity.status(HttpStatus.OK).build();
-        } catch (Exception ex) {
-            log.error("Error getting oAuth token {}", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
     @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getStatus() {
         log.info("query status: {}", mqttClient.isConnectionConfigured());
@@ -97,13 +86,6 @@ public class MQTTRestController {
         return new ResponseEntity<>(ServiceStatus.notReady(), HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/mapping", method = RequestMethod.PUT, consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity reloadMappings(@Valid @RequestBody String tenant) {
-        log.info("Reload mappings: {}", tenant);
-        mqttClient.reloadMappings(tenant);
-        return ResponseEntity.status(HttpStatus.OK).build();
-    }
-
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MQTTMapping>> getMappings() {
         log.info("Get mappings");
@@ -111,10 +93,24 @@ public class MQTTRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @RequestMapping(value = "/mapping//{tenant}/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/mapping/{tenant}/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> deleteMapping (@PathVariable String tenant, @PathVariable Long id) {
         log.info("Delete mapping {} from tenant {} ", id, tenant);
         Long result = mqttClient.deleteMapping(tenant, id);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @RequestMapping(value = "/mapping/{tenant}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> addMapping (@PathVariable String tenant, @Valid @RequestBody MQTTMapping mapping) {
+        log.info("Add mapping {} for tenant {} ", mapping, tenant);
+        Long result = mqttClient.addMapping(tenant, mapping);
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @RequestMapping(value = "/mapping/{tenant}/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> updateMapping (@PathVariable String tenant, @PathVariable Long id, @Valid @RequestBody MQTTMapping mapping) {
+        log.info("Update mapping {}, {} for tenant {} ", mapping, id, tenant);
+        Long result = mqttClient.updateMapping(tenant, id, mapping);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 }

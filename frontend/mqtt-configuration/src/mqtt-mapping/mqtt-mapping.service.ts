@@ -25,7 +25,7 @@ export class MQTTMappingService {
 
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
 
-  private readonly PATH_MAPPING_ENDPOINT = 'mapping';
+  private readonly PATH_OPERATION_ENDPOINT = 'operation';
 
   private readonly BASE_URL = 'service/generic-mqtt-agent';
 
@@ -71,13 +71,12 @@ export class MQTTMappingService {
   }
 
   async reloadMappings(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_MAPPING_ENDPOINT}`, {
+    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
-        'content-type': 'text/plain',
+        'content-type': 'application/json',
       },
-      body: this.client.tenant,
-      //body: JSON.stringify({"tenant": this.client.tenant}),
-      method: 'PUT',
+      body: JSON.stringify({"tenant": this.client.tenant, "operation": "RELOAD"}),
+      method: 'POST',
     });
   }
 

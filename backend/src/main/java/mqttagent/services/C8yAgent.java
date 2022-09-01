@@ -265,9 +265,9 @@ public class C8yAgent {
         this.eventApi.createAsync(eventRep);
     }
 
-    public List<MQTTMapping> getMQTTMappings() {
+    public ArrayList<MQTTMapping> getMQTTMappings() {
         InventoryFilter inventoryFilter = new InventoryFilter();
-        List<MQTTMapping> result = new ArrayList<MQTTMapping>();
+        ArrayList<MQTTMapping> result = new ArrayList<MQTTMapping>();
 		inventoryFilter.byType(MQTT_MAPPING_TYPE);
         List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
         if (moc.size() > 0 ) {
