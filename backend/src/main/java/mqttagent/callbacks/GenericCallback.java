@@ -4,8 +4,8 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.handler.SysHandler;
-import mqttagent.configuration.MQTTMapping;
-import mqttagent.configuration.MQTTMappingSubstitution;
+import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingSubstitution;
 import mqttagent.services.C8yAgent;
 import mqttagent.services.MQTTClient;
 

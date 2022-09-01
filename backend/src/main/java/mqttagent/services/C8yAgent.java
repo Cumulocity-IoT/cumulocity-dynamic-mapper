@@ -2,8 +2,9 @@ package mqttagent.services;
 
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
-import mqttagent.configuration.MQTTMapping;
-import mqttagent.configuration.MQTTMappingSubstitution;
+import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.model.MQTTMappingsRepresentation;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -70,7 +71,11 @@ public class C8yAgent {
     @Autowired
     private MQTTClient mqttClient;
 
+    @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private MQTTMappingsConverter converterService;
 
     private ManagedObjectRepresentation agentMOR;
 
@@ -136,18 +141,6 @@ public class C8yAgent {
             log.error("Error on MQTT Connection: ", e);
             mqttClient.reconnect();
         }
-    }
-
-    @PostConstruct
-    private void createObjectMapper() {
-        objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
-        objectMapper.enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING);
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        objectMapper.setDateFormat(new RFC3339DateFormat());
-        objectMapper.registerModule(new JavaTimeModule());
     }
 
     @PreDestroy
@@ -278,29 +271,10 @@ public class C8yAgent {
 		inventoryFilter.byType(MQTT_MAPPING_TYPE);
         List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
         if (moc.size() > 0 ) {
-            final List<Map> l = (ArrayList<Map>) moc.get(0).get(MQTT_MAPPING_FRAGMENT);
-            l.forEach(mm -> {
-                final ArrayList<Map> sl =(ArrayList<Map>)mm.getOrDefault("substitutions", new HashMap<>());
-                final MQTTMappingSubstitution[] ss = new MQTTMappingSubstitution[sl.size()];
-                int i = 0;
-                for (Map sub : sl) {
-                    ss[i]= new MQTTMappingSubstitution((String)sub.get("pathSource"), (String)sub.get("pathTarget"));
-                    i++;
-                }
-                
-                MQTTMapping m = new MQTTMapping( (long) mm.get("id"),
-                (String) mm.get("topic"), 
-                (String) mm.get("targetAPI"), 
-                (String) mm.get("source"), 
-                (String) mm.get("target"),
-                (boolean) mm.get("active"),
-                (boolean) mm.getOrDefault("tested", false),
-                (boolean) mm.getOrDefault("createNoExistingDevice", false),
-                (long) mm.get("qos"),
-                ss,
-                (long) mm.get("lastUpdate")) ;
-                result.add( m );
-            });
+             ManagedObjectRepresentation mo = moc.get(0);
+             MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
+             log.info("Found MQTTMapping {}", mqttMo);
+             result = mqttMo.getC8yMQTTMapping();
             log.info("Found MQTTMapping {}", result.size());
         } else {
             log.info("No MQTTMapping found!");
@@ -329,6 +303,22 @@ public class C8yAgent {
             log.error ("Could not map payload: {} {}", targetAPI, payload);   
         } catch ( SDKException s){
             log.error ("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);  
+        }
+    }
+
+    public void saveMQTTMappings(List<MQTTMapping> mappings) throws JsonProcessingException {
+        InventoryFilter inventoryFilter = new InventoryFilter();
+		inventoryFilter.byType(MQTT_MAPPING_TYPE);
+        List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
+        //TODO what happensif more mo are returned
+        if (moc.size() > 0 ) {
+            //final List<Map> l = (ArrayList<Map>) moc.get(0).get(MQTT_MAPPING_FRAGMENT);
+            final ManagedObjectRepresentation mo = moc.get(0);
+            ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
+            moUpdate.setId(mo.getId());
+            moUpdate.setProperty(MQTT_MAPPING_TYPE + "_UPDATED", mappings);
+            inventoryApi.update(moUpdate);
+            log.info("Updated MQTTMapping after deletion!");
         }
     }
 }
