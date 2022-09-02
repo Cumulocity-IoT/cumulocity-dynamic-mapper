@@ -21,7 +21,7 @@ export class MQTTMappingService {
 
   agentId: string;
 
-  private readonly MAPPING_TYPE = 'c8y_mqttMapping_v2_type';
+  private readonly MAPPING_TYPE = 'c8y_mqttMapping_type';
 
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
 
