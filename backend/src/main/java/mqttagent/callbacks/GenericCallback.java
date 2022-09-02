@@ -1,6 +1,7 @@
 package mqttagent.callbacks;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
 import lombok.extern.slf4j.Slf4j;
@@ -160,10 +161,12 @@ public class GenericCallback implements MqttCallback {
     private String resolveExternalId(String externalId, String externalIdType) {
         ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
         String id = null;
+        GId gid = null;
         if ( extId != null){
-            id = c8yAgent.getExternalId(externalId, externalIdType).getExternalId();
+            gid = extId.getManagedObject().getId();
+            id = gid.getValue();
         }
-        log.info("Found id {} for external id: {}, {}", id, externalId);
+        log.info("Found id {} for external id: {}, {},  {}", id, gid, externalId);
         return id;
     }
 

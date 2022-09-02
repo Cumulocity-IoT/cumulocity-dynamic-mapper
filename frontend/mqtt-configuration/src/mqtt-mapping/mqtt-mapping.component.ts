@@ -106,7 +106,7 @@ export class MQTTMappingComponent implements OnInit {
 
 
   ngOnInit() {
-    this.initMappingDetails();
+    this.loadMappings();
     this.initForm();
     this.actionControls.push({
       type: BuiltInActionType.Edit,
@@ -123,11 +123,10 @@ export class MQTTMappingComponent implements OnInit {
 
   async addMapping() {
     this.editMode = false;
-    //let l = ( this.mqttMappings.length == 0 ? -1 :Math.max(...this.mqttMappings.map(item => item.id)));
-    let l = Math.max(...this.mqttMappings.map(item => item.id));
+    let l = (this.mqttMappings.length == 0 ? 0 :Math.max(...this.mqttMappings.map(item => item.id))) + 1;
  
     let mapping = {
-      id: l + 1,
+      id: l,
       topic: '',
       targetAPI: 'measurement',
       source: '{}',
@@ -138,7 +137,8 @@ export class MQTTMappingComponent implements OnInit {
       qos: 1,
       substitutions: [],
       mapDeviceIdentifier: false,
-      externalIdType: null,
+      externalIdType: 'c8y_Serial',
+      snoopPayload: false,
       lastUpdate: Date.now()
     }
     this.mappingToUpdate = mapping;
@@ -161,10 +161,10 @@ export class MQTTMappingComponent implements OnInit {
     this.mappingGridComponent.reload();
   }
 
-  private async initMappingDetails(): Promise<void> {
+  private async loadMappings(): Promise<void> {
     this.mqttMappings = await this.mqttMappingService.loadMappings();
     if (!this.mqttMappings) {
-      return;
+      this.mqttMappings = await this.mqttMappingService.initalizeMappings();
     }
   }
 

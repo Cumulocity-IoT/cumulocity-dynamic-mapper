@@ -21,7 +21,7 @@ export class MQTTMappingService {
 
   agentId: string;
 
-  private readonly MAPPING_TYPE = 'c8y_mqttMapping_type';
+  private readonly MAPPING_TYPE = 'c8y_mqttMapping';
 
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
 
@@ -61,6 +61,16 @@ export class MQTTMappingService {
       console.log("No mqtt mapping found!")
       return [];
     }
+  }
+
+
+  async initalizeMappings(): Promise<MQTTMapping[]> {
+    const response: IResult<IManagedObject> = await this.inventory.create({
+      c8y_mqttMapping: {},
+      name: "MQTT-Mapping",
+      type: this.MAPPING_TYPE
+    });
+    return [];
   }
 
   async saveMappings(mappings: MQTTMapping[]): Promise<IResult<IManagedObject>> {
