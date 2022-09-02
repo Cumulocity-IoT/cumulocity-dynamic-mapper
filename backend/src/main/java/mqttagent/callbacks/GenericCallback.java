@@ -1,6 +1,7 @@
 package mqttagent.callbacks;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callbacks.handler.SysHandler;
@@ -93,11 +94,18 @@ public class GenericCallback implements MqttCallback {
                                 log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget, payloadMessage);                   
                             }
 
-                            String[] path = sub.pathTarget.split(Pattern.quote("."));
-                            if (path == null) {
-                                path = new String[] {sub.pathTarget};
+                            String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
+                            if (pathTarget == null) {
+                                pathTarget = new String[] {sub.pathTarget};
                             }
-                            addValue(substitute, payloadTarget, path);
+                            if (sub.pathTarget.equals("source.id") && map1.mapDeviceIdentifier){
+                                var deviceId = resolveExternalId(substitute, map1.externalIdType);
+                                if (deviceId == null) {
+                                    throw new RuntimeException ("External id " + deviceId + " for type " + map1.externalIdType + " not found!" );
+                                }
+                                substitute = deviceId;
+                            }
+                            addValue(substitute, payloadTarget, pathTarget);
                         }
                         log.info("Posting payload: {}", payloadTarget);
                         c8yAgent.createC8Y_MEA(map1.targetAPI, payloadTarget.toString());
@@ -124,11 +132,18 @@ public class GenericCallback implements MqttCallback {
                                 } catch (PathNotFoundException p){
                                   log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget, payloadMessage);
                                 }
-                                String[] path = sub.pathTarget.split(Pattern.quote("."));
-                                if (path == null) {
-                                    path = new String[] {sub.pathTarget};
+                                String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
+                                if (pathTarget == null) {
+                                    pathTarget = new String[] {sub.pathTarget};
                                 }
-                                addValue(substitute, payloadTarget, path);
+                                if (sub.pathTarget.equals("source.id") && map2.mapDeviceIdentifier){
+                                    var deviceId = resolveExternalId(substitute, map2.externalIdType);
+                                    if (deviceId == null) {
+                                        throw new RuntimeException ("External id " + deviceId + " for type " + map2.externalIdType + " not found!" );
+                                    }
+                                    substitute = deviceId;
+                                }
+                                addValue(substitute, payloadTarget, pathTarget);
                             }
                             log.info("Posting payload: {}", payloadTarget);
                             c8yAgent.createC8Y_MEA(map2.targetAPI, payloadTarget.toString());
@@ -140,6 +155,16 @@ public class GenericCallback implements MqttCallback {
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
+    }
+
+    private String resolveExternalId(String externalId, String externalIdType) {
+        ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
+        String id = null;
+        if ( extId != null){
+            id = c8yAgent.getExternalId(externalId, externalIdType).getExternalId();
+        }
+        log.info("Found id {} for external id: {}, {}", id, externalId);
+        return id;
     }
 
     public JSONObject addValue(String value, JSONObject jsonObject, String[] keys) throws JSONException {

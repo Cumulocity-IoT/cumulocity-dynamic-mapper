@@ -10,14 +10,12 @@ import java.io.Serializable;
 
 import javax.validation.constraints.NotNull;
 
-import org.bouncycastle.jcajce.provider.asymmetric.DH.Mappings;
-
 @Data
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = { "id", "topic", "targetAPI", "source", "target", "active", "tested", "createNoExistingDevice",
-    "qos", "substitutions", "lastUpdate" })
+    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType", "lastUpdate" })
 public class MQTTMapping implements Serializable {
 
   @NotNull
@@ -49,6 +47,13 @@ public class MQTTMapping implements Serializable {
 
   @NotNull
   public MQTTMappingSubstitution[] substitutions;
+
+  @NotNull
+  public boolean mapDeviceIdentifier;
+
+  @NotNull
+  public String externalIdType;
+
 
   @NotNull
   public long lastUpdate;

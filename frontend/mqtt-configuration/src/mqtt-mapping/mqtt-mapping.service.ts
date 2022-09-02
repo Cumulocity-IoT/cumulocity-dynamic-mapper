@@ -59,7 +59,7 @@ export class MQTTMappingService {
       return response.data[0][this.MAPPING_FRAGMENT] as MQTTMapping[];
     } else {
       console.log("No mqtt mapping found!")
-      return undefined;
+      return [];
     }
   }
 

@@ -162,6 +162,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       active: new FormControl(this.mapping.active, Validators.required),
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
+      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier, Validators.required),
+      externalIdType: new FormControl(this.mapping.externalIdType, Validators.required),
     });
 
   }
@@ -172,7 +174,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     const selection = { path: ns };
     editor.setSelection(selection, selection)
   }
-
 
   private isWildcardTopic(): boolean {
     const topic = this.propertyForm.get('topic').value;
@@ -223,6 +224,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       createNoExistingDevice: this.propertyForm.get('createNoExistingDevice').value || false,
       qos: this.propertyForm.get('qos').value,
       substitutions: this.mapping.substitutions,
+      mapDeviceIdentifier: this.mapping.mapDeviceIdentifier,
+      externalIdType: this.mapping.externalIdType,
       lastUpdate: Date.now(),
     };
   }
