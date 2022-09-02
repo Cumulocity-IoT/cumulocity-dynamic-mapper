@@ -67,6 +67,20 @@
                         #createNoExistingDeviceRef />
                     </div>
                   </div>
+                  <div class="form-group">
+                    <label for="mapDeviceIdentifier" class="" translate>Map device identifier</label>
+                    <div class="">
+                      <input formControlName="mapDeviceIdentifier" type="checkbox" class="form-control"
+                        #mapDeviceIdentifierRef />
+                    </div>
+                  </div>
+                  <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
+                    <label for="externalIdType" class="" translate>External Id Type</label>
+                    <div>
+                      <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
+                        #externalIdTypeRef required />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

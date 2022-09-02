@@ -5,7 +5,7 @@ export interface MQTTAuthentication {
   password: string;
   clientId: string;
   useTLS: boolean;
-  active:boolean
+  active: boolean;
 }
 
 export interface MQTTMappingSubstitution {
@@ -24,7 +24,9 @@ export interface MQTTMapping {
   tested: boolean,
   createNoExistingDevice: boolean,
   qos: number,
-  substitutions?: MQTTMappingSubstitution[]
+  substitutions?: MQTTMappingSubstitution[];
+  mapDeviceIdentifier:boolean;
+  externalIdType: string
 }
 
 export const SAMPLE_TEMPLATES = {

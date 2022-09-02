@@ -23,7 +23,7 @@ export class MQTTMappingComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mqttMappings: MQTTMapping[];
+  mqttMappings: MQTTMapping[] = [];
   mappingToUpdate: MQTTMapping;
   editMode: boolean;
 
@@ -123,7 +123,9 @@ export class MQTTMappingComponent implements OnInit {
 
   async addMapping() {
     this.editMode = false;
+    //let l = ( this.mqttMappings.length == 0 ? -1 :Math.max(...this.mqttMappings.map(item => item.id)));
     let l = Math.max(...this.mqttMappings.map(item => item.id));
+ 
     let mapping = {
       id: l + 1,
       topic: '',
@@ -135,6 +137,8 @@ export class MQTTMappingComponent implements OnInit {
       createNoExistingDevice: false,
       qos: 1,
       substitutions: [],
+      mapDeviceIdentifier: false,
+      externalIdType: null,
       lastUpdate: Date.now()
     }
     this.mappingToUpdate = mapping;
