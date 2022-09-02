@@ -5,5 +5,5 @@
         "backend/src/main/configuration"
     ],
     "java.project.outputPath": "backend/target/classes",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
