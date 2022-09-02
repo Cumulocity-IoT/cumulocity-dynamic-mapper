@@ -5,7 +5,7 @@ curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/inv
 --data-raw '{
     "name": "MQTT Mapping",
     "c8y_IsDevice": {},
-    "type": "c8y_mqttMapping_v2_type",
+    "type": "c8y_mqttMapping_type",
     "c8y_mqttMapping": [
         {
             "qos": 0,

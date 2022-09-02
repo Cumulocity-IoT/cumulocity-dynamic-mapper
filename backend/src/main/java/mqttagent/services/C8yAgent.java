@@ -76,7 +76,7 @@ public class C8yAgent {
 
     private final String AGENT_ID = "MQTT_AGENT";
     private final String AGENT_NAME = "Generic MQTT Agent";
-    private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_v2_type";
+    private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_type";
     private final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
     public String tenant = null;
 

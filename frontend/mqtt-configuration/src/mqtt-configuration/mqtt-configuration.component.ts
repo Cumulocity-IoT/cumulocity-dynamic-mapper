@@ -106,7 +106,7 @@ export class MQTTConfigurationComponent implements OnInit {
       active: false
     });
 
-    if (response.status === 201) {
+    if (response.status < 300) {
       this.alertservice.success(gettext('Update successful'));
       this.isMQTTInitialized = true;
       this.isMQTTActivated = false;
