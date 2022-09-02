@@ -26,7 +26,8 @@ export interface MQTTMapping {
   qos: number,
   substitutions?: MQTTMappingSubstitution[];
   mapDeviceIdentifier:boolean;
-  externalIdType: string
+  externalIdType: string,
+  snoopPayload:boolean
 }
 
 export const SAMPLE_TEMPLATES = {
