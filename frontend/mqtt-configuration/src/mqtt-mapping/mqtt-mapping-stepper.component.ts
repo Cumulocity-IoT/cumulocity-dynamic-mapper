@@ -162,8 +162,9 @@ export class MQTTMappingStepperComponent implements OnInit {
       active: new FormControl(this.mapping.active, Validators.required),
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
-      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier, Validators.required),
-      externalIdType: new FormControl(this.mapping.externalIdType, Validators.required),
+      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
+      externalIdType: new FormControl(this.mapping.externalIdType),
+      snoopPayload: new FormControl(this.mapping.snoopPayload),
     });
 
   }
@@ -224,8 +225,9 @@ export class MQTTMappingStepperComponent implements OnInit {
       createNoExistingDevice: this.propertyForm.get('createNoExistingDevice').value || false,
       qos: this.propertyForm.get('qos').value,
       substitutions: this.mapping.substitutions,
-      mapDeviceIdentifier: this.mapping.mapDeviceIdentifier,
-      externalIdType: this.mapping.externalIdType,
+      mapDeviceIdentifier: this.propertyForm.get('mapDeviceIdentifier').value,
+      externalIdType: this.propertyForm.get('externalIdType').value,
+      snoopPayload: this.propertyForm.get('snoopPayload').value,
       lastUpdate: Date.now(),
     };
   }
@@ -296,7 +298,12 @@ export class MQTTMappingStepperComponent implements OnInit {
     } else if (event.step.label == "Test mapping") {
 
     }
-    event.stepper.next();
+    if (this.propertyForm.get('snoopPayload').value) {
+      console.log("Ready to snoop ...");
+      this.onCommit.emit(this.getCurrentMapping());
+    } else {
+      event.stepper.next();
+    }
 
   }
 
