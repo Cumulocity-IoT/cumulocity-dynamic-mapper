@@ -273,7 +273,7 @@ public class MQTTClient {
                         && activeMappingsMap.get(topic).lastUpdate != updatedMappingsMap.get(topic).lastUpdate) {
                     subscribe = true;
                 }
-                if (subscribe && map.active) {
+                if (subscribe && map.active && !map.snoopPayload) {
                     try {
                         log.debug("Subscribing to topic: {} ...", topic);
                         subscribe(topic, map);

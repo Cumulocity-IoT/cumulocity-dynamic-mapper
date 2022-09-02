@@ -40,7 +40,6 @@ import lombok.extern.slf4j.Slf4j;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingsRepresentation;
 
-
 @Slf4j
 @Service
 public class C8yAgent {
@@ -76,7 +75,7 @@ public class C8yAgent {
 
     private final String AGENT_ID = "MQTT_AGENT";
     private final String AGENT_NAME = "Generic MQTT Agent";
-    private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping_type";
+    private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
     private final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
     public String tenant = null;
 
@@ -88,6 +87,7 @@ public class C8yAgent {
 
         /* Connecting to Cumulocity */
         subscriptionsService.runForTenant(tenant, () -> {
+            // register agent
             ExternalIDRepresentation agentIdRep = null;
             try {
                 agentIdRep = getExternalId(AGENT_ID, null);
@@ -120,11 +120,28 @@ public class C8yAgent {
                 }
                 log.info("ExternalId created: {}", externalAgentId.getExternalId());
             }
+
+            // test if managedObject mqttMapping exists
+            InventoryFilter inventoryFilter = new InventoryFilter();
+            inventoryFilter.byType(MQTT_MAPPING_TYPE);
+            List<ManagedObjectRepresentation> mol = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+                    .getManagedObjects();
+            if (mol.size() == 0) {
+                // create new managedObject
+                ManagedObjectRepresentation moMQTTMapping = new ManagedObjectRepresentation();
+                moMQTTMapping.setType(MQTT_MAPPING_TYPE);
+                moMQTTMapping.setName("MQTT-Mapping");
+                moMQTTMapping = inventoryApi.create(moMQTTMapping);
+                log.info("Created new MQTT-Mapping: {}, {}", moMQTTMapping.getId().getValue(), moMQTTMapping.getId());
+            }
         });
         /* Connecting to MQTT Client */
-        /* TODO When no tenant options provided the microservice will not start unless unsubscribed + subscribed
-        We should add logic to fetch tenant options regulary e.g. all 60 seconds until they could be retrieved or on REST Request when configuration is set
-        */
+        /*
+         * TODO When no tenant options provided the microservice will not start unless
+         * unsubscribed + subscribed
+         * We should add logic to fetch tenant options regulary e.g. all 60 seconds
+         * until they could be retrieved or on REST Request when configuration is set
+         */
         try {
             mqttClient.init();
             mqttClient.reconnect();
@@ -263,56 +280,50 @@ public class C8yAgent {
     public ArrayList<MQTTMapping> getMQTTMappings() {
         InventoryFilter inventoryFilter = new InventoryFilter();
         ArrayList<MQTTMapping> result = new ArrayList<MQTTMapping>();
-		inventoryFilter.byType(MQTT_MAPPING_TYPE);
-        List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
-        if (moc.size() > 0 ) {
-             ManagedObjectRepresentation mo = moc.get(0);
-             MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
-             log.info("Found MQTTMapping {}", mqttMo);
-             result = mqttMo.getC8yMQTTMapping();
-            log.info("Found MQTTMapping {}", result.size());
-        } else {
-            log.info("No MQTTMapping found!");
-        }
+        inventoryFilter.byType(MQTT_MAPPING_TYPE);
+        ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+                .getManagedObjects().get(0);
+        MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
+        log.info("Found MQTTMapping {}", mqttMo);
+        result = mqttMo.getC8yMQTTMapping();
+        log.info("Found MQTTMapping {}", result.size());
+
         return result;
     }
 
     public void createC8Y_MEA(String targetAPI, String payload) {
         try {
-            if ( targetAPI.equals("event")){
-                EventRepresentation  er = objectMapper.readValue(payload, EventRepresentation.class);
+            if (targetAPI.equals("event")) {
+                EventRepresentation er = objectMapper.readValue(payload, EventRepresentation.class);
                 er = eventApi.create(er);
-                log.info ("New event posted: {}", er);
-            } else if (targetAPI.equals("alarm")){
-                AlarmRepresentation  ar = objectMapper.readValue(payload, AlarmRepresentation.class);
+                log.info("New event posted: {}", er);
+            } else if (targetAPI.equals("alarm")) {
+                AlarmRepresentation ar = objectMapper.readValue(payload, AlarmRepresentation.class);
                 ar = alarmApi.create(ar);
-                log.info ("New alarm posted: {}", ar);
+                log.info("New alarm posted: {}", ar);
             } else if (targetAPI.equals("measurement")) {
                 MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
                 mr = measurementApi.create(mr);
-                log.info ("New measurement posted: {}", mr);
+                log.info("New measurement posted: {}", mr);
             } else {
-                log.error ("Not existing API!");
+                log.error("Not existing API!");
             }
-        } catch (JsonProcessingException e) { 
-            log.error ("Could not map payload: {} {}", targetAPI, payload);   
-        } catch ( SDKException s){
-            log.error ("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);  
+        } catch (JsonProcessingException e) {
+            log.error("Could not map payload: {} {}", targetAPI, payload);
+        } catch (SDKException s) {
+            log.error("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);
         }
     }
 
     public void saveMQTTMappings(List<MQTTMapping> mappings) throws JsonProcessingException {
         InventoryFilter inventoryFilter = new InventoryFilter();
-		inventoryFilter.byType(MQTT_MAPPING_TYPE);
-        List<ManagedObjectRepresentation> moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get().getManagedObjects();
-        //TODO what happens if more mo are returned
-        if (moc.size() > 0 ) {
-            final ManagedObjectRepresentation mo = moc.get(0);
-            ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
-            moUpdate.setId(mo.getId());
-            moUpdate.setProperty(MQTT_MAPPING_FRAGMENT + "_UPDATED", mappings);
-            inventoryApi.update(moUpdate);
-            log.info("Updated MQTTMapping after deletion!");
-        }
+        inventoryFilter.byType(MQTT_MAPPING_TYPE);
+        ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+                .getManagedObjects().get(0);
+        ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
+        moUpdate.setId(mo.getId());
+        moUpdate.setProperty(MQTT_MAPPING_FRAGMENT + "_UPDATED", mappings);
+        inventoryApi.update(moUpdate);
+        log.info("Updated MQTTMapping after deletion!");
     }
 }

@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = { "id", "topic", "targetAPI", "source", "target", "active", "tested", "createNoExistingDevice",
-    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType", "lastUpdate" })
+    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType" ,"snoopPayload" , "lastUpdate" })
 public class MQTTMapping implements Serializable {
 
   @NotNull
@@ -54,6 +54,8 @@ public class MQTTMapping implements Serializable {
   @NotNull
   public String externalIdType;
 
+  @NotNull
+  public boolean snoopPayload;
 
   @NotNull
   public long lastUpdate;
