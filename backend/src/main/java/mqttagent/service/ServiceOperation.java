@@ -1,4 +1,4 @@
-package mqttagent.services;
+package mqttagent.service;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

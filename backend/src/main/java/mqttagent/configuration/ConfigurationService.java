@@ -1,4 +1,4 @@
-package mqttagent.services;
+package mqttagent.configuration;
 
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class CredentialsConfigurationService {
+public class ConfigurationService {
     private static final String OPTION_CATEGORY_CONFIGURATION = "mqttclient.configuration";
 
     private static final String OPTION_KEY_CONFIGURATION = "credentials.mqttclient.configuration";
@@ -21,7 +21,7 @@ public class CredentialsConfigurationService {
     private final TenantOptionApi tenantOptionApi;
 
     @Autowired
-    public CredentialsConfigurationService(final TenantOptionApi tenantOptionApi) {
+    public ConfigurationService(final TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
     }
 

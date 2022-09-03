@@ -1,17 +1,5 @@
 package mqttagent;
 
-import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
-import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
-import lombok.extern.slf4j.Slf4j;
-import mqttagent.services.C8yAgent;
-import mqttagent.services.MQTTClient;
-import mqttagent.services.RFC3339DateFormat;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -20,6 +8,18 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
+import com.cumulocity.microservice.context.annotation.EnableContextSupport;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import lombok.extern.slf4j.Slf4j;
+import mqttagent.core.C8yAgent;
+import mqttagent.service.MQTTClient;
+import mqttagent.service.RFC3339DateFormat;
 
 @Slf4j
 @MicroserviceApplication

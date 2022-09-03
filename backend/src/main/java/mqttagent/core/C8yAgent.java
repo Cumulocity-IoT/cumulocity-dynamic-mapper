@@ -1,4 +1,4 @@
-package mqttagent.services;
+package mqttagent.core;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +39,8 @@ import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingsRepresentation;
+import mqttagent.service.MQTTClient;
+import mqttagent.service.MQTTMappingsConverter;
 
 @Slf4j
 @Service

@@ -1,10 +1,10 @@
-package mqttagent.callbacks.handler;
+package mqttagent.callback.handler;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.measurement.MeasurementValue;
 
 import lombok.extern.slf4j.Slf4j;
-import mqttagent.services.C8yAgent;
+import mqttagent.core.C8yAgent;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;

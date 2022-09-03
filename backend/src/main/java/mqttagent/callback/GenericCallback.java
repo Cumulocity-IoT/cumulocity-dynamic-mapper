@@ -1,22 +1,4 @@
-package mqttagent.callbacks;
-
-import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-
-import lombok.extern.slf4j.Slf4j;
-import mqttagent.callbacks.handler.SysHandler;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingSubstitution;
-import mqttagent.services.C8yAgent;
-import mqttagent.services.MQTTClient;
-
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+package mqttagent.callback;
 
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
@@ -25,11 +7,27 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.joda.time.DateTime;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import lombok.extern.slf4j.Slf4j;
+import mqttagent.callback.handler.SysHandler;
+import mqttagent.core.C8yAgent;
+import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.service.MQTTClient;
 
 @Slf4j
 @Service
