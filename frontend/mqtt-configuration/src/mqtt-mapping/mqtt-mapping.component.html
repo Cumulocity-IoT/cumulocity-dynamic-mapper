@@ -1,11 +1,14 @@
 <c8y-title translate>MQTT</c8y-title>
 
 <c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="loadMappings()">
+    <i c8yIcon="refresh"></i>
+    {{ 'Refresh' | translate }}
+  </button>
   <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="addMapping()">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
-
   <button class="btn btn-link" title="{{ 'Save changes' | translate }}" (click)="onSaveButtonClicked()">
     <i c8yIcon="save"></i>
     {{ 'Save changes' | translate }}

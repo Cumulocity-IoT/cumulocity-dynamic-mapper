@@ -13,8 +13,10 @@ import mqttagent.model.MQTTMappingsRepresentation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -22,6 +24,7 @@ import java.util.concurrent.Future;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -61,7 +64,8 @@ public class MQTTClient {
     private boolean initilized = false;
 
     // mappings: tenant -> ( topic -> mqtt_mappping)
-    private Map<String, Map<String, MQTTMapping>> instanceMappings = new HashMap<String, Map<String, MQTTMapping>>();
+    private Map<String, Map<String, MQTTMapping>> tenantMappings = new HashMap<String, Map<String, MQTTMapping>>();
+    private Map<String, Set<String>> tenantMappingsDirty = new HashMap<String, Set<String>>();
 
     private void runInit() {
         while (!isInitilized()) {
@@ -74,7 +78,7 @@ public class MQTTClient {
                     try {
                         String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                         String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                        mqttClient = new MqttClient(broker, mqttConfiguration.getClientId());
+                        mqttClient = new MqttClient(broker, mqttConfiguration.getClientId(), new MemoryPersistence());
                         setInitilized(true);
                         log.info("Connecting to MQTT Broker {}", broker);
                     } catch (HttpServerErrorException e) {
@@ -147,7 +151,7 @@ public class MQTTClient {
         if (isConnectionConfigured() && !isConnected()) {
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(true);
-            connOpts.setAutomaticReconnect(true);
+            connOpts.setAutomaticReconnect(false);
             connOpts.setUserName(mqttConfiguration.getUser());
             connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
             mqttClient.connect(connOpts);
@@ -236,7 +240,7 @@ public class MQTTClient {
                 log.info("Processing addition for topic: {}", m.topic);
             });
             // process changes
-            final Map<String, MQTTMapping> activeMappingsMap = instanceMappings.getOrDefault(tenant,
+            final Map<String, MQTTMapping> activeMappingsMap = tenantMappings.getOrDefault(tenant,
                     new HashMap<String, MQTTMapping>());
 
             // unsubscribe not used topics
@@ -273,7 +277,7 @@ public class MQTTClient {
                         && activeMappingsMap.get(topic).lastUpdate != updatedMappingsMap.get(topic).lastUpdate) {
                     subscribe = true;
                 }
-                if (subscribe && map.active && !map.snoopPayload) {
+                if (subscribe && map.active) {
                     try {
                         log.debug("Subscribing to topic: {} ...", topic);
                         subscribe(topic, map);
@@ -283,7 +287,7 @@ public class MQTTClient {
                 }
             });
             // update mappings
-            instanceMappings.put(tenant, updatedMappingsMap);
+            tenantMappings.put(tenant, updatedMappingsMap);
         });
     }
 
@@ -338,7 +342,7 @@ public class MQTTClient {
     }
 
     @Scheduled(fixedRate = 30000)
-    public void startReporting() {
+    public void runHouskeeping() {
 
         String statusReconnectTask = (reconnectTask == null ? "stopped"
                 : reconnectTask.isDone() ? "stopped" : "running");
@@ -347,18 +351,43 @@ public class MQTTClient {
         log.info("Status of reconnectTask: {}, initTask {}, isConnected {}", statusReconnectTask,
                 statusInitTask, isConnected());
 
+        cleanTenantMappings();
+
+    }
+
+    private void cleanTenantMappings() {
+        for ( String te : tenantMappingsDirty.keySet()) {
+            // test if for this tenant dirty mappings exist
+            log.info("Testing dirty: {}, {}", te);
+            if (tenantMappingsDirty.get(te).size() > 0){
+                for (String to : tenantMappingsDirty.get(te)) {
+                    MQTTMapping mqttMapping = getMappingsPerTenant(te).get(to);
+                    log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
+                    updateMapping(te, mqttMapping.id, mqttMapping);
+                }
+            }  
+            // reset dirtySet
+            tenantMappingsDirty.put(te, new HashSet<String>());
+        }
     }
 
     public Map<String, MQTTMapping> getMappingsPerTenant(String tenant) {
-        // private Map<String, Map<String, MQTTMapping>> instanceMappings = new
+        // private Map<String, Map<String, MQTTMapping>> tenantMappings = new
         // HashMap<String, Map<String, MQTTMapping>>();
-        return instanceMappings.get(tenant);
+        return tenantMappings.get(tenant);
+    }
+
+    public void setTenantMappingsDirty(String tenant, String topic) {
+        log.info("Setting dirty: {}, {}", tenant, topic);
+        Set <String> hs =  tenantMappingsDirty.getOrDefault(tenant, new HashSet<String>());
+        hs.add(topic);
+        tenantMappingsDirty.put(tenant, hs);
     }
 
     public Long deleteMapping(String tenant, Long id) {
         subscriptionsService.runForTenant(tenant, () -> {
             List<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
-            List<MQTTMapping> updatedMappings = new ArrayList <MQTTMapping>();
+            List<MQTTMapping> updatedMappings = new ArrayList<MQTTMapping>();
             MutableInt i = new MutableInt(0);
             mappings.forEach(m -> {
                 if (m.id == id) {
@@ -380,7 +409,7 @@ public class MQTTClient {
         return id;
     }
 
-	public Long addMapping(String tenant, MQTTMapping mapping) {
+    public Long addMapping(String tenant, MQTTMapping mapping) {
         MutableLong result = null;
         subscriptionsService.runForTenant(tenant, () -> {
             ArrayList<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
@@ -388,7 +417,8 @@ public class MQTTClient {
                 mapping.lastUpdate = System.currentTimeMillis();
                 mapping.id = MQTTMappingsRepresentation.nextId(mappings);
                 mappings.add(mapping);
-                result.setValue(mapping.id);;
+                result.setValue(mapping.id);
+                ;
             } else {
                 throw new RuntimeException("Topic name is not unique!");
             }
@@ -402,10 +432,10 @@ public class MQTTClient {
         // update cached mappings
         reloadMappings(tenant);
         return result.getValue();
-	}
-    
+    }
+
     public Long updateMapping(String tenant, Long id, MQTTMapping mapping) {
-        MutableLong result = null;
+        MutableLong result = new MutableLong();
         subscriptionsService.runForTenant(tenant, () -> {
             ArrayList<MQTTMapping> mappings = c8yAgent.getMQTTMappings();
             if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
@@ -418,7 +448,8 @@ public class MQTTClient {
                     }
                     i.increment();
                 });
-                result.setValue(mapping.id);;
+                result.setValue(mapping.id);
+                ;
             } else {
                 throw new RuntimeException("Topic name is not unique!");
             }
@@ -435,11 +466,11 @@ public class MQTTClient {
     }
 
     public void runOperation(ServiceOperation operation) {
-        if ( operation.getOperation().equals(Operation.RELOAD)){
+        if (operation.getOperation().equals(Operation.RELOAD)) {
             reloadMappings(operation.getTenant());
-        } else if ( operation.getOperation().equals(Operation.CONNECT)){
+        } else if (operation.getOperation().equals(Operation.CONNECT)) {
             connectToBroker();
-        } else if ( operation.getOperation().equals(Operation.DISCONNECT)){
+        } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
         }
     }

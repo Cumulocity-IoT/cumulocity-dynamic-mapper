@@ -22,6 +22,8 @@ import { MQTTServiceConfigurationComponent } from './service-configuration.compo
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTConfigurationTabFactory } from './tab.factory';
 import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
+import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
+import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
 
 @NgModule({
   imports: [
@@ -51,6 +53,8 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
+    TemplateRendererComponent,
+    SnoopedTemplateRendererComponent,
   ],
   entryComponents: [
     MQTTServiceConfigurationComponent,
@@ -59,7 +63,9 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
-    QOSRendererComponent
+    QOSRendererComponent,
+    TemplateRendererComponent,
+    SnoopedTemplateRendererComponent,
   ],
   declarations: [
     MQTTServiceConfigurationComponent,
@@ -68,7 +74,9 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
     MQTTMappingStepperComponent,
     MQTTTerminateConnectionModalComponent,
     StatusRendererComponent,
-    QOSRendererComponent
+    QOSRendererComponent,
+    TemplateRendererComponent,
+    SnoopedTemplateRendererComponent,
   ],
   providers: [
     MQTTOverviewGuard,

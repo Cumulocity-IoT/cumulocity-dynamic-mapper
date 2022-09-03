@@ -4,6 +4,8 @@ import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType,
 import { MQTTMapping, SAMPLE_TEMPLATES } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
+import { TemplateRendererComponent } from './template.renderer.component';
+import { SnoopedTemplateRendererComponent } from './snoopedTemplate.renderer.component';
 
 @Component({
   selector: 'mqtt-mapping',
@@ -48,7 +50,7 @@ export class MQTTMappingComponent implements OnInit {
       name: 'topic',
       path: 'topic',
       filterable: true,
-      gridTrackSize: '10%'
+      gridTrackSize: '5%'
     },
     {
       name: 'targetAPI',
@@ -56,13 +58,14 @@ export class MQTTMappingComponent implements OnInit {
       path: 'targetAPI',
       filterable: true,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '10%'
+      gridTrackSize: '5%'
     },
     {
       header: 'Sample payload',
       name: 'source',
       path: 'source',
       filterable: true,
+      cellRendererComponent: TemplateRendererComponent,
       gridTrackSize: '25%'
     },
     {
@@ -70,10 +73,11 @@ export class MQTTMappingComponent implements OnInit {
       name: 'target',
       path: 'target',
       filterable: true,
+      cellRendererComponent: TemplateRendererComponent,
       gridTrackSize: '25%'
     },
     {
-      header: 'Active-Tested',
+      header: 'Active-Tested-Snooping',
       name: 'active',
       path: 'active',
       filterable: true,
@@ -87,6 +91,14 @@ export class MQTTMappingComponent implements OnInit {
       path: 'qos',
       filterable: true,
       cellRendererComponent: QOSRendererComponent,
+      gridTrackSize: '10%'
+    },
+    {
+      header: '# Snooped Templates',
+      name: 'snoopedTemplates',
+      path: 'snoopedTemplates',
+      filterable: true,
+      cellRendererComponent: SnoopedTemplateRendererComponent,
       gridTrackSize: '10%'
     },
   ]
@@ -107,7 +119,6 @@ export class MQTTMappingComponent implements OnInit {
 
   ngOnInit() {
     this.loadMappings();
-    this.initForm();
     this.actionControls.push({
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)
@@ -118,8 +129,6 @@ export class MQTTMappingComponent implements OnInit {
       });
   }
 
-  private initForm(): void {
-  }
 
   async addMapping() {
     this.editMode = false;
@@ -138,7 +147,8 @@ export class MQTTMappingComponent implements OnInit {
       substitutions: [],
       mapDeviceIdentifier: false,
       externalIdType: 'c8y_Serial',
-      snoopPayload: false,
+      snoopTemplates: false,
+      snoopedTemplates: [],
       lastUpdate: Date.now()
     }
     this.mappingToUpdate = mapping;

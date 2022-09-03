@@ -38,7 +38,6 @@ export class MQTTConfigurationComponent implements OnInit {
     this.isMQTTActivated = false;
     this.isMQTTConnected = false;
     let status = await this.mqttConfigurationService.getConnectionStatus();
-    console.log("Retrieved status:", status)
     if (status === "ACTIVATED") {
       this.isMQTTConnected = false;
       this.isMQTTInitialized = true;
@@ -52,6 +51,7 @@ export class MQTTConfigurationComponent implements OnInit {
       this.isMQTTInitialized = true;
       this.isMQTTActivated = false;
     }
+    console.log("Retrieved status:", status, this.isMQTTConnected)
   }
 
   private initForm(): void {
@@ -147,7 +147,7 @@ export class MQTTConfigurationComponent implements OnInit {
   private async disconnectFromMQTT() {
     const response = await this.mqttConfigurationService.disconnect();
     console.log("Details disconnectFromMQTT", response)
-    if (response.status === 200) {
+    if (response.status < 300) {
       this.isMQTTActivated = false;
       this.alertservice.success(gettext('Successfully disconnected'));
     } else {

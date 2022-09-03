@@ -1,10 +1,10 @@
+import { CdkStep } from '@angular/cdk/stepper';
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { MQTTMappingService } from './mqtt-mapping.service';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { MQTTMapping, MQTTMappingSubstitution, SAMPLE_TEMPLATES, APIs, QOSs, SCHEMA_EVENT, SCHEMA_ALARM, SCHEMA_MEASUREMENT, getSchema, SCHEMA_PAYLOAD } from "../mqtt-configuration.model"
-import { CdkStep } from '@angular/cdk/stepper';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
+import { APIs, getSchema, MQTTMapping, MQTTMappingSubstitution, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD } from "../mqtt-configuration.model";
+import { MQTTMappingService } from './mqtt-mapping.service';
 
 @Component({
   selector: 'mqtt-mapping-stepper',
@@ -153,7 +153,11 @@ export class MQTTMappingStepperComponent implements OnInit {
       schema: SCHEMA_PAYLOAD
     };
 
+    this.initTemplateEditors();
+
   }
+
+  ngAf
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
@@ -164,7 +168,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
-      snoopPayload: new FormControl(this.mapping.snoopPayload),
+      snoopTemplates: new FormControl(this.mapping.snoopTemplates),
     });
 
   }
@@ -219,7 +223,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       topic: this.normalizeTopic(this.propertyForm.get('topic').value),
       targetAPI: this.propertyForm.get('targetAPI').value,
       source: st,
-      target: this.editorTarget.getText(),
+      target: JSON.stringify(this.editorTarget.get()),
       active: this.propertyForm.get('active').value,
       tested: this.mapping.tested || false,
       createNoExistingDevice: this.propertyForm.get('createNoExistingDevice').value || false,
@@ -227,7 +231,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       substitutions: this.mapping.substitutions,
       mapDeviceIdentifier: this.propertyForm.get('mapDeviceIdentifier').value,
       externalIdType: this.propertyForm.get('externalIdType').value,
-      snoopPayload: this.propertyForm.get('snoopPayload').value,
+      snoopTemplates: this.propertyForm.get('snoopTemplates').value,
+      snoopedTemplates: this.mapping.snoopedTemplates,
       lastUpdate: Date.now(),
     };
   }
@@ -278,33 +283,39 @@ export class MQTTMappingStepperComponent implements OnInit {
         this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
       })
 
-      this.templateSource = JSON.parse(this.mapping.source);
-      //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
-      if (this.isWildcardTopic()) {
-        this.templateSource = {
-          ...this.templateSource,
-          TOPIC: "909090"
-        }
-      }
+      this.initTemplateEditors();
       this.editorTarget.setSchema(getSchema(targetAPI), null);
-      this.templateTarget = JSON.parse(this.mapping.target);
-      if (!this.editMode) {
-        this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
-        console.log("Sample template", this.templateTarget, getSchema(targetAPI))
-      }
+
     } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
     } else if (event.step.label == "Test mapping") {
 
     }
-    if (this.propertyForm.get('snoopPayload').value) {
+    if (this.propertyForm.get('snoopTemplates').value) {
       console.log("Ready to snoop ...");
       this.onCommit.emit(this.getCurrentMapping());
     } else {
       event.stepper.next();
     }
 
+  }
+
+  private initTemplateEditors() {
+    const targetAPI = this.propertyForm.get('targetAPI').value
+    this.templateSource = JSON.parse(this.mapping.source);
+    //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
+    if (this.isWildcardTopic()) {
+      this.templateSource = {
+        ...this.templateSource,
+        TOPIC: "909090"
+      };
+    }
+    this.templateTarget = JSON.parse(this.mapping.target);
+    if (!this.editMode) {
+      this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
+      console.log("Sample template", this.templateTarget, getSchema(targetAPI));
+    }
   }
 
   public onAddSubstitutionsClicked() {
