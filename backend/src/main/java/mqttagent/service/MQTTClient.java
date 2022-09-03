@@ -1,15 +1,4 @@
-package mqttagent.services;
-
-import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import org.apache.commons.lang3.StringUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.lang3.mutable.MutableLong;
-
-import lombok.extern.slf4j.Slf4j;
-import mqttagent.callbacks.GenericCallback;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingsRepresentation;
+package mqttagent.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,10 +6,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -33,6 +25,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import lombok.extern.slf4j.Slf4j;
+import mqttagent.callback.GenericCallback;
+import mqttagent.configuration.ConfigurationService;
+import mqttagent.configuration.MQTTConfiguration;
+import mqttagent.core.C8yAgent;
+import mqttagent.model.MQTTMapping;
+import mqttagent.model.MQTTMappingsRepresentation;
+
 @Slf4j
 @Configuration
 @EnableScheduling
@@ -42,7 +45,7 @@ public class MQTTClient {
     MQTTConfiguration mqttConfiguration;
 
     @Autowired
-    private CredentialsConfigurationService configurationService;
+    private ConfigurationService configurationService;
 
     private MqttClient mqttClient;
 

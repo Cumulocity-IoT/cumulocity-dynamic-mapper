@@ -1,11 +1,5 @@
 package mqttagent.rest;
 
-import mqttagent.model.MQTTMapping;
-import mqttagent.services.MQTTClient;
-import mqttagent.services.MQTTConfiguration;
-import mqttagent.services.ServiceOperation;
-import mqttagent.services.ServiceStatus;
-
 import java.util.List;
 
 import javax.validation.Valid;
@@ -21,6 +15,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.extern.slf4j.Slf4j;
+import mqttagent.configuration.MQTTConfiguration;
+import mqttagent.model.MQTTMapping;
+import mqttagent.service.MQTTClient;
+import mqttagent.service.ServiceOperation;
+import mqttagent.service.ServiceStatus;
 
 @Slf4j
 @RestController

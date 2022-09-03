@@ -1,4 +1,4 @@
-package mqttagent.services;
+package mqttagent.service;
 
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 
