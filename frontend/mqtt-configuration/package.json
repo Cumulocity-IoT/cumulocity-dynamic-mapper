@@ -4,9 +4,9 @@
   "description": "This is the Cumulocity module federation plugin. Plugins can be developed like any Cumulocity application, but can be used at runtime by other applications. Therefore, they export an Angular module which can then be imported by any other application. The exports are defined in `package.json`:",
   "scripts": {
     "start": "c8ycli server -u ${url}",
-    "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpackI.config.js",
+    "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpack.config.js",
     "build": "c8ycli build",
-    "build:extra": "c8ycli build --env.extraWebpackConfig=./extra-webpackI.config.js",
+    "build:extra": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
     "postinstall": "ngcc"
   },
