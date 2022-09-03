@@ -58,7 +58,7 @@ public class MQTTMappingsRepresentation implements Serializable {
         var topic = mapping.topic;
         MutableBoolean result = new MutableBoolean(true);
         mappings.forEach(m -> {
-          if (topic.equals(m.topic) && !(mapping.id != m.id)) {
+          if (topic.equals(m.topic) && (mapping.id != m.id)) {
             result.setFalse();
           } 
         });

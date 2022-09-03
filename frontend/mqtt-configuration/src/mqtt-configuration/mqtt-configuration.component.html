@@ -16,13 +16,6 @@
           }"></span>
         {{ 'MQTTBroker connected' | translate }}
       </div>
-<!--       <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isMQTTActivated,
-            inactive: !isMQTTActivated
-          }"></span>
-        {{ 'Active' | translate }}
-      </div> -->
       <div class="c8y-realtime">
         <span class="c8y-pulse animated pulse" [ngClass]="{
             active: isMQTTAgentCreated,
@@ -95,11 +88,11 @@
           Update
         </button>
         <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-          [disabled]="!isMQTTInitialized || isMQTTActivated" translate>
+          [disabled]="isMQTTConnected" translate>
           Connect
         </button>
         <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
-          [disabled]="!isMQTTActivated" translate>
+          [disabled]="!isMQTTConnected" translate>
           Disconnect
         </button>
       </div>

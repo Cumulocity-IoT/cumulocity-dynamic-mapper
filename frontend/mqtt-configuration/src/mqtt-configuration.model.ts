@@ -27,7 +27,8 @@ export interface MQTTMapping {
   substitutions?: MQTTMappingSubstitution[];
   mapDeviceIdentifier:boolean;
   externalIdType: string,
-  snoopPayload:boolean
+  snoopTemplates:boolean,
+  snoopedTemplates:string[]
 }
 
 export const SAMPLE_TEMPLATES = {

@@ -81,7 +81,9 @@ public class C8yAgent {
 
     @EventListener
     public void init(MicroserviceSubscriptionAddedEvent event) {
-        this.tenant = event.getCredentials().getTenant();
+
+        // TODO handle what happens if multiple tenants subscribe to this microservice
+        tenant = event.getCredentials().getTenant();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 
@@ -145,7 +147,7 @@ public class C8yAgent {
         try {
             mqttClient.init();
             mqttClient.reconnect();
-            mqttClient.startReporting();
+            mqttClient.runHouskeeping();
             /* Uncomment this if you want to subscribe on start on "#" */
             mqttClient.subscribe("#", null);
             mqttClient.subscribe("$SYS/#", null);
@@ -160,10 +162,6 @@ public class C8yAgent {
         if (mqttClient != null) {
             mqttClient.disconnect();
         }
-    }
-
-    public String getTenant() {
-        return this.tenant;
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,

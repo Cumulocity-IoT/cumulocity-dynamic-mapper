@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
 import javax.validation.constraints.NotNull;
 
@@ -15,7 +16,7 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = { "id", "topic", "targetAPI", "source", "target", "active", "tested", "createNoExistingDevice",
-    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType" ,"snoopPayload" , "lastUpdate" })
+    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType" ,"snoopTemplates" , "snoopedTemplates", "lastUpdate" })
 public class MQTTMapping implements Serializable {
 
   @NotNull
@@ -55,7 +56,10 @@ public class MQTTMapping implements Serializable {
   public String externalIdType;
 
   @NotNull
-  public boolean snoopPayload;
+  public boolean snoopTemplates;
+
+  @NotNull
+  public ArrayList<String> snoopedTemplates;
 
   @NotNull
   public long lastUpdate;
@@ -70,6 +74,8 @@ public class MQTTMapping implements Serializable {
     this.createNoExistingDevice = mapping.createNoExistingDevice;
     this.qos = mapping.qos;
     this.substitutions = mapping.substitutions;
+    this.snoopTemplates = mapping.snoopTemplates;
+    this.snoopedTemplates = mapping.snoopedTemplates;
   }
 }
 
