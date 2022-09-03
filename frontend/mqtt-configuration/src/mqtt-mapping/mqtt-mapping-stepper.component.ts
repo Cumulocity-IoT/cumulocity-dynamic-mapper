@@ -28,6 +28,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   TOPIC_WILDCARD = "#"
 
   paletteCounter:number = 0;
+  snoopedTemplateCounter:number = 0;
   isSubstitutionValid: boolean;
   substitutions: string = '';
 
@@ -156,8 +157,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.initTemplateEditors();
 
   }
-
-  ngAf
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
@@ -292,7 +291,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     } else if (event.step.label == "Test mapping") {
 
     }
-    if (this.propertyForm.get('snoopTemplates').value) {
+    if (this.propertyForm.get('snoopTemplates').value && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
       this.onCommit.emit(this.getCurrentMapping());
     } else {
@@ -316,6 +315,23 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(targetAPI));
     }
+  }
+
+  async onSnoopedSourceTemplatesClicked() {
+    if (this.snoopedTemplateCounter >= this.mapping.snoopedTemplates.length) {
+      this.snoopedTemplateCounter = 0;
+    }
+    this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
+    //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
+    if (this.isWildcardTopic()) {
+      this.templateSource = {
+        ...this.templateSource,
+        TOPIC: "909090"
+      };
+    }
+    // disable further snooping for this template
+    this.propertyForm.patchValue({"snoopTemplates": false});
+    this.snoopedTemplateCounter++;
   }
 
   public onAddSubstitutionsClicked() {

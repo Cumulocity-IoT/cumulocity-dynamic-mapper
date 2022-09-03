@@ -94,7 +94,7 @@ export class MQTTMappingComponent implements OnInit {
       gridTrackSize: '10%'
     },
     {
-      header: '# Snooped Templates',
+      header: '# Snoopes',
       name: 'snoopedTemplates',
       path: 'snoopedTemplates',
       filterable: true,
@@ -171,7 +171,7 @@ export class MQTTMappingComponent implements OnInit {
     this.mappingGridComponent.reload();
   }
 
-  private async loadMappings(): Promise<void> {
+  async loadMappings(): Promise<void> {
     this.mqttMappings = await this.mqttMappingService.loadMappings();
     if (!this.mqttMappings) {
       this.mqttMappings = await this.mqttMappingService.initalizeMappings();

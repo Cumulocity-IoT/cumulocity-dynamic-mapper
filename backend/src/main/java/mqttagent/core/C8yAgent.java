@@ -322,7 +322,7 @@ public class C8yAgent {
                 .getManagedObjects().get(0);
         ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
         moUpdate.setId(mo.getId());
-        moUpdate.setProperty(MQTT_MAPPING_FRAGMENT + "_UPDATED", mappings);
+        moUpdate.setProperty(MQTT_MAPPING_FRAGMENT, mappings);
         inventoryApi.update(moUpdate);
         log.info("Updated MQTTMapping after deletion!");
     }
