@@ -56,7 +56,7 @@ public class MQTTMapping implements Serializable {
   public String externalIdType;
 
   @NotNull
-  public boolean snoopTemplates;
+  public Snoop_Status snoopTemplates;
 
   @NotNull
   public ArrayList<String> snoopedTemplates;

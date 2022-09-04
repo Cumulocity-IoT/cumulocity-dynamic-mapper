@@ -27,7 +27,7 @@ export interface MQTTMapping {
   substitutions?: MQTTMappingSubstitution[];
   mapDeviceIdentifier:boolean;
   externalIdType: string,
-  snoopTemplates:boolean,
+  snoopTemplates: Snoop_Status,
   snoopedTemplates:string[]
 }
 
@@ -224,4 +224,11 @@ export function getSchema(targetAPI: string): any {
   } else {
     return SCHEMA_MEASUREMENT;
   }
+}
+
+export enum Snoop_Status {
+  NONE = "NONE",
+  ENABLED = "ENABLED",
+  STARTED = "STARTED",
+  STOPPED = "STOPPED"
 }
