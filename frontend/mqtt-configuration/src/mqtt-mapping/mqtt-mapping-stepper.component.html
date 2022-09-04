@@ -92,7 +92,7 @@
                     <label for="qos" class="" translate>Snoop payload</label>
                     <div class="">
                       <select class="form-control" formControlName="snoopTemplates"  #snoopTemplatesRef>
-                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q" [disabled] = "q != 'ENABLED'">
+                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q" [disabled] = "q != 'ENABLED' && q != 'NONE'">
                           {{ Snoop_Status[q] }}
                         </option>
                       </select>

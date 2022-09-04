@@ -215,7 +215,7 @@ export class MQTTMappingComponent implements OnInit {
   private async saveMappings() {
     const response1 = await this.mqttMappingService.saveMappings(this.mqttMappings);
     const response2 = await this.mqttMappingService.reloadMappings();
-    console.log("New response:", response1.res)
+    console.log("New response:", response1.res, response2)
 
     if (response1.res.ok && response2.status < 300) {
       this.alertService.success(gettext('Mappings saved and activated successfully'));

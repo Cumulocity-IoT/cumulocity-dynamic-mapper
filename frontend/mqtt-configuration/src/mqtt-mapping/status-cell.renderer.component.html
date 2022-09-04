@@ -12,7 +12,7 @@
 </div>
 <div class="c8y-realtime">
   <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.snoopTemplates,
-      inactive: !context.item.snoopTemplates
+      active: context.item.snoopTemplates != 'NONE',
+      inactive: context.item.snoopTemplates == 'NONE'
     }"></span>
 </div>
