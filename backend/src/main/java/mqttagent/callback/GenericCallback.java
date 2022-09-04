@@ -27,6 +27,7 @@ import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.model.Snoop_Status;
 import mqttagent.service.MQTTClient;
 
 @Slf4j
@@ -98,11 +99,13 @@ public class GenericCallback implements MqttCallback {
 
     private void handleNewPayload(MQTTMapping map, String deviceIdentifier, String payloadMessage, String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
-            if (map.snoopTemplates) {
+            if (map.snoopTemplates.equals(Snoop_Status.ENABLED) || map.snoopTemplates.equals(Snoop_Status.STARTED)) {
                 map.snoopedTemplates.add(payloadMessage);
                 if (map.snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
                     // stop snooping
-                    map.snoopTemplates = false;
+                    map.snoopTemplates = Snoop_Status.STOPPED;
+                } else {
+                    map.snoopTemplates = Snoop_Status.STARTED;
                 }
                 log.info("Adding snoopedTemplate to map: {},{},{}", map.topic, map.snoopedTemplates.size(), map.snoopTemplates);
                 mqttClient.setTenantMappingsDirty(tenant, map.topic);

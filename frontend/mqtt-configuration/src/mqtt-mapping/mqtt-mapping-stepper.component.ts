@@ -3,7 +3,7 @@ import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, 
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { APIs, getSchema, MQTTMapping, MQTTMappingSubstitution, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD } from "../mqtt-configuration.model";
+import { APIs, getSchema, MQTTMapping, MQTTMappingSubstitution, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, Snoop_Status } from "../mqtt-configuration.model";
 import { MQTTMappingService } from './mqtt-mapping.service';
 
 @Component({
@@ -24,6 +24,8 @@ export class MQTTMappingStepperComponent implements OnInit {
   COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#fefbd8', '#618685', '#ffef96', '#50394c', '#b2b2b2', '#f4e1d2']
   APIs = APIs;
   QOSs = QOSs;
+  Snoop_Status = Snoop_Status;
+  keys = Object.keys;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
   TOPIC_WILDCARD = "#"
 
@@ -291,7 +293,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     } else if (event.step.label == "Test mapping") {
 
     }
-    if (this.propertyForm.get('snoopTemplates').value && this.mapping.snoopedTemplates.length == 0) {
+    if (this.propertyForm.get('snoopTemplates').value == Snoop_Status.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
       this.onCommit.emit(this.getCurrentMapping());
     } else {
@@ -330,7 +332,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       };
     }
     // disable further snooping for this template
-    this.propertyForm.patchValue({"snoopTemplates": false});
+    this.propertyForm.patchValue({"snoopTemplates": Snoop_Status.STOPPED});
     this.snoopedTemplateCounter++;
   }
 

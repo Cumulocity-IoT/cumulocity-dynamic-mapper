@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { MQTTMapping, SAMPLE_TEMPLATES } from '../mqtt-configuration.model';
+import { MQTTMapping, SAMPLE_TEMPLATES, Snoop_Status } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
@@ -147,7 +147,7 @@ export class MQTTMappingComponent implements OnInit {
       substitutions: [],
       mapDeviceIdentifier: false,
       externalIdType: 'c8y_Serial',
-      snoopTemplates: false,
+      snoopTemplates: Snoop_Status.NONE,
       snoopedTemplates: [],
       lastUpdate: Date.now()
     }
