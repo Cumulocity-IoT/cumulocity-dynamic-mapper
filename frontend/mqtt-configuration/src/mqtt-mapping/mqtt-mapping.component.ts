@@ -39,18 +39,18 @@ export class MQTTMappingComponent implements OnInit {
   columns: Column[] = [
     {
       name: 'id',
-      header: 'ID',
+      header: '#',
       path: 'id',
-      filterable: true,
+      filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '5%'
+      gridTrackSize: '3%'
     },
     {
       header: 'Topic',
       name: 'topic',
       path: 'topic',
       filterable: true,
-      gridTrackSize: '5%'
+      gridTrackSize: '10%'
     },
     {
       name: 'targetAPI',
@@ -58,7 +58,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'targetAPI',
       filterable: true,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '5%'
+      gridTrackSize: '7.5%'
     },
     {
       header: 'Sample payload',
@@ -66,6 +66,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
+      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
@@ -74,13 +75,14 @@ export class MQTTMappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
+      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
       header: 'Active-Tested-Snooping',
       name: 'active',
       path: 'active',
-      filterable: true,
+      filterable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: 'textAlignCenter',
       gridTrackSize: '5%'
@@ -91,15 +93,15 @@ export class MQTTMappingComponent implements OnInit {
       path: 'qos',
       filterable: true,
       cellRendererComponent: QOSRendererComponent,
-      gridTrackSize: '10%'
+      gridTrackSize: '7.5%'
     },
     {
       header: '# Snoopes',
       name: 'snoopedTemplates',
       path: 'snoopedTemplates',
-      filterable: true,
+      filterable: false,
       cellRendererComponent: SnoopedTemplateRendererComponent,
-      gridTrackSize: '10%'
+      gridTrackSize: '7.5%'
     },
   ]
 

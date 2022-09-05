@@ -34,65 +34,70 @@
                       <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
-                  <div class="form-group">
-                    <label for="targetAPI" class="" translate>Target API</label>
-                    <div class="">
-                      <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-                        <option *ngFor="let api of APIs" [ngValue]="api">
-                          {{ api }}
-                        </option>
-                      </select>
+                  <div class="row">
+                    <div class="col-md-6 form-group">
+                      <label for="targetAPI" class="" translate>Target API</label>
+                      <div class="c8y-select-wrapper">
+                        <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+                          <option *ngFor="let api of APIs" [ngValue]="api">
+                            {{ api }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6 form-group">
+                      <label class="" translate>QOS</label>
+                      <div class="c8y-select-wrapper">
+                        <select class="form-control" formControlName="qos" #qosRef>
+                          <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                            {{ q.name }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label class="c8y-switch" title="{{ 'Active' | translate }}">
+                        <input type="checkbox" formControlName="active" />
+                        <span></span>
+                        <span>
+                          {{ 'Active' | translate }}
+                        </span>
+                      </label>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="c8y-switch" title="{{ 'Create device' | translate }}">
+                        <input type="checkbox" formControlName="createNoExistingDevice" />
+                        <span></span>
+                        <span>
+                          {{ 'Create device' | translate }}
+                        </span>
+                      </label>
                     </div>
                   </div>
                   <div class="form-group">
-                    <label for="qos" class="" translate>QOS</label>
-                    <div class="">
-                      <select class="form-control" formControlName="qos" #qosRef>
-                        <option *ngFor="let q of QOSs" [ngValue]="q.value">
-                          {{ q.name }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label for="active" class="" translate>Mapping Active</label>
-                    <div class="">
-                      <input formControlName="active" type="checkbox" class="form-control" #activeRef />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label for="createNoExistingDevice" class="" translate>Create device if not existing</label>
-                    <div class="">
-                      <input formControlName="createNoExistingDevice" type="checkbox" class="form-control"
-                        #createNoExistingDeviceRef />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label for="mapDeviceIdentifier" class="" translate>Map device identifier</label>
-                    <div class="">
-                      <input formControlName="mapDeviceIdentifier" type="checkbox" class="form-control"
-                        #mapDeviceIdentifierRef />
-                    </div>
+                    <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
+                      <input formControlName="mapDeviceIdentifier" type="checkbox"/>
+                      <span></span>
+                      <span>
+                       {{ 'Map device idenfifier' | translate }}
+                      </span>
+                    </label>
                   </div>
                   <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                     <label for="externalIdType" class="" translate>External Id Type</label>
                     <div>
-                      <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
-                        #externalIdTypeRef />
+                      <input formControlName="externalIdType" type="text" class="form-control"
+                        placeholder="e.g. c8y_Serial" #externalIdTypeRef />
                     </div>
                   </div>
-<!--                   <div class="form-group">
-                    <label for="snoopTemplates" class="" translate>Snoop payload</label>
-                    <div class="">
-                      <input formControlName="snoopTemplates" type="checkbox" class="form-control"
-                        #snoopTemplatesRef />
-                    </div>
-                  </div> -->
                   <div class="form-group">
                     <label for="qos" class="" translate>Snoop payload</label>
-                    <div class="">
-                      <select class="form-control" formControlName="snoopTemplates"  #snoopTemplatesRef>
-                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q" [disabled] = "q != 'ENABLED' && q != 'NONE'">
+                    <div class="c8y-select-wrapper">
+                      <select class="form-control" formControlName="snoopTemplates" #snoopTemplatesRef>
+                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q"
+                          [disabled]="q != 'ENABLED' && q != 'NONE'">
                           {{ Snoop_Status[q] }}
                         </option>
                       </select>
@@ -183,7 +188,8 @@
         </div>
 
         <div class="col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2 text-center">
-          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplatesClicked()" translate [disabled]="mapping.snoopedTemplates.length==0">
+          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplatesClicked()"
+            translate [disabled]="mapping.snoopedTemplates.length==0">
             Snooped templates
           </button>
           <button type="button" name="sample" class="btn btn-default" (click)="onClearSubstitutionsClicked()" translate>

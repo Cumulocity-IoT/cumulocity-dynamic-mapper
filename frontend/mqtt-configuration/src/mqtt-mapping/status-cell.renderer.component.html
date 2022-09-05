@@ -1,16 +1,16 @@
-<div class="c8y-realtime">
+<div class="c8y-realtime" title="Active">
   <span class="c8y-pulse animated pulse" [ngClass]="{
       active: context.item.active,
       inactive: !context.item.active
     }"></span>
 </div>
-<div class="c8y-realtime">
+<div class="c8y-realtime" title="Tested">
   <span class="c8y-pulse animated pulse" [ngClass]="{
       active: context.item.tested,
       inactive: !context.item.tested
-    }"></span>
+    }" ></span>
 </div>
-<div class="c8y-realtime">
+<div class="c8y-realtime" title="Snooping">
   <span class="c8y-pulse animated pulse" [ngClass]="{
       active: context.item.snoopTemplates != 'NONE',
       inactive: context.item.snoopTemplates == 'NONE'
