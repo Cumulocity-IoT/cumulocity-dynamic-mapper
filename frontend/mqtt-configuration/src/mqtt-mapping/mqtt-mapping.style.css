@@ -77,3 +77,8 @@ button.jsoneditor-button.jsoneditor-dragarea {
   vertical-align: middle;
   float: none;
 }
+
+.jsonColumn {
+    max-height: 100px;
+    overflow: scroll !important;
+}

@@ -1,6 +1,6 @@
 import { CdkStep } from '@angular/cdk/stepper';
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { APIs, getSchema, MQTTMapping, MQTTMappingSubstitution, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, Snoop_Status } from "../mqtt-configuration.model";
@@ -109,14 +109,15 @@ export class MQTTMappingStepperComponent implements OnInit {
   propertyForm: FormGroup;
   testForm: FormGroup;
 
-  topicUnique: boolean;
+  topicUnique: boolean = true;
 
   TOPIC_JSON_PATH = "TOPIC";
 
   constructor(
     public mqttMappingService: MQTTMappingService,
     public alertService: AlertService,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+    private fb: FormBuilder,
   ) { }
 
   ngOnInit() {
@@ -161,10 +162,21 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   private initPropertyForm(): void {
-    this.propertyForm = new FormGroup({
+/*     this.propertyForm = new FormGroup({
       topic: new FormControl(this.mapping.topic, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       active: new FormControl(this.mapping.active, Validators.required),
+      createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
+      qos: new FormControl(this.mapping.qos, Validators.required),
+      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
+      externalIdType: new FormControl(this.mapping.externalIdType),
+      snoopTemplates: new FormControl(this.mapping.snoopTemplates),
+    }); */
+
+    this.propertyForm = this.fb.group({
+      topic: new FormControl(this.mapping.topic, Validators.required),
+      targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
+      active: [this.mapping.active], 
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
