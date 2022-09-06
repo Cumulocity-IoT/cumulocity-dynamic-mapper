@@ -29,8 +29,8 @@ export class MQTTMappingStepperComponent implements OnInit {
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
   TOPIC_WILDCARD = "#"
 
-  paletteCounter:number = 0;
-  snoopedTemplateCounter:number = 0;
+  paletteCounter: number = 0;
+  snoopedTemplateCounter: number = 0;
   isSubstitutionValid: boolean;
   substitutions: string = '';
 
@@ -43,8 +43,19 @@ export class MQTTMappingStepperComponent implements OnInit {
   pathTargetMissing: boolean;
   selectionList: any = [];
 
+  clicksTarget: []
+  clicksSource: []
+  editorOptionsSource: any
+  editorOptionsTarget: any
+  editorOptionsTesting: any
+
   private setSelectionSource = function (node: any, event: any) {
     if (event.type == "click") {
+      if (this.clicksSource == undefined) this.clicksSource = [];
+      this.clicksSource.push(Date.now());
+      this.clicksSource = this.clicksSource.slice(-2);
+      let doubleClick = (this.clicksSource.length > 1 ? this.clicksSource[1] - this.clicksSource[0] : Infinity);
+      //console.log("Set target editor event:", event.type, this.clicksTarget, doubleClick);
       var path = "";
       for (let i = 0; i < node.path.length; i++) {
         if (typeof node.path[i] === 'number') {
@@ -59,9 +70,10 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.pathSource = path;
       for (let item of this.selectionList) {
         //console.log("Reset item:", item);
-        item.setAttribute('style',null);
+        item.setAttribute('style', null);
       }
-      this.setSelectionToPath(this.editorSource, path)
+      // test if doubleclicked
+      if (doubleClick < 750) this.setSelectionToPath(this.editorSource, path)
       //console.log("Set pathSource:", path);
     }
   }.bind(this)
@@ -69,6 +81,12 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private setSelectionTarget = function (node: any, event: any) {
     if (event.type == "click") {
+      if (this.clicksTarget == undefined) this.clicksTarget = [];
+      this.clicksTarget.push(Date.now());
+      this.clicksTarget = this.clicksTarget.slice(-2);
+      let doubleClick = (this.clicksTarget.length > 1 ? this.clicksTarget[1] - this.clicksTarget[0] : Infinity);
+      //console.log("Set target editor event:", event.type, this.clicksTarget, doubleClick);
+
       var path = "";
       for (let i = 0; i < node.path.length; i++) {
         if (typeof node.path[i] === 'number') {
@@ -85,14 +103,12 @@ export class MQTTMappingStepperComponent implements OnInit {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
-      this.setSelectionToPath(this.editorTarget, path)
+      // test if doubleclicked
+      if (doubleClick < 750) this.setSelectionToPath(this.editorTarget, path)
       //console.log("Set pathTarget:", path);
     }
   }.bind(this)
 
-  editorOptionsSource: any
-  editorOptionsTarget: any
-  editorOptionsTesting: any
 
   @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
@@ -132,6 +148,9 @@ export class MQTTMappingStepperComponent implements OnInit {
       enableTransform: false,
       enableSearch: false,
       onEvent: this.setSelectionSource,
+      /*       onSelectionChange: () => {
+              console.log("selection change source called");
+              }, */
       schema: SCHEMA_PAYLOAD
     };
 
@@ -143,6 +162,9 @@ export class MQTTMappingStepperComponent implements OnInit {
       enableTransform: false,
       enableSearch: false,
       onEvent: this.setSelectionTarget,
+      /*       onSelectionChange: () => {
+              console.log("selection change target called");
+              }, */
       schema: getSchema(this.mapping.targetAPI)
     };
 
@@ -162,21 +184,10 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   private initPropertyForm(): void {
-/*     this.propertyForm = new FormGroup({
-      topic: new FormControl(this.mapping.topic, Validators.required),
-      targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      active: new FormControl(this.mapping.active, Validators.required),
-      createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
-      qos: new FormControl(this.mapping.qos, Validators.required),
-      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
-      externalIdType: new FormControl(this.mapping.externalIdType),
-      snoopTemplates: new FormControl(this.mapping.snoopTemplates),
-    }); */
-
     this.propertyForm = this.fb.group({
       topic: new FormControl(this.mapping.topic, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      active: [this.mapping.active], 
+      active: [this.mapping.active],
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
@@ -344,7 +355,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       };
     }
     // disable further snooping for this template
-    this.propertyForm.patchValue({"snoopTemplates": Snoop_Status.STOPPED});
+    this.propertyForm.patchValue({ "snoopTemplates": Snoop_Status.STOPPED });
     this.snoopedTemplateCounter++;
   }
 
@@ -395,7 +406,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
       console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
       //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
-      this.selectionList  = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
+      this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
       for (let item of this.selectionList) {
         item.setAttribute('style', `background: ${nextColor};`);
       }
