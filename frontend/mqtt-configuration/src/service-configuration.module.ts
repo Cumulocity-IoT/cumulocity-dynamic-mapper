@@ -104,7 +104,7 @@ export class MQTTServiceConfigurationModule {
     private config: MQTTConfigurationService
   ) {
     this.mapping.initializeMQTTAgent().then(  (agent) => {
-      console.log("Found MQTTAgent in mapping:", agent);
+      console.log("Found MQTTAgent:", agent);
     });
     this.config.initializeMQTTAgent().then();
   }
