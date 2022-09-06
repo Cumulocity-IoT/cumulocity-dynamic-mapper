@@ -66,7 +66,7 @@ export class MQTTMappingService {
 
   async initalizeMappings(): Promise<MQTTMapping[]> {
     const response: IResult<IManagedObject> = await this.inventory.create({
-      c8y_mqttMapping: {},
+      c8y_mqttMapping: [],
       name: "MQTT-Mapping",
       type: this.MAPPING_TYPE
     });

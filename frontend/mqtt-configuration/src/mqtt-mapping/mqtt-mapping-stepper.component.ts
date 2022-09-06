@@ -58,11 +58,11 @@ export class MQTTMappingStepperComponent implements OnInit {
       }
       this.pathSource = path;
       for (let item of this.selectionList) {
-        console.log("Reset item:", item);
+        //console.log("Reset item:", item);
         item.setAttribute('style',null);
       }
       this.setSelectionToPath(this.editorSource, path)
-      console.log("Set pathSource:", path);
+      //console.log("Set pathSource:", path);
     }
   }.bind(this)
 
@@ -82,11 +82,11 @@ export class MQTTMappingStepperComponent implements OnInit {
       }
       this.pathTarget = path;
       for (let item of this.selectionList) {
-        console.log("Reset item:", item);
+        //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
       this.setSelectionToPath(this.editorTarget, path)
-      console.log("Set pathTarget:", path);
+      //console.log("Set pathTarget:", path);
     }
   }.bind(this)
 
@@ -122,7 +122,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   ngOnInit() {
     //console.log("Mapping to be updated:", this.mapping);
-    console.log ("ElementRef:", this.elementRef.nativeElement);
+    //console.log ("ElementRef:", this.elementRef.nativeElement);
     this.initPropertyForm();
     this.editorOptionsSource = {
       modes: ['tree', 'code'],
