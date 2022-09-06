@@ -94,9 +94,9 @@ public class GenericCallback implements MqttCallback {
     private void handleNewPayload(MQTTMapping map, String deviceIdentifier, String payloadMessage) {
         if (map.snoopTemplates.equals(Snoop_Status.ENABLED) || map.snoopTemplates.equals(Snoop_Status.STARTED)) {
             map.snoopedTemplates.add(payloadMessage);
-            if (map.snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
-                // stop snooping
-                map.snoopTemplates = Snoop_Status.STOPPED;
+            if (map.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+                // remove oldest payload
+                map.snoopedTemplates.remove(0);
             } else {
                 map.snoopTemplates = Snoop_Status.STARTED;
             }
