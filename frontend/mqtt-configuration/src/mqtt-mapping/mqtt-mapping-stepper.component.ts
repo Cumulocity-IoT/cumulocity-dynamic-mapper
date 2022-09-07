@@ -79,7 +79,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       // test if doubleclicked
       if (doubleClick < 750) {
         this.setSelectionToPath(this.editorSource, path)
-        this.pathSource = path;
         this.updateSourceExpressionResult(path);
         //this.sourceExpression = path;
       }
@@ -231,6 +230,7 @@ export class MQTTMappingStepperComponent implements OnInit {
         try {
           //var expression = this.JSONATA(path)
           //this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
+          this.pathSource = path;
           this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource.get(), path); 
           this.sourceExpressionErrorMsg = '';
         } catch (error) {
@@ -430,7 +430,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       for (let item of this.selectionList) {
         item.setAttribute('style', null);
       }
-      this.pathSource = this.mapping.substitutions[this.counterShowSubstitutions].pathSource;
+      this.updateSourceExpressionResult(this.mapping.substitutions[this.counterShowSubstitutions].pathSource);
       this.pathTarget = this.mapping.substitutions[this.counterShowSubstitutions].pathTarget;
       this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.counterShowSubstitutions].pathSource)
       this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
