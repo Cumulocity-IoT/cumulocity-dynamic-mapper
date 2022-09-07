@@ -93,3 +93,10 @@ button.jsoneditor-button.jsoneditor-dragarea {
   padding-bottom: 5px;
   padding-top: 5px;
 }
+
+.padding-l0{
+  padding-left:0;
+}
+.padding-r0{
+  padding-right:0;
+}

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -37,6 +38,7 @@ import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.model.ProcessingContext;
 import mqttagent.model.Snoop_Status;
 import mqttagent.service.MQTTClient;
 
@@ -79,47 +81,57 @@ public class GenericCallback implements MqttCallback {
                 String payloadMessage = (mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "");
-                String wildcardTopic = topic.replaceFirst("([^///]+$)", "#");
-                String deviceIdentifier = topic.replaceFirst("^(.*[\\/])", "");
-                log.info("Message received on topic {},{},{} with message {}", topic, deviceIdentifier, wildcardTopic,
-                        payloadMessage);
-
-                // TODO handle what happens if multiple tenants subscribe to this microservice
-                Map<String, MQTTMapping> mappings = mqttClient.getActiveMappings();
-                MQTTMapping map = mappings.get(topic);
-                log.info("Looking for exact matching of topics: {},{}",  topic, map);
-                if (map != null) {
-                    handleNewPayload(map, deviceIdentifier, payloadMessage);
-                } else {
-                    // exact topic not found, look for topic without device identifier
-                    // e.g. /temperature/9090 -> /temperature/#
-                    map = mappings.get(wildcardTopic);
-                    log.info("Looking for wildcard matching of topics: {},{}",  wildcardTopic, map);
-                    if (map != null) {
-                        handleNewPayload(map, deviceIdentifier, payloadMessage);
-                    }
-                }
+                ProcessingContext ctx = resolveMap(topic, payloadMessage);
+                handleNewPayload(ctx, payloadMessage);
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
     }
 
-    private void handleNewPayload(MQTTMapping map, String deviceIdentifier, String payloadMessage) {
-        if (map.snoopTemplates.equals(Snoop_Status.ENABLED) || map.snoopTemplates.equals(Snoop_Status.STARTED)) {
-            map.snoopedTemplates.add(payloadMessage);
-            if (map.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
-                // remove oldest payload
-                map.snoopedTemplates.remove(0);
-            } else {
-                map.snoopTemplates = Snoop_Status.STARTED;
-            }
-            log.info("Adding snoopedTemplate to map: {},{},{}", map.topic, map.snoopedTemplates.size(),
-                    map.snoopTemplates);
-            mqttClient.setTenantMappingsDirty(map.topic);
+    private ProcessingContext resolveMap(String topic, String payloadMessage) {
+        ProcessingContext context = new ProcessingContext();
+        String wildcardTopic = topic.replaceFirst("([^///]+$)", "#");
+        String di = topic.replaceFirst("^(.*[\\/])", "");
+        context.setDeviceIdentifier(di);
+        log.info("Message received on topic {},{},{} with message {}", topic, di, wildcardTopic,
+                payloadMessage);
+
+        // TODO handle what happens if multiple tenants subscribe to this microservice
+        Map<String, MQTTMapping> mappings = mqttClient.getActiveMappings();
+        MQTTMapping map = mappings.get(topic);
+        log.info("Looking for exact matching of topics: {},{}",  topic, map);
+        if (map != null) {
+            context.setMapping(map);
+            return context;
         } else {
-            var payloadTarget = new JSONObject(map.target);
-            for (MQTTMappingSubstitution sub : map.substitutions) {
+            // exact topic not found, look for topic without device identifier
+            // e.g. /temperature/9090 -> /temperature/#
+            map = mappings.get(wildcardTopic);
+            log.info("Looking for wildcard matching of topics: {},{}",  wildcardTopic, map);
+            if (map != null) {
+                context.setMapping(map);
+                return context;
+            }
+        }
+        return context;
+    }
+
+    private void handleNewPayload(ProcessingContext ctx, String payloadMessage) {
+        if (ctx.getMapping().snoopTemplates.equals(Snoop_Status.ENABLED) || ctx.getMapping().snoopTemplates.equals(Snoop_Status.STARTED)) {
+            ctx.getMapping().snoopedTemplates.add(payloadMessage);
+            if (ctx.getMapping().snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+                // remove oldest payload
+                ctx.getMapping().snoopedTemplates.remove(0);
+            } else {
+                ctx.getMapping().snoopTemplates = Snoop_Status.STARTED;
+            }
+            log.info("Adding snoopedTemplate to map: {},{},{}", ctx.getMapping().topic, ctx.getMapping().snoopedTemplates.size(),
+                    ctx.getMapping().snoopTemplates);
+            mqttClient.setTenantMappingsDirty(ctx.getMapping().topic);
+        } else {
+            var payloadTarget = new JSONObject(ctx.getMapping().target);
+            for (MQTTMappingSubstitution sub : ctx.getMapping().substitutions) {
                 var substitute = "";
                 /* 
                 used for JSONPath in sourcePath definitions
@@ -143,9 +155,9 @@ public class GenericCallback implements MqttCallback {
                 */ 
                 try {
                     if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
-                    && deviceIdentifier != null
-                    && !deviceIdentifier.equals("")) {
-                        substitute = deviceIdentifier;
+                    && ctx.getDeviceIdentifier() != null
+                    && !ctx.getDeviceIdentifier().equals("")) {
+                        substitute = ctx.getDeviceIdentifier();
                     } else {
                         Expressions expr = Expressions.parse(sub.pathSource);
                         JsonNode jsonObj = objectMapper.readTree(payloadMessage);
@@ -184,18 +196,18 @@ public class GenericCallback implements MqttCallback {
                 if (pathTarget == null) {
                     pathTarget = new String[] { sub.pathTarget };
                 }
-                if (sub.pathTarget.equals("source.id") && map.mapDeviceIdentifier) {
-                    var deviceId = resolveExternalId(substitute, map.externalIdType);
+                if (sub.pathTarget.equals("source.id") && ctx.getMapping().mapDeviceIdentifier) {
+                    var deviceId = resolveExternalId(substitute, ctx.getMapping().externalIdType);
                     if (deviceId == null) {
                         throw new RuntimeException("External id " + deviceId + " for type "
-                                + map.externalIdType + " not found!");
+                                + ctx.getMapping().externalIdType + " not found!");
                     }
                     substitute = deviceId;
                 }
                 substituteValue(substitute, payloadTarget, pathTarget);
             }
             log.info("Posting payload: {}", payloadTarget);
-            c8yAgent.createC8Y_MEA(map.targetAPI, payloadTarget.toString());
+            c8yAgent.createC8Y_MEA(ctx.getMapping().targetAPI, payloadTarget.toString());
         }
 
     }
