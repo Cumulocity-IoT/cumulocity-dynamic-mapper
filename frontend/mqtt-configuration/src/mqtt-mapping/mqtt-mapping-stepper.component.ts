@@ -45,7 +45,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   pathSourceMissing: boolean;
   pathTargetMissing: boolean;
   selectionList: any = [];
-
+  
   clicksTarget: []
   clicksSource: []
   editorOptionsSource: any
@@ -53,6 +53,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   editorOptionsTesting: any
   sourceExpression: string
   sourceExpressionResult: string
+  sourceExpressionErrorMsg: string ='';
 
   private setSelectionSource = function (node: any, event: any) {
     if (event.type == "click") {
@@ -72,13 +73,16 @@ export class MQTTMappingStepperComponent implements OnInit {
         }
         if (i !== node.path.length - 1) path += ".";
       }
-      this.pathSource = path;
       for (let item of this.selectionList) {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
       // test if doubleclicked
-      if (doubleClick < 750) this.setSelectionToPath(this.editorSource, path)
+      if (doubleClick < 750) {
+        this.setSelectionToPath(this.editorSource, path)
+        this.pathSource = path;
+        this.sourceExpression = path;
+      }
       //console.log("Set pathSource:", path);
     }
   }.bind(this)
@@ -103,13 +107,15 @@ export class MQTTMappingStepperComponent implements OnInit {
         }
         if (i !== node.path.length - 1) path += ".";
       }
-      this.pathTarget = path;
       for (let item of this.selectionList) {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
       // test if doubleclicked
-      if (doubleClick < 750) this.setSelectionToPath(this.editorTarget, path)
+      if (doubleClick < 750) {
+        this.setSelectionToPath(this.editorTarget, path)
+        this.pathTarget = path;
+      }
       //console.log("Set pathTarget:", path);
     }
   }.bind(this)
@@ -218,9 +224,14 @@ export class MQTTMappingStepperComponent implements OnInit {
     // JMES library
     //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
     // JSONATA
-    var expression = this.JSONATA(path) 
-    this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
-    
+    var expression = this.JSONATA(path)
+    try {
+      this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
+      this.sourceExpressionErrorMsg = '';
+    } catch (error) {
+      console.log("Error evaluating expression: ", error);
+      this.sourceExpressionErrorMsg = error.message
+    }
   }
 
   checkTopicIsUnique(evt): boolean {

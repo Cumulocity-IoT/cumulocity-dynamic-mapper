@@ -14,11 +14,11 @@ c8y-data-grid button[title="Reload"] {
   display: none !important;
 }
 
-div.jsoneditor-menu > div.jsoneditor-search {
+div.jsoneditor-menu>div.jsoneditor-search {
   display: none !important;
 }
 
-div > div.jsoneditor-menu {
+div>div.jsoneditor-menu {
   background-color: var(--navigator-bg-color, var(--navigator-dark-bg-color, var(--brand-primary, #1776BF)));
 }
 
@@ -54,11 +54,11 @@ div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
   background: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
 }
 
-.jsoneditor-statusbar > .jsoneditor-validation-error-icon {
+.jsoneditor-statusbar>.jsoneditor-validation-error-icon {
   background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
 }
 
-.jsoneditor-statusbar > .jsoneditor-parse-error-icon {
+.jsoneditor-statusbar>.jsoneditor-parse-error-icon {
   background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
 }
 
@@ -78,7 +78,18 @@ button.jsoneditor-button.jsoneditor-dragarea {
   float: none;
 }
 
-.jsonColumn {
-    max-height: 100px;
-    overflow: scroll !important;
+.jsonColumnSmall {
+  max-height: 100px;
+  overflow: auto !important;
+}
+
+.jsonColumnLarge {
+  max-height: 300px;
+  overflow: auto !important;
+}
+
+.jsonColumnTiny {
+  height: 34px;
+  padding-bottom: 5px;
+  padding-top: 5px;
 }

@@ -78,10 +78,10 @@
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                      <input formControlName="mapDeviceIdentifier" type="checkbox"/>
+                      <input formControlName="mapDeviceIdentifier" type="checkbox" />
                       <span></span>
                       <span>
-                       {{ 'Map device idenfifier' | translate }}
+                        {{ 'Map device idenfifier' | translate }}
                       </span>
                     </label>
                   </div>
@@ -131,17 +131,17 @@
 
               <div class="container">
                 <div class="row">
-                  <div class="col-lg-5  vcenter">
+                  <div class="col-lg-5">
                     <div class="form-group">
                       <label translate>Template message - source</label>
-                      <div style="overflow:scroll; height:300px;">
+                      <div class="jsonColumnLarge">
                         <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
                         </json-editor>
+                        <c8y-messages>
+                          <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!
+                          </c8y-message>
+                        </c8y-messages>
                       </div>
-                      <c8y-messages>
-                        <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!
-                        </c8y-message>
-                      </c8y-messages>
                     </div>
 
                   </div>
@@ -155,48 +155,58 @@
                   <div class="col-lg-5 vcenter">
                     <div class="form-group">
                       <label translate>Cumulocity message - target</label>
-                      <div style="overflow:scroll; height:300px;">
+                      <div class="jsonColumnLarge">
                         <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
                         </json-editor>
+                        <c8y-messages>
+                          <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!
+                          </c8y-message>
+                        </c8y-messages>
                       </div>
-                      <c8y-messages>
-                        <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!
-                        </c8y-message>
-                      </c8y-messages>
                     </div>
-
                   </div>
-
                 </div>
-
               </div>
 
               <div class="container">
                 <div class="row">
-                  <div class="col-lg-5  vcenter">
+                  <div class="col-lg-5">
                     <div class="form-group">
-                      <label translate>Expression - source</label>
-                      <input  type="text" class="form-control" [(ngModel)]="sourceExpression" placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
-                         (change)="sourceExpressionChanged($event)" />
+                      <label translate>Evaluate Expression on Source</label>
+                      <input type="text" class="form-control" [(ngModel)]="sourceExpression"
+                        placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
+                        (change)="sourceExpressionChanged($event)" />
+                        <c8y-messages>
+                          <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
+                          </c8y-message>
+                        </c8y-messages>
                     </div>
                   </div>
-
-                  <div class="col-lg-5 col-lg-offset-2 vcenter jsonColumn">
+                  <div class="col-lg-5 col-lg-offset-2">
                     <div class="form-group">
-                      <label translate>Expression - result</label>
-                      <pre>{{sourceExpressionResult}}
+                      <label translate>Substitute in Target</label>
+                      <pre class="jsonColumnTiny">{{pathTarget}}
                       </pre>
                     </div>
                   </div>
                 </div>
               </div>
-
-
               <div class="container">
                 <div class="row">
-                  <div class="col-lg-12 vcenter">
+                  <div class="col-lg-5 jsonColumn">
+                    <div class="form-group">
+                      <label translate>Expression - result</label>
+                      <pre class="jsonColumnTiny">{{sourceExpressionResult}}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="container">
+                <div class="row">
+                  <div class="col-lg-12">
                     <div class="legend form-block">
-                    Defined substitutions
+                      Defined substitutions
                     </div>
                     <div>
                       <pre>{{substitutions}}</pre>
