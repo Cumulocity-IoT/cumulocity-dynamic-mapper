@@ -16,6 +16,8 @@ export interface MQTTMappingSubstitution {
 export interface MQTTMapping {
   id: number,
   topic: string,
+  templateTopic: string,
+  indexDeviceIdentifierInTemplateTopic: number, 
   targetAPI: string,
   source: string,
   target: string,
@@ -224,6 +226,47 @@ export function getSchema(targetAPI: string): any {
   } else {
     return SCHEMA_MEASUREMENT;
   }
+}
+
+export function normalizeTopic(topic: string) {
+  if (topic == undefined) topic = '';
+  let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+  console.log("Topic normalized:", topic, nt);
+  // append trailing slash if last character is not wildcard #
+  nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? '' : '/')
+  return nt
+}
+
+export function isTemplateTopicUnique(templateTopic: string, mappings: MQTTMapping[]): boolean {
+  let result = true;
+  result = mappings.every(m => {
+    if (templateTopic == m.templateTopic && this.mapping.id != m.id) {
+      return false;
+    } else {
+      return true;
+    }
+  })
+  return result;
+}
+
+export function isTopicIsUnique(topic: string, mappings: MQTTMapping[]): boolean {
+  let result = true;
+  result = mappings.every(m => {
+    if (topic == m.topic && this.mapping.id != m.id) {
+      return false;
+    } else {
+      return true;
+    }
+  })
+  return result;
+}
+
+export const TOPIC_WILDCARD = "#"
+
+export function isWildcardTopic( topic: string): boolean {
+  const result = topic.includes(TOPIC_WILDCARD);
+  //const result = topic.endsWith(this.TOPIC_WILDCARD);
+  return result;
 }
 
 export enum Snoop_Status {

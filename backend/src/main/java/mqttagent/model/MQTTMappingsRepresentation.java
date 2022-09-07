@@ -16,67 +16,77 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class MQTTMappingsRepresentation implements Serializable {
 
-    static String  TOPIC_WILDCARD ="#";
-    
-    @JsonProperty("id")
-    private String id;
+  static String TOPIC_WILDCARD = "#";
 
-    @JsonProperty("type")
-    private String type;
+  @JsonProperty("id")
+  private String id;
 
-    @JsonProperty(value = "name")
-    private String name;
+  @JsonProperty("type")
+  private String type;
 
-    @JsonProperty(value = "description")
-    private String description;
+  @JsonProperty(value = "name")
+  private String name;
 
-    @JsonProperty(value = "c8y_mqttMapping")
-    private ArrayList<MQTTMapping> c8yMQTTMapping;
+  @JsonProperty(value = "description")
+  private String description;
 
-    private Map<String, Object> dynamicProperties;
+  @JsonProperty(value = "c8y_mqttMapping")
+  private ArrayList<MQTTMapping> c8yMQTTMapping;
 
-    @JsonAnyGetter
-    public Map<String, Object> getDynamicProperties() {
-        return dynamicProperties;
+  private Map<String, Object> dynamicProperties;
+
+  @JsonAnyGetter
+  public Map<String, Object> getDynamicProperties() {
+    return dynamicProperties;
+  }
+
+  @JsonAnySetter
+  public void setDynamicProperties(String key, Object value) {
+    if (dynamicProperties == null) {
+      this.dynamicProperties = new LinkedHashMap<>();
     }
+    this.dynamicProperties.put(key, value);
+  }
 
-    @JsonAnySetter
-    public void setDynamicProperties(String key, Object value) {
-        if (dynamicProperties == null) {
-            this.dynamicProperties = new LinkedHashMap<>();
-        }
-        this.dynamicProperties.put(key, value);
-    }
-
-    static public boolean checkTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
-        var topic = mapping.topic;
-        MutableBoolean result = new MutableBoolean(true);
-        mappings.forEach(m -> {
-          if (topic.equals(m.topic) && (mapping.id != m.id)) {
-            result.setFalse();
-          } 
-        });
-        return result.booleanValue();
+  static public boolean checkTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
+    var topic = mapping.topic;
+    MutableBoolean result = new MutableBoolean(true);
+    mappings.forEach(m -> {
+      if (topic.equals(m.topic) && (mapping.id != m.id)) {
+        result.setFalse();
       }
-    
-    static public String normalizeTopic(String topic){
-        String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
-        // append trailing slash if last character is not wildcard #
-        nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? "" : "/");
-        return nt;
-      }
+    });
+    return result.booleanValue();
+  }
 
-      static public Long nextId (ArrayList<MQTTMapping> mappings){
-        Long max = mappings
+  static public boolean checkTemplateTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
+    var topic = mapping.templateTopic;
+    MutableBoolean result = new MutableBoolean(true);
+    mappings.forEach(m -> {
+      if (topic.equals(m.templateTopic) && (mapping.id != m.id)) {
+        result.setFalse();
+      }
+    });
+    return result.booleanValue();
+  }
+
+  static public String normalizeTopic(String topic) {
+    String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
+    // append trailing slash if last character is not wildcard #
+    nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? "" : "/");
+    return nt;
+  }
+
+  static public Long nextId(ArrayList<MQTTMapping> mappings) {
+    Long max = mappings
         .stream()
         .mapToLong(v -> v.id)
         .max().orElseThrow(NoSuchElementException::new);
-        return max + 1L;
-      }
+    return max + 1L;
+  }
 }

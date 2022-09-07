@@ -28,10 +28,37 @@
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
                       <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
-                        #idRef required (change)="checkTopicIsUnique($event)" />
+                        #topicRef required />
+                    </div>
+                    <!--                     <c8y-messages>
+                      <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
+                    </c8y-messages> -->
+                  </c8y-form-group>
+                  <c8y-form-group>
+                    <div class="form-group">
+                      <label for="templateTopic">Template Topic</label>
+                      <div class="row ">
+                        <div class="col-lg-5 padding-r0">
+                          <input formControlName="templateTopic" type="text" class="form-control" 
+                            placeholder="e.g. device/110" #templateTopic
+                            (change)="checkTemplateTopicIsValid($event)"/>
+                        </div>
+                        <div class="col-lg-3 padding-l0">
+                          <button type="submit" class="btn btn-primary" (click)="onMarkDeviceIdentifierClicked()">
+                            Mark Device Identifier
+                          </button>
+                        </div>
+                        <div class="col-lg-3 col-lg-offset-1">
+                          <input type="text" class="form-control" [value]="markedDeviceIdentifier"
+                          readonly/>
+                        </div>    
+                      </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
+                      <c8y-message *ngIf="!templateTopicUnique" translate>This Template Topic must be unique.
+                      </c8y-message>
+                      <c8y-message *ngIf="!templateTopicValid" translate>The Topic must be a part of Template Topic.
+                      </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
                   <div class="row">
@@ -176,10 +203,10 @@
                       <input type="text" class="form-control" [(ngModel)]="pathSource"
                         placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
                         (change)="sourceExpressionChanged($event)" />
-                        <c8y-messages>
-                          <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
-                          </c8y-message>
-                        </c8y-messages>
+                      <c8y-messages>
+                        <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
+                        </c8y-message>
+                      </c8y-messages>
                     </div>
                   </div>
                   <div class="col-lg-5 col-lg-offset-2">

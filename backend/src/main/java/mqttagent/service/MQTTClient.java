@@ -384,14 +384,14 @@ public class MQTTClient {
         Long result = null;
 
         ArrayList<MQTTMapping> mappings = c8yAgent.getMappings();
-        if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
+        if (MQTTMappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
             mapping.lastUpdate = System.currentTimeMillis();
             mapping.id = MQTTMappingsRepresentation.nextId(mappings);
             mappings.add(mapping);
             result = mapping.id;
             ;
         } else {
-            throw new RuntimeException("Topic name is not unique!");
+            throw new RuntimeException("TemplateTopic name is not unique!");
         }
         try {
             c8yAgent.saveMappings(mappings);
@@ -408,7 +408,7 @@ public class MQTTClient {
     public Long updateMapping(Long id, MQTTMapping mapping) {
         Long result = null;
         ArrayList<MQTTMapping> mappings = c8yAgent.getMappings();
-        if (MQTTMappingsRepresentation.checkTopicIsUnique(mappings, mapping)) {
+        if (MQTTMappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
             MutableInt i = new MutableInt(0);
             mappings.forEach(m -> {
                 if (m.id == id) {
@@ -421,7 +421,7 @@ public class MQTTClient {
             result = mapping.id;
             ;
         } else {
-            throw new RuntimeException("Topic name is not unique!");
+            throw new RuntimeException("TemplateTopic name is not unique!");
         }
         try {
             c8yAgent.saveMappings(mappings);

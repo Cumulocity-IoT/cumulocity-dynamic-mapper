@@ -26,6 +26,12 @@ public class MQTTMapping implements Serializable {
   public String topic;
 
   @NotNull
+  public String templateTopic;
+
+  @NotNull
+  public long indexDeviceIdentifierInTemplateTopic;
+
+  @NotNull
   public String targetAPI;
 
   @NotNull
@@ -66,6 +72,8 @@ public class MQTTMapping implements Serializable {
 
   public void copyFrom(MQTTMapping mapping) {
     this.topic = mapping.topic;
+    this.templateTopic = mapping.templateTopic;
+    this.indexDeviceIdentifierInTemplateTopic = mapping.indexDeviceIdentifierInTemplateTopic;
     this.targetAPI = mapping.targetAPI;
     this.source = mapping.source;
     this.target = mapping.target;

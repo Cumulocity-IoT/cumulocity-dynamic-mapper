@@ -21,7 +21,7 @@
       <p class="card-title" translate>Mapping</p>
     </div> -->
     <div class="card-block">
-      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mqttMappings" class=""
+      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mappings" class=""
         [pagination]="pagination" [actionControls]="actionControls" [displayOptions]="displayOptions">
       </c8y-data-grid>
     </div>
@@ -29,7 +29,7 @@
   
 <!--   <div class="card-block d-flex d-col flex-grow"> -->
   <div class="card-block col-md-offset-3 bg-white">
-    <div class="c8y-empty-state text-center" *ngIf="mqttMappings.length === 0">
+    <div class="c8y-empty-state text-center" *ngIf="mappings.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
         <strong>No mappings available.</strong><br/>
@@ -43,7 +43,7 @@
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
       <mqtt-mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false"
-        (onCommit)="onCommit($event)" [mapping]="mappingToUpdate" [mappings]="mqttMappings" [editMode]="editMode">
+        (onCommit)="onCommit($event)" [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
       </mqtt-mapping-stepper>
     </div>
   </div>
