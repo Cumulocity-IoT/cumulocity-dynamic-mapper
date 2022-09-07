@@ -6,7 +6,6 @@ import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTMappingService {
-
   constructor(
     private inventory: InventoryService,
     private identity: IdentityService,
@@ -18,17 +17,13 @@ export class MQTTMappingService {
   }
 
   mappingId: string;
-
   agentId: string;
 
   private readonly MAPPING_TYPE = 'c8y_mqttMapping';
-
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
-
   private readonly PATH_OPERATION_ENDPOINT = 'operation';
-
   private readonly BASE_URL = 'service/generic-mqtt-agent';
-
+  private JSONATA = require("jsonata");
 
   async initializeMQTTAgent(): Promise<string>{
     if (!this.agentId) {
@@ -100,9 +95,13 @@ export class MQTTMappingService {
       console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        let s = JSONPath({ path: "$." + sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
+        // test for JSONPATH implementation
+        //let s = JSONPath({ path: "$." + sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
+        let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource);
         if (!s || s == '') {
-          if ("$." + sub.pathSource != '$.TOPIC') {
+          // test for JSONPATH implementation
+          //if ("$." + sub.pathSource != '$.TOPIC') {
+          if (sub.pathSource != 'TOPIC') {
             console.error("No substitution for:", sub.pathSource, s, mapping.source);
             throw Error("Error: substitution not found:" + sub.pathSource);
           } else {
@@ -151,4 +150,9 @@ export class MQTTMappingService {
     return null;
   }
 
+  public evaluateExpression(json: JSON, path: string): string {
+      const expression = this.JSONATA(path)
+      return expression.evaluate(json)
+      //return JSON.stringify(expression.evaluate(json), null, 4)
+  }
 }
