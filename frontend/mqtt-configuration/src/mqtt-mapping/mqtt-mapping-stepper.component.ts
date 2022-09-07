@@ -5,6 +5,8 @@ import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { APIs, getSchema, MQTTMapping, MQTTMappingSubstitution, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, Snoop_Status } from "../mqtt-configuration.model";
 import { MQTTMappingService } from './mqtt-mapping.service';
+import { JSONPath } from 'jsonpath-plus';
+import { search } from '@metrichor/jmespath';
 
 @Component({
   selector: 'mqtt-mapping-stepper',
@@ -28,6 +30,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   keys = Object.keys;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
   TOPIC_WILDCARD = "#"
+  JSONATA = require("jsonata");
 
   paletteCounter: number = 0;
   snoopedTemplateCounter: number = 0;
@@ -48,6 +51,8 @@ export class MQTTMappingStepperComponent implements OnInit {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
+  sourceExpression: string
+  sourceExpressionResult: string
 
   private setSelectionSource = function (node: any, event: any) {
     if (event.type == "click") {
@@ -148,9 +153,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       enableTransform: false,
       enableSearch: false,
       onEvent: this.setSelectionSource,
-      /*       onSelectionChange: () => {
-              console.log("selection change source called");
-              }, */
       schema: SCHEMA_PAYLOAD
     };
 
@@ -162,9 +164,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       enableTransform: false,
       enableSearch: false,
       onEvent: this.setSelectionTarget,
-      /*       onSelectionChange: () => {
-              console.log("selection change target called");
-              }, */
       schema: getSchema(this.mapping.targetAPI)
     };
 
@@ -208,6 +207,20 @@ export class MQTTMappingStepperComponent implements OnInit {
     const topic = this.propertyForm.get('topic').value;
     const result = topic.endsWith(this.TOPIC_WILDCARD);
     return result;
+  }
+
+  public sourceExpressionChanged(evt){
+    let path = evt.target.value;
+    console.log("Evaluate expression:", path, this.editorSource.get());
+
+    // JSONPath library
+    //this.sourceExpressionResult = JSON.stringify(JSONPath({path: path, json: this.editorSource.get()}), null, 4)
+    // JMES library
+    //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
+    // JSONATA
+    var expression = this.JSONATA(path) 
+    this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
+    
   }
 
   checkTopicIsUnique(evt): boolean {

@@ -170,6 +170,28 @@
                 </div>
 
               </div>
+
+              <div class="container">
+                <div class="row">
+                  <div class="col-lg-5  vcenter">
+                    <div class="form-group">
+                      <label translate>Expression - source</label>
+                      <input  type="text" class="form-control" [(ngModel)]="sourceExpression" placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
+                         (change)="sourceExpressionChanged($event)" />
+                    </div>
+                  </div>
+
+                  <div class="col-lg-5 col-lg-offset-2 vcenter jsonColumn">
+                    <div class="form-group">
+                      <label translate>Expression - result</label>
+                      <pre>{{sourceExpressionResult}}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
               <div class="container">
                 <div class="row">
                   <div class="col-lg-12 vcenter">
