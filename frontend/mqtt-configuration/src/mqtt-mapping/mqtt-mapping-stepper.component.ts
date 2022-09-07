@@ -30,7 +30,6 @@ export class MQTTMappingStepperComponent implements OnInit {
   keys = Object.keys;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
   TOPIC_WILDCARD = "#"
-  JSONATA = require("jsonata");
 
   paletteCounter: number = 0;
   snoopedTemplateCounter: number = 0;
@@ -51,7 +50,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
-  sourceExpression: string
+  //sourceExpression: string
   sourceExpressionResult: string
   sourceExpressionErrorMsg: string ='';
 
@@ -81,7 +80,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       if (doubleClick < 750) {
         this.setSelectionToPath(this.editorSource, path)
         this.pathSource = path;
-        this.sourceExpression = path;
+        this.updateSourceExpressionResult(path);
+        //this.sourceExpression = path;
       }
       //console.log("Set pathSource:", path);
     }
@@ -218,20 +218,25 @@ export class MQTTMappingStepperComponent implements OnInit {
   public sourceExpressionChanged(evt){
     let path = evt.target.value;
     console.log("Evaluate expression:", path, this.editorSource.get());
+    this.updateSourceExpressionResult(path);
+  }
+  
+  private updateSourceExpressionResult( path: string) {    
+        // JSONPath library
+        //this.sourceExpressionResult = JSON.stringify(JSONPath({path: path, json: this.editorSource.get()}), null, 4)
+        // JMES library
+        //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
+        // JSONATA
 
-    // JSONPath library
-    //this.sourceExpressionResult = JSON.stringify(JSONPath({path: path, json: this.editorSource.get()}), null, 4)
-    // JMES library
-    //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
-    // JSONATA
-    var expression = this.JSONATA(path)
-    try {
-      this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
-      this.sourceExpressionErrorMsg = '';
-    } catch (error) {
-      console.log("Error evaluating expression: ", error);
-      this.sourceExpressionErrorMsg = error.message
-    }
+        try {
+          //var expression = this.JSONATA(path)
+          //this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
+          this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource.get(), path); 
+          this.sourceExpressionErrorMsg = '';
+        } catch (error) {
+          console.log("Error evaluating expression: ", error);
+          this.sourceExpressionErrorMsg = error.message
+        }
   }
 
   checkTopicIsUnique(evt): boolean {
@@ -425,7 +430,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       for (let item of this.selectionList) {
         item.setAttribute('style', null);
       }
-
+      this.pathSource = this.mapping.substitutions[this.counterShowSubstitutions].pathSource;
+      this.pathTarget = this.mapping.substitutions[this.counterShowSubstitutions].pathTarget;
       this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.counterShowSubstitutions].pathSource)
       this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
       console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))

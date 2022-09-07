@@ -1,5 +1,6 @@
 package mqttagent.callback;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -16,10 +17,20 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.api.jsonata4java.expressions.EvaluateException;
+import com.api.jsonata4java.expressions.EvaluateRuntimeException;
+import com.api.jsonata4java.expressions.Expressions;
+import com.api.jsonata4java.expressions.ParseException;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+/* 
+used for JSONPath in sourcePath definitions
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+*/
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.handler.SysHandler;
@@ -41,6 +52,9 @@ public class GenericCallback implements MqttCallback {
 
     @Autowired
     SysHandler sysHandler;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     @Override
     public void connectionLost(Throwable throwable) {
@@ -107,6 +121,8 @@ public class GenericCallback implements MqttCallback {
             var payloadTarget = new JSONObject(map.target);
             for (MQTTMappingSubstitution sub : map.substitutions) {
                 var substitute = "";
+                /* 
+                used for JSONPath in sourcePath definitions
                 try {
                     if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
                             && deviceIdentifier != null
@@ -119,6 +135,49 @@ public class GenericCallback implements MqttCallback {
                 } catch (PathNotFoundException p) {
                     log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget,
                             payloadMessage);
+                }
+                */
+
+                /* 
+                used for JSONata in sourcePath definitions
+                */ 
+                try {
+                    if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
+                    && deviceIdentifier != null
+                    && !deviceIdentifier.equals("")) {
+                        substitute = deviceIdentifier;
+                    } else {
+                        Expressions expr = Expressions.parse(sub.pathSource);
+                        JsonNode jsonObj = objectMapper.readTree(payloadMessage);
+                        JsonNode result = expr.evaluate(jsonObj);
+                        if (result == null) {
+                            log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
+                            payloadMessage);
+                        } else {
+                            if (result.isTextual()) {
+                                substitute = result.textValue();
+                            } else {
+                                substitute = objectMapper.writeValueAsString(result);
+                            }
+                            log.info("Evaluated substitution {} for: {}, {}, {}", substitute, sub.pathSource, payloadTarget,
+                            payloadMessage);
+                        }
+                    }
+                } catch (ParseException e) {
+                    log.error("ParseException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage, e);
+                } catch (EvaluateRuntimeException e) {
+                    log.error("EvaluateRuntimeException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage, e);
+                } catch (JsonProcessingException e) {
+                    log.error("JsonProcessingException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage, e);
+                } catch (IOException e) {
+                    log.error("IOException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage, e);
+                } catch (EvaluateException e) {
+                    log.error("EvaluateException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage, e);
                 }
 
                 String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
@@ -133,7 +192,7 @@ public class GenericCallback implements MqttCallback {
                     }
                     substitute = deviceId;
                 }
-                addValue(substitute, payloadTarget, pathTarget);
+                substituteValue(substitute, payloadTarget, pathTarget);
             }
             log.info("Posting payload: {}", payloadTarget);
             c8yAgent.createC8Y_MEA(map.targetAPI, payloadTarget.toString());
@@ -153,7 +212,7 @@ public class GenericCallback implements MqttCallback {
         return id;
     }
 
-    public JSONObject addValue(String value, JSONObject jsonObject, String[] keys) throws JSONException {
+    public JSONObject substituteValue(String value, JSONObject jsonObject, String[] keys) throws JSONException {
         String currentKey = keys[0];
 
         if (keys.length == 1) {
@@ -164,7 +223,7 @@ public class GenericCallback implements MqttCallback {
 
         JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
         String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JSONObject updatedNestedValue = addValue(value, nestedJsonObjectVal, remainingKeys);
+        JSONObject updatedNestedValue = substituteValue(value, nestedJsonObjectVal, remainingKeys);
         return jsonObject.put(currentKey, updatedNestedValue);
     }
 

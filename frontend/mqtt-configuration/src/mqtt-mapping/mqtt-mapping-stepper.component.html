@@ -173,7 +173,7 @@
                   <div class="col-lg-5">
                     <div class="form-group">
                       <label translate>Evaluate Expression on Source</label>
-                      <input type="text" class="form-control" [(ngModel)]="sourceExpression"
+                      <input type="text" class="form-control" [(ngModel)]="pathSource"
                         placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
                         (change)="sourceExpressionChanged($event)" />
                         <c8y-messages>
