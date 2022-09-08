@@ -16,7 +16,8 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = { "id", "topic", "targetAPI", "source", "target", "active", "tested", "createNoExistingDevice",
-    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType" ,"snoopTemplates" , "snoopedTemplates", "lastUpdate" })
+    "qos", "substitutions", "mapDeviceIdentifier", "externalIdType", "snoopTemplates", "snoopedTemplates",
+    "lastUpdate" })
 public class MQTTMapping implements Serializable {
 
   @NotNull
@@ -62,13 +63,18 @@ public class MQTTMapping implements Serializable {
   public String externalIdType;
 
   @NotNull
-  public Snoop_Status snoopTemplates;
+  public SnoopStatus snoopTemplates;
 
   @NotNull
   public ArrayList<String> snoopedTemplates;
 
   @NotNull
   public long lastUpdate;
+
+  @Override
+  public boolean equals(Object m) {
+    return (m instanceof MQTTMapping) && id == ((MQTTMapping) m).id;
+  }
 
   public void copyFrom(MQTTMapping mapping) {
     this.topic = mapping.topic;

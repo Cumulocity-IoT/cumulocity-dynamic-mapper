@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { isTemplateTopicUnique, MQTTMapping, SAMPLE_TEMPLATES, Snoop_Status } from '../mqtt-configuration.model';
+import { isTemplateTopicUnique, MQTTMapping, SAMPLE_TEMPLATES, SnoopStatus } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
@@ -151,7 +151,7 @@ export class MQTTMappingComponent implements OnInit {
       substitutions: [],
       mapDeviceIdentifier: false,
       externalIdType: 'c8y_Serial',
-      snoopTemplates: Snoop_Status.NONE,
+      snoopTemplates: SnoopStatus.NONE,
       snoopedTemplates: [],
       lastUpdate: Date.now()
     }
@@ -187,7 +187,7 @@ export class MQTTMappingComponent implements OnInit {
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
     console.log("Changed mapping:", mapping, i);
 
-    if (isTemplateTopicUnique(mapping.templateTopic, this.mappings)) {
+    if (isTemplateTopicUnique(mapping.templateTopic, mapping.id, this.mappings)) {
       if ( i == -1 ) {
         console.log("Push new mapping:", mapping, i);
         this.mappings.push(mapping)

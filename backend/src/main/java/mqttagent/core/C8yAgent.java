@@ -378,4 +378,23 @@ public class C8yAgent {
         });
         return mcr[0];
     }
+
+    public MQTTMapping getMapping(Long id){
+        MQTTMapping[] mr = { null };
+        subscriptionsService.runForTenant(tenant, () -> {
+            InventoryFilter inventoryFilter = new InventoryFilter();
+            inventoryFilter.byType(MQTT_MAPPING_TYPE);
+            ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+                    .getManagedObjects().get(0);
+            MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
+            log.info("Found MQTTMapping {}", mqttMo);
+            mqttMo.getC8yMQTTMapping().forEach((m) ->{
+                if ( m.id == id ){
+                    mr[0] = m;
+                }
+            });
+            log.info("Found MQTTMapping {}", mr[0]);
+        });
+        return mr[0];
+    }
 }
