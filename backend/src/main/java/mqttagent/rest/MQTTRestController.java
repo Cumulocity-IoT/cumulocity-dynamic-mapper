@@ -44,6 +44,7 @@ public class MQTTRestController {
         }
     }
 
+    //TODO Add basic Payload validation to ServiceOperation
     @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity runOperation(@Valid @RequestBody ServiceOperation operation) {
         log.info("Getting operation: {}", operation.toString());
@@ -96,6 +97,7 @@ public class MQTTRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    //TODO Add ID not found handling & Response
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> deleteMapping (@PathVariable Long id) {
         log.info("Delete mapping {}", id);
@@ -110,6 +112,7 @@ public class MQTTRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
+    //TODO Add ID not found handling & Response
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody MQTTMapping mapping) {
         log.info("Update mapping {}, {}", mapping, id);
