@@ -26,12 +26,16 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import javassist.runtime.Inner;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.core.C8yAgent;
+import mqttagent.model.InnerNode;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingsRepresentation;
+import mqttagent.model.ResolveException;
+import mqttagent.model.TreeNode;
 
 @Slf4j
 @Configuration
@@ -57,9 +61,11 @@ public class MQTTClient {
 
     private boolean initilized = false;
 
+    private Set<String> activeSubscriptionsSet = new HashSet<String>();
+
     // mappings: tenant -> ( topic -> mqtt_mappping)
-    private Map<String, MQTTMapping> tenantMappings = new HashMap<String, MQTTMapping>();
-    private Set<String> tenantMappingsDirty = new HashSet<String>();
+    private TreeNode mappingTree = InnerNode.initTree();;
+    private Set<MQTTMapping> tenantMappingsDirty = new HashSet<MQTTMapping>();
 
     private void runInit() {
         while (!isInitilized()) {
@@ -70,7 +76,7 @@ public class MQTTClient {
                 try {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId(), new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId()+"_myown", new MemoryPersistence());
                     setInitilized(true);
                     log.info("Connecting to MQTT Broker {}", broker);
                 } catch (HttpServerErrorException e) {
@@ -222,28 +228,22 @@ public class MQTTClient {
     public void reloadMappings() {
 
         List<MQTTMapping> mappings = c8yAgent.getMappings();
-        // convert list -> map
-        Map<String, MQTTMapping> updatedMappingsMap = new HashMap<String, MQTTMapping>();
+        // convert list -> map, set
+        Set<String> updatedSubscriptionsSet = new HashSet<String>();
+        Map<String, MQTTMapping> updatedSubscriptionsMap = new HashMap<String, MQTTMapping>();
         mappings.forEach(m -> {
-            updatedMappingsMap.put(m.topic, m);
+            if (m.active) {
+                updatedSubscriptionsSet.add(m.topic);
+                updatedSubscriptionsMap.put(m.topic, m);
+            }
             log.info("Processing addition for topic: {}", m.topic);
         });
-        // process changes
-        final Map<String, MQTTMapping> activeMappingsMap = tenantMappings;
 
         // unsubscribe not used topics
-        activeMappingsMap.forEach((topic, map) -> {
+        activeSubscriptionsSet.forEach((topic) -> {
             log.info("Processing unsubscribe for topic: {}", topic);
-            boolean unsubscribe = false;
             // topic was deleted -> unsubscribe
-            if (updatedMappingsMap.get(topic) == null) {
-                unsubscribe = true;
-                // test if existing mapping was updated
-            } else if (updatedMappingsMap.get(topic) != null
-                    && updatedMappingsMap.get(topic).lastUpdate != activeMappingsMap.get(topic).lastUpdate) {
-                unsubscribe = true;
-            }
-            if (unsubscribe) {
+            if (!updatedSubscriptionsSet.contains(topic)) {
                 try {
                     log.debug("Unsubscribe from topic: {} ...", topic);
                     unsubscribe(topic);
@@ -254,28 +254,32 @@ public class MQTTClient {
         });
 
         // subscribe to new topics
-        updatedMappingsMap.forEach((topic, map) -> {
+        updatedSubscriptionsSet.forEach((topic) -> {
             log.info("Processing subscribe for topic: {}", topic);
-            boolean subscribe = false;
             // topic was deleted -> unsubscribe
-            if (activeMappingsMap.get(topic) == null) {
-                subscribe = true;
-                // test if existing mapping was updated
-            } else if (activeMappingsMap.get(topic) != null
-                    && activeMappingsMap.get(topic).lastUpdate != updatedMappingsMap.get(topic).lastUpdate) {
-                subscribe = true;
-            }
-            if (subscribe && map.active) {
+            if (!activeSubscriptionsSet.contains(topic)) {
                 try {
                     log.debug("Subscribing to topic: {} ...", topic);
-                    subscribe(topic, map);
+                    subscribe(topic, (int) updatedSubscriptionsMap.get(topic).qos);
                 } catch (MqttException | IllegalArgumentException e) {
                     log.error("Could not subscribe topic: {}", topic);
                 }
             }
         });
-        // update mappings
-        tenantMappings = updatedMappingsMap;
+        // update mappings tree
+        mappingTree = rebuildMappingTree(mappings);
+    }
+
+    private TreeNode rebuildMappingTree(List<MQTTMapping> mappings) {
+        InnerNode in = InnerNode.initTree();
+        mappings.forEach(m -> {
+            try {
+                in.insertMapping(m);
+            } catch (ResolveException e) {
+                log.error("Could not insert mapping {}, ignoring mapping", m);
+            }
+        });
+        return in;
     }
 
     public void subscribe(String topic, Integer qos) throws MqttException {
@@ -286,20 +290,6 @@ public class MQTTClient {
             mqttClient.setCallback(genericCallback);
             if (qos != null)
                 mqttClient.subscribe(topic, qos);
-            else
-                mqttClient.subscribe(topic);
-            log.debug("Successfully subscribed on topic {}", topic);
-        }
-    }
-
-    private void subscribe(String topic, MQTTMapping map) throws MqttException {
-        if (isInitilized() && mqttClient != null) {
-            log.info("Subscribing on topic {}", topic);
-            c8yAgent.createEvent("Subscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
-
-            mqttClient.setCallback(genericCallback);
-            if (map != null)
-                mqttClient.subscribe(topic, (int) map.qos);
             else
                 mqttClient.subscribe(topic);
             log.debug("Successfully subscribed on topic {}", topic);
@@ -331,28 +321,23 @@ public class MQTTClient {
     }
 
     private void cleanTenantMappings() {
-
-            // test if for this tenant dirty mappings exist
-            log.info("Testing for dirty maps");
-            if (tenantMappingsDirty.size() > 0) {
-                for (String to : tenantMappingsDirty) {
-                    MQTTMapping mqttMapping = tenantMappings.get(to);
-                    log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
-                    updateMapping(mqttMapping.id, mqttMapping);
-                }
-            }
-            // reset dirtySet
-            tenantMappingsDirty = new HashSet<String>();
-
+        // test if for this tenant dirty mappings exist
+        log.info("Testing for dirty maps");
+        for (MQTTMapping mqttMapping : tenantMappingsDirty) {
+            log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
+            updateMapping(mqttMapping.id, mqttMapping);
+        }
+        // reset dirtySet
+        tenantMappingsDirty = new HashSet<MQTTMapping>();
     }
 
-    public Map<String, MQTTMapping> getActiveMappings() {
-        return tenantMappings;
+    public TreeNode getActiveMappings() {
+        return mappingTree;
     }
 
-    public void setTenantMappingsDirty(String topic) {
-        log.info("Setting dirty: {}",  topic);
-        tenantMappingsDirty.add(topic);
+    public void setTenantMappingsDirty(MQTTMapping mapping) {
+        log.info("Setting dirty: {}", mapping);
+        tenantMappingsDirty.add(mapping);
     }
 
     public Long deleteMapping(Long id) {

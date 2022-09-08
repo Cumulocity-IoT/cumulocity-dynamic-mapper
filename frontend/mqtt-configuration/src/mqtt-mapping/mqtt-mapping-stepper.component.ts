@@ -3,7 +3,7 @@ import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, 
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { APIs, getSchema, isTemplateTopicUnique, isWildcardTopic, MQTTMapping, MQTTMappingSubstitution, normalizeTopic, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, Snoop_Status } from "../mqtt-configuration.model";
+import { APIs, getSchema, isTemplateTopicUnique, isWildcardTopic, MQTTMapping, MQTTMappingSubstitution, normalizeTopic, QOSs, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, SnoopStatus } from "../mqtt-configuration.model";
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { JSONPath } from 'jsonpath-plus';
 import { search } from '@metrichor/jmespath';
@@ -26,10 +26,10 @@ export class MQTTMappingStepperComponent implements OnInit {
   COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#fefbd8', '#618685', '#ffef96', '#50394c', '#b2b2b2', '#f4e1d2']
   APIs = APIs;
   QOSs = QOSs;
-  Snoop_Status = Snoop_Status;
+  Snoop_Status = SnoopStatus;
   keys = Object.keys;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
-  
+
 
   paletteCounter: number = 0;
   snoopedTemplateCounter: number = 0;
@@ -44,7 +44,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   pathSourceMissing: boolean;
   pathTargetMissing: boolean;
   selectionList: any = [];
-  
+
   clicksTarget: []
   clicksSource: []
   editorOptionsSource: any
@@ -52,7 +52,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   editorOptionsTesting: any
   //sourceExpression: string
   sourceExpressionResult: string
-  sourceExpressionErrorMsg: string ='';
+  sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
 
   private setSelectionSource = function (node: any, event: any) {
@@ -215,29 +215,29 @@ export class MQTTMappingStepperComponent implements OnInit {
 
 
 
-  public sourceExpressionChanged(evt){
+  public sourceExpressionChanged(evt) {
     let path = evt.target.value;
     console.log("Evaluate expression:", path, this.editorSource.get());
     this.updateSourceExpressionResult(path);
   }
-  
-  private updateSourceExpressionResult( path: string) {    
-        // JSONPath library
-        //this.sourceExpressionResult = JSON.stringify(JSONPath({path: path, json: this.editorSource.get()}), null, 4)
-        // JMES library
-        //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
-        // JSONATA
 
-        try {
-          //var expression = this.JSONATA(path)
-          //this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
-          this.pathSource = path;
-          this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource.get(), path); 
-          this.sourceExpressionErrorMsg = '';
-        } catch (error) {
-          console.log("Error evaluating expression: ", error);
-          this.sourceExpressionErrorMsg = error.message
-        }
+  private updateSourceExpressionResult(path: string) {
+    // JSONPath library
+    //this.sourceExpressionResult = JSON.stringify(JSONPath({path: path, json: this.editorSource.get()}), null, 4)
+    // JMES library
+    //this.sourceExpressionResult = JSON.stringify(search(this.editorSource.get() as any, path), null, 4)
+    // JSONATA
+
+    try {
+      //var expression = this.JSONATA(path)
+      //this.sourceExpressionResult = JSON.stringify(expression.evaluate(this.editorSource.get()), null, 4)
+      this.pathSource = path;
+      this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource.get(), path);
+      this.sourceExpressionErrorMsg = '';
+    } catch (error) {
+      console.log("Error evaluating expression: ", error);
+      this.sourceExpressionErrorMsg = error.message
+    }
   }
 
   checkTopicIsUnique(evt): boolean {
@@ -258,6 +258,13 @@ export class MQTTMappingStepperComponent implements OnInit {
     return result;
   }
 
+  onTopicChanged(evt) {
+    let topic = normalizeTopic(this.propertyForm.get('topic').value);
+    console.log ("Changed topic:", evt.target.value, topic);
+    this.propertyForm.patchValue({ "templateTopic": topic });
+    this.mapping.substitutions = [];
+  }
+
   checkTemplateTopicIsValid(evt): boolean {
     let templateTopic = evt.target.value;
     console.log("Changed templateTopic: ", templateTopic);
@@ -275,7 +282,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   checkTemplateTopicIsUnique(evt): boolean {
     let templateTopic = evt.target.value;
     //console.log("Changed templateTopic: ", templateTopic);
-    let result = isTemplateTopicUnique(templateTopic, this.mappings);
+    let result = isTemplateTopicUnique(templateTopic, this.mapping.id, this.mappings);
     console.log("Check if templateTopic is unique: ", this.mapping, templateTopic, result, this.mappings);
     this.templateTopicUnique = result;
 
@@ -335,17 +342,17 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   onMarkDeviceIdentifierClicked() {
     let parts: string[] = this.propertyForm.get('templateTopic').value.split("/");
-    if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length-1){
+    if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1) {
       this.mapping.indexDeviceIdentifierInTemplateTopic++;
     } else {
-      this.mapping.indexDeviceIdentifierInTemplateTopic=0;
+      this.mapping.indexDeviceIdentifierInTemplateTopic = 0;
     }
     this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
   }
 
   private initMarkedDeviceIdentifier() {
     let parts: string[] = this.propertyForm.get('templateTopic').value.split("/");
-    if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1){
+    if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1) {
       this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
     }
   }
@@ -360,7 +367,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   public onNextSelected(event: { stepper: C8yStepper; step: CdkStep }): void {
     const targetAPI = this.propertyForm.get('targetAPI').value
-    const topic : string = this.propertyForm.get('topic').value;
+    const topic: string = this.propertyForm.get('topic').value;
     console.log("OnNextSelected", event.step.label, targetAPI, this.editMode)
 
     if (event.step.label == "Define topic") {
@@ -384,7 +391,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     } else if (event.step.label == "Test mapping") {
 
     }
-    if (this.propertyForm.get('snoopTemplates').value == Snoop_Status.ENABLED && this.mapping.snoopedTemplates.length == 0) {
+    if (this.propertyForm.get('snoopTemplates').value == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
       this.onCommit.emit(this.getCurrentMapping());
     } else {
@@ -395,7 +402,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private initTemplateEditors() {
     const targetAPI = this.propertyForm.get('targetAPI').value
-    const topic : string = this.propertyForm.get('topic').value;
+    const topic: string = this.propertyForm.get('topic').value;
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(topic)) {
@@ -416,7 +423,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.snoopedTemplateCounter = 0;
     }
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
-    const topic : string = this.propertyForm.get('topic').value;
+    const topic: string = this.propertyForm.get('topic').value;
     //add dummy field "TOPIC" to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(topic)) {
       this.templateSource = {
@@ -425,7 +432,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       };
     }
     // disable further snooping for this template
-    this.propertyForm.patchValue({ "snoopTemplates": Snoop_Status.STOPPED });
+    this.propertyForm.patchValue({ "snoopTemplates": SnoopStatus.STOPPED });
     this.snoopedTemplateCounter++;
   }
 
@@ -449,7 +456,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   public onClearSubstitutionsClicked() {
     this.mapping.substitutions = [];
-    const topic : string = this.propertyForm.get('topic').value;
+    const topic: string = this.propertyForm.get('topic').value;
     this.substitutions = "";
     if (this.mapping.substitutions.length == 0 && isWildcardTopic(topic)) {
       let sub: MQTTMappingSubstitution = {

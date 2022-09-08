@@ -3,6 +3,7 @@ package mqttagent.callback;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TimeZone;
@@ -38,8 +39,11 @@ import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.MQTTMapping;
 import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.model.MappingNode;
 import mqttagent.model.ProcessingContext;
-import mqttagent.model.Snoop_Status;
+import mqttagent.model.ResolveException;
+import mqttagent.model.SnoopStatus;
+import mqttagent.model.TreeNode;
 import mqttagent.service.MQTTClient;
 
 @Slf4j
@@ -71,7 +75,7 @@ public class GenericCallback implements MqttCallback {
         sdf.setTimeZone(TimeZone.getTimeZone("CET"));
     }
 
-    static String TOKEN_DEVICE_TOPIC = "$.TOPIC";
+    static String TOKEN_DEVICE_TOPIC = "TOPIC";
     static int SNOOP_TEMPLATES_MAX = 5;
 
     @Override
@@ -89,72 +93,46 @@ public class GenericCallback implements MqttCallback {
         }
     }
 
-    private ProcessingContext resolveMap(String topic, String payloadMessage) {
+    private ProcessingContext resolveMap(String topic, String payloadMessage) throws ResolveException {
         ProcessingContext context = new ProcessingContext();
-        String wildcardTopic = topic.replaceFirst("([^///]+$)", "#");
-        String di = topic.replaceFirst("^(.*[\\/])", "");
-        context.setDeviceIdentifier(di);
-        log.info("Message received on topic {},{},{} with message {}", topic, di, wildcardTopic,
+        log.info("Message received on topic {} with message {}", topic ,
                 payloadMessage);
 
-        // TODO handle what happens if multiple tenants subscribe to this microservice
-        Map<String, MQTTMapping> mappings = mqttClient.getActiveMappings();
-        MQTTMapping map = mappings.get(topic);
-        log.info("Looking for exact matching of topics: {},{}",  topic, map);
-        if (map != null) {
-            context.setMapping(map);
-            return context;
+        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split("/")));
+        TreeNode node = mqttClient.getActiveMappings().resolveTopicPath(levels);
+        if ( node instanceof MappingNode) {
+            context.setMapping(((MappingNode) node).getMapping());
+            ArrayList<String> topicLevels = new ArrayList<String> (Arrays.asList(topic.split("/")));
+            log.info("Resolving deviceIdentifier: {}, {}", topic, context.getMapping().indexDeviceIdentifierInTemplateTopic );
+            String deviceIdentifier = topicLevels.get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
+            context.setDeviceIdentifier(deviceIdentifier);
         } else {
-            // exact topic not found, look for topic without device identifier
-            // e.g. /temperature/9090 -> /temperature/#
-            map = mappings.get(wildcardTopic);
-            log.info("Looking for wildcard matching of topics: {},{}",  wildcardTopic, map);
-            if (map != null) {
-                context.setMapping(map);
-                return context;
-            }
+            throw new ResolveException ("Could not find appropriate mapping for topic: " + topic);
         }
         return context;
     }
 
     private void handleNewPayload(ProcessingContext ctx, String payloadMessage) {
-        if (ctx.getMapping().snoopTemplates.equals(Snoop_Status.ENABLED) || ctx.getMapping().snoopTemplates.equals(Snoop_Status.STARTED)) {
+        if (ctx.getMapping().snoopTemplates.equals(SnoopStatus.ENABLED) || ctx.getMapping().snoopTemplates.equals(SnoopStatus.STARTED)) {
             ctx.getMapping().snoopedTemplates.add(payloadMessage);
             if (ctx.getMapping().snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
                 // remove oldest payload
                 ctx.getMapping().snoopedTemplates.remove(0);
             } else {
-                ctx.getMapping().snoopTemplates = Snoop_Status.STARTED;
+                ctx.getMapping().snoopTemplates = SnoopStatus.STARTED;
             }
             log.info("Adding snoopedTemplate to map: {},{},{}", ctx.getMapping().topic, ctx.getMapping().snoopedTemplates.size(),
                     ctx.getMapping().snoopTemplates);
-            mqttClient.setTenantMappingsDirty(ctx.getMapping().topic);
+            mqttClient.setTenantMappingsDirty(ctx.getMapping());
         } else {
             var payloadTarget = new JSONObject(ctx.getMapping().target);
             for (MQTTMappingSubstitution sub : ctx.getMapping().substitutions) {
                 var substitute = "";
                 /* 
-                used for JSONPath in sourcePath definitions
-                try {
-                    if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
-                            && deviceIdentifier != null
-                            && !deviceIdentifier.equals("")) {
-                        substitute = deviceIdentifier;
-                    } else {
-                        substitute = (String) JsonPath.parse(payloadMessage)
-                                .read("$." + sub.pathSource);
-                    }
-                } catch (PathNotFoundException p) {
-                    log.error("No substitution for: {}, {}, {}", "$." + sub.pathSource, payloadTarget,
-                            payloadMessage);
-                }
-                */
-
-                /* 
                 used for JSONata in sourcePath definitions
                 */ 
                 try {
-                    if (("$." + sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
+                    if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
                     && ctx.getDeviceIdentifier() != null
                     && !ctx.getDeviceIdentifier().equals("")) {
                         substitute = ctx.getDeviceIdentifier();

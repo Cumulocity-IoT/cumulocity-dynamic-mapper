@@ -28,7 +28,7 @@
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
                       <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
-                        #topicRef required />
+                        (change)="onTopicChanged($event)" #topicRef required />
                     </div>
                     <!--                     <c8y-messages>
                       <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
@@ -39,9 +39,8 @@
                       <label for="templateTopic">Template Topic</label>
                       <div class="row ">
                         <div class="col-lg-5 padding-r0">
-                          <input formControlName="templateTopic" type="text" class="form-control" 
-                            placeholder="e.g. device/110" #templateTopic
-                            (change)="checkTemplateTopicIsValid($event)"/>
+                          <input formControlName="templateTopic" type="text" class="form-control"
+                            placeholder="e.g. device/110" #templateTopic (change)="checkTemplateTopicIsValid($event)" />
                         </div>
                         <div class="col-lg-3 padding-l0">
                           <button type="submit" class="btn btn-primary" (click)="onMarkDeviceIdentifierClicked()">
@@ -49,9 +48,8 @@
                           </button>
                         </div>
                         <div class="col-lg-3 col-lg-offset-1">
-                          <input type="text" class="form-control" [value]="markedDeviceIdentifier"
-                          readonly/>
-                        </div>    
+                          <input type="text" class="form-control" [value]="markedDeviceIdentifier" readonly />
+                        </div>
                       </div>
                     </div>
                     <c8y-messages>

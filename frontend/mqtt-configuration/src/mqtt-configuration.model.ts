@@ -29,7 +29,7 @@ export interface MQTTMapping {
   substitutions?: MQTTMappingSubstitution[];
   mapDeviceIdentifier:boolean;
   externalIdType: string,
-  snoopTemplates: Snoop_Status,
+  snoopTemplates: SnoopStatus,
   snoopedTemplates:string[]
 }
 
@@ -237,10 +237,10 @@ export function normalizeTopic(topic: string) {
   return nt
 }
 
-export function isTemplateTopicUnique(templateTopic: string, mappings: MQTTMapping[]): boolean {
+export function isTemplateTopicUnique(templateTopic: String, id: number, mappings: MQTTMapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
-    if (templateTopic == m.templateTopic && this.mapping.id != m.id) {
+    if (templateTopic == m.templateTopic && id != m.id) {
       return false;
     } else {
       return true;
@@ -249,10 +249,10 @@ export function isTemplateTopicUnique(templateTopic: string, mappings: MQTTMappi
   return result;
 }
 
-export function isTopicIsUnique(topic: string, mappings: MQTTMapping[]): boolean {
+export function isTopicIsUnique(topic: string, id: number, mappings: MQTTMapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
-    if (topic == m.topic && this.mapping.id != m.id) {
+    if (topic == m.topic && id != m.id) {
       return false;
     } else {
       return true;
@@ -265,11 +265,10 @@ export const TOPIC_WILDCARD = "#"
 
 export function isWildcardTopic( topic: string): boolean {
   const result = topic.includes(TOPIC_WILDCARD);
-  //const result = topic.endsWith(this.TOPIC_WILDCARD);
   return result;
 }
 
-export enum Snoop_Status {
+export enum SnoopStatus {
   NONE = "NONE",
   ENABLED = "ENABLED",
   STARTED = "STARTED",
