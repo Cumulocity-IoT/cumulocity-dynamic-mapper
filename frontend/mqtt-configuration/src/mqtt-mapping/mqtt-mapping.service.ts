@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { JSONPath } from 'jsonpath-plus';
-import { Mapping, TOKEN_DEVICE_TOPIC } from '../mqtt-configuration.model';
+import { API, Mapping, TOKEN_DEVICE_TOPIC } from '../mqtt-configuration.model';
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
@@ -95,22 +95,22 @@ export class MQTTMappingService {
       console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        // test for JSONPATH implementation
-        //let s = JSONPath({ path: "$." + sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
-        let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource);
-        if (!s || s == '') {
-          if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
-            console.error("No substitution for:", sub.pathSource, s, mapping.source);
-            throw Error("Error: substitution not found:" + sub.pathSource);
-          } else {
-            s = this.agentId;
+        if ( sub.pathTarget != TOKEN_DEVICE_TOPIC) {
+          let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource);
+          if (!s || s == '') {
+            if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
+              console.error("No substitution for:", sub.pathSource, s, mapping.source);
+              throw Error("Error: substitution not found:" + sub.pathSource);
+            } else {
+              s = this.agentId;
+            }
           }
+          _.set(result, sub.pathTarget, s)
         }
-        _.set(result, sub.pathTarget, s)
       })
   
       // for simulation replace source id with agentId
-      if (simulation) {
+      if (simulation && mapping.targetAPI!=API.INVENTORY) {
         result.source.id = this.agentId;
         result.time = new Date().toISOString();
       }
@@ -120,32 +120,38 @@ export class MQTTMappingService {
     return result;
   }
 
-  async sendTestResult(mapping: Mapping): Promise<IResult<IEvent | IAlarm | IMeasurement>> {
+  async sendTestResult(mapping: Mapping): Promise<IResult<IEvent | IAlarm | IMeasurement | IManagedObject>> {
     let test_payload = await this.testResult(mapping, true);
 
-    if (mapping.targetAPI == 'event') {
+    if (mapping.targetAPI == API.EVENT) {
       let p: IEvent = test_payload as IEvent;
       if (p != null) {
         return this.event.create(p);
       } else {
         throw new Error("Payload is not a valid:" + mapping.targetAPI);
       }
-    } else if (mapping.targetAPI == 'alarm') {
+    } else if (mapping.targetAPI == API.ALARM) {
       let p: IAlarm = test_payload as IAlarm;
       if (p != null) {
         return this.alarm.create(p);
       } else {
         throw new Error("Payload is not a valid:" + mapping.targetAPI);
       }
-    } else if (mapping.targetAPI == 'measurement') {
+    } else if (mapping.targetAPI == API.MEASUREMENT) {
       let p: IMeasurement = test_payload as IMeasurement;
       if (p != null) {
         return this.measurement.create(p);
       } else {
         throw new Error("Payload is not a valid:" + mapping.targetAPI);
       }
+    } else {
+      let p: IManagedObject = test_payload as IManagedObject;
+      if (p != null) {
+        return this.inventory.create(p);
+      } else {
+        throw new Error("Payload is not a valid:" + mapping.targetAPI);
+      }
     }
-    return null;
   }
 
   public evaluateExpression(json: JSON, path: string): string {
