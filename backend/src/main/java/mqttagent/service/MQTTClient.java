@@ -32,8 +32,8 @@ import mqttagent.callback.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.InnerNode;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingsRepresentation;
+import mqttagent.model.Mapping;
+import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
 
@@ -65,7 +65,7 @@ public class MQTTClient {
 
     // mappings: tenant -> ( topic -> mqtt_mappping)
     private TreeNode mappingTree = InnerNode.initTree();;
-    private Set<MQTTMapping> tenantMappingsDirty = new HashSet<MQTTMapping>();
+    private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
     private void runInit() {
         while (!isInitilized()) {
@@ -76,7 +76,7 @@ public class MQTTClient {
                 try {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId()+"_myown", new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId(), new MemoryPersistence());
                     setInitilized(true);
                     log.info("Connecting to MQTT Broker {}", broker);
                 } catch (HttpServerErrorException e) {
@@ -227,10 +227,10 @@ public class MQTTClient {
     // TODO change this to respect the tenant name
     public void reloadMappings() {
 
-        List<MQTTMapping> mappings = c8yAgent.getMappings();
+        List<Mapping> mappings = c8yAgent.getMappings();
         // convert list -> map, set
         Set<String> updatedSubscriptionsSet = new HashSet<String>();
-        Map<String, MQTTMapping> updatedSubscriptionsMap = new HashMap<String, MQTTMapping>();
+        Map<String, Mapping> updatedSubscriptionsMap = new HashMap<String, Mapping>();
         mappings.forEach(m -> {
             if (m.active) {
                 updatedSubscriptionsSet.add(m.topic);
@@ -270,7 +270,7 @@ public class MQTTClient {
         mappingTree = rebuildMappingTree(mappings);
     }
 
-    private TreeNode rebuildMappingTree(List<MQTTMapping> mappings) {
+    private TreeNode rebuildMappingTree(List<Mapping> mappings) {
         InnerNode in = InnerNode.initTree();
         mappings.forEach(m -> {
             try {
@@ -308,42 +308,40 @@ public class MQTTClient {
 
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
-
         String statusReconnectTask = (reconnectTask == null ? "stopped"
                 : reconnectTask.isDone() ? "stopped" : "running");
         String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
 
-        log.info("Status of reconnectTask: {}, initTask {}, isConnected {}", statusReconnectTask,
+        log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
                 statusInitTask, isConnected());
 
-        cleanTenantMappings();
-
+        cleanDirtyMappings();
     }
 
-    private void cleanTenantMappings() {
+    private void cleanDirtyMappings() {
         // test if for this tenant dirty mappings exist
-        log.info("Testing for dirty maps");
-        for (MQTTMapping mqttMapping : tenantMappingsDirty) {
+        log.debug("Testing for dirty maps");
+        for (Mapping mqttMapping : dirtyMappings) {
             log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
             updateMapping(mqttMapping.id, mqttMapping);
         }
         // reset dirtySet
-        tenantMappingsDirty = new HashSet<MQTTMapping>();
+        dirtyMappings = new HashSet<Mapping>();
     }
 
     public TreeNode getActiveMappings() {
         return mappingTree;
     }
 
-    public void setTenantMappingsDirty(MQTTMapping mapping) {
+    public void setMappingDirty(Mapping mapping) {
         log.info("Setting dirty: {}", mapping);
-        tenantMappingsDirty.add(mapping);
+        dirtyMappings.add(mapping);
     }
 
     public Long deleteMapping(Long id) {
 
-        List<MQTTMapping> mappings = c8yAgent.getMappings();
-        List<MQTTMapping> updatedMappings = new ArrayList<MQTTMapping>();
+        List<Mapping> mappings = c8yAgent.getMappings();
+        List<Mapping> updatedMappings = new ArrayList<Mapping>();
         MutableInt i = new MutableInt(0);
         mappings.forEach(m -> {
             if (m.id == id) {
@@ -365,13 +363,13 @@ public class MQTTClient {
         return id;
     }
 
-    public Long addMapping(MQTTMapping mapping) {
+    public Long addMapping(Mapping mapping) {
         Long result = null;
 
-        ArrayList<MQTTMapping> mappings = c8yAgent.getMappings();
-        if (MQTTMappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
+        ArrayList<Mapping> mappings = c8yAgent.getMappings();
+        if (MappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
             mapping.lastUpdate = System.currentTimeMillis();
-            mapping.id = MQTTMappingsRepresentation.nextId(mappings);
+            mapping.id = MappingsRepresentation.nextId(mappings);
             mappings.add(mapping);
             result = mapping.id;
             ;
@@ -390,10 +388,10 @@ public class MQTTClient {
         return result;
     }
 
-    public Long updateMapping(Long id, MQTTMapping mapping) {
+    public Long updateMapping(Long id, Mapping mapping) {
         Long result = null;
-        ArrayList<MQTTMapping> mappings = c8yAgent.getMappings();
-        if (MQTTMappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
+        ArrayList<Mapping> mappings = c8yAgent.getMappings();
+        if (MappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
             MutableInt i = new MutableInt(0);
             mappings.forEach(m -> {
                 if (m.id == id) {

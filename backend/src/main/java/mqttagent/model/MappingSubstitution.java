@@ -12,8 +12,8 @@ import javax.validation.constraints.NotNull;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@ToString(exclude = {"pathSource", "pathTarget"})
-public class MQTTMappingSubstitution implements Serializable {
+@ToString()
+public class MappingSubstitution implements Serializable {
 
     @NotNull
     public String pathSource;

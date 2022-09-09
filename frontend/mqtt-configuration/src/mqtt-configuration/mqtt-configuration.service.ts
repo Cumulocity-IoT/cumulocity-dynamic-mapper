@@ -55,7 +55,7 @@ export class MQTTConfigurationService {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"tenant": this.client.tenant, "operation": "CONNECT"}),
+      body: JSON.stringify({"operation": "CONNECT"}),
       method: 'POST',
     });
   }
@@ -65,7 +65,7 @@ export class MQTTConfigurationService {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"tenant": this.client.tenant, "operation": "DISCONNECT"}),
+      body: JSON.stringify({"operation": "DISCONNECT"}),
       method: 'POST',
     });
   }

@@ -8,11 +8,11 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString(exclude = { "depthIndex", "preTreeNode", "level", "mapping", "deviceIdentifierIndex" })
+@ToString()
 public class MappingNode extends TreeNode{
     @Setter
     @Getter
-    private MQTTMapping mapping;
+    private Mapping mapping;
 
     @Setter
     @Getter

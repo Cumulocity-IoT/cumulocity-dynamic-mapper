@@ -24,12 +24,14 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
 import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
 import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
 import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @NgModule({
   imports: [
     CoreModule,
     CommonModule,
     FormsModule,
+    PopoverModule,
     ReactiveFormsModule,
     NgJsonEditorModule,
     RouterModule.forChild([

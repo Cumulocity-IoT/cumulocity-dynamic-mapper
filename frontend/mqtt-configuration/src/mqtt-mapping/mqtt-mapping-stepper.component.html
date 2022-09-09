@@ -1,3 +1,4 @@
+
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
 
@@ -43,7 +44,7 @@
                             placeholder="e.g. device/110" #templateTopic (change)="checkTemplateTopicIsValid($event)" />
                         </div>
                         <div class="col-lg-3 padding-l0">
-                          <button type="submit" class="btn btn-primary" (click)="onMarkDeviceIdentifierClicked()">
+                          <button type="submit" class="btn btn-primary" (click)="onMarkDeviceIdentifier()">
                             Mark Device Identifier
                           </button>
                         </div>
@@ -171,11 +172,27 @@
 
                   </div>
                   <div class="col-lg-2 vcenter" style="text-align:center;">
-                    <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()"
-                      translate>
-                      Map ->
-                    </button>
-
+                    <div style="padding-bottom: 8px;">
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitutions()"
+                        translate title="Map" title="Map">
+                        <i c8yIcon="add-new"></i>
+                      </button>
+                    </div>
+                    <div style="padding-bottom: 8px;">
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onSelectSubstitution()" translate title="Select">
+                        <i c8yIcon="skip"></i>
+                      </button>
+                    </div>
+                    <div style="padding-bottom: 8px;">
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitution()" translate title="Delete Selected">
+                        <i c8yIcon="negative"></i>
+                      </button>
+                    </div>
+                    <div>
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitutions()" translate title="Delete All">
+                        <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="col-lg-5 vcenter">
                     <div class="form-group">
@@ -197,8 +214,24 @@
                 <div class="row">
                   <div class="col-lg-5">
                     <div class="form-group">
-                      <label translate>Evaluate Expression on Source</label>
-                      <input type="text" class="form-control" [(ngModel)]="pathSource"
+                      <div>
+                        <label translate style="display:contents !important">Evaluate Expression on Source
+                        </label>
+                        <span class="hidden-xs hidden-sm">
+                          <ng-template #popTemplate>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
+                          <button
+                            class="btn-clean text-primary"
+                            [popover]="popTemplate" popoverTitle="JSONata"
+                            popover="{html:true} Use JSONata https://jsonata.org in your expressions."
+                            placement="right"
+                            triggers="focus"
+                            type="button"
+                          >
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                      <input type="text" style="font-family: monospace;" class="form-control" [(ngModel)]="pathSource"
                         placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
                         (change)="sourceExpressionChanged($event)" />
                       <c8y-messages>
@@ -245,17 +278,11 @@
         </div>
 
         <div class="col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2 text-center">
-          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplatesClicked()"
+          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplates()"
             translate [disabled]="mapping.snoopedTemplates.length==0">
             Snooped templates
           </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onClearSubstitutionsClicked()" translate>
-            Clear substitutions
-          </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onShowSubstitutionsClicked()" translate>
-            Show substitutions
-          </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
+          <button type="button" name="sample" class="btn btn-default" (click)="onSampleButton()" translate>
             Sample target templates
           </button>
         </div>
@@ -290,14 +317,14 @@
           </div>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()" translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformation()" translate>
             Transform test message
           </button>
-          <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()" translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onSendTest()" translate>
             Send test message
           </button>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButtonClicked()"
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButton()"
           [labels]="{ custom: 'Confirm'}">
         </c8y-stepper-buttons>
       </cdk-step>

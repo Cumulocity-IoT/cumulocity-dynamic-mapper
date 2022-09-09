@@ -12,8 +12,8 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString(exclude = { "depthIndex", "preTreeNode", "level", "nodes" })
-public class InnerNode extends TreeNode{
+@ToString()
+public class InnerNode extends TreeNode {
     
     @Setter
     @Getter
@@ -61,7 +61,7 @@ public class InnerNode extends TreeNode{
         }
     }
 
-    public void insertMapping( InnerNode currentNode, MQTTMapping mapping, ArrayList<String> levels) throws ResolveException{
+    public void insertMapping( InnerNode currentNode, Mapping mapping, ArrayList<String> levels) throws ResolveException{
         var l = levels.get(0);
         String preToString = ( currentNode == null? "null" : currentNode.toString());
         log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), l, preToString, levels);
@@ -94,7 +94,7 @@ public class InnerNode extends TreeNode{
             throw new ResolveException("Could not add mapping to tree: " + mapping.toString());
         }
     }
-    public void insertMapping(MQTTMapping mapping) throws ResolveException{
+    public void insertMapping(Mapping mapping) throws ResolveException{
         var path = mapping.templateTopic;
         // if templateTopic is not set use topic instead
         if (path == null || path.equals("")){
