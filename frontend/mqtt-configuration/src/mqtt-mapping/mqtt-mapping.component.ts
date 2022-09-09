@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { isTemplateTopicUnique, MQTTMapping, SAMPLE_TEMPLATES, SnoopStatus } from '../mqtt-configuration.model';
+import { API, isTemplateTopicUnique, Mapping, SAMPLE_TEMPLATES, SnoopStatus } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
@@ -25,8 +25,8 @@ export class MQTTMappingComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappings: MQTTMapping[] = [];
-  mappingToUpdate: MQTTMapping;
+  mappings: Mapping[] = [];
+  mappingToUpdate: Mapping;
   editMode: boolean;
 
   displayOptions: DisplayOptions = {
@@ -66,7 +66,6 @@ export class MQTTMappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
@@ -75,7 +74,6 @@ export class MQTTMappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
@@ -108,7 +106,7 @@ export class MQTTMappingComponent implements OnInit {
   value: string;
 
   pagination: Pagination = {
-    pageSize: 30,
+    pageSize: 3,
     currentPage: 1,
   };
   actionControls: ActionControl[] = [];
@@ -141,9 +139,9 @@ export class MQTTMappingComponent implements OnInit {
       topic: '',
       templateTopic: '',
       indexDeviceIdentifierInTemplateTopic: -1,
-      targetAPI: 'measurement',
+      targetAPI: API.MEASUREMENT,
       source: '{}',
-      target: SAMPLE_TEMPLATES['measurement'],
+      target: SAMPLE_TEMPLATES[API.MEASUREMENT],
       active: false,
       tested: false,
       createNoExistingDevice: false,
@@ -161,14 +159,14 @@ export class MQTTMappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
-  editMapping(mapping: MQTTMapping) {
+  editMapping(mapping: Mapping) {
     this.editMode = true;
     this.mappingToUpdate = mapping;
     console.log("Editing mapping", mapping)
     this.showConfigMapping = true;
   }
 
-  deleteMapping(mapping: MQTTMapping) {
+  deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
     this.mappings.splice(i, 1) // remove it from array
@@ -182,7 +180,7 @@ export class MQTTMappingComponent implements OnInit {
     }
   }
 
-  async onCommit(mapping: MQTTMapping) {
+  async onCommit(mapping: Mapping) {
     mapping.lastUpdate =  Date.now();
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
     console.log("Changed mapping:", mapping, i);

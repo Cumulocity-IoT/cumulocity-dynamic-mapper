@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { JSONPath } from 'jsonpath-plus';
-import { MQTTMapping } from '../mqtt-configuration.model';
+import { Mapping, TOKEN_DEVICE_TOPIC } from '../mqtt-configuration.model';
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
@@ -38,7 +38,7 @@ export class MQTTMappingService {
     }
   }
 
-  async loadMappings(): Promise<MQTTMapping[]> {
+  async loadMappings(): Promise<Mapping[]> {
     const filter: object = {
       pageSize: 100,
       withTotalPages: true
@@ -51,7 +51,7 @@ export class MQTTMappingService {
     if (response.data && response.data.length > 0) {
       this.mappingId = response.data[0].id;
       console.log("Found mqtt mapping:", this.mappingId, response.data[0][this.MAPPING_FRAGMENT])
-      return response.data[0][this.MAPPING_FRAGMENT] as MQTTMapping[];
+      return response.data[0][this.MAPPING_FRAGMENT] as Mapping[];
     } else {
       console.log("No mqtt mapping found!")
       return [];
@@ -59,7 +59,7 @@ export class MQTTMappingService {
   }
 
 
-  async initalizeMappings(): Promise<MQTTMapping[]> {
+  async initalizeMappings(): Promise<Mapping[]> {
     const response: IResult<IManagedObject> = await this.inventory.create({
       c8y_mqttMapping: [],
       name: "MQTT-Mapping",
@@ -68,7 +68,7 @@ export class MQTTMappingService {
     return [];
   }
 
-  async saveMappings(mappings: MQTTMapping[]): Promise<IResult<IManagedObject>> {
+  async saveMappings(mappings: Mapping[]): Promise<IResult<IManagedObject>> {
     return this.inventory.update({
       c8y_mqttMapping: mappings,
       id: this.mappingId,
@@ -86,7 +86,7 @@ export class MQTTMappingService {
   }
 
 
-  async testResult(mapping: MQTTMapping, simulation: boolean): Promise <any> {
+  async testResult(mapping: Mapping, simulation: boolean): Promise <any> {
     let result = JSON.parse(mapping.target);
     if (!this.agentId) {
       console.error("Need to intialize MQTTAgent:", this.agentId);
@@ -99,9 +99,7 @@ export class MQTTMappingService {
         //let s = JSONPath({ path: "$." + sub.pathSource, json: JSON.parse(mapping.source), wrap: false });
         let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource);
         if (!s || s == '') {
-          // test for JSONPATH implementation
-          //if ("$." + sub.pathSource != '$.TOPIC') {
-          if (sub.pathSource != 'TOPIC') {
+          if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
             console.error("No substitution for:", sub.pathSource, s, mapping.source);
             throw Error("Error: substitution not found:" + sub.pathSource);
           } else {
@@ -122,7 +120,7 @@ export class MQTTMappingService {
     return result;
   }
 
-  async sendTestResult(mapping: MQTTMapping): Promise<IResult<IEvent | IAlarm | IMeasurement>> {
+  async sendTestResult(mapping: Mapping): Promise<IResult<IEvent | IAlarm | IMeasurement>> {
     let test_payload = await this.testResult(mapping, true);
 
     if (mapping.targetAPI == 'event') {

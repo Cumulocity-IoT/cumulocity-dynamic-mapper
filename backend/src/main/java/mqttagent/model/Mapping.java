@@ -31,7 +31,7 @@ public class Mapping implements Serializable {
   public long indexDeviceIdentifierInTemplateTopic;
 
   @NotNull
-  public String targetAPI;
+  public API targetAPI;
 
   @NotNull
   public String source;

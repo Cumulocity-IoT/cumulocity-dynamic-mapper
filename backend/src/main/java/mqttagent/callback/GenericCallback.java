@@ -5,11 +5,9 @@ import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -37,9 +35,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
+import mqttagent.model.API;
 import mqttagent.model.Mapping;
-import mqttagent.model.MappingSubstitution;
 import mqttagent.model.MappingNode;
+import mqttagent.model.MappingSubstitution;
 import mqttagent.model.ProcessingContext;
 import mqttagent.model.ResolveException;
 import mqttagent.model.SnoopStatus;
@@ -75,7 +74,7 @@ public class GenericCallback implements MqttCallback {
         sdf.setTimeZone(TimeZone.getTimeZone("CET"));
     }
 
-    static String TOKEN_DEVICE_TOPIC = "TOPIC";
+    static String TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
     static int SNOOP_TEMPLATES_MAX = 5;
 
     @Override
@@ -102,90 +101,112 @@ public class GenericCallback implements MqttCallback {
         TreeNode node = mqttClient.getActiveMappings().resolveTopicPath(levels);
         if ( node instanceof MappingNode) {
             context.setMapping(((MappingNode) node).getMapping());
-            ArrayList<String> topicLevels = new ArrayList<String> (Arrays.asList(topic.split("/")));
-            log.info("Resolving deviceIdentifier: {}, {}", topic, context.getMapping().indexDeviceIdentifierInTemplateTopic );
-            String deviceIdentifier = topicLevels.get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
-            context.setDeviceIdentifier(deviceIdentifier);
+            if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
+                ArrayList<String> topicLevels = new ArrayList<String> (Arrays.asList(topic.split("/")));
+                log.info("Resolving deviceIdentifier: {}, {}", topic, context.getMapping().indexDeviceIdentifierInTemplateTopic );
+                String deviceIdentifier = topicLevels.get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
+                context.setDeviceIdentifier(deviceIdentifier);
+            }
         } else {
             throw new ResolveException ("Could not find appropriate mapping for topic: " + topic);
         }
         return context;
     }
 
-    private void handleNewPayload(ProcessingContext ctx, String payloadMessage) {
-        if (ctx.getMapping().snoopTemplates.equals(SnoopStatus.ENABLED) || ctx.getMapping().snoopTemplates.equals(SnoopStatus.STARTED)) {
-            ctx.getMapping().snoopedTemplates.add(payloadMessage);
-            if (ctx.getMapping().snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+    private void handleNewPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException{
+        Mapping mapping = ctx.getMapping();
+        if (mapping.snoopTemplates.equals(SnoopStatus.ENABLED) || mapping.snoopTemplates.equals(SnoopStatus.STARTED)) {
+            mapping.snoopedTemplates.add(payloadMessage);
+            if (mapping.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
                 // remove oldest payload
-                ctx.getMapping().snoopedTemplates.remove(0);
+                mapping.snoopedTemplates.remove(0);
             } else {
-                ctx.getMapping().snoopTemplates = SnoopStatus.STARTED;
+                mapping.snoopTemplates = SnoopStatus.STARTED;
             }
-            log.info("Adding snoopedTemplate to map: {},{},{}", ctx.getMapping().topic, ctx.getMapping().snoopedTemplates.size(),
-                    ctx.getMapping().snoopTemplates);
-            mqttClient.setMappingDirty(ctx.getMapping());
+            log.info("Adding snoopedTemplate to map: {},{},{}", mapping.topic, mapping.snoopedTemplates.size(),
+                    mapping.snoopTemplates);
+            mqttClient.setMappingDirty(mapping);
         } else {
-            var payloadTarget = new JSONObject(ctx.getMapping().target);
-            for (MappingSubstitution sub : ctx.getMapping().substitutions) {
+            var payloadTarget = new JSONObject(mapping.target);
+            JsonNode extractedSourceContent = null;
+            ArrayList <String> resultDeviceIdentifier = new ArrayList<String>();
+            for (MappingSubstitution sub : mapping.substitutions) {
+                /*
+                 * step 1 extract content from incoming payload
+                 */
                 var substitute = "";
-                /* 
-                used for JSONata in sourcePath definitions
-                */ 
                 try {
-                    if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)
-                    && ctx.getDeviceIdentifier() != null
-                    && !ctx.getDeviceIdentifier().equals("")) {
-                        substitute = ctx.getDeviceIdentifier();
+                    if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)) {
+                        if (ctx.isDeviceIdentifierValid() ) {
+                            substitute = ctx.getDeviceIdentifier();
+                        } else {
+                            throw new ProcessingException("No device identifier found for: " + sub.pathSource);
+                        }
                     } else {
                         Expressions expr = Expressions.parse(sub.pathSource);
                         JsonNode jsonObj = objectMapper.readTree(payloadMessage);
-                        JsonNode result = expr.evaluate(jsonObj);
-                        if (result == null) {
-                            log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
-                            payloadMessage);
-                        } else {
-                            if (result.isTextual()) {
-                                substitute = result.textValue();
-                            } else {
-                                substitute = objectMapper.writeValueAsString(result);
-                            }
-                            log.info("Evaluated substitution {} for: {}, {}, {}", substitute, sub.pathSource, payloadTarget,
-                            payloadMessage);
-                        }
+                        extractedSourceContent = expr.evaluate(jsonObj);
                     }
-                } catch (ParseException e) {
-                    log.error("ParseException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                } catch (ParseException | IOException | EvaluateException e) {
+                    log.error("Exception for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
                     payloadMessage, e);
                 } catch (EvaluateRuntimeException e) {
                     log.error("EvaluateRuntimeException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
                     payloadMessage, e);
-                } catch (JsonProcessingException e) {
-                    log.error("JsonProcessingException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage, e);
-                } catch (IOException e) {
-                    log.error("IOException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage, e);
-                } catch (EvaluateException e) {
-                    log.error("EvaluateException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage, e);
                 }
 
+                if (extractedSourceContent == null) {
+                    log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
+                    payloadMessage);
+                } else {
+                    if (extractedSourceContent.isTextual()) {
+                        substitute = extractedSourceContent.textValue();
+                    } else if (extractedSourceContent.isArray() && sub.definesIdentifier && mapping.targetAPI.equals(API.INVENTORY)) {
+                    // extracted result from sourcPayload is an array, so we potentially have to iterate over the result, e.g. creating multiple devices
+                        for (JsonNode jn : extractedSourceContent) {
+                            if (jn.isTextual()) {
+                                resultDeviceIdentifier.add(jn.textValue());
+                            } else {
+                                log.warn ("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
+                            } 
+                        }
+                    } else {
+                        try {
+                            substitute = objectMapper.writeValueAsString(extractedSourceContent);
+                        } catch (JsonProcessingException e) {
+                            log.error("JsonProcessingException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
+                            payloadMessage, e);
+                        }
+                    }
+                    log.info("Evaluated substitution {} for: {}, {}, {}", substitute, sub.pathSource, payloadTarget,
+                    payloadMessage);
+                }
+
+                 /*
+                 * step 2 replace target with extract content from incoming payload
+                 */
                 String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
                 if (pathTarget == null) {
                     pathTarget = new String[] { sub.pathTarget };
                 }
-                if (sub.pathTarget.equals("source.id") && ctx.getMapping().mapDeviceIdentifier) {
-                    var deviceId = resolveExternalId(substitute, ctx.getMapping().externalIdType);
+                if (sub.pathTarget.equals("source.id") && mapping.mapDeviceIdentifier && sub.definesIdentifier) {
+                    var deviceId = resolveExternalId(substitute, mapping.externalIdType);
                     if (deviceId == null) {
                         throw new RuntimeException("External id " + deviceId + " for type "
-                                + ctx.getMapping().externalIdType + " not found!");
+                                + mapping.externalIdType + " not found!");
                     }
                     substitute = deviceId;
                 }
                 substituteValue(substitute, payloadTarget, pathTarget);
             }
             log.info("Posting payload: {}", payloadTarget);
-            c8yAgent.createC8Y_MEA(ctx.getMapping().targetAPI, payloadTarget.toString());
+            if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)){
+                resultDeviceIdentifier.forEach(d -> {
+                    c8yAgent.createDevice(payloadTarget.toString(), d, mapping.externalIdType);
+                });
+            } else {
+                c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+            }
         }
 
     }

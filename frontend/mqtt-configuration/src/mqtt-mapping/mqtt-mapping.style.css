@@ -83,6 +83,12 @@ button.jsoneditor-button.jsoneditor-dragarea {
   overflow: auto !important;
 }
 
+.jsonColumn {
+  border: 0; 
+  background-color: transparent;
+  font-size: smaller;
+}
+
 .jsonColumnLarge {
   max-height: 300px;
   overflow: auto !important;

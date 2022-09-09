@@ -65,7 +65,7 @@
                       <label for="targetAPI" class="" translate>Target API</label>
                       <div class="c8y-select-wrapper">
                         <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-                          <option *ngFor="let api of APIs" [ngValue]="api">
+                          <option *ngFor="let api of keys(API)" [ngValue]="api">
                             {{ api }}
                           </option>
                         </select>
@@ -75,7 +75,7 @@
                       <label class="" translate>QOS</label>
                       <div class="c8y-select-wrapper">
                         <select class="form-control" formControlName="qos" #qosRef>
-                          <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                          <option *ngFor="let q of QOS" [ngValue]="q.value">
                             {{ q.name }}
                           </option>
                         </select>
@@ -107,7 +107,7 @@
                       <input formControlName="mapDeviceIdentifier" type="checkbox" />
                       <span></span>
                       <span>
-                        {{ 'Map device idenfifier' | translate }}
+                        {{ 'Map Device Idenfifier' | translate }}
                       </span>
                     </label>
                   </div>
@@ -122,9 +122,9 @@
                     <label for="qos" class="" translate>Snoop payload</label>
                     <div class="c8y-select-wrapper">
                       <select class="form-control" formControlName="snoopTemplates" #snoopTemplatesRef>
-                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q"
+                        <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                           [disabled]="q != 'ENABLED' && q != 'NONE'">
-                          {{ Snoop_Status[q] }}
+                          {{ SnoopStatus[q] }}
                         </option>
                       </select>
                     </div>
@@ -157,9 +157,12 @@
 
               <div class="container">
                 <div class="row">
+                  <div class="legend form-block col-lg-12">
+                    Templates
+                  </div>
                   <div class="col-lg-5">
                     <div class="form-group">
-                      <label translate>Template message - source</label>
+                      <label translate>Source</label>
                       <div class="jsonColumnLarge">
                         <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
                         </json-editor>
@@ -196,7 +199,7 @@
                   </div>
                   <div class="col-lg-5 vcenter">
                     <div class="form-group">
-                      <label translate>Cumulocity message - target</label>
+                      <label translate>Target</label>
                       <div class="jsonColumnLarge">
                         <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
                         </json-editor>
@@ -212,6 +215,9 @@
 
               <div class="container">
                 <div class="row">
+                  <div class="legend form-block col-lg-12">
+                    Substitution
+                  </div>
                   <div class="col-lg-5">
                     <div class="form-group">
                       <div>
@@ -222,7 +228,6 @@
                           <button
                             class="btn-clean text-primary"
                             [popover]="popTemplate" popoverTitle="JSONata"
-                            popover="{html:true} Use JSONata https://jsonata.org in your expressions."
                             placement="right"
                             triggers="focus"
                             type="button"
@@ -232,7 +237,7 @@
                         </span>
                       </div>
                       <input type="text" style="font-family: monospace;" class="form-control" [(ngModel)]="pathSource"
-                        placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
+                        placeholder="e.g. $join([$substring(tx,5), DEVICE_IDENT]) or $number(DEVICE_IDENT)/10"
                         (change)="sourceExpressionChanged($event)" />
                       <c8y-messages>
                         <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
@@ -240,7 +245,16 @@
                       </c8y-messages>
                     </div>
                   </div>
-                  <div class="col-lg-5 col-lg-offset-2">
+                  <div class="col-lg-2">
+                    <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
+                      <input type="checkbox" [(ngModel)]="definesIdentifier" />
+                      <span></span>
+                      <span>
+                        {{ 'Define Identifier' | translate }}
+                      </span>
+                    </label>
+                  </div>
+                  <div class="col-lg-5">
                     <div class="form-group">
                       <label translate>Substitute in Target</label>
                       <pre class="jsonColumnTiny">{{pathTarget}}
