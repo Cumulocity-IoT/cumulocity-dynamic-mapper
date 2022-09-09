@@ -12,4 +12,7 @@ import lombok.NoArgsConstructor;
 public class ProcessingContext {
     private Mapping mapping;
     private String deviceIdentifier;
+    public boolean isDeviceIdentifierValid() {
+        return deviceIdentifier != null && !deviceIdentifier.equals("");
+    }
 }

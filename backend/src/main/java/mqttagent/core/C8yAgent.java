@@ -39,6 +39,7 @@ import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.configuration.ConfigurationService;
 import mqttagent.configuration.MQTTConfiguration;
+import mqttagent.model.API;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.service.MQTTClient;
@@ -107,26 +108,13 @@ public class C8yAgent {
                 log.info("Agent with ID {} already exists {}", AGENT_ID, agentIdRep);
                 this.agentMOR = agentIdRep.getManagedObject();
             } else {
-                ID id = new ID();
-                id.setType("c8y_Serial");
-                id.setValue(AGENT_ID);
-
                 ManagedObjectRepresentation agent = new ManagedObjectRepresentation();
                 agent.setName(AGENT_NAME);
                 agent.set(new Agent());
                 agent.set(new IsDevice());
                 this.agentMOR = inventoryApi.create(agent);
                 log.info("Agent has been created with ID {}", agentMOR.getId());
-                ExternalIDRepresentation externalAgentId = new ExternalIDRepresentation();
-                externalAgentId.setType("c8y_Serial");
-                externalAgentId.setExternalId(AGENT_ID);
-                externalAgentId.setManagedObject(this.agentMOR);
-
-                try {
-                    identityApi.create(externalAgentId);
-                } catch (SDKException e) {
-                    log.error(e.getMessage());
-                }
+                ExternalIDRepresentation externalAgentId = createExternalID(this.agentMOR, AGENT_ID, "c8y_Serial");
                 log.info("ExternalId created: {}", externalAgentId.getExternalId());
             }
 
@@ -171,6 +159,33 @@ public class C8yAgent {
         if (mqttClient != null) {
             mqttClient.disconnect();
         }
+    }
+
+    public ExternalIDRepresentation createExternalID(ManagedObjectRepresentation mor, String externalId,
+            String externalIdType) {
+        ExternalIDRepresentation externalID = new ExternalIDRepresentation();
+        externalID.setType(externalIdType);
+        externalID.setExternalId(externalId);
+        externalID.setManagedObject(mor);
+        try {
+            externalID = identityApi.create(externalID);
+        } catch (SDKException e) {
+            log.error(e.getMessage());
+        }
+        return externalID;
+    }
+
+    public ManagedObjectRepresentation createDevice(String name, String type, String externalId,
+            String externalIdType) {
+        ManagedObjectRepresentation device = new ManagedObjectRepresentation();
+        device.setName(name);
+        device.setType(type);
+        device.set(new IsDevice());
+        ManagedObjectRepresentation deviceMOR = inventoryApi.create(device);
+        log.info("New device created with ID {}", deviceMOR.getId());
+        ExternalIDRepresentation externalAgentId = createExternalID(deviceMOR, externalId, externalIdType);
+        log.info("ExternalId created: {}", externalAgentId.getExternalId());
+        return deviceMOR;
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
@@ -330,18 +345,18 @@ public class C8yAgent {
         });
     }
 
-    public void createC8Y_MEA(String targetAPI, String payload) {
+    public void createMEA(API targetAPI, String payload) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                if (targetAPI.equals("event")) {
+                if (targetAPI.equals(API.EVENT)) {
                     EventRepresentation er = objectMapper.readValue(payload, EventRepresentation.class);
                     er = eventApi.create(er);
                     log.info("New event posted: {}", er);
-                } else if (targetAPI.equals("alarm")) {
+                } else if (targetAPI.equals(API.ALARM)) {
                     AlarmRepresentation ar = objectMapper.readValue(payload, AlarmRepresentation.class);
                     ar = alarmApi.create(ar);
                     log.info("New alarm posted: {}", ar);
-                } else if (targetAPI.equals("measurement")) {
+                } else if (targetAPI.equals(API.MEASUREMENT)) {
                     MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
                     mr = measurementApi.create(mr);
                     log.info("New measurement posted: {}", mr);
@@ -352,6 +367,24 @@ public class C8yAgent {
                 log.error("Could not map payload: {} {}", targetAPI, payload);
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);
+            }
+        });
+    }
+
+    public void createDevice(String payload, String externalId, String externalIdType) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
+                // append external id to name
+                mor.setName(mor.getName()+ "_"+ externalId);
+                mor = inventoryApi.create(mor);
+                log.info("New device created: {}", mor);
+                ExternalIDRepresentation externalAgentId = createExternalID( mor,  externalId,
+                 externalIdType);
+            } catch (JsonProcessingException e) {
+                log.error("Could not map payload: {}", payload);
+            } catch (SDKException s) {
+                log.error("Could not sent payload to c8y: {} {}", payload, s);
             }
         });
     }
@@ -379,7 +412,7 @@ public class C8yAgent {
         return mcr[0];
     }
 
-    public Mapping getMapping(Long id){
+    public Mapping getMapping(Long id) {
         Mapping[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
@@ -388,8 +421,8 @@ public class C8yAgent {
                     .getManagedObjects().get(0);
             MappingsRepresentation mqttMo = converterService.asMappings(mo);
             log.info("Found Mapping {}", mqttMo);
-            mqttMo.getC8yMQTTMapping().forEach((m) ->{
-                if ( m.id == id ){
+            mqttMo.getC8yMQTTMapping().forEach((m) -> {
+                if (m.id == id) {
                     mr[0] = m;
                 }
             });

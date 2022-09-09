@@ -8,12 +8,13 @@ export interface MQTTAuthentication {
   active: boolean;
 }
 
-export interface MQTTMappingSubstitution {
+export interface MappingSubstitution {
   pathSource: string,
   pathTarget: string,
+  definesIdentifier?: boolean
 }
 
-export interface MQTTMapping {
+export interface Mapping {
   id: number,
   topic: string,
   templateTopic: string,
@@ -26,7 +27,7 @@ export interface MQTTMapping {
   tested: boolean,
   createNoExistingDevice: boolean,
   qos: number,
-  substitutions?: MQTTMappingSubstitution[];
+  substitutions?: MappingSubstitution[];
   mapDeviceIdentifier:boolean;
   externalIdType: string,
   snoopTemplates: SnoopStatus,
@@ -34,7 +35,7 @@ export interface MQTTMapping {
 }
 
 export const SAMPLE_TEMPLATES = {
-  measurement: `{                                               
+  MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
             \"value\": 110,
@@ -45,7 +46,7 @@ export const SAMPLE_TEMPLATES = {
         \"id\":\"909090\" },
       \"type\": \"c8y_TemperatureMeasurement\"
   }`,
-  alarm: `{                                            
+  ALARM: `{                                            
     \"source\": {
     \"id\": \"909090\"
     },\
@@ -55,7 +56,7 @@ export const SAMPLE_TEMPLATES = {
     \"status\": \"ACTIVE\",
     \"time\": \"2022-08-05T00:14:49.389+02:00\"
   }`,
-  event: `{ 
+  EVENT: `{ 
     \"source\": {
     \"id\": \"909090\"
     },
@@ -63,15 +64,24 @@ export const SAMPLE_TEMPLATES = {
     \"time\": \"2022-08-05T00:14:49.389+02:00\",
     \"type\": \"c8y_TestEvent\"
  }`
+ ,
+  INVENTORY: `{ 
+    \"c8y_IsDevice\": {},
+    \"name\": \"Vibration Sensor\",
+    \"type\": \"maker_Vibration_Sensor\"
+ }`
 }
 
-export const APIs = ['measurement', 'event', 'alarm']
+export enum API {
+  ALARM = "ALARM",
+  EVENT = "EVENT",
+  MEASUREMENT = "MEASUREMENT",
+  INVENTORY = "INVENTORY"
+}
 
-export const QOSs = [{ name: 'At most once', value: 0 },
+export const QOS = [{ name: 'At most once', value: 0 },
 { name: 'At least once', value: 1 },
 { name: 'Exactly once', value: 2 }]
-
-
 
 export const SCHEMA_EVENT = {
   'definitions': {},
@@ -208,6 +218,38 @@ export const SCHEMA_MEASUREMENT = {
 }
 
 
+export const SCHEMA_INVENTORY = {
+  'definitions': {},
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  '$id': 'http://example.com/root.json',
+  'type': 'object',
+  'title': 'INVENTORY',
+  'required': [
+      'c8y_IsDevice',
+      'type',
+      'name',
+    ],
+    'properties': {
+      'c8y_IsDevice': {
+        '$id': '#/properties/c8y_IsDevice',
+        'type': 'object',
+        'title': 'Mark as device.',
+        'properties': {
+        }
+      },
+      'type':{
+        '$id': '#/properties/type',
+        'type': 'string',
+        'title': 'Type of the device.',
+      },
+      'name':{
+        '$id': '#/properties/name',
+        'type': 'string',
+        'title': 'Name of the device.',
+      }
+    }
+}
+
 export const SCHEMA_PAYLOAD = {
   'definitions': {},
   '$schema': 'http://json-schema.org/draft-07/schema#',
@@ -218,13 +260,17 @@ export const SCHEMA_PAYLOAD = {
     ],
 }
 
+export const TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
+
 export function getSchema(targetAPI: string): any {
-  if (targetAPI == "alarm") {
+  if (targetAPI == API.ALARM) {
     return SCHEMA_ALARM;
-  } else if (targetAPI == "event"){
+  } else if (targetAPI == API.EVENT){
     return SCHEMA_EVENT;
-  } else {
+  } else if (targetAPI == API.MEASUREMENT) {
     return SCHEMA_MEASUREMENT;
+  } else  {
+    return SCHEMA_INVENTORY;
   }
 }
 
@@ -237,7 +283,7 @@ export function normalizeTopic(topic: string) {
   return nt
 }
 
-export function isTemplateTopicUnique(templateTopic: String, id: number, mappings: MQTTMapping[]): boolean {
+export function isTemplateTopicUnique(templateTopic: String, id: number, mappings: Mapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
     if (templateTopic == m.templateTopic && id != m.id) {
@@ -249,7 +295,7 @@ export function isTemplateTopicUnique(templateTopic: String, id: number, mapping
   return result;
 }
 
-export function isTopicIsUnique(topic: string, id: number, mappings: MQTTMapping[]): boolean {
+export function isTopicIsUnique(topic: string, id: number, mappings: Mapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
     if (topic == m.topic && id != m.id) {
