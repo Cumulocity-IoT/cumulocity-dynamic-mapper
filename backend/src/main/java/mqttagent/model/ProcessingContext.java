@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProcessingContext {
-    private MQTTMapping mapping;
+    private Mapping mapping;
     private String deviceIdentifier;
 }

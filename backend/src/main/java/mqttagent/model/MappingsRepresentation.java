@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MQTTMappingsRepresentation implements Serializable {
+public class MappingsRepresentation implements Serializable {
 
   static String TOPIC_WILDCARD = "#";
 
@@ -36,7 +36,7 @@ public class MQTTMappingsRepresentation implements Serializable {
   private String description;
 
   @JsonProperty(value = "c8y_mqttMapping")
-  private ArrayList<MQTTMapping> c8yMQTTMapping;
+  private ArrayList<Mapping> c8yMQTTMapping;
 
   private Map<String, Object> dynamicProperties;
 
@@ -53,7 +53,7 @@ public class MQTTMappingsRepresentation implements Serializable {
     this.dynamicProperties.put(key, value);
   }
 
-  static public boolean checkTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
+  static public boolean checkTopicIsUnique(ArrayList<Mapping> mappings, Mapping mapping) {
     var topic = mapping.topic;
     MutableBoolean result = new MutableBoolean(true);
     mappings.forEach(m -> {
@@ -64,7 +64,7 @@ public class MQTTMappingsRepresentation implements Serializable {
     return result.booleanValue();
   }
 
-  static public boolean checkTemplateTopicIsUnique(ArrayList<MQTTMapping> mappings, MQTTMapping mapping) {
+  static public boolean checkTemplateTopicIsUnique(ArrayList<Mapping> mappings, Mapping mapping) {
     var topic = mapping.templateTopic;
     MutableBoolean result = new MutableBoolean(true);
     mappings.forEach(m -> {
@@ -82,7 +82,7 @@ public class MQTTMappingsRepresentation implements Serializable {
     return nt;
   }
 
-  static public Long nextId(ArrayList<MQTTMapping> mappings) {
+  static public Long nextId(ArrayList<Mapping> mappings) {
     Long max = mappings
         .stream()
         .mapToLong(v -> v.id)

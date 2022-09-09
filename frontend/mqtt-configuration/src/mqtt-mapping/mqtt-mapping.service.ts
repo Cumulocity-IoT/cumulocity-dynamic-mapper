@@ -80,7 +80,7 @@ export class MQTTMappingService {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"tenant": this.client.tenant, "operation": "RELOAD"}),
+      body: JSON.stringify({"operation": "RELOAD"}),
       method: 'POST',
     });
   }

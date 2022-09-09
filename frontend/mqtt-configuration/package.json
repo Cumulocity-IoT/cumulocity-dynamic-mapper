@@ -28,10 +28,8 @@
     "@c8y/ngx-components": "1014.0.68",
     "@c8y/style": "1014.0.68",
     "@maaxgr/ang-jsoneditor": "^12.0.0",
-    "@metrichor/jmespath": "^0.3.1",
     "@ngx-translate/core": "13.0.0",
     "jsonata": "^1.8.6",
-    "jsonpath-plus": "^7.0.0",
     "rxjs": "~6.6.3",
     "zone.js": "~0.11.4"
   },

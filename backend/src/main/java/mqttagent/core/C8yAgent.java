@@ -39,10 +39,10 @@ import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.configuration.ConfigurationService;
 import mqttagent.configuration.MQTTConfiguration;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingsRepresentation;
+import mqttagent.model.Mapping;
+import mqttagent.model.MappingsRepresentation;
 import mqttagent.service.MQTTClient;
-import mqttagent.service.MQTTMappingsConverter;
+import mqttagent.service.MappingsConverter;
 
 @Slf4j
 @Service
@@ -73,7 +73,7 @@ public class C8yAgent {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private MQTTMappingsConverter converterService;
+    private MappingsConverter converterService;
 
     @Autowired
     private ConfigurationService configurationService;
@@ -137,13 +137,13 @@ public class C8yAgent {
                     .getManagedObjects();
             if (mol.size() == 0) {
                 // create new managedObject
-                ManagedObjectRepresentation moMQTTMapping = new ManagedObjectRepresentation();
-                moMQTTMapping.setType(MQTT_MAPPING_TYPE);
-                // moMQTTMapping.set([], MQTT_MAPPING_FRAGMENT);
-                moMQTTMapping.setProperty(MQTT_MAPPING_FRAGMENT, new ArrayList<>());
-                moMQTTMapping.setName("MQTT-Mapping");
-                moMQTTMapping = inventoryApi.create(moMQTTMapping);
-                log.info("Created new MQTT-Mapping: {}, {}", moMQTTMapping.getId().getValue(), moMQTTMapping.getId());
+                ManagedObjectRepresentation moMapping = new ManagedObjectRepresentation();
+                moMapping.setType(MQTT_MAPPING_TYPE);
+                // moMapping.set([], MQTT_MAPPING_FRAGMENT);
+                moMapping.setProperty(MQTT_MAPPING_FRAGMENT, new ArrayList<>());
+                moMapping.setName("MQTT-Mapping");
+                moMapping = inventoryApi.create(moMapping);
+                log.info("Created new MQTT-Mapping: {}, {}", moMapping.getId().getValue(), moMapping.getId());
             }
         });
         /* Connecting to MQTT Client */
@@ -294,17 +294,17 @@ public class C8yAgent {
         });
     }
 
-    public ArrayList<MQTTMapping> getMappings() {
-        ArrayList<MQTTMapping> result = new ArrayList<MQTTMapping>();
+    public ArrayList<Mapping> getMappings() {
+        ArrayList<Mapping> result = new ArrayList<Mapping>();
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
-            log.info("Found MQTTMapping {}", mqttMo);
+            MappingsRepresentation mqttMo = converterService.asMappings(mo);
+            log.info("Found Mapping {}", mqttMo);
             result.addAll(mqttMo.getC8yMQTTMapping());
-            log.info("Found MQTTMapping {}", result.size());
+            log.info("Found Mapping {}", result.size());
         });
         return result;
     }
@@ -356,7 +356,7 @@ public class C8yAgent {
         });
     }
 
-    public void saveMappings(List<MQTTMapping> mappings) throws JsonProcessingException {
+    public void saveMappings(List<Mapping> mappings) throws JsonProcessingException {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
@@ -366,7 +366,7 @@ public class C8yAgent {
             moUpdate.setId(mo.getId());
             moUpdate.setProperty(MQTT_MAPPING_FRAGMENT, mappings);
             inventoryApi.update(moUpdate);
-            log.info("Updated MQTTMapping after deletion!");
+            log.info("Updated Mapping after deletion!");
         });
     }
 
@@ -379,21 +379,21 @@ public class C8yAgent {
         return mcr[0];
     }
 
-    public MQTTMapping getMapping(Long id){
-        MQTTMapping[] mr = { null };
+    public Mapping getMapping(Long id){
+        Mapping[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            MQTTMappingsRepresentation mqttMo = converterService.asMQTTMappings(mo);
-            log.info("Found MQTTMapping {}", mqttMo);
+            MappingsRepresentation mqttMo = converterService.asMappings(mo);
+            log.info("Found Mapping {}", mqttMo);
             mqttMo.getC8yMQTTMapping().forEach((m) ->{
                 if ( m.id == id ){
                     mr[0] = m;
                 }
             });
-            log.info("Found MQTTMapping {}", mr[0]);
+            log.info("Found Mapping {}", mr[0]);
         });
         return mr[0];
     }

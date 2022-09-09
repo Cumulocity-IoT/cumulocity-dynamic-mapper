@@ -131,7 +131,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  counterShowSubstitutions: number = 0;
+  selectedSubstitution: number = 0;
 
   propertyForm: FormGroup;
   testForm: FormGroup;
@@ -141,6 +141,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   TOPIC_JSON_PATH = "TOPIC";
   templateTopicValid: boolean;
+
 
   constructor(
     public mqttMappingService: MQTTMappingService,
@@ -318,16 +319,16 @@ export class MQTTMappingStepperComponent implements OnInit {
     };
   }
 
-  async onCommitButtonClicked() {
+  async onCommitButton() {
     this.onCommit.emit(this.getCurrentMapping());
   }
 
-  async onTestTransformationClicked() {
+  async onTestTransformation() {
     let dataTesting = await this.mqttMappingService.testResult(this.getCurrentMapping(), false);
     this.dataTesting = dataTesting;
   }
 
-  async onSendTestClicked() {
+  async onSendTest() {
     let { data, res } = await this.mqttMappingService.sendTestResult(this.getCurrentMapping());
     //console.log ("My data:", data );
     if (res.status == 200 || res.status == 201) {
@@ -340,7 +341,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }
 
-  onMarkDeviceIdentifierClicked() {
+  onMarkDeviceIdentifier() {
     let parts: string[] = this.propertyForm.get('templateTopic').value.split("/");
     if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1) {
       this.mapping.indexDeviceIdentifierInTemplateTopic++;
@@ -357,11 +358,11 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }
 
-  async onSampleButtonClicked() {
+  async onSampleButton() {
     this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.propertyForm.get('targetAPI').value]);
   }
 
-  async onCancelButtonClicked() {
+  async onCancelButton() {
     this.onCancel.emit();
   }
 
@@ -374,13 +375,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.substitutions = '';
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(topic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
-      if (this.mapping.substitutions.length == 0 && isWildcardTopic(topic)) {
-        this.mapping.substitutions.push({ pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id" })
-      }
-      this.mapping.substitutions.forEach(s => {
-        //console.log ("New mapping:", s.pathSource, s.pathTarget);
-        this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
-      })
+      this.updateSubstitutions();
 
       this.initTemplateEditors();
       this.editorTarget.setSchema(getSchema(targetAPI), null);
@@ -398,6 +393,18 @@ export class MQTTMappingStepperComponent implements OnInit {
       event.stepper.next();
     }
 
+  }
+
+  private updateSubstitutions() {
+    this.substitutions = ''
+    const topic = this.propertyForm.get('topic').value
+    if (this.mapping.substitutions.length == 0 && isWildcardTopic(topic)) {
+      this.mapping.substitutions.push({ pathSource: this.TOPIC_JSON_PATH, pathTarget: "source.id" });
+    }
+    this.mapping.substitutions.forEach(s => {
+      //console.log ("New mapping:", s.pathSource, s.pathTarget);
+      this.substitutions = this.substitutions + `[ ${s.pathSource} -> ${s.pathTarget}]`;
+    });
   }
 
   private initTemplateEditors() {
@@ -418,7 +425,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }
 
-  async onSnoopedSourceTemplatesClicked() {
+  async onSnoopedSourceTemplates() {
     if (this.snoopedTemplateCounter >= this.mapping.snoopedTemplates.length) {
       this.snoopedTemplateCounter = 0;
     }
@@ -436,7 +443,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.snoopedTemplateCounter++;
   }
 
-  public onAddSubstitutionsClicked() {
+  public onAddSubstitutions() {
     this.pathSourceMissing = this.pathSource != '' ? false : true;
     this.pathTargetMissing = this.pathTarget != '' ? false : true;
 
@@ -454,7 +461,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }
 
-  public onClearSubstitutionsClicked() {
+  public onDeleteSubstitutions() {
     this.mapping.substitutions = [];
     const topic: string = this.propertyForm.get('topic').value;
     this.substitutions = "";
@@ -468,32 +475,41 @@ export class MQTTMappingStepperComponent implements OnInit {
     console.log("Cleared substitutions!");
   }
 
-  public onShowSubstitutionsClicked() {
+  public onDeleteSubstitution() {
+    console.log("Delete marked substitution", this.selectedSubstitution);
+    if (this.selectedSubstitution < this.mapping.substitutions.length) {
+      this.mapping.substitutions.splice(this.selectedSubstitution-1,1);
+      this.selectedSubstitution = 0;
+    }
+    this.updateSubstitutions();
+  }
+
+  public onSelectSubstitution() {
     let nextColor = this.COLOR_PALETTE[this.paletteCounter];
     this.paletteCounter++;
     if (this.paletteCounter >= this.COLOR_PALETTE.length) {
       this.paletteCounter = 0;
     }
-    if (this.counterShowSubstitutions < this.mapping.substitutions.length) {
+    if (this.selectedSubstitution < this.mapping.substitutions.length) {
       // reset background color of old selection list
       for (let item of this.selectionList) {
         item.setAttribute('style', null);
       }
-      this.updateSourceExpressionResult(this.mapping.substitutions[this.counterShowSubstitutions].pathSource);
-      this.pathTarget = this.mapping.substitutions[this.counterShowSubstitutions].pathTarget;
-      this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.counterShowSubstitutions].pathSource)
-      this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.counterShowSubstitutions].pathTarget)
+      this.updateSourceExpressionResult(this.mapping.substitutions[this.selectedSubstitution].pathSource);
+      this.pathTarget = this.mapping.substitutions[this.selectedSubstitution].pathTarget;
+      this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.selectedSubstitution].pathSource)
+      this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.selectedSubstitution].pathTarget)
       console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
       //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
       this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
       for (let item of this.selectionList) {
         item.setAttribute('style', `background: ${nextColor};`);
       }
-      this.counterShowSubstitutions++;
+      this.selectedSubstitution++;
     }
 
-    if (this.counterShowSubstitutions >= this.mapping.substitutions.length) {
-      this.counterShowSubstitutions = 0;
+    if (this.selectedSubstitution >= this.mapping.substitutions.length) {
+      this.selectedSubstitution = 0;
       this.paletteCounter = 0;
     }
     console.log("Show substitutions!");

@@ -37,8 +37,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
-import mqttagent.model.MQTTMapping;
-import mqttagent.model.MQTTMappingSubstitution;
+import mqttagent.model.Mapping;
+import mqttagent.model.MappingSubstitution;
 import mqttagent.model.MappingNode;
 import mqttagent.model.ProcessingContext;
 import mqttagent.model.ResolveException;
@@ -123,10 +123,10 @@ public class GenericCallback implements MqttCallback {
             }
             log.info("Adding snoopedTemplate to map: {},{},{}", ctx.getMapping().topic, ctx.getMapping().snoopedTemplates.size(),
                     ctx.getMapping().snoopTemplates);
-            mqttClient.setTenantMappingsDirty(ctx.getMapping());
+            mqttClient.setMappingDirty(ctx.getMapping());
         } else {
             var payloadTarget = new JSONObject(ctx.getMapping().target);
-            for (MQTTMappingSubstitution sub : ctx.getMapping().substitutions) {
+            for (MappingSubstitution sub : ctx.getMapping().substitutions) {
                 var substitute = "";
                 /* 
                 used for JSONata in sourcePath definitions

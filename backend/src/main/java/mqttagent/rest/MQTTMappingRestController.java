@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.InnerNode;
-import mqttagent.model.MQTTMapping;
+import mqttagent.model.Mapping;
 import mqttagent.model.TreeNode;
 import mqttagent.service.MQTTClient;
 import mqttagent.service.ServiceOperation;
@@ -26,7 +26,7 @@ import mqttagent.service.ServiceStatus;
 
 @Slf4j
 @RestController
-public class MQTTRestController {
+public class MQTTMappingRestController {
 
     @Autowired
     MQTTClient mqttClient;
@@ -92,16 +92,16 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<MQTTMapping>> getMappings() {
+    public ResponseEntity<List<Mapping>> getMappings() {
         log.info("Get mappings");
-        List<MQTTMapping> result = c8yAgent.getMappings();
+        List<Mapping> result = c8yAgent.getMappings();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MQTTMapping> getMapping(@PathVariable Long id) {
+    public ResponseEntity<Mapping> getMapping(@PathVariable Long id) {
         log.info("Get mappings");
-        MQTTMapping result = c8yAgent.getMapping(id);
+        Mapping result = c8yAgent.getMapping(id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
         }
@@ -117,14 +117,14 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> addMapping (@Valid @RequestBody MQTTMapping mapping) {
+    public ResponseEntity<Long> addMapping (@Valid @RequestBody Mapping mapping) {
         log.info("Add mapping {}", mapping);
         Long result = mqttClient.addMapping(mapping);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody MQTTMapping mapping) {
+    public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
         log.info("Update mapping {}, {}", mapping, id);
         Long result = mqttClient.updateMapping(id, mapping);
         return ResponseEntity.status(HttpStatus.OK).body(result);
