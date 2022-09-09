@@ -28,7 +28,7 @@
                   <c8y-form-group>
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
-                      <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
+                      <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control" placeholder="e.g. device/110"
                         (change)="onTopicChanged($event)" #topicRef required />
                     </div>
                     <!--                     <c8y-messages>
@@ -40,12 +40,12 @@
                       <label for="templateTopic">Template Topic</label>
                       <div class="row ">
                         <div class="col-lg-5 padding-r0">
-                          <input formControlName="templateTopic" type="text" class="form-control"
+                          <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text" class="form-control"
                             placeholder="e.g. device/110" #templateTopic (change)="checkTemplateTopicIsValid($event)" />
                         </div>
                         <div class="col-lg-3 padding-l0">
-                          <button type="submit" class="btn btn-primary" (click)="onMarkDeviceIdentifier()">
-                            Mark Device Identifier
+                          <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">
+                            Select Device Identifier
                           </button>
                         </div>
                         <div class="col-lg-3 col-lg-offset-1">
@@ -64,7 +64,7 @@
                     <div class="col-md-6 form-group">
                       <label for="targetAPI" class="" translate>Target API</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="targetAPI" #targetAPIRef>
+                        <select class="form-control" formControlName="targetAPI"  [(ngModel)]="mapping.targetAPI" #targetAPIRef>
                           <option *ngFor="let api of keys(API)" [ngValue]="api">
                             {{ api }}
                           </option>
@@ -74,7 +74,7 @@
                     <div class="col-md-6 form-group">
                       <label class="" translate>QOS</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="qos" #qosRef>
+                        <select class="form-control" formControlName="qos"  [(ngModel)]="mapping.qos" #qosRef>
                           <option *ngFor="let q of QOS" [ngValue]="q.value">
                             {{ q.name }}
                           </option>
@@ -85,7 +85,7 @@
                   <div class="row">
                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Active' | translate }}">
-                        <input type="checkbox" formControlName="active" />
+                        <input type="checkbox" formControlName="active" [(ngModel)]="mapping.active"/>
                         <span></span>
                         <span>
                           {{ 'Active' | translate }}
@@ -94,7 +94,7 @@
                     </div>
                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Create device' | translate }}">
-                        <input type="checkbox" formControlName="createNoExistingDevice" />
+                        <input type="checkbox" formControlName="createNoExistingDevice" [(ngModel)]="mapping.createNoExistingDevice"/>
                         <span></span>
                         <span>
                           {{ 'Create device' | translate }}
@@ -104,7 +104,7 @@
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                      <input formControlName="mapDeviceIdentifier" type="checkbox" />
+                      <input formControlName="mapDeviceIdentifier" [(ngModel)]="mapping.mapDeviceIdentifier" type="checkbox" />
                       <span></span>
                       <span>
                         {{ 'Map Device Idenfifier' | translate }}
@@ -114,14 +114,14 @@
                   <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                     <label for="externalIdType" class="" translate>External Id Type</label>
                     <div>
-                      <input formControlName="externalIdType" type="text" class="form-control"
+                      <input formControlName="externalIdType" [(ngModel)]="mapping.externalIdType" type="text" class="form-control"
                         placeholder="e.g. c8y_Serial" #externalIdTypeRef />
                     </div>
                   </div>
                   <div class="form-group">
                     <label for="qos" class="" translate>Snoop payload</label>
                     <div class="c8y-select-wrapper">
-                      <select class="form-control" formControlName="snoopTemplates" #snoopTemplatesRef>
+                      <select class="form-control" formControlName="snoopTemplates"[(ngModel)]="mapping.snoopTemplates"  #snoopTemplatesRef>
                         <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                           [disabled]="q != 'ENABLED' && q != 'NONE'">
                           {{ SnoopStatus[q] }}
@@ -176,7 +176,7 @@
                   </div>
                   <div class="col-lg-2 vcenter" style="text-align:center;">
                     <div style="padding-bottom: 8px;">
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitutions()"
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitution()"
                         translate title="Map" title="Map">
                         <i c8yIcon="add-new"></i>
                       </button>
@@ -321,7 +321,7 @@
                 <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
-                    <div style="height:200px">
+                    <div class="jsonColumnLarge">
                       <json-editor [options]="editorOptionsTesting" [data]="dataTesting" #editorResting></json-editor>
                     </div>
                   </div>

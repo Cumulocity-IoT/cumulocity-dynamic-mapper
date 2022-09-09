@@ -185,20 +185,26 @@ public class GenericCallback implements MqttCallback {
                  /*
                  * step 2 replace target with extract content from incoming payload
                  */
-                String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
-                if (pathTarget == null) {
-                    pathTarget = new String[] { sub.pathTarget };
-                }
-                if (sub.pathTarget.equals("source.id") && mapping.mapDeviceIdentifier && sub.definesIdentifier) {
-                    var deviceId = resolveExternalId(substitute, mapping.externalIdType);
-                    if (deviceId == null) {
-                        throw new RuntimeException("External id " + deviceId + " for type "
-                                + mapping.externalIdType + " not found!");
+                if (!mapping.targetAPI.equals(API.INVENTORY)){
+                    String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
+                    if (pathTarget == null) {
+                        pathTarget = new String[] { sub.pathTarget };
                     }
-                    substitute = deviceId;
+                    if (sub.pathTarget.equals("source.id") 
+                        && mapping.mapDeviceIdentifier 
+                        && sub.definesIdentifier ) {
+                        substitute = resolveExternalId(substitute, mapping.externalIdType);
+                        if (substitute == null) {
+                            throw new RuntimeException("External id " + substitute + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        }
+                    }
+                    substituteValue(substitute, payloadTarget, pathTarget);
                 }
-                substituteValue(substitute, payloadTarget, pathTarget);
             }
+            /*
+            * step 3 send target payload to c8y
+            */
             log.info("Posting payload: {}", payloadTarget);
             if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)){
                 resultDeviceIdentifier.forEach(d -> {

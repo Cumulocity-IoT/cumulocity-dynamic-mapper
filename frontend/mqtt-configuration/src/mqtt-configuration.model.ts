@@ -217,7 +217,6 @@ export const SCHEMA_MEASUREMENT = {
     }
 }
 
-
 export const SCHEMA_INVENTORY = {
   'definitions': {},
   '$schema': 'http://json-schema.org/draft-07/schema#',
@@ -284,13 +283,8 @@ export function normalizeTopic(topic: string) {
 }
 
 export function isTemplateTopicUnique(templateTopic: String, id: number, mappings: Mapping[]): boolean {
-  let result = true;
-  result = mappings.every(m => {
-    if (templateTopic == m.templateTopic && id != m.id) {
-      return false;
-    } else {
-      return true;
-    }
+  let result = mappings.every(m => {
+    return (templateTopic != m.templateTopic || id == m.id)
   })
   return result;
 }
@@ -298,11 +292,7 @@ export function isTemplateTopicUnique(templateTopic: String, id: number, mapping
 export function isTopicIsUnique(topic: string, id: number, mappings: Mapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
-    if (topic == m.topic && id != m.id) {
-      return false;
-    } else {
-      return true;
-    }
+    return (topic != m.topic || id == m.id);
   })
   return result;
 }
