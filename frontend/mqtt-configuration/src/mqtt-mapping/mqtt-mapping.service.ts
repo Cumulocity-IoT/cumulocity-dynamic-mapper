@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { JSONPath } from 'jsonpath-plus';
 import { API, Mapping, TOKEN_DEVICE_TOPIC } from '../mqtt-configuration.model';
 import * as _ from 'lodash';
 
@@ -155,8 +154,11 @@ export class MQTTMappingService {
   }
 
   public evaluateExpression(json: JSON, path: string): string {
-      const expression = this.JSONATA(path)
-      return expression.evaluate(json)
-      //return JSON.stringify(expression.evaluate(json), null, 4)
+      let result = '';
+      if ( path != undefined && path != '' && json != undefined ) {
+        const expression = this.JSONATA(path)
+        result = expression.evaluate(json)
+      }
+      return result;
   }
 }
