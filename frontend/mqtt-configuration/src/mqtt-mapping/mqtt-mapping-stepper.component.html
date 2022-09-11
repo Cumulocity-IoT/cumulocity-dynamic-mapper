@@ -29,11 +29,8 @@
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
                       <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control" placeholder="e.g. device/110"
-                        (change)="onTopicChanged($event)" #topicRef required />
+                         #topicRef required />
                     </div>
-                    <!--                     <c8y-messages>
-                      <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
-                    </c8y-messages> -->
                   </c8y-form-group>
                   <c8y-form-group>
                     <div class="form-group">
@@ -41,7 +38,7 @@
                       <div class="row ">
                         <div class="col-lg-5 padding-r0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text" class="form-control"
-                            placeholder="e.g. device/110" #templateTopic (change)="checkTemplateTopicIsValid($event)" />
+                            placeholder="e.g. device/110" #templateTopic/>
                         </div>
                         <div class="col-lg-3 padding-l0">
                           <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">
@@ -54,9 +51,9 @@
                       </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="!templateTopicUnique" translate>This Template Topic must be unique.
+                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotUnique" translate>This Template Topic must be unique.
                       </c8y-message>
-                      <c8y-message *ngIf="!templateTopicValid" translate>The Topic must be a part of Template Topic.
+                      <c8y-message *ngIf="propertyForm.errors?.notSubstring" translate>The Topic must be a part of Template Topic.
                       </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
@@ -139,7 +136,7 @@
         </c8y-stepper-buttons>
       </cdk-step>
 
-      <cdk-step label="Define templates">
+       <cdk-step [stepControl]="templateForm" label="Define templates">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
@@ -153,135 +150,132 @@
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
 
-              <!-- <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3"> -->
-
-              <div class="container">
-                <div class="row">
-                  <div class="legend form-block col-lg-12">
-                    Templates
-                  </div>
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <label translate>Source</label>
-                      <div class="jsonColumnLarge">
-                        <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
-                        </json-editor>
+              <div [formGroup]="templateForm">
+                <div class="container">
+                  <div class="row">
+                    <div class="legend form-block col-lg-12">
+                      Templates
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label translate>Source</label>
+                        <div class="jsonColumnLarge">
+                          <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
+                          </json-editor>
+                        </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!
+                           <c8y-message *ngIf="sourcePathMissing" translate>Select source node to define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
                     </div>
-
-                  </div>
-                  <div class="col-lg-2 vcenter" style="text-align:center;">
-                    <div style="padding-bottom: 8px;">
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitution()"
-                        translate title="Map" title="Map">
-                        <i c8yIcon="add-new"></i>
-                      </button>
-                    </div>
-                    <div style="padding-bottom: 8px;">
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onSelectSubstitution()" translate title="Select">
-                        <i c8yIcon="skip"></i>
-                      </button>
-                    </div>
-                    <div style="padding-bottom: 8px;">
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitution()" translate title="Delete Selected">
-                        <i c8yIcon="negative"></i>
-                      </button>
-                    </div>
-                    <div>
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitutions()" translate title="Delete All">
-                        <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="col-lg-5 vcenter">
-                    <div class="form-group">
-                      <label translate>Target</label>
-                      <div class="jsonColumnLarge">
-                        <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
-                        </json-editor>
-                        <c8y-messages>
-                          <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!
-                          </c8y-message>
-                        </c8y-messages>
+                    <div class="col-lg-2 vcenter" style="text-align:center;">
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitution()"
+                          translate title="Map" title="Map">
+                          <i c8yIcon="add-new"></i>
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="container">
-                <div class="row">
-                  <div class="legend form-block col-lg-12">
-                    Substitution
-                  </div>
-                  <div class="col-lg-5">
-                    <div class="form-group">
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onSelectSubstitution()" translate title="Select">
+                          <i c8yIcon="skip"></i>
+                        </button>
+                      </div>
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitution()" translate title="Delete Selected">
+                          <i c8yIcon="negative"></i>
+                        </button>
+                      </div>
                       <div>
-                        <label translate style="display:contents !important">Evaluate Expression on Source
-                        </label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popTemplate>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
-                          <button
-                            class="btn-clean text-primary"
-                            [popover]="popTemplate" popoverTitle="JSONata"
-                            placement="right"
-                            triggers="focus"
-                            type="button"
-                          >
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitutions()" translate title="Delete All">
+                          <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
+                        </button>
                       </div>
-                      <input type="text" style="font-family: monospace;" class="form-control" [(ngModel)]="pathSource"
-                        placeholder="e.g. $join([$substring(tx,5), DEVICE_IDENT]) or $number(DEVICE_IDENT)/10"
-                        (change)="sourceExpressionChanged($event)" />
-                      <c8y-messages>
-                        <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
-                        </c8y-message>
-                      </c8y-messages>
                     </div>
-                  </div>
-                  <div class="col-lg-2">
-                    <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
-                      <input type="checkbox" [(ngModel)]="definesIdentifier" />
-                      <span></span>
-                      <span>
-                        {{ 'Define Identifier' | translate }}
-                      </span>
-                    </label>
-                  </div>
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <label translate>Substitute in Target</label>
-                      <pre class="jsonColumnTiny">{{pathTarget}}
-                      </pre>
+                    <div class="col-lg-5 vcenter">
+                      <div class="form-group">
+                        <label translate>Target</label>
+                        <div class="jsonColumnLarge">
+                          <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
+                          </json-editor>
+                        </div>
+                        <c8y-messages>
+                          <c8y-message *ngIf="targetPathMissing" translate>Select target node to define substitution!
+                          </c8y-message> 
+                        </c8y-messages>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-5 jsonColumn">
-                    <div class="form-group">
-                      <label translate>Expression - result</label>
-                      <pre class="jsonColumnTiny">{{sourceExpressionResult}}
-                      </pre>
+                <div class="container">
+                  <div class="row">
+                    <div class="legend form-block col-lg-12">
+                      Substitution
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <div>
+                          <label translate style="display:contents !important">Evaluate Expression on Source
+                          </label>
+                          <span class="hidden-xs hidden-sm">
+                            <ng-template #popTemplate>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
+                            <button
+                              class="btn-clean text-primary"
+                              [popover]="popTemplate" popoverTitle="JSONata"
+                              placement="right"
+                              triggers="focus"
+                              type="button"
+                            >
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                        <input #pathSourceRef type="text" style="font-family: monospace;" class="form-control" formControlName="pathSource" [(ngModel)]="pathSource"
+                          placeholder="e.g. $join([$substring(tx,5), DEVICE_IDENT]) or $number(DEVICE_IDENT)/10"/>
+                        <c8y-messages>
+                          <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
+                          </c8y-message>
+                        </c8y-messages>
+                      </div>
+                    </div>
+                    <div class="col-lg-2">
+                      <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
+                        <input type="checkbox" formControlName="definesIdentifier" [(ngModel)]="definesIdentifier" /> 
+                        <span></span>
+                        <span>
+                          {{ 'Define Identifier' | translate }}
+                        </span>
+                      </label>
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label translate>Substitute in Target</label>
+                        <input #pathTargetRef type="text" style="font-family: monospace;" class="form-control" formControlName="pathTarget" [ngModel]="pathTarget"
+                        readonly/>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-12">
-                    <div class="legend form-block">
-                      Defined substitutions
+                <div class="container">
+                  <div class="row">
+                    <div class="col-lg-5 jsonColumn">
+                      <div class="form-group">
+                        <label translate>Expression - result</label>
+                        <pre class="jsonColumnTiny">{{sourceExpressionResult}}
+                        </pre>
+                      </div>
                     </div>
-                    <div>
-                      <pre>{{substitutions}}</pre>
+                  </div>
+                </div>
+                <div class="container">
+                  <div class="row">
+                    <div class="col-lg-12">
+                      <div class="legend form-block">
+                        Defined substitutions
+                      </div>
+                      <div>
+                        <pre>{{substitutions}}</pre>
+                      </div>
                     </div>
                   </div>
                 </div>

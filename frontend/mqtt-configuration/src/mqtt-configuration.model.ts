@@ -1,3 +1,5 @@
+import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
+
 export interface MQTTAuthentication {
   mqttHost: string;
   mqttPort: string;
@@ -9,29 +11,29 @@ export interface MQTTAuthentication {
 }
 
 export interface MappingSubstitution {
-  pathSource: string,
-  pathTarget: string,
-  definesIdentifier?: boolean
+  pathSource: string;
+  pathTarget: string;
+  definesIdentifier?: boolean;
 }
 
 export interface Mapping {
-  id: number,
-  topic: string,
-  templateTopic: string,
-  indexDeviceIdentifierInTemplateTopic: number, 
-  targetAPI: string,
-  source: string,
-  target: string,
-  lastUpdate: number,
-  active: boolean,
-  tested: boolean,
-  createNoExistingDevice: boolean,
-  qos: number,
+  id: number;
+  topic: string;
+  templateTopic: string;
+  indexDeviceIdentifierInTemplateTopic: number; 
+  targetAPI: string;
+  source: string;
+  target: string;
+  lastUpdate: number;
+  active: boolean;
+  tested: boolean;
+  createNoExistingDevice: boolean;
+  qos: number;
   substitutions?: MappingSubstitution[];
   mapDeviceIdentifier:boolean;
-  externalIdType: string,
-  snoopTemplates: SnoopStatus,
-  snoopedTemplates:string[]
+  externalIdType: string;
+  snoopTemplates: SnoopStatus;
+  snoopedTemplates:string[];
 }
 
 export const SAMPLE_TEMPLATES = {
@@ -276,7 +278,7 @@ export function getSchema(targetAPI: string): any {
 export function normalizeTopic(topic: string) {
   if (topic == undefined) topic = '';
   let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
-  console.log("Topic normalized:", topic, nt);
+  //console.log("Topic normalized:", topic, nt);
   // append trailing slash if last character is not wildcard #
   nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? '' : '/')
   return nt
@@ -309,4 +311,35 @@ export enum SnoopStatus {
   ENABLED = "ENABLED",
   STARTED = "STARTED",
   STOPPED = "STOPPED"
+}
+
+export function validateTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const error={}
+    let defined=false
+
+    let templateTopic =  normalizeTopic(control.get('templateTopic').value);
+    let topic =  normalizeTopic( control.get('topic').value);
+    let error1 = !topic.startsWith(templateTopic);
+    
+    let id =  control.get('id').value;
+    let error2 = !mappings.every(m => {
+      return (templateTopic != m.templateTopic || id == m.id)
+    })
+    console.log("Tested topics :", topic, templateTopic, error1, error2); 
+
+    if (error1) {
+      error['notSubstring'] = true
+      defined = true
+    }      
+ 
+    if (error2) {
+      error['templateTopicNotUnique'] = true
+      defined = true
+    }  
+      
+    return defined?error : null;
+    
+  }
+ 
 }
