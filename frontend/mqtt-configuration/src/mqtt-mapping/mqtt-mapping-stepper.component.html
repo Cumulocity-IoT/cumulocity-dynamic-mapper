@@ -34,7 +34,21 @@
                   </c8y-form-group>
                   <c8y-form-group>
                     <div class="form-group">
-                      <label for="templateTopic">Template Topic</label>
+                      <div>
+                        <label for="templateTopic" style="display: inline; margin-right:5px;">Template Topic</label>
+                        <span class="hidden-xs hidden-sm">
+                          <ng-template #popTemplateTopic>The TemplateTopic name must begin the Topic name.</ng-template>
+                          <button
+                            class="btn-clean text-primary"
+                            [popover]="popTemplateTopic" popoverTitle="JSONata"
+                            placement="right"
+                            triggers="focus"
+                            type="button"
+                          >
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
                       <div class="row ">
                         <div class="col-lg-5 padding-r0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text" class="form-control"
@@ -177,9 +191,23 @@
                         </button>
                       </div>
                       <div style="padding-bottom: 8px;">
-                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onSelectSubstitution()" translate title="Select">
-                          <i c8yIcon="skip"></i>
-                        </button>
+                        <div>
+                          <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;margin-left: 25px;" (click)="onSelectSubstitution()" translate title="Select">
+                            <i c8yIcon="skip"></i>
+                          </button>
+                          <span class="hidden-xs hidden-sm" style="margin-left: 10px;">
+                            <ng-template #popTemplateSelect>Select/show defined substitutions in templates.</ng-template>
+                            <button
+                              class="btn-clean text-primary"
+                              [popover]="popTemplateSelect" popoverTitle="Select"
+                              placement="right"
+                              triggers="focus"
+                              type="button"
+                            >
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
                       </div>
                       <div style="padding-bottom: 8px;">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitution()" translate title="Delete Selected">
@@ -218,10 +246,10 @@
                           <label translate style="display:contents !important">Evaluate Expression on Source
                           </label>
                           <span class="hidden-xs hidden-sm">
-                            <ng-template #popTemplate>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
+                            <ng-template #popTemplateJSON>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
                             <button
                               class="btn-clean text-primary"
-                              [popover]="popTemplate" popoverTitle="JSONata"
+                              [popover]="popTemplateJSON" popoverTitle="JSONata"
                               placement="right"
                               triggers="focus"
                               type="button"
@@ -272,6 +300,18 @@
                     <div class="col-lg-12">
                       <div class="legend form-block">
                         Defined substitutions
+                        <span class="hidden-xs hidden-sm" style="margin-left: 10px;">
+                          <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an "*".</ng-template>
+                          <button
+                            class="btn-clean text-primary"
+                            [popover]="popTemplateSub" popoverTitle="JSONata"
+                            placement="right"
+                            triggers="focus"
+                            type="button"
+                          >
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
                       </div>
                       <div>
                         <pre>{{substitutions}}</pre>
