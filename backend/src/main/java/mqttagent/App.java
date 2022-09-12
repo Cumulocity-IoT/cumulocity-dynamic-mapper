@@ -14,10 +14,17 @@ import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.core.C8yAgent;
+import mqttagent.model.InnerNode;
+import mqttagent.model.MappingNode;
+import mqttagent.model.TreeNode;
+import mqttagent.model.TreeNodeSerializer;
+import mqttagent.model.InnerNodeSerializer;
+import mqttagent.model.MappingNodeSerializer;
 import mqttagent.service.MQTTClient;
 import mqttagent.service.RFC3339DateFormat;
 
@@ -58,6 +65,12 @@ public class App {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.setDateFormat(new RFC3339DateFormat());
         objectMapper.registerModule(new JavaTimeModule());
+
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(TreeNode.class, new TreeNodeSerializer());
+        module.addSerializer(InnerNode.class, new InnerNodeSerializer());
+        module.addSerializer(MappingNode.class, new MappingNodeSerializer());
+        objectMapper.registerModule(module);
         return objectMapper;
     }
 

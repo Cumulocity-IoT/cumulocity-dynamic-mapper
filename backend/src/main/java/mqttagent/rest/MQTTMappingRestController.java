@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.core.C8yAgent;
-import mqttagent.model.MQTTMapping;
+import mqttagent.model.InnerNode;
+import mqttagent.model.Mapping;
+import mqttagent.model.TreeNode;
 import mqttagent.service.MQTTClient;
 import mqttagent.service.ServiceOperation;
 import mqttagent.service.ServiceStatus;
@@ -26,7 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
-public class MQTTRestController {
+public class MQTTMappingRestController {
 
     @Autowired
     MQTTClient mqttClient;
@@ -91,11 +93,22 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<MQTTMapping>> getMappings() {
+    public ResponseEntity<List<Mapping>> getMappings() {
         log.info("Get mappings");
-        List<MQTTMapping> result = c8yAgent.getMappings();
+        List<Mapping> result = c8yAgent.getMappings();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
+
+    @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Mapping> getMapping(@PathVariable Long id) {
+        log.info("Get mappings");
+        Mapping result = c8yAgent.getMapping(id);
+        if (result == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> deleteMapping (@PathVariable Long id) {
@@ -107,8 +120,8 @@ public class MQTTRestController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Mapping with id "+id+" could not be found.");
     }
 
-    @RequestMapping(value = "/mapping/", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> addMapping (@Valid @RequestBody MQTTMapping mapping) {
+    @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Long> addMapping (@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping {}", mapping);
             Long result = mqttClient.addMapping(mapping);
@@ -124,7 +137,7 @@ public class MQTTRestController {
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody MQTTMapping mapping) {
+    public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping {}, {}", mapping, id);
             Long result = mqttClient.updateMapping(id, mapping);
@@ -137,5 +150,16 @@ public class MQTTRestController {
             else
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
+    }
+
+    @RequestMapping(value = "/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TreeNode> getActiveTreeNode () {
+        TreeNode result = mqttClient.getActiveMappings();
+        InnerNode innerNode = null;
+        if ( result instanceof InnerNode){
+            innerNode = (InnerNode) result;
+        }
+        log.info("Get tree {}", result, innerNode) ;
+        return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 }

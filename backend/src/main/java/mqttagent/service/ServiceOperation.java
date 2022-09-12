@@ -18,13 +18,11 @@ enum Operation {
 public class ServiceOperation {
     @NotNull
     private Operation operation;
-    @NotNull
-    private String tenant ;
-    
-    public static ServiceOperation reload(String tenant) {
-        return new ServiceOperation(Operation.RELOAD, tenant);
+
+    public static ServiceOperation reload() {
+        return new ServiceOperation(Operation.RELOAD);
     }   
     public static ServiceOperation connect() {
-        return new ServiceOperation(Operation.CONNECT, null);
+        return new ServiceOperation(Operation.CONNECT);
     }
 }

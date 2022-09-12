@@ -6,16 +6,16 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mqttagent.model.MQTTMappingsRepresentation;
+import mqttagent.model.MappingsRepresentation;
 
 @Component
-public class MQTTMappingsConverter {
+public class MappingsConverter {
 
     @Autowired
     private ObjectMapper objectMapper;
     
-    public MQTTMappingsRepresentation asMQTTMappings(final ManagedObjectRepresentation managedObject) {
-        final MQTTMappingsRepresentation result = objectMapper.convertValue(managedObject, MQTTMappingsRepresentation.class);
+    public MappingsRepresentation asMappings(final ManagedObjectRepresentation managedObject) {
+        final MappingsRepresentation result = objectMapper.convertValue(managedObject, MappingsRepresentation.class);
         if (result.getDynamicProperties() != null) {
             result.getDynamicProperties().remove("self");
             result.getDynamicProperties().remove("selfDecoded");

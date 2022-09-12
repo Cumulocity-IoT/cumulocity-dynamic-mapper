@@ -1,6 +1,6 @@
 package mqttagent.model;
 
-public enum Snoop_Status {
+public enum SnoopStatus {
   NONE,
   ENABLED,
   STARTED,
