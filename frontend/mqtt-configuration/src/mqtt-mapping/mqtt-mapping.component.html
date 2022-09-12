@@ -1,0 +1,48 @@
+<c8y-title translate>MQTT</c8y-title>
+
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="loadMappings()">
+    <i c8yIcon="refresh"></i>
+    {{ 'Refresh' | translate }}
+  </button>
+  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="addMapping()">
+    <i c8yIcon="plus-circle"></i>
+    {{ 'Add mapping' | translate }}
+  </button>
+  <button class="btn btn-link" title="{{ 'Save changes' | translate }}" (click)="onSaveButtonClicked()">
+    <i c8yIcon="save"></i>
+    {{ 'Save changes' | translate }}
+  </button>
+</c8y-action-bar-item>
+<!-- <div class="card w-75"> -->
+<div class="card">
+  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
+    <div class="card-block">
+      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mappings" 
+        [pagination]="pagination" [actionControls]="actionControls" >
+      </c8y-data-grid>
+    </div>
+  </div>
+  
+<!--   <div class="card-block d-flex d-col flex-grow"> -->
+  <div class="card-block col-md-offset-3 bg-white">
+    <div class="c8y-empty-state text-center" *ngIf="mappings.length === 0">
+      <h1 [c8yIcon]="'file-text'"></h1>
+      <p>
+        <strong>No mappings available.</strong><br/>
+        <small translate>Add a new mapping by clicking below.</small><br/>
+         <button class="btn btn-primary" title="Add record" (click)="addMapping()" translate>Add mapping
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <div [ngClass]="{ drawerOpen: showConfigMapping }">
+    <div class="bottom-drawer">
+      <mqtt-mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false"
+        (onCommit)="onCommit($event)" [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
+      </mqtt-mapping-stepper>
+    </div>
+  </div>
+
+</div>
