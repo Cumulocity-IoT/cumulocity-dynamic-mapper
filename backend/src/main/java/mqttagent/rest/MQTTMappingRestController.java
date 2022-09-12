@@ -4,6 +4,7 @@ import java.util.List;
 
 import javax.validation.Valid;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +24,7 @@ import mqttagent.model.TreeNode;
 import mqttagent.service.MQTTClient;
 import mqttagent.service.ServiceOperation;
 import mqttagent.service.ServiceStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController
@@ -42,7 +44,7 @@ public class MQTTMappingRestController {
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
 
@@ -54,26 +56,25 @@ public class MQTTMappingRestController {
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
 
     @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
+    public ResponseEntity<?> getConnectionDetails() {
         log.info("get connection details");
         try {
             final MQTTConfiguration configuration = mqttClient.getConnectionDetails();
             if (configuration == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
             }
             // don't modify original copy
             final MQTTConfiguration configuration_clone = (MQTTConfiguration) configuration.clone();
             configuration_clone.setPassword("");
-
             return new ResponseEntity<>(configuration_clone, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error on loading configuration {}", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
 
@@ -113,21 +114,42 @@ public class MQTTMappingRestController {
     public ResponseEntity<Long> deleteMapping (@PathVariable Long id) {
         log.info("Delete mapping {}", id);
         Long result = mqttClient.deleteMapping(id);
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+        if (result != null)
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        else
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Mapping with id "+id+" could not be found.");
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> addMapping (@Valid @RequestBody Mapping mapping) {
-        log.info("Add mapping {}", mapping);
-        Long result = mqttClient.addMapping(mapping);
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+        try {
+            log.info("Add mapping {}", mapping);
+            Long result = mqttClient.addMapping(mapping);
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        } catch (Exception ex) {
+            if (ex instanceof RuntimeException)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
+            else if (ex instanceof JsonProcessingException)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+            else
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
-        log.info("Update mapping {}, {}", mapping, id);
-        Long result = mqttClient.updateMapping(id, mapping);
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+        try {
+            log.info("Update mapping {}, {}", mapping, id);
+            Long result = mqttClient.updateMapping(id, mapping);
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        } catch (Exception ex) {
+            if (ex instanceof RuntimeException)
+                throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
+            else if (ex instanceof JsonProcessingException)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+            else
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
     }
 
     @RequestMapping(value = "/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
