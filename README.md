@@ -11,16 +11,48 @@ Once deployed you can call `https://{yourC8YTenant}/service/{microserviceName}/s
 
 The topic should be part of the body with the Content-Type "text/plain". Example Body: `device/123412/t`
 
-## Build
+## Build, Deploy, Run
 Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your Computer.
-Run `mvn clean package` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 
-## Deploy & Run
-Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices)
+### Backend - Microservice
+Run `mvn clean package` in folder `backend` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
-## Enhance
-In the folder [Callbacks](./src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
-As an example see the [SysHandler](./src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
+### Frondend - Plugin
+Run `npm run build` in folder `frontend/mqtt-configuration` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `frontend/mqtt-configuration` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
+The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
+
+## Configuration and Definition of MQTT Mappings
+
+### Configuration MQTT Connection to broker
+
+![Configuration MQTT Connection to broker](resources/image/Generic_MQTT_Connection.png)
+
+### Table of MQTT Mappings
+
+![Table of MQTT Mappings](resources/image/Generic_MQTT_MappingTable.png)
+
+### Define message Templates for source and target (Cumulocity REST format)
+
+![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
+
+
+### Define message Mapping for Source and Target (Cumulocity REST format)
+
+![Define Templates](resources/image/Generic_MQTT_MappingDefinition.png)
+
+### Test transformation of Source to Target message (Cumulocity REST format)
+
+![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
+
+### Send transformed Test Message to test device in Cumulocity
+
+![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
+
+### Setup Sample MQTTMappings
+
+A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
