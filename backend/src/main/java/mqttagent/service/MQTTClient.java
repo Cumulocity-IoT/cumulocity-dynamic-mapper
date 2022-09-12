@@ -310,11 +310,8 @@ public class MQTTClient {
     public void runHouskeeping() {
         try {
             String statusReconnectTask = (reconnectTask == null ? "stopped"
-                    : reconnectTask.isDone() ? "stopped" : "running");
-            String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
-                String statusReconnectTask = (reconnectTask == null ? "stopped"
                         : reconnectTask.isDone() ? "stopped" : "running");
-                String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
+            String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
             log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
                     statusInitTask, isConnected());
             cleanDirtyMappings();
