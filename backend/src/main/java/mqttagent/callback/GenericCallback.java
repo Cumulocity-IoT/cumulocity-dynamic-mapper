@@ -31,6 +31,7 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 */
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.handler.SysHandler;
@@ -76,6 +77,7 @@ public class GenericCallback implements MqttCallback {
 
     static String TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
     static int SNOOP_TEMPLATES_MAX = 5;
+    static String SOURCE_ID = "source.id";
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
@@ -94,26 +96,28 @@ public class GenericCallback implements MqttCallback {
 
     private ProcessingContext resolveMap(String topic, String payloadMessage) throws ResolveException {
         ProcessingContext context = new ProcessingContext();
-        log.info("Message received on topic {} with message {}", topic ,
+        log.info("Message received on topic {} with message {}", topic,
                 payloadMessage);
 
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split("/")));
         TreeNode node = mqttClient.getActiveMappings().resolveTopicPath(levels);
-        if ( node instanceof MappingNode) {
+        if (node instanceof MappingNode) {
             context.setMapping(((MappingNode) node).getMapping());
-            if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
-                ArrayList<String> topicLevels = new ArrayList<String> (Arrays.asList(topic.split("/")));
-                log.info("Resolving deviceIdentifier: {}, {}", topic, context.getMapping().indexDeviceIdentifierInTemplateTopic );
-                String deviceIdentifier = topicLevels.get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
-                context.setDeviceIdentifier(deviceIdentifier);
-            }
+            // if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
+            ArrayList<String> topicLevels = new ArrayList<String>(Arrays.asList(topic.split("/")));
+            String deviceIdentifier = topicLevels
+                    .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
+            log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
+                    context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
+            context.setDeviceIdentifier(deviceIdentifier);
+            // }
         } else {
-            throw new ResolveException ("Could not find appropriate mapping for topic: " + topic);
+            throw new ResolveException("Could not find appropriate mapping for topic: " + topic);
         }
         return context;
     }
 
-    private void handleNewPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException{
+    private void handleNewPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException {
         Mapping mapping = ctx.getMapping();
         if (mapping.snoopTemplates.equals(SnoopStatus.ENABLED) || mapping.snoopTemplates.equals(SnoopStatus.STARTED)) {
             mapping.snoopedTemplates.add(payloadMessage);
@@ -128,17 +132,16 @@ public class GenericCallback implements MqttCallback {
             mqttClient.setMappingDirty(mapping);
         } else {
             var payloadTarget = new JSONObject(mapping.target);
-            JsonNode extractedSourceContent = null;
-            ArrayList <String> resultDeviceIdentifier = new ArrayList<String>();
+            ArrayList<String> resultDeviceIdentifier = new ArrayList<String>();
             for (MappingSubstitution sub : mapping.substitutions) {
+                JsonNode extractedSourceContent = null;
                 /*
                  * step 1 extract content from incoming payload
                  */
-                var substitute = "";
                 try {
                     if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)) {
-                        if (ctx.isDeviceIdentifierValid() ) {
-                            substitute = ctx.getDeviceIdentifier();
+                        if (ctx.isDeviceIdentifierValid()) {
+                            extractedSourceContent = new TextNode (ctx.getDeviceIdentifier());
                         } else {
                             throw new ProcessingException("No device identifier found for: " + sub.pathSource);
                         }
@@ -154,45 +157,58 @@ public class GenericCallback implements MqttCallback {
                     log.error("EvaluateRuntimeException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
                     payloadMessage, e);
                 }
-
+                
+                 /*
+                 * step 2 analyse exctracted content: textual, array
+                 */
+                var substitute = "";
                 if (extractedSourceContent == null) {
                     log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage);
+                            payloadMessage);
                 } else {
-                    if (extractedSourceContent.isTextual()) {
-                        substitute = extractedSourceContent.textValue();
-                    } else if (extractedSourceContent.isArray() && sub.definesIdentifier && mapping.targetAPI.equals(API.INVENTORY)) {
-                    // extracted result from sourcPayload is an array, so we potentially have to iterate over the result, e.g. creating multiple devices
-                        for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()) {
-                                resultDeviceIdentifier.add(jn.textValue());
-                            } else {
-                                log.warn ("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
-                            } 
+                    if (sub.definesIdentifier && mapping.targetAPI.equals(API.INVENTORY)) {
+                        if (extractedSourceContent.isArray()) {
+                            // extracted result from sourcPayload is an array, so we potentially have to
+                            // iterate over the result, e.g. creating multiple devices
+                            for (JsonNode jn : extractedSourceContent) {
+                                if (jn.isTextual()) {
+                                    resultDeviceIdentifier.add(jn.textValue());
+                                    substitute = jn.textValue();
+                                } else {
+                                    log.warn("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
+                                }
+                            }
+                            // create only one device
+                        } else if (extractedSourceContent.isTextual()) {
+                            resultDeviceIdentifier.add(extractedSourceContent.textValue());
+                            substitute = extractedSourceContent.textValue();
                         }
+                    } else if (extractedSourceContent.isTextual()) {
+                        substitute = extractedSourceContent.textValue();
                     } else {
                         try {
                             substitute = objectMapper.writeValueAsString(extractedSourceContent);
                         } catch (JsonProcessingException e) {
                             log.error("JsonProcessingException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                            payloadMessage, e);
+                                    payloadMessage, e);
                         }
                     }
-                    log.info("Evaluated substitution {} for: {}, {}, {}", substitute, sub.pathSource, payloadTarget,
-                    payloadMessage);
+                    log.info("Evaluated substitution {} for: pathSource {},  pathTarget {}, {}, {}, {}", substitute,
+                            sub.pathSource, sub.pathTarget, payloadTarget,
+                            payloadMessage, mapping.targetAPI.equals(API.INVENTORY));
                 }
 
-                 /*
-                 * step 2 replace target with extract content from incoming payload
+                /*
+                 * step 3 replace target with extract content from incoming payload
                  */
-                if (!mapping.targetAPI.equals(API.INVENTORY)){
-                    String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
-                    if (pathTarget == null) {
-                        pathTarget = new String[] { sub.pathTarget };
-                    }
-                    if (sub.pathTarget.equals("source.id") 
-                        && mapping.mapDeviceIdentifier 
-                        && sub.definesIdentifier ) {
+                String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
+                if (pathTarget == null) {
+                    pathTarget = new String[] { sub.pathTarget };
+                }
+                if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                    if (sub.pathTarget.equals(SOURCE_ID)
+                            && mapping.mapDeviceIdentifier
+                            && sub.definesIdentifier) {
                         substitute = resolveExternalId(substitute, mapping.externalIdType);
                         if (substitute == null) {
                             throw new RuntimeException("External id " + substitute + " for type "
@@ -200,18 +216,28 @@ public class GenericCallback implements MqttCallback {
                         }
                     }
                     substituteValue(substitute, payloadTarget, pathTarget);
+                } else {
+                    if (!sub.pathTarget.equals(TOKEN_DEVICE_TOPIC)) {
+                        // avoid substitution, since DEVICE_IDENT since not present in target payload
+                        // for inventory
+                        substituteValue(substitute, payloadTarget, pathTarget);
+                    }
                 }
             }
             /*
-            * step 3 send target payload to c8y
-            */
-            log.info("Posting payload: {}", payloadTarget);
-            if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)){
+             * step 4 send target payload to c8y
+             */
+            log.info("Posting payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+                    resultDeviceIdentifier.size());
+            if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)) {
                 resultDeviceIdentifier.forEach(d -> {
                     c8yAgent.upsertDevice(payloadTarget.toString(), d, mapping.externalIdType);
                 });
-            } else {
+            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+            } else {
+                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+                        resultDeviceIdentifier.size());
             }
         }
 

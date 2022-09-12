@@ -23,8 +23,7 @@ public class MappingNode extends TreeNode{
     }  
 
     public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException {
-        String joinedPath = String.join(",", tp);
-        log.info("Trying to resolve : {}", joinedPath);
+        log.info("Resolved mapping:{}, tp.size()", mapping, tp.size());
          if (tp.size() == 0){
             return this;
         } else {

@@ -182,7 +182,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       schema: SCHEMA_PAYLOAD
     };
 
-    this.initTemplateEditors();
+    this.enrichTemplates();
     this.initMarkedDeviceIdentifier();
     this.onTopicUpdated();
     this.onSourceExpressionUpdated();
@@ -201,15 +201,15 @@ export class MQTTMappingStepperComponent implements OnInit {
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
-    }, 
-   // { validator: validateTemplateTopicIsValid(this.mappings)}
+    },
+      // { validator: validateTemplateTopicIsValid(this.mappings)}
     );
   }
 
   private initTemplateForm(): void {
     this.templateForm = this.fb.group({
-      pathSource:  new FormControl(this.pathSource),
-      pathTarget:  new FormControl(this.pathTarget),
+      pathSource: new FormControl(this.pathSource),
+      pathTarget: new FormControl(this.pathTarget),
       definesIdentifier: new FormControl(this.definesIdentifier),
     });
   }
@@ -240,23 +240,23 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   onTopicUpdated(): void {
     this.propertyForm.get('topic').valueChanges.pipe(debounceTime(500))
-     // distinctUntilChanged()
-    .subscribe(val => {
-      let touched =  this.propertyForm.get('topic').touched;
-      console.log(`Topic changed is ${val}.`, touched);
-      if (touched) {
-        this.mapping.templateTopic = val as string;
-      }
-    });
+      // distinctUntilChanged()
+      .subscribe(val => {
+        let touched = this.propertyForm.get('topic').dirty;
+        console.log(`Topic changed is ${val}.`, touched);
+        if (touched) {
+          this.mapping.templateTopic = val as string;
+        }
+      });
   }
 
   onSourceExpressionUpdated(): void {
     this.templateForm.get('pathSource').valueChanges.pipe(debounceTime(500))
-     // distinctUntilChanged()
-    .subscribe(val => {
-      //console.log(`Updated sourcePath ${val}.`, val);
-      this.updateSourceExpressionResult(val);
-    });
+      // distinctUntilChanged()
+      .subscribe(val => {
+        //console.log(`Updated sourcePath ${val}.`, val);
+        this.updateSourceExpressionResult(val);
+      });
   }
 
   private getCurrentMapping(): Mapping {
@@ -323,11 +323,11 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   private initMarkedDeviceIdentifier() {
-    if ( this.mapping?.templateTopic != undefined ) {
+    if (this.mapping?.templateTopic != undefined) {
       let parts: string[] = this.mapping.templateTopic.split("/");
       if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1) {
         this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
-    }
+      }
     }
   }
 
@@ -357,7 +357,7 @@ export class MQTTMappingStepperComponent implements OnInit {
         this.mapping.substitutions = [];
       }
       this.updateSubstitutions();
-      this.initTemplateEditors();
+      this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
 
     } else if (event.step.label == "Define templates") {
@@ -375,7 +375,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   }
 
-  private initTemplateEditors() {
+  private enrichTemplates() {
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(this.mapping.topic)) {
@@ -410,7 +410,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       };
     }
     // disable further snooping for this template
-    this.mapping.snoopTemplates=  SnoopStatus.STOPPED ;
+    this.mapping.snoopTemplates = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
   }
 
@@ -428,6 +428,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       console.log("New substitution", sub);
       this.pathSource = '';
       this.pathTarget = '';
+      this.definesIdentifier = false;
     }
   }
 
@@ -441,7 +442,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   public onDeleteSubstitution() {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
-      this.mapping.substitutions.splice(this.selectedSubstitution-1,1);
+      this.mapping.substitutions.splice(this.selectedSubstitution - 1, 1);
       this.selectedSubstitution = 0;
     }
     this.updateSubstitutions();
@@ -451,12 +452,17 @@ export class MQTTMappingStepperComponent implements OnInit {
   private updateSubstitutions() {
     this.substitutions = ''
     if (this.mapping.substitutions.length == 0 && isWildcardTopic(this.mapping.topic)) {
-      this.mapping.substitutions.push(
-        { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true })
-        ;
+      if (this.mapping.targetAPI != API.INVENTORY) {
+        this.mapping.substitutions.push(
+          { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
+      } else {
+        // if creating new device then the json body contains only a dummy field
+        this.mapping.substitutions.push(
+          { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: TOKEN_DEVICE_TOPIC, definesIdentifier: true });
+      }
     }
     this.mapping.substitutions.forEach(s => {
-      console.log ("Update substitution:", s.pathSource, s.pathTarget, this.mapping.substitutions?.length);
+      console.log("Update substitution:", s.pathSource, s.pathTarget, this.mapping.substitutions?.length);
       let marksDeviceIdentifier = (s.definesIdentifier ? "* " : "");
       this.substitutions = this.substitutions + `[ ${marksDeviceIdentifier}${s.pathSource} -> ${s.pathTarget} ]`;
     });
@@ -466,7 +472,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
-    this.mapping.substitutions.forEach( s => {
+    this.mapping.substitutions.forEach(s => {
       if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
     })
     this.mapping.substitutions.push(sub);
