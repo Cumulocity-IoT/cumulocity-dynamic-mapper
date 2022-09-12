@@ -371,6 +371,7 @@ public class C8yAgent {
         });
     }
 
+    // TODO handle case when device already exists
     public void createDevice(String payload, String externalId, String externalIdType) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
