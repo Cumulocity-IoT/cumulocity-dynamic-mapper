@@ -83,6 +83,12 @@ button.jsoneditor-button.jsoneditor-dragarea {
   overflow: auto !important;
 }
 
+.jsonColumn {
+  border: 0; 
+  background-color: transparent;
+  font-size: smaller;
+}
+
 .jsonColumnLarge {
   max-height: 300px;
   overflow: auto !important;
@@ -92,4 +98,11 @@ button.jsoneditor-button.jsoneditor-dragarea {
   height: 34px;
   padding-bottom: 5px;
   padding-top: 5px;
+}
+
+.padding-l0{
+  padding-left:0;
+}
+.padding-r0{
+  padding-right:0;
 }

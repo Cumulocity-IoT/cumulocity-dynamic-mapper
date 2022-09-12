@@ -1,3 +1,5 @@
+import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
+
 export interface MQTTAuthentication {
   mqttHost: string;
   mqttPort: string;
@@ -8,31 +10,34 @@ export interface MQTTAuthentication {
   active: boolean;
 }
 
-export interface MQTTMappingSubstitution {
-  pathSource: string,
-  pathTarget: string,
+export interface MappingSubstitution {
+  pathSource: string;
+  pathTarget: string;
+  definesIdentifier?: boolean;
 }
 
-export interface MQTTMapping {
-  id: number,
-  topic: string,
-  targetAPI: string,
-  source: string,
-  target: string,
-  lastUpdate: number,
-  active: boolean,
-  tested: boolean,
-  createNoExistingDevice: boolean,
-  qos: number,
-  substitutions?: MQTTMappingSubstitution[];
+export interface Mapping {
+  id: number;
+  topic: string;
+  templateTopic: string;
+  indexDeviceIdentifierInTemplateTopic: number; 
+  targetAPI: string;
+  source: string;
+  target: string;
+  lastUpdate: number;
+  active: boolean;
+  tested: boolean;
+  createNoExistingDevice: boolean;
+  qos: number;
+  substitutions?: MappingSubstitution[];
   mapDeviceIdentifier:boolean;
-  externalIdType: string,
-  snoopTemplates: Snoop_Status,
-  snoopedTemplates:string[]
+  externalIdType: string;
+  snoopTemplates: SnoopStatus;
+  snoopedTemplates:string[];
 }
 
 export const SAMPLE_TEMPLATES = {
-  measurement: `{                                               
+  MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
             \"value\": 110,
@@ -43,7 +48,7 @@ export const SAMPLE_TEMPLATES = {
         \"id\":\"909090\" },
       \"type\": \"c8y_TemperatureMeasurement\"
   }`,
-  alarm: `{                                            
+  ALARM: `{                                            
     \"source\": {
     \"id\": \"909090\"
     },\
@@ -53,7 +58,7 @@ export const SAMPLE_TEMPLATES = {
     \"status\": \"ACTIVE\",
     \"time\": \"2022-08-05T00:14:49.389+02:00\"
   }`,
-  event: `{ 
+  EVENT: `{ 
     \"source\": {
     \"id\": \"909090\"
     },
@@ -61,15 +66,24 @@ export const SAMPLE_TEMPLATES = {
     \"time\": \"2022-08-05T00:14:49.389+02:00\",
     \"type\": \"c8y_TestEvent\"
  }`
+ ,
+  INVENTORY: `{ 
+    \"c8y_IsDevice\": {},
+    \"name\": \"Vibration Sensor\",
+    \"type\": \"maker_Vibration_Sensor\"
+ }`
 }
 
-export const APIs = ['measurement', 'event', 'alarm']
+export enum API {
+  ALARM = "ALARM",
+  EVENT = "EVENT",
+  MEASUREMENT = "MEASUREMENT",
+  INVENTORY = "INVENTORY"
+}
 
-export const QOSs = [{ name: 'At most once', value: 0 },
+export const QOS = [{ name: 'At most once', value: 0 },
 { name: 'At least once', value: 1 },
 { name: 'Exactly once', value: 2 }]
-
-
 
 export const SCHEMA_EVENT = {
   'definitions': {},
@@ -205,6 +219,37 @@ export const SCHEMA_MEASUREMENT = {
     }
 }
 
+export const SCHEMA_INVENTORY = {
+  'definitions': {},
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  '$id': 'http://example.com/root.json',
+  'type': 'object',
+  'title': 'INVENTORY',
+  'required': [
+      'c8y_IsDevice',
+      'type',
+      'name',
+    ],
+    'properties': {
+      'c8y_IsDevice': {
+        '$id': '#/properties/c8y_IsDevice',
+        'type': 'object',
+        'title': 'Mark as device.',
+        'properties': {
+        }
+      },
+      'type':{
+        '$id': '#/properties/type',
+        'type': 'string',
+        'title': 'Type of the device.',
+      },
+      'name':{
+        '$id': '#/properties/name',
+        'type': 'string',
+        'title': 'Name of the device.',
+      }
+    }
+}
 
 export const SCHEMA_PAYLOAD = {
   'definitions': {},
@@ -216,19 +261,85 @@ export const SCHEMA_PAYLOAD = {
     ],
 }
 
+export const TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
+
 export function getSchema(targetAPI: string): any {
-  if (targetAPI == "alarm") {
+  if (targetAPI == API.ALARM) {
     return SCHEMA_ALARM;
-  } else if (targetAPI == "event"){
+  } else if (targetAPI == API.EVENT){
     return SCHEMA_EVENT;
-  } else {
+  } else if (targetAPI == API.MEASUREMENT) {
     return SCHEMA_MEASUREMENT;
+  } else  {
+    return SCHEMA_INVENTORY;
   }
 }
 
-export enum Snoop_Status {
+export function normalizeTopic(topic: string) {
+  if (topic == undefined) topic = '';
+  let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+  //console.log("Topic normalized:", topic, nt);
+  // append trailing slash if last character is not wildcard #
+  nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? '' : '/')
+  return nt
+}
+
+export function isTemplateTopicUnique(templateTopic: String, id: number, mappings: Mapping[]): boolean {
+  let result = mappings.every(m => {
+    return (templateTopic != m.templateTopic || id == m.id)
+  })
+  return result;
+}
+
+export function isTopicIsUnique(topic: string, id: number, mappings: Mapping[]): boolean {
+  let result = true;
+  result = mappings.every(m => {
+    return (topic != m.topic || id == m.id);
+  })
+  return result;
+}
+
+export const TOPIC_WILDCARD = "#"
+
+export function isWildcardTopic( topic: string): boolean {
+  const result = topic.includes(TOPIC_WILDCARD);
+  return result;
+}
+
+export enum SnoopStatus {
   NONE = "NONE",
   ENABLED = "ENABLED",
   STARTED = "STARTED",
   STOPPED = "STOPPED"
+}
+
+export function validateTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const error={}
+    let defined=false
+
+    let templateTopic =  normalizeTopic(control.get('templateTopic').value);
+    let topic =  normalizeTopic( control.get('topic').value);
+    let error1 = !topic.startsWith(templateTopic);
+    
+    let id =  control.get('id').value;
+    let error2 = !mappings.every(m => {
+      return (templateTopic != m.templateTopic || id == m.id)
+    })
+    console.log("Tested topics :", topic, templateTopic, error1, error2); 
+
+    if (error1) {
+      error['notSubstring'] = true
+      defined = true
+    }      
+ 
+    if (error2) {
+      error['templateTopicNotUnique'] = true
+      defined = true
+    }  
+      
+    return defined?error : null;
+    
+  }
+ 
 }

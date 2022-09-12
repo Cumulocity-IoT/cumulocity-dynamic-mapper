@@ -49,3 +49,6 @@ backend/.DS_Store
 .DS_Store
 .vscode/settings.json
 .vscode/settings.json
+frontend/mqtt-configuration/src/mqtt-mapping/data.ts
+frontend/mqtt-configuration/src/mqtt-mapping/gc.html
+frontend/mqtt-configuration/src/mqtt-mapping/gc.ts

@@ -1,3 +1,4 @@
+
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
 
@@ -27,19 +28,41 @@
                   <c8y-form-group>
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
-                      <input formControlName="topic" type="text" class="form-control" placeholder="e.g. device/110"
-                        #idRef required (change)="checkTopicIsUnique($event)" />
+                      <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control" placeholder="e.g. device/110"
+                         #topicRef required />
+                    </div>
+                  </c8y-form-group>
+                  <c8y-form-group>
+                    <div class="form-group">
+                      <label for="templateTopic">Template Topic</label>
+                      <div class="row ">
+                        <div class="col-lg-5 padding-r0">
+                          <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text" class="form-control"
+                            placeholder="e.g. device/110" #templateTopic/>
+                        </div>
+                        <div class="col-lg-3 padding-l0">
+                          <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">
+                            Select Device Identifier
+                          </button>
+                        </div>
+                        <div class="col-lg-3 col-lg-offset-1">
+                          <input type="text" class="form-control" [value]="markedDeviceIdentifier" readonly />
+                        </div>
+                      </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="!topicUnique" translate>This Topic must be unique.</c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotUnique" translate>This Template Topic must be unique.
+                      </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.notSubstring" translate>The Topic must be a part of Template Topic.
+                      </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
                   <div class="row">
                     <div class="col-md-6 form-group">
                       <label for="targetAPI" class="" translate>Target API</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="targetAPI" #targetAPIRef>
-                          <option *ngFor="let api of APIs" [ngValue]="api">
+                        <select class="form-control" formControlName="targetAPI"  [(ngModel)]="mapping.targetAPI" #targetAPIRef>
+                          <option *ngFor="let api of keys(API)" [ngValue]="api">
                             {{ api }}
                           </option>
                         </select>
@@ -48,8 +71,8 @@
                     <div class="col-md-6 form-group">
                       <label class="" translate>QOS</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="qos" #qosRef>
-                          <option *ngFor="let q of QOSs" [ngValue]="q.value">
+                        <select class="form-control" formControlName="qos"  [(ngModel)]="mapping.qos" #qosRef>
+                          <option *ngFor="let q of QOS" [ngValue]="q.value">
                             {{ q.name }}
                           </option>
                         </select>
@@ -59,7 +82,7 @@
                   <div class="row">
                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Active' | translate }}">
-                        <input type="checkbox" formControlName="active" />
+                        <input type="checkbox" formControlName="active" [(ngModel)]="mapping.active"/>
                         <span></span>
                         <span>
                           {{ 'Active' | translate }}
@@ -68,7 +91,7 @@
                     </div>
                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Create device' | translate }}">
-                        <input type="checkbox" formControlName="createNoExistingDevice" />
+                        <input type="checkbox" formControlName="createNoExistingDevice" [(ngModel)]="mapping.createNoExistingDevice"/>
                         <span></span>
                         <span>
                           {{ 'Create device' | translate }}
@@ -78,27 +101,27 @@
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                      <input formControlName="mapDeviceIdentifier" type="checkbox" />
+                      <input formControlName="mapDeviceIdentifier" [(ngModel)]="mapping.mapDeviceIdentifier" type="checkbox" />
                       <span></span>
                       <span>
-                        {{ 'Map device idenfifier' | translate }}
+                        {{ 'Map Device Idenfifier' | translate }}
                       </span>
                     </label>
                   </div>
                   <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                     <label for="externalIdType" class="" translate>External Id Type</label>
                     <div>
-                      <input formControlName="externalIdType" type="text" class="form-control"
+                      <input formControlName="externalIdType" [(ngModel)]="mapping.externalIdType" type="text" class="form-control"
                         placeholder="e.g. c8y_Serial" #externalIdTypeRef />
                     </div>
                   </div>
                   <div class="form-group">
                     <label for="qos" class="" translate>Snoop payload</label>
                     <div class="c8y-select-wrapper">
-                      <select class="form-control" formControlName="snoopTemplates" #snoopTemplatesRef>
-                        <option *ngFor="let q of keys(Snoop_Status)" [ngValue]="q"
+                      <select class="form-control" formControlName="snoopTemplates"[(ngModel)]="mapping.snoopTemplates"  #snoopTemplatesRef>
+                        <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                           [disabled]="q != 'ENABLED' && q != 'NONE'">
-                          {{ Snoop_Status[q] }}
+                          {{ SnoopStatus[q] }}
                         </option>
                       </select>
                     </div>
@@ -113,7 +136,7 @@
         </c8y-stepper-buttons>
       </cdk-step>
 
-      <cdk-step label="Define templates">
+       <cdk-step [stepControl]="templateForm" label="Define templates">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
@@ -127,89 +150,132 @@
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
 
-              <!-- <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3"> -->
-
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <label translate>Template message - source</label>
-                      <div class="jsonColumnLarge">
-                        <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
-                        </json-editor>
+              <div [formGroup]="templateForm">
+                <div class="container">
+                  <div class="row">
+                    <div class="legend form-block col-lg-12">
+                      Templates
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label translate>Source</label>
+                        <div class="jsonColumnLarge">
+                          <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
+                          </json-editor>
+                        </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="pathSourceMissing" translate>Select source node to define substitution!
+                           <c8y-message *ngIf="sourcePathMissing" translate>Select source node to define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
                     </div>
-
-                  </div>
-                  <div class="col-lg-2 vcenter" style="text-align:center;">
-                    <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitutionsClicked()"
-                      translate>
-                      Map ->
-                    </button>
-
-                  </div>
-                  <div class="col-lg-5 vcenter">
-                    <div class="form-group">
-                      <label translate>Cumulocity message - target</label>
-                      <div class="jsonColumnLarge">
-                        <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
-                        </json-editor>
+                    <div class="col-lg-2 vcenter" style="text-align:center;">
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onAddSubstitution()"
+                          translate title="Map" title="Map">
+                          <i c8yIcon="add-new"></i>
+                        </button>
+                      </div>
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onSelectSubstitution()" translate title="Select">
+                          <i c8yIcon="skip"></i>
+                        </button>
+                      </div>
+                      <div style="padding-bottom: 8px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitution()" translate title="Delete Selected">
+                          <i c8yIcon="negative"></i>
+                        </button>
+                      </div>
+                      <div>
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;" (click)="onDeleteSubstitutions()" translate title="Delete All">
+                          <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="col-lg-5 vcenter">
+                      <div class="form-group">
+                        <label translate>Target</label>
+                        <div class="jsonColumnLarge">
+                          <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
+                          </json-editor>
+                        </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="pathTargetMissing" translate>Select target node to define substitution!
-                          </c8y-message>
+                          <c8y-message *ngIf="targetPathMissing" translate>Select target node to define substitution!
+                          </c8y-message> 
                         </c8y-messages>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <label translate>Evaluate Expression on Source</label>
-                      <input type="text" class="form-control" [(ngModel)]="sourceExpression"
-                        placeholder="e.g. $join([$substring(tx,5), TOPIC]) or $number(TOPIC)/10"
-                        (change)="sourceExpressionChanged($event)" />
+                <div class="container">
+                  <div class="row">
+                    <div class="legend form-block col-lg-12">
+                      Substitution
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <div>
+                          <label translate style="display:contents !important">Evaluate Expression on Source
+                          </label>
+                          <span class="hidden-xs hidden-sm">
+                            <ng-template #popTemplate>Use <a href="https:://jsonata.org">JSONata</a> in your expressions.</ng-template>
+                            <button
+                              class="btn-clean text-primary"
+                              [popover]="popTemplate" popoverTitle="JSONata"
+                              placement="right"
+                              triggers="focus"
+                              type="button"
+                            >
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                        <input #pathSourceRef type="text" style="font-family: monospace;" class="form-control" formControlName="pathSource" [(ngModel)]="pathSource"
+                          placeholder="e.g. $join([$substring(tx,5), DEVICE_IDENT]) or $number(DEVICE_IDENT)/10"/>
                         <c8y-messages>
                           <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
                           </c8y-message>
                         </c8y-messages>
+                      </div>
                     </div>
-                  </div>
-                  <div class="col-lg-5 col-lg-offset-2">
-                    <div class="form-group">
-                      <label translate>Substitute in Target</label>
-                      <pre class="jsonColumnTiny">{{pathTarget}}
-                      </pre>
+                    <div class="col-lg-2">
+                      <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
+                        <input type="checkbox" formControlName="definesIdentifier" [(ngModel)]="definesIdentifier" /> 
+                        <span></span>
+                        <span>
+                          {{ 'Define Identifier' | translate }}
+                        </span>
+                      </label>
+                    </div>
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label translate>Substitute in Target</label>
+                        <input #pathTargetRef type="text" style="font-family: monospace;" class="form-control" formControlName="pathTarget" [ngModel]="pathTarget"
+                        readonly/>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-5 jsonColumn">
-                    <div class="form-group">
-                      <label translate>Expression - result</label>
-                      <pre class="jsonColumnTiny">{{sourceExpressionResult}}
-                      </pre>
+                <div class="container">
+                  <div class="row">
+                    <div class="col-lg-5 jsonColumn">
+                      <div class="form-group">
+                        <label translate>Expression - result</label>
+                        <pre class="jsonColumnTiny">{{sourceExpressionResult}}
+                        </pre>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="container">
-                <div class="row">
-                  <div class="col-lg-12">
-                    <div class="legend form-block">
-                      Defined substitutions
-                    </div>
-                    <div>
-                      <pre>{{substitutions}}</pre>
+                <div class="container">
+                  <div class="row">
+                    <div class="col-lg-12">
+                      <div class="legend form-block">
+                        Defined substitutions
+                      </div>
+                      <div>
+                        <pre>{{substitutions}}</pre>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -220,17 +286,11 @@
         </div>
 
         <div class="col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2 text-center">
-          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplatesClicked()"
+          <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplates()"
             translate [disabled]="mapping.snoopedTemplates.length==0">
             Snooped templates
           </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onClearSubstitutionsClicked()" translate>
-            Clear substitutions
-          </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onShowSubstitutionsClicked()" translate>
-            Show substitutions
-          </button>
-          <button type="button" name="sample" class="btn btn-default" (click)="onSampleButtonClicked()" translate>
+          <button type="button" name="sample" class="btn btn-default" (click)="onSampleButton()" translate>
             Sample target templates
           </button>
         </div>
@@ -255,7 +315,7 @@
                 <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
-                    <div style="height:200px">
+                    <div class="jsonColumnLarge">
                       <json-editor [options]="editorOptionsTesting" [data]="dataTesting" #editorResting></json-editor>
                     </div>
                   </div>
@@ -265,14 +325,14 @@
           </div>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformationClicked()" translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformation()" translate>
             Transform test message
           </button>
-          <button type="button" name="test" class="btn btn-default" (click)="onSendTestClicked()" translate>
+          <button type="button" name="test" class="btn btn-default" (click)="onSendTest()" translate>
             Send test message
           </button>
         </div>
-        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButtonClicked()"
+        <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButton()"
           [labels]="{ custom: 'Confirm'}">
         </c8y-stepper-buttons>
       </cdk-step>

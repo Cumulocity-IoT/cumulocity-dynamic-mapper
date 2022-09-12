@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { MQTTMapping, SAMPLE_TEMPLATES, Snoop_Status } from '../mqtt-configuration.model';
+import { API, isTemplateTopicUnique, Mapping, SAMPLE_TEMPLATES, SnoopStatus } from '../mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
@@ -25,8 +25,8 @@ export class MQTTMappingComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mqttMappings: MQTTMapping[] = [];
-  mappingToUpdate: MQTTMapping;
+  mappings: Mapping[] = [];
+  mappingToUpdate: Mapping;
   editMode: boolean;
 
   displayOptions: DisplayOptions = {
@@ -66,7 +66,6 @@ export class MQTTMappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
@@ -75,7 +74,6 @@ export class MQTTMappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      cellCSSClassName: 'jsonColumn',
       gridTrackSize: '25%'
     },
     {
@@ -108,7 +106,7 @@ export class MQTTMappingComponent implements OnInit {
   value: string;
 
   pagination: Pagination = {
-    pageSize: 30,
+    pageSize: 3,
     currentPage: 1,
   };
   actionControls: ActionControl[] = [];
@@ -134,14 +132,16 @@ export class MQTTMappingComponent implements OnInit {
 
   async addMapping() {
     this.editMode = false;
-    let l = (this.mqttMappings.length == 0 ? 0 :Math.max(...this.mqttMappings.map(item => item.id))) + 1;
+    let l = (this.mappings.length == 0 ? 0 :Math.max(...this.mappings.map(item => item.id))) + 1;
  
     let mapping = {
       id: l,
       topic: '',
-      targetAPI: 'measurement',
+      templateTopic: '',
+      indexDeviceIdentifierInTemplateTopic: -1,
+      targetAPI: API.MEASUREMENT,
       source: '{}',
-      target: SAMPLE_TEMPLATES['measurement'],
+      target: SAMPLE_TEMPLATES[API.MEASUREMENT],
       active: false,
       tested: false,
       createNoExistingDevice: false,
@@ -149,49 +149,49 @@ export class MQTTMappingComponent implements OnInit {
       substitutions: [],
       mapDeviceIdentifier: false,
       externalIdType: 'c8y_Serial',
-      snoopTemplates: Snoop_Status.NONE,
+      snoopTemplates: SnoopStatus.NONE,
       snoopedTemplates: [],
       lastUpdate: Date.now()
     }
     this.mappingToUpdate = mapping;
-    console.log("Add mappping", l, this.mqttMappings)
+    console.log("Add mappping", l, this.mappings)
     this.mappingGridComponent.reload();
     this.showConfigMapping = true;
   }
 
-  editMapping(mapping: MQTTMapping) {
+  editMapping(mapping: Mapping) {
     this.editMode = true;
     this.mappingToUpdate = mapping;
     console.log("Editing mapping", mapping)
     this.showConfigMapping = true;
   }
 
-  deleteMapping(mapping: MQTTMapping) {
+  deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
-    let i = this.mqttMappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
-    this.mqttMappings.splice(i, 1) // remove it from array
+    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
+    this.mappings.splice(i, 1) // remove it from array
     this.mappingGridComponent.reload();
   }
 
   async loadMappings(): Promise<void> {
-    this.mqttMappings = await this.mqttMappingService.loadMappings();
-    if (!this.mqttMappings) {
-      this.mqttMappings = await this.mqttMappingService.initalizeMappings();
+    this.mappings = await this.mqttMappingService.loadMappings();
+    if (!this.mappings) {
+      this.mappings = await this.mqttMappingService.initalizeMappings();
     }
   }
 
-  async onCommit(mapping: MQTTMapping) {
+  async onCommit(mapping: Mapping) {
     mapping.lastUpdate =  Date.now();
-    let i = this.mqttMappings.map(item => item.id).findIndex(m => m == mapping.id)
+    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
     console.log("Changed mapping:", mapping, i);
 
-    if (this.isUniqueTopic(mapping)) {
+    if (isTemplateTopicUnique(mapping.templateTopic, mapping.id, this.mappings)) {
       if ( i == -1 ) {
         console.log("Push new mapping:", mapping, i);
-        this.mqttMappings.push(mapping)
+        this.mappings.push(mapping)
       } else {
         console.log("Update old new mapping:", mapping, i);
-        this.mqttMappings[i] = mapping;
+        this.mappings[i] = mapping;
       }
       this.mappingGridComponent.reload();
     } else {
@@ -200,24 +200,14 @@ export class MQTTMappingComponent implements OnInit {
     this.showConfigMapping = false;
   }
 
-  private isUniqueTopic(new_map: MQTTMapping): boolean {
-    let result = this.mqttMappings.every(m => {
-      if (new_map.topic == m.topic && new_map.id != m.id) {
-        return false;
-      }
-      return true;
-    })
-    return result;
-  }
-
   async onSaveButtonClicked() {
     this.saveMappings();
   }
 
   private async saveMappings() {
-    const response1 = await this.mqttMappingService.saveMappings(this.mqttMappings);
+    const response1 = await this.mqttMappingService.saveMappings(this.mappings);
     const response2 = await this.mqttMappingService.reloadMappings();
-    console.log("New response:", response1.res, response2)
+    console.log("New response:", response1.res, response2, this.mappings)
 
     if (response1.res.ok && response2.status < 300) {
       this.alertService.success(gettext('Mappings saved and activated successfully'));
