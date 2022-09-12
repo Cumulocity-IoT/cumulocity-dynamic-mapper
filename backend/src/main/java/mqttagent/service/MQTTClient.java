@@ -308,17 +308,22 @@ public class MQTTClient {
 
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
-        String statusReconnectTask = (reconnectTask == null ? "stopped"
-                : reconnectTask.isDone() ? "stopped" : "running");
-        String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
-
-        log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
-                statusInitTask, isConnected());
-
-        cleanDirtyMappings();
+        try {
+            String statusReconnectTask = (reconnectTask == null ? "stopped"
+                    : reconnectTask.isDone() ? "stopped" : "running");
+            String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
+                String statusReconnectTask = (reconnectTask == null ? "stopped"
+                        : reconnectTask.isDone() ? "stopped" : "running");
+                String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
+            log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
+                    statusInitTask, isConnected());
+            cleanDirtyMappings();
+        } catch (Exception ex) {
+            log.error("Error during house keeping execution: {}", ex);
+        }
     }
 
-    private void cleanDirtyMappings() {
+    private void cleanDirtyMappings() throws JsonProcessingException {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
         for (Mapping mqttMapping : dirtyMappings) {
@@ -363,7 +368,7 @@ public class MQTTClient {
         return id;
     }
 
-    public Long addMapping(Mapping mapping) {
+    public Long addMapping(Mapping mapping) throws JsonProcessingException {
         Long result = null;
 
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
@@ -380,7 +385,7 @@ public class MQTTClient {
             c8yAgent.saveMappings(mappings);
         } catch (JsonProcessingException ex) {
             log.error("Cound not process parse mappings as json: {}", ex);
-            throw new RuntimeException(ex);
+            throw ex;
         }
 
         // update cached mappings
@@ -388,7 +393,7 @@ public class MQTTClient {
         return result;
     }
 
-    public Long updateMapping(Long id, Mapping mapping) {
+    public Long updateMapping(Long id, Mapping mapping) throws JsonProcessingException {
         Long result = null;
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
         if (MappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
@@ -410,7 +415,7 @@ public class MQTTClient {
             c8yAgent.saveMappings(mappings);
         } catch (JsonProcessingException ex) {
             log.error("Cound not process parse mappings as json: {}", ex);
-            throw new RuntimeException(ex);
+            throw ex;
         }
 
         // update cached mappings
