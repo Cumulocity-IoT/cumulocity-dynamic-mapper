@@ -21,6 +21,9 @@ public class ConfigurationService {
     private final TenantOptionApi tenantOptionApi;
 
     @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
     public ConfigurationService(final TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
     }
@@ -30,7 +33,7 @@ public class ConfigurationService {
             return;
         }
 
-        final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
+        final String configurationJson = objectMapper.writeValueAsString(configuration);
         final OptionRepresentation optionRepresentation = new OptionRepresentation();
         optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
         optionRepresentation.setKey(OPTION_KEY_CONFIGURATION);

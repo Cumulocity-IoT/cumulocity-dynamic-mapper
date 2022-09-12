@@ -326,7 +326,11 @@ export function validateTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
     let error2 = !mappings.every(m => {
       return (templateTopic != m.templateTopic || id == m.id)
     })
-    console.log("Tested topics :", topic, templateTopic, error1, error2); 
+
+    let error3 = !mappings.every(m => {
+      return ( !templateTopic.startsWith(m.templateTopic) || ! !m.templateTopic.startsWith(templateTopic) || id == m.id)
+    })
+    console.log("Tested topics :", topic, templateTopic, error1, error2, error3); 
 
     if (error1) {
       error['notSubstring'] = true
@@ -335,6 +339,11 @@ export function validateTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
  
     if (error2) {
       error['templateTopicNotUnique'] = true
+      defined = true
+    }  
+
+    if (error3) {
+      error['templateTopicNotSubstringOfOtherTemplateTopic'] = true
       defined = true
     }  
       

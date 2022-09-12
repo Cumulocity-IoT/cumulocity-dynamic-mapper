@@ -1,0 +1,13 @@
+{
+    "deviceId": "TestDevice2",
+    "customName": "CustomSensor",
+    "customFragment": {
+        "customFragmentValue": "customValue"
+    },
+    "customNumber": 10,
+    "customArray": [
+        "ArrayValue1",
+        "ArrayValue2"
+    ],
+    "customType": "S-Bahn-Berlin"
+}

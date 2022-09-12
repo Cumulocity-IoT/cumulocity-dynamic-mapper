@@ -41,7 +41,7 @@ public class InnerNode extends TreeNode {
         Set<String> set = childNodes.keySet();
         String joinedSet = String.join(",", set);
         String joinedPath = String.join(",", tp);
-        log.info("Trying to resolve : {}, {}", joinedSet, joinedPath);
+        log.info("Trying to resolve: {} in [{}]", joinedPath, joinedSet);
         if (tp.size() >= 1 ) {
             if ( childNodes.containsKey(tp.get(0))){
                 TreeNode tn = childNodes.get(tp.get(0));
@@ -79,7 +79,11 @@ public class InnerNode extends TreeNode {
             levels.remove(0);
             InnerNode child;
             if (currentNode.getChildNodes().containsKey(l)){
-                child = (InnerNode) currentNode.getChildNodes().get(l);
+                if ( currentNode.getChildNodes().get(l) instanceof InnerNode) {
+                    child = (InnerNode) currentNode.getChildNodes().get(l);
+                } else {
+                    throw new ResolveException("Could not add mapping to tree, since at this node at the parent node a mapping is already defined, {} " + mapping.toString());
+                }
             } else {
                 child = new InnerNode();
                 child.setPreTreeNode(currentNode);
