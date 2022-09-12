@@ -208,7 +208,7 @@ public class GenericCallback implements MqttCallback {
             log.info("Posting payload: {}", payloadTarget);
             if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)){
                 resultDeviceIdentifier.forEach(d -> {
-                    c8yAgent.createDevice(payloadTarget.toString(), d, mapping.externalIdType);
+                    c8yAgent.upsertDevice(payloadTarget.toString(), d, mapping.externalIdType);
                 });
             } else {
                 c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());

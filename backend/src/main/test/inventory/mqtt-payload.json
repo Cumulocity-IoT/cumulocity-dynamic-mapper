@@ -1,0 +1,12 @@
+{
+	"deviceId": "TestDevice2",
+	"customText": "TextValue",
+	"customFragment": {
+		"customFragmentValue": "customValue"
+	},
+	"customNumber": 10,
+	"customArray": [
+		"ArrayValue1",
+		"ArrayValue2"
+	]
+}
