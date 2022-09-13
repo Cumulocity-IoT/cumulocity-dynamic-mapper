@@ -328,7 +328,7 @@ export function validateTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
     })
 
     let error3 = !mappings.every(m => {
-      return ( !templateTopic.startsWith(m.templateTopic) || ! !m.templateTopic.startsWith(templateTopic) || id == m.id)
+      return ( ( !topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
     })
     console.log("Tested topics :", topic, templateTopic, error1, error2, error3); 
 
