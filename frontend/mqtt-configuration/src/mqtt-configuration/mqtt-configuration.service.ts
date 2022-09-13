@@ -50,7 +50,7 @@ export class MQTTConfigurationService {
     });
   }
 
-  connect(): Promise<IFetchResponse> {
+  connectToMQTTBroker(): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
@@ -60,7 +60,7 @@ export class MQTTConfigurationService {
     });
   }
 
-  disconnect(): Promise<IFetchResponse> {
+  disconnectFromMQTTBroker(): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
