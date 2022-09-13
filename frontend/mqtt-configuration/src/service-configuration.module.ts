@@ -25,6 +25,7 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
 import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
 import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/substitution-renderer.component';
 
 @NgModule({
   imports: [
@@ -57,6 +58,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent,
   ],
   entryComponents: [
     MQTTServiceConfigurationComponent,
@@ -68,6 +70,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent,
   ],
   declarations: [
     MQTTServiceConfigurationComponent,
@@ -79,6 +82,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent
   ],
   providers: [
     MQTTOverviewGuard,
