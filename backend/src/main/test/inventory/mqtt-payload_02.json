@@ -1,6 +1,12 @@
+Test-Case
+
+create device with deviceIdentifier from topic (no wildcard)
+
+topic:  devices/london/
+sustitutions: [ * DEVICE_IDENT -> DEVICE_IDENT ][ customName -> name ][ customType -> type ]
+
 {
-    "deviceId": "TestDevice2",
-    "customName": "CustomSensor",
+    "customName": "S-Bahn-Berlin",
     "customFragment": {
         "customFragmentValue": "customValue"
     },
@@ -9,5 +15,5 @@
         "ArrayValue1",
         "ArrayValue2"
     ],
-    "customType": "S-Bahn-Berlin"
+    "customType": "type_S-Bahn"
 }

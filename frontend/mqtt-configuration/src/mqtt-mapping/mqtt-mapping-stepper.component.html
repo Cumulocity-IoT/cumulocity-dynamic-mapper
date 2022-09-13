@@ -66,6 +66,8 @@
                     <c8y-messages>
                       <c8y-message *ngIf="propertyForm.errors?.templateTopicNotUnique" translate>This Template Topic must be unique.
                       </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotSubstringOfOtherTemplateTopic" translate>This Template Topic can't be the starting part of another Template Topic or vice versa.
+                      </c8y-message>
                       <c8y-message *ngIf="propertyForm.errors?.notSubstring" translate>The Topic must be a part of Template Topic.
                       </c8y-message>
                     </c8y-messages>

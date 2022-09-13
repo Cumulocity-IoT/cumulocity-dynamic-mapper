@@ -451,7 +451,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private updateSubstitutions() {
     this.substitutions = ''
-    if (this.mapping.substitutions.length == 0 && isWildcardTopic(this.mapping.topic)) {
+    if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.topic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
       if (this.mapping.targetAPI != API.INVENTORY) {
         this.mapping.substitutions.push(
           { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
