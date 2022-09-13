@@ -106,3 +106,19 @@ button.jsoneditor-button.jsoneditor-dragarea {
 .padding-r0{
   padding-right:0;
 }
+
+.jsoneditor-value {
+  font-size: smaller !important;
+}
+
+.jsoneditor-field {
+  font-size: smaller !important;
+}
+
+.jsoneditor {
+  line-height: 75% !important;
+}
+
+.jsoneditor-readonly {
+  font-size: smaller !important;
+}
