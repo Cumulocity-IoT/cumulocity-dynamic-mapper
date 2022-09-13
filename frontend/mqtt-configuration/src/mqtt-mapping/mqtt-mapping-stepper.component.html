@@ -1,4 +1,3 @@
-
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
 
@@ -37,10 +36,10 @@
                       <div>
                         <label for="templateTopic" style="display: inline; margin-right:5px;">Template Topic</label>
                         <span class="hidden-xs hidden-sm">
-                          <ng-template #popTemplateTopic>The TemplateTopic name must begin the Topic name.</ng-template>
+                          <ng-template #popTemplateTopic>The TemplateTopic name must begin with the Topic name.</ng-template>
                           <button
                             class="btn-clean text-primary"
-                            [popover]="popTemplateTopic" popoverTitle="JSONata"
+                            [popover]="popTemplateTopic" popoverTitle="Template Topic Name"
                             placement="right"
                             triggers="focus"
                             type="button"
@@ -66,6 +65,8 @@
                     </div>
                     <c8y-messages>
                       <c8y-message *ngIf="propertyForm.errors?.templateTopicNotUnique" translate>This Template Topic must be unique.
+                      </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotSubstringOfOtherTemplateTopic" translate>This Template Topic can't be the starting part of another Template Topic or vice versa.
                       </c8y-message>
                       <c8y-message *ngIf="propertyForm.errors?.notSubstring" translate>The Topic must be a part of Template Topic.
                       </c8y-message>
@@ -222,7 +223,19 @@
                     </div>
                     <div class="col-lg-5 vcenter">
                       <div class="form-group">
-                        <label translate>Target</label>
+                        <label style="display: inline; margin-right:5px;">Target</label>
+                        <span class="hidden-xs hidden-sm">
+                          <ng-template #popTemplateTarget>The template contains the dummy field "DEVICE_IDENT" to map device identifiers.</ng-template>
+                          <button
+                            class="btn-clean text-primary"
+                            [popover]="popTemplateTarget" popoverTitle='Use dummy field "DEVICE_IDENT"'
+                            placement="right"
+                            triggers="focus"
+                            type="button"
+                          >
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
                         <div class="jsonColumnLarge">
                           <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
                           </json-editor>

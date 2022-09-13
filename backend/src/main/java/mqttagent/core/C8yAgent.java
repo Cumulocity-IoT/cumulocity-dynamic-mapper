@@ -175,8 +175,8 @@ public class C8yAgent {
         return externalID;
     }
 
-    public ManagedObjectRepresentation createDevice(String name, String type, String externalId,
-            String externalIdType) {
+    public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
+                                                    String externalIdType) {
         ManagedObjectRepresentation device = new ManagedObjectRepresentation();
         device.setName(name);
         device.setType(type);
@@ -371,18 +371,28 @@ public class C8yAgent {
         });
     }
 
-    // TODO handle case when device already exists
-    public void createDevice(String payload, String externalId, String externalIdType) {
+    public void upsertDevice(String payload, String externalId, String externalIdType) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
-                // append external id to name
-                mor.setName(mor.getName()+ "_"+ externalId);
-                mor.set(new IsDevice());
-                mor = inventoryApi.create(mor);
-                log.info("New device created: {}", mor);
-                ExternalIDRepresentation externalAgentId = createExternalID( mor,  externalId,
-                 externalIdType);
+                ExternalIDRepresentation extId = getExternalId(externalId, externalIdType);
+                if (extId == null) {
+                    // Device does not exist
+                    ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
+                    // append external id to name
+                    mor.setName(mor.getName());
+                    mor.set(new IsDevice());
+                    mor = inventoryApi.create(mor);
+                    log.info("New device created: {}", mor);
+                    ExternalIDRepresentation externalAgentId = createExternalID( mor,  externalId,
+                            externalIdType);
+                } else {
+                    //Device exists - update needed
+                    ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
+                    mor.setId(extId.getManagedObject().getId());
+                    inventoryApi.update(mor);
+                    log.info("Device updated: {}", mor);
+                }
+
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {}", payload);
             } catch (SDKException s) {
