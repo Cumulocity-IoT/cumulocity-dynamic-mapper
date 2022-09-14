@@ -29,7 +29,7 @@ public class InnerNodeSerializer extends StdSerializer<InnerNode> {
         jgen.writeStringField("level", value.getLevel());
         jgen.writeStringField("preTreeNode", (value.getPreTreeNode() != null ? value.getPreTreeNode().getAbsolutePath():"null"));
         jgen.writeStringField("absolutePath", value.getAbsolutePath());
-        provider.defaultSerializeField("childNnodes", value.getChildNodes(), jgen);
+        provider.defaultSerializeField("childNodes", value.getChildNodes(), jgen);
         jgen.writeEndObject();
     }
 }
