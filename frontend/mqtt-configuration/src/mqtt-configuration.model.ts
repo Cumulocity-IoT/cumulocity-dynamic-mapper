@@ -36,6 +36,10 @@ export interface Mapping {
   snoopedTemplates:string[];
 }
 
+export interface StatusMessage {
+  count: number;
+}
+
 export const SAMPLE_TEMPLATES = {
   MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {

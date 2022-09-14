@@ -20,11 +20,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.InnerNode;
+import mqttagent.model.InnerNodeSerializer;
 import mqttagent.model.MappingNode;
+import mqttagent.model.MappingNodeSerializer;
 import mqttagent.model.TreeNode;
 import mqttagent.model.TreeNodeSerializer;
-import mqttagent.model.InnerNodeSerializer;
-import mqttagent.model.MappingNodeSerializer;
 import mqttagent.service.MQTTClient;
 import mqttagent.service.RFC3339DateFormat;
 
@@ -73,5 +73,4 @@ public class App {
         objectMapper.registerModule(module);
         return objectMapper;
     }
-
 }

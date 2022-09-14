@@ -109,9 +109,10 @@ export class MQTTServiceConfigurationModule {
     private mapping: MQTTMappingService,
     private config: MQTTConfigurationService
   ) {
-    this.mapping.initializeMQTTAgent().then(  (agent) => {
+    this.mapping.initializeMQTTAgent().then((agent) => {
       console.log("Found MQTTAgent:", agent);
     });
-    this.config.initializeMQTTAgent().then();
+    this.config.initializeMQTTAgent().then().catch(err => console.log("Error initializing MQTTAgent:", err));
+    //this.config.initializeWebSocket().then().catch(err => console.log("Error initializing WebSocket:", err));
   }
 }
