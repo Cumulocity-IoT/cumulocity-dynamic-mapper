@@ -1,15 +1,64 @@
 # Generic MQTT Agent Microservice for Cumulocity
 
 ## Description
-This is an Agent which uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect to any MQTT Broker and uses the [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
-Purpose of this Agent is to subscribe on any topic and to map the payload to the [Cumulocity Domain Model]((https://cumulocity.com/guides/concepts/domain-model/)).
 
-## Configuration
-Just add the necessary details like MQTT Broker, credentials and URL to the [applications.properties](./src/main/resources/application.properties).
-Part of this Microservice is an REST endpoint which allows to dynamically subscribe and unsubscribe on topics. 
-Once deployed you can call `https://{yourC8YTenant}/service/{microserviceName}/subscribe` with POST to subscribe and DELETE to unsubscribe.
+Cumulocity IoT does have an MQTT endpoint but does not yet allow connecting generic MQTT devices. This project addresses
+this gap by providing the following artifcats:
 
-The topic should be part of the body with the Content-Type "text/plain". Example Body: `device/123412/t`
+* A Microservice - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
+connect to a MQTT Broker, a generic Data Mapper & Expression Language  for data mapping and the
+[Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
+* A Frontend - uses the exposed endpoints of the Microservice to configure a MQTT Broker connection & to perform 
+graphical MQTT Data Mappings within the Cumumlocity IoT UI.
+
+Using this project you are able to connect to any MQTT Broker and map any JSON-based payload on any topic dynamically to
+the Cumulocity IoT Domain Model in a graphical way.
+
+### Architecture
+![Architecture](resources/image/Generic_MQTT_Architecture.png)
+The grey components are part of this project.
+
+## Prerequisites
+In your Cumulocity IoT Tenant you must have the **microservice** feature subscribed. Per default this feature is not
+avilable and must be provided by administrators of the instance you are using.
+
+Make sure to use an user with admin privileges in your Tenant.
+
+## Installation
+
+You need to install two components to your Cumulocity IoT Tenant:
+
+* Microservice
+* WebApp Plugin
+
+Both are provided as binaries in [Releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Take 
+the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
+
+### Microservice
+
+In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
+![Upload Microservice](resources/image/Generic_MQTT_UploadMicroservice.png).
+Select the "generic-mqtt-agent.zip".
+Make sure that you subscribe the microservice to your tenant when prompted
+
+### Web App Plugin
+
+In Adminstration App go to Ecosystem -> Packages and click on "Add Application" on the top right.
+
+> Note: If you don't see the Packages Menu you have to add "?beta=true" in your URL.
+> Example: {{url}}/apps/administration?beta=true
+
+Select "mqtt-configuration.zip" and wait until it is uploaded.
+
+> Note: We need to clone the Administration app to add the plugin to it
+
+After succesful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
+and afterwards "Administration".
+![Duplicate App](resources/image/Generic_MQTT_DuplicateApp.png).
+
+Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "MQTT configuration plugin"
+
+![Plugin Installed](resources/image/Generic_MQTT_PluginInstalled.png)
 
 ## Build, Deploy, Run
 Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your Computer.
