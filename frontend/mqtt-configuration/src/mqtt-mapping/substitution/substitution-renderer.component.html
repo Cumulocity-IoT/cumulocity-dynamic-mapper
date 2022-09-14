@@ -1,0 +1,3 @@
+<div>
+  <span *ngFor="let sub of substitutions; let i = index" [ngStyle]="{'background': ( i == setting.selectedSubstitutionIndex ? setting.color : 'none'), 'font-family': 'monospace', 'margin-left': '5px', 'margin-right': '5px'}">{{'[ ' + (sub.definesIdentifier ? "* " : "") +  sub.pathSource + '->' + sub.pathTarget +  ' ]'}}</span>
+</div>

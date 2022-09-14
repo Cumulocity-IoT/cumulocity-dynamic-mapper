@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
+import { LoginService } from '@c8y/ngx-components';
 import { MQTTAuthentication } from '../mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
@@ -7,18 +8,37 @@ export class MQTTConfigurationService {
   private readonly PATH_CONNECT_ENDPOINT = 'connection';
 
   private readonly PATH_STATUS_ENDPOINT = 'status';
-
-
   private readonly PATH_OPERATION_ENDPOINT = 'operation';
+  private readonly PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 
   private readonly BASE_URL = 'service/generic-mqtt-agent';
 
   private isMQTTAgentCreated = false;
 
   constructor(private client: FetchClient,
-    private identity: IdentityService,) { }
+    private identity: IdentityService,
+    private loginService: LoginService) { }
 
-  async initializeMQTTAgent(): Promise<void> {
+  private getWebSocketUrl() {
+    let url: string = this.client.getUrl();
+    url = url.replace("http", "ws").replace("https", "wss");
+    console.log("Strategy: ", this.loginService.getAuthStrategy(), url);
+
+    if (true) {
+      const options = this.client.getFetchOptions()
+      const basicAuthHeader = options.headers.Authorization;
+      console.log("FetchOptions: ", options, basicAuthHeader);
+      const basicAuthtoken = basicAuthHeader.replace('Basic ', '');
+      //url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?token=${basicAuthtoken}`;
+      url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}`;
+    } else {
+      let xsrf = this.getCookieValue('XSRF-TOKEN')
+      url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?XSRF-TOKEN=${xsrf}`;
+    }
+    return url;
+  }
+
+  async initializeMQTTAgent(): Promise<string> {
     const identity: IExternalIdentity = {
       type: 'c8y_Serial',
       externalId: 'MQTT_AGENT'
@@ -28,11 +48,18 @@ export class MQTTConfigurationService {
       const { data, res } = await this.identity.detail(identity);
       console.log("Configuration result code: {}", res.status);
       this.isMQTTAgentCreated = true;
-
+      let mo = data.managedObject.id.toString();
+      return mo;
     } catch (error) {
       console.error("Configuration result code: {}", error);
       this.isMQTTAgentCreated = false;
     }
+  }
+
+  private getCookieValue(name: string) {
+    console.log("Cookie request:", document, name)
+    const value = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return value ? value.pop() : '';
   }
 
 
@@ -55,7 +82,7 @@ export class MQTTConfigurationService {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"operation": "CONNECT"}),
+      body: JSON.stringify({ "operation": "CONNECT" }),
       method: 'POST',
     });
   }
@@ -65,7 +92,7 @@ export class MQTTConfigurationService {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"operation": "DISCONNECT"}),
+      body: JSON.stringify({ "operation": "DISCONNECT" }),
       method: 'POST',
     });
   }

@@ -26,7 +26,6 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import javassist.runtime.Inner;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;

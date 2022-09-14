@@ -32,6 +32,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
 
   paletteCounter: number = 0;
+  nextColor: string;
   snoopedTemplateCounter: number = 0;
   isSubstitutionValid: boolean;
   substitutions: string = '';
@@ -85,7 +86,6 @@ export class MQTTMappingStepperComponent implements OnInit {
     }
   }.bind(this)
 
-
   private setSelectionTarget = function (node: any, event: any) {
     if (event.type == "click") {
       if (this.clicksTarget == undefined) this.clicksTarget = [];
@@ -117,7 +117,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       //console.log("Set pathTarget:", path);
     }
   }.bind(this)
-
 
   @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
@@ -482,7 +481,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   public onSelectSubstitution() {
     this.sourcePathMissing = false;
     this.targetPathMissing = false;
-    let nextColor = this.COLOR_PALETTE[this.paletteCounter];
+    this.nextColor = this.COLOR_PALETTE[this.paletteCounter];
     this.paletteCounter++;
     if (this.paletteCounter >= this.COLOR_PALETTE.length) {
       this.paletteCounter = 0;
@@ -502,7 +501,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
       this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
       for (let item of this.selectionList) {
-        item.setAttribute('style', `background: ${nextColor};`);
+        item.setAttribute('style', `background: ${this.nextColor};`);
       }
       this.selectedSubstitution++;
     }
