@@ -128,7 +128,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   isConnectionToMQTTEstablished: boolean;
 
-  selectedSubstitution: number = 0;
+  selectedSubstitution: number = -1;
 
   propertyForm: FormGroup;
   templateForm: FormGroup;
@@ -251,6 +251,8 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   onTopicChanged(event): void {
     this.mapping.topic = normalizeTopic(this.mapping.topic);
+    this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
+    this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = this.mapping.topic;
   }
 
@@ -335,6 +337,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       let parts: string[] = this.mapping.templateTopic.split("/");
       if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1) {
         this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
+      } else {
+        this.markedDeviceIdentifier = '';
       }
     }
   }
@@ -433,6 +437,7 @@ export class MQTTMappingStepperComponent implements OnInit {
         definesIdentifier: this.definesIdentifier
       }
       this.addSubstitution(sub);
+      this.selectedSubstitution = -1;
       console.log("New substitution", sub);
       this.pathSource = '';
       this.pathTarget = '';
@@ -451,7 +456,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(this.selectedSubstitution - 1, 1);
-      this.selectedSubstitution = 0;
+      this.selectedSubstitution = -1;
     }
     this.updateSubstitutions();
   }
@@ -488,37 +493,37 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   public onSelectSubstitution() {
+    if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
+      this.selectedSubstitution = -1;
+      this.paletteCounter = -1;
+    }
+    if (this.paletteCounter == this.COLOR_PALETTE.length - 1) {
+      this.paletteCounter = -1;
+    }
+
+    this.selectedSubstitution++;
+    this.paletteCounter++;
     this.sourcePathMissing = false;
     this.targetPathMissing = false;
     this.nextColor = this.COLOR_PALETTE[this.paletteCounter];
-    this.paletteCounter++;
-    if (this.paletteCounter >= this.COLOR_PALETTE.length) {
-      this.paletteCounter = 0;
+
+    // reset background color of old selection list
+    for (let item of this.selectionList) {
+      item.setAttribute('style', null);
     }
-    if (this.selectedSubstitution < this.mapping.substitutions.length) {
-      // reset background color of old selection list
-      for (let item of this.selectionList) {
-        item.setAttribute('style', null);
-      }
-      this.pathSource = this.mapping.substitutions[this.selectedSubstitution].pathSource;
-      this.updateSourceExpressionResult(this.mapping.substitutions[this.selectedSubstitution].pathSource);
-      this.pathTarget = this.mapping.substitutions[this.selectedSubstitution].pathTarget;
-      this.definesIdentifier = this.mapping.substitutions[this.selectedSubstitution].definesIdentifier;
-      this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.selectedSubstitution].pathSource)
-      this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.selectedSubstitution].pathTarget)
-      console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
-      //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
-      this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
-      for (let item of this.selectionList) {
-        item.setAttribute('style', `background: ${this.nextColor};`);
-      }
-      this.selectedSubstitution++;
+    this.pathSource = this.mapping.substitutions[this.selectedSubstitution].pathSource;
+    this.updateSourceExpressionResult(this.mapping.substitutions[this.selectedSubstitution].pathSource);
+    this.pathTarget = this.mapping.substitutions[this.selectedSubstitution].pathTarget;
+    this.definesIdentifier = this.mapping.substitutions[this.selectedSubstitution].definesIdentifier;
+    this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.selectedSubstitution].pathSource)
+    this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.selectedSubstitution].pathTarget)
+    console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
+    //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
+    this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
+    for (let item of this.selectionList) {
+      item.setAttribute('style', `background: ${this.nextColor};`);
     }
 
-    if (this.selectedSubstitution >= this.mapping.substitutions.length) {
-      this.selectedSubstitution = 0;
-      this.paletteCounter = 0;
-    }
     console.log("Show substitutions!");
   }
 
