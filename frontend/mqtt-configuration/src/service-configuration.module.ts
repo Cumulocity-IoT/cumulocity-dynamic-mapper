@@ -113,6 +113,5 @@ export class MQTTServiceConfigurationModule {
       console.log("Found MQTTAgent:", agent);
     });
     this.config.initializeMQTTAgent().then().catch(err => console.log("Error initializing MQTTAgent:", err));
-    //this.config.initializeWebSocket().then().catch(err => console.log("Error initializing WebSocket:", err));
   }
 }

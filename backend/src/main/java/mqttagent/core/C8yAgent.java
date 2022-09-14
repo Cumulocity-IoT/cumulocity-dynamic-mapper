@@ -43,7 +43,6 @@ import mqttagent.model.API;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.service.MQTTClient;
-import mqttagent.service.MappingsConverter;
 
 @Slf4j
 @Service
@@ -72,9 +71,6 @@ public class C8yAgent {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private MappingsConverter converterService;
 
     @Autowired
     private ConfigurationService configurationService;
@@ -316,7 +312,7 @@ public class C8yAgent {
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            MappingsRepresentation mqttMo = converterService.asMappings(mo);
+            MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
             log.info("Found Mapping {}", mqttMo);
             result.addAll(mqttMo.getC8yMQTTMapping());
             log.info("Found Mapping {}", result.size());
@@ -431,7 +427,7 @@ public class C8yAgent {
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            MappingsRepresentation mqttMo = converterService.asMappings(mo);
+            MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
             log.info("Found Mapping {}", mqttMo);
             mqttMo.getC8yMQTTMapping().forEach((m) -> {
                 if (m.id == id) {

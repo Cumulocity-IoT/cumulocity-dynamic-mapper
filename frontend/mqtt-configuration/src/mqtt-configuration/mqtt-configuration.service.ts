@@ -1,11 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
 import { LoginService } from '@c8y/ngx-components';
-import { EMPTY, Observable, Observer } from 'rxjs';
-import { AnonymousSubject, Subject } from 'rxjs/internal/Subject';
-import { catchError, map, switchAll, tap } from 'rxjs/operators';
-import { MQTTAuthentication, StatusMessage } from '../mqtt-configuration.model';
-import { Client, Message } from '@stomp/stompjs';
+import { MQTTAuthentication } from '../mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTConfigurationService {
@@ -18,7 +14,6 @@ export class MQTTConfigurationService {
   private readonly BASE_URL = 'service/generic-mqtt-agent';
 
   private isMQTTAgentCreated = false;
-  private stompClient: Client;
 
   constructor(private client: FetchClient,
     private identity: IdentityService,
@@ -41,49 +36,6 @@ export class MQTTConfigurationService {
       url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?XSRF-TOKEN=${xsrf}`;
     }
     return url;
-  }
-
-  async initializeWebSocket(): Promise<void> {
-    this.stompClient = new Client({
-      brokerURL: this.getWebSocketUrl(),
-      connectHeaders: {
-       login: 't306817378/christof.strack@softwareag.com',
-       passcode: '#Manage250!DFC',
-     },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-    });
-    this.stompClient.brokerURL = this.getWebSocketUrl();
-    this.stompClient.onConnect = function (frame) {
-      const subscription = this.stompClient.subscribe('/topic/monitor', callback);
-      console.log("Successfully connected!");
-      // Do something, all subscribes must be done is this callback
-      // This is needed because this will be executed after a (re)connect
-    };
-    
-    this.stompClient.onStompError = function (frame) {
-      // Will be invoked in case of error encountered at Broker
-      // Bad login/passcode typically will cause an error
-      // Complaint brokers will set `message` header with a brief message. Body may contain details.
-      // Compliant brokers will terminate the connection after any error
-      console.log('Broker reported error: ' + frame.headers['message']);
-      console.log('Additional details: ' + frame.body);
-    };
-
-    this.stompClient.activate();
-
-    let callback = function (message) {
-      // called when the client receives a STOMP message from the server
-      if (message.body) {
-        console.log('got message with body ' + message.body);
-      } else {
-        console.log('got empty message');
-      }
-    };
-
-    const subscription = this.stompClient.subscribe('/topic/monitor', callback);
-
   }
 
   async initializeMQTTAgent(): Promise<string> {

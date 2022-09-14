@@ -35,8 +35,6 @@ import mqttagent.model.Mapping;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
-import mqttagent.websocket.MQTTStatusWebsocketController;
-import mqttagent.websocket.StatusMessage;
 
 @Slf4j
 @Configuration
@@ -50,9 +48,6 @@ public class MQTTClient {
 
     @Autowired
     private C8yAgent c8yAgent;
-
-    @Autowired
-    private MQTTStatusWebsocketController wsHandler;
 
     @Autowired
     private GenericCallback genericCallback;
@@ -319,7 +314,6 @@ public class MQTTClient {
             log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
                     statusInitTask, isConnected());
             cleanDirtyMappings();
-            wsHandler.send(new StatusMessage( System.currentTimeMillis()));
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
