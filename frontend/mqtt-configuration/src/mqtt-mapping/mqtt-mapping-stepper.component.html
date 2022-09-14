@@ -28,7 +28,7 @@
                     <label for="topic" class="" translate>Topic</label>
                     <div class="">
                       <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control" placeholder="e.g. device/110"
-                         #topicRef required />
+                         #topicRef required (change)="onTopicChanged($event)" />
                     </div>
                   </c8y-form-group>
                   <c8y-form-group>
@@ -51,7 +51,7 @@
                       <div class="row ">
                         <div class="col-lg-5 padding-r0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text" class="form-control"
-                            placeholder="e.g. device/110" #templateTopic/>
+                            placeholder="e.g. device/110" #templateTopic (change)="onTemplateTopicChanged($event)"/>
                         </div>
                         <div class="col-lg-3 padding-l0">
                           <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">
@@ -104,7 +104,7 @@
                         </span>
                       </label>
                     </div>
-                    <div class="col-md-6">
+<!--                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Create device' | translate }}">
                         <input type="checkbox" formControlName="createNoExistingDevice" [(ngModel)]="mapping.createNoExistingDevice"/>
                         <span></span>
@@ -112,7 +112,7 @@
                           {{ 'Create device' | translate }}
                         </span>
                       </label>
-                    </div>
+                    </div> -->
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
