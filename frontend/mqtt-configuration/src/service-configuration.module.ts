@@ -25,6 +25,7 @@ import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
 import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
 import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/substitution-renderer.component';
 
 @NgModule({
   imports: [
@@ -57,6 +58,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent,
   ],
   entryComponents: [
     MQTTServiceConfigurationComponent,
@@ -68,6 +70,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent,
   ],
   declarations: [
     MQTTServiceConfigurationComponent,
@@ -79,6 +82,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
+    SubstitutionRendererComponent
   ],
   providers: [
     MQTTOverviewGuard,
@@ -105,9 +109,9 @@ export class MQTTServiceConfigurationModule {
     private mapping: MQTTMappingService,
     private config: MQTTConfigurationService
   ) {
-    this.mapping.initializeMQTTAgent().then(  (agent) => {
+    this.mapping.initializeMQTTAgent().then((agent) => {
       console.log("Found MQTTAgent:", agent);
     });
-    this.config.initializeMQTTAgent().then();
+    this.config.initializeMQTTAgent().then().catch(err => console.log("Error initializing MQTTAgent:", err));
   }
 }

@@ -327,7 +327,8 @@
                         </span>
                       </div>
                       <div>
-                        <pre>{{substitutions}}</pre>
+                       <!--  <pre>{{substitutions}}</pre> -->
+                       <substitution-renderer [substitutions]="mapping.substitutions" [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}"></substitution-renderer>
                       </div>
                     </div>
                   </div>
