@@ -29,6 +29,7 @@
     "@c8y/style": "1014.0.143",
     "@maaxgr/ang-jsoneditor": "^12.0.0",
     "@ngx-translate/core": "13.0.0",
+    "@stomp/stompjs": "^6.1.2",
     "jsonata": "^1.8.6",
     "rxjs": "~6.6.3",
     "zone.js": "~0.11.4"

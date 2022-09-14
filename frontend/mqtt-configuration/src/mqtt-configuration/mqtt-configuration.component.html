@@ -5,6 +5,11 @@
     {{ 'Refresh status' | translate }}
   </button>
 </c8y-action-bar-item>
+<div>
+  <span>
+    {{liveData$ | async}}
+  </span>
+</div>
 <div class="card">
   <div class="col-xs-12 col-sm-10 col-md-8 col-lg-6 bg-white">
     <div class="card-header separator j-c-between">

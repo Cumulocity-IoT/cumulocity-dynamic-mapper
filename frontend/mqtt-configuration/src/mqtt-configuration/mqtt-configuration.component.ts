@@ -5,6 +5,10 @@ import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { MQTTTerminateConnectionModalComponent } from './terminate-connection-modal/terminate-connection-modal.component';
 import { MQTTMappingService } from '../mqtt-mapping/mqtt-mapping.service';
+import { StatusMessage } from 'src/mqtt-configuration.model';
+import { catchError, map, tap } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+
 
 @Component({
   selector: 'mqtt-configuration',
@@ -19,18 +23,23 @@ export class MQTTConfigurationComponent implements OnInit {
 
   mqttForm: FormGroup;
 
+  liveData$: Observable<any>;
+
   constructor(
     private bsModalService: BsModalService,
     public mqttConfigurationService: MQTTConfigurationService,
     public mqttMappingService: MQTTMappingService,
     public alertservice: AlertService
-  ) {}
+  ) {
+  }
 
   ngOnInit() {
+    console.log("Init configuration!");
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
-    this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated()
+    this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated();
+    this.mqttConfigurationService.initializeWebSocket();
   }
 
   async initConnectionStatus(): Promise<void> {
