@@ -5,10 +5,10 @@
 Cumulocity IoT does have an MQTT endpoint but does not yet allow connecting generic MQTT devices. This project addresses
 this gap by providing the following artifcats:
 
-* A Microservice - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
+* A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
 connect to a MQTT Broker, a generic Data Mapper & Expression Language  for data mapping and the
 [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
-* A Frontend - uses the exposed endpoints of the Microservice to configure a MQTT Broker connection & to perform 
+* A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT Broker connection & to perform 
 graphical MQTT Data Mappings within the Cumumlocity IoT UI.
 
 Using this project you are able to connect to any MQTT Broker and map any JSON-based payload on any topic dynamically to
@@ -17,6 +17,46 @@ the Cumulocity IoT Domain Model in a graphical way.
 ### Architecture
 ![Architecture](resources/image/Generic_MQTT_Architecture.png)
 The grey components are part of this project.
+
+The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant.
+
+Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
+
+For the mappings we differentiate between a **subscription topic** and a **template topic**:
+
+#### Subscription Topic
+
+This is the topic which is actually subscribed on in the MQTT Broker. It can contain wildcards.
+Examples are: "device/#", "device/data/#", "device/12345/data" etc.
+
+#### Template Topic
+
+The template topic is the key of the persisted mapping. The main difference to subscription topic is that 
+a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.
+Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
+
+### Known Limitation & Disclaimer
+
+Currently this project is focussing on JSON Payload only. Any other payload sent via MQTT must be mapped programmatically.
+See chapter [Enhance](#enhance) for more details.
+
+As we already have a very good C8Y API coverage for mapping not all complex cases might be supported. Currently the 
+following Mappings are supported:
+
+* Inventory
+* Events
+* Measurements
+* Alarms
+
+Beside that complex JSON objects & arrays are supported but not fully tested.
+Also complex mapping expressions are supported by using [JSONata](https://jsonata.org).
+
+Example to concatenate JSON Properties with JSONata:
+```
+Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
+```
+
+Pull Requests adding mappings for other data formats or additional functionaly are welcomed!
 
 ## Prerequisites
 In your Cumulocity IoT Tenant you must have the **microservice** feature subscribed. Per default this feature is not
@@ -37,7 +77,9 @@ the binaries from the latest release and upload them to your Cumulocity IoT Tena
 ### Microservice
 
 In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
+
 ![Upload Microservice](resources/image/Generic_MQTT_UploadMicroservice.png).
+
 Select the "generic-mqtt-agent.zip".
 Make sure that you subscribe the microservice to your tenant when prompted
 
@@ -102,6 +144,10 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 ### Setup Sample MQTTMappings
 
 A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
+
+## Enhance
+In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
+As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
