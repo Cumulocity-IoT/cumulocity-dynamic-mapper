@@ -183,7 +183,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
     this.enrichTemplates();
     this.initMarkedDeviceIdentifier();
-    this.onTopicUpdated();
+    //this.onTopicUpdated();
     this.onSourceExpressionUpdated();
 
   }
@@ -247,6 +247,15 @@ export class MQTTMappingStepperComponent implements OnInit {
           this.mapping.templateTopic = val as string;
         }
       });
+  }
+
+  onTopicChanged(event): void {
+    this.mapping.topic = normalizeTopic(this.mapping.topic);
+    this.mapping.templateTopic = this.mapping.topic;
+  }
+
+  onTemplateTopicChanged(event): void {
+    this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
   }
 
   onSourceExpressionUpdated(): void {
