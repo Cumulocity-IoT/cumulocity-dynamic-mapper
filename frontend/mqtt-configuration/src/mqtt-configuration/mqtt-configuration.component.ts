@@ -39,7 +39,6 @@ export class MQTTConfigurationComponent implements OnInit {
     this.initConnectionStatus();
     this.initConnectionDetails();
     this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated();
-    this.mqttConfigurationService.initializeWebSocket();
   }
 
   async initConnectionStatus(): Promise<void> {

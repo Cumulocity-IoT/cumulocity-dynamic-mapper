@@ -15,20 +15,12 @@ export class SubstitutionRendererComponent implements OnInit {
   @Input()
   substitutions: Mapping[] = [];
 
-/*   @Input()
-  color: string;
-
-  @Input()
-  selectedSubstitutionIndex: number = -1; */
   @Input()
   setting: {color : 'green', selectedSubstitutionIndex:1};
 
   constructor() { }
 
-
   ngOnInit() {
     console.log ("Setting for renderer:", this.setting)
-
   }
-
 }
