@@ -31,7 +31,7 @@ export interface Mapping {
   mapDeviceIdentifier: boolean;
   externalIdType: string;
   snoopTemplates: SnoopStatus;
-  snoopedTemplates: string[];
+  snoopedTemplates?: string[];
 }
 
 export interface StatusMessage {

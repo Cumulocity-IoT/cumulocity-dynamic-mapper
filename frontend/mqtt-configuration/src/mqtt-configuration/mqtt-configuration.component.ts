@@ -5,7 +5,7 @@ import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { MQTTTerminateConnectionModalComponent } from './terminate-connection-modal/terminate-connection-modal.component';
 import { MQTTMappingService } from '../mqtt-mapping/mqtt-mapping.service';
-import { StatusMessage } from 'src/mqtt-configuration.model';
+import { StatusMessage } from '../shared/mqtt-configuration.model';
 import { catchError, map, tap } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 

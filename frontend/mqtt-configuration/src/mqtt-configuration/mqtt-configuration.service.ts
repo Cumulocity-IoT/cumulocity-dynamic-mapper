@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
 import { LoginService } from '@c8y/ngx-components';
-import { MQTTAuthentication } from '../mqtt-configuration.model';
+import { MQTTAuthentication } from '../shared/mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTConfigurationService {
