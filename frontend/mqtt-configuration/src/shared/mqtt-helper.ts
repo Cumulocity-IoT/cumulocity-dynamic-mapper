@@ -1,4 +1,4 @@
-import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
+import { AbstractControl, ValidationErrors, ValidatorFn, Validators } from "@angular/forms"
 import { API, Mapping, ValidationError } from "./mqtt-configuration.model"
 
 export const SAMPLE_TEMPLATES = {
@@ -235,7 +235,7 @@ export function normalizeTopic(topic: string) {
   nt = "/" + nt;
   // console.log("Topic normalized:", topic, nt);
   // append trailing slash if last character is not wildcard #
-  // nt = nt.concat(nt.endsWith(TOPIC_WILDCARD_MULTI) ? '' : '/')
+   nt = nt.concat(nt.endsWith(TOPIC_WILDCARD_MULTI)|| nt.endsWith(TOPIC_WILDCARD_SINGLE) ? '' : '/')
   return nt
 }
 
@@ -383,6 +383,11 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
       errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
       defined = true
     }
+
+
+    // let containsWildcardTemplateTopic = isWildcardTopic(templateTopic);
+    // control.get('markedDeviceIdentifier').setValidators( containsWildcardTemplateTopic? Validators.required : Validators.nullValidator);
+    // control.get('markedDeviceIdentifier').updateValueAndValidity();
     //console.log("Tested topics :", errors);
     return defined ? errors : null;
   }

@@ -117,7 +117,7 @@ public class MQTTClient {
             try {
                 connect();
                 // Uncomment this if you want to subscribe on start on "#"
-                subscribe("#", 0);
+                // subscribe("#", 0);
                 subscribe("$SYS/#", 0);
             } catch (MqttException e) {
                 log.error("Error on reconnect: ", e);
@@ -341,12 +341,13 @@ public class MQTTClient {
     }
 
     public Long deleteMapping(Long id) {
-
+        Long[] result = { null };
         List<Mapping> mappings = c8yAgent.getMappings();
         List<Mapping> updatedMappings = new ArrayList<Mapping>();
         MutableInt i = new MutableInt(0);
         mappings.forEach(m -> {
             if (m.id == id) {
+                result[0] = id;
                 log.info("Deleted mapping with id: {}", m.id);
             } else {
                 updatedMappings.add(m);
@@ -362,7 +363,7 @@ public class MQTTClient {
 
         // update cached mappings
         reloadMappings();
-        return id;
+        return result[0];
     }
 
     public Long addMapping(Mapping mapping) throws JsonProcessingException {
@@ -393,7 +394,7 @@ public class MQTTClient {
     }
 
     public Long updateMapping(Long id, Mapping mapping) throws JsonProcessingException {
-        Long result = null;
+        Long[] result = { null };
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
         ArrayList<ValidationError> errors= MappingsRepresentation.isMappingValid(mappings, mapping);
 
@@ -404,12 +405,12 @@ public class MQTTClient {
                     log.info("Update mapping with id: {}", m.id);
                     m.copyFrom(mapping);
                     m.lastUpdate = System.currentTimeMillis();
+                    result[0] = m.id;
                 }
                 i.increment();
             });
-            result = mapping.id;
         } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + ", " + error);
+            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
         try {
@@ -421,7 +422,7 @@ public class MQTTClient {
 
         // update cached mappings
         reloadMappings();
-        return result;
+        return result[0];
     }
 
     public void runOperation(ServiceOperation operation) {

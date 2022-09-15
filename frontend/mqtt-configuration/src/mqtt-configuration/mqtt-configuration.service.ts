@@ -12,9 +12,9 @@ export class MQTTConfigurationService {
   private readonly PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 
   private readonly BASE_URL = 'service/generic-mqtt-agent';
-
-  private isMQTTAgentCreated = false;
-
+  private mappingId: string;
+  private agentId: string;
+  
   constructor(private client: FetchClient,
     private identity: IdentityService,
     private loginService: LoginService) { }
@@ -38,21 +38,19 @@ export class MQTTConfigurationService {
     return url;
   }
 
-  async initializeMQTTAgent(): Promise<string> {
-    const identity: IExternalIdentity = {
-      type: 'c8y_Serial',
-      externalId: 'MQTT_AGENT'
-    };
+  async initializeMQTTAgent(): Promise<string>{
+    if (!this.agentId) {
+      const identity: IExternalIdentity = {
+        type: 'c8y_Serial',
+        externalId: 'MQTT_AGENT'
+      };
 
-    try {
+      this.agentId = null;
       const { data, res } = await this.identity.detail(identity);
-      console.log("Configuration result code: {}", res.status);
-      this.isMQTTAgentCreated = true;
-      let mo = data.managedObject.id.toString();
-      return mo;
-    } catch (error) {
-      console.error("Configuration result code: {}", error);
-      this.isMQTTAgentCreated = false;
+      if (res.status < 300){
+        this.agentId = data.managedObject.id.toString();
+      }
+      return this.agentId;
     }
   }
 
@@ -62,10 +60,6 @@ export class MQTTConfigurationService {
     return value ? value.pop() : '';
   }
 
-
-  getMQTTAgentCreated(): boolean {
-    return this.isMQTTAgentCreated;
-  }
 
   updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {

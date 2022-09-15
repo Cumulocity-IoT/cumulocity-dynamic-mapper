@@ -105,6 +105,7 @@ export class MQTTMappingComponent implements OnInit {
   ]
 
   value: string;
+  isMQTTAgentCreated: boolean;
 
   pagination: Pagination = {
     pageSize: 3,
@@ -118,8 +119,9 @@ export class MQTTMappingComponent implements OnInit {
   ) { }
 
 
-  ngOnInit() {
+  async ngOnInit() {
     this.loadMappings();
+    this.isMQTTAgentCreated = (await this.mqttMappingService.initializeMQTTAgent()) != null;
     this.actionControls.push({
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)

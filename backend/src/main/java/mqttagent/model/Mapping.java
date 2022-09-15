@@ -86,6 +86,8 @@ public class Mapping implements Serializable {
     this.createNoExistingDevice = mapping.createNoExistingDevice;
     this.qos = mapping.qos;
     this.substitutions = mapping.substitutions;
+    this.mapDeviceIdentifier = mapping.mapDeviceIdentifier;
+    this.externalIdType = mapping.externalIdType;
     this.snoopTemplates = mapping.snoopTemplates;
     this.snoopedTemplates = mapping.snoopedTemplates;
   }

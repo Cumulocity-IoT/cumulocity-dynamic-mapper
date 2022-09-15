@@ -26,18 +26,43 @@
                 <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
                   <c8y-form-group>
                     <label for="topic" class="" translate>Topic</label>
-                    <div class="">
-                      <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
-                        placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
+                    <div>
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-7 padding-r0">
+                        <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
+                          placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
+                      </div>
+                      <div class="col-lg-5">
+                        <div class="row" style="text-align:center">
+                          <label class="c8y-switch" title="{{ 'Wildcard Topic'}}" style="display: inline-flex; margin-left:8px">
+                            <input type="checkbox" formControlName="markerWildcardTopic" disabled="true"
+                              [(ngModel)]="containsWildcardTopic" />
+                            <span></span>
+                            <span>
+                              {{ 'Wildcard Topic'}}
+                            </span>
+                          </label>
+                          <span class="hidden-xs hidden-sm" style="margin-left:4px;">
+                            <ng-template #popTemplateWildcard>Topic contains wildcards: multi level "#" or single level "*".
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popTemplateWildcard"
+                              popoverTitle="Wildcard" placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="propertyForm.errors[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
+                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"
+                        translate>
                         Only one MultiLevel wildcard "#" is allowed.
                       </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors[ValidationError.Multi_Level_Wildcard_Only_At_End]"
+                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
                         translate>MultiLevel wildcard "#" can only appear at the end.
                       </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors[ValidationError.Only_One_Single_Level_Wildcard]"
+                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Single_Level_Wildcard]"
                         translate>Only one SingleLevel wildcard "*" is allowed.
                       </c8y-message>
                       <!--                       <c8y-message *ngIf="propertyForm.errors?.Topic_Not_Substring_Of_OtherTopic" translate>The Topic must be a part of another Topic.
@@ -47,8 +72,8 @@
                   <c8y-form-group>
                     <div class="form-group">
                       <div>
-                        <label for="templateTopic" style="display: inline; margin-right:5px;">Template Topic</label>
-                        <span class="hidden-xs hidden-sm">
+                        <label for="templateTopic" style="display: inline;">Template Topic</label>
+                        <span class="hidden-xs hidden-sm" style="margin-left:4px;">
                           <ng-template #popTemplateTopic>The TemplateTopic name must begin with the Topic name.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateTopic"
@@ -57,32 +82,33 @@
                           </button>
                         </span>
                       </div>
-                      <div class="row ">
+                      <div class="row">
                         <div class="col-lg-5 padding-r0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
                             class="form-control" placeholder="e.g. device/110" #templateTopic
                             (change)="onTemplateTopicChanged($event)" />
                         </div>
-                        <div class="col-lg-3 padding-l0">
-                          <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">
-                            Select Device Identifier
-                          </button>
+                        <div class="col-lg-4 text-center padding-l0 padding-r0">
+                          <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">Device
+                            Identifier</button>
                         </div>
-                        <div class="col-lg-3 col-lg-offset-1">
-                          <input type="text" class="form-control" [value]="markedDeviceIdentifier" readonly />
+                        <div class="col-lg-3 padding-l0">
+                          <input formControlName="markedDeviceIdentifier" type="text" class="form-control" [(ngModel)]="markedDeviceIdentifier" readonly />
                         </div>
                       </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="propertyForm.errors[ValidationError.TemplateTopic_Not_Unique]" translate>This
+                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
+                        This
                         Template Topic must be unique across other Template Topics.
                       </c8y-message>
                       <c8y-message
-                        *ngIf="propertyForm.errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
+                        *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
                         translate>This Template Topic can't be the starting part of another Template Topic or vice
                         versa.
                       </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic]"
+                      <c8y-message
+                        *ngIf="propertyForm.errors?.[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic]"
                         translate>The Topic must be a part of Template Topic.
                       </c8y-message>
                     </c8y-messages>
@@ -343,7 +369,7 @@
                 </div>
                 <c8y-messages>
                   <c8y-message
-                    *ngIf="templateForm.errors?.ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used"
+                    *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
                     translate>Only one substitution defining the DeviceIdentifier_Can_Be_Used
                   </c8y-message>
                 </c8y-messages>
