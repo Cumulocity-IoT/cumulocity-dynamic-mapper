@@ -250,7 +250,9 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   onTopicChanged(event): void {
+    console.log("Starting normalization: ", this.mapping.topic);
     this.mapping.topic = normalizeTopic(this.mapping.topic);
+    console.log("Ended normalization: ", this.mapping.topic);
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.topic);
