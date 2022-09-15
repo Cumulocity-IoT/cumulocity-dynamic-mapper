@@ -232,7 +232,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
     try {
       //console.log("Why this", path);
-      this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource.get(), path);
+      this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource?.get(), path);
       this.sourceExpressionErrorMsg = '';
     } catch (error) {
       console.log("Error evaluating expression: ", error);
