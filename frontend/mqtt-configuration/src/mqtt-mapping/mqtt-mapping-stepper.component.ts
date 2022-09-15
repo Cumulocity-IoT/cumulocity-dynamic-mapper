@@ -3,7 +3,7 @@ import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, 
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { API, getSchema, isWildcardTopic, Mapping, MappingSubstitution, normalizeTopic, QOS, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, SnoopStatus, TOKEN_DEVICE_TOPIC, validateTemplateTopicIsValid } from "../mqtt-configuration.model";
+import { API, getSchema, isWildcardTopic, Mapping, MappingSubstitution, normalizeTopic, QOS, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, SnoopStatus, TOKEN_DEVICE_TOPIC, checkTemplateTopicIsValid, deriveTemplateTopicFromTopic, checkTopicIsValid, checkPropertiesAreValid } from "../mqtt-configuration.model";
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { debounceTime } from "rxjs/operators";
 
@@ -192,8 +192,8 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.propertyForm = this.fb.group({
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      templateTopic: new FormControl(this.mapping.templateTopic),
       topic: new FormControl(this.mapping.topic, Validators.required),
+      templateTopic: new FormControl(this.mapping.templateTopic),
       active: [this.mapping.active],
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
@@ -201,7 +201,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
     },
-      // { validator: validateTemplateTopicIsValid(this.mappings)}
+       { validator: checkPropertiesAreValid(this.mappings)}
     );
   }
 
@@ -253,7 +253,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.mapping.topic = normalizeTopic(this.mapping.topic);
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
-    this.mapping.templateTopic = this.mapping.topic;
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.topic);
   }
 
   onTemplateTopicChanged(event): void {
