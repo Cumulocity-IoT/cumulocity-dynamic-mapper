@@ -37,6 +37,8 @@ export class MQTTMappingStepperComponent implements OnInit {
   nextColor: string;
   snoopedTemplateCounter: number = 0;
   isSubstitutionValid: boolean;
+  containsWildcardTopic: boolean = false;
+  containsWildcardTemplateTopic: boolean = false;
   substitutions: string = '';
 
   pathSource: string = '';
@@ -187,33 +189,36 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.initMarkedDeviceIdentifier();
     //this.onTopicUpdated();
     this.onSourceExpressionUpdated();
-
+    this.containsWildcardTopic = isWildcardTopic(this.mapping.topic);
+    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
   }
 
   private initPropertyForm(): void {
-    this.propertyForm = this.fb.group({
+    this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       topic: new FormControl(this.mapping.topic, Validators.required),
+      markerWildcardTopic: new FormControl(this.containsWildcardTopic),
+      markerWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
       templateTopic: new FormControl(this.mapping.templateTopic),
-      active: [this.mapping.active],
+      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, ( this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator) ),
+      active: new FormControl(this.mapping.active),
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
-    },
-      { validator: checkPropertiesAreValid(this.mappings) }
+    } , checkPropertiesAreValid(this.mappings) 
     );
   }
 
   private initTemplateForm(): void {
-    this.templateForm = this.fb.group({
+    this.templateForm = new FormGroup({
       pathSource: new FormControl(this.pathSource),
       pathTarget: new FormControl(this.pathTarget),
       definesIdentifier: new FormControl(this.definesIdentifier),
     },
-      { validator: checkSubstituionIsValid(this.mapping) });
+     checkSubstituionIsValid(this.mapping));
   }
 
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {
@@ -255,10 +260,14 @@ export class MQTTMappingStepperComponent implements OnInit {
   onTopicChanged(event): void {
     console.log("Starting normalization: ", this.mapping.topic);
     this.mapping.topic = normalizeTopic(this.mapping.topic);
+    this.containsWildcardTopic = isWildcardTopic(this.mapping.topic);
     console.log("Ended normalization: ", this.mapping.topic);
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.topic);
+    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
+    this.propertyForm.get('markedDeviceIdentifier').setValidators( this.containsWildcardTemplateTopic? Validators.required : Validators.nullValidator);
+    this.propertyForm.get('markedDeviceIdentifier').updateValueAndValidity();
   }
 
   onTemplateTopicChanged(event): void {
@@ -376,7 +385,6 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.updateSubstitutions();
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-
     } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();

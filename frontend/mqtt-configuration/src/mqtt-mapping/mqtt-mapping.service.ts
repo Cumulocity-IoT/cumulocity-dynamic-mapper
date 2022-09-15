@@ -16,8 +16,8 @@ export class MQTTMappingService {
     // find mqtt agent for tesing
   }
 
-  mappingId: string;
-  agentId: string;
+  private mappingId: string;
+  private agentId: string;
 
   private readonly MAPPING_TYPE = 'c8y_mqttMapping';
   private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
@@ -32,8 +32,11 @@ export class MQTTMappingService {
         externalId: 'MQTT_AGENT'
       };
 
+      this.agentId = null;
       const { data, res } = await this.identity.detail(identity);
-      this.agentId = data.managedObject.id.toString();
+      if (res.status < 300){
+        this.agentId = data.managedObject.id.toString();
+      }
       return this.agentId;
     }
   }
@@ -90,7 +93,7 @@ export class MQTTMappingService {
     let result = JSON.parse(mapping.target);
     if (!this.agentId) {
       console.error("Need to intialize MQTTAgent:", this.agentId);
-      result = JSON.stringify(mapping.target);
+      result = mapping.target;
     } else {
       console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {

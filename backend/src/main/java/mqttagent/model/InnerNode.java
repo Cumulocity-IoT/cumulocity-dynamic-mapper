@@ -48,12 +48,17 @@ public class InnerNode extends TreeNode {
                 // test if exact match exists for this level
                 tp.remove(0);
                 return tn.resolveTopicPath(tp);
-            } else if (childNodes.containsKey("#")) {
-                TreeNode tn = childNodes.get("#");
-                // test if wildcard "#" match exists for this level
+            } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_MULTI)) {
+                TreeNode tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_MULTI);
+                // test if multi level wildcard "#" match exists for this level
                 tp.remove(0);
                 return tn.resolveTopicPath(tp);
-            } else {
+            } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_SINGLE)) {
+                TreeNode tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
+                // test if single level wildcard "+" match exists for this level
+                tp.remove(0);
+                return tn.resolveTopicPath(tp);
+            }else {
                 throw new ResolveException("Path: " + tp.get(0).toString() + " could not be resolved further!");
             }
         } else {

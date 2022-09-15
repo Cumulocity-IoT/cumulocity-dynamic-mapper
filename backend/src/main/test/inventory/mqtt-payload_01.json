@@ -6,7 +6,6 @@ topic: wdevice/#
 sustitutions: [ * DEVICE_IDENT -> DEVICE_IDENT ][ customName -> name ][ customType -> type ]
 
 {
-	"deviceId": "TestDevice2",
 	"customName": "Bus Berlin-Tegel",
 	"customText": "TextValue",
 	"customFragment": {

@@ -72,8 +72,16 @@
           </c8y-messages>
         </c8y-form-group>
         <c8y-form-group>
-          <label for="useTLS" translate>Use TLS</label>
-          <input formControlName="useTLS" type="checkbox" class="form-control" #useTLSRef required />
+          <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
+            <input type="checkbox" formControlName="useTLS"  #useTLSRef required  />
+            <span></span>
+            <span>
+              {{ 'Wildcard Topic'}}
+            </span>
+          </label>
+
+<!--           <label for="useTLS" translate>Use TLS</label>
+          <input formControlName="useTLS" type="checkbox" class="form-control" #useTLSRef required /> -->
           <c8y-messages>
             <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
             </c8y-message>

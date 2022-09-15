@@ -375,7 +375,7 @@ public class C8yAgent {
                     // Device does not exist
                     ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
                     // append external id to name
-                    mor.setName(mor.getName());
+                    mor.setName(mor.getName() + "_" + externalId);
                     mor.set(new IsDevice());
                     mor = inventoryApi.create(mor);
                     log.info("New device created: {}", mor);

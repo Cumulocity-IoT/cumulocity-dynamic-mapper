@@ -106,6 +106,9 @@ public class MappingsRepresentation implements Serializable {
   static public String normalizeTopic(String topic) {
     String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
     nt = "/".concat(nt);
+    if (!nt.endsWith(TOPIC_WILDCARD_MULTI) && !nt.endsWith(TOPIC_WILDCARD_SINGLE)) {
+      nt = nt.concat("/");
+    }
     return nt;
   }
 

@@ -33,12 +33,12 @@ export class MQTTConfigurationComponent implements OnInit {
   ) {
   }
 
-  ngOnInit() {
-    console.log("Init configuration!");
+  async ngOnInit() {
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
-    this.isMQTTAgentCreated = this.mqttConfigurationService.getMQTTAgentCreated();
+    this.isMQTTAgentCreated = (await this.mqttConfigurationService.initializeMQTTAgent()) != null;
+    console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
   }
 
   async initConnectionStatus(): Promise<void> {
