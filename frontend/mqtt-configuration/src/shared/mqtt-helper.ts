@@ -1,44 +1,5 @@
-import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
-
-export interface MQTTAuthentication {
-  mqttHost: string;
-  mqttPort: string;
-  user: string;
-  password: string;
-  clientId: string;
-  useTLS: boolean;
-  active: boolean;
-}
-
-export interface MappingSubstitution {
-  pathSource: string;
-  pathTarget: string;
-  definesIdentifier?: boolean;
-}
-
-export interface Mapping {
-  id: number;
-  topic: string;
-  templateTopic: string;
-  indexDeviceIdentifierInTemplateTopic: number;
-  targetAPI: string;
-  source: string;
-  target: string;
-  lastUpdate: number;
-  active: boolean;
-  tested: boolean;
-  createNoExistingDevice: boolean;
-  qos: number;
-  substitutions?: MappingSubstitution[];
-  mapDeviceIdentifier: boolean;
-  externalIdType: string;
-  snoopTemplates: SnoopStatus;
-  snoopedTemplates: string[];
-}
-
-export interface StatusMessage {
-  count: number;
-}
+import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
+import { API, Mapping, ValidationError } from "./mqtt-configuration.model"
 
 export const SAMPLE_TEMPLATES = {
   MEASUREMENT: `{                                               
@@ -77,17 +38,6 @@ export const SAMPLE_TEMPLATES = {
     \"type\": \"maker_Vibration_Sensor\"
  }`
 }
-
-export enum API {
-  ALARM = "ALARM",
-  EVENT = "EVENT",
-  MEASUREMENT = "MEASUREMENT",
-  INVENTORY = "INVENTORY"
-}
-
-export const QOS = [{ name: 'At most once', value: 0 },
-{ name: 'At least once', value: 1 },
-{ name: 'Exactly once', value: 2 }]
 
 export const SCHEMA_EVENT = {
   'definitions': {},
@@ -297,18 +247,18 @@ export function deriveTemplateTopicFromTopic(topic: string) {
   return nt
 }
 
-export function isTopicValid(topic: string): any {
+export function isTopicNameValid(topic: string): any {
   topic = normalizeTopic(topic);
 
   let errors = {};
   // count number of "#"
   let count_multi = (topic.match(/\\#/g) || []).length;
-  if (count_multi > 1) errors['Only_One_Multi_Level_Wildcard'] = true;
+  if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
   let count_single = (topic.match(/\\+/g) || []).length;
-  if (count_single > 1) errors['Only_One_Single_Level_Wildcard'] = true;
+  if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) errors['Multi_Level_Wildcard_Only_At_End'] = true;
+  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
   return errors;
 }
@@ -324,7 +274,7 @@ export function isTopicUnique(mapping: Mapping, mappings: Mapping[]): boolean {
 export function isTemplateTopicUnique(mapping: Mapping, mappings: Mapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
-    return ((!mapping.topic.startsWith(m.topic) && !m.topic.startsWith(mapping.topic)) || mapping.id == m.id);
+    return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
   })
   return result;
 }
@@ -344,156 +294,98 @@ export enum SnoopStatus {
   STOPPED = "STOPPED"
 }
 
-export function checkTopicIsValid(mappings: Mapping[]): ValidatorFn {
+
+export function isSubstituionValid(mapping: Mapping): boolean {
+  let count = mapping.substitutions.filter(m => m.definesIdentifier).map( m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    return previousValue + currentValue;
+  }, 0)
+  return (count > 1);
+}
+
+export function checkSubstituionIsValid(mapping: Mapping): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors = {}
     let defined = false
 
+    let count = mapping.substitutions.filter(m => m.definesIdentifier).map( m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+      return previousValue + currentValue;
+    }, 0)
+    if (count > 1) {
+      errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
+      defined = true
+    }
+    console.log("Tested substitutions :", errors);
+    return defined ? errors : null;
+  }
+
+}
+
+export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const errors = {}
+    let error: boolean = false;
+    let defined = false
+
     let templateTopic = normalizeTopic(control.get('templateTopic').value);
     let topic = normalizeTopic(control.get('topic').value);
-    let error1 = !templateTopic.startsWith(topic);
-
     let id = control.get('id').value;
+
+    // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
+    // for comparison the "#" must then be replaced by a "+"
+    let nt = topic.trim().replace(/\#+$/, '+')
+    error = !templateTopic.startsWith(nt);
+    if (error) {
+      errors[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic] = true
+      defined = true
+    }
 
     // count number of "#"
     let count_multi = (topic.match(/\\#/g) || []).length;
     if (count_multi > 1) {
-      errors['Only_One_Multi_Level_Wildcard'] = true;
+      errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
       defined = true
     }
 
     // count number of "+"_
     let count_single = (topic.match(/\\+/g) || []).length;
     if (count_single > 1) {
-      errors['Only_One_Single_Level_Wildcard'] = true;
+      errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
       defined = true
     }
 
     // wildcard "'" can only appear at the end
     if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) {
-      errors['Multi_Level_Wildcard_Only_At_End'] = true;
+      errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
       defined = true
     }
 
-    // topic cannot be startstring of another topic
-    let error4 = !mappings.every(m => {
-      return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
-    })
-    if (error4) {
-      errors['Topic_Not_Substring_Of_OtherTopic'] = true
-      defined = true
-    }
-    console.log("Tested topics :", errors);
+    /*       // topic cannot be startstring of another topic
+          error = !mappings.every(m => {
+            return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
+          })
+          if (error) {
+            errors['Topic_Not_Substring_Of_OtherTopic'] = true
+            defined = true
+          } */
 
-    return defined ? errors : null;
-  }
-
-}
-
-export function checkTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    const errors = {}
-    let defined = false
-
-    let templateTopic = normalizeTopic(control.get('templateTopic').value);
-    let topic = normalizeTopic(control.get('topic').value);
-    let error1 = !templateTopic.startsWith(topic);
-
-    let id = control.get('id').value;
-    let error2 = !mappings.every(m => {
+    error = !mappings.every(m => {
       return (templateTopic != m.templateTopic || id == m.id)
     })
+    if (error) {
+      errors[ValidationError.TemplateTopic_Not_Unique] = true
+      defined = true
+    }
 
-    let error3 = !mappings.every(m => {
-      return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
+    error = !mappings.every(m => {
+      return ((!templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(templateTopic) || id == m.id))
     })
-    console.log("Tested topics :", topic, templateTopic, error1, error2, error3);
-
-    if (error1) {
-      errors['Topic_Must_Be_Substring_Of_TemplateTopic'] = true
+    if (error && templateTopic != '') {
+      errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
       defined = true
     }
-
-    if (error2) {
-      errors['TemplateTopic_Not_Unique'] = true
-      defined = true
-    }
-
-    if (error3) {
-      errors['TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic'] = true
-      defined = true
-    }
+    //console.log("Tested topics :", errors);
     return defined ? errors : null;
   }
-}
-
-
-  export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const errors = {}
-      let error: boolean = false;
-      let defined = false
-  
-      let templateTopic = normalizeTopic(control.get('templateTopic').value);
-      let topic = normalizeTopic(control.get('topic').value);
-      let id = control.get('id').value;
-
-      // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
-      // for comparison the "#" must then be replaced by a "+"
-      let nt = topic.trim().replace(/\#+$/, '+')
-      error = !templateTopic.startsWith(nt);
-      if (error) {
-        errors['Topic_Must_Be_Substring_Of_TemplateTopic'] = true
-        defined = true
-      }
-  
-      // count number of "#"
-      let count_multi = (topic.match(/\\#/g) || []).length;
-      if (count_multi > 1) {
-        errors['Only_One_Multi_Level_Wildcard'] = true;
-        defined = true
-      }
-  
-      // count number of "+"_
-      let count_single = (topic.match(/\\+/g) || []).length;
-      if (count_single > 1) {
-        errors['Only_One_Single_Level_Wildcard'] = true;
-        defined = true
-      }
-  
-      // wildcard "'" can only appear at the end
-      if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) {
-        errors['Multi_Level_Wildcard_Only_At_End'] = true;
-        defined = true
-      }
-  
-/*       // topic cannot be startstring of another topic
-      error = !mappings.every(m => {
-        return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
-      })
-      if (error) {
-        errors['Topic_Not_Substring_Of_OtherTopic'] = true
-        defined = true
-      } */
-
-      error = !mappings.every(m => {
-        return (templateTopic != m.templateTopic || id == m.id)
-      })
-      if (error) {
-        errors['TemplateTopic_Not_Unique'] = true
-        defined = true
-      }
-  
-      error = !mappings.every(m => {
-        return ((!templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(templateTopic) || id == m.id))
-      })
-      if (error && templateTopic != '') {
-        errors['TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic'] = true
-        defined = true
-      }
-      console.log("Tested topics :", errors);
-      return defined ? errors : null;
-    }
-  
 
 }
+

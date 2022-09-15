@@ -86,6 +86,8 @@ import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/subst
   ],
   providers: [
     MQTTOverviewGuard,
+    MQTTConfigurationService,
+    MQTTMappingService,
     { provide: HOOK_NAVIGATOR_NODES, useClass: MQTTConfigurationNavigationFactory, multi: true },
     { provide: HOOK_TABS, useClass: MQTTConfigurationTabFactory, multi: true },
     {
