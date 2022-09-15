@@ -377,7 +377,7 @@ public class MQTTClient {
             mappings.add(mapping);
             result = mapping.id;
         } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + ", " + error);
+            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
         try {
