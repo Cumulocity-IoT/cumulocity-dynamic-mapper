@@ -16,24 +16,14 @@ the Cumulocity IoT Domain Model in a graphical way.
 
 ### Architecture
 ![Architecture](resources/image/Generic_MQTT_Architecture.png)
-The grey components are part of this project.
+The grey components are part of this project which are:
 
-The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant.
-
-Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
-
-For the mappings we differentiate between a **subscription topic** and a **template topic**:
-
-#### Subscription Topic
-
-This is the topic which is actually subscribed on in the MQTT Broker. It can contain wildcards.
-Examples are: "device/#", "device/data/#", "device/12345/data" etc.
-
-#### Template Topic
-
-The template topic is the key of the persisted mapping. The main difference to subscription topic is that 
-a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.
-Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
+* **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to a MQTT Broker
+* **Data Mapper** - handling of received messages via MQTT and mapping them to a target data format for Cumulocity IoT. 
+Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
+* **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
+* **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
+* **MQTT Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
 ### Known Limitation & Disclaimer
 
@@ -49,14 +39,8 @@ following Mappings are supported:
 * Alarms
 
 Beside that complex JSON objects & arrays are supported but not fully tested.
-Also complex mapping expressions are supported by using [JSONata](https://jsonata.org).
 
-Example to concatenate JSON Properties with JSONata:
-```
-Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
-```
-
-Pull Requests adding mappings for other data formats or additional functionaly are welcomed!
+> **Pull Requests adding mappings for other data formats or additional functionaly are welcomed!**
 
 ## Prerequisites
 In your Cumulocity IoT Tenant you must have the **microservice** feature subscribed. Per default this feature is not
@@ -96,6 +80,7 @@ Select "mqtt-configuration.zip" and wait until it is uploaded.
 
 After succesful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
 and afterwards "Administration".
+
 ![Duplicate App](resources/image/Generic_MQTT_DuplicateApp.png).
 
 Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "MQTT configuration plugin"
@@ -117,7 +102,7 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 ## Configuration and Definition of MQTT Mappings
 
 ### Configuration MQTT Connection to broker
-
+The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant.
 ![Configuration MQTT Connection to broker](resources/image/Generic_MQTT_Connection.png)
 
 ### Table of MQTT Mappings
@@ -130,6 +115,28 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 
 
 ### Define message Mapping for Source and Target (Cumulocity REST format)
+Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
+
+For the mappings we differentiate between a **subscription topic** and a **template topic**:
+
+#### Subscription Topic
+
+This is the topic which is actually subscribed on in the MQTT Broker. It can contain wildcards.
+Examples are: "device/#", "device/data/#", "device/12345/data" etc.
+
+#### Template Topic
+
+The template topic is the key of the persisted mapping. The main difference to subscription topic is that
+a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.
+Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
+
+#### Expression Language
+Complex mapping expressions are supported by using [JSONata](https://jsonata.org).
+
+Example to concatenate JSON Properties with JSONata:
+```
+Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
+```
 
 ![Define Templates](resources/image/Generic_MQTT_MappingDefinition.png)
 
