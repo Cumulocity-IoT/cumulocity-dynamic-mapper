@@ -185,7 +185,7 @@ export class MQTTMappingComponent implements OnInit {
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
     console.log("Changed mapping:", mapping, i);
 
-    if (isTemplateTopicUnique(mapping.templateTopic, mapping.id, this.mappings)) {
+    if (isTemplateTopicUnique(mapping, this.mappings)) {
       if ( i == -1 ) {
         console.log("Push new mapping:", mapping, i);
         this.mappings.push(mapping)

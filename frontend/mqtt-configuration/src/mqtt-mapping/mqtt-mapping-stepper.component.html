@@ -30,6 +30,16 @@
                       <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control" placeholder="e.g. device/110"
                          #topicRef required (change)="onTopicChanged($event)" />
                     </div>
+                    <c8y-messages>
+                      <c8y-message *ngIf="propertyForm.errors?.Only_One_Multi_Level_Wildcard" translate>Only one MultiLevel wildcard "#" is allowed.
+                      </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.Multi_Level_Wildcard_Only_At_End" translate>MultiLevel wildcard "#" can only appear at the end.
+                      </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.Only_One_Single_Level_Wildcard" translate>Only one SingleLevel wildcard "*" is allowed.
+                      </c8y-message>
+<!--                       <c8y-message *ngIf="propertyForm.errors?.Topic_Not_Substring_Of_OtherTopic" translate>The Topic must be a part of another Topic.
+                      </c8y-message> -->
+                    </c8y-messages>
                   </c8y-form-group>
                   <c8y-form-group>
                     <div class="form-group">
@@ -64,11 +74,11 @@
                       </div>
                     </div>
                     <c8y-messages>
-                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotUnique" translate>This Template Topic must be unique.
+                      <c8y-message *ngIf="propertyForm.errors?.TemplateTopic_Not_Unique" translate>This Template Topic must be unique across other Template Topics.
                       </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors?.templateTopicNotSubstringOfOtherTemplateTopic" translate>This Template Topic can't be the starting part of another Template Topic or vice versa.
+                      <c8y-message *ngIf="propertyForm.errors?.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic" translate>This Template Topic can't be the starting part of another Template Topic or vice versa.
                       </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors?.notSubstring" translate>The Topic must be a part of Template Topic.
+                      <c8y-message *ngIf="propertyForm.errors?.Topic_Must_Be_Substring_Of_TemplateTopic" translate>The Topic must be a part of Template Topic.
                       </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
