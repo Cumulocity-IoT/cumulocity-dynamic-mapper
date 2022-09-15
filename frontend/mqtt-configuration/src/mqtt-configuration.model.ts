@@ -281,7 +281,8 @@ export function getSchema(targetAPI: string): any {
 
 export function normalizeTopic(topic: string) {
   if (topic == undefined) topic = '';
-  let nt = topic.trim().replace(/\/+$/, '/').replace(/^\/+/, '')
+  let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+  nt = "/" + nt;
   // console.log("Topic normalized:", topic, nt);
   // append trailing slash if last character is not wildcard #
   // nt = nt.concat(nt.endsWith(TOPIC_WILDCARD_MULTI) ? '' : '/')
@@ -292,7 +293,7 @@ export function deriveTemplateTopicFromTopic(topic: string) {
   if (topic == undefined) topic = '';
   topic = normalizeTopic(topic)
   // replace trailing TOPIC_WILDCARD_MULTI "#" with TOPIC_WILDCARD_SINGLE "*" 
-  let nt = topic.trim().replace(/\/+$/, '').replace(/^\#+/, '+')
+  let nt = topic.trim().replace(/\#+$/, '+')
   return nt
 }
 
@@ -437,7 +438,10 @@ export function checkTemplateTopicIsValid(mappings: Mapping[]): ValidatorFn {
       let topic = normalizeTopic(control.get('topic').value);
       let id = control.get('id').value;
 
-      error = !templateTopic.startsWith(topic);
+      // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
+      // for comparison the "#" must then be replaced by a "+"
+      let nt = topic.trim().replace(/\#+$/, '+')
+      error = !templateTopic.startsWith(nt);
       if (error) {
         errors['Topic_Must_Be_Substring_Of_TemplateTopic'] = true
         defined = true
