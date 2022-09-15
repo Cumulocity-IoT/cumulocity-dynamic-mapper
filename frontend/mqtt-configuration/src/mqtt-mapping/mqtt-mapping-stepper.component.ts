@@ -3,7 +3,8 @@ import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, 
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { API, getSchema, isWildcardTopic, Mapping, MappingSubstitution, normalizeTopic, QOS, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, SnoopStatus, TOKEN_DEVICE_TOPIC, checkTemplateTopicIsValid, deriveTemplateTopicFromTopic, checkTopicIsValid, checkPropertiesAreValid } from "../mqtt-configuration.model";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError} from "../shared/mqtt-configuration.model";
+import { getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC, deriveTemplateTopicFromTopic, checkPropertiesAreValid, checkSubstituionIsValid } from "../shared/mqtt-helper";
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { debounceTime } from "rxjs/operators";
 
@@ -25,6 +26,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#fefbd8', '#618685', '#ffef96', '#50394c', '#b2b2b2', '#f4e1d2']
   API = API;
+  ValidationError = ValidationError;
   QOS = QOS;
   SnoopStatus = SnoopStatus;
   keys = Object.keys;
@@ -201,7 +203,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
     },
-       { validator: checkPropertiesAreValid(this.mappings)}
+      { validator: checkPropertiesAreValid(this.mappings) }
     );
   }
 
@@ -210,7 +212,8 @@ export class MQTTMappingStepperComponent implements OnInit {
       pathSource: new FormControl(this.pathSource),
       pathTarget: new FormControl(this.pathTarget),
       definesIdentifier: new FormControl(this.definesIdentifier),
-    });
+    },
+      { validator: checkSubstituionIsValid(this.mapping) });
   }
 
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {

@@ -35,6 +35,7 @@ import mqttagent.model.Mapping;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
+import mqttagent.model.ValidationError;
 
 @Slf4j
 @Configuration
@@ -368,14 +369,16 @@ public class MQTTClient {
         Long result = null;
 
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        if (MappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
+        ArrayList<ValidationError> errors= MappingsRepresentation.isMappingValid(mappings, mapping);
+
+        if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();
             mapping.id = MappingsRepresentation.nextId(mappings);
             mappings.add(mapping);
             result = mapping.id;
-            ;
         } else {
-            throw new RuntimeException("TemplateTopic name is not unique!");
+            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + ", " + error);
+            throw new RuntimeException("Validation errors:" + errorList);
         }
         try {
             c8yAgent.saveMappings(mappings);
@@ -392,7 +395,9 @@ public class MQTTClient {
     public Long updateMapping(Long id, Mapping mapping) throws JsonProcessingException {
         Long result = null;
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        if (MappingsRepresentation.checkTemplateTopicIsUnique(mappings, mapping)) {
+        ArrayList<ValidationError> errors= MappingsRepresentation.isMappingValid(mappings, mapping);
+
+        if (errors.size() == 0) {
             MutableInt i = new MutableInt(0);
             mappings.forEach(m -> {
                 if (m.id == id) {
@@ -403,9 +408,9 @@ public class MQTTClient {
                 i.increment();
             });
             result = mapping.id;
-            ;
         } else {
-            throw new RuntimeException("TemplateTopic name is not unique!");
+            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + ", " + error);
+            throw new RuntimeException("Validation errors:" + errorList);
         }
         try {
             c8yAgent.saveMappings(mappings);

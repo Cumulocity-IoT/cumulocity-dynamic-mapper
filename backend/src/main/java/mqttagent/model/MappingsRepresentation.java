@@ -2,6 +2,7 @@ package mqttagent.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -21,7 +22,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MappingsRepresentation implements Serializable {
 
-  static String TOPIC_WILDCARD = "#";
+  static String TOPIC_WILDCARD_MULTI = "#";
+  static String TOPIC_WILDCARD_SINGLE = "+";
 
   @JsonProperty("id")
   private String id;
@@ -38,47 +40,72 @@ public class MappingsRepresentation implements Serializable {
   @JsonProperty(value = "c8y_mqttMapping")
   private ArrayList<Mapping> c8yMQTTMapping;
 
-  private Map<String, Object> dynamicProperties;
 
-  @JsonAnyGetter
-  public Map<String, Object> getDynamicProperties() {
-    return dynamicProperties;
+  static public boolean isWildcardTopic(String topic) {
+    var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
+    return result;
   }
 
-  @JsonAnySetter
-  public void setDynamicProperties(String key, Object value) {
-    if (dynamicProperties == null) {
-      this.dynamicProperties = new LinkedHashMap<>();
+  /*
+   * only one substitution can be marked with definesIdentifier == true
+   */
+  static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    long count =Arrays.asList(mapping.substitutions).stream().filter(sub -> sub.definesIdentifier).count();
+    if (count > 1) {
+      result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
     }
-    this.dynamicProperties.put(key, value);
+    return result;
   }
 
-  static public boolean checkTopicIsUnique(ArrayList<Mapping> mappings, Mapping mapping) {
-    var topic = mapping.topic;
-    MutableBoolean result = new MutableBoolean(true);
-    mappings.forEach(m -> {
-      if (topic.equals(m.topic) && (mapping.id != m.id)) {
-        result.setFalse();
-      }
-    });
-    return result.booleanValue();
+  static public ArrayList<ValidationError> isTopicNameValid(String topic) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    int count = topic.length() - topic.replace(TOPIC_WILDCARD_SINGLE, "").length();
+    if (count > 1) {
+      result.add(ValidationError.Only_One_Single_Level_Wildcard);
+    }
+    count = topic.length() - topic.replace(TOPIC_WILDCARD_MULTI, "").length();
+    if (count > 1) {
+      result.add(ValidationError.Only_One_Multi_Level_Wildcard);
+    }
+    if (count >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length()) {
+      result.add(ValidationError.Multi_Level_Wildcard_Only_At_End);
+    }
+    return result;
   }
 
-  static public boolean checkTemplateTopicIsUnique(ArrayList<Mapping> mappings, Mapping mapping) {
-    var topic = mapping.templateTopic;
-    MutableBoolean result = new MutableBoolean(true);
+  static public ArrayList<ValidationError> isTemplateTopicValid(Mapping mapping) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    boolean error = (!mapping.templateTopic.startsWith(mapping.topic));
+    if (error) {
+      result.add(ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic);
+    }
+    return result;
+  }
+
+  static public ArrayList<ValidationError> isTemplateTopicUnique(ArrayList<Mapping> mappings, Mapping mapping) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    var templateTopic = mapping.templateTopic;
     mappings.forEach(m -> {
-      if (topic.equals(m.templateTopic) && (mapping.id != m.id)) {
-        result.setFalse();
+      if ((templateTopic.startsWith(m.templateTopic) || m.templateTopic.startsWith(templateTopic) ) && (mapping.id != m.id)) {
+        result.add(ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic);
       }
     });
-    return result.booleanValue();
+    return result;
+  }
+
+  static public ArrayList<ValidationError> isMappingValid(ArrayList<Mapping> mappings, Mapping mapping) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    result.addAll(isSubstituionValid(mapping));
+    result.addAll(isTopicNameValid(mapping.topic));
+    result.addAll(isTopicNameValid(mapping.templateTopic));
+    result.addAll(isTemplateTopicUnique(mappings, mapping));
+    return result;
   }
 
   static public String normalizeTopic(String topic) {
     String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
-    // append trailing slash if last character is not wildcard #
-    nt = nt.concat(nt.endsWith(TOPIC_WILDCARD) ? "" : "/");
+    nt = "/".concat(nt);
     return nt;
   }
 

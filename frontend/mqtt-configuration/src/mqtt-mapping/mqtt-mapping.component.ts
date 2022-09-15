@@ -1,11 +1,12 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { API, isTemplateTopicUnique, Mapping, SAMPLE_TEMPLATES, SnoopStatus } from '../mqtt-configuration.model';
+import { API, Mapping, SnoopStatus } from '../shared/mqtt-configuration.model';
 import { StatusRendererComponent } from './status-cell.renderer.component';
 import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
 import { SnoopedTemplateRendererComponent } from './snoopedTemplate.renderer.component';
+import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../shared/mqtt-helper';
 
 @Component({
   selector: 'mqtt-mapping',
