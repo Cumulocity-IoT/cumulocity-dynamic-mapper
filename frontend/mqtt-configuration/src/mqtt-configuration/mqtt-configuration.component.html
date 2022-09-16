@@ -18,8 +18,8 @@
       </div>
       <div class="c8y-realtime">
         <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isMQTTAgentCreated,
-            inactive: !isMQTTAgentCreated
+            active: isMQTTAgentCreated$ | async,
+            inactive: !isMQTTAgentCreated$ | async
           }"></span>
         {{ 'MQTTAgent registered' | translate }}
       </div>

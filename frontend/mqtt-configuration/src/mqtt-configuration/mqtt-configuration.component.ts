@@ -7,7 +7,7 @@ import { MQTTTerminateConnectionModalComponent } from './terminate-connection-mo
 import { MQTTMappingService } from '../mqtt-mapping/mqtt-mapping.service';
 import { StatusMessage } from '../shared/mqtt-configuration.model';
 import { catchError, map, tap } from 'rxjs/operators';
-import { Observable } from 'rxjs';
+import { from, Observable } from 'rxjs';
 
 
 @Component({
@@ -19,7 +19,8 @@ export class MQTTConfigurationComponent implements OnInit {
   isMQTTInitialized: boolean;
   isMQTTActivated: boolean;
   isMQTTConnected: boolean;
-  isMQTTAgentCreated: boolean;
+  isMQTTAgentCreated$: Observable<boolean>;
+  mqttAgentId$: Observable<string>;
 
   mqttForm: FormGroup;
 
@@ -33,12 +34,13 @@ export class MQTTConfigurationComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit() {
+  ngOnInit() {
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
-    this.isMQTTAgentCreated = (await this.mqttConfigurationService.initializeMQTTAgent()) != null;
-    console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
+    this.mqttAgentId$ = from(this.mqttMappingService.initializeMQTTAgent());
+    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
+    //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
   }
 
   async initConnectionStatus(): Promise<void> {
