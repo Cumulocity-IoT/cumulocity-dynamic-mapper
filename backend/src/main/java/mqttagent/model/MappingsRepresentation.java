@@ -105,7 +105,8 @@ public class MappingsRepresentation implements Serializable {
 
   static public String normalizeTopic(String topic) {
     String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
-    nt = "/".concat(nt);
+    // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
+    // nt = "/".concat(nt);
     if (!nt.endsWith(TOPIC_WILDCARD_MULTI) && !nt.endsWith(TOPIC_WILDCARD_SINGLE)) {
       nt = nt.concat("/");
     }

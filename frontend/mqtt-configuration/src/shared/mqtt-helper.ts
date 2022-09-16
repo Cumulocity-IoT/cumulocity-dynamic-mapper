@@ -232,7 +232,8 @@ export function getSchema(targetAPI: string): any {
 export function normalizeTopic(topic: string) {
   if (topic == undefined) topic = '';
   let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
-  nt = "/" + nt;
+  // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
+  // nt = "/" + nt;
   // console.log("Topic normalized:", topic, nt);
   // append trailing slash if last character is not wildcard #
    nt = nt.concat(nt.endsWith(TOPIC_WILDCARD_MULTI)|| nt.endsWith(TOPIC_WILDCARD_SINGLE) ? '' : '/')
