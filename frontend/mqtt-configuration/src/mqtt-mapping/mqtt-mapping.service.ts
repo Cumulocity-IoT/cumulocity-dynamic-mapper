@@ -78,7 +78,7 @@ export class MQTTMappingService {
     });
   }
 
-  async reloadMappings(): Promise<IFetchResponse> {
+  async activateMappings(): Promise<IFetchResponse> {
     return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',

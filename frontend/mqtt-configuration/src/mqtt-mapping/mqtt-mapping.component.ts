@@ -178,6 +178,7 @@ export class MQTTMappingComponent implements OnInit {
     this.mappings.splice(i, 1) // remove it from array
     console.log("Deleting mapping, remaining maps", this.mappings)
     this.mappingGridComponent.reload();
+    this.saveMappings();
   }
 
   async loadMappings(): Promise<void> {
@@ -201,23 +202,37 @@ export class MQTTMappingComponent implements OnInit {
         this.mappings[i] = mapping;
       }
       this.mappingGridComponent.reload();
+      this.saveMappings();
     } else {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.topic + ". Please use a different topic."));
     }
     this.showConfigMapping = false;
   }
 
-  async onSaveButtonClicked() {
+  async onSaveClicked() {
     this.saveMappings();
+  }
+
+  async onActivateClicked() {
+    this.activateMappings();
+  }
+
+  private async activateMappings() {
+    const response2 = await this.mqttMappingService.activateMappings();
+    console.log("Activate mapping response:", response2)
+    if (response2.status < 300) {
+      this.alertService.success(gettext('Mappings sactivated successfully'));
+      this.isConnectionToMQTTEstablished = true;
+    } else {
+      this.alertService.danger(gettext('Failed to activate mappings'));
+    }
   }
 
   private async saveMappings() {
     const response1 = await this.mqttMappingService.saveMappings(this.mappings);
-    const response2 = await this.mqttMappingService.reloadMappings();
-    console.log("New response:", response1.res, response2, this.mappings)
-
-    if (response1.res.ok && response2.status < 300) {
-      this.alertService.success(gettext('Mappings saved and activated successfully'));
+    console.log("Saved mppings response:", response1.res, this.mappings)
+    if (response1.res.ok) {
+      this.alertService.success(gettext('Mappings saved successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to save mappings'));
