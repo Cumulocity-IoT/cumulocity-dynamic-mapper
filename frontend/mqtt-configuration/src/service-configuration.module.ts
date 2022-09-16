@@ -9,23 +9,24 @@ import {
   HOOK_TABS,
   Route
 } from '@c8y/ngx-components';
+import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 import { MQTTConfigurationComponent } from './mqtt-configuration/mqtt-configuration.component';
 import { MQTTConfigurationService } from './mqtt-configuration/mqtt-configuration.service';
-import { MQTTTerminateConnectionModalComponent } from './mqtt-configuration/terminate-connection-modal/terminate-connection-modal.component';
+import { TerminateBrokerConnectionModalComponent } from './mqtt-configuration/terminate-connection-modal/terminate-connection-modal.component';
 import { MQTTMappingStepperComponent } from './mqtt-mapping/mqtt-mapping-stepper.component';
 import { MQTTMappingComponent } from './mqtt-mapping/mqtt-mapping.component';
 import { MQTTMappingService } from './mqtt-mapping/mqtt-mapping.service';
+import { OverwriteSubstitutionModalComponent } from './mqtt-mapping/overwrite-substitution-modal/overwrite-substitution-modal.component';
 import { QOSRendererComponent } from './mqtt-mapping/qos-cell.renderer.component';
+import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from './mqtt-mapping/status-cell.renderer.component';
+import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/substitution-renderer.component';
+import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
 import { MQTTConfigurationNavigationFactory } from './navigation.factory';
 import { MQTTServiceConfigurationComponent } from './service-configuration.component';
 import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
 import { MQTTConfigurationTabFactory } from './tab.factory';
-import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor'
-import { TemplateRendererComponent } from './mqtt-mapping/template.renderer.component';
-import { SnoopedTemplateRendererComponent } from './mqtt-mapping/snoopedTemplate.renderer.component';
-import { PopoverModule } from 'ngx-bootstrap/popover';
-import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/substitution-renderer.component';
 
 @NgModule({
   imports: [
@@ -53,7 +54,8 @@ import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/subst
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
-    MQTTTerminateConnectionModalComponent,
+    TerminateBrokerConnectionModalComponent,
+    OverwriteSubstitutionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -65,7 +67,8 @@ import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/subst
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
-    MQTTTerminateConnectionModalComponent,
+    TerminateBrokerConnectionModalComponent,
+    OverwriteSubstitutionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -77,7 +80,8 @@ import { SubstitutionRendererComponent } from './mqtt-mapping/substitution/subst
     MQTTConfigurationComponent,
     MQTTMappingComponent,
     MQTTMappingStepperComponent,
-    MQTTTerminateConnectionModalComponent,
+    TerminateBrokerConnectionModalComponent,
+    OverwriteSubstitutionModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,

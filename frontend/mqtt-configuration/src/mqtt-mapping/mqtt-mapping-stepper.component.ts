@@ -3,10 +3,12 @@ import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, 
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError} from "../shared/mqtt-configuration.model";
-import { getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC, deriveTemplateTopicFromTopic, checkPropertiesAreValid, checkSubstituionIsValid } from "../shared/mqtt-helper";
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { debounceTime, take } from "rxjs/operators";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../shared/mqtt-configuration.model";
+import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../shared/mqtt-helper";
 import { MQTTMappingService } from './mqtt-mapping.service';
-import { debounceTime } from "rxjs/operators";
+import { OverwriteSubstitutionModalComponent } from './overwrite-substitution-modal/overwrite-substitution-modal.component';
 
 
 @Component({
@@ -80,9 +82,10 @@ export class MQTTMappingStepperComponent implements OnInit {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
-      // test if doubleclicked
+      // test if doubleclicked, last two click occured within 750 ms
       if (doubleClick < 750) {
         this.setSelectionToPath(this.editorSource, path)
+        this.definesIdentifier = false;
         this.updateSourceExpressionResult(path);
         this.pathSource = path;
       }
@@ -141,6 +144,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   targetPathMissing: boolean = false;
 
   constructor(
+    private bsModalService: BsModalService,
     public mqttMappingService: MQTTMappingService,
     public alertService: AlertService,
     private elementRef: ElementRef,
@@ -496,14 +500,49 @@ export class MQTTMappingStepperComponent implements OnInit {
     });
   }
 
+
   private addSubstitution(sub: MappingSubstitution) {
+
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
-    this.mapping.substitutions.forEach(s => {
-      if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
+    // test 1
+    // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. User has to remove the old substitution.
+    let overwriteIndex = -1;
+    this.mapping.substitutions.forEach((s, index) => {
+      if (sub.pathTarget == s.pathTarget) {
+        overwriteIndex = index;
+      }
     })
-    this.mapping.substitutions.push(sub);
+
+    if (overwriteIndex != -1) {
+      const initialState = {
+        substitution: this.mapping.substitutions[overwriteIndex]
+      }
+      const overwriteModalRef: BsModalRef = this.bsModalService.show( OverwriteSubstitutionModalComponent, { initialState });
+      overwriteModalRef.content.closeSubject.subscribe(
+         (overwrite: boolean) => {
+          // test 2
+          // only one susbsitution can define the deviceIdentifier, thus set the others to false
+          this.mapping.substitutions.forEach(s => {
+            if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
+          })
+          console.log("Overwriting I:", overwrite, overwrite, this.mapping.substitutions);
+          if (overwrite){
+            this.mapping.substitutions[overwriteIndex] = sub;
+          }
+          console.log("Overwriting II:", overwrite, overwrite, this.mapping.substitutions);
+        }
+      );
+    } else {
+      // test 2
+      // only one susbsitution can define the deviceIdentifier, thus set the others to false
+      this.mapping.substitutions.forEach(s => {
+        if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
+      })
+      this.mapping.substitutions.push(sub);
+    }
+
     this.updateSubstitutions();
   }
 

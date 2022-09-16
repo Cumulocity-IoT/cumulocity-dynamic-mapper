@@ -10,10 +10,10 @@ import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 
 @Component({
-  selector: 'eaas-terminate-connection-modal',
+  selector: 'terminate-connection-modal',
   templateUrl: 'terminate-connection-modal.component.html',
 })
-export class MQTTTerminateConnectionModalComponent implements OnInit {
+export class TerminateBrokerConnectionModalComponent implements OnInit {
   @ViewChild('modalRef', { static: false }) modalRef: ConfirmModalComponent;
   message: string;
   closeSubject: Subject<boolean> = new Subject();
