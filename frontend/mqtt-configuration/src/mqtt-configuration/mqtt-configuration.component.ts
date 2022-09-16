@@ -128,7 +128,7 @@ export class MQTTConfigurationComponent implements OnInit {
 
   private async connectToMQTTBroker() {
     const response1 = await this.mqttConfigurationService.connectToMQTTBroker();
-    const response2 = await this.mqttMappingService.reloadMappings();
+    const response2 = await this.mqttMappingService.activateMappings();
     console.log("Details connectToMQTTBroker", response1, response2)
     if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext('Connection successful'));
