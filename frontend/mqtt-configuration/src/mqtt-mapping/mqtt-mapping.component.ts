@@ -7,6 +7,8 @@ import { QOSRendererComponent } from './qos-cell.renderer.component';
 import { TemplateRendererComponent } from './template.renderer.component';
 import { SnoopedTemplateRendererComponent } from './snoopedTemplate.renderer.component';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../shared/mqtt-helper';
+import { from, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'mqtt-mapping',
@@ -105,7 +107,8 @@ export class MQTTMappingComponent implements OnInit {
   ]
 
   value: string;
-  isMQTTAgentCreated: boolean;
+  isMQTTAgentCreated$: Observable<boolean>;
+  mqttAgentId$: Observable<string>;
 
   pagination: Pagination = {
     pageSize: 3,
@@ -118,10 +121,10 @@ export class MQTTMappingComponent implements OnInit {
     public alertService: AlertService
   ) { }
 
-
-  async ngOnInit() {
+  ngOnInit() {
     this.loadMappings();
-    this.isMQTTAgentCreated = (await this.mqttMappingService.initializeMQTTAgent()) != null;
+    this.mqttAgentId$ = from(this.mqttMappingService.initializeMQTTAgent());
+    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
     this.actionControls.push({
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)
@@ -131,7 +134,6 @@ export class MQTTMappingComponent implements OnInit {
         callback: this.deleteMapping.bind(this)
       });
   }
-
 
   async addMapping() {
     this.editMode = false;
@@ -172,7 +174,9 @@ export class MQTTMappingComponent implements OnInit {
   deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
+    console.log("Trying to delete mapping, index", i)
     this.mappings.splice(i, 1) // remove it from array
+    console.log("Deleting mapping, remaining maps", this.mappings)
     this.mappingGridComponent.reload();
   }
 
