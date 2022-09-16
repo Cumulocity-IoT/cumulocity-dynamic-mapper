@@ -67,36 +67,36 @@ public class InnerNode extends TreeNode {
     }
 
     public void insertMapping( InnerNode currentNode, Mapping mapping, ArrayList<String> levels) throws ResolveException{
-        var l = levels.get(0);
+        var currentLevel = levels.get(0);
         String preToString = ( currentNode == null? "null" : currentNode.toString());
-        log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), l, preToString, levels);
+        log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, preToString, levels);
         if (levels.size() == 1){
             MappingNode child = new MappingNode();
             child.setPreTreeNode(currentNode);
             child.setMapping(mapping);
-            child.setLevel(l);
-            child.setAbsolutePath(currentNode.getAbsolutePath()+l+"/");
+            child.setLevel(currentLevel);
+            child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel + "/");
             child.setDeviceIdentifierIndex(mapping.indexDeviceIdentifierInTemplateTopic);
             child.setDepthIndex(currentNode.getDepthIndex()+1);
-            log.debug("Adding mapNode: {}, {}, {}", currentNode.getLevel(), l, child.toString());
-            currentNode.getChildNodes().put(l,child);
+            log.debug("Adding mapNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
+            currentNode.getChildNodes().put(currentLevel,child);
         } else if (levels.size() > 1){
             levels.remove(0);
             InnerNode child;
-            if (currentNode.getChildNodes().containsKey(l)){
-                if ( currentNode.getChildNodes().get(l) instanceof InnerNode) {
-                    child = (InnerNode) currentNode.getChildNodes().get(l);
+            if (currentNode.getChildNodes().containsKey(currentLevel)){
+                if ( currentNode.getChildNodes().get(currentLevel) instanceof InnerNode) {
+                    child = (InnerNode) currentNode.getChildNodes().get(currentLevel);
                 } else {
                     throw new ResolveException("Could not add mapping to tree, since at this node at the parent node a mapping is already defined, {} " + mapping.toString());
                 }
             } else {
                 child = new InnerNode();
                 child.setPreTreeNode(currentNode);
-                child.setLevel(l);
-                child.setAbsolutePath(currentNode.getAbsolutePath()+l+"/");
+                child.setLevel(currentLevel);
+                child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel + "/");
                 child.setDepthIndex(currentNode.getDepthIndex()+1);
-                log.debug("Adding innerNode: {}, {}, {}", currentNode.getLevel(), l, child.toString());
-                currentNode.getChildNodes().put(l,child);
+                log.debug("Adding innerNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
+                currentNode.getChildNodes().put(currentLevel,child);
             }
             child.insertMapping(child, mapping, levels);
         } else {

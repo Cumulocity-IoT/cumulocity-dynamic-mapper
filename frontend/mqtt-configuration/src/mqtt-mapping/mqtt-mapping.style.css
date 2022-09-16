@@ -123,3 +123,7 @@ button.jsoneditor-button.jsoneditor-dragarea {
 .jsoneditor-readonly {
   font-size: smaller !important;
 }
+
+.popover-body {
+  overflow: auto;
+}
