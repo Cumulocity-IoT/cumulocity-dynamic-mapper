@@ -25,13 +25,9 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-/* 
-used for JSONPath in sourcePath definitions
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
-*/
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.handler.SysHandler;
@@ -40,6 +36,7 @@ import mqttagent.model.API;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingNode;
 import mqttagent.model.MappingSubstitution;
+import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ProcessingContext;
 import mqttagent.model.ResolveException;
 import mqttagent.model.SnoopStatus;
@@ -86,8 +83,15 @@ public class GenericCallback implements MqttCallback {
                 String payloadMessage = (mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "");
-                ProcessingContext ctx = resolveMap(topic, payloadMessage);
-                handleNewPayload(ctx, payloadMessage);
+
+                try {
+                    ProcessingContext ctx = resolveMap(topic, payloadMessage);
+                    handleNewPayload(ctx, payloadMessage);
+
+                } catch (Exception e) {
+                    log.warn("Message could NOT be parsed, ignoring this message");
+
+                }
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
@@ -119,6 +123,7 @@ public class GenericCallback implements MqttCallback {
 
     private void handleNewPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException {
         Mapping mapping = ctx.getMapping();
+        String deviceIdentifier = ctx.getDeviceIdentifier();
         if (mapping.snoopTemplates.equals(SnoopStatus.ENABLED) || mapping.snoopTemplates.equals(SnoopStatus.STARTED)) {
             mapping.snoopedTemplates.add(payloadMessage);
             if (mapping.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
@@ -131,6 +136,26 @@ public class GenericCallback implements MqttCallback {
                     mapping.snoopTemplates);
             mqttClient.setMappingDirty(mapping);
         } else {
+
+            /*
+             * step 0 patch payload with dummy property DEVICE_IDENT in case of a wildcard
+             * in the template topic
+             */
+            JsonNode payloadJsonNode;
+            try {
+                payloadJsonNode = objectMapper.readTree(payloadMessage);
+                boolean containsWildcardTemplateTopic = MappingsRepresentation
+                        .isWildcardTopic(mapping.getTemplateTopic());
+                if (containsWildcardTemplateTopic && payloadJsonNode instanceof ObjectNode) {
+                    ((ObjectNode) payloadJsonNode).put(TOKEN_DEVICE_TOPIC, deviceIdentifier);
+                }
+                payloadMessage = payloadJsonNode.toPrettyString();
+                log.info("Patched payload:{}, {}", containsWildcardTemplateTopic, payloadMessage);
+            } catch (JsonProcessingException e) {
+                log.error("JsonProcessingException parsing: {}, {}", payloadMessage, e);
+                throw new ProcessingException("JsonProcessingException parsing: " + payloadMessage + " exception:" + e);
+            }
+
             var payloadTarget = new JSONObject(mapping.target);
             ArrayList<String> resultDeviceIdentifier = new ArrayList<String>();
             for (MappingSubstitution sub : mapping.substitutions) {
@@ -139,26 +164,30 @@ public class GenericCallback implements MqttCallback {
                  * step 1 extract content from incoming payload
                  */
                 try {
-                    if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)) {
-                        if (ctx.isDeviceIdentifierValid()) {
-                            extractedSourceContent = new TextNode (ctx.getDeviceIdentifier());
-                        } else {
-                            throw new ProcessingException("No device identifier found for: " + sub.pathSource);
-                        }
-                    } else {
-                        Expressions expr = Expressions.parse(sub.pathSource);
-                        JsonNode jsonObj = objectMapper.readTree(payloadMessage);
-                        extractedSourceContent = expr.evaluate(jsonObj);
-                    }
+                    Expressions expr = Expressions.parse(sub.pathSource);
+                    extractedSourceContent = expr.evaluate(payloadJsonNode);
+                    /*
+                     * if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)) {
+                     * if (ctx.isDeviceIdentifierValid()) {
+                     * extractedSourceContent = new TextNode (ctx.getDeviceIdentifier());
+                     * } else {
+                     * throw new ProcessingException("No device identifier found for: " +
+                     * sub.pathSource);
+                     * }
+                     * } else {
+                     * Expressions expr = Expressions.parse(sub.pathSource);
+                     * extractedSourceContent = expr.evaluate(payloadJsonNode);
+                     * }
+                     */
                 } catch (ParseException | IOException | EvaluateException e) {
                     log.error("Exception for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage, e);
+                            payloadMessage, e);
                 } catch (EvaluateRuntimeException e) {
                     log.error("EvaluateRuntimeException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                    payloadMessage, e);
+                            payloadMessage, e);
                 }
-                
-                 /*
+
+                /*
                  * step 2 analyse exctracted content: textual, array
                  */
                 var substitute = "";

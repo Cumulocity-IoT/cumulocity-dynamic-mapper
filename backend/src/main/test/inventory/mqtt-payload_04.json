@@ -1,0 +1,21 @@
+Test-Case
+
+create device with deviceIdentifier from topic (wildcard) with joind devicename
+
+topic: wdevice/#
+templateTopic: wdevice/+/west
+sustitutions: [ * DEVICE_IDENT -> DEVICE_IDENT ][ $join([customName, "-", DEVICE_IDENT]) -> name ][ customType -> type ]
+
+{
+	"customName": "Bus-Berlin-Tegel",
+	"customText": "TextValue",
+	"customFragment": {
+		"customFragmentValue": "customValue"
+	},
+	"customNumber": 10,
+	"customArray": [
+		"ArrayValue1",
+		"ArrayValue2"
+	],
+	"customType": "type_Bus"
+}

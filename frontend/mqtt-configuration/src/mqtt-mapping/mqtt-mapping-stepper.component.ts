@@ -285,9 +285,11 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   private getCurrentMapping(): Mapping {
     //remove dummy field "DEVICE_IDENT", since it should not be stored
-    let dts = this.editorSource.get()
-    delete dts[TOKEN_DEVICE_TOPIC];
-    let st = JSON.stringify(dts);
+    //if (!this.containsWildcardTopic) {
+      let dts = this.editorSource.get()
+      delete dts[TOKEN_DEVICE_TOPIC];
+      let st = JSON.stringify(dts);
+    //}
 
     let dtt = this.editorTarget.get()
     delete dtt[TOKEN_DEVICE_TOPIC];
