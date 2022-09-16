@@ -259,7 +259,7 @@ export function isTopicNameValid(topic: string): any {
   let count_single = (topic.match(/\+/g) || []).length;
   if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
   return errors;
 }
@@ -355,7 +355,7 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     }
 
     // wildcard "'" can only appear at the end
-    if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) {
+    if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) {
       errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
       defined = true
     }

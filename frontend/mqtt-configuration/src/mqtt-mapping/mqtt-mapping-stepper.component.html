@@ -35,16 +35,16 @@
                       </div>
                       <div class="col-lg-5">
                         <div class="row" style="text-align:center">
-                          <label class="c8y-switch" title="{{ 'Wildcard Topic'}}" style="display: inline-flex; margin-left:8px">
-                            <input type="checkbox" formControlName="markerWildcardTopic" disabled="true"
-                              [(ngModel)]="containsWildcardTopic" />
+                          <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}" style="display: inline-flex; margin-left:8px">
+                            <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
+                              [(ngModel)]="containsWildcardTemplateTopic" />
                             <span></span>
                             <span>
                               {{ 'Wildcard Topic'}}
                             </span>
                           </label>
                           <span class="hidden-xs hidden-sm" style="margin-left:4px;">
-                            <ng-template #popTemplateWildcard>Topic contains wildcards: multi level "#" or single level "*".
+                            <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single level "+".
                             </ng-template>
                             <button class="btn-clean text-primary" [popover]="popTemplateWildcard"
                               popoverTitle="Wildcard" placement="right" triggers="focus" type="button">

@@ -68,7 +68,7 @@ public class MappingsRepresentation implements Serializable {
     if (count > 1) {
       result.add(ValidationError.Only_One_Multi_Level_Wildcard);
     }
-    if (count >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length() - 1) {
+    if (count >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length() - 1) {
       result.add(ValidationError.Multi_Level_Wildcard_Only_At_End);
     }
     return result;
