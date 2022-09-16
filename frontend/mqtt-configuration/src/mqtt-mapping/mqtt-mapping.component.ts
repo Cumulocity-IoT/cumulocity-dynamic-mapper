@@ -179,6 +179,7 @@ export class MQTTMappingComponent implements OnInit {
     console.log("Deleting mapping, remaining maps", this.mappings)
     this.mappingGridComponent.reload();
     this.saveMappings();
+    this.activateMappings();
   }
 
   async loadMappings(): Promise<void> {
@@ -203,6 +204,7 @@ export class MQTTMappingComponent implements OnInit {
       }
       this.mappingGridComponent.reload();
       this.saveMappings();
+      this.activateMappings();
     } else {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.topic + ". Please use a different topic."));
     }
@@ -221,7 +223,7 @@ export class MQTTMappingComponent implements OnInit {
     const response2 = await this.mqttMappingService.activateMappings();
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
-      this.alertService.success(gettext('Mappings sactivated successfully'));
+      this.alertService.success(gettext('Mappings activated successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));

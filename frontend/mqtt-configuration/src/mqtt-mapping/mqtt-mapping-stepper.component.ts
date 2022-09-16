@@ -468,7 +468,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   public onDeleteSubstitution() {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
-      this.mapping.substitutions.splice(this.selectedSubstitution - 1, 1);
+      this.mapping.substitutions.splice(this.selectedSubstitution , 1);
       this.selectedSubstitution = -1;
     }
     this.updateSubstitutions();

@@ -253,10 +253,10 @@ export function isTopicNameValid(topic: string): any {
 
   let errors = {};
   // count number of "#"
-  let count_multi = (topic.match(/\\#/g) || []).length;
+  let count_multi = (topic.match(/\#/g) || []).length;
   if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
-  let count_single = (topic.match(/\\+/g) || []).length;
+  let count_single = (topic.match(/\+/g) || []).length;
   if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
@@ -341,14 +341,14 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     }
 
     // count number of "#"
-    let count_multi = (topic.match(/\\#/g) || []).length;
+    let count_multi = (topic.match(/\#/g) || []).length;
     if (count_multi > 1) {
       errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
       defined = true
     }
 
     // count number of "+"_
-    let count_single = (topic.match(/\\+/g) || []).length;
+    let count_single = (topic.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
       defined = true
