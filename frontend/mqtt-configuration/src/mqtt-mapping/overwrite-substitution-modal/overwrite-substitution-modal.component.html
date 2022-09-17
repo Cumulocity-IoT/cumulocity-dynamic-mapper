@@ -1,5 +1,8 @@
 <c8y-confirm-modal [title]="title" [status]="status" [labels]="labels" #overwriteRef>
-  <div style = "text-align: left;"><span>{{ message1 }}</span></div>
-  <div style = "text-align: center;"><span>{{ substitutionText }}</span></div>
-  <div style = "text-align: left;"><span>{{ message2 }}</span></div>
+  <div ><span>{{ message1 | translate }}</span></div>
+  <br>
+<!--   <div style = "text-align: center;"><span>{{ substitutionText }}</span></div> -->
+  <div style = "text-align: center;"><pre>{{ substitutionText }}</pre></div>
+  <br>
+  <div ><span>{{ message2 | translate }}</span></div>
 </c8y-confirm-modal>

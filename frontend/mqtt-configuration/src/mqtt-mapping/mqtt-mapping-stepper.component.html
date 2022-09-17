@@ -23,52 +23,50 @@
             <div class="card-block p-b-0">
               <div [formGroup]="propertyForm">
 
-                <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
-                  <c8y-form-group>
-                    <label for="topic" class="" translate>Topic</label>
-                    <div>
-                    </div>
-                    <div class="row">
-                      <div class="col-lg-7 padding-r0">
-                        <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
-                          placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
-                      </div>
-                      <div class="col-lg-5">
-                        <div class="row" style="text-align:center">
-                          <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}" style="display: inline-flex; margin-left:8px">
-                            <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
-                              [(ngModel)]="containsWildcardTemplateTopic" />
-                            <span></span>
-                            <span>
-                              {{ 'Wildcard Topic'}}
-                            </span>
-                          </label>
-                          <span class="hidden-xs hidden-sm" style="margin-left:4px;">
-                            <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single level "+".
-                            </ng-template>
-                            <button class="btn-clean text-primary" [popover]="popTemplateWildcard"
-                              popoverTitle="Wildcard" placement="right" triggers="focus" type="button">
-                              <i c8yIcon="question-circle-o"></i>
-                            </button>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <c8y-messages>
-                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"
-                        translate>
-                        Only one MultiLevel wildcard "#" is allowed.
-                      </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
-                        translate>MultiLevel wildcard "#" can only appear at the end.
-                      </c8y-message>
-                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Single_Level_Wildcard]"
-                        translate>Only one SingleLevel wildcard "*" is allowed.
-                      </c8y-message>
-                      <!--                       <c8y-message *ngIf="propertyForm.errors?.Topic_Not_Substring_Of_OtherTopic" translate>The Topic must be a part of another Topic.
+                <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
+                  <div class="row">
+                    <div class="col-lg-5 form-group padding-r0">
+                      <label for="topic" class="" translate>Topic</label>
+                      <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
+                        placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
+                      <c8y-messages>
+                        <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"
+                          translate>
+                          Only one MultiLevel wildcard "#" is allowed.
+                        </c8y-message>
+                        <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
+                          translate>MultiLevel wildcard "#" can only appear at the end.
+                        </c8y-message>
+                        <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Single_Level_Wildcard]"
+                          translate>Only one SingleLevel wildcard "*" is allowed.
+                        </c8y-message>
+                        <!--                       <c8y-message *ngIf="propertyForm.errors?.Topic_Not_Substring_Of_OtherTopic" translate>The Topic must be a part of another Topic.
                       </c8y-message> -->
-                    </c8y-messages>
-                  </c8y-form-group>
+                      </c8y-messages>
+                    </div>
+                    <div class="col-lg-7 form-group" style="text-align: right;">
+                      <label translate><br></label>
+                      <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}"
+                        style="display: inline-flex; margin-left:8px">
+                        <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
+                          [(ngModel)]="containsWildcardTemplateTopic" />
+                        <span></span>
+                        <span>
+                          {{ 'Wildcard Topic'}}
+                        </span>
+                      </label>
+                      <span class="hidden-xs hidden-sm" style="margin-left:4px;">
+                        <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single
+                          level "+".
+                        </ng-template>
+                        <button class="btn-clean text-primary" [popover]="popTemplateWildcard" popoverTitle="Wildcard"
+                          placement="right" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+
                   <c8y-form-group>
                     <div class="form-group">
                       <div>
@@ -88,12 +86,14 @@
                             class="form-control" placeholder="e.g. device/110" #templateTopic
                             (change)="onTemplateTopicChanged($event)" />
                         </div>
-                        <div class="col-lg-4 text-center padding-l0 padding-r0">
-                          <button type="submit" class="btn btn-primary" (click)="onSelectDeviceIdentifier()">Device
+                        <div class="col-lg-4 no-gutter">
+                          <button type="submit" style="width:100%" class="btn btn-primary"
+                            (click)="onSelectDeviceIdentifier()">Device
                             Identifier</button>
                         </div>
                         <div class="col-lg-3 padding-l0">
-                          <input formControlName="markedDeviceIdentifier" type="text" class="form-control" [(ngModel)]="markedDeviceIdentifier" readonly />
+                          <input formControlName="markedDeviceIdentifier" type="text" class="form-control"
+                            [(ngModel)]="markedDeviceIdentifier" readonly />
                         </div>
                       </div>
                     </div>
@@ -177,7 +177,9 @@
                     <div>
                       <label style="display: inline; margin-right:5px;" translate>Snoop payload</label>
                       <span class="hidden-xs hidden-sm">
-                        <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.</ng-template>
+                        <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
+                          Once the snooping starts and payloads are recorded, they can be used as templates for defining
+                          the source format of the MQTT mapping.</ng-template>
                         <button class="btn-clean text-primary" [popover]="popTemplateSnoop" popoverTitle="Snoop payload"
                           placement="top" triggers="focus" type="button">
                           <i c8yIcon="question-circle-o"></i>
@@ -308,12 +310,12 @@
                           <label translate style="display:contents !important">Evaluate Expression on Source
                           </label>
                           <span class="hidden-xs hidden-sm">
-<!--                             <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_self" >JSONata</a> in your
+                            <!--                             <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_self" >JSONata</a> in your
                               expressions.</ng-template> -->
-                              <ng-template #popTemplateJSON>Use (https://jsonata.org) JSONata in your
-                                expressions.</ng-template>
-                            <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON" popoverTitle="JSONata" po
-                              placement="right" triggers="focus" type="button">
+                            <ng-template #popTemplateJSON>Use (https://jsonata.org) JSONata in your
+                              expressions.</ng-template>
+                            <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
+                              popoverTitle="JSONata" po placement="right" triggers="focus" type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>

@@ -19,7 +19,7 @@ export class TerminateBrokerConnectionModalComponent implements OnInit {
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { ok: gettext('Disconnect'), cancel: gettext('Cancel') };
   title = gettext('Disconnect');
-  status: StatusType = Status.DANGER;
+  status: StatusType = Status.WARNING;
 
   constructor(private translateService: TranslateService) {}
 
