@@ -222,10 +222,10 @@
               <div [formGroup]="templateForm">
                 <div class="container">
                   <div class="row">
-                    <div class="legend form-block col-lg-12">
+                    <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Templates
                     </div>
-                    <div class="col-lg-5">
+                    <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Source</label>
                         <div class="jsonColumnLarge">
@@ -275,7 +275,7 @@
                         </button>
                       </div>
                     </div>
-                    <div class="col-lg-5 vcenter">
+                    <div class="col-lg-4 vcenter">
                       <div class="form-group">
                         <label style="display: inline; margin-right:5px;">Target</label>
                         <span class="hidden-xs hidden-sm">
@@ -301,10 +301,10 @@
                 </div>
                 <div class="container">
                   <div class="row">
-                    <div class="legend form-block col-lg-12">
+                    <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
-                    <div class="col-lg-5">
+                    <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <div>
                           <label translate style="display:contents !important">Evaluate Expression on Source
@@ -338,7 +338,7 @@
                         </span>
                       </label>
                     </div>
-                    <div class="col-lg-5">
+                    <div class="col-lg-4">
                       <div class="form-group">
                         <label translate>Substitute in Target</label>
                         <input #pathTargetRef type="text" style="font-family: monospace;" class="form-control"
@@ -349,7 +349,7 @@
                 </div>
                 <div class="container">
                   <div class="row">
-                    <div class="col-lg-5 jsonColumn">
+                    <div class="col-lg-4 col-lg-offset-1 jsonColumn">
                       <div class="form-group">
                         <label translate>Expression - result</label>
                         <pre class="jsonColumnTiny">{{sourceExpressionResult}}
@@ -360,7 +360,7 @@
                 </div>
                 <div class="container">
                   <div class="row">
-                    <div class="col-lg-12">
+                    <div class="col-lg-10 col-lg-offset-1">
                       <div class="legend form-block">
                         Defined substitutions
                         <span class="hidden-xs hidden-sm" style="margin-left: 10px;">
@@ -377,6 +377,7 @@
                           [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}">
                         </substitution-renderer>
                       </div>
+                      <br>
                     </div>
                   </div>
                 </div>
