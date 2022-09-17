@@ -26,15 +26,17 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { ok: gettext('Overwrite'), cancel: gettext('Cancel') };
   title = gettext('Overwrite');
-  status: StatusType = Status.DANGER;
+  status: StatusType = Status.WARNING;
 
   constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
-    this.message1 = `You are about to overwrite an exting substitution:`;
-    this.message2 = `Do you want to proceed?`;
-    this.substitutionText = `[${this.substitution.pathSource}-> ${this.substitution.pathTarget}]`;
-  
+    this.message1 = this.translateService.instant(
+      gettext('You are about to overwrite an exting substitution:'));;
+    this.message2 = this.translateService.instant(
+      gettext('Do you want to proceed?'));
+    let marksDeviceIdentifier = (this.substitution.definesIdentifier ? "* " : "");
+    this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
   }
 
   async ngAfterViewInit() {
