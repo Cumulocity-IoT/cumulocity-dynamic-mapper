@@ -3,7 +3,7 @@ Test-Case
 create device with deviceIdentifier from topic (no wildcard)
 
 topic:  devices/london/
-sustitutions: [ * DEVICE_IDENT -> DEVICE_IDENT ][ customName -> name ][ customType -> type ]
+sustitutions: [ * _DEVICE_IDENT_ -> _DEVICE_IDENT_ ][ customName -> name ][ customType -> type ]
 
 {
     "customName": "S-Bahn-Berlin",

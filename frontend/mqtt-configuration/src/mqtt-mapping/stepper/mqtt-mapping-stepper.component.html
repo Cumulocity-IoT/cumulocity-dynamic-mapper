@@ -53,15 +53,16 @@
                               [(ngModel)]="containsWildcardTemplateTopic" />
                             <span></span>
                             <span>
-                              {{ 'Wildcard Topic'}}
+                              {{ 'Wildcard TemlateTopic'}}
                             </span>
                           </label>
                           <span class="hidden-xs hidden-sm m-l-4">
                             <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single
-                              level "+".
+                              level "+". In the payload "_DEVICE_IDENT_" is added to be used in mappings. Don't remove
+                              or modify it.
                             </ng-template>
                             <button class="btn-clean text-primary" [popover]="popTemplateWildcard"
-                              popoverTitle="Wildcard" placement="right" triggers="focus" type="button">
+                              popoverTitle="Wildcard" placement="bottom" triggers="focus" type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
@@ -91,8 +92,7 @@
                         </div>
                         <div class="col-lg-4 no-gutter">
                           <button type="submit" style="width:100%" class="btn btn-primary"
-                            (click)="onSelectDeviceIdentifier()">Device
-                            Identifier</button>
+                            (click)="onSelectDeviceIdentifier()">Device Identifier</button>
                         </div>
                         <div class="col-lg-3 p-l-0">
                           <input formControlName="markedDeviceIdentifier" type="text" class="form-control"
@@ -241,10 +241,6 @@
                         </c8y-messages>
                       </div>
                     </div>
-
-
-
-
                     <div class="col-lg-2 vcenter text-center">
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
@@ -285,10 +281,11 @@
                         <div class="input-group">
                           <label>Target</label>
                           <span class="hidden-xs hidden-sm m-l-4">
-                            <ng-template #popTemplateTarget>The template contains the dummy field "DEVICE_IDENT" to map
+                            <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
+                              map
                               device identifiers.</ng-template>
                             <button class="btn-clean text-primary" [popover]="popTemplateTarget"
-                              popoverTitle='Use dummy field "DEVICE_IDENT"' placement="right" triggers="focus"
+                              popoverTitle='Use dummy field "_DEVICE_IDENT_"' placement="right" triggers="focus"
                               type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
@@ -313,10 +310,10 @@
                     </div>
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
-                        <div>
-                          <label translate style="display:contents !important">Evaluate Expression on Source
+                        <div class="input-group">
+                          <label translate>Evaluate Expression on Source
                           </label>
-                          <span class="hidden-xs hidden-sm">
+                          <span class="hidden-xs hidden-sm p-l-4">
                             <!--                             <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_self" >JSONata</a> in your
                               expressions.</ng-template> -->
                             <ng-template #popTemplateJSON>Use (https://jsonata.org) JSONata in your
@@ -327,9 +324,9 @@
                             </button>
                           </span>
                         </div>
-                        <input #pathSourceRef type="text" style="font-family: monospace;" class="form-control"
+                        <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
                           formControlName="pathSource" [(ngModel)]="pathSource"
-                          placeholder="e.g. $join([$substring(tx,5), DEVICE_IDENT]) or $number(DEVICE_IDENT)/10" />
+                          placeholder="e.g. $join([$substring(tx,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
                         <c8y-messages>
                           <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
                           </c8y-message>
@@ -337,6 +334,7 @@
                       </div>
                     </div>
                     <div class="col-lg-2">
+                      <br>
                       <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
                         <input type="checkbox" formControlName="definesIdentifier" [(ngModel)]="definesIdentifier" />
                         <span></span>
@@ -348,19 +346,19 @@
                     <div class="col-lg-4">
                       <div class="form-group">
                         <label translate>Substitute in Target</label>
-                        <input #pathTargetRef type="text" style="font-family: monospace;" class="form-control"
-                          formControlName="pathTarget" [ngModel]="pathTarget" readonly />
+                        <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
+                          formControlName="pathTarget" [ngModel]="pathTarget" readonly disabled="true"/>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div class="container">
                   <div class="row">
-                    <div class="col-lg-4 col-lg-offset-1 jsonColumn">
+                    <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Expression - result</label>
-                        <pre class="jsonColumnTiny">{{sourceExpressionResult}}
-                        </pre>
+                        <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                        formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly disabled="true"/>
                       </div>
                     </div>
                   </div>

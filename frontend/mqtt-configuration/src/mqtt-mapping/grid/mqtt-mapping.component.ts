@@ -1,20 +1,21 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { MQTTMappingService } from './mqtt-mapping.service';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { API, Mapping, SnoopStatus } from '../shared/mqtt-configuration.model';
-import { StatusRendererComponent } from './status-cell.renderer.component';
-import { QOSRendererComponent } from './qos-cell.renderer.component';
-import { TemplateRendererComponent } from './template.renderer.component';
-import { SnoopedTemplateRendererComponent } from './snoopedTemplate.renderer.component';
-import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../shared/mqtt-helper';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { API, Mapping, SnoopStatus } from '../../shared/mqtt-configuration.model';
+import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/mqtt-helper';
+import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
+import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
+import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 
 @Component({
   selector: 'mqtt-mapping',
   templateUrl: 'mqtt-mapping.component.html',
-  styleUrls: ['./mqtt-mapping.style.css', 
-  '../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
+  styleUrls: ['../shared/mqtt-mapping.style.css', 
+  '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
@@ -56,12 +57,20 @@ export class MQTTMappingComponent implements OnInit {
       gridTrackSize: '10%'
     },
     {
-      name: 'targetAPI',
-      header: 'Target API',
-      path: 'targetAPI',
+      header: 'TemplateTopic',
+      name: 'templateTopic',
+      path: 'templateTopic',
       filterable: true,
+      gridTrackSize: '10%'
+    },
+    {
+      name: 'targetAPI',
+      header: 'API',
+      path: 'targetAPI',
+      filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '7.5%'
+      cellRendererComponent: APIRendererComponent,
+      gridTrackSize: '5%'
     },
     {
       header: 'Sample payload',
@@ -69,7 +78,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '25%'
+      gridTrackSize: '20%'
     },
     {
       header: 'Target',
@@ -77,7 +86,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '25%'
+      gridTrackSize: '20%'
     },
     {
       header: 'Active-Tested-Snooping',
@@ -85,8 +94,8 @@ export class MQTTMappingComponent implements OnInit {
       path: 'active',
       filterable: false,
       cellRendererComponent: StatusRendererComponent,
-      cellCSSClassName: 'textAlignCenter',
-      gridTrackSize: '5%'
+      cellCSSClassName: 'text-align-center',
+      gridTrackSize: '7.5%'
     },
     {
       header: 'QOS',

@@ -215,7 +215,7 @@ export const SCHEMA_PAYLOAD = {
   ],
 }
 
-export const TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
+export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 
 export function getSchema(targetAPI: string): any {
   if (targetAPI == API.ALARM) {

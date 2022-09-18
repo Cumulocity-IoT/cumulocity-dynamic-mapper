@@ -3,7 +3,7 @@ Test-Case
 create device with deviceIdentifier from payload (no wildcard)
 
 topic:  devices/london/
-sustitutions: [ * deviceId -> DEVICE_IDENT ][ customName -> name ][ customType -> type ]
+sustitutions: [ * deviceId -> _DEVICE_IDENT_ ][ customName -> name ][ customType -> type ]
 
 {
     "deviceId": "TestDevice2",

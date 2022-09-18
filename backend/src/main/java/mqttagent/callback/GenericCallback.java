@@ -72,7 +72,8 @@ public class GenericCallback implements MqttCallback {
         sdf.setTimeZone(TimeZone.getTimeZone("CET"));
     }
 
-    static String TOKEN_DEVICE_TOPIC = "DEVICE_IDENT";
+    static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
+    static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
     static int SNOOP_TEMPLATES_MAX = 5;
     static String SOURCE_ID = "source.id";
 
@@ -138,7 +139,7 @@ public class GenericCallback implements MqttCallback {
         } else {
 
             /*
-             * step 0 patch payload with dummy property DEVICE_IDENT in case of a wildcard
+             * step 0 patch payload with dummy property _DEVICE_IDENT_ in case of a wildcard
              * in the template topic
              */
             JsonNode payloadJsonNode;
@@ -164,6 +165,9 @@ public class GenericCallback implements MqttCallback {
                  * step 1 extract content from incoming payload
                  */
                 try {
+                    // escape _DEVICE_IDENT_ with BACKQUOTE "`"
+                    sub.pathSource = sub.pathSource.replace (TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
+
                     Expressions expr = Expressions.parse(sub.pathSource);
                     extractedSourceContent = expr.evaluate(payloadJsonNode);
                     /*
@@ -247,7 +251,7 @@ public class GenericCallback implements MqttCallback {
                     substituteValue(substitute, payloadTarget, pathTarget);
                 } else {
                     if (!sub.pathTarget.equals(TOKEN_DEVICE_TOPIC)) {
-                        // avoid substitution, since DEVICE_IDENT since not present in target payload
+                        // avoid substitution, since _DEVICE_IDENT_ since not present in target payload
                         // for inventory
                         substituteValue(substitute, payloadTarget, pathTarget);
                     }
