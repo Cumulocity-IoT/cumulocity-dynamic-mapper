@@ -100,14 +100,6 @@ button.jsoneditor-button.jsoneditor-dragarea {
   padding-top: 5px;
 }
 
-.padding-l0{
-  padding-left:0;
-}
-
-.padding-r0{
-  padding-right:0;
-}
-
 .jsoneditor-value {
   font-size: smaller !important;
 }
