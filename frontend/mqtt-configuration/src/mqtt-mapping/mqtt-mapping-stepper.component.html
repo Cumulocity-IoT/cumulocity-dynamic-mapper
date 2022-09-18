@@ -25,7 +25,7 @@
 
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="row">
-                    <div class="col-lg-5 form-group padding-r0">
+                    <div class="col-lg-5 form-group p-r-0">
                       <label for="topic" class="" translate>Topic</label>
                       <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
                         placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
@@ -44,34 +44,37 @@
                       </c8y-message> -->
                       </c8y-messages>
                     </div>
-                    <div class="col-lg-7 form-group" style="text-align: right;">
-                      <label translate><br></label>
-                      <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}"
-                        style="display: inline-flex; margin-left:8px">
-                        <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
-                          [(ngModel)]="containsWildcardTemplateTopic" />
-                        <span></span>
-                        <span>
-                          {{ 'Wildcard Topic'}}
-                        </span>
-                      </label>
-                      <span class="hidden-xs hidden-sm" style="margin-left:4px;">
-                        <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single
-                          level "+".
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popTemplateWildcard" popoverTitle="Wildcard"
-                          placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
+                    <div class="col-lg-7 form-group">
+                      <div class="pull-right">
+                        <label translate><br></label>
+                        <div class="input-group">
+                          <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}">
+                            <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
+                              [(ngModel)]="containsWildcardTemplateTopic" />
+                            <span></span>
+                            <span>
+                              {{ 'Wildcard Topic'}}
+                            </span>
+                          </label>
+                          <span class="hidden-xs hidden-sm m-l-4">
+                            <ng-template #popTemplateWildcard>TemlateTopic contains wildcards: multi level "#" or single
+                              level "+".
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popTemplateWildcard"
+                              popoverTitle="Wildcard" placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <c8y-form-group>
                     <div class="form-group">
-                      <div>
-                        <label for="templateTopic" style="display: inline;">Template Topic</label>
-                        <span class="hidden-xs hidden-sm" style="margin-left:4px;">
+                      <div class="input-group">
+                        <label for="templateTopic">Template Topic</label>
+                        <span class="hidden-xs hidden-sm m-l-4">
                           <ng-template #popTemplateTopic>The TemplateTopic name must begin with the Topic name.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateTopic"
@@ -81,7 +84,7 @@
                         </span>
                       </div>
                       <div class="row">
-                        <div class="col-lg-5 padding-r0">
+                        <div class="col-lg-5 p-r-0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
                             class="form-control" placeholder="e.g. device/110" #templateTopic
                             (change)="onTemplateTopicChanged($event)" />
@@ -91,7 +94,7 @@
                             (click)="onSelectDeviceIdentifier()">Device
                             Identifier</button>
                         </div>
-                        <div class="col-lg-3 padding-l0">
+                        <div class="col-lg-3 p-l-0">
                           <input formControlName="markedDeviceIdentifier" type="text" class="form-control"
                             [(ngModel)]="markedDeviceIdentifier" readonly />
                         </div>
@@ -174,8 +177,8 @@
                     </div>
                   </div>
                   <div class="form-group">
-                    <div>
-                      <label style="display: inline; margin-right:5px;" translate>Snoop payload</label>
+                    <div class="input-group">
+                      <label class="m-r-4" translate>Snoop payload</label>
                       <span class="hidden-xs hidden-sm">
                         <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
                           Once the snooping starts and payloads are recorded, they can be used as templates for defining
@@ -238,31 +241,32 @@
                         </c8y-messages>
                       </div>
                     </div>
-                    <div class="col-lg-2 vcenter" style="text-align:center;">
-                      <div style="padding-bottom: 8px;">
+
+
+
+
+                    <div class="col-lg-2 vcenter text-center">
+                      <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                           (click)="onAddSubstitution()" translate title="Map" title="Map">
                           <i c8yIcon="add-new"></i>
                         </button>
                       </div>
-                      <div style="padding-bottom: 8px;">
-                        <div>
-                          <button type="button" name="sample" class="btn btn-primary"
-                            style="min-width: 65px;margin-left: 25px;" (click)="onSelectSubstitution()" translate
-                            title="Select substitution">
-                            <i c8yIcon="skip"></i>
+                      <div class="p-b-8" style="padding-left:18px;">
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
+                          (click)="onSelectSubstitution()" translate title="Select substitution">
+                          <i c8yIcon="skip"></i>
+                        </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popTemplateSelect>Select defined substitutions in templates.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
+                            placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
                           </button>
-                          <span class="hidden-xs hidden-sm" style="margin-left: 10px;">
-                            <ng-template #popTemplateSelect>Select defined substitutions in templates.
-                            </ng-template>
-                            <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
-                              placement="right" triggers="focus" type="button">
-                              <i c8yIcon="question-circle-o"></i>
-                            </button>
-                          </span>
-                        </div>
+                        </span>
                       </div>
-                      <div style="padding-bottom: 8px;">
+                      <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                           (click)="onDeleteSubstitution()" translate title="Delete Selected">
                           <i c8yIcon="negative"></i>
@@ -275,18 +279,21 @@
                         </button>
                       </div>
                     </div>
+
                     <div class="col-lg-4 vcenter">
                       <div class="form-group">
-                        <label style="display: inline; margin-right:5px;">Target</label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popTemplateTarget>The template contains the dummy field "DEVICE_IDENT" to map
-                            device identifiers.</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateTarget"
-                            popoverTitle='Use dummy field "DEVICE_IDENT"' placement="right" triggers="focus"
-                            type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
+                        <div class="input-group">
+                          <label>Target</label>
+                          <span class="hidden-xs hidden-sm m-l-4">
+                            <ng-template #popTemplateTarget>The template contains the dummy field "DEVICE_IDENT" to map
+                              device identifiers.</ng-template>
+                            <button class="btn-clean text-primary" [popover]="popTemplateTarget"
+                              popoverTitle='Use dummy field "DEVICE_IDENT"' placement="right" triggers="focus"
+                              type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
                         <div class="jsonColumnLarge">
                           <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
                           </json-editor>
@@ -363,7 +370,7 @@
                     <div class="col-lg-10 col-lg-offset-1">
                       <div class="legend form-block">
                         Defined substitutions
-                        <span class="hidden-xs hidden-sm" style="margin-left: 10px;">
+                        <span class="hidden-xs hidden-sm m-l-4">
                           <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
                             "*".</ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateSub" popoverTitle="JSONata"
