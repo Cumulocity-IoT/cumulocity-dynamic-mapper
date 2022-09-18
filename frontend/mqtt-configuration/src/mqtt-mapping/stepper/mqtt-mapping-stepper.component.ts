@@ -4,17 +4,17 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { debounceTime, take } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../shared/mqtt-configuration.model";
-import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../shared/mqtt-helper";
-import { MQTTMappingService } from './mqtt-mapping.service';
-import { OverwriteSubstitutionModalComponent } from './overwrite-substitution-modal/overwrite-substitution-modal.component';
+import { debounceTime } from "rxjs/operators";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/mqtt-configuration.model";
+import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/mqtt-helper";
+import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
+import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 
 
 @Component({
   selector: 'mqtt-mapping-stepper',
   templateUrl: 'mqtt-mapping-stepper.component.html',
-  styleUrls: ['./mqtt-mapping.style.css'],
+  styleUrls: ['../shared/mqtt-mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
@@ -56,7 +56,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
-  sourceExpressionResult: string
+  sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
 
@@ -221,6 +221,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       pathSource: new FormControl(this.pathSource),
       pathTarget: new FormControl(this.pathTarget),
       definesIdentifier: new FormControl(this.definesIdentifier),
+      sourceExpressionResult: new FormControl(this.sourceExpressionResult),
     },
      checkSubstituionIsValid(this.mapping));
   }
@@ -288,7 +289,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   private getCurrentMapping(): Mapping {
-    //remove dummy field "DEVICE_IDENT", since it should not be stored
+    //remove dummy field "_DEVICE_IDENT_", since it should not be stored
     //if (!this.containsWildcardTopic) {
       let dts = this.editorSource.get()
       delete dts[TOKEN_DEVICE_TOPIC];
@@ -368,7 +369,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (this.mapping.targetAPI == API.INVENTORY) {
       this.templateTarget = {
         ...this.templateTarget,
-        DEVICE_IDENT: "909090"
+        _DEVICE_IDENT_: "909090"
       };
     }
   }
@@ -412,7 +413,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (isWildcardTopic(this.mapping.topic)) {
       this.templateSource = {
         ...this.templateSource,
-        DEVICE_IDENT: "909090"
+        _DEVICE_IDENT_: "909090"
       };
     }
     this.templateTarget = JSON.parse(this.mapping.target);
@@ -423,7 +424,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     if (this.mapping.targetAPI == API.INVENTORY) {
       this.templateTarget = {
         ...this.templateTarget,
-        DEVICE_IDENT: "909090"
+        _DEVICE_IDENT_: "909090"
       };
     }
   }
@@ -433,11 +434,11 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.snoopedTemplateCounter = 0;
     }
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
-    //add dummy field "DEVICE_IDENT" to use for mapping the device identifier form the topic ending
+    //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(this.mapping.topic)) {
       this.templateSource = {
         ...this.templateSource,
-        DEVICE_IDENT: "909090"
+        _DEVICE_IDENT_: "909090"
       };
     }
     // disable further snooping for this template

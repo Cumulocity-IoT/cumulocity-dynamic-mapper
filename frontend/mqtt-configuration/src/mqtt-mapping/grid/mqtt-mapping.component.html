@@ -13,12 +13,11 @@
     <i c8yIcon="save"></i>
     {{ 'Save changes' | translate }}
   </button> -->
-<!--   <button class="btn btn-link" title="{{ 'Activate mappings' | translate }}" (click)="onActivateClicked()">
+<button class="btn btn-link" title="{{ 'Activate mappings' | translate }}" (click)="onActivateClicked()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Activate mappings' | translate }}
-  </button> -->
+  </button>
 </c8y-action-bar-item>
-<!-- <div class="card w-75"> -->
 <div class="card">
   <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
     <div class="card-block">
@@ -28,7 +27,6 @@
     </div>
   </div>
   
-<!--   <div class="card-block d-flex d-col flex-grow"> -->
   <div class="card-block col-md-offset-5 bg-white">
     <div class="c8y-empty-state" *ngIf="mappings.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>

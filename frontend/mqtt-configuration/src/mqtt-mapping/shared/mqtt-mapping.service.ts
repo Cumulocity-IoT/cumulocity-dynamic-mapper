@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { API, Mapping } from '../shared/mqtt-configuration.model';
+import { API, Mapping } from '../../shared/mqtt-configuration.model';
 import * as _ from 'lodash';
-import { TOKEN_DEVICE_TOPIC } from '../shared/mqtt-helper';
+import { TOKEN_DEVICE_TOPIC } from '../../shared/mqtt-helper';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTMappingService {

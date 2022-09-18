@@ -3,11 +3,10 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MQTTConfigurationService } from './mqtt-configuration.service';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { TerminateBrokerConnectionModalComponent } from './terminate-connection-modal/terminate-connection-modal.component';
-import { MQTTMappingService } from '../mqtt-mapping/mqtt-mapping.service';
-import { StatusMessage } from '../shared/mqtt-configuration.model';
-import { catchError, map, tap } from 'rxjs/operators';
+import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
+import { MQTTMappingService } from '../mqtt-mapping/shared/mqtt-mapping.service';
 import { from, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 
 @Component({

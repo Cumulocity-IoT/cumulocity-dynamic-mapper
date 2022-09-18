@@ -4,7 +4,7 @@ create device with deviceIdentifier from topic (wildcard) with joind devicename
 
 topic: wdevice/#
 templateTopic: wdevice/+/west
-sustitutions: [ * DEVICE_IDENT -> DEVICE_IDENT ][ $join([customName, "-", DEVICE_IDENT]) -> name ][ customType -> type ]
+sustitutions: [ * _DEVICE_IDENT_ -> _DEVICE_IDENT_ ][ $join([customName, "-", _DEVICE_IDENT_]) -> name ][ customType -> type ]
 
 {
 	"customName": "Bus-Berlin-Tegel",

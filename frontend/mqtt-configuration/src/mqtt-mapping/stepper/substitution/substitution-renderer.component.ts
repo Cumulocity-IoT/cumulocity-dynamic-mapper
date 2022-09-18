@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { Mapping } from '../../shared/mqtt-configuration.model';
+import { Mapping } from '../../../shared/mqtt-configuration.model';
 
 
 @Component({
