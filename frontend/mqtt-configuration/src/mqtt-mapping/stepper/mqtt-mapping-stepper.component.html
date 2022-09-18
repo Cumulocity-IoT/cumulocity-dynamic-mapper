@@ -314,12 +314,10 @@
                           <label translate>Evaluate Expression on Source
                           </label>
                           <span class="hidden-xs hidden-sm p-l-4">
-                            <!--                             <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_self" >JSONata</a> in your
-                              expressions.</ng-template> -->
-                            <ng-template #popTemplateJSON>Use (https://jsonata.org) JSONata in your
-                              expressions.</ng-template>
+                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank" >JSONata</a> in your
+                              expressions.</ng-template> 
                             <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
-                              popoverTitle="JSONata" po placement="right" triggers="focus" type="button">
+                              popoverTitle="JSONata" placement="right" type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
