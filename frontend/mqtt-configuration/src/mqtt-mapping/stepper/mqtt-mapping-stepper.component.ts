@@ -8,6 +8,7 @@ import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/mqtt-configuration.model";
 import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/mqtt-helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
+import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 
 
@@ -205,14 +206,14 @@ export class MQTTMappingStepperComponent implements OnInit {
       markerWildcardTopic: new FormControl(this.containsWildcardTopic),
       markerWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
       templateTopic: new FormControl(this.mapping.templateTopic),
-      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, ( this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator) ),
+      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, (this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator)),
       active: new FormControl(this.mapping.active),
       createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
-    } , checkPropertiesAreValid(this.mappings) 
+    }, checkPropertiesAreValid(this.mappings)
     );
   }
 
@@ -223,7 +224,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       definesIdentifier: new FormControl(this.definesIdentifier),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
     },
-     checkSubstituionIsValid(this.mapping));
+      checkSubstituionIsValid(this.mapping));
   }
 
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {
@@ -271,7 +272,7 @@ export class MQTTMappingStepperComponent implements OnInit {
     this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.topic);
     this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
-    this.propertyForm.get('markedDeviceIdentifier').setValidators( this.containsWildcardTemplateTopic? Validators.required : Validators.nullValidator);
+    this.propertyForm.get('markedDeviceIdentifier').setValidators(this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator);
     this.propertyForm.get('markedDeviceIdentifier').updateValueAndValidity();
   }
 
@@ -291,9 +292,9 @@ export class MQTTMappingStepperComponent implements OnInit {
   private getCurrentMapping(): Mapping {
     //remove dummy field "_DEVICE_IDENT_", since it should not be stored
     //if (!this.containsWildcardTopic) {
-      let dts = this.editorSource.get()
-      delete dts[TOKEN_DEVICE_TOPIC];
-      let st = JSON.stringify(dts);
+    let dts = this.editorSource.get()
+    delete dts[TOKEN_DEVICE_TOPIC];
+    let st = JSON.stringify(dts);
     //}
 
     let dtt = this.editorTarget.get()
@@ -462,6 +463,7 @@ export class MQTTMappingStepperComponent implements OnInit {
       this.pathSource = '';
       this.pathTarget = '';
       this.definesIdentifier = false;
+      this.templateForm.updateValueAndValidity({'emitEvent': true});
     }
   }
 
@@ -475,7 +477,7 @@ export class MQTTMappingStepperComponent implements OnInit {
   public onDeleteSubstitution() {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
-      this.mapping.substitutions.splice(this.selectedSubstitution , 1);
+      this.mapping.substitutions.splice(this.selectedSubstitution, 1);
       this.selectedSubstitution = -1;
     }
     this.updateSubstitutions();
@@ -503,48 +505,79 @@ export class MQTTMappingStepperComponent implements OnInit {
 
 
   private addSubstitution(sub: MappingSubstitution) {
-
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
     // test 1
-    // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. User has to remove the old substitution.
-    let overwriteIndex = -1;
+    // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. 
+    // User has to remove the old substitution.
+    let additionPending = true;
+    let existingSubstitution = -1;
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
-        overwriteIndex = index;
+        existingSubstitution = index;
       }
     })
 
-    if (overwriteIndex != -1) {
+    if (existingSubstitution != -1) {
       const initialState = {
-        substitution: this.mapping.substitutions[overwriteIndex]
+        substitution: this.mapping.substitutions[existingSubstitution]
       }
-      const overwriteModalRef: BsModalRef = this.bsModalService.show( OverwriteSubstitutionModalComponent, { initialState });
+      const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
       overwriteModalRef.content.closeSubject.subscribe(
-         (overwrite: boolean) => {
-          // test 2
-          // only one susbsitution can define the deviceIdentifier, thus set the others to false
-          this.mapping.substitutions.forEach(s => {
-            if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
-          })
-          console.log("Overwriting I:", overwrite, overwrite, this.mapping.substitutions);
-          if (overwrite){
-            this.mapping.substitutions[overwriteIndex] = sub;
+        (overwrite: boolean) => {
+          console.log("Overwriting substitution I:", overwrite, this.mapping.substitutions);
+          if (overwrite) {
+            // when overwritting substitution then copy deviceIdentifier property
+            sub.definesIdentifier = this.mapping.substitutions[existingSubstitution].definesIdentifier;
+            this.mapping.substitutions[existingSubstitution] = sub;
           }
-          console.log("Overwriting II:", overwrite, overwrite, this.mapping.substitutions);
+          //this.templateForm.get('definesIdentifier').patchValue(false);
+          //this.templateForm.setErrors(null);
+          this.templateForm.updateValueAndValidity({'emitEvent': true});
+          console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
         }
       );
-    } else {
+    }
+    if (additionPending) {
       // test 2
       // only one susbsitution can define the deviceIdentifier, thus set the others to false
+      let substitutionOld: MappingSubstitution[] = [];
       this.mapping.substitutions.forEach(s => {
-        if (sub.definesIdentifier && s.definesIdentifier) s.definesIdentifier = false;
+        if (sub.definesIdentifier && s.definesIdentifier) {
+          substitutionOld.push(s)
+        }
       })
-      this.mapping.substitutions.push(sub);
-    }
 
-    this.updateSubstitutions();
+      if (substitutionOld.length == 1) {
+        const initialState = {
+          substitutionOld: substitutionOld[0],
+          substitutionNew: sub
+        }
+        const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
+        overwriteModalRef.content.closeSubject.subscribe(
+          (overwrite: boolean) => {
+            console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
+            if (overwrite) {
+              substitutionOld[0].definesIdentifier = false;
+            } else {
+              sub.definesIdentifier = false;
+            }
+            //this.templateForm.get('definesIdentifier').patchValue(false);
+            //this.templateForm.setErrors(null);
+            this.templateForm.updateValueAndValidity({'emitEvent': true});
+            console.log("Overwriting definesIdentifier II:", overwrite, substitutionOld[0], sub);
+          }
+        )
+        this.mapping.substitutions.push(sub);
+      } else if (substitutionOld.length == 0) {
+        this.mapping.substitutions.push(sub);
+      } else {
+        console.error("Someting is wrong, since more than one substitution is marked to define the device identifier:", substitutionOld);
+      }
+
+      this.updateSubstitutions();
+    }
   }
 
   public onSelectSubstitution() {

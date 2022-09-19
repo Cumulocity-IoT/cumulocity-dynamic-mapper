@@ -15,6 +15,7 @@ import { MQTTConfigurationComponent } from './mqtt-configuration/mqtt-configurat
 import { MQTTConfigurationService } from './mqtt-configuration/mqtt-configuration.service';
 import { TerminateBrokerConnectionModalComponent } from './mqtt-configuration/terminate/terminate-connection-modal.component';
 import { MQTTMappingComponent } from './mqtt-mapping/grid/mqtt-mapping.component';
+import { OverwriteDeviceIdentifierModalComponent } from './mqtt-mapping/overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from './mqtt-mapping/overwrite/overwrite-substitution-modal.component';
 import { APIRendererComponent } from './mqtt-mapping/renderer/api.renderer.component';
 import { QOSRendererComponent } from './mqtt-mapping/renderer/qos-cell.renderer.component';
@@ -57,6 +58,7 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     MQTTMappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
+    OverwriteDeviceIdentifierModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -71,6 +73,7 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     MQTTMappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
+    OverwriteDeviceIdentifierModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -85,6 +88,7 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     MQTTMappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
+    OverwriteDeviceIdentifierModalComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,

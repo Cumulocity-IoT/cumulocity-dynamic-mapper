@@ -315,7 +315,7 @@ export function checkSubstituionIsValid(mapping: Mapping): ValidatorFn {
       errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
       defined = true
     }
-    console.log("Tested substitutions :", errors);
+    console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }
 

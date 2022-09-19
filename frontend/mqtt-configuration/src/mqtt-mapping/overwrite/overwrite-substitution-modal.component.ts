@@ -15,7 +15,7 @@ import { MappingSubstitution } from '../../shared/mqtt-configuration.model';
   templateUrl: 'overwrite-substitution-modal.component.html',
 })
 export class OverwriteSubstitutionModalComponent implements OnInit {
-  @ViewChild('overwriteRef', { static: false }) overwriteRef: ConfirmModalComponent;
+  @ViewChild('overwriteSubstitutionRef', { static: false }) overwriteSubstitutionRef: ConfirmModalComponent;
 
   @Input()
   substitution: MappingSubstitution;
@@ -41,7 +41,7 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
 
   async ngAfterViewInit() {
     try {
-      await this.overwriteRef.result;
+      await this.overwriteSubstitutionRef.result;
       this.onClose();
     } catch (error) {
       this.onDismiss();
@@ -54,6 +54,7 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
   }
 
   onDismiss() {
+    this.closeSubject.next(false);
     this.closeSubject.complete();
   }
 }

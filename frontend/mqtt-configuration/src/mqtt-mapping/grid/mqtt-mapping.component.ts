@@ -179,7 +179,8 @@ export class MQTTMappingComponent implements OnInit {
 
   editMapping(mapping: Mapping) {
     this.editMode = true;
-    this.mappingToUpdate = mapping;
+    // create deep copy of existing mapping, in case user cancels changes
+    this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
     console.log("Editing mapping", mapping)
     this.showConfigMapping = true;
   }
@@ -209,10 +210,11 @@ export class MQTTMappingComponent implements OnInit {
 
     if (isTemplateTopicUnique(mapping, this.mappings)) {
       if ( i == -1 ) {
+        // new mapping
         console.log("Push new mapping:", mapping, i);
         this.mappings.push(mapping)
       } else {
-        console.log("Update old new mapping:", mapping, i);
+        console.log("Update existing mapping:", this.mappings[i], mapping, i);
         this.mappings[i] = mapping;
       }
       this.mappingGridComponent.reload();
