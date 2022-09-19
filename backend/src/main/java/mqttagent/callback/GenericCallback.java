@@ -91,6 +91,7 @@ public class GenericCallback implements MqttCallback {
 
                 } catch (Exception e) {
                     log.warn("Message could NOT be parsed, ignoring this message");
+                    e.printStackTrace();
 
                 }
             }
@@ -110,11 +111,13 @@ public class GenericCallback implements MqttCallback {
             context.setMapping(((MappingNode) node).getMapping());
             // if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
             ArrayList<String> topicLevels = new ArrayList<String>(Arrays.asList(topic.split("/")));
-            String deviceIdentifier = topicLevels
-                    .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
-            log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
-                    context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
-            context.setDeviceIdentifier(deviceIdentifier);
+            if (context.getMapping().indexDeviceIdentifierInTemplateTopic >= 0) {
+                String deviceIdentifier = topicLevels
+                        .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
+                log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
+                        context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
+                context.setDeviceIdentifier(deviceIdentifier);
+            }
             // }
         } else {
             throw new ResolveException("Could not find appropriate mapping for topic: " + topic);
