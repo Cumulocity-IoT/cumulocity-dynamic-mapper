@@ -3,7 +3,7 @@ import { Mapping } from '../../../shared/mqtt-configuration.model';
 
 
 @Component({
-  selector: 'substitution-renderer',
+  selector: 'mapping-substitution-renderer',
   templateUrl: 'substitution-renderer.component.html',
   styleUrls: ['./substitution-renderer.style.css',
   ],
