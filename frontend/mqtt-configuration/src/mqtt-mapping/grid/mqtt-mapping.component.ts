@@ -12,7 +12,7 @@ import { TemplateRendererComponent } from '../renderer/template.renderer.compone
 import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 
 @Component({
-  selector: 'mqtt-mapping',
+  selector: 'mapping-grid',
   templateUrl: 'mqtt-mapping.component.html',
   styleUrls: ['../shared/mqtt-mapping.style.css', 
   '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
@@ -68,6 +68,7 @@ export class MQTTMappingComponent implements OnInit {
       header: 'API',
       path: 'targetAPI',
       filterable: false,
+      sortable:false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
       gridTrackSize: '5%'
@@ -78,7 +79,7 @@ export class MQTTMappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '20%'
+      gridTrackSize: '22.5%'
     },
     {
       header: 'Target',
@@ -86,13 +87,14 @@ export class MQTTMappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '20%'
+      gridTrackSize: '22.5%'
     },
     {
       header: 'Active-Tested-Snooping',
       name: 'active',
       path: 'active',
       filterable: false,
+      sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: 'text-align-center',
       gridTrackSize: '7.5%'
@@ -102,16 +104,18 @@ export class MQTTMappingComponent implements OnInit {
       name: 'qos',
       path: 'qos',
       filterable: true,
+      sortable: false,
       cellRendererComponent: QOSRendererComponent,
-      gridTrackSize: '7.5%'
+      gridTrackSize: '5%'
     },
     {
       header: '# Snoopes',
       name: 'snoopedTemplates',
       path: 'snoopedTemplates',
       filterable: false,
+      sortable:false,
       cellRendererComponent: SnoopedTemplateRendererComponent,
-      gridTrackSize: '7.5%'
+      gridTrackSize: '5%'
     },
   ]
 

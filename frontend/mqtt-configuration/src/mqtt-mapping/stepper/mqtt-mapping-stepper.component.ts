@@ -12,7 +12,7 @@ import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 
 
 @Component({
-  selector: 'mqtt-mapping-stepper',
+  selector: 'mapping-stepper',
   templateUrl: 'mqtt-mapping-stepper.component.html',
   styleUrls: ['../shared/mqtt-mapping.style.css'],
   encapsulation: ViewEncapsulation.None,

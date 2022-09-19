@@ -10,7 +10,7 @@ import { map } from 'rxjs/operators';
 
 
 @Component({
-  selector: 'mqtt-configuration',
+  selector: 'mapping-configuration',
   templateUrl: 'mqtt-configuration.component.html',
 })
 export class MQTTConfigurationComponent implements OnInit {

@@ -11,7 +11,7 @@ import { Subject } from 'rxjs';
 import { MappingSubstitution } from '../../shared/mqtt-configuration.model';
 
 @Component({
-  selector: 'overwrite-substitution-modal',
+  selector: 'mapping-overwrite-substitution-modal',
   templateUrl: 'overwrite-substitution-modal.component.html',
 })
 export class OverwriteSubstitutionModalComponent implements OnInit {

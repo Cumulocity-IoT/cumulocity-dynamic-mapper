@@ -41,9 +41,9 @@
 
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
-      <mqtt-mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false"
+      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false"
         (onCommit)="onCommit($event)" [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
-      </mqtt-mapping-stepper>
+      </mapping-stepper>
     </div>
   </div>
 
