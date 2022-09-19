@@ -3,14 +3,8 @@ package mqttagent.model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
-
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -68,7 +62,7 @@ public class MappingsRepresentation implements Serializable {
     if (count > 1) {
       result.add(ValidationError.Only_One_Multi_Level_Wildcard);
     }
-    if (count >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length() - 1) {
+    if (count >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) != topic.length() - 1) {
       result.add(ValidationError.Multi_Level_Wildcard_Only_At_End);
     }
     return result;
