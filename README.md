@@ -144,20 +144,57 @@ Example to concatenate JSON Properties with JSONata:
 ```
 Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
 ```
+### Wizzard to define a mapping
+<br/>
+
+The wizzard to define a mapping consists of the steps:
+1. Define the properties of the topic and API to be used
+1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+1. Test the mapping by applying the transformation and send the result to a test device.
+
+<br/>
+
+#### Define MQTT topic properties
+<br/>
+
+![Define Properties](resources/image/Generic_MQTT_TopicDefinition.png)
+
+#### Define templates and substitutions for source and target payload
+<br/>
 
 ![Define Templates](resources/image/Generic_MQTT_MappingDefinition.png)
+<br/>
 
-### Test transformation of Source to Target message (Cumulocity REST format)
+#### Test transformation of Source to Target message (Cumulocity REST format)
+<br/>
 
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
 ### Send transformed Test Message to test device in Cumulocity
+<br/>
 
 ![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
 
 ### Setup Sample MQTTMappings
 
 A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
+
+### Snooping payloads on source topic
+
+In the first wizzard step snooping for payloads on the source topic can be started. In order to record JSON payloads on this topic a subscrition records the payloads and saves them for later use in a source template.
+The process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
+If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
+
+#### Enable snooping payloads on source topic
+<br/>
+
+![Enable Snooping](resources/image/Generic_MQTT_EnableSnooping.png)
+
+#### Use snooped payloads in source templates
+<br/>
+
+![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
+
 
 ## Enhance
 In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
