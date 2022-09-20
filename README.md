@@ -103,7 +103,14 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 
 ### Configuration MQTT Connection to broker
 The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant.
-![Configuration MQTT Connection to broker](resources/image/Generic_MQTT_Connection.png)
+
+<br/>
+<p align="center" style="text-indent:70px;">
+  <a>
+    <img width="100%" src="http://g.recordit.co/dm3Qah19Ar.gif">
+  </a>
+</p>
+<br/>
 
 ### Table of MQTT Mappings
 
