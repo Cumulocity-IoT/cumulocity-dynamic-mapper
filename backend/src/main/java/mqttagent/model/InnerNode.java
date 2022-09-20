@@ -23,9 +23,9 @@ public class InnerNode extends TreeNode {
     static public InnerNode initTree() {
         InnerNode in = new InnerNode();
         in.setDepthIndex(0);
-        in.setLevel("/");
+        in.setLevel("root");
         in.setPreTreeNode(null);
-        in.setAbsolutePath("/");
+        in.setAbsolutePath("");
         return in;
     }
     
@@ -39,9 +39,9 @@ public class InnerNode extends TreeNode {
 
     public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException {
         Set<String> set = childNodes.keySet();
-        String joinedSet = String.join(",", set);
+        String joinedSet = String.join("", set);
         String joinedPath = String.join(",", tp);
-        log.info("Trying to resolve: {} in [{}]", joinedPath, joinedSet);
+        log.info("Trying to resolve: '{}'' in [{}]", joinedPath, joinedSet);
         if (tp.size() >= 1 ) {
             if ( childNodes.containsKey(tp.get(0))){
                 TreeNode tn = childNodes.get(tp.get(0));
@@ -75,7 +75,7 @@ public class InnerNode extends TreeNode {
             child.setPreTreeNode(currentNode);
             child.setMapping(mapping);
             child.setLevel(currentLevel);
-            child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel + "/");
+            child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel);
             child.setDeviceIdentifierIndex(mapping.indexDeviceIdentifierInTemplateTopic);
             child.setDepthIndex(currentNode.getDepthIndex()+1);
             log.debug("Adding mapNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
@@ -93,7 +93,7 @@ public class InnerNode extends TreeNode {
                 child = new InnerNode();
                 child.setPreTreeNode(currentNode);
                 child.setLevel(currentLevel);
-                child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel + "/");
+                child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel);
                 child.setDepthIndex(currentNode.getDepthIndex()+1);
                 log.debug("Adding innerNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
                 currentNode.getChildNodes().put(currentLevel,child);
@@ -109,7 +109,7 @@ public class InnerNode extends TreeNode {
         if (path == null || path.equals("")){
             path = mapping.topic;
         }
-        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split("/")));
+        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));
         insertMapping(this, mapping, levels);
     }
 }

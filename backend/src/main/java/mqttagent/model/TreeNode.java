@@ -10,6 +10,8 @@ import lombok.ToString;
 @ToString()
 public abstract class TreeNode implements Serializable {
 
+    public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
+
     @Setter
     @Getter
     private long depthIndex;

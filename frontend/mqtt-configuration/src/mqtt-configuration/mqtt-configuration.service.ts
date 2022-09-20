@@ -1,20 +1,14 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
 import { LoginService } from '@c8y/ngx-components';
+import { AGENT_ID, BASE_URL, PATH_CONNECT_ENDPOINT, PATH_MONITORING_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/mqtt-helper';
 import { MQTTAuthentication } from '../shared/mqtt-configuration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTConfigurationService {
-  private readonly PATH_CONNECT_ENDPOINT = 'connection';
 
-  private readonly PATH_STATUS_ENDPOINT = 'status';
-  private readonly PATH_OPERATION_ENDPOINT = 'operation';
-  private readonly PATH_MONITORING_ENDPOINT = 'monitor-websocket';
+  private agentId: string = '';
 
-  private readonly BASE_URL = 'service/generic-mqtt-agent';
-  private mappingId: string;
-  private agentId: string;
-  
   constructor(private client: FetchClient,
     private identity: IdentityService,
     private loginService: LoginService) { }
@@ -30,25 +24,26 @@ export class MQTTConfigurationService {
       console.log("FetchOptions: ", options, basicAuthHeader);
       const basicAuthtoken = basicAuthHeader.replace('Basic ', '');
       //url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?token=${basicAuthtoken}`;
-      url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}`;
+      url = `${url}${BASE_URL}/${PATH_MONITORING_ENDPOINT}`;
     } else {
       let xsrf = this.getCookieValue('XSRF-TOKEN')
-      url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?XSRF-TOKEN=${xsrf}`;
+      url = `${url}${BASE_URL}/${PATH_MONITORING_ENDPOINT}?XSRF-TOKEN=${xsrf}`;
     }
     return url;
   }
 
-  async initializeMQTTAgent(): Promise<string>{
-    if (!this.agentId) {
+  async initializeMQTTAgent(): Promise<string> {
+    if (this.agentId == '') {
       const identity: IExternalIdentity = {
         type: 'c8y_Serial',
-        externalId: 'MQTT_AGENT'
+        externalId: AGENT_ID
       };
 
       this.agentId = null;
       const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300){
+      if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
+        console.log("MQTTConfiguration: Found MQTTAgent", this.agentId );
       }
       return this.agentId;
     }
@@ -62,7 +57,7 @@ export class MQTTConfigurationService {
 
 
   updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
+    return this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
@@ -72,7 +67,7 @@ export class MQTTConfigurationService {
   }
 
   connectToMQTTBroker(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
@@ -82,7 +77,7 @@ export class MQTTConfigurationService {
   }
 
   disconnectFromMQTTBroker(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
@@ -92,7 +87,7 @@ export class MQTTConfigurationService {
   }
 
   async getConnectionDetails(): Promise<MQTTAuthentication> {
-    const response = await this.client.fetch(`${this.BASE_URL}/${this.PATH_CONNECT_ENDPOINT}`, {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
       },
@@ -107,7 +102,7 @@ export class MQTTConfigurationService {
   }
 
   async getConnectionStatus(): Promise<string> {
-    const response = await this.client.fetch(`${this.BASE_URL}/${this.PATH_STATUS_ENDPOINT}`, {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_STATUS_ENDPOINT}`, {
       method: 'GET',
     });
     const { status } = await response.json();

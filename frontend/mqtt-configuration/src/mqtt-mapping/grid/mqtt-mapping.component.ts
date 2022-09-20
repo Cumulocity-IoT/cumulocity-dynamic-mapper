@@ -14,8 +14,8 @@ import { MQTTMappingService } from '../shared/mqtt-mapping.service';
 @Component({
   selector: 'mapping-grid',
   templateUrl: 'mqtt-mapping.component.html',
-  styleUrls: ['../shared/mqtt-mapping.style.css', 
-  '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
+  styleUrls: ['../shared/mqtt-mapping.style.css',
+    '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
@@ -68,7 +68,7 @@ export class MQTTMappingComponent implements OnInit {
       header: 'API',
       path: 'targetAPI',
       filterable: false,
-      sortable:false,
+      sortable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
       gridTrackSize: '5%'
@@ -113,15 +113,13 @@ export class MQTTMappingComponent implements OnInit {
       name: 'snoopedTemplates',
       path: 'snoopedTemplates',
       filterable: false,
-      sortable:false,
+      sortable: false,
       cellRendererComponent: SnoopedTemplateRendererComponent,
       gridTrackSize: '5%'
     },
   ]
 
   value: string;
-  isMQTTAgentCreated$: Observable<boolean>;
-  mqttAgentId$: Observable<string>;
 
   pagination: Pagination = {
     pageSize: 3,
@@ -136,8 +134,6 @@ export class MQTTMappingComponent implements OnInit {
 
   ngOnInit() {
     this.loadMappings();
-    this.mqttAgentId$ = from(this.mqttMappingService.initializeMQTTAgent());
-    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
     this.actionControls.push({
       type: BuiltInActionType.Edit,
       callback: this.editMapping.bind(this)
@@ -150,8 +146,8 @@ export class MQTTMappingComponent implements OnInit {
 
   async addMapping() {
     this.editMode = false;
-    let l = (this.mappings.length == 0 ? 0 :Math.max(...this.mappings.map(item => item.id))) + 1;
- 
+    let l = (this.mappings.length == 0 ? 0 : Math.max(...this.mappings.map(item => item.id))) + 1;
+
     let mapping = {
       id: l,
       topic: '',
@@ -196,20 +192,23 @@ export class MQTTMappingComponent implements OnInit {
     this.activateMappings();
   }
 
+  /*   async loadMappings(): Promise<void> {
+  } */
+
   async loadMappings(): Promise<void> {
     this.mappings = await this.mqttMappingService.loadMappings();
-    if (!this.mappings) {
-      this.mappings = await this.mqttMappingService.initalizeMappings();
-    }
+    /*      this.mqttMappingService.loadMappings().then( mappings => {
+          this.mappings = mappings
+        })  */
   }
 
   async onCommit(mapping: Mapping) {
-    mapping.lastUpdate =  Date.now();
+    mapping.lastUpdate = Date.now();
     let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
     console.log("Changed mapping:", mapping, i);
 
     if (isTemplateTopicUnique(mapping, this.mappings)) {
-      if ( i == -1 ) {
+      if (i == -1) {
         // new mapping
         console.log("Push new mapping:", mapping, i);
         this.mappings.push(mapping)

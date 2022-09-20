@@ -102,15 +102,14 @@ public class GenericCallback implements MqttCallback {
 
     private ProcessingContext resolveMap(String topic, String payloadMessage) throws ResolveException {
         ProcessingContext context = new ProcessingContext();
-        log.info("Message received on topic {} with message {}", topic,
+        log.info("Message received on topic '{}'  with message {}", topic,
                 payloadMessage);
-
-        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split("/")));
+        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
         TreeNode node = mqttClient.getActiveMappings().resolveTopicPath(levels);
         if (node instanceof MappingNode) {
             context.setMapping(((MappingNode) node).getMapping());
             // if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
-            ArrayList<String> topicLevels = new ArrayList<String>(Arrays.asList(topic.split("/")));
+            ArrayList<String> topicLevels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
             if (context.getMapping().indexDeviceIdentifierInTemplateTopic >= 0) {
                 String deviceIdentifier = topicLevels
                         .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
