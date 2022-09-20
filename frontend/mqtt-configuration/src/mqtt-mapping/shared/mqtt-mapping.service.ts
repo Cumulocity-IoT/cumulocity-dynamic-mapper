@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { API, Mapping } from '../../shared/mqtt-configuration.model';
 import * as _ from 'lodash';
-import { TOKEN_DEVICE_TOPIC } from '../../shared/mqtt-helper';
+import { AGENT_ID, BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TOKEN_DEVICE_TOPIC } from '../../shared/mqtt-helper';
+import { MQTTConfigurationService } from '../../mqtt-configuration/mqtt-configuration.service';
 
 @Injectable({ providedIn: 'root' })
 export class MQTTMappingService {
@@ -12,63 +13,72 @@ export class MQTTMappingService {
     private event: EventService,
     private alarm: AlarmService,
     private measurement: MeasurementService,
-    private client: FetchClient) {
+    private client: FetchClient,
+    private configurationService: MQTTConfigurationService) {
     // find mqtt agent for tesing
   }
 
-  private mappingId: string;
   private agentId: string;
-
-  private readonly MAPPING_TYPE = 'c8y_mqttMapping';
-  private readonly MAPPING_FRAGMENT = 'c8y_mqttMapping';
-  private readonly PATH_OPERATION_ENDPOINT = 'operation';
-  private readonly BASE_URL = 'service/generic-mqtt-agent';
+  private mappingId: string;
   private JSONATA = require("jsonata");
 
-  async initializeMQTTAgent(): Promise<string>{
-    if (!this.agentId) {
-      const identity: IExternalIdentity = {
-        type: 'c8y_Serial',
-        externalId: 'MQTT_AGENT'
+  /* 
+    async loadMappings(): Promise<Mapping[]> {
+      const filter: object = {
+        pageSize: 100,
+        withTotalPages: true
       };
-
-      this.agentId = null;
-      const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300){
-        this.agentId = data.managedObject.id.toString();
+  
+      const query = {
+        type: this.MAPPING_TYPE
       }
-      return this.agentId;
-    }
-  }
+      const response: IResultList<IManagedObject> = await this.inventory.listQuery(query, filter);
+      if (response.data && response.data.length > 0) {
+        this.mappingId = response.data[0].id;
+        console.log("Found mqtt mapping:", this.mappingId, response.data[0][this.MAPPING_FRAGMENT])
+        return response.data[0][this.MAPPING_FRAGMENT] as Mapping[];
+      } else {
+        console.log("No mqtt mapping found!")
+        return [];
+      }
+    } */
 
   async loadMappings(): Promise<Mapping[]> {
-    const filter: object = {
-      pageSize: 100,
-      withTotalPages: true
-    };
+    if (!this.agentId) {
+      this.agentId = await this.configurationService.initializeMQTTAgent();
+    } 
+    console.log("MappingService: Found MQTTAgent!", this.agentId);
 
-    const query = {
-      type: this.MAPPING_TYPE
-    }
-    const response: IResultList<IManagedObject> = await this.inventory.listQuery(query, filter);
-    if (response.data && response.data.length > 0) {
-      this.mappingId = response.data[0].id;
-      console.log("Found mqtt mapping:", this.mappingId, response.data[0][this.MAPPING_FRAGMENT])
-      return response.data[0][this.MAPPING_FRAGMENT] as Mapping[];
-    } else {
-      console.log("No mqtt mapping found!")
+    let identity: IExternalIdentity = {
+      type: 'c8y_Serial',
+      externalId: MAPPING_TYPE
+    };
+    try {
+      const { data, res } = await this.identity.detail(identity);
+      this.mappingId = data.managedObject.id as string;
+      const response: IResult<IManagedObject> = await this.inventory.detail(this.mappingId);
+      return response.data[MAPPING_FRAGMENT] as Mapping[];
+    } catch (e) {
+      console.log("So far no mqttMapping generated!")
+       // create new mapping mo
+      const response: IResult<IManagedObject> = await this.inventory.create({
+        c8y_mqttMapping: [],
+        name: "MQTT-Mapping",
+        type: MAPPING_TYPE
+      });
+
+      //create identity for mo
+      identity = {
+        ...identity,
+        managedObject: {
+          id: response.data.id
+        }
+      }
+      const { data, res } = await this.identity.create(identity);
+      this.mappingId = response.data.id;
+      // return empty mapping
       return [];
     }
-  }
-
-
-  async initalizeMappings(): Promise<Mapping[]> {
-    const response: IResult<IManagedObject> = await this.inventory.create({
-      c8y_mqttMapping: [],
-      name: "MQTT-Mapping",
-      type: this.MAPPING_TYPE
-    });
-    return [];
   }
 
   async saveMappings(mappings: Mapping[]): Promise<IResult<IManagedObject>> {
@@ -79,17 +89,17 @@ export class MQTTMappingService {
   }
 
   async activateMappings(): Promise<IFetchResponse> {
-    return this.client.fetch(`${this.BASE_URL}/${this.PATH_OPERATION_ENDPOINT}`, {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({"operation": "RELOAD"}),
+      body: JSON.stringify({ "operation": "RELOAD" }),
       method: 'POST',
     });
   }
 
 
-  async testResult(mapping: Mapping, simulation: boolean): Promise <any> {
+  async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
     let result = JSON.parse(mapping.target);
     if (!this.agentId) {
       console.error("Need to intialize MQTTAgent:", this.agentId);
@@ -98,7 +108,7 @@ export class MQTTMappingService {
       console.log("MQTTAgent is already initialized:", this.agentId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        if ( sub.pathTarget != TOKEN_DEVICE_TOPIC) {
+        if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
           let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource);
           if (!s || s == '') {
             if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
@@ -111,9 +121,9 @@ export class MQTTMappingService {
           _.set(result, sub.pathTarget, s)
         }
       })
-  
+
       // for simulation replace source id with agentId
-      if (simulation && mapping.targetAPI!=API.INVENTORY) {
+      if (simulation && mapping.targetAPI != API.INVENTORY) {
         result.source.id = this.agentId;
         result.time = new Date().toISOString();
       }
@@ -158,11 +168,11 @@ export class MQTTMappingService {
   }
 
   public evaluateExpression(json: JSON, path: string): string {
-      let result = '';
-      if ( path != undefined && path != '' && json != undefined ) {
-        const expression = this.JSONATA(path)
-        result = expression.evaluate(json)
-      }
-      return result;
+    let result = '';
+    if (path != undefined && path != '' && json != undefined) {
+      const expression = this.JSONATA(path)
+      result = expression.evaluate(json)
+    }
+    return result;
   }
 }

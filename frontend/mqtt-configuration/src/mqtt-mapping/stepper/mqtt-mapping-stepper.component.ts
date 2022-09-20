@@ -6,7 +6,7 @@ import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/mqtt-configuration.model";
-import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/mqtt-helper";
+import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/mqtt-helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { MQTTMappingService } from '../shared/mqtt-mapping.service';
@@ -345,18 +345,25 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   onSelectDeviceIdentifier() {
-    let parts: string[] = this.mapping.templateTopic.split("/");
+    let parts: string[] = splitTopic(this.mapping.templateTopic);
     if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1) {
       this.mapping.indexDeviceIdentifierInTemplateTopic++;
     } else {
-      this.mapping.indexDeviceIdentifierInTemplateTopic = 0;
+      this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
+    }
+    while (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1  &&  parts[this.mapping.indexDeviceIdentifierInTemplateTopic] == "/") {
+      if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1) {
+        this.mapping.indexDeviceIdentifierInTemplateTopic++;
+      } else {
+        this.mapping.indexDeviceIdentifierInTemplateTopic = 0;
+      }
     }
     this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
   }
 
   private initMarkedDeviceIdentifier() {
     if (this.mapping?.templateTopic != undefined) {
-      let parts: string[] = this.mapping.templateTopic.split("/");
+      let parts: string[] = splitTopic(this.mapping.templateTopic);
       if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1) {
         this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
       } else {

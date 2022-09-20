@@ -37,7 +37,7 @@ export class MQTTConfigurationComponent implements OnInit {
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
-    this.mqttAgentId$ = from(this.mqttMappingService.initializeMQTTAgent());
+    this.mqttAgentId$ = from(this.mqttConfigurationService.initializeMQTTAgent());
     this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
     //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
   }

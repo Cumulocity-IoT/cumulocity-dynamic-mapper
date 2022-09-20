@@ -16,6 +16,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MappingsRepresentation implements Serializable {
 
+  static final String REGEXP_REMOVE_TRAILING_SLASHES = "#\\/$";
+  static final String REGEXP_REDUCE_LEADING_TRAILING_SLASHES = "(\\/{2,}$)|(^\\/{2,})";
   static String TOPIC_WILDCARD_MULTI = "#";
   static String TOPIC_WILDCARD_SINGLE = "+";
 
@@ -98,12 +100,11 @@ public class MappingsRepresentation implements Serializable {
   }
 
   static public String normalizeTopic(String topic) {
-    String nt = topic.trim().replace("\\/+$", "").replace("^\\/+", "");
+    if (topic == null ) topic = "";
+    // reduce multiple leading or trailing "/" to just one "/"
+    String nt = topic.trim().replaceAll( REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
     // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
-    // nt = "/".concat(nt);
-    if (!nt.endsWith(TOPIC_WILDCARD_MULTI) && !nt.endsWith(TOPIC_WILDCARD_SINGLE)) {
-      nt = nt.concat("/");
-    }
+    nt = nt.replaceAll( REGEXP_REMOVE_TRAILING_SLASHES, "#");
     return nt;
   }
 

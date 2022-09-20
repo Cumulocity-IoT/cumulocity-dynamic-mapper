@@ -217,6 +217,15 @@ export const SCHEMA_PAYLOAD = {
 
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 
+export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
+export const PATH_OPERATION_ENDPOINT = 'operation';
+export const PATH_CONNECT_ENDPOINT = 'connection';
+export const PATH_STATUS_ENDPOINT = 'status';
+export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
+export const BASE_URL = 'service/generic-mqtt-agent';
+export const AGENT_ID = 'MQTT_AGENT';
+
 export function getSchema(targetAPI: string): any {
   if (targetAPI == API.ALARM) {
     return SCHEMA_ALARM;
@@ -229,14 +238,20 @@ export function getSchema(targetAPI: string): any {
   }
 }
 
+/*
+* for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
+*/
+export function splitTopic( topic: string): string[]{
+  return topic.split(/(?<=\/)|(?=\/)/g);
+}
+
 export function normalizeTopic(topic: string) {
   if (topic == undefined) topic = '';
-  let nt = topic.trim().replace(/\/+$/, '').replace(/^\/+/, '')
+  // reduce multiple leading or trailing "/" to just one "/"
+  let nt = topic.trim().replace(/(\/{2,}$)|(^\/{2,})/g, '/');
   // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
-  // nt = "/" + nt;
-  // console.log("Topic normalized:", topic, nt);
-  // append trailing slash if last character is not wildcard #
-   nt = nt.concat(nt.endsWith(TOPIC_WILDCARD_MULTI)|| nt.endsWith(TOPIC_WILDCARD_SINGLE) ? '' : '/')
+  // remove trailing "/" if topic is ends with "#"
+  nt = nt.replace(/(#\/$)/g, "#");
   return nt
 }
 
@@ -297,7 +312,7 @@ export enum SnoopStatus {
 
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(m => m.definesIdentifier).map( m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -308,7 +323,7 @@ export function checkSubstituionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(m => m.definesIdentifier).map( m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
       return previousValue + currentValue;
     }, 0)
     if (count > 1) {
