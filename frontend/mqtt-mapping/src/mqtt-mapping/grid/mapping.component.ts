@@ -1,25 +1,23 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { from, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { API, Mapping, SnoopStatus } from '../../shared/mqtt-configuration.model';
-import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/mqtt-helper';
+import { API, Mapping, SnoopStatus } from '../../shared/configuration.model';
+import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { MQTTMappingService } from '../shared/mqtt-mapping.service';
+import { MappingService } from '../shared/mapping.service';
 
 @Component({
   selector: 'mapping-grid',
-  templateUrl: 'mqtt-mapping.component.html',
-  styleUrls: ['../shared/mqtt-mapping.style.css',
+  templateUrl: 'mapping.component.html',
+  styleUrls: ['../shared/mapping.style.css',
     '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
-export class MQTTMappingComponent implements OnInit {
+export class MappingComponent implements OnInit {
 
   isSubstitutionValid: boolean;
 
@@ -128,7 +126,7 @@ export class MQTTMappingComponent implements OnInit {
   actionControls: ActionControl[] = [];
 
   constructor(
-    public mqttMappingService: MQTTMappingService,
+    public mappingService: MappingService,
     public alertService: AlertService
   ) { }
 
@@ -196,7 +194,7 @@ export class MQTTMappingComponent implements OnInit {
   } */
 
   async loadMappings(): Promise<void> {
-    this.mappings = await this.mqttMappingService.loadMappings();
+    this.mappings = await this.mappingService.loadMappings();
     /*      this.mqttMappingService.loadMappings().then( mappings => {
           this.mappings = mappings
         })  */
@@ -234,7 +232,7 @@ export class MQTTMappingComponent implements OnInit {
   }
 
   private async activateMappings() {
-    const response2 = await this.mqttMappingService.activateMappings();
+    const response2 = await this.mappingService.activateMappings();
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings activated successfully'));
@@ -245,7 +243,7 @@ export class MQTTMappingComponent implements OnInit {
   }
 
   private async saveMappings() {
-    const response1 = await this.mqttMappingService.saveMappings(this.mappings);
+    const response1 = await this.mappingService.saveMappings(this.mappings);
     console.log("Saved mppings response:", response1.res, this.mappings)
     if (response1.res.ok) {
       this.alertService.success(gettext('Mappings saved successfully'));

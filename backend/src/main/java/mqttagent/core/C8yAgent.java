@@ -41,6 +41,7 @@ import mqttagent.configuration.ConfigurationService;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.model.API;
 import mqttagent.model.Mapping;
+import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.service.MQTTClient;
 
@@ -116,10 +117,11 @@ public class C8yAgent {
 
             // test if managedObject mqttMapping exists
             ExternalIDRepresentation moMappingExtId = getExternalId(MQTT_MAPPING_TYPE, "c8y_Serial");
-            //InventoryFilter inventoryFilter = new InventoryFilter();
-            //inventoryFilter.byType(MQTT_MAPPING_TYPE);
-            //List<ManagedObjectRepresentation> mol = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
-            //        .getManagedObjects();
+            // InventoryFilter inventoryFilter = new InventoryFilter();
+            // inventoryFilter.byType(MQTT_MAPPING_TYPE);
+            // List<ManagedObjectRepresentation> mol =
+            // inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+            // .getManagedObjects();
             if (moMappingExtId == null) {
                 // create new managedObject
                 ManagedObjectRepresentation moMapping = new ManagedObjectRepresentation();
@@ -174,7 +176,7 @@ public class C8yAgent {
     }
 
     public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
-                                                    String externalIdType) {
+            String externalIdType) {
         ManagedObjectRepresentation device = new ManagedObjectRepresentation();
         device.setName(name);
         device.setType(type);
@@ -375,17 +377,19 @@ public class C8yAgent {
                 ExternalIDRepresentation extId = getExternalId(externalId, externalIdType);
                 if (extId == null) {
                     // Device does not exist
-                    ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
+                    ManagedObjectRepresentation mor = objectMapper.readValue(payload,
+                            ManagedObjectRepresentation.class);
                     // append external id to name
                     mor.setName(mor.getName());
                     mor.set(new IsDevice());
                     mor = inventoryApi.create(mor);
                     log.info("New device created: {}", mor);
-                    ExternalIDRepresentation externalAgentId = createExternalID( mor,  externalId,
+                    ExternalIDRepresentation externalAgentId = createExternalID(mor, externalId,
                             externalIdType);
                 } else {
-                    //Device exists - update needed
-                    ManagedObjectRepresentation mor = objectMapper.readValue(payload, ManagedObjectRepresentation.class);
+                    // Device exists - update needed
+                    ManagedObjectRepresentation mor = objectMapper.readValue(payload,
+                            ManagedObjectRepresentation.class);
                     mor.setId(extId.getManagedObject().getId());
                     inventoryApi.update(mor);
                     log.info("Device updated: {}", mor);
@@ -403,8 +407,8 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
-            //There should be always one mapping
-            //TODO Change to ext ID retrieval maybe
+            // There should be always one mapping
+            // TODO Change to ext ID retrieval maybe
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
             ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
@@ -429,8 +433,8 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
-            //There should be always one mapping
-            //TODO Change to ext ID retrieval maybe
+            // There should be always one mapping
+            // TODO Change to ext ID retrieval maybe
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
             MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
@@ -443,5 +447,19 @@ public class C8yAgent {
             log.info("Found Mapping {}", mr[0]);
         });
         return mr[0];
+    }
+
+    public void sendMonitoring(String type, Map<Long,MappingStatus> status) {
+        log.info("Send monitoring: {}", status.size());
+        EventRepresentation[] ers = { new EventRepresentation() };
+        subscriptionsService.runForTenant(tenant, () -> {
+            ers[0].setSource(agentMOR);
+            ers[0].setText("New monitoring event:" + System.currentTimeMillis());
+            ers[0].setDateTime(DateTime.now());
+            ers[0].setType(type);
+            ArrayList<MappingStatus> result = new ArrayList<>(status.values());;
+            ers[0].setProperty("monitoring", result);
+            this.eventApi.createAsync(ers[0]);
+        });
     }
 }

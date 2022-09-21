@@ -35,6 +35,7 @@ import mqttagent.core.C8yAgent;
 import mqttagent.model.API;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingNode;
+import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingSubstitution;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ProcessingContext;
@@ -84,16 +85,35 @@ public class GenericCallback implements MqttCallback {
                 String payloadMessage = (mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "");
-
+                ProcessingContext ctx = null;
                 try {
-                    ProcessingContext ctx = resolveMap(topic, payloadMessage);
-                    handleNewPayload(ctx, payloadMessage);
-
+                    ctx = resolveMap(topic, payloadMessage);
                 } catch (Exception e) {
-                    log.warn("Message could NOT be parsed, ignoring this message");
+                    log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
                     e.printStackTrace();
-
+                    MappingStatus st = mqttClient.getMonitoring().getOrDefault(MQTTClient.KEY_MONITORING_UNSPECIFIED, new MappingStatus());
+                    st.errors++;
+                    mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
                 }
+
+                if (ctx != null) {
+                    Mapping map = ctx.getMapping();
+                    MappingStatus st = mqttClient.getMonitoring().getOrDefault(map.id, new MappingStatus(map.id, 0, 0, 0));
+                    try {
+                        handleNewPayload(ctx, payloadMessage);
+                        st.messagesReceived++;
+                        if (map.snoopTemplates == SnoopStatus.ENABLED) {
+                            st.snoopedTemplatesTotal++;
+                        }
+                        mqttClient.getMonitoring().put(map.id, st);
+                    } catch (Exception e) {
+                        log.warn("Message could NOT be parsed, ignoring this message.");
+                        e.printStackTrace();
+                        st.errors++;
+                        mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
+                    }
+                }
+
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
@@ -109,7 +129,8 @@ public class GenericCallback implements MqttCallback {
         if (node instanceof MappingNode) {
             context.setMapping(((MappingNode) node).getMapping());
             // if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
-            ArrayList<String> topicLevels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+            ArrayList<String> topicLevels = new ArrayList<String>(
+                    Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
             if (context.getMapping().indexDeviceIdentifierInTemplateTopic >= 0) {
                 String deviceIdentifier = topicLevels
                         .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
@@ -168,7 +189,7 @@ public class GenericCallback implements MqttCallback {
                  */
                 try {
                     // escape _DEVICE_IDENT_ with BACKQUOTE "`"
-                    sub.pathSource = sub.pathSource.replace (TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
+                    sub.pathSource = sub.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
 
                     Expressions expr = Expressions.parse(sub.pathSource);
                     extractedSourceContent = expr.evaluate(payloadJsonNode);

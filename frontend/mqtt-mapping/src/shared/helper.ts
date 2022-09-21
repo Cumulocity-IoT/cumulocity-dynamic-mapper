@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn, Validators } from "@angular/forms"
-import { API, Mapping, ValidationError } from "./mqtt-configuration.model"
+import { API, Mapping, ValidationError } from "./configuration.model"
 
 export const SAMPLE_TEMPLATES = {
   MEASUREMENT: `{                                               
@@ -218,6 +218,7 @@ export const SCHEMA_PAYLOAD = {
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const MQTT_MONITORING_EVENT_TYPE = "mqtt_status_monitoring";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONNECT_ENDPOINT = 'connection';

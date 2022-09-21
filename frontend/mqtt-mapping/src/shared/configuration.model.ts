@@ -34,10 +34,17 @@ export interface Mapping {
   snoopedTemplates?: string[];
 }
 
+
+export interface MappingStatus {
+  id: number;
+  errors: number;
+  messagesReceived: number;
+  snoopedTemplatesTotal: number;
+}
+
 export interface StatusMessage {
   count: number;
 }
-
 
 export enum API {
   ALARM = "ALARM",

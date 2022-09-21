@@ -8,7 +8,7 @@ import {
 } from '@c8y/ngx-components';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { MappingSubstitution } from '../../shared/mqtt-configuration.model';
+import { MappingSubstitution } from '../../shared/configuration.model';
 
 @Component({
   selector: 'mapping-overwrite-substitution-modal',

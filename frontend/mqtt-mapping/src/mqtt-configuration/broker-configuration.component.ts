@@ -1,19 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { MQTTConfigurationService } from './mqtt-configuration.service';
+import { BrokerConfigurationService } from './broker-configuration.service';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
-import { MQTTMappingService } from '../mqtt-mapping/shared/mqtt-mapping.service';
+import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 
 @Component({
-  selector: 'mapping-configuration',
-  templateUrl: 'mqtt-configuration.component.html',
+  selector: 'broker-configuration',
+  templateUrl: 'broker-configuration.component.html',
 })
-export class MQTTConfigurationComponent implements OnInit {
+export class BokerConfigurationComponent implements OnInit {
 
   isMQTTInitialized: boolean;
   isMQTTActivated: boolean;
@@ -27,8 +27,8 @@ export class MQTTConfigurationComponent implements OnInit {
 
   constructor(
     private bsModalService: BsModalService,
-    public mqttConfigurationService: MQTTConfigurationService,
-    public mqttMappingService: MQTTMappingService,
+    public configurationService: BrokerConfigurationService,
+    public mappingService: MappingService,
     public alertservice: AlertService
   ) {
   }
@@ -37,7 +37,7 @@ export class MQTTConfigurationComponent implements OnInit {
     this.initForm();
     this.initConnectionStatus();
     this.initConnectionDetails();
-    this.mqttAgentId$ = from(this.mqttConfigurationService.initializeMQTTAgent());
+    this.mqttAgentId$ = from(this.configurationService.initializeMQTTAgent());
     this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
     //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
   }
@@ -46,7 +46,7 @@ export class MQTTConfigurationComponent implements OnInit {
     this.isMQTTInitialized = false;
     this.isMQTTActivated = false;
     this.isMQTTConnected = false;
-    let status = await this.mqttConfigurationService.getConnectionStatus();
+    let status = await this.configurationService.getConnectionStatus();
     if (status === "ACTIVATED") {
       this.isMQTTConnected = false;
       this.isMQTTInitialized = true;
@@ -75,7 +75,7 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async initConnectionDetails(): Promise<void> {
-    const connectionDetails = await this.mqttConfigurationService.getConnectionDetails();
+    const connectionDetails = await this.configurationService.getConnectionDetails();
     console.log("Connection details", connectionDetails)
     if (!connectionDetails) {
       return;
@@ -105,7 +105,7 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async updateConnectionDetails() {
-    const response = await this.mqttConfigurationService.updateConnectionDetails({
+    const response = await this.configurationService.updateConnectionDetails({
       mqttHost: this.mqttForm.value.mqttHost,
       mqttPort: this.mqttForm.value.mqttPort,
       user: this.mqttForm.value.user,
@@ -126,8 +126,8 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async connectToMQTTBroker() {
-    const response1 = await this.mqttConfigurationService.connectToMQTTBroker();
-    const response2 = await this.mqttMappingService.activateMappings();
+    const response1 = await this.configurationService.connectToMQTTBroker();
+    const response2 = await this.mappingService.activateMappings();
     console.log("Details connectToMQTTBroker", response1, response2)
     if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext('Connection successful'));
@@ -154,7 +154,7 @@ export class MQTTConfigurationComponent implements OnInit {
   }
 
   private async disconnectFromMQTT() {
-    const response = await this.mqttConfigurationService.disconnectFromMQTTBroker();
+    const response = await this.configurationService.disconnectFromMQTTBroker();
     console.log("Details disconnectFromMQTT", response)
     if (response.status < 300) {
       this.isMQTTActivated = false;

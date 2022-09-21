@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { API, Mapping } from '../../shared/mqtt-configuration.model';
+import { API, Mapping } from '../../shared/configuration.model';
 import * as _ from 'lodash';
-import { AGENT_ID, BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TOKEN_DEVICE_TOPIC } from '../../shared/mqtt-helper';
-import { MQTTConfigurationService } from '../../mqtt-configuration/mqtt-configuration.service';
+import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 
 @Injectable({ providedIn: 'root' })
-export class MQTTMappingService {
+export class MappingService {
   constructor(
     private inventory: InventoryService,
     private identity: IdentityService,
@@ -14,34 +14,13 @@ export class MQTTMappingService {
     private alarm: AlarmService,
     private measurement: MeasurementService,
     private client: FetchClient,
-    private configurationService: MQTTConfigurationService) {
+    private configurationService: BrokerConfigurationService) {
     // find mqtt agent for tesing
   }
 
   private agentId: string;
   private mappingId: string;
   private JSONATA = require("jsonata");
-
-  /* 
-    async loadMappings(): Promise<Mapping[]> {
-      const filter: object = {
-        pageSize: 100,
-        withTotalPages: true
-      };
-  
-      const query = {
-        type: this.MAPPING_TYPE
-      }
-      const response: IResultList<IManagedObject> = await this.inventory.listQuery(query, filter);
-      if (response.data && response.data.length > 0) {
-        this.mappingId = response.data[0].id;
-        console.log("Found mqtt mapping:", this.mappingId, response.data[0][this.MAPPING_FRAGMENT])
-        return response.data[0][this.MAPPING_FRAGMENT] as Mapping[];
-      } else {
-        console.log("No mqtt mapping found!")
-        return [];
-      }
-    } */
 
   async loadMappings(): Promise<Mapping[]> {
     if (!this.agentId) {

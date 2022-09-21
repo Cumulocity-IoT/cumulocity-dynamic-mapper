@@ -26,12 +26,14 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.InnerNode;
 import mqttagent.model.Mapping;
+import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
@@ -42,6 +44,10 @@ import mqttagent.model.ValidationError;
 @EnableScheduling
 @Service
 public class MQTTClient {
+
+    public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
+    private static final String MQTT_STATUS_EVENT_TYPE = "mqtt_status_event";
+    private static final String MQTT_MONITORING_EVENT_TYPE = "mqtt_status_monitoring";
 
     MQTTConfiguration mqttConfiguration;
 
@@ -66,6 +72,9 @@ public class MQTTClient {
     // mappings: tenant -> ( topic -> mqtt_mappping)
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
+
+    @Getter
+    private Map<Long, MappingStatus> monitoring = new HashMap<Long, MappingStatus>();
 
     private void runInit() {
         while (!isInitilized()) {
@@ -155,7 +164,7 @@ public class MQTTClient {
             mqttClient.connect(connOpts);
             log.info("Successfully connected to Broker {}", mqttClient.getServerURI());
             c8yAgent.createEvent("Successfully connected to Broker " + mqttClient.getServerURI(),
-                    "mqtt_status_event",
+                    MQTT_STATUS_EVENT_TYPE,
                     DateTime.now(), null);
 
         }
@@ -224,19 +233,33 @@ public class MQTTClient {
         initilized = init;
     }
 
-    // TODO change this to respect the tenant name
     public void reloadMappings() {
-
         List<Mapping> mappings = c8yAgent.getMappings();
-        // convert list -> map, set
         Set<String> updatedSubscriptionsSet = new HashSet<String>();
         Map<String, Mapping> updatedSubscriptionsMap = new HashMap<String, Mapping>();
+        Set<Long> existingMaps = new HashSet<Long>(monitoring.keySet());
+        //log.info("Key set existingMaps before: {}", existingMaps.toString());
         mappings.forEach(m -> {
             if (m.active) {
                 updatedSubscriptionsSet.add(m.topic);
                 updatedSubscriptionsMap.put(m.topic, m);
             }
-            log.info("Processing addition for topic: {}", m.topic);
+            if (!monitoring.containsKey(m.id)) {
+                log.info("Adding: {}", m.id);
+                monitoring.put(m.id, new MappingStatus(m.id, 0, 0, 0));
+            }
+            //log.info("Processing addition for topic: {}, monitoringExists {}", m.topic, monitoring.containsKey(m.id));
+            existingMaps.remove(m.id);
+        });
+
+        //log.info("Key set existingMaps after: {}, {}", monitoring.keySet().toString(), monitoring.size());
+
+        // always keep monitoring entry for unspecified
+        existingMaps.remove(KEY_MONITORING_UNSPECIFIED);
+        // remove monitorings for deleted maps
+        existingMaps.forEach(id -> {
+            log.info("Removing monitoring not used: {}", id);
+            monitoring.remove(id);
         });
 
         // unsubscribe not used topics
@@ -285,7 +308,7 @@ public class MQTTClient {
     public void subscribe(String topic, Integer qos) throws MqttException {
         if (isInitilized() && mqttClient != null) {
             log.info("Subscribing on topic {}", topic);
-            c8yAgent.createEvent("Subscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
+            c8yAgent.createEvent("Subscribing on topic " + topic, MQTT_STATUS_EVENT_TYPE, DateTime.now(), null);
 
             mqttClient.setCallback(genericCallback);
             if (qos != null)
@@ -299,7 +322,7 @@ public class MQTTClient {
     private void unsubscribe(String topic) throws MqttException {
         if (isInitilized() && mqttClient != null) {
             log.info("Unsubscribing from topic {}", topic);
-            c8yAgent.createEvent("Unsubscribing on topic " + topic, "mqtt_status_event", DateTime.now(), null);
+            c8yAgent.createEvent("Unsubscribing on topic " + topic, MQTT_STATUS_EVENT_TYPE, DateTime.now(), null);
 
             mqttClient.unsubscribe(topic);
             log.debug("Successfully unsubscribed from topic {}", topic);
@@ -310,14 +333,19 @@ public class MQTTClient {
     public void runHouskeeping() {
         try {
             String statusReconnectTask = (reconnectTask == null ? "stopped"
-                        : reconnectTask.isDone() ? "stopped" : "running");
+                    : reconnectTask.isDone() ? "stopped" : "running");
             String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
             log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
                     statusInitTask, isConnected());
             cleanDirtyMappings();
+            sendMonitoring();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
+    }
+
+    private void sendMonitoring() {
+        c8yAgent.sendMonitoring(MQTT_MONITORING_EVENT_TYPE, monitoring);
     }
 
     private void cleanDirtyMappings() throws JsonProcessingException {
@@ -370,7 +398,7 @@ public class MQTTClient {
         Long result = null;
 
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        ArrayList<ValidationError> errors= MappingsRepresentation.isMappingValid(mappings, mapping);
+        ArrayList<ValidationError> errors = MappingsRepresentation.isMappingValid(mappings, mapping);
 
         if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();
@@ -378,7 +406,8 @@ public class MQTTClient {
             mappings.add(mapping);
             result = mapping.id;
         } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + "[ " + error + " ]");
+            String errorList = errors.stream().map(e -> e.toString()).reduce("",
+                    (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
         try {
@@ -396,7 +425,7 @@ public class MQTTClient {
     public Long updateMapping(Long id, Mapping mapping) throws JsonProcessingException {
         Long[] result = { null };
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        ArrayList<ValidationError> errors= MappingsRepresentation.isMappingValid(mappings, mapping);
+        ArrayList<ValidationError> errors = MappingsRepresentation.isMappingValid(mappings, mapping);
 
         if (errors.size() == 0) {
             MutableInt i = new MutableInt(0);
@@ -410,7 +439,8 @@ public class MQTTClient {
                 i.increment();
             });
         } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("", (res, error) -> res + "[ " + error + " ]");
+            String errorList = errors.stream().map(e -> e.toString()).reduce("",
+                    (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
         try {

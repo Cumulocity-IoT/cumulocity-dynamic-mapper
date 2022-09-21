@@ -5,21 +5,21 @@ import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/mqtt-configuration.model";
-import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/mqtt-helper";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
-import { MQTTMappingService } from '../shared/mqtt-mapping.service';
+import { MappingService } from '../shared/mapping.service';
 
 
 @Component({
   selector: 'mapping-stepper',
-  templateUrl: 'mqtt-mapping-stepper.component.html',
-  styleUrls: ['../shared/mqtt-mapping.style.css'],
+  templateUrl: 'mapping-stepper.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
-export class MQTTMappingStepperComponent implements OnInit {
+export class MappingStepperComponent implements OnInit {
 
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
@@ -146,7 +146,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
   constructor(
     private bsModalService: BsModalService,
-    public mqttMappingService: MQTTMappingService,
+    public mappingService: MappingService,
     public alertService: AlertService,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -243,7 +243,7 @@ export class MQTTMappingStepperComponent implements OnInit {
 
     try {
       //console.log("Why this", path);
-      this.sourceExpressionResult = this.mqttMappingService.evaluateExpression(this.editorSource?.get(), path);
+      this.sourceExpressionResult = this.mappingService.evaluateExpression(this.editorSource?.get(), path);
       this.sourceExpressionErrorMsg = '';
     } catch (error) {
       console.log("Error evaluating expression: ", error);
@@ -327,12 +327,12 @@ export class MQTTMappingStepperComponent implements OnInit {
   }
 
   async onTestTransformation() {
-    let dataTesting = await this.mqttMappingService.testResult(this.getCurrentMapping(), false);
+    let dataTesting = await this.mappingService.testResult(this.getCurrentMapping(), false);
     this.dataTesting = dataTesting;
   }
 
   async onSendTest() {
-    let { data, res } = await this.mqttMappingService.sendTestResult(this.getCurrentMapping());
+    let { data, res } = await this.mappingService.sendTestResult(this.getCurrentMapping());
     //console.log ("My data:", data );
     if (res.status == 200 || res.status == 201) {
       this.alertService.success("Successfully tested mapping!");
