@@ -52,3 +52,6 @@ backend/.DS_Store
 frontend/mqtt-configuration/src/mqtt-mapping/data.ts
 frontend/mqtt-configuration/src/mqtt-mapping/gc.html
 frontend/mqtt-configuration/src/mqtt-mapping/gc.ts
+frontend/mqtt-mapping/src/mqtt-mapping/gc.html
+frontend/mqtt-mapping/src/mqtt-mapping/gc.ts
+frontend/mqtt-mapping/src/mqtt-mapping/data.ts

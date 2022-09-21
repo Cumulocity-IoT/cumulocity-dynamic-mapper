@@ -23,43 +23,43 @@ div>div.jsoneditor-menu {
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-icon {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-button {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-dragarea {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr .jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr.parse-error .jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-search button {
-  background: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-statusbar>.jsoneditor-validation-error-icon {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-statusbar>.jsoneditor-parse-error-icon {
-  background-image: url("/apps/mqtt-configuration/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 button.jsoneditor-button.jsoneditor-dragarea {

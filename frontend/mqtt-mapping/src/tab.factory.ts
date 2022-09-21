@@ -3,7 +3,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 
 @Injectable()
-export class MQTTConfigurationTabFactory implements TabFactory {
+export class ConfigurationTabFactory implements TabFactory {
   constructor(public router: Router) {}
 
   get() {
@@ -21,6 +21,13 @@ export class MQTTConfigurationTabFactory implements TabFactory {
         priority: 1000,
         label: 'Mapping',
         icon: 'split-table',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: 'mqtt/monitoring',
+        priority: 1000,
+        label: 'Monitoring',
+        icon: 'monitoring',
         orientation: 'horizontal',
       } as Tab);
     }

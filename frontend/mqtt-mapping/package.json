@@ -50,25 +50,25 @@
   },
   "c8y": {
     "application": {
-      "name": "mqtt-configuration",
-      "contextPath": "mqtt-configuration",
-      "key": "mqtt-configuration-application-key",
-      "globalTitle": "MQTT widget",
+      "name": "mqtt-mapping",
+      "contextPath": "mqtt-mapping",
+      "key": "mqtt-mapping-application-key",
+      "globalTitle": "MQTT mapping widget",
       "tabsHorizontal": true,
       "isPackage": true,
       "noAppSwitcher": true,
       "package": "plugin",
       "exports": [
         {
-          "name": "MQTT configuration plugin",
-          "module": "MQTTServiceConfigurationModule",
-          "path": "./src/service-configuration.module",
-          "description": "Adds a MQTT configuration plugin"
+          "name": "MQTT mapping plugin",
+          "module": "MQTTMappingModule",
+          "path": "./src/service-mapping.module",
+          "description": "Adds a MQTT mapping plugin"
         }
       ],
       "remotes": {
-        "mqtt-configuration": [
-          "MQTTServiceConfigurationModule"
+        "mqtt-mapping": [
+          "MQTTMappingModule"
         ]
       }
     },

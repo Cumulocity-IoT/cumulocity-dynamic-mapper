@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
 import { LoginService } from '@c8y/ngx-components';
-import { AGENT_ID, BASE_URL, PATH_CONNECT_ENDPOINT, PATH_MONITORING_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/mqtt-helper';
-import { MQTTAuthentication } from '../shared/mqtt-configuration.model';
+import { AGENT_ID, BASE_URL, PATH_CONNECT_ENDPOINT, PATH_MONITORING_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/helper';
+import { MQTTAuthentication } from '../shared/configuration.model';
 
 @Injectable({ providedIn: 'root' })
-export class MQTTConfigurationService {
+export class BrokerConfigurationService {
 
-  private agentId: string = '';
+  private agentId: string;
 
   constructor(private client: FetchClient,
     private identity: IdentityService,
@@ -33,20 +33,19 @@ export class MQTTConfigurationService {
   }
 
   async initializeMQTTAgent(): Promise<string> {
-    if (this.agentId == '') {
+    if (!this.agentId) {
       const identity: IExternalIdentity = {
         type: 'c8y_Serial',
         externalId: AGENT_ID
       };
 
-      this.agentId = null;
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
-        console.log("MQTTConfiguration: Found MQTTAgent", this.agentId );
+        console.log("MQTTConfigurationService: Found MQTTAgent", this.agentId );
       }
-      return this.agentId;
     }
+    return this.agentId;
   }
 
   private getCookieValue(name: string) {

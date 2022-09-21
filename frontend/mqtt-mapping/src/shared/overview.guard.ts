@@ -3,7 +3,7 @@ import { CanActivate } from '@angular/router';
 import { ApplicationService } from '@c8y/client';
 
 @Injectable({ providedIn: 'root' })
-export class MQTTOverviewGuard implements CanActivate {
+export class OverviewGuard implements CanActivate {
   private static readonly APPLICATION_MQTT = 'generic-mqtt-agent';
 
   private activateOverviewNavigationPromise: Promise<boolean>;
@@ -13,7 +13,7 @@ export class MQTTOverviewGuard implements CanActivate {
   canActivate(): Promise<boolean> {
     if (!this.activateOverviewNavigationPromise) {
       this.activateOverviewNavigationPromise = this.applicationService
-        .isAvailable(MQTTOverviewGuard.APPLICATION_MQTT)
+        .isAvailable(OverviewGuard.APPLICATION_MQTT)
         .then((result) => {
           if (!(result && result.data)) {
             console.error('Generic MQTT Agent Microservice not subscribed!');

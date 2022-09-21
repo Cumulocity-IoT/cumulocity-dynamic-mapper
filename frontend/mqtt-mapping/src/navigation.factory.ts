@@ -3,7 +3,7 @@ import { ApplicationService } from '@c8y/client';
 import { gettext, NavigatorNode, NavigatorNodeFactory } from '@c8y/ngx-components';
 
 @Injectable()
-export class MQTTConfigurationNavigationFactory implements NavigatorNodeFactory {
+export class ConfigurationNavigationFactory implements NavigatorNodeFactory {
   private static readonly APPLICATION_MQTT_GENERIC = 'generic-mqtt-agent';
 
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
@@ -19,7 +19,7 @@ export class MQTTConfigurationNavigationFactory implements NavigatorNodeFactory 
 
   get() {
     return this.applicationService
-      .isAvailable(MQTTConfigurationNavigationFactory.APPLICATION_MQTT_GENERIC)
+      .isAvailable(ConfigurationNavigationFactory.APPLICATION_MQTT_GENERIC)
       .then((result) => {
         if (!(result && result.data)) {
           console.error('MQTT Generic Microservice not subscribed!');

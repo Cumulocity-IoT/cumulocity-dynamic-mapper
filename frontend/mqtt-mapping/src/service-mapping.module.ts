@@ -11,10 +11,10 @@ import {
 } from '@c8y/ngx-components';
 import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { MQTTConfigurationComponent } from './mqtt-configuration/mqtt-configuration.component';
-import { MQTTConfigurationService } from './mqtt-configuration/mqtt-configuration.service';
+import { BokerConfigurationComponent } from './mqtt-configuration/broker-configuration.component';
+import { BrokerConfigurationService } from './mqtt-configuration/broker-configuration.service';
 import { TerminateBrokerConnectionModalComponent } from './mqtt-configuration/terminate/terminate-connection-modal.component';
-import { MQTTMappingComponent } from './mqtt-mapping/grid/mqtt-mapping.component';
+import { MappingComponent } from './mqtt-mapping/grid/mapping.component';
 import { OverwriteDeviceIdentifierModalComponent } from './mqtt-mapping/overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from './mqtt-mapping/overwrite/overwrite-substitution-modal.component';
 import { APIRendererComponent } from './mqtt-mapping/renderer/api.renderer.component';
@@ -22,13 +22,15 @@ import { QOSRendererComponent } from './mqtt-mapping/renderer/qos-cell.renderer.
 import { SnoopedTemplateRendererComponent } from './mqtt-mapping/renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from './mqtt-mapping/renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './mqtt-mapping/renderer/template.renderer.component';
-import { MQTTMappingService } from './mqtt-mapping/shared/mqtt-mapping.service';
-import { MQTTMappingStepperComponent } from './mqtt-mapping/stepper/mqtt-mapping-stepper.component';
+import { MappingService } from './mqtt-mapping/shared/mapping.service';
+import { MappingStepperComponent } from './mqtt-mapping/stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substitution/substitution-renderer.component';
-import { MQTTConfigurationNavigationFactory } from './navigation.factory';
-import { MQTTServiceConfigurationComponent } from './service-configuration.component';
-import { MQTTOverviewGuard } from './shared/mqtt-overview.guard';
-import { MQTTConfigurationTabFactory } from './tab.factory';
+import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
+import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
+import { ConfigurationNavigationFactory } from './navigation.factory';
+import { ServiceMappingComponent } from './service-mapping.component';
+import { OverviewGuard } from './shared/overview.guard';
+import { ConfigurationTabFactory } from './tab.factory';
 
 @NgModule({
   imports: [
@@ -42,20 +44,25 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
       {
         path: 'mqtt/configuration',
         pathMatch: 'full',
-        component: MQTTConfigurationComponent,
+        component: BokerConfigurationComponent,
       },
       {
         path: 'mqtt/mapping',
         pathMatch: 'full',
-        component: MQTTMappingComponent,
+        component: MappingComponent,
+      },
+      {
+        path: 'mqtt/monitoring',
+        pathMatch: 'full',
+        component: MonitoringComponent,
       },
     ]),
   ],
   exports: [
-    MQTTServiceConfigurationComponent,
-    MQTTConfigurationComponent,
-    MQTTMappingComponent,
-    MQTTMappingStepperComponent,
+    ServiceMappingComponent,
+    BokerConfigurationComponent,
+    MappingComponent,
+    MappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
@@ -65,12 +72,13 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     APIRendererComponent,
+    MonitoringComponent,
   ],
   entryComponents: [
-    MQTTServiceConfigurationComponent,
-    MQTTConfigurationComponent,
-    MQTTMappingComponent,
-    MQTTMappingStepperComponent,
+    ServiceMappingComponent,
+    BokerConfigurationComponent,
+    MappingComponent,
+    MappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
@@ -80,12 +88,13 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     APIRendererComponent,
+    MonitoringComponent,
   ],
   declarations: [
-    MQTTServiceConfigurationComponent,
-    MQTTConfigurationComponent,
-    MQTTMappingComponent,
-    MQTTMappingStepperComponent,
+    ServiceMappingComponent,
+    BokerConfigurationComponent,
+    MappingComponent,
+    MappingStepperComponent,
     TerminateBrokerConnectionModalComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
@@ -95,29 +104,35 @@ import { MQTTConfigurationTabFactory } from './tab.factory';
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     APIRendererComponent,
+    MonitoringComponent,
   ],
   providers: [
-    MQTTOverviewGuard,
-    MQTTConfigurationService,
-    MQTTMappingService,
-    { provide: HOOK_NAVIGATOR_NODES, useClass: MQTTConfigurationNavigationFactory, multi: true },
-    { provide: HOOK_TABS, useClass: MQTTConfigurationTabFactory, multi: true },
+    OverviewGuard,
+    BrokerConfigurationService,
+    MonitoringService,
+    MappingService,
+    { provide: HOOK_NAVIGATOR_NODES, useClass: ConfigurationNavigationFactory, multi: true },
+    { provide: HOOK_TABS, useClass: ConfigurationTabFactory, multi: true },
     {
       provide: HOOK_ROUTE,
       useValue: [
         {
           path: 'mqtt/configuration',
-          component: MQTTConfigurationComponent,
+          component: BokerConfigurationComponent,
         },
         {
           path: 'mqtt/mapping',
-          component: MQTTMappingComponent,
+          component: MappingComponent,
+        },
+        {
+          path: 'mqtt/monitoring',
+          component: MonitoringComponent,
         },
       ] as Route[],
       multi: true,
     },
   ],
 })
-export class MQTTServiceConfigurationModule {
+export class MQTTMappingModule {
   constructor() {}
 }
