@@ -74,7 +74,7 @@ In Adminstration App go to Ecosystem -> Packages and click on "Add Application" 
 > Note: If you don't see the Packages Menu you have to add "?beta=true" in your URL.
 > Example: {{url}}/apps/administration?beta=true
 
-Select "mqtt-configuration.zip" and wait until it is uploaded.
+Select "mqtt-mapping.zip" and wait until it is uploaded.
 
 > Note: We need to clone the Administration app to add the plugin to it
 
@@ -95,8 +95,8 @@ Run `mvn clean package` in folder `backend` to build the Microservice which will
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frondend - Plugin
-Run `npm run build` in folder `frontend/mqtt-configuration` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `frontend/mqtt-configuration` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
+Run `npm run build` in folder `frontend/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration and Definition of MQTT Mappings
@@ -115,11 +115,6 @@ The MQTT Broker configuration is persisted in the tenant options of a Cumulocity
 ### Table of MQTT Mappings
 
 ![Table of MQTT Mappings](resources/image/Generic_MQTT_MappingTable.png)
-
-### Define message Templates for source and target (Cumulocity REST format)
-
-![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
-
 
 ### Define message Mapping for Source and Target (Cumulocity REST format)
 Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
@@ -162,7 +157,16 @@ The wizzard to define a mapping consists of the steps:
 #### Define templates and substitutions for source and target payload
 <br/>
 
-![Define Templates](resources/image/Generic_MQTT_MappingDefinition.png)
+![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
+<br/>
+
+In oder to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
+1. Add mapping (button with "+" sign)
+1. Show & Select already defined substitutions (button with skip symbol). A selected substitution is colored and can be deleted by pressing the button with "-" sign
+1. Delete mapping (button wiht one "-" sign), the selected substitution is deleted
+1. Delete all mappings (button wiht two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, eithe "+"- singel level or "#" - multi level
+
+![Define Templates](resources/image/Generic_MQTT_MappingTemplate_annnotated.png)
 <br/>
 
 #### Test transformation of Source to Target message (Cumulocity REST format)
