@@ -450,16 +450,22 @@ public class C8yAgent {
     }
 
     public void sendMonitoring(String type, Map<Long,MappingStatus> status) {
-        log.info("Send monitoring: {}", status.size());
-        EventRepresentation[] ers = { new EventRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            ers[0].setSource(agentMOR);
-            ers[0].setText("New monitoring event:" + System.currentTimeMillis());
-            ers[0].setDateTime(DateTime.now());
-            ers[0].setType(type);
-            ArrayList<MappingStatus> result = new ArrayList<>(status.values());;
-            ers[0].setProperty("monitoring", result);
-            this.eventApi.createAsync(ers[0]);
-        });
+        
+        // avoid sending empty monitoring events
+        if (status.values().size() > 0) {
+            log.info("Sending monitoring: {}", status.values().size());
+            EventRepresentation[] ers = { new EventRepresentation() };
+            subscriptionsService.runForTenant(tenant, () -> {
+                ers[0].setSource(agentMOR);
+                ers[0].setText("New monitoring event:" + System.currentTimeMillis());
+                ers[0].setDateTime(DateTime.now());
+                ers[0].setType(type);
+                ArrayList<MappingStatus> result = new ArrayList<>(status.values());;
+                ers[0].setProperty("monitoring", result);
+                this.eventApi.createAsync(ers[0]);
+            });
+        } else {
+            log.info("Ignoring monitoring: {}", status.values().size());
+        }
     }
 }

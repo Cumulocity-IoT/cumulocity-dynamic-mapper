@@ -47,7 +47,7 @@ public class MQTTClient {
 
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String MQTT_STATUS_EVENT_TYPE = "mqtt_status_event";
-    private static final String MQTT_MONITORING_EVENT_TYPE = "mqtt_status_monitoring";
+    private static final String MQTT_MONITORING_EVENT_TYPE = "mqtt_monitoring_event";
 
     MQTTConfiguration mqttConfiguration;
 
@@ -246,7 +246,7 @@ public class MQTTClient {
             }
             if (!monitoring.containsKey(m.id)) {
                 log.info("Adding: {}", m.id);
-                monitoring.put(m.id, new MappingStatus(m.id, 0, 0, 0, 0));
+                monitoring.put(m.id, new MappingStatus(m.id, 0, 0, m.snoopedTemplates.size(), 0));
             }
             //log.info("Processing addition for topic: {}, monitoringExists {}", m.topic, monitoring.containsKey(m.id));
             existingMaps.remove(m.id);
@@ -357,7 +357,8 @@ public class MQTTClient {
         log.debug("Testing for dirty maps");
         for (Mapping mqttMapping : dirtyMappings) {
             log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
-            updateMapping(mqttMapping.id, mqttMapping);
+            // no reload required
+            updateMapping(mqttMapping.id, mqttMapping, false);
         }
         // reset dirtySet
         dirtyMappings = new HashSet<Mapping>();
@@ -426,7 +427,7 @@ public class MQTTClient {
         return result;
     }
 
-    public Long updateMapping(Long id, Mapping mapping) throws JsonProcessingException {
+    public Long updateMapping(Long id, Mapping mapping, boolean reload) throws JsonProcessingException {
         Long[] result = { null };
         ArrayList<Mapping> mappings = c8yAgent.getMappings();
         ArrayList<ValidationError> errors = MappingsRepresentation.isMappingValid(mappings, mapping);
@@ -455,7 +456,9 @@ public class MQTTClient {
         }
 
         // update cached mappings
-        reloadMappings();
+        if (reload) {
+            reloadMappings();
+        }
         return result[0];
     }
 
