@@ -1,63 +1,132 @@
+# Step1 run first curl, this returns a source id
+# Step2 run second curl with id from cmd 1
+
+# command step 1
 curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/inventory/managedObjects' \
 --header 'Authorization: Basic YOUR_AUTHENTICATION' \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json' \
 --data-raw '{
     "name": "MQTT Mapping",
-    "c8y_IsDevice": {},
-    "type": "c8y_mqttMapping_type",
-    "c8y_mqttMapping": [
-        {
-            "qos": 0,
-            "substitutions": [],
-            "tested": false,
-            "createNoExistingDevice": false,
-            "lastUpdate": 1659798913434,
-            "topic": "temperature/#",
-            "active": false,
-            "id": 0,
-            "targetAPI": "measurement",
-            "source": "{\n    \"value\": 125,\n    \"timestamp\": \"2022-08-05T00:14:49.389+02:00\"\n}",
-            "target": "{\n    \"source\": {\n        \"id\": \"909090\"\n    },\n    \"time\": \"2020-03-19T12:03:27.845Z\",\n    \"type\": \"c8y_TemperatureMeasurement\",\n    \"c8y_Steam\": {\n        \"Temperature\": {\n            \"unit\": \"C\",\n            \"value\": 110\n        }\n    }\n}"
-        },
-        {
-            "qos": 0,
-            "substitutions": [],
-            "tested": false,
-            "createNoExistingDevice": false,
-            "lastUpdate": 1659798906443,
-            "topic": "speed/#",
-            "active": false,
-            "id": 1,
-            "targetAPI": "measurement",
-            "source": "{\n    \"value\": 85,\n    \"timestamp\": \"2022-08-05T00:14:49.389+02:00\"\n}",
-            "target": "{\n    \"source\": {\n        \"id\": \"909090\"\n    },\n    \"time\": \"2020-03-19T12:03:27.845Z\",\n    \"type\": \"c8y_SpeedMeasurement\",\n    \"c8y_Velovity\": {\n        \"Velocity\": {\n            \"unit\": \"km/h\",\n            \"value\": 210\n        }\n    }\n}"
-        },
-        {
-            "qos": 0,
-            "substitutions": [],
-            "tested": true,
-            "createNoExistingDevice": false,
-            "lastUpdate": 1659988312306,
-            "topic": "event/#",
-            "active": true,
-            "id": 2,
-            "targetAPI": "event",
-            "source": "{\n    \"asset\": \"303030\",\n    \"msg_type\": \"c8y_LoraBellEvent\",\n    \"text\": \"Elevator was called\",\n    \"time\": \"2022-08-05T00:14:49.389+02:00\"\n}",
-            "target": "{\n    \"source\": {\n        \"id\": \"909090\"\n    },\n    \"type\": \"c8y_LoraBellEvent\",\n    \"text\": \"Elevator was called\",\n    \"time\": \"2020-03-19T12:03:27.845Z\"\n}"
-        },
-        {
-            "qos": 1,
-            "substitutions": [],
-            "tested": true,
-            "createNoExistingDevice": false,
-            "lastUpdate": 1660035178751,
-            "topic": "alarm/#",
-            "active": true,
-            "id": 3,
-            "targetAPI": "alarm",
-            "source": "{\n    \"id\": \"251982\",\n    \"alarm_type\": \"c8y_UnavailabilityAlarm\",\n    \"text\": \"No data received from the device within the required interval.\",\n    \"severity\": \"MAJOR\",\n    \"status\": \"ACTIVE\",\n \"time\": \"2020-03-19T12:03:27.845Z\"\n}",
-            "target": "{\n    \"source\": {\n        \"id\": \"909090\"\n    },\n    \"type\": \"c8y_UnavailabilityAlarm\",\n    \"text\": \"No data received from the device within the required interval.\",\n    \"severity\": \"MINOR\",\n    \"status\": \"ACTIVE\",\n    \"time\": \"2020-03-19T12:03:27.845Z\"\n}"
-        }
-    ]
+    "type": "c8y_mqttMapping",
+            "c8y_mqttMapping": [
+                {
+                    "tested": false,
+                    "mapDeviceIdentifier": true,
+                    "active": true,
+                    "targetAPI": "INVENTORY",
+                    "source": "{\"customName\":\"Bus-Berlin-Rom\",\"customText\":\"Rom\",\"customFragment\":{\"customFragmentValue\":\"customValueNew\"},\"customNumber\":10,\"customArray\":[\"ArrayValue1\",\"ArrayValue2\"],\"customType\":\"type_Bus\"}",
+                    "externalIdType": "c8y_Serial",
+                    "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
+                    "templateTopic": "device/+/rom/",
+                    "qos": 1,
+                    "substitutions": [
+                        {
+                            "definesIdentifier": true,
+                            "pathSource": "_DEVICE_IDENT_",
+                            "pathTarget": "_DEVICE_IDENT_"
+                        }
+                    ],
+                    "snoopTemplates": "STOPPED",
+                    "createNoExistingDevice": false,
+                    "lastUpdate": 1663690366869,
+                    "topic": "device/#",
+                    "snoopedTemplates": [
+                        "{\n\t\"customName\": \"Bus-Berlin-Rom\",\n\t\"customText\": \"Rom\",\n\t\"customFragment\": {\n\t\t\"customFragmentValue\": \"customValueNew\"\n\t},\n\t\"customNumber\": 10,\n\t\"customArray\": [\n\t\t\"ArrayValue1\",\n\t\t\"ArrayValue2\"\n\t],\n\t\"customType\": \"type_Bus\"\n}\n"
+                    ],
+                    "id": 1,
+                    "indexDeviceIdentifierInTemplateTopic": 2
+                },
+                {
+                    "tested": false,
+                    "mapDeviceIdentifier": true,
+                    "active": true,
+                    "targetAPI": "ALARM",
+                    "source": "{\"msg_type\":\"c8y_LoraBellAlarm\",\"tx\":\"Elevator was not called\",\"ts\":\"2022-09-08T16:21:53.389+02:00\"}",
+                    "externalIdType": "c8y_Serial",
+                    "target": "{\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TestAlarm\",\"text\":\"This is a new test alarm!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-08-05T00:14:49.389+02:00\"}",
+                    "templateTopic": "alarm/+",
+                    "qos": 1,
+                    "substitutions": [
+                        {
+                            "definesIdentifier": true,
+                            "pathSource": "_DEVICE_IDENT_",
+                            "pathTarget": "source.id"
+                        },
+                        {
+                            "definesIdentifier": false,
+                            "pathSource": "msg_type",
+                            "pathTarget": "type"
+                        },
+                        {
+                            "definesIdentifier": false,
+                            "pathSource": "tx",
+                            "pathTarget": "text"
+                        },
+                        {
+                            "definesIdentifier": false,
+                            "pathSource": "ts",
+                            "pathTarget": "time"
+                        }
+                    ],
+                    "snoopTemplates": "NONE",
+                    "createNoExistingDevice": false,
+                    "lastUpdate": 1663624993212,
+                    "topic": "alarm/#",
+                    "snoopedTemplates": [],
+                    "id": 2,
+                    "indexDeviceIdentifierInTemplateTopic": 2
+                },
+                {
+                    "tested": true,
+                    "mapDeviceIdentifier": true,
+                    "active": true,
+                    "targetAPI": "EVENT",
+                    "source": "{\"msg_type\":\"c8y_LoraBellEvent\",\"txt\":\"Elevator was not called today!\",\"ts\":\"2022-09-08T16:21:53.389+02:00\"}",
+                    "externalIdType": "c8y_Serial",
+                    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
+                    "templateTopic": "/eventing/+/east",
+                    "qos": 1,
+                    "substitutions": [
+                        {
+                            "definesIdentifier": true,
+                            "pathSource": "_DEVICE_IDENT_",
+                            "pathTarget": "source.id"
+                        },
+                        {
+                            "definesIdentifier": false,
+                            "pathSource": "txt",
+                            "pathTarget": "text"
+                        },
+                        {
+                            "definesIdentifier": false,
+                            "pathSource": "ts",
+                            "pathTarget": "time"
+                        }
+                    ],
+                    "snoopTemplates": "STARTED",
+                    "createNoExistingDevice": false,
+                    "lastUpdate": 1663847963183,
+                    "topic": "/eventing/#",
+                    "snoopedTemplates": [
+                        "{\n  \"msg_type\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}",
+                        "{\n  \"msg_types\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}",
+                        "{\n  \"msg_type\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}",
+                        "{\n  \"msg_type\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}"
+                    ],
+                    "id": 3,
+                    "indexDeviceIdentifierInTemplateTopic": 3
+                }
+            ]
+}'
+
+# cmd step 2
+
+curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/identity/globalIds/ID_FROM_STEP1/externalIds' \
+--header 'Authorization: Basic YOUR_AUTHENTICATION' \
+--header 'Content-Type: application/vnd.com.nsn.cumulocity.externalId+json' \
+--header 'Accept: application/vnd.com.nsn.cumulocity.externalId+json' \
+--data-raw '{
+	"externalId": "c8y_mqttMapping",
+    "type": "c8y_Serial"
 }'
