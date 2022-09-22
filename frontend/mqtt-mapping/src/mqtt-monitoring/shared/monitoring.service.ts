@@ -28,11 +28,13 @@ export class MonitoringService {
     console.log("Start subscription for monitoring:", this.agentId);
     let dateFrom = this.addHoursToDate(new Date(), -1).toISOString();
     let dateTo = new Date().toISOString();
-    let queryString = `type=${MQTT_MONITORING_EVENT_TYPE}&dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    let queryString = `type eq '${MQTT_MONITORING_EVENT_TYPE}' and dateFrom eq'${dateFrom} and dateTo eq '${dateTo}'`;
     const filter: object = {
       pageSize: 1,
       withTotalPages: true,
-      query:  queryString
+      type: MQTT_MONITORING_EVENT_TYPE,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
       };
     let result : IResultList<IEvent> = await this.event.list(filter);
     if ( result?.data.length > 0) {

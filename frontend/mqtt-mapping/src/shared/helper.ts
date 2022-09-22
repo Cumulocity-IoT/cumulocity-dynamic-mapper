@@ -218,7 +218,7 @@ export const SCHEMA_PAYLOAD = {
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
-export const MQTT_MONITORING_EVENT_TYPE = "mqtt_status_monitoring";
+export const MQTT_MONITORING_EVENT_TYPE = "mqtt_monitoring_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONNECT_ENDPOINT = 'connection';

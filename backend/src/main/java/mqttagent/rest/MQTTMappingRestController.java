@@ -140,7 +140,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping {}, {}", mapping, id);
-            Long result = mqttClient.updateMapping(id, mapping);
+            Long result = mqttClient.updateMapping(id, mapping, false);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
