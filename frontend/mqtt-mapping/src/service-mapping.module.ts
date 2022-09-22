@@ -26,6 +26,7 @@ import { MappingService } from './mqtt-mapping/shared/mapping.service';
 import { MappingStepperComponent } from './mqtt-mapping/stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substitution/substitution-renderer.component';
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
+import { IdRendererComponent } from './mqtt-monitoring/renderer/id-cell.renderer.component';
 import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
 import { ConfigurationNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
@@ -73,6 +74,7 @@ import { ConfigurationTabFactory } from './tab.factory';
     SubstitutionRendererComponent,
     APIRendererComponent,
     MonitoringComponent,
+    IdRendererComponent,
   ],
   entryComponents: [
     ServiceMappingComponent,
@@ -89,6 +91,7 @@ import { ConfigurationTabFactory } from './tab.factory';
     SubstitutionRendererComponent,
     APIRendererComponent,
     MonitoringComponent,
+    IdRendererComponent,
   ],
   declarations: [
     ServiceMappingComponent,
@@ -105,6 +108,7 @@ import { ConfigurationTabFactory } from './tab.factory';
     SubstitutionRendererComponent,
     APIRendererComponent,
     MonitoringComponent,
+    IdRendererComponent,
   ],
   providers: [
     OverviewGuard,

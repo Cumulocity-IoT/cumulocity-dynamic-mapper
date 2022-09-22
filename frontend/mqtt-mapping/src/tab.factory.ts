@@ -13,7 +13,7 @@ export class ConfigurationTabFactory implements TabFactory {
         path: 'mqtt/configuration',
         priority: 1000,
         label: 'Configuration',
-        icon: 'lock',
+        icon: 'cog',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({

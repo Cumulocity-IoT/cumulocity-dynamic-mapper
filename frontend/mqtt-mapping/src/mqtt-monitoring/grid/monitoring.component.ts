@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
 import { MappingStatus } from '../../shared/configuration.model';
+import { IdRendererComponent } from '../renderer/id-cell.renderer.component';
 import { MonitoringService } from '../shared/monitoring.service';
 
 @Component({
@@ -31,8 +32,8 @@ export class MonitoringComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '10%'
-
+      gridTrackSize: '20%',
+      cellRendererComponent: IdRendererComponent
     },
     {
       header: '# Errors',
@@ -40,23 +41,31 @@ export class MonitoringComponent implements OnInit {
       path: 'errors',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '30%'
+      gridTrackSize: '20%'
     },
     {
-      header: '# MessagesReceived',
+      header: '# Messages Received',
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '30%'
+      gridTrackSize: '20%'
     },
     {
-      header: '# SnoopedTemplatesTotal',
+      header: '# Snooped Templates Total',
       name: 'snoopedTemplatesTotal',
       path: 'snoopedTemplatesTotal',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '30%'
+      gridTrackSize: '20%'
+    },
+    {
+      header: '# Snooped Templates Active',
+      name: 'snoopedTemplatesActive',
+      path: 'snoopedTemplatesActive',
+      filterable: true,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '20%'
     },
 
   ]

@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 
 import javax.validation.constraints.NotNull;
 
@@ -26,6 +25,9 @@ public class MappingStatus implements Serializable {
 
   @NotNull
   public long errors;
+
+  @NotNull
+  public long snoopedTemplatesActive;
 
   @NotNull
   public long snoopedTemplatesTotal;
