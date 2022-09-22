@@ -40,6 +40,7 @@ export interface MappingStatus {
   errors: number;
   messagesReceived: number;
   snoopedTemplatesTotal: number;
+  snoopedTemplatesActive: number
 }
 
 export interface StatusMessage {

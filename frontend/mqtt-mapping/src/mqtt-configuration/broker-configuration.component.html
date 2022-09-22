@@ -1,108 +1,112 @@
-<c8y-title translate>MQTT</c8y-title>
+
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="initConnectionStatus()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh status' | translate }}
   </button>
 </c8y-action-bar-item>
-<div class="card">
-  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-6 bg-white">
-    <div class="card-header separator j-c-between">
-      <h4 class="card-title" translate>Authentication</h4>
-      <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isMQTTConnected,
-            inactive: !isMQTTConnected
-          }"></span>
-        {{ 'MQTTBroker connected' | translate }}
-      </div>
-      <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
-            active: isMQTTAgentCreated$ | async,
-            inactive: !isMQTTAgentCreated$ | async
-          }"></span>
-        {{ 'MQTTAgent registered' | translate }}
-      </div>
-    </div>
-    <div class="card-block">
-      <div [formGroup]="mqttForm">
-        <c8y-form-group>
-          <label for="mqttHost" translate>MQTT Host</label>
-          <input formControlName="mqttHost" type="text" class="form-control" placeholder="e.g. test.mosquitto.org"
-            #mqttHostRef required />
-          <c8y-messages>
-            <c8y-message *ngIf="!mqttForm.get('mqttHost').untouched && !mqttHostRef.value" translate>This field is
-              required.</c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="mqttPort" translate>MQTT Port</label>
-          <input formControlName="mqttPort" type="number" class="form-control" placeholder="e.g. 1883" #mqttPortRef
-            required />
-          <c8y-messages>
-            <c8y-message *ngIf="!mqttForm.get('mqttPort').untouched && !mqttPortRef.value" translate>This field is
-              required.</c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="user" translate>User</label>
-          <input formControlName="user" type="text" class="form-control" placeholder="{{ 'user' | translate }}" #userRef
-            required />
-          <c8y-messages>
-            <c8y-message *ngIf="mqttForm.get('user').touched && !userRef.value" translate>This field is required.
-            </c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="password" translate>Password</label>
-          <input formControlName="password" type="password" class="form-control"
-            placeholder="{{ 'password' | translate }}" #passwordRef required />
-          <c8y-messages>
-            <c8y-message *ngIf="!mqttForm.get('password').untouched && !passwordRef.value" translate>This field is
-              required.</c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label for="clientId" translate>ClientId</label>
-          <input formControlName="clientId" type="text" class="form-control" placeholder="e.g. poc-1234" #clientIdRef
-            required />
-          <c8y-messages>
-            <c8y-message *ngIf="!mqttForm.get('clientId').untouched && !clientIdRef.value" translate>This field is
-              required.</c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
-        <c8y-form-group>
-          <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
-            <input type="checkbox" formControlName="useTLS"  #useTLSRef required  />
-            <span></span>
-            <span>
-              {{ 'Use TLS'}}
-            </span>
-          </label>
 
-<!--           <label for="useTLS" translate>Use TLS</label>
-          <input formControlName="useTLS" type="checkbox" class="form-control" #useTLSRef required /> -->
-          <c8y-messages>
-            <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
-            </c8y-message>
-          </c8y-messages>
-        </c8y-form-group>
+<div class="row">
+  <div class="col-md-8 col-xs-12">
+    <div class="card card--fullpage">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ 'MQTT' | translate }}
+        </h4>
+        <div class="c8y-realtime">
+          <span class="c8y-pulse animated pulse" [ngClass]="{
+              active: isMQTTConnected,
+              inactive: !isMQTTConnected
+            }"></span>
+          {{ 'MQTTBroker connected' | translate }}
+        </div>
+        <div class="c8y-realtime">
+          <span class="c8y-pulse animated pulse" [ngClass]="{
+              active: isMQTTAgentCreated$ | async,
+              inactive: !isMQTTAgentCreated$ | async
+            }"></span>
+          {{ 'MQTTAgent registered' | translate }}
+        </div>
       </div>
-    </div>
-    <div class="card-footer separator">
-      <div class="form-group">
-        <button type="button" name="update" class="btn btn-primary" (click)="onUpdateButtonClicked()"
-          [disabled]="!mqttForm.valid" translate>
-          Update
-        </button>
-        <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-          [disabled]="isMQTTConnected" translate>
-          Connect
-        </button>
-        <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
-          [disabled]="!isMQTTConnected" translate>
-          Disconnect
-        </button>
+      <div class="inner-scroll">
+        <div class="card-block">
+          <div [formGroup]="mqttForm">
+            <c8y-form-group>
+              <label for="mqttHost" translate>MQTT Host</label>
+              <input formControlName="mqttHost" type="text" class="form-control" placeholder="e.g. test.mosquitto.org"
+                #mqttHostRef required />
+              <c8y-messages>
+                <c8y-message *ngIf="!mqttForm.get('mqttHost').untouched && !mqttHostRef.value" translate>This field is
+                  required.</c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+            <c8y-form-group>
+              <label for="mqttPort" translate>MQTT Port</label>
+              <input formControlName="mqttPort" type="number" class="form-control" placeholder="e.g. 1883" #mqttPortRef
+                required />
+              <c8y-messages>
+                <c8y-message *ngIf="!mqttForm.get('mqttPort').untouched && !mqttPortRef.value" translate>This field is
+                  required.</c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+            <c8y-form-group>
+              <label for="user" translate>User</label>
+              <input formControlName="user" type="text" class="form-control" placeholder="{{ 'user' | translate }}" #userRef
+                required />
+              <c8y-messages>
+                <c8y-message *ngIf="mqttForm.get('user').touched && !userRef.value" translate>This field is required.
+                </c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+            <c8y-form-group>
+              <label for="password" translate>Password</label>
+              <input formControlName="password" type="password" class="form-control"
+                placeholder="{{ 'password' | translate }}" #passwordRef required />
+              <c8y-messages>
+                <c8y-message *ngIf="!mqttForm.get('password').untouched && !passwordRef.value" translate>This field is
+                  required.</c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+            <c8y-form-group>
+              <label for="clientId" translate>ClientId</label>
+              <input formControlName="clientId" type="text" class="form-control" placeholder="e.g. poc-1234" #clientIdRef
+                required />
+              <c8y-messages>
+                <c8y-message *ngIf="!mqttForm.get('clientId').untouched && !clientIdRef.value" translate>This field is
+                  required.</c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+            <c8y-form-group>
+              <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
+                <input type="checkbox" formControlName="useTLS"  #useTLSRef required  />
+                <span></span>
+                <span>
+                  {{ 'Use TLS'}}
+                </span>
+              </label>
+              <c8y-messages>
+                <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
+                </c8y-message>
+              </c8y-messages>
+            </c8y-form-group>
+          </div>
+        </div>
+        <div class="card-footer separator">
+          <div class="form-group">
+            <button type="button" name="update" class="btn btn-primary" (click)="onUpdateButtonClicked()"
+              [disabled]="!mqttForm.valid" translate>
+              Update
+            </button>
+            <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
+              [disabled]="isMQTTConnected" translate>
+              Connect
+            </button>
+            <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
+              [disabled]="!isMQTTConnected" translate>
+              Disconnect
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

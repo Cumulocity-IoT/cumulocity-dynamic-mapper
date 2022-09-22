@@ -91,19 +91,20 @@ public class GenericCallback implements MqttCallback {
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
                     e.printStackTrace();
-                    MappingStatus st = mqttClient.getMonitoring().getOrDefault(MQTTClient.KEY_MONITORING_UNSPECIFIED, new MappingStatus());
+                    MappingStatus st = mqttClient.getMonitoring().get(MQTTClient.KEY_MONITORING_UNSPECIFIED);
                     st.errors++;
                     mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
                 }
 
                 if (ctx != null) {
                     Mapping map = ctx.getMapping();
-                    MappingStatus st = mqttClient.getMonitoring().getOrDefault(map.id, new MappingStatus(map.id, 0, 0, 0));
+                    MappingStatus st = mqttClient.getMonitoring().get(map.id);
                     try {
                         handleNewPayload(ctx, payloadMessage);
                         st.messagesReceived++;
                         if (map.snoopTemplates == SnoopStatus.ENABLED) {
                             st.snoopedTemplatesTotal++;
+                            st.snoopedTemplatesActive = map.snoopedTemplates.size();
                         }
                         mqttClient.getMonitoring().put(map.id, st);
                     } catch (Exception e) {

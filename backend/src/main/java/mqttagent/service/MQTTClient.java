@@ -246,7 +246,7 @@ public class MQTTClient {
             }
             if (!monitoring.containsKey(m.id)) {
                 log.info("Adding: {}", m.id);
-                monitoring.put(m.id, new MappingStatus(m.id, 0, 0, 0));
+                monitoring.put(m.id, new MappingStatus(m.id, 0, 0, 0, 0));
             }
             //log.info("Processing addition for topic: {}, monitoringExists {}", m.topic, monitoring.containsKey(m.id));
             existingMaps.remove(m.id);
@@ -254,7 +254,11 @@ public class MQTTClient {
 
         //log.info("Key set existingMaps after: {}, {}", monitoring.keySet().toString(), monitoring.size());
 
-        // always keep monitoring entry for unspecified
+        // always keep monitoring entry for monitoring that can't be related to any mapping and so they are unspecified 
+        if (!monitoring.containsKey(KEY_MONITORING_UNSPECIFIED)) {
+            log.info("Adding: {}", KEY_MONITORING_UNSPECIFIED);
+            monitoring.put(KEY_MONITORING_UNSPECIFIED, new MappingStatus(KEY_MONITORING_UNSPECIFIED, 0, 0, 0, 0));
+        }
         existingMaps.remove(KEY_MONITORING_UNSPECIFIED);
         // remove monitorings for deleted maps
         existingMaps.forEach(id -> {

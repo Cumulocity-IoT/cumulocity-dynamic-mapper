@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, Realtime } from '@c8y/client';
+import { EventService, FetchClient, Realtime, IEvent, IResultList } from '@c8y/client';
 import * as _ from 'lodash';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
@@ -10,6 +10,7 @@ import { MQTT_MONITORING_EVENT_TYPE } from '../../shared/helper';
 export class MonitoringService {
   constructor(
     private client: FetchClient,
+    private event: EventService,
     private configurationService: BrokerConfigurationService) {
     this.realtime = new Realtime(this.client);
   }
@@ -25,7 +26,28 @@ export class MonitoringService {
   async subscribeToMonitoringChannel(): Promise<object> {
     this.agentId = await this.configurationService.initializeMQTTAgent();
     console.log("Start subscription for monitoring:", this.agentId);
+    let dateFrom = this.addHoursToDate(new Date(), -1).toISOString();
+    let dateTo = new Date().toISOString();
+    let queryString = `type=${MQTT_MONITORING_EVENT_TYPE}&dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    const filter: object = {
+      pageSize: 1,
+      withTotalPages: true,
+      query:  queryString
+      };
+    let result : IResultList<IEvent> = await this.event.list(filter);
+    if ( result?.data.length > 0) {
+      let monitoring: MappingStatus[] = result?.data[0]['monitoring'];
+      this.monitoringDetails.next(monitoring);
+    }
+    console.log("Found monitoring events", result.data);
     return this.realtime.subscribe(`/events/${this.agentId}`, this.updateMonitoring.bind(this));
+  }
+
+  private addHoursToDate(objDate, intHours) : Date{
+    let numberOfMlSeconds = objDate.getTime();
+    let addMlSeconds = (intHours * 60) * 60 * 1000;
+    let newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
+    return newDateObj;
   }
 
   unsubscribeFromMonitoringChannel(subscription: object): object {

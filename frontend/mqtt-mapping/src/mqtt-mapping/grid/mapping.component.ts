@@ -95,7 +95,7 @@ export class MappingComponent implements OnInit {
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: 'text-align-center',
-      gridTrackSize: '7.5%'
+      gridTrackSize: '12.5%'
     },
     {
       header: 'QOS',
@@ -106,7 +106,7 @@ export class MappingComponent implements OnInit {
       cellRendererComponent: QOSRendererComponent,
       gridTrackSize: '5%'
     },
-    {
+/*     {
       header: '# Snoopes',
       name: 'snoopedTemplates',
       path: 'snoopedTemplates',
@@ -114,7 +114,7 @@ export class MappingComponent implements OnInit {
       sortable: false,
       cellRendererComponent: SnoopedTemplateRendererComponent,
       gridTrackSize: '5%'
-    },
+    }, */
   ]
 
   value: string;
