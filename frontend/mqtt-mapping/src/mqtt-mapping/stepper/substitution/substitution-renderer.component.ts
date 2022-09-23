@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { Mapping } from '../../../shared/configuration.model';
 
 
@@ -16,11 +16,19 @@ export class SubstitutionRendererComponent implements OnInit {
   substitutions: Mapping[] = [];
 
   @Input()
-  setting: {color : 'green', selectedSubstitutionIndex:1};
+  setting: any;
+
+  @Output() onSelect = new EventEmitter<number>();
 
   constructor() { }
 
   ngOnInit() {
     console.log ("Setting for renderer:", this.setting)
+  }
+
+  onSubstitutionSelected (index: number) {
+    console.log("Selected substitution:", index);
+    this.setting.selectedSubstitutionIndex = index;
+    this.onSelect.emit(index);
   }
 }
