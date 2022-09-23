@@ -587,7 +587,7 @@ export class MappingStepperComponent implements OnInit {
     }
   }
 
-  public onSelectSubstitution() {
+  public onSelectNextSubstitution() {
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
       this.paletteCounter = -1;
@@ -600,19 +600,25 @@ export class MappingStepperComponent implements OnInit {
     this.paletteCounter++;
     this.sourcePathMissing = false;
     this.targetPathMissing = false;
+
+    this.onSelectSubstitution(this.selectedSubstitution);
+  }
+
+
+  public onSelectSubstitution( selected: number) {
     this.nextColor = this.COLOR_PALETTE[this.paletteCounter];
 
     // reset background color of old selection list
     for (let item of this.selectionList) {
       item.setAttribute('style', null);
     }
-    this.pathSource = this.mapping.substitutions[this.selectedSubstitution].pathSource;
-    this.updateSourceExpressionResult(this.mapping.substitutions[this.selectedSubstitution].pathSource);
-    this.pathTarget = this.mapping.substitutions[this.selectedSubstitution].pathTarget;
-    this.definesIdentifier = this.mapping.substitutions[this.selectedSubstitution].definesIdentifier;
-    this.setSelectionToPath(this.editorSource, this.mapping.substitutions[this.selectedSubstitution].pathSource)
-    this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[this.selectedSubstitution].pathTarget)
-    console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'))
+    this.pathSource = this.mapping.substitutions[selected].pathSource;
+    this.updateSourceExpressionResult(this.mapping.substitutions[selected].pathSource);
+    this.pathTarget = this.mapping.substitutions[selected].pathTarget;
+    this.definesIdentifier = this.mapping.substitutions[selected].definesIdentifier;
+    this.setSelectionToPath(this.editorSource, this.mapping.substitutions[selected].pathSource);
+    this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[selected].pathTarget);
+    console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'));
     //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
     this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
     for (let item of this.selectionList) {
@@ -621,5 +627,4 @@ export class MappingStepperComponent implements OnInit {
 
     console.log("Show substitutions!");
   }
-
 }

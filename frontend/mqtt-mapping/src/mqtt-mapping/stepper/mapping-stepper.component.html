@@ -209,12 +209,12 @@
         </c8y-stepper-buttons>
       </cdk-step>
 
-      <cdk-step [stepControl]="templateForm" label="Define templates">
+      <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
               <h4 class="text-center text-medium">
-                Define templates
+                Define templates and substitutions
               </h4>
             </div>
           </div>
@@ -241,16 +241,27 @@
                         </c8y-messages>
                       </div>
                     </div>
-                    <div class="col-lg-2 vcenter text-center">
+                    <div class="col-lg-2 text-center">
+                      <label translate>Manage Substitutions</label>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                           (click)="onAddSubstitution()" translate title="Map" title="Map">
                           <i c8yIcon="add-new"></i>
                         </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popTemplateAdd>Add substitution. Before target and source property in templates
+                            have to be selected (double-clicked).
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateAdd" popoverTitle="Add"
+                            placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
                       </div>
-                      <div class="p-b-8" style="padding-left:18px;">
+                      <div class="p-b-8">
+<!--                       <div class="p-b-8" style="padding-left:18px;"> -->
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
-                          (click)="onSelectSubstitution()" translate title="Select substitution">
+                          (click)="onSelectNextSubstitution()" translate title="Select substitution">
                           <i c8yIcon="skip"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
@@ -267,12 +278,29 @@
                           (click)="onDeleteSubstitution()" translate title="Delete Selected">
                           <i c8yIcon="negative"></i>
                         </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popTemplateDelete>Delete selected substitution. Before substitution has to be
+                            selected with the "Skip-Button".
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
+                            placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
                       </div>
                       <div>
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                           (click)="onDeleteSubstitutions()" translate title="Delete All">
                           <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
                         </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popTemplateDeleteAll>Delete all substitutions.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateDeleteAll"
+                            popoverTitle="Delete All" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
                       </div>
                     </div>
                     <div class="col-lg-4 vcenter">
@@ -372,7 +400,7 @@
                       </div>
                       <div>
                         <mapping-substitution-renderer [substitutions]="mapping.substitutions"
-                          [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}">
+                          [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}" (onSelect)="onSelectSubstitution($event)">
                         </mapping-substitution-renderer>
                       </div>
                       <br>
