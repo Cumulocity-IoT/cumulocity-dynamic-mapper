@@ -22,7 +22,6 @@
           <div class="card-inner-scroll fit-h">
             <div class="card-block p-b-0">
               <div [formGroup]="propertyForm">
-
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="row">
                     <div class="col-lg-5 form-group p-r-0">
@@ -70,7 +69,6 @@
                       </div>
                     </div>
                   </div>
-
                   <c8y-form-group>
                     <div class="form-group">
                       <div class="input-group">
@@ -149,15 +147,6 @@
                         </span>
                       </label>
                     </div>
-                    <!--                     <div class="col-md-6">
-                      <label class="c8y-switch" title="{{ 'Create device' | translate }}">
-                        <input type="checkbox" formControlName="createNoExistingDevice" [(ngModel)]="mapping.createNoExistingDevice"/>
-                        <span></span>
-                        <span>
-                          {{ 'Create device' | translate }}
-                        </span>
-                      </label>
-                    </div> -->
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
@@ -208,7 +197,6 @@
           (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }">
         </c8y-stepper-buttons>
       </cdk-step>
-
       <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
@@ -330,6 +318,28 @@
                     </div>
                   </div>
                   <div class="row">
+                    <div class="col-lg-10 col-lg-offset-1">
+                      <label>
+                        Defined substitutions
+                        <span class="hidden-xs hidden-sm m-l-4">
+                          <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
+                            "*".</ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateSub"
+                            popoverTitle="Defined substitutions" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </label>
+                      <div>
+                        <mapping-substitution-renderer [substitutions]="mapping.substitutions"
+                          [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}" (onSelect)="onSelectSubstitution($event)">
+                        </mapping-substitution-renderer>
+                      </div>
+                      <br>
+                    </div>
+                  </div>
+
+                  <div class="row">
                     <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
@@ -383,27 +393,6 @@
                           formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly
                           disabled="true" />
                       </div>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-lg-10 col-lg-offset-1">
-                      <div class="legend form-block">
-                        Defined substitutions
-                        <span class="hidden-xs hidden-sm m-l-4">
-                          <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
-                            "*".</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateSub"
-                            popoverTitle="Defined substitutions" placement="right" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
-                      <div>
-                        <mapping-substitution-renderer [substitutions]="mapping.substitutions"
-                          [setting]="{color : nextColor, selectedSubstitutionIndex: selectedSubstitution}" (onSelect)="onSelectSubstitution($event)">
-                        </mapping-substitution-renderer>
-                      </div>
-                      <br>
                     </div>
                   </div>
                   <c8y-messages>

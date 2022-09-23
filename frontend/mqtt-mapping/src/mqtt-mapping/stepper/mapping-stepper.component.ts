@@ -351,7 +351,7 @@ export class MappingStepperComponent implements OnInit {
     } else {
       this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     }
-    while (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1  &&  parts[this.mapping.indexDeviceIdentifierInTemplateTopic] == "/") {
+    while (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1 && parts[this.mapping.indexDeviceIdentifierInTemplateTopic] == "/") {
       if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length - 1) {
         this.mapping.indexDeviceIdentifierInTemplateTopic++;
       } else {
@@ -400,6 +400,18 @@ export class MappingStepperComponent implements OnInit {
       this.updateSubstitutions();
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+      // dirty trick to trigger initializing the selection. This can only happen after the json tree element is shown
+      setTimeout(() => {
+        this.selectedSubstitution = 0;
+        this.onSelectSubstitution(this.selectedSubstitution);
+        // console.log("Found querySelectorAll tree rows:", this.elementRef.nativeElement.querySelectorAll('table.jsoneditor-tree > tbody > tr:nth-child(2)~tr'));
+        // const list = this.elementRef.nativeElement.querySelectorAll('table.jsoneditor-tree > tbody > tr:nth-child(2)~tr');
+        // for (let i = 0; i < list.length; i++) {
+        //   list[i].addEventListener("dblclick", function () {
+        //     console.log("Double clicked", list[i]);
+        //   });
+        // }
+      }, 40);
     } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
@@ -470,7 +482,7 @@ export class MappingStepperComponent implements OnInit {
       this.pathSource = '';
       this.pathTarget = '';
       this.definesIdentifier = false;
-      this.templateForm.updateValueAndValidity({'emitEvent': true});
+      this.templateForm.updateValueAndValidity({ 'emitEvent': true });
     }
   }
 
@@ -539,9 +551,7 @@ export class MappingStepperComponent implements OnInit {
             sub.definesIdentifier = this.mapping.substitutions[existingSubstitution].definesIdentifier;
             this.mapping.substitutions[existingSubstitution] = sub;
           }
-          //this.templateForm.get('definesIdentifier').patchValue(false);
-          //this.templateForm.setErrors(null);
-          this.templateForm.updateValueAndValidity({'emitEvent': true});
+          this.templateForm.updateValueAndValidity({ 'emitEvent': true });
           console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
         }
       );
@@ -570,9 +580,7 @@ export class MappingStepperComponent implements OnInit {
             } else {
               sub.definesIdentifier = false;
             }
-            //this.templateForm.get('definesIdentifier').patchValue(false);
-            //this.templateForm.setErrors(null);
-            this.templateForm.updateValueAndValidity({'emitEvent': true});
+            this.templateForm.updateValueAndValidity({ 'emitEvent': true });
             console.log("Overwriting definesIdentifier II:", overwrite, substitutionOld[0], sub);
           }
         )
@@ -588,16 +596,17 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public onSelectNextSubstitution() {
+    // changing of colors is currently diabled, to enable these uncomment the following stmt.
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
-      this.paletteCounter = -1;
+      // this.paletteCounter = -1;
     }
-    if (this.paletteCounter == this.COLOR_PALETTE.length - 1) {
-      this.paletteCounter = -1;
-    }
+    // if (this.paletteCounter == this.COLOR_PALETTE.length - 1) {
+    //   this.paletteCounter = -1;
+    // }
 
     this.selectedSubstitution++;
-    this.paletteCounter++;
+    // this.paletteCounter++;
     this.sourcePathMissing = false;
     this.targetPathMissing = false;
 
@@ -605,7 +614,7 @@ export class MappingStepperComponent implements OnInit {
   }
 
 
-  public onSelectSubstitution( selected: number) {
+  public onSelectSubstitution(selected: number) {
     this.nextColor = this.COLOR_PALETTE[this.paletteCounter];
 
     // reset background color of old selection list
@@ -618,13 +627,12 @@ export class MappingStepperComponent implements OnInit {
     this.definesIdentifier = this.mapping.substitutions[selected].definesIdentifier;
     this.setSelectionToPath(this.editorSource, this.mapping.substitutions[selected].pathSource);
     this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[selected].pathTarget);
-    console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'));
+    //console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'));
     //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
     this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
     for (let item of this.selectionList) {
       item.setAttribute('style', `background: ${this.nextColor};`);
     }
-
     console.log("Show substitutions!");
   }
 }
