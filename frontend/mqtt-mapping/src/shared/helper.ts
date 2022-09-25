@@ -56,6 +56,9 @@ export const SCHEMA_EVENT = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the event is associated.',
+      "anyOf": [
+        { "required": ["id"] },
+      ],
       'properties': {
         'id': {
           'type': 'string',
@@ -101,6 +104,9 @@ export const SCHEMA_ALARM = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the alarm is associated.',
+      "anyOf": [
+        { "required": ["id"] },
+      ],
       'properties': {
         'id': {
           'type': 'string',
@@ -151,6 +157,9 @@ export const SCHEMA_MEASUREMENT = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the measurement is associated.',
+      "anyOf": [
+        { "required": ["id"] },
+      ],
       'properties': {
         'id': {
           'type': 'string',
@@ -242,7 +251,7 @@ export function getSchema(targetAPI: string): any {
 /*
 * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
 */
-export function splitTopic( topic: string): string[]{
+export function splitTopic(topic: string): string[] {
   return topic.split(/(?<=\/)|(?=\/)/g);
 }
 
