@@ -207,7 +207,7 @@ Note: When adding a new substitution the following two cosistency rules are chec
 #### Test transformation of Source to Target message (Cumulocity REST format)
 <br/>
 
-To test the defined transformation, press the button ```Transform test message```.
+To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any error are displayed.
 
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
