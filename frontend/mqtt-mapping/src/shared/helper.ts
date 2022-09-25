@@ -56,7 +56,7 @@ export const SCHEMA_EVENT = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the event is associated.',
-      "anyOf": [
+      "allOf": [
         { "required": ["id"] },
       ],
       'properties': {
@@ -104,7 +104,7 @@ export const SCHEMA_ALARM = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the alarm is associated.',
-      "anyOf": [
+      "allOf": [
         { "required": ["id"] },
       ],
       'properties': {
@@ -157,7 +157,7 @@ export const SCHEMA_MEASUREMENT = {
       '$id': '#/properties/source',
       'type': 'object',
       'title': 'The managed object to which the measurement is associated.',
-      "anyOf": [
+      "allOf": [
         { "required": ["id"] },
       ],
       'properties': {

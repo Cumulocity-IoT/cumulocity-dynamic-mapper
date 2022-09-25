@@ -1,5 +1,10 @@
 # Generic MQTT Agent Microservice for Cumulocity
 
+# Content
+- [Description](#description)
+- [Architecture](#architecture)
+- [Known_Limitation_&_Disclaimer](#known-limitation-&-disclaimer)
+
 ## Description
 
 Cumulocity IoT does have an MQTT endpoint but does not yet allow connecting generic MQTT devices. This project addresses
@@ -182,6 +187,12 @@ In oder to define a substitution ( substitute values in the target payload with 
 ### Setup Sample MQTTMappings
 
 A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
+
+For all target payloads (Measurement, Event, Alarm, Inventory) schemas for the required Cumulocity are defined and validated.
+In the sample below , e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
+<br/>
+
+![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
 ### Snooping payloads on source topic
 
