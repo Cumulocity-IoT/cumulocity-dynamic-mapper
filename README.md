@@ -3,7 +3,15 @@
 # Content
 - [Description](#description)
 - [Architecture](#architecture)
-- [Known_Limitation_&_Disclaimer](#known-limitation-&-disclaimer)
+- [Known Limitation and Disclaimer](#known-limitation-and-disclaimer)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Microservice](#icroservice)
+- [Web App Plugin](#web-app-plugin)
+- [Build, Deploy, Run](#build,-deploy,-run)
+- [Configuration and Definition of MQTT Mappings](#configuration-and-definition-of-mqtt-appings)
+- [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
+
 
 ## Description
 
@@ -30,7 +38,7 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 * **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
 * **MQTT Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
-### Known Limitation & Disclaimer
+### Known Limitation and Disclaimer
 
 Currently this project is focussing on JSON Payload only. Any other payload sent via MQTT must be mapped programmatically.
 See chapter [Enhance](#enhance) for more details.
