@@ -192,6 +192,18 @@ In oder to define a substitution ( substitute values in the target payload with 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate_annnotated.png)
 <br/>
 
+To define a new substitution the following steps have to be performed:
+1. Select a property in the source JSON payload by doble click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
+1. Select a property in the target JSON payload by doble click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
+1.  Select  ```Defines device identifier``` if this propert defines the device identifier, i.e. it is mapped to ```source.id```.
+1. Press the add button with the ```+``` sign.
+
+Note: When adding a new susbstitution the following two cosistency rules are checked:
+
+1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+1. If the new substotution defines the device identifier, it is checked if already another substitution exists defining the device identifier. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+
+
 #### Test transformation of Source to Target message (Cumulocity REST format)
 <br/>
 
@@ -210,7 +222,7 @@ To send the a transformormed payload to a test device, press the button ```Send 
 
 A script to create sample MQTT-Mappings can be found [here](resources/script/createSampleMQTTMappings.sh).
 
-For all target payloads (Measurement, Event, Alarm, Inventory) schemas for the required Cumulocity are defined and validated.
+For all target payloads in Cumulocity (Measurement, Event, Alarm, Inventory) schemas for the required  are defined and validated.
 In the sample below , e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
 <br/>
 
