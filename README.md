@@ -8,15 +8,15 @@
 - [Installation](#installation)
   * [Microservice](#icroservice)
   * [Web App Plugin](#web-app-plugin)
-  * [Build, Deploy, Run](#build,-deploy,-run)
-- [Configuration, Definition and Deployment of MQTT-Mappings](#configuration,-definition-and-deployment-of-mqtt-mappings)
+  * [Build, Deploy, Run](#build-deploy-run)
+- [Configuration, Definition and Deployment of MQTT-Mappings](#configuration-definition-and-deployment-of-mqtt-mappings)
   * [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
   * [Table of MQTT Mappings](#table-of-mqtt-mappings)
   * [Define message Mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
   * [Test transformation of Source to Target message (Cumulocity REST format)](#test-transformation-of-source-to-target-message-(cumulocity-rest-format))
-  * [Setup Sample MQTTMappings](#setup-sample-mqttmappings)
+  * [Setup Sample MQTT-Mappings](#setup-sample-mqtt-mappings)
   * [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
@@ -195,16 +195,20 @@ In oder to define a substitution ( substitute values in the target payload with 
 #### Test transformation of Source to Target message (Cumulocity REST format)
 <br/>
 
+To test the defined transformation, press the button ```Transform test message```.
+
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
 ### Send transformed Test Message to test device in Cumulocity
 <br/>
 
+To send the a transformormed payload to a test device, press the button ```Send test message```.
+
 ![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
 
-### Setup Sample MQTTMappings
+### Setup Sample MQTT-Mappings
 
-A script to create sample MQTTMappings can be found [here](resources/script/createSampleMQTTMappings.sh).
+A script to create sample MQTT-Mappings can be found [here](resources/script/createSampleMQTTMappings.sh).
 
 For all target payloads (Measurement, Event, Alarm, Inventory) schemas for the required Cumulocity are defined and validated.
 In the sample below , e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
@@ -225,6 +229,9 @@ If a payload is found the status moves to **STARTED**. This is indicated in the 
 
 #### Use snooped payloads in source templates
 <br/>
+
+In order to use a previously snooped payload click the button
+```Snooped templates```. Multiples activation of this button iterates over all the recorded templates.
 
 ![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
 
