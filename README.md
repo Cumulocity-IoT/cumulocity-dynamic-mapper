@@ -20,6 +20,7 @@
   * [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
+- [Monitoring](#monitoring)
 
 
 
@@ -254,6 +255,13 @@ In order to use a previously snooped payload click the button
 
 ![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
 
+### Monitoring
+
+<br/>
+
+On the monitoring tab you can see how a specific MQTT mapping performs during the last activation in the microservice.
+
+![Monitoring](resources/image/Generic_MQTT_Monitoring.png)
 
 ## Enhance
 In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
