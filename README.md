@@ -11,8 +11,8 @@
   * [Build, Deploy, Run](#build-deploy-run)
 - [Configuration, Definition and Deployment of MQTT-Mappings](#configuration-definition-and-deployment-of-mqtt-mappings)
   * [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
-  * [Table of MQTT Mappings](#table-of-mqtt-mappings)
-  * [Define message Mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
+  * [Table of MQTT mappings](#table-of-mqtt-mappings)
+  * [Define message mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
   * [Test transformation of Source to Target message (Cumulocity REST format)](#test-transformation-of-source-to-target-message-(cumulocity-rest-format))
@@ -25,7 +25,7 @@
 
 ## Overview
 
-Cumulocity IoT does have an MQTT endpoint but does not yet allow connecting generic MQTT devices. This project addresses
+Cumulocity IoT has a MQTT endpoint but does not yet allow devices to send generic MQTT payloads. This project addresses
 this gap by providing the following artifcats:
 
 * A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
@@ -34,7 +34,7 @@ connect to a MQTT Broker, a generic Data Mapper & Expression Language  for data 
 * A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT Broker connection & to perform 
 graphical MQTT Data Mappings within the Cumumlocity IoT UI.
 
-Using this project you are able to connect to any MQTT Broker and map any JSON-based payload on any topic dynamically to
+Using the solution you are able to connect to any MQTT Broker and map any JSON-based payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical way.
 
 ### Architecture
@@ -122,10 +122,10 @@ Run `npm run build` in folder `frontend/mqtt-mapping` to build the Front End (pl
 Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
-## Configuration, Definition and Deployment of MQTT Mappings
+## Configuration, Definition and Deployment of MQTT mappings
 
 ### Configuration MQTT Connection to broker
-The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant.
+The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.
 
 <br/>
 <p align="center" style="text-indent:70px;">
@@ -135,9 +135,14 @@ The MQTT Broker configuration is persisted in the tenant options of a Cumulocity
 </p>
 <br/>
 
-### Table of MQTT Mappings
+### Table of MQTT mappings
+Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
+1. Creating new MQTT mappinfs: Press button ```Add Mapping```
+1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
+1. Deleting exsiting MQTT mapping: Press the "-"" in the row of the relevant mapping to delete an existing mappings
 
-![Table of MQTT Mappings](resources/image/Generic_MQTT_MappingTable.png)
+After every change the mappings are automatically updated in the microservice.
+![Table of MQTT mappings](resources/image/Generic_MQTT_MappingTable.png)
 
 ### Define message Mapping for Source and Target (Cumulocity REST format)
 Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
@@ -151,11 +156,13 @@ Examples are: "device/#", "device/data/#", "device/12345/data" etc.
 
 #### Template Topic
 
-The template topic is the key of the persisted mapping. The main difference to subscription topic is that
+The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
 a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.
 Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
 
 #### Expression Language
+In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id. In this case the following function could be used:
+```$join([device_name, _DEVICE_IDENT_])```.
 Complex mapping expressions are supported by using [JSONata](https://jsonata.org).
 
 Example to concatenate JSON Properties with JSONata:
