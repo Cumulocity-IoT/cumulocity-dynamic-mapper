@@ -1,16 +1,27 @@
 # Generic MQTT Agent Microservice for Cumulocity
 
 # Content
-- [Description](#description)
-- [Architecture](#architecture)
-- [Known Limitation and Disclaimer](#known-limitation-and-disclaimer)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Microservice](#icroservice)
-- [Web App Plugin](#web-app-plugin)
-- [Build, Deploy, Run](#build,-deploy,-run)
-- [Configuration and Definition of MQTT Mappings](#configuration-and-definition-of-mqtt-appings)
-- [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
+* [Description](#description)
+* [Architecture](#architecture)
+* [Known Limitation and Disclaimer](#known-limitation-and-disclaimer)
+* [Prerequisites](#prerequisites)
+* [Installation](#installation)
+* [Microservice](#icroservice)
+* [Web App Plugin](#web-app-plugin)
+* [Build, Deploy, Run](#build,-deploy,-run)
+* [Configuration and Definition of MQTT Mappings](#configuration-and-definition-of-mqtt-mappings)
+* [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
+* [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
+* [Table of MQTT Mappings](#table-of-mqtt-mappings)
+* [Define message Mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
+* [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
+* [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+* [Test transformation of Source to Target message (Cumulocity REST format)](#test-transformation-of-source-to-target-message-(cumulocity-rest-format))
+* [Setup Sample MQTTMappings](#setup-sample-mqttmappings)
+* [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
+* [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
+* [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
+
 
 
 ## Description
