@@ -174,34 +174,27 @@ Example to concatenate JSON Properties with JSONata:
 Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
 ```
 ### Wizzard to define a mapping
-<br/>
 
 The wizzard to define a mapping consists of the steps:
 1. Define the properties of the topic and API to be used
 1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 1. Test the mapping by applying the transformation and send the result to a test device.
 
-<br/>
-
 #### Define MQTT topic properties
-<br/>
 
 ![Define Properties](resources/image/Generic_MQTT_TopicDefinition.png)
 
 #### Define templates and substitutions for source and target payload
-<br/>
 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
-<br/>
 
-In oder to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
+In order to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
 1. Add mapping (button with "+" sign)
 1. Show & Select already defined substitutions (button with skip symbol). A selected substitution is colored and can be deleted by pressing the button with "-" sign
 1. Delete mapping (button wiht one "-" sign), the selected substitution is deleted
 1. Delete all mappings (button wiht two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, eithe "+"- singel level or "#" - multi level
 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate_annnotated.png)
-<br/>
 
 To define a new substitution the following steps have to be performed:
 1. Select a property in the source JSON payload by double-click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
@@ -217,19 +210,16 @@ To define a new substitution the following steps have to be performed:
 To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
-<br/>
 
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
 #### Test transformation of Source to Target message (Cumulocity REST format)
-<br/>
 
 To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any error are displayed.
 
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
 ### Send transformed Test Message to test device in Cumulocity
-<br/>
 
 To send the a transformed payload to a test device, press the button ```Send test message```.
 
@@ -238,21 +228,21 @@ To send the a transformed payload to a test device, press the button ```Send tes
 
 ### Snooping payloads on source topic
 
-Very often you want to use the existing payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording to messgaes on a topic.
+Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - snooping- to messages on a topic.
 
-In the first wizzard step snooping for payloads on the source topic can be started. In order to record JSON payloads on this topic a subscrition records the payloads and saves them for later use in a source template.
-The process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
+In order to record JSON payloads on the defined topic a subscrition records the payloads and saves them for later use in a source template.
+
+The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
 
 If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
 
 #### Enable snooping payloads on source topic
 
-To enable snooping select ```ENABLED``` in the drop down as shon in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic ans records the received payloads.
+To enable snooping select ```ENABLED``` in the drop down as shown in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic and records the received payloads.
 
 ![Enable Snooping](resources/image/Generic_MQTT_EnableSnooping.png)
 
 #### Use snooped payloads in source templates
-<br/>
 
 In order to use a previously snooped payload click the button
 ```Snooped templates```. Multiples activation of this button iterates over all the recorded templates.
@@ -260,8 +250,6 @@ In order to use a previously snooped payload click the button
 ![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
 
 ### Monitoring
-
-<br/>
 
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
