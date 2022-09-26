@@ -6,16 +6,17 @@
   * [Known Limitation and Disclaimer](#known-limitation-and-disclaimer)
   * [Prerequisites](#prerequisites)
 - [Installation](#installation)
-  * [Microservice](#icroservice)
+  * [Microservice](#microservice)
   * [Web App Plugin](#web-app-plugin)
   * [Build, Deploy, Run](#build-deploy-run)
 - [Configuration MQTT connection to broker](#configuration-mqtt-connection-to-broker)
 - [Definition and Deployment of MQTT mappings](#definition-and-deployment-of-mqtt-mappings)
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
-  * [Define message mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
+  * [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format-cumulocity-rest-format)
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
-  * [Test transformation of Source to Target message (Cumulocity REST format)](#test-transformation-of-source-to-target-message-(cumulocity-rest-format))
+  * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
+  * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
@@ -124,9 +125,8 @@ Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration MQTT connection to broker
-The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.
-
-Further connection to the MQTT broker can be enabled or disabled.
+The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.\
+Furthermore, connections to the MQTT broker can be enabled or disabled.
 
 <br/>
 <p align="center" style="text-indent:70px;">
@@ -140,6 +140,7 @@ Further connection to the MQTT broker can be enabled or disabled.
 ## Definition and Deployment of MQTT mappings
 
 ### Table of MQTT mappings
+
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
 1. Creating new MQTT mappinfs: Press button ```Add Mapping```
 1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
@@ -148,7 +149,8 @@ Once the connection to a MQTT broker is configured and successfully enabled you 
 After every change the mappings are automatically updated in the microservice.
 ![Table of MQTT mappings](resources/image/Generic_MQTT_MappingTable.png)
 
-### Define message Mapping for Source and Target (Cumulocity REST format)
+### Define mappings from source to target format (Cumulocity REST format)
+
 Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
 
 For the mappings we differentiate between a **subscription topic** and a **template topic**:
@@ -165,6 +167,7 @@ a template topic can have a path behind the wildcard for the reason as we can re
 Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
 
 #### Expression Language
+
 In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id. In this case the following function could be used:
 ```$join([device_name, _DEVICE_IDENT_])```.
 Complex mapping expressions are supported by using [JSONata](https://jsonata.org).
@@ -173,6 +176,7 @@ Example to concatenate JSON Properties with JSONata:
 ```
 Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
 ```
+
 ### Wizzard to define a mapping
 
 The wizzard to define a mapping consists of the steps:
@@ -213,15 +217,15 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
-#### Test transformation of Source to Target message (Cumulocity REST format)
+### Test transformation from source to target format
 
 To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any error are displayed.
 
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
 
-### Send transformed Test Message to test device in Cumulocity
+### Send transformed test message to test device in Cumulocity
 
-To send the a transformed payload to a test device, press the button ```Send test message```.
+To send the a transformed payload to a test device, press the button ```Send test message```. If an error occurs this is shown in the UI.
 
 ![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
 
