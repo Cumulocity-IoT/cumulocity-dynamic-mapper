@@ -14,12 +14,12 @@
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
   * [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format-cumulocity-rest-format)
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
+    + [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
+    + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
-  * [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
-    + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
-    + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
+  * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
 - [Monitoring](#monitoring)
 - [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
 
@@ -142,37 +142,23 @@ Furthermore, connections to the MQTT broker can be enabled or disabled.
 ### Table of MQTT mappings
 
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
-1. Creating new MQTT mappinfs: Press button ```Add Mapping```
+1. Creating new MQTT mappings: Press button ```Add Mapping```
 1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
-1. Deleting exsiting MQTT mapping: Press the "-"" in the row of the relevant mapping to delete an existing mappings
+1. Deleting exsiting MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
 After every change the mappings are automatically updated in the microservice.
+
 ![Table of MQTT mappings](resources/image/Generic_MQTT_MappingTable.png)
 
 ### Define mappings from source to target format (Cumulocity REST format)
 
 Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
 
-For the mappings we differentiate between a **subscription topic** and a **template topic**:
-
-#### Subscription Topic
-
-This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards.
-Examples are: "device/#", "device/data/#", "device/12345/data" etc.
-
-#### Template Topic
-
-The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
-a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.
-Examples are: "device/#/data, "device/#/events/", "device/#/sensor"
-
 #### Expression Language
 
 In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id. In this case the following function could be used:
-```$join([device_name, _DEVICE_IDENT_])```.
-Complex mapping expressions are supported by using [JSONata](https://jsonata.org).
-
-Example to concatenate JSON Properties with JSONata:
+```$join([device_name, _DEVICE_IDENT_])```. \
+Complex mapping expressions are supported by using [JSONata](https://jsonata.org). Example to concatenate JSON Properties with JSONata:
 ```
 Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
 ```
@@ -186,9 +172,53 @@ The wizzard to define a mapping consists of the steps:
 
 #### Define MQTT topic properties
 
+In the first wizzard step properties for the topic are defined.
+
 ![Define Properties](resources/image/Generic_MQTT_TopicDefinition.png)
 
+For the mappings we differentiate between a **subscription topic** and a **template topic**:
+
+#### Subscription Topic
+
+This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
+When you use a wildcard it signals to the mapping that you want to extract the device identifier from the topic name. In this case the additinal property ```_DEVICE_IDENT_```is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
+
+>Note: Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
+Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
+
+#### Template Topic
+
+The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
+a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.\
+Examples are: "device/+/data, "device/date/north/+/events/", "device/+"\
+If the template topic contains a wildcard, you have to specify which part to the topic defined the device identfier by pressing the button ```Device Identifier```.
+
+#### Snooping payloads on source topic
+
+Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - snooping- to messages on a topic.
+
+In order to record JSON payloads on the defined topic a subscrition records the payloads and saves them for later use in a source template.
+
+The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
+
+If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
+
+#### Enable snooping payloads on source topic
+
+To enable snooping select ```ENABLED``` in the drop down as shown in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic and records the received payloads.
+
+![Enable Snooping](resources/image/Generic_MQTT_EnableSnooping.png)
+
+#### Map Device Idenfifier
+
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this enable the switch ```Map Device Identifier``` and specify the name of the type of external id. When a payload from this device arries the external id is translated to the internal Cumulocity id.
+
 #### Define templates and substitutions for source and target payload
+
+In the second wizzard step, shown on the screenshot below the mapping is furher defined:
+1. Editing the source template directly or use a snooped template by pressing button ```Snooped templates```
+2. Editing the target templatedirectly or use a sample template by pressing button ```Sample target template```
+3. Adding substitutions
 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
 
@@ -229,24 +259,7 @@ To send the a transformed payload to a test device, press the button ```Send tes
 
 ![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
 
-
-### Snooping payloads on source topic
-
-Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - snooping- to messages on a topic.
-
-In order to record JSON payloads on the defined topic a subscrition records the payloads and saves them for later use in a source template.
-
-The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
-
-If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
-
-#### Enable snooping payloads on source topic
-
-To enable snooping select ```ENABLED``` in the drop down as shown in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic and records the received payloads.
-
-![Enable Snooping](resources/image/Generic_MQTT_EnableSnooping.png)
-
-#### Use snooped payloads in source templates
+### Use snooped payloads in source templates
 
 In order to use a previously snooped payload click the button
 ```Snooped templates```. Multiples activation of this button iterates over all the recorded templates.
