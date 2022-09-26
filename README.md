@@ -9,18 +9,18 @@
   * [Microservice](#icroservice)
   * [Web App Plugin](#web-app-plugin)
   * [Build, Deploy, Run](#build-deploy-run)
-- [Configuration, Definition and Deployment of MQTT-Mappings](#configuration-definition-and-deployment-of-mqtt-mappings)
-  * [Configuration MQTT Connection to broker](#configuration-mqtt-connection-to-broker)
+- [Configuration MQTT connection to broker](#configuration-mqtt-connection-to-broker)
+- [Definition and Deployment of MQTT mappings](#definition-and-deployment-of-mqtt-mappings)
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
   * [Define message mapping for Source and Target (Cumulocity REST format)](#define-message-mapping-for-source-and-target-(cumulocity-rest-format))
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
   * [Test transformation of Source to Target message (Cumulocity REST format)](#test-transformation-of-source-to-target-message-(cumulocity-rest-format))
-  * [Setup Sample MQTT-Mappings](#setup-sample-mqtt-mappings)
   * [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
 - [Monitoring](#monitoring)
+- [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
 
 
 
@@ -30,19 +30,19 @@ Cumulocity IoT has a MQTT endpoint but does not yet allow devices to send generi
 this gap by providing the following artifcats:
 
 * A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
-connect to a MQTT Broker, a generic Data Mapper & Expression Language  for data mapping and the
+connect to a MQTT broker, a generic Data Mapper & Expression Language  for data mapping and the
 [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
-* A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT Broker connection & to perform 
+* A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT broker connection & to perform 
 graphical MQTT Data Mappings within the Cumumlocity IoT UI.
 
-Using the solution you are able to connect to any MQTT Broker and map any JSON-based payload on any topic dynamically to
+Using the solution you are able to connect to any MQTT broker and map any JSON-based payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical way.
 
 ### Architecture
 ![Architecture](resources/image/Generic_MQTT_Architecture.png)
 The grey components are part of this project which are:
 
-* **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to a MQTT Broker
+* **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to a MQTT broker
 * **Data Mapper** - handling of received messages via MQTT and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 * **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
@@ -123,10 +123,10 @@ Run `npm run build` in folder `frontend/mqtt-mapping` to build the Front End (pl
 Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
-## Configuration, Definition and Deployment of MQTT mappings
+## Configuration MQTT connection to broker
+The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.
 
-### Configuration MQTT Connection to broker
-The MQTT Broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.
+Further connection to the MQTT broker can be enabled or disabled.
 
 <br/>
 <p align="center" style="text-indent:70px;">
@@ -135,6 +135,9 @@ The MQTT Broker configuration is persisted in the tenant options of a Cumulocity
   </a>
 </p>
 <br/>
+
+
+## Definition and Deployment of MQTT mappings
 
 ### Table of MQTT mappings
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
@@ -152,7 +155,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 #### Subscription Topic
 
-This is the topic which is actually subscribed on in the MQTT Broker. It can contain wildcards.
+This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards.
 Examples are: "device/#", "device/data/#", "device/12345/data" etc.
 
 #### Template Topic
@@ -206,11 +209,17 @@ To define a new substitution the following steps have to be performed:
 1.  Select  ```Defines device identifier``` if this property defines the device identifier, i.e. it is mapped to ```source.id```.
 1. Press the add button with the ```+``` sign.
 
-Note: When adding a new substitution the following two cosistency rules are checked:
+>Note: When adding a new substitution the following two consistency rules are checked:
 
-1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
-1. If the new substotution defines the device identifier, it is checked if already another substitution exists defining the device identifier. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
+1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
+To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
+
+In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
+<br/>
+
+![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
 #### Test transformation of Source to Target message (Cumulocity REST format)
 <br/>
@@ -222,28 +231,23 @@ To test the defined transformation, press the button ```Transform test message``
 ### Send transformed Test Message to test device in Cumulocity
 <br/>
 
-To send the a transformormed payload to a test device, press the button ```Send test message```.
+To send the a transformed payload to a test device, press the button ```Send test message```.
 
 ![Send Test Message](resources/image/Generic_MQTT_SendTestMessageToCumulocity.png)
 
-### Setup Sample MQTT-Mappings
-
-A script to create sample MQTT-Mappings can be found [here](resources/script/createSampleMQTTMappings.sh).
-
-For all target payloads in Cumulocity (Measurement, Event, Alarm, Inventory) schemas for the required  are defined and validated.
-In the sample below , e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
-<br/>
-
-![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
 ### Snooping payloads on source topic
 
+Very often you want to use the existing payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording to messgaes on a topic.
+
 In the first wizzard step snooping for payloads on the source topic can be started. In order to record JSON payloads on this topic a subscrition records the payloads and saves them for later use in a source template.
 The process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
+
 If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
 
 #### Enable snooping payloads on source topic
-<br/>
+
+To enable snooping select ```ENABLED``` in the drop down as shon in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic ans records the received payloads.
 
 ![Enable Snooping](resources/image/Generic_MQTT_EnableSnooping.png)
 
@@ -259,9 +263,13 @@ In order to use a previously snooped payload click the button
 
 <br/>
 
-On the monitoring tab you can see how a specific MQTT mapping performs during the last activation in the microservice.
+On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
 ![Monitoring](resources/image/Generic_MQTT_Monitoring.png)
+
+## Setup Sample MQTT mappings
+
+A script to create sample MQTT mappings can be found [here](resources/script/createSampleMQTTMappings.sh).
 
 ## Enhance
 In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
