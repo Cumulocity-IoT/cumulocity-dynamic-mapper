@@ -50,6 +50,12 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 * **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
 * **MQTT Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
+The following diagram describes what happens in the microservice if a new MQTT mapping is added.
+![Mapping](resources/image/Generic_MQTT_Diagram_Map.png)
+
+The following diagram describes what happens in the microservice if a new messages arrives and how the payload is transformed.
+![Transform](resources/image/Generic_MQTT_Diagram_Transform.png)
+
 ### Known Limitation and Disclaimer
 
 Currently this project is focussing on JSON Payload only. Any other payload sent via MQTT must be mapped programmatically.
