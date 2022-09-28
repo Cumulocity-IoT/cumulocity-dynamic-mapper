@@ -16,7 +16,7 @@ export interface MappingSubstitution {
 
 export interface Mapping {
   id: number;
-  topic: string;
+  subscriptionTopic: string;
   templateTopic: string;
   indexDeviceIdentifierInTemplateTopic: number;
   targetAPI: string;
@@ -25,7 +25,6 @@ export interface Mapping {
   lastUpdate: number;
   active: boolean;
   tested: boolean;
-  createNoExistingDevice: boolean;
   qos: number;
   substitutions?: MappingSubstitution[];
   mapDeviceIdentifier: boolean;
@@ -37,6 +36,7 @@ export interface Mapping {
 
 export interface MappingStatus {
   id: number;
+  subscriptionTopic: string;
   errors: number;
   messagesReceived: number;
   snoopedTemplatesTotal: number;

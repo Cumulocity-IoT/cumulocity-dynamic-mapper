@@ -32,8 +32,16 @@ export class MonitoringComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '20%',
+      gridTrackSize: '10%',
       cellRendererComponent: IdRendererComponent
+    },
+    {
+      name: 'subscriptionTopic',
+      header: 'Subscription Topic',
+      path: 'subscriptionTopic',
+      filterable: false,
+      dataType: ColumnDataType.TextLong,
+      gridTrackSize: '20%',
     },
     {
       header: '# Errors',
@@ -41,7 +49,7 @@ export class MonitoringComponent implements OnInit {
       path: 'errors',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '20%'
+      gridTrackSize: '17.5%'
     },
     {
       header: '# Messages Received',
@@ -49,7 +57,7 @@ export class MonitoringComponent implements OnInit {
       path: 'messagesReceived',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '20%'
+      gridTrackSize: '17.5%'
     },
     {
       header: '# Snooped Templates Total',
@@ -57,7 +65,7 @@ export class MonitoringComponent implements OnInit {
       path: 'snoopedTemplatesTotal',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '20%'
+      gridTrackSize: '17.5%'
     },
     {
       header: '# Snooped Templates Active',
@@ -65,7 +73,7 @@ export class MonitoringComponent implements OnInit {
       path: 'snoopedTemplatesActive',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '20%'
+      gridTrackSize: '17.5%'
     },
 
   ]

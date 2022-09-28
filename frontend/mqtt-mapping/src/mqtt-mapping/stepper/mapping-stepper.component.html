@@ -25,8 +25,8 @@
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
                   <div class="row">
                     <div class="col-lg-5 form-group p-r-0">
-                      <label for="topic" class="" translate>Topic</label>
-                      <input formControlName="topic" [(ngModel)]="mapping.topic" type="text" class="form-control"
+                      <label for="subscriptionTopic" class="" translate>Subscription Topic</label>
+                      <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text" class="form-control"
                         placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
                       <c8y-messages>
                         <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"

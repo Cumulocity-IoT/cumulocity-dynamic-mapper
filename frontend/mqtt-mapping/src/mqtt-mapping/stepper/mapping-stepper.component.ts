@@ -57,6 +57,7 @@ export class MappingStepperComponent implements OnInit {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
+  editorSourceDblClick: boolean = false;
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
@@ -90,7 +91,8 @@ export class MappingStepperComponent implements OnInit {
         this.updateSourceExpressionResult(path);
         this.pathSource = path;
       }
-      //console.log("Set pathSource:", path);
+      console.log("Set pathSource:", path, this.editorSourceDblClick);
+      this.editorSourceDblClick = false;
     }
   }.bind(this)
 
@@ -194,7 +196,7 @@ export class MappingStepperComponent implements OnInit {
     this.initMarkedDeviceIdentifier();
     //this.onTopicUpdated();
     this.onSourceExpressionUpdated();
-    this.containsWildcardTopic = isWildcardTopic(this.mapping.topic);
+    this.containsWildcardTopic = isWildcardTopic(this.mapping.subscriptionTopic);
     this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
   }
 
@@ -202,13 +204,12 @@ export class MappingStepperComponent implements OnInit {
     this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      topic: new FormControl(this.mapping.topic, Validators.required),
+      subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
       markerWildcardTopic: new FormControl(this.containsWildcardTopic),
       markerWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
       templateTopic: new FormControl(this.mapping.templateTopic),
       markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, (this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator)),
       active: new FormControl(this.mapping.active),
-      createNoExistingDevice: new FormControl(this.mapping.createNoExistingDevice, Validators.required),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
@@ -252,10 +253,10 @@ export class MappingStepperComponent implements OnInit {
   }
 
   onTopicUpdated(): void {
-    this.propertyForm.get('topic').valueChanges.pipe(debounceTime(500))
+    this.propertyForm.get('subscriptionTopic').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
-        let touched = this.propertyForm.get('topic').dirty;
+        let touched = this.propertyForm.get('subscriptionTopic').dirty;
         console.log(`Topic changed is ${val}.`, touched);
         if (touched) {
           this.mapping.templateTopic = val as string;
@@ -264,13 +265,13 @@ export class MappingStepperComponent implements OnInit {
   }
 
   onTopicChanged(event): void {
-    console.log("Starting normalization: ", this.mapping.topic);
-    this.mapping.topic = normalizeTopic(this.mapping.topic);
-    this.containsWildcardTopic = isWildcardTopic(this.mapping.topic);
-    console.log("Ended normalization: ", this.mapping.topic);
+    console.log("Starting normalization: ", this.mapping.subscriptionTopic);
+    this.mapping.subscriptionTopic = normalizeTopic(this.mapping.subscriptionTopic);
+    this.containsWildcardTopic = isWildcardTopic(this.mapping.subscriptionTopic);
+    console.log("Ended normalization: ", this.mapping.subscriptionTopic);
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.topic);
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
     this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
     this.propertyForm.get('markedDeviceIdentifier').setValidators(this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator);
     this.propertyForm.get('markedDeviceIdentifier').updateValueAndValidity();
@@ -303,7 +304,7 @@ export class MappingStepperComponent implements OnInit {
 
     return {
       id: this.mapping.id,
-      topic: normalizeTopic(this.mapping.topic),
+      subscriptionTopic: normalizeTopic(this.mapping.subscriptionTopic),
       templateTopic: normalizeTopic(this.mapping.templateTopic),
       indexDeviceIdentifierInTemplateTopic: this.mapping.indexDeviceIdentifierInTemplateTopic,
       targetAPI: this.mapping.targetAPI,
@@ -311,7 +312,6 @@ export class MappingStepperComponent implements OnInit {
       target: tt,
       active: this.mapping.active,
       tested: this.mapping.tested || false,
-      createNoExistingDevice: this.mapping.createNoExistingDevice || false,
       qos: this.mapping.qos,
       substitutions: this.mapping.substitutions,
       mapDeviceIdentifier: this.mapping.mapDeviceIdentifier,
@@ -392,27 +392,25 @@ export class MappingStepperComponent implements OnInit {
 
     if (event.step.label == "Define topic") {
       this.substitutions = '';
-      console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.topic), this.mapping.substitutions.length)
+      console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
-      if (this.propertyForm.get('topic').touched) {
+      if (this.propertyForm.get('subscriptionTopic').touched) {
         this.mapping.substitutions = [];
       }
       this.updateSubstitutions();
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
       // dirty trick to trigger initializing the selection. This can only happen after the json tree element is shown
-      setTimeout(() => {
+      setTimeout((( herzig ) => {
         this.selectedSubstitution = 0;
         this.onSelectSubstitution(this.selectedSubstitution);
-        // console.log("Found querySelectorAll tree rows:", this.elementRef.nativeElement.querySelectorAll('table.jsoneditor-tree > tbody > tr:nth-child(2)~tr'));
-        // const list = this.elementRef.nativeElement.querySelectorAll('table.jsoneditor-tree > tbody > tr:nth-child(2)~tr');
-        // for (let i = 0; i < list.length; i++) {
-        //   list[i].addEventListener("dblclick", function () {
-        //     console.log("Double clicked", list[i]);
-        //   });
-        // }
-      }, 40);
-    } else if (event.step.label == "Define templates") {
+        const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
+        editorSourceRef.addEventListener("dblclick", function () {
+          console.log("Double clicked source editor!");
+          herzig.herz = true;
+        });
+      }), 40, {herz: this.editorSourceDblClick});
+      } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
     } else if (event.step.label == "Test mapping") {
@@ -430,7 +428,7 @@ export class MappingStepperComponent implements OnInit {
   private enrichTemplates() {
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
-    if (isWildcardTopic(this.mapping.topic)) {
+    if (isWildcardTopic(this.mapping.subscriptionTopic)) {
       this.templateSource = {
         ...this.templateSource,
         _DEVICE_IDENT_: "909090"
@@ -455,7 +453,7 @@ export class MappingStepperComponent implements OnInit {
     }
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
     //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
-    if (isWildcardTopic(this.mapping.topic)) {
+    if (isWildcardTopic(this.mapping.subscriptionTopic)) {
       this.templateSource = {
         ...this.templateSource,
         _DEVICE_IDENT_: "909090"
@@ -505,7 +503,7 @@ export class MappingStepperComponent implements OnInit {
 
   private updateSubstitutions() {
     this.substitutions = ''
-    if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.topic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
+    if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.subscriptionTopic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
       if (this.mapping.targetAPI != API.INVENTORY) {
         this.mapping.substitutions.push(
           { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });

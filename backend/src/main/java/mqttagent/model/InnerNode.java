@@ -40,7 +40,7 @@ public class InnerNode extends TreeNode {
     public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException {
         Set<String> set = childNodes.keySet();
         String joinedSet = String.join("", set);
-        String joinedPath = String.join(",", tp);
+        String joinedPath = String.join("", tp);
         log.info("Trying to resolve: '{}'' in [{}]", joinedPath, joinedSet);
         if (tp.size() >= 1 ) {
             if ( childNodes.containsKey(tp.get(0))){
@@ -107,7 +107,7 @@ public class InnerNode extends TreeNode {
         var path = mapping.templateTopic;
         // if templateTopic is not set use topic instead
         if (path == null || path.equals("")){
-            path = mapping.topic;
+            path = mapping.subscriptionTopic;
         }
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));
         insertMapping(this, mapping, levels);
