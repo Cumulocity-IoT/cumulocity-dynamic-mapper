@@ -289,10 +289,10 @@ export function isTopicNameValid(topic: string): any {
   return errors;
 }
 
-export function isTopicUnique(mapping: Mapping, mappings: Mapping[]): boolean {
+export function isSubscriptionTopicUnique(mapping: Mapping, mappings: Mapping[]): boolean {
   let result = true;
   result = mappings.every(m => {
-    return ((!mapping.topic.startsWith(m.topic) && !m.topic.startsWith(mapping.topic)) || mapping.id == m.id);
+    return ((!mapping.subscriptionTopic.startsWith(m.subscriptionTopic) && !m.subscriptionTopic.startsWith(mapping.subscriptionTopic)) || mapping.id == m.id);
   })
   return result;
 }
@@ -353,12 +353,12 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let defined = false
 
     let templateTopic = normalizeTopic(control.get('templateTopic').value);
-    let topic = normalizeTopic(control.get('topic').value);
+    let subscriptionTopic = normalizeTopic(control.get('subscriptionTopic').value);
     let id = control.get('id').value;
 
     // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
     // for comparison the "#" must then be replaced by a "+"
-    let nt = topic.trim().replace(/\#+$/, '+')
+    let nt = subscriptionTopic.trim().replace(/\#+$/, '+')
     error = !templateTopic.startsWith(nt);
     if (error) {
       errors[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic] = true
@@ -366,21 +366,21 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     }
 
     // count number of "#"
-    let count_multi = (topic.match(/\#/g) || []).length;
+    let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
     if (count_multi > 1) {
       errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
       defined = true
     }
 
     // count number of "+"_
-    let count_single = (topic.match(/\+/g) || []).length;
+    let count_single = (subscriptionTopic.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
       defined = true
     }
 
     // wildcard "'" can only appear at the end
-    if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) {
+    if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
       errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
       defined = true
     }

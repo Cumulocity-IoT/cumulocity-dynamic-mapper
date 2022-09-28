@@ -48,14 +48,14 @@ export class MappingComponent implements OnInit {
       gridTrackSize: '3%'
     },
     {
-      header: 'Topic',
-      name: 'topic',
-      path: 'topic',
+      header: 'Subscription Topic',
+      name: 'subscriptionTopic',
+      path: 'subscriptionTopic',
       filterable: true,
       gridTrackSize: '10%'
     },
     {
-      header: 'TemplateTopic',
+      header: 'Template Topic',
       name: 'templateTopic',
       path: 'templateTopic',
       filterable: true,
@@ -148,7 +148,7 @@ export class MappingComponent implements OnInit {
 
     let mapping = {
       id: l,
-      topic: '',
+      subscriptionTopic: '',
       templateTopic: '',
       indexDeviceIdentifierInTemplateTopic: -1,
       targetAPI: API.MEASUREMENT,
@@ -156,7 +156,6 @@ export class MappingComponent implements OnInit {
       target: SAMPLE_TEMPLATES[API.MEASUREMENT],
       active: false,
       tested: false,
-      createNoExistingDevice: false,
       qos: 1,
       substitutions: [],
       mapDeviceIdentifier: false,
@@ -218,7 +217,7 @@ export class MappingComponent implements OnInit {
       this.saveMappings();
       this.activateMappings();
     } else {
-      this.alertService.danger(gettext('Topic is already used: ' + mapping.topic + ". Please use a different topic."));
+      this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
     }
     this.showConfigMapping = false;
   }

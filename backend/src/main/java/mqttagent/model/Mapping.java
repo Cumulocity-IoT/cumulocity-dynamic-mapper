@@ -22,7 +22,7 @@ public class Mapping implements Serializable {
   public long id;
 
   @NotNull
-  public String topic;
+  public String subscriptionTopic;
 
   @NotNull
   public String templateTopic;
@@ -44,9 +44,6 @@ public class Mapping implements Serializable {
 
   @NotNull
   public boolean tested;
-
-  @NotNull
-  public boolean createNoExistingDevice;
 
   @NotNull
   public long qos;
@@ -75,7 +72,7 @@ public class Mapping implements Serializable {
   }
 
   public void copyFrom(Mapping mapping) {
-    this.topic = mapping.topic;
+    this.subscriptionTopic = mapping.subscriptionTopic;
     this.templateTopic = mapping.templateTopic;
     this.indexDeviceIdentifierInTemplateTopic = mapping.indexDeviceIdentifierInTemplateTopic;
     this.targetAPI = mapping.targetAPI;
@@ -83,7 +80,6 @@ public class Mapping implements Serializable {
     this.target = mapping.target;
     this.active = mapping.active;
     this.tested = mapping.tested;
-    this.createNoExistingDevice = mapping.createNoExistingDevice;
     this.qos = mapping.qos;
     this.substitutions = mapping.substitutions;
     this.mapDeviceIdentifier = mapping.mapDeviceIdentifier;

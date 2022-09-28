@@ -72,7 +72,7 @@ public class MappingsRepresentation implements Serializable {
 
   static public ArrayList<ValidationError> isTemplateTopicValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    boolean error = (!mapping.templateTopic.startsWith(mapping.topic));
+    boolean error = (!mapping.templateTopic.startsWith(mapping.subscriptionTopic));
     if (error) {
       result.add(ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic);
     }
@@ -93,7 +93,7 @@ public class MappingsRepresentation implements Serializable {
   static public ArrayList<ValidationError> isMappingValid(ArrayList<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     result.addAll(isSubstituionValid(mapping));
-    result.addAll(isTopicNameValid(mapping.topic));
+    result.addAll(isTopicNameValid(mapping.subscriptionTopic));
     result.addAll(isTopicNameValid(mapping.templateTopic));
     result.addAll(isTemplateTopicUnique(mappings, mapping));
     return result;

@@ -37,6 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
+import mqttagent.callback.ProcessingException;
 import mqttagent.configuration.ConfigurationService;
 import mqttagent.configuration.MQTTConfiguration;
 import mqttagent.model.API;
@@ -345,7 +346,8 @@ public class C8yAgent {
         });
     }
 
-    public void createMEA(API targetAPI, String payload) {
+    public void createMEA(API targetAPI, String payload) throws ProcessingException {
+        String[] errors = {""};
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 if (targetAPI.equals(API.EVENT)) {
@@ -365,13 +367,19 @@ public class C8yAgent {
                 }
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {} {}", targetAPI, payload);
+                errors[0] ="Could not map payload: " + targetAPI + "/" + payload;
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);
+                errors[0] ="Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s;
             }
         });
+        if (!errors[0].equals("")) {
+            throw new ProcessingException(errors[0]);
+        }
     }
 
-    public void upsertDevice(String payload, String externalId, String externalIdType) {
+    public void upsertDevice(String payload, String externalId, String externalIdType) throws ProcessingException{
+        String[] errors = {""};
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 ExternalIDRepresentation extId = getExternalId(externalId, externalIdType);
@@ -397,10 +405,15 @@ public class C8yAgent {
 
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {}", payload);
+                errors[0] ="Could not map payload: " + payload;
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {}", payload, s);
+                errors[0] ="Could not sent payload to c8y: " + payload + " " + s;
             }
         });
+        if (!errors[0].equals("")) {
+            throw new ProcessingException(errors[0]);
+        }
     }
 
     public void saveMappings(List<Mapping> mappings) throws JsonProcessingException {

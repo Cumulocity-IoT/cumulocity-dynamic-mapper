@@ -28,9 +28,8 @@ curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/inv
                         }
                     ],
                     "snoopTemplates": "STOPPED",
-                    "createNoExistingDevice": false,
                     "lastUpdate": 1663690366869,
-                    "topic": "device/#",
+                    "subscriptionTopic": "device/#",
                     "snoopedTemplates": [
                         "{\n\t\"customName\": \"Bus-Berlin-Rom\",\n\t\"customText\": \"Rom\",\n\t\"customFragment\": {\n\t\t\"customFragmentValue\": \"customValueNew\"\n\t},\n\t\"customNumber\": 10,\n\t\"customArray\": [\n\t\t\"ArrayValue1\",\n\t\t\"ArrayValue2\"\n\t],\n\t\"customType\": \"type_Bus\"\n}\n"
                     ],
@@ -70,9 +69,8 @@ curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/inv
                         }
                     ],
                     "snoopTemplates": "NONE",
-                    "createNoExistingDevice": false,
                     "lastUpdate": 1663624993212,
-                    "topic": "alarm/#",
+                    "subscriptionTopic": "alarm/#",
                     "snoopedTemplates": [],
                     "id": 2,
                     "indexDeviceIdentifierInTemplateTopic": 2
@@ -105,9 +103,8 @@ curl --location --request POST 'https://YOUR_TENANT.eu-latest.cumulocity.com/inv
                         }
                     ],
                     "snoopTemplates": "STARTED",
-                    "createNoExistingDevice": false,
                     "lastUpdate": 1663847963183,
-                    "topic": "/eventing/#",
+                    "subscriptionTopic": "/eventing/#",
                     "snoopedTemplates": [
                         "{\n  \"msg_type\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}",
                         "{\n  \"msg_types\": \"c8y_LoraBellEvent\",\n  \"txt\": \"Elevator was not too late yesterday!\",\n  \"ts\": \"2022-09-22T15:10:10.389+02:00\"\n}",

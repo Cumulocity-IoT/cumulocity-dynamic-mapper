@@ -21,6 +21,9 @@ public class MappingStatus implements Serializable {
   public long id;
 
   @NotNull
+  public String subscriptionTopic;
+
+  @NotNull
   public long messagesReceived;
 
   @NotNull

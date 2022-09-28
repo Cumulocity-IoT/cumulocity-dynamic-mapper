@@ -157,7 +157,7 @@ public class GenericCallback implements MqttCallback {
             } else {
                 mapping.snoopTemplates = SnoopStatus.STARTED;
             }
-            log.info("Adding snoopedTemplate to map: {},{},{}", mapping.topic, mapping.snoopedTemplates.size(),
+            log.info("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic, mapping.snoopedTemplates.size(),
                     mapping.snoopTemplates);
             mqttClient.setMappingDirty(mapping);
         } else {
@@ -190,23 +190,10 @@ public class GenericCallback implements MqttCallback {
                  */
                 try {
                     // escape _DEVICE_IDENT_ with BACKQUOTE "`"
-                    sub.pathSource = sub.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
-
-                    Expressions expr = Expressions.parse(sub.pathSource);
+                    var p = sub.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
+                    log.info("Patched sub.pathSource: {}, {}", sub.pathSource, p);
+                    Expressions expr = Expressions.parse(p);
                     extractedSourceContent = expr.evaluate(payloadJsonNode);
-                    /*
-                     * if ((sub.pathSource).equals(TOKEN_DEVICE_TOPIC)) {
-                     * if (ctx.isDeviceIdentifierValid()) {
-                     * extractedSourceContent = new TextNode (ctx.getDeviceIdentifier());
-                     * } else {
-                     * throw new ProcessingException("No device identifier found for: " +
-                     * sub.pathSource);
-                     * }
-                     * } else {
-                     * Expressions expr = Expressions.parse(sub.pathSource);
-                     * extractedSourceContent = expr.evaluate(payloadJsonNode);
-                     * }
-                     */
                 } catch (ParseException | IOException | EvaluateException e) {
                     log.error("Exception for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
                             payloadMessage, e);
@@ -286,16 +273,28 @@ public class GenericCallback implements MqttCallback {
              */
             log.info("Posting payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
                     resultDeviceIdentifier.size());
+
             if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)) {
+                String[] errors = {""};
                 resultDeviceIdentifier.forEach(d -> {
-                    c8yAgent.upsertDevice(payloadTarget.toString(), d, mapping.externalIdType);
+                    try {
+                        c8yAgent.upsertDevice(payloadTarget.toString(), d, mapping.externalIdType);
+                    } catch (ProcessingException e) {
+                        errors[0] = e.getMessage();
+                    }
                 });
+
+                if (!errors[0].equals("")) {
+                    throw new ProcessingException(errors[0]);
+                }
+
             } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
             } else {
                 log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
                         resultDeviceIdentifier.size());
             }
+                
         }
 
     }
