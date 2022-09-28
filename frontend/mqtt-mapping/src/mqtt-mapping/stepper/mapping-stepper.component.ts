@@ -1,5 +1,5 @@
 import { CdkStep } from '@angular/cdk/stepper';
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterContentChecked, AfterContentInit, AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
@@ -19,7 +19,7 @@ import { MappingService } from '../shared/mapping.service';
   encapsulation: ViewEncapsulation.None,
 })
 
-export class MappingStepperComponent implements OnInit {
+export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
@@ -57,7 +57,8 @@ export class MappingStepperComponent implements OnInit {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
-  editorSourceDblClick: boolean = false;
+  editorSourceDoubleClick: boolean [] =  [false];
+  editorTargetDoubleClick: boolean [] =  [false];
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
@@ -91,8 +92,8 @@ export class MappingStepperComponent implements OnInit {
         this.updateSourceExpressionResult(path);
         this.pathSource = path;
       }
-      console.log("Set pathSource:", path, this.editorSourceDblClick);
-      this.editorSourceDblClick = false;
+      console.log("Set pathSource:", path, this.editorSourceDoubleClick[0]);
+      this.editorSourceDoubleClick[0] = false;
     }
   }.bind(this)
 
@@ -124,7 +125,8 @@ export class MappingStepperComponent implements OnInit {
         this.setSelectionToPath(this.editorTarget, path)
         this.pathTarget = path;
       }
-      //console.log("Set pathTarget:", path);
+      console.log("Set pathTarget:", path, this.editorTargetDoubleClick[0]);
+      this.editorTargetDoubleClick[0] = false;
     }
   }.bind(this)
 
@@ -151,8 +153,33 @@ export class MappingStepperComponent implements OnInit {
     public mappingService: MappingService,
     public alertService: AlertService,
     private elementRef: ElementRef,
-    private fb: FormBuilder,
   ) { }
+
+  ngAfterContentChecked(): void {
+    const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
+    if ( editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
+      //console.log("I'm here, ngAfterContentChecked", editorSourceRef, editorSourceRef.getAttribute("listener"));
+      this.selectedSubstitution = 0;
+      this.onSelectSubstitution(this.selectedSubstitution);
+      editorSourceRef.setAttribute("listener", "true");
+      const sourceCallback =  function () {
+        console.log("Double clicked source editor!");
+        this.editorSourceDoubleClick[0] = true;
+      }.bind(this);
+      editorSourceRef.addEventListener("dblclick", sourceCallback);
+    }
+
+    const editorTargetRef = this.elementRef.nativeElement.querySelector('#editorTargetRef');
+    if ( editorTargetRef != null && !editorTargetRef.getAttribute("listener")) {
+      //console.log("I'm here, ngAfterContentChecked", editorTargetRef, editorTargetRef.getAttribute("listener"));
+      editorTargetRef.setAttribute("listener", "true");
+      const targetCallback = function () {
+        console.log("Double clicked target editor!");
+        this.editorTargetDoubleClick[0] = true;
+      }.bind(this);
+      editorTargetRef.addEventListener("dblclick", targetCallback);
+    }
+  }
 
   ngOnInit() {
     console.log("Mapping to be updated:", this.mapping, this.editMode);
@@ -401,16 +428,16 @@ export class MappingStepperComponent implements OnInit {
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
       // dirty trick to trigger initializing the selection. This can only happen after the json tree element is shown
-      setTimeout((( herzig ) => {
-        this.selectedSubstitution = 0;
-        this.onSelectSubstitution(this.selectedSubstitution);
-        const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
-        editorSourceRef.addEventListener("dblclick", function () {
-          console.log("Double clicked source editor!");
-          herzig.herz = true;
-        });
-      }), 40, {herz: this.editorSourceDblClick});
-      } else if (event.step.label == "Define templates") {
+      // setTimeout((( herzig ) => {
+      //   this.selectedSubstitution = 0;
+      //   this.onSelectSubstitution(this.selectedSubstitution);
+      //   const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
+      //   editorSourceRef.addEventListener("dblclick", function () {
+      //     console.log("Double clicked source editor!");
+      //     herzig.herz = true;
+      //   });
+      // }), 40, {herz: this.editorSourceDblClick});
+    } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
     } else if (event.step.label == "Test mapping") {
