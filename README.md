@@ -54,7 +54,8 @@ The following diagram describes what happens in the microservice if a new MQTT m
 ![Mapping](resources/image/Generic_MQTT_Diagram_Map.png)
 
 The following diagram describes what happens in the microservice if a new messages arrives and how the payload is transformed.
-![Transform](resources/image/Generic_MQTT_Diagram_Transform.png)
+![Transform](resources/image/Generic_MQTT_Diagram_Transform1.png)
+![Transform](resources/image/Generic_MQTT_Diagram_Transform2.png)
 
 ### Known Limitation and Disclaimer
 
