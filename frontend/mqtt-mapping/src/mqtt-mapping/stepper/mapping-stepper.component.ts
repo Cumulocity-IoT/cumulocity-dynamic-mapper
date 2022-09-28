@@ -1,6 +1,6 @@
 import { CdkStep } from '@angular/cdk/stepper';
-import { AfterContentChecked, AfterContentInit, AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -27,7 +27,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
-  COLOR_PALETTE = ['#d5f4e6', '#80ced6', '#fefbd8', '#618685', '#ffef96', '#50394c', '#b2b2b2', '#f4e1d2']
   API = API;
   ValidationError = ValidationError;
   QOS = QOS;
@@ -37,7 +36,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
 
   paletteCounter: number = 0;
-  nextColor: string;
   snoopedTemplateCounter: number = 0;
   isSubstitutionValid: boolean;
   containsWildcardTopic: boolean = false;
@@ -52,8 +50,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   selectionList: any = [];
   definesIdentifier: boolean = false;
 
-  clicksTarget: []
-  clicksSource: []
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
@@ -65,11 +61,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private setSelectionSource = function (node: any, event: any) {
     if (event.type == "click") {
-      if (this.clicksSource == undefined) this.clicksSource = [];
-      this.clicksSource.push(Date.now());
-      this.clicksSource = this.clicksSource.slice(-2);
-      let doubleClick = (this.clicksSource.length > 1 ? this.clicksSource[1] - this.clicksSource[0] : Infinity);
-      //console.log("Set target editor event:", event.type, this.clicksTarget, doubleClick);
       var path = "";
       for (let i = 0; i < node.path.length; i++) {
         if (typeof node.path[i] === 'number') {
@@ -85,8 +76,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
-      // test if doubleclicked, last two click occured within 750 ms
-      if (doubleClick < 750) {
+      // test if double-clicked then select item and evaluate expression
+      if (this.editorSourceDoubleClick[0]) {
         this.setSelectionToPath(this.editorSource, path)
         this.definesIdentifier = false;
         this.updateSourceExpressionResult(path);
@@ -99,12 +90,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private setSelectionTarget = function (node: any, event: any) {
     if (event.type == "click") {
-      if (this.clicksTarget == undefined) this.clicksTarget = [];
-      this.clicksTarget.push(Date.now());
-      this.clicksTarget = this.clicksTarget.slice(-2);
-      let doubleClick = (this.clicksTarget.length > 1 ? this.clicksTarget[1] - this.clicksTarget[0] : Infinity);
-      //console.log("Set target editor event:", event.type, this.clicksTarget, doubleClick);
-
       var path = "";
       for (let i = 0; i < node.path.length; i++) {
         if (typeof node.path[i] === 'number') {
@@ -121,7 +106,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         item.setAttribute('style', null);
       }
       // test if double-clicked
-      if (doubleClick < 750) {
+      if (this.editorTargetDoubleClick[0]) {
         this.setSelectionToPath(this.editorTarget, path)
         this.pathTarget = path;
       }
@@ -147,6 +132,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   testForm: FormGroup;
   sourcePathMissing: boolean = false;
   targetPathMissing: boolean = false;
+  COLOR_HIGHLIGHTED: string =  'lightgrey'; //#5FAEEC';
 
   constructor(
     private bsModalService: BsModalService,
@@ -640,8 +626,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
 
   public onSelectSubstitution(selected: number) {
-    this.nextColor = this.COLOR_PALETTE[this.paletteCounter];
-
     // reset background color of old selection list
     for (let item of this.selectionList) {
       item.setAttribute('style', null);
@@ -656,7 +640,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
     this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
     for (let item of this.selectionList) {
-      item.setAttribute('style', `background: ${this.nextColor};`);
+      item.setAttribute('style', `background: ${this.COLOR_HIGHLIGHTED};`);
     }
     console.log("Show substitutions!");
   }
