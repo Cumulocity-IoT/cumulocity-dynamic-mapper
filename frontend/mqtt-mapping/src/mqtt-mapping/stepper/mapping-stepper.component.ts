@@ -6,10 +6,11 @@ import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstituionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { MappingService } from '../shared/mapping.service';
+import * as _ from 'lodash';
 
 
 @Component({
@@ -33,28 +34,24 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   SnoopStatus = SnoopStatus;
   keys = Object.keys;
   values = Object.values;
+  isWildcardTopic = isWildcardTopic;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
 
   paletteCounter: number = 0;
   snoopedTemplateCounter: number = 0;
   isSubstitutionValid: boolean;
-  containsWildcardTopic: boolean = false;
-  containsWildcardTemplateTopic: boolean = false;
-  substitutions: string = '';
+  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false);
 
-  pathSource: string = '';
-  pathTarget: string = '';
   templateSource: any;
   templateTarget: any;
   dataTesting: any;
   selectionList: any = [];
-  definesIdentifier: boolean = false;
 
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
-  editorSourceDoubleClick: boolean [] =  [false];
-  editorTargetDoubleClick: boolean [] =  [false];
+  editorSourceDoubleClick: boolean[] = [false];
+  editorTargetDoubleClick: boolean[] = [false];
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
@@ -79,9 +76,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       // test if double-clicked then select item and evaluate expression
       if (this.editorSourceDoubleClick[0]) {
         this.setSelectionToPath(this.editorSource, path)
-        this.definesIdentifier = false;
         this.updateSourceExpressionResult(path);
-        this.pathSource = path;
+        this.currentSubstitution.setPathSource(path);
+        this.currentSubstitution.setDeviceIdentifier(false);
       }
       console.log("Set pathSource:", path, this.editorSourceDoubleClick[0]);
       this.editorSourceDoubleClick[0] = false;
@@ -108,7 +105,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       // test if double-clicked
       if (this.editorTargetDoubleClick[0]) {
         this.setSelectionToPath(this.editorTarget, path)
-        this.pathTarget = path;
+        this.currentSubstitution.setPathTarget(path);
+        this.currentSubstitution.setDeviceIdentifier(false);
       }
       console.log("Set pathTarget:", path, this.editorTargetDoubleClick[0]);
       this.editorTargetDoubleClick[0] = false;
@@ -130,9 +128,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   propertyForm: FormGroup;
   templateForm: FormGroup;
   testForm: FormGroup;
-  sourcePathMissing: boolean = false;
-  targetPathMissing: boolean = false;
-  COLOR_HIGHLIGHTED: string =  'lightgrey'; //#5FAEEC';
+  COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
+  containsWildcardTemplateTopic: boolean;
 
   constructor(
     private bsModalService: BsModalService,
@@ -143,12 +140,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   ngAfterContentChecked(): void {
     const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
-    if ( editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
+    if (editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
       //console.log("I'm here, ngAfterContentChecked", editorSourceRef, editorSourceRef.getAttribute("listener"));
       this.selectedSubstitution = 0;
       this.onSelectSubstitution(this.selectedSubstitution);
       editorSourceRef.setAttribute("listener", "true");
-      const sourceCallback =  function () {
+      const sourceCallback = function () {
         console.log("Double clicked source editor!");
         this.editorSourceDoubleClick[0] = true;
       }.bind(this);
@@ -156,7 +153,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     const editorTargetRef = this.elementRef.nativeElement.querySelector('#editorTargetRef');
-    if ( editorTargetRef != null && !editorTargetRef.getAttribute("listener")) {
+    if (editorTargetRef != null && !editorTargetRef.getAttribute("listener")) {
       //console.log("I'm here, ngAfterContentChecked", editorTargetRef, editorTargetRef.getAttribute("listener"));
       editorTargetRef.setAttribute("listener", "true");
       const targetCallback = function () {
@@ -170,6 +167,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   ngOnInit() {
     console.log("Mapping to be updated:", this.mapping, this.editMode);
     //console.log ("ElementRef:", this.elementRef.nativeElement);
+    this.currentSubstitution.setPathSource("wurst");
     this.initPropertyForm();
     this.initTemplateForm();
     this.editorOptionsSource = {
@@ -209,36 +207,38 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.initMarkedDeviceIdentifier();
     //this.onTopicUpdated();
     this.onSourceExpressionUpdated();
-    this.containsWildcardTopic = isWildcardTopic(this.mapping.subscriptionTopic);
-    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
   }
 
   private initPropertyForm(): void {
+    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
     this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
-      markerWildcardTopic: new FormControl(this.containsWildcardTopic),
-      markerWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
       templateTopic: new FormControl(this.mapping.templateTopic),
+      containsWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
       markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, (this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator)),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
-    }, checkPropertiesAreValid(this.mappings)
+    },
+      checkPropertiesAreValid(this.mappings)
     );
   }
 
   private initTemplateForm(): void {
     this.templateForm = new FormGroup({
-      pathSource: new FormControl(this.pathSource),
-      pathTarget: new FormControl(this.pathTarget),
-      definesIdentifier: new FormControl(this.definesIdentifier),
+      cs: new FormGroup({
+        ps: new FormControl(this.currentSubstitution.pathSource),
+        pt: new FormControl(this.currentSubstitution.pathTarget),
+        di: new FormControl(this.currentSubstitution.definesIdentifier),
+      }),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
     },
-      checkSubstituionIsValid(this.mapping));
+      checkSubstitutionIsValid(this.mapping)
+    );
   }
 
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {
@@ -280,7 +280,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   onTopicChanged(event): void {
     console.log("Starting normalization: ", this.mapping.subscriptionTopic);
     this.mapping.subscriptionTopic = normalizeTopic(this.mapping.subscriptionTopic);
-    this.containsWildcardTopic = isWildcardTopic(this.mapping.subscriptionTopic);
     console.log("Ended normalization: ", this.mapping.subscriptionTopic);
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
@@ -292,10 +291,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   onTemplateTopicChanged(event): void {
     this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
+    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
   }
 
   onSourceExpressionUpdated(): void {
-    this.templateForm.get('pathSource').valueChanges.pipe(debounceTime(500))
+    this.templateForm.get('cs').get('ps').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
         //console.log(`Updated sourcePath ${val}.`, val);
@@ -305,11 +305,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private getCurrentMapping(): Mapping {
     //remove dummy field "_DEVICE_IDENT_", since it should not be stored
-    //if (!this.containsWildcardTopic) {
     let dts = this.editorSource.get()
     delete dts[TOKEN_DEVICE_TOPIC];
     let st = JSON.stringify(dts);
-    //}
 
     let dtt = this.editorTarget.get()
     delete dtt[TOKEN_DEVICE_TOPIC];
@@ -404,7 +402,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     console.log("OnNextSelected", event.step.label, this.mapping)
 
     if (event.step.label == "Define topic") {
-      this.substitutions = '';
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       if (this.propertyForm.get('subscriptionTopic').touched) {
@@ -413,22 +410,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.updateSubstitutions();
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      // dirty trick to trigger initializing the selection. This can only happen after the json tree element is shown
-      // setTimeout((( herzig ) => {
-      //   this.selectedSubstitution = 0;
-      //   this.onSelectSubstitution(this.selectedSubstitution);
-      //   const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
-      //   editorSourceRef.addEventListener("dblclick", function () {
-      //     console.log("Double clicked source editor!");
-      //     herzig.herz = true;
-      //   });
-      // }), 40, {herz: this.editorSourceDblClick});
     } else if (event.step.label == "Define templates") {
       console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
       this.dataTesting = this.editorSource.get();
-    } else if (event.step.label == "Test mapping") {
-
     }
+
     if (this.mapping.snoopTemplates == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
       this.onCommit.emit(this.getCurrentMapping());
@@ -478,28 +464,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onAddSubstitution() {
-    this.sourcePathMissing = (this.pathSource == '');
-    this.targetPathMissing = (this.pathTarget == '');
-    console.log("New substitution", this.sourcePathMissing, this.targetPathMissing);
-    if (this.pathSource != '' && this.pathTarget != '') {
-      let sub: MappingSubstitution = {
-        pathSource: this.pathSource,
-        pathTarget: this.pathTarget,
-        definesIdentifier: this.definesIdentifier
-      }
-      this.addSubstitution(sub);
+    if (this.currentSubstitution.isValid()) {
+      this.addSubstitution(this.currentSubstitution);
       this.selectedSubstitution = -1;
-      console.log("New substitution", sub);
-      this.pathSource = '';
-      this.pathTarget = '';
-      this.definesIdentifier = false;
+      console.log("New substitution", this.currentSubstitution);
+      this.currentSubstitution.reset();
       this.templateForm.updateValueAndValidity({ 'emitEvent': true });
     }
   }
 
   public onDeleteSubstitutions() {
     this.mapping.substitutions = [];
-    this.substitutions = "";
     this.updateSubstitutions();
     console.log("Cleared substitutions!");
   }
@@ -513,28 +488,22 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.updateSubstitutions();
   }
 
-
   private updateSubstitutions() {
-    this.substitutions = ''
     if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.subscriptionTopic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
       if (this.mapping.targetAPI != API.INVENTORY) {
         this.mapping.substitutions.push(
-          { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
+          new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
+          // { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
       } else {
         // if creating new device then the json body contains only a dummy field
-        this.mapping.substitutions.push(
-          { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: TOKEN_DEVICE_TOPIC, definesIdentifier: true });
+         this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
+        //  { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: TOKEN_DEVICE_TOPIC, definesIdentifier: true } as MappingSubstitution);
       }
     }
-    this.mapping.substitutions.forEach(s => {
-      console.log("Update substitution:", s.pathSource, s.pathTarget, this.mapping.substitutions?.length);
-      let marksDeviceIdentifier = (s.definesIdentifier ? "* " : "");
-      this.substitutions = this.substitutions + `[ ${marksDeviceIdentifier}${s.pathSource} -> ${s.pathTarget} ]`;
-    });
   }
 
-
-  private addSubstitution(sub: MappingSubstitution) {
+  private addSubstitution(s: MappingSubstitution) {
+    let sub: MappingSubstitution = _.clone(s);
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
@@ -601,8 +570,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       } else {
         console.error("Someting is wrong, since more than one substitution is marked to define the device identifier:", substitutionOld);
       }
-
-      this.updateSubstitutions();
     }
   }
 
@@ -610,32 +577,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     // changing of colors is currently diabled, to enable these uncomment the following stmt.
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
-      // this.paletteCounter = -1;
     }
-    // if (this.paletteCounter == this.COLOR_PALETTE.length - 1) {
-    //   this.paletteCounter = -1;
-    // }
-
     this.selectedSubstitution++;
-    // this.paletteCounter++;
-    this.sourcePathMissing = false;
-    this.targetPathMissing = false;
-
     this.onSelectSubstitution(this.selectedSubstitution);
   }
-
 
   public onSelectSubstitution(selected: number) {
     // reset background color of old selection list
     for (let item of this.selectionList) {
       item.setAttribute('style', null);
     }
-    this.pathSource = this.mapping.substitutions[selected].pathSource;
-    this.updateSourceExpressionResult(this.mapping.substitutions[selected].pathSource);
-    this.pathTarget = this.mapping.substitutions[selected].pathTarget;
-    this.definesIdentifier = this.mapping.substitutions[selected].definesIdentifier;
-    this.setSelectionToPath(this.editorSource, this.mapping.substitutions[selected].pathSource);
-    this.setSelectionToPath(this.editorTarget, this.mapping.substitutions[selected].pathTarget);
+    this.currentSubstitution = new MappingSubstitution(this.mapping.substitutions[selected].pathSource, this.mapping.substitutions[selected].pathTarget, this.mapping.substitutions[selected].definesIdentifier);
+    this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
+    this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
+    this.setSelectionToPath(this.editorTarget, this.currentSubstitution.pathTarget);
     //console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'));
     //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
     this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
