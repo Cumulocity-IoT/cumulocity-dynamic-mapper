@@ -39,8 +39,6 @@
                         <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Single_Level_Wildcard]"
                           translate>Only one SingleLevel wildcard "*" is allowed.
                         </c8y-message>
-                        <!--                       <c8y-message *ngIf="propertyForm.errors?.Topic_Not_Substring_Of_OtherTopic" translate>The Topic must be a part of another Topic.
-                      </c8y-message> -->
                       </c8y-messages>
                     </div>
                     <div class="col-lg-7 form-group">
@@ -48,8 +46,8 @@
                         <label translate><br></label>
                         <div class="input-group">
                           <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}">
-                            <input type="checkbox" formControlName="markerWildcardTemplateTopic" disabled="true"
-                              [(ngModel)]="containsWildcardTemplateTopic" />
+                            <input type="checkbox" formControlName="containsWildcardTemplateTopic" disabled="true"
+                              [ngModel]="containsWildcardTemplateTopic" />
                             <span></span>
                             <span>
                               {{ 'Wildcard TemlateTopic'}}
@@ -224,7 +222,7 @@
                           </json-editor>
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="sourcePathMissing" translate>Select source node to define substitution!
+                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate>Select source node to define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
@@ -247,7 +245,6 @@
                         </span>
                       </div>
                       <div class="p-b-8">
-<!--                       <div class="p-b-8" style="padding-left:18px;"> -->
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
                           (click)="onSelectNextSubstitution()" translate title="Select substitution">
                           <i c8yIcon="skip"></i>
@@ -311,7 +308,7 @@
                           </json-editor>
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="targetPathMissing" translate>Select target node to define substitution!
+                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate>Select target node to define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
@@ -339,7 +336,8 @@
                     </div>
                   </div>
 
-                  <div class="row">
+                  <div class="row" formGroupName="cs">
+                  <!-- <div class="row" > -->
                     <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
@@ -358,9 +356,9 @@
                             </button>
                           </span>
                         </div>
-                        <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
-                          formControlName="pathSource" [(ngModel)]="pathSource"
-                          placeholder="e.g. $join([$substring(tx,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
+                         <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
+                          formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
+                          placeholder="e.g. $join([$substring(tx,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" /> 
                         <c8y-messages>
                           <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
                           </c8y-message>
@@ -370,7 +368,7 @@
                     <div class="col-lg-2">
                       <br>
                       <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
-                        <input type="checkbox" formControlName="definesIdentifier" [(ngModel)]="definesIdentifier" />
+                        <input type="checkbox" formControlName="di" [(ngModel)]="currentSubstitution.definesIdentifier" />
                         <span></span>
                         <span>
                           {{ 'Define Identifier' | translate }}
@@ -381,7 +379,8 @@
                       <div class="form-group">
                         <label translate>Substitute in Target</label>
                         <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                          formControlName="pathTarget" [ngModel]="pathTarget" readonly disabled="true" />
+                          formControlName="pt"
+                           [(ngModel)]="currentSubstitution.pathTarget" readonly disabled="true" />
                       </div>
                     </div>
                   </div>

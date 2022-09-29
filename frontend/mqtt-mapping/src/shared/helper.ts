@@ -320,7 +320,6 @@ export enum SnoopStatus {
   STOPPED = "STOPPED"
 }
 
-
 export function isSubstituionValid(mapping: Mapping): boolean {
   let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
@@ -328,7 +327,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
   return (count > 1);
 }
 
-export function checkSubstituionIsValid(mapping: Mapping): ValidatorFn {
+export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors = {}
     let defined = false

@@ -8,10 +8,52 @@ export interface MQTTAuthentication {
   active: boolean;
 }
 
-export interface MappingSubstitution {
-  pathSource: string;
-  pathTarget: string;
-  definesIdentifier?: boolean;
+// export interface MappingSubstitution {
+//   reset(): void;
+//   isValid(): boolean;
+//   hasPathSource(): boolean;
+//   hasPathTarget(): boolean;
+//   pathSource: string;
+//   pathTarget: string;
+//   definesIdentifier?: boolean;
+// }
+
+export class MappingSubstitution {
+  public pathSource: string;
+  public pathTarget: string;
+  public definesIdentifier?: boolean
+  constructor (
+    ps: string,
+    pt: string,
+    di: boolean
+  ){
+    this.pathSource = ps;
+    this.pathTarget = pt;
+    this.definesIdentifier = di;
+  }
+  reset() {
+    this.pathSource = '';
+    this.pathTarget = '';
+    this.definesIdentifier = false;
+  }
+  isValid() {
+    return this.hasPathSource() && this.hasPathTarget()
+  }
+  hasPathSource() {
+    return this.pathSource != ''
+  }
+  hasPathTarget() {
+    return this.pathTarget != ''
+  }
+  setPathSource(ps: string) {
+    this.pathSource = ps;
+  }
+  setPathTarget(pt: string) {
+    this.pathTarget = pt;
+  }
+  setDeviceIdentifier(di:boolean){
+    this.definesIdentifier = di;
+  };
 }
 
 export interface Mapping {
