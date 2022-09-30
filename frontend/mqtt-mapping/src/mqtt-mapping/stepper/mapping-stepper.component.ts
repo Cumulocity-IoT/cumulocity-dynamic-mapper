@@ -4,13 +4,14 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { debounceTime } from "rxjs/operators";
+import { debounceTime, subscribeOn } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import * as _ from 'lodash';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 
 @Component({
@@ -34,7 +35,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   SnoopStatus = SnoopStatus;
   keys = Object.keys;
   values = Object.values;
-  isWildcardTopic = isWildcardTopic;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
 
   paletteCounter: number = 0;
@@ -50,43 +50,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   editorOptionsSource: any
   editorOptionsTarget: any
   editorOptionsTesting: any
-  editorSourceDoubleClick: boolean[] = [false];
-  editorTargetDoubleClick: boolean[] = [false];
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
 
-  private setSelectionSource = function (node: any, event: any) {
+  private setSelection = function (node: any, event: any) {
     if (event.type == "click") {
-      var path = "";
-      for (let i = 0; i < node.path.length; i++) {
-        if (typeof node.path[i] === 'number') {
-          path = path.substring(0, path.length - 1);
-          path += '[' + node.path[i] + ']';
-
-        } else {
-          path += node.path[i];
+      let target = '';
+      event.path.forEach(element => {
+        if (element.localName == "json-editor") {
+          target = element.parentElement.id;
         }
-        if (i !== node.path.length - 1) path += ".";
-      }
-      for (let item of this.selectionList) {
-        //console.log("Reset item:", item);
-        item.setAttribute('style', null);
-      }
-      // test if double-clicked then select item and evaluate expression
-      if (this.editorSourceDoubleClick[0]) {
-        this.setSelectionToPath(this.editorSource, path)
-        this.updateSourceExpressionResult(path);
-        this.currentSubstitution.setPathSource(path);
-        this.currentSubstitution.setDeviceIdentifier(false);
-      }
-      console.log("Set pathSource:", path, this.editorSourceDoubleClick[0]);
-      this.editorSourceDoubleClick[0] = false;
-    }
-  }.bind(this)
-
-  private setSelectionTarget = function (node: any, event: any) {
-    if (event.type == "click") {
+      });
+      
       var path = "";
       for (let i = 0; i < node.path.length; i++) {
         if (typeof node.path[i] === 'number') {
@@ -103,13 +79,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         item.setAttribute('style', null);
       }
       // test if double-clicked
-      if (this.editorTargetDoubleClick[0]) {
+      if ( target == "editorTargetRef") {
         this.setSelectionToPath(this.editorTarget, path)
-        this.currentSubstitution.setPathTarget(path);
-        this.currentSubstitution.setDeviceIdentifier(false);
+        this.currentSubstitution.pathTarget = path;
+        this.currentSubstitution.definesIdentifier = false;
+      } else if ( target == "editorSourceRef" ) {
+        // test if double-clicked then select item and evaluate expression
+        this.setSelectionToPath(this.editorSource, path)
+        this.updateSourceExpressionResult(path);
+        this.currentSubstitution.pathSource = path;
+        //this.currentSubstitution.setDeviceIdentifier(false);
       }
-      console.log("Set pathTarget:", path, this.editorTargetDoubleClick[0]);
-      this.editorTargetDoubleClick[0] = false;
     }
   }.bind(this)
 
@@ -139,35 +119,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   ) { }
 
   ngAfterContentChecked(): void {
+    // if json source editor is displayed then choose the first selection
     const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
     if (editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
       //console.log("I'm here, ngAfterContentChecked", editorSourceRef, editorSourceRef.getAttribute("listener"));
       this.selectedSubstitution = 0;
       this.onSelectSubstitution(this.selectedSubstitution);
       editorSourceRef.setAttribute("listener", "true");
-      const sourceCallback = function () {
-        console.log("Double clicked source editor!");
-        this.editorSourceDoubleClick[0] = true;
-      }.bind(this);
-      editorSourceRef.addEventListener("dblclick", sourceCallback);
-    }
-
-    const editorTargetRef = this.elementRef.nativeElement.querySelector('#editorTargetRef');
-    if (editorTargetRef != null && !editorTargetRef.getAttribute("listener")) {
-      //console.log("I'm here, ngAfterContentChecked", editorTargetRef, editorTargetRef.getAttribute("listener"));
-      editorTargetRef.setAttribute("listener", "true");
-      const targetCallback = function () {
-        console.log("Double clicked target editor!");
-        this.editorTargetDoubleClick[0] = true;
-      }.bind(this);
-      editorTargetRef.addEventListener("dblclick", targetCallback);
     }
   }
 
   ngOnInit() {
     console.log("Mapping to be updated:", this.mapping, this.editMode);
     //console.log ("ElementRef:", this.elementRef.nativeElement);
-    this.currentSubstitution.setPathSource("wurst");
     this.initPropertyForm();
     this.initTemplateForm();
     this.editorOptionsSource = {
@@ -177,7 +141,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       enableSort: false,
       enableTransform: false,
       enableSearch: false,
-      onEvent: this.setSelectionSource,
+      onEvent: this.setSelection,
       schema: SCHEMA_PAYLOAD
     };
 
@@ -188,7 +152,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       enableSort: false,
       enableTransform: false,
       enableSearch: false,
-      onEvent: this.setSelectionTarget,
+      onEvent: this.setSelection,
       schema: getSchema(this.mapping.targetAPI)
     };
 
@@ -199,7 +163,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       enableSort: false,
       enableTransform: false,
       enableSearch: false,
-      onEvent: this.setSelectionSource,
       schema: SCHEMA_PAYLOAD
     };
 
@@ -467,7 +430,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (this.currentSubstitution.isValid()) {
       this.addSubstitution(this.currentSubstitution);
       this.selectedSubstitution = -1;
-      console.log("New substitution", this.currentSubstitution);
+      console.log("New substitution", this.currentSubstitution, this.mapping.substitutions);
       this.currentSubstitution.reset();
       this.templateForm.updateValueAndValidity({ 'emitEvent': true });
     }
@@ -493,24 +456,66 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       if (this.mapping.targetAPI != API.INVENTORY) {
         this.mapping.substitutions.push(
           new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
-          // { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
+        // { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
       } else {
         // if creating new device then the json body contains only a dummy field
-         this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
+        this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
         //  { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: TOKEN_DEVICE_TOPIC, definesIdentifier: true } as MappingSubstitution);
       }
     }
   }
 
-  private addSubstitution(s: MappingSubstitution) {
-    let sub: MappingSubstitution = _.clone(s);
+  private addSubstitution(st: MappingSubstitution) {
+    let sub: MappingSubstitution = _.clone(st);
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
+
+    let updatePending = new Subject<boolean>();
+
+    // test 2
+    // only one susbsitution can define the deviceIdentifier, thus set the others to false
+    let suby = updatePending.subscribe(update => {
+      if (update) {
+        let substitutionOld: MappingSubstitution[] = [];
+        this.mapping.substitutions.forEach(s => {
+          if (sub.definesIdentifier && s.definesIdentifier) {
+            substitutionOld.push(s)
+          }
+        })
+
+        if (substitutionOld.length == 1) {
+          const initialState = {
+            substitutionOld: substitutionOld[0],
+            substitutionNew: sub
+          }
+          const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
+          overwriteModalRef.content.closeSubject.subscribe(
+            (overwrite: boolean) => {
+              console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
+              if (overwrite) {
+                substitutionOld[0].definesIdentifier = false;
+              } else {
+                sub.definesIdentifier = false;
+              }
+              this.templateForm.updateValueAndValidity({ 'emitEvent': true });
+              console.log("Overwriting definesIdentifier II:", overwrite, substitutionOld[0], sub);
+            }
+          )
+          this.mapping.substitutions.push(sub);
+        } else if (substitutionOld.length == 0) {
+          this.mapping.substitutions.push(sub);
+        } else {
+          console.error("Someting is wrong, since more than one substitution is marked to define the device identifier:", substitutionOld);
+        }
+      }
+
+    });
+
+
     // test 1
     // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. 
     // User has to remove the old substitution.
-    let additionPending = true;
     let existingSubstitution = -1;
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
@@ -530,47 +535,18 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             // when overwritting substitution then copy deviceIdentifier property
             sub.definesIdentifier = this.mapping.substitutions[existingSubstitution].definesIdentifier;
             this.mapping.substitutions[existingSubstitution] = sub;
-          }
+          } 
+          updatePending.next(false);
           this.templateForm.updateValueAndValidity({ 'emitEvent': true });
           console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
         }
       );
+    } else {
+      updatePending.next(true);
     }
-    if (additionPending) {
-      // test 2
-      // only one susbsitution can define the deviceIdentifier, thus set the others to false
-      let substitutionOld: MappingSubstitution[] = [];
-      this.mapping.substitutions.forEach(s => {
-        if (sub.definesIdentifier && s.definesIdentifier) {
-          substitutionOld.push(s)
-        }
-      })
 
-      if (substitutionOld.length == 1) {
-        const initialState = {
-          substitutionOld: substitutionOld[0],
-          substitutionNew: sub
-        }
-        const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
-        overwriteModalRef.content.closeSubject.subscribe(
-          (overwrite: boolean) => {
-            console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
-            if (overwrite) {
-              substitutionOld[0].definesIdentifier = false;
-            } else {
-              sub.definesIdentifier = false;
-            }
-            this.templateForm.updateValueAndValidity({ 'emitEvent': true });
-            console.log("Overwriting definesIdentifier II:", overwrite, substitutionOld[0], sub);
-          }
-        )
-        this.mapping.substitutions.push(sub);
-      } else if (substitutionOld.length == 0) {
-        this.mapping.substitutions.push(sub);
-      } else {
-        console.error("Someting is wrong, since more than one substitution is marked to define the device identifier:", substitutionOld);
-      }
-    }
+    suby.unsubscribe();
+
   }
 
   public onSelectNextSubstitution() {

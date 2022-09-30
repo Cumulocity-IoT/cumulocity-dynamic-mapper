@@ -174,7 +174,7 @@ export class MappingComponent implements OnInit {
     this.editMode = true;
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
-    console.log("Editing mapping", mapping)
+    console.log("Editing mapping", this.mappingToUpdate)
     this.showConfigMapping = true;
   }
 

@@ -45,15 +45,6 @@ export class MappingSubstitution {
   hasPathTarget() {
     return this.pathTarget != ''
   }
-  setPathSource(ps: string) {
-    this.pathSource = ps;
-  }
-  setPathTarget(pt: string) {
-    this.pathTarget = pt;
-  }
-  setDeviceIdentifier(di:boolean){
-    this.definesIdentifier = di;
-  };
 }
 
 export interface Mapping {
