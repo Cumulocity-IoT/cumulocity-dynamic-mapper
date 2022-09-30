@@ -56,39 +56,40 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private setSelection = function (node: any, event: any) {
     if (event.type == "click") {
+      // determine the json editor where the click happened
       let target = '';
       event.path.forEach(element => {
         if (element.localName == "json-editor") {
           target = element.parentElement.id;
         }
       });
-      
-      var path = "";
-      for (let i = 0; i < node.path.length; i++) {
-        if (typeof node.path[i] === 'number') {
-          path = path.substring(0, path.length - 1);
-          path += '[' + node.path[i] + ']';
 
+      var path = "";
+      node.path.forEach(n => {
+        if (typeof n === 'number') {
+          path = path.substring(0, path.length - 1);
+          path += '[' + n + ']';
         } else {
-          path += node.path[i];
+          path += n;
         }
-        if (i !== node.path.length - 1) path += ".";
-      }
+        path += ".";
+      });
+      path = path.replace(/\.$/g, '')
+
       for (let item of this.selectionList) {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
-      // test if double-clicked
-      if ( target == "editorTargetRef") {
+      // test in which editor the click occured 
+      if (target == "editorTargetRef") {
         this.setSelectionToPath(this.editorTarget, path)
         this.currentSubstitution.pathTarget = path;
         this.currentSubstitution.definesIdentifier = false;
-      } else if ( target == "editorSourceRef" ) {
+      } else if (target == "editorSourceRef") {
         // test if double-clicked then select item and evaluate expression
         this.setSelectionToPath(this.editorSource, path)
         this.updateSourceExpressionResult(path);
         this.currentSubstitution.pathSource = path;
-        //this.currentSubstitution.setDeviceIdentifier(false);
       }
     }
   }.bind(this)
@@ -535,7 +536,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             // when overwritting substitution then copy deviceIdentifier property
             sub.definesIdentifier = this.mapping.substitutions[existingSubstitution].definesIdentifier;
             this.mapping.substitutions[existingSubstitution] = sub;
-          } 
+          }
           updatePending.next(false);
           this.templateForm.updateValueAndValidity({ 'emitEvent': true });
           console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
