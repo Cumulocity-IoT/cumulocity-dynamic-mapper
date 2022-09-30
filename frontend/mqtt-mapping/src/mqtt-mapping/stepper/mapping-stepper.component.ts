@@ -35,6 +35,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   SnoopStatus = SnoopStatus;
   keys = Object.keys;
   values = Object.values;
+  isWildcardTopic = isWildcardTopic;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
 
   paletteCounter: number = 0;
@@ -110,7 +111,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateForm: FormGroup;
   testForm: FormGroup;
   COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
-  containsWildcardTemplateTopic: boolean;
 
   constructor(
     private bsModalService: BsModalService,
@@ -174,14 +174,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   private initPropertyForm(): void {
-    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
     this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
       templateTopic: new FormControl(this.mapping.templateTopic),
-      containsWildcardTemplateTopic: new FormControl(this.containsWildcardTemplateTopic),
-      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier, (this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator)),
+      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
@@ -248,14 +246,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
     this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
-    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
-    this.propertyForm.get('markedDeviceIdentifier').setValidators(this.containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator);
-    this.propertyForm.get('markedDeviceIdentifier').updateValueAndValidity();
+    // let containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
+    // this.propertyForm.get('markedDeviceIdentifier').setValidators(containsWildcardTemplateTopic ? Validators.required : Validators.nullValidator);
+    // this.propertyForm.get('markedDeviceIdentifier').updateValueAndValidity();
   }
 
   onTemplateTopicChanged(event): void {
     this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
-    this.containsWildcardTemplateTopic = isWildcardTopic(this.mapping.templateTopic);
   }
 
   onSourceExpressionUpdated(): void {
@@ -455,13 +452,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private updateSubstitutions() {
     if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.subscriptionTopic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
       if (this.mapping.targetAPI != API.INVENTORY) {
-        this.mapping.substitutions.push(
-          new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
-        // { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: "source.id", definesIdentifier: true });
+        this.mapping.substitutions.push( new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
       } else {
         // if creating new device then the json body contains only a dummy field
         this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
-        //  { pathSource: TOKEN_DEVICE_TOPIC, pathTarget: TOKEN_DEVICE_TOPIC, definesIdentifier: true } as MappingSubstitution);
       }
     }
   }
@@ -471,9 +465,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (sub.pathTarget == "source.id") {
       sub.definesIdentifier = true;
     }
-
     let updatePending = new Subject<boolean>();
-
     // test 2
     // only one susbsitution can define the deviceIdentifier, thus set the others to false
     let suby = updatePending.subscribe(update => {
@@ -513,7 +505,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
     });
 
-
     // test 1
     // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. 
     // User has to remove the old substitution.
@@ -545,9 +536,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     } else {
       updatePending.next(true);
     }
-
     suby.unsubscribe();
-
   }
 
   public onSelectNextSubstitution() {
@@ -568,8 +557,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
     this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
     this.setSelectionToPath(this.editorTarget, this.currentSubstitution.pathTarget);
-    //console.log("Found querySelectorAll elements:", this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected'));
-    //this.selectionList  = this.elementRef.nativeElement.getElementsByClassName('jsoneditor-selected');
     this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
     for (let item of this.selectionList) {
       item.setAttribute('style', `background: ${this.COLOR_HIGHLIGHTED};`);

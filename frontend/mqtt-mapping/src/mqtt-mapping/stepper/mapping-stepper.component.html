@@ -46,8 +46,8 @@
                         <label translate><br></label>
                         <div class="input-group">
                           <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}">
-                            <input type="checkbox" formControlName="containsWildcardTemplateTopic" disabled="true"
-                              [ngModel]="containsWildcardTemplateTopic" />
+                            <input type="checkbox"  disabled="true"
+                              [value]="isWildcardTopic(mapping.templateTopic)" />
                             <span></span>
                             <span>
                               {{ 'Wildcard TemlateTopic'}}
@@ -98,8 +98,7 @@
                     </div>
                     <c8y-messages>
                       <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
-                        This
-                        Template Topic must be unique across other Template Topics.
+                        This Template Topic must be unique across other Template Topics.
                       </c8y-message>
                       <c8y-message
                         *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
@@ -107,9 +106,13 @@
                         versa.
                       </c8y-message>
                       <c8y-message
-                        *ngIf="propertyForm.errors?.[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic]"
-                        translate>The Topic must be a part of Template Topic.
+                        *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic]"
+                        translate>The Template Topic must match the Subscription Topic.
                       </c8y-message>
+                      <c8y-message
+                      *ngIf="propertyForm.errors?.[ValidationError.Device_Identifier_Must_Be_Selected]"
+                      translate>The device identifier must be selected.
+                    </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
                   <div class="row">
