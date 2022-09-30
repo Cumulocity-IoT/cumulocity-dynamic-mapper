@@ -281,7 +281,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 
 ## Setup Sample MQTT mappings
 
-A script to create sample MQTT mappings can be found [here](resources/script/createSampleMQTTMappings.sh).
+A script to create sample MQTT mappings can be found [here](resources/script/createSampleMappings.sh).
 
 ## Enhance
 In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.

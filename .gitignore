@@ -55,3 +55,4 @@ frontend/mqtt-configuration/src/mqtt-mapping/gc.ts
 frontend/mqtt-mapping/src/mqtt-mapping/gc.html
 frontend/mqtt-mapping/src/mqtt-mapping/gc.ts
 frontend/mqtt-mapping/src/mqtt-mapping/data.ts
+resources/script/createSampleMappings_private.sh
