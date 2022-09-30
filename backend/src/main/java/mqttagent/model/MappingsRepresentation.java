@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import java.util.function.BiFunction;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -36,7 +38,6 @@ public class MappingsRepresentation implements Serializable {
   @JsonProperty(value = "c8y_mqttMapping")
   private ArrayList<Mapping> c8yMQTTMapping;
 
-
   static public boolean isWildcardTopic(String topic) {
     var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
     return result;
@@ -47,7 +48,7 @@ public class MappingsRepresentation implements Serializable {
    */
   static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    long count =Arrays.asList(mapping.substitutions).stream().filter(sub -> sub.definesIdentifier).count();
+    long count = Arrays.asList(mapping.substitutions).stream().filter(sub -> sub.definesIdentifier).count();
     if (count > 1) {
       result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
     }
@@ -72,9 +73,12 @@ public class MappingsRepresentation implements Serializable {
 
   static public ArrayList<ValidationError> isTemplateTopicValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    boolean error = (!mapping.templateTopic.startsWith(mapping.subscriptionTopic));
+
+    BiFunction<String, String, Boolean> topicMatcher = (ss,
+        ts) -> (Pattern.matches(String.join(".+", String.join("[^/]+", ss.replace("/", "\\/").split("\\+")).split("#")), ts));
+    boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.templateTopic));
     if (error) {
-      result.add(ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic);
+      result.add(ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic);
     }
     return result;
   }
@@ -83,7 +87,8 @@ public class MappingsRepresentation implements Serializable {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     var templateTopic = mapping.templateTopic;
     mappings.forEach(m -> {
-      if ((templateTopic.startsWith(m.templateTopic) || m.templateTopic.startsWith(templateTopic) ) && (mapping.id != m.id)) {
+      if ((templateTopic.startsWith(m.templateTopic) || m.templateTopic.startsWith(templateTopic))
+          && (mapping.id != m.id)) {
         result.add(ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic);
       }
     });
@@ -100,11 +105,13 @@ public class MappingsRepresentation implements Serializable {
   }
 
   static public String normalizeTopic(String topic) {
-    if (topic == null ) topic = "";
+    if (topic == null)
+      topic = "";
     // reduce multiple leading or trailing "/" to just one "/"
-    String nt = topic.trim().replaceAll( REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
-    // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
-    nt = nt.replaceAll( REGEXP_REMOVE_TRAILING_SLASHES, "#");
+    String nt = topic.trim().replaceAll(REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
+    // do not use starting slashes, see as well
+    // https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
+    nt = nt.replaceAll(REGEXP_REMOVE_TRAILING_SLASHES, "#");
     return nt;
   }
 

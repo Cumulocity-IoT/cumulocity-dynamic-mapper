@@ -354,13 +354,23 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let templateTopic = normalizeTopic(control.get('templateTopic').value);
     let subscriptionTopic = normalizeTopic(control.get('subscriptionTopic').value);
     let id = control.get('id').value;
+    let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
 
     // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
     // for comparison the "#" must then be replaced by a "+"
-    let nt = subscriptionTopic.trim().replace(/\#+$/, '+')
-    error = !templateTopic.startsWith(nt);
+    // allowed (tt=template topic, st= subscription topic)
+    // allowed    st                      tt                    
+    //    +       /topic/                 /topic/               
+    //    -       /topic/                 /topic/value          
+    //    +       /topic/#                /topic/value
+    //    +       /topic/+                /topic/value
+    //    -       /topic/+                /topic/important/value
+    //    +       /topic/+/value          /topic/important/value
+
+    let f = st=>ts=>new RegExp(ts.split`+`.join`[^/]+`.split`#`.join`.+`).test(st)
+    error = !f(subscriptionTopic)(templateTopic);
     if (error) {
-      errors[ValidationError.Topic_Must_Be_Substring_Of_TemplateTopic] = true
+      errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
       defined = true
     }
 
@@ -406,6 +416,13 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     })
     if (error && templateTopic != '') {
       errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
+      defined = true
+    }
+
+    // if the template topic contains a wildcard a device identifier must be selected 
+    let mdi = control.get('markedDeviceIdentifier').value;
+    if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
+      errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
       defined = true
     }
 
