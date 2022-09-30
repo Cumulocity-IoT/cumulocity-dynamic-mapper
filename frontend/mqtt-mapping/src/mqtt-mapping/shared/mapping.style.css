@@ -97,6 +97,10 @@ button.jsoneditor-button.jsoneditor-dragarea {
   font-size: smaller !important;
 }
 
+div.ace_content {
+  font-size: smaller !important;
+}
+
 .popover-body {
   overflow: auto;
 }
