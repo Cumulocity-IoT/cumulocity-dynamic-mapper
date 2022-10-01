@@ -7,7 +7,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ServiceStatus, Status } from '../shared/configuration.model';
+import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
 
 
 @Component({
@@ -22,6 +22,15 @@ export class BokerConfigurationComponent implements OnInit {
   monitorings$: Observable<ServiceStatus>;
   subscription: object;
   mqttForm: FormGroup;
+  configuration: MQTTAuthentication = {
+    mqttHost: undefined,
+    mqttPort: undefined,
+    user: undefined,
+    password: undefined,
+    clientId: undefined,
+    useTLS: undefined,
+    active: undefined
+  };
 
   constructor(
     private bsModalService: BsModalService,
@@ -34,7 +43,7 @@ export class BokerConfigurationComponent implements OnInit {
   ngOnInit() {
     this.initForm();
     this.initializeMonitoringService();
-    this.initConnectionDetails();
+    this.loadConnectionDetails();
     this.mqttAgentId$ = from(this.configurationService.initializeMQTTAgent());
     this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map(agentId => agentId != null));
     //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
@@ -45,29 +54,14 @@ export class BokerConfigurationComponent implements OnInit {
     this.subscription = await this.configurationService.subscribeMonitoringChannel();
     this.monitorings$ = this.configurationService.getCurrentServiceStatus();
     this.monitorings$.subscribe(status => {
-      if (status.status === Status.ACTIVATED) {
-        this.isMQTTConnected = false;
-      } else if (status.status === Status.CONNECTED) {
-        this.isMQTTConnected = true;
-      } else if (status.status === Status.CONFIGURED) {
-        this.isMQTTConnected = false;
-      }
+      this.isMQTTConnected = (status.status === Status.CONNECTED);
     })
   }
 
-  async initConnectionStatus(): Promise<void> {
-
+  async loadConnectionStatus(): Promise<void> {
     this.isMQTTConnected = false;
     let status = await this.configurationService.getConnectionStatus();
-    if (status === "ACTIVATED") {
-      this.isMQTTConnected = false;
-
-    } else if (status === "CONNECTED") {
-      this.isMQTTConnected = true;
-
-    } else if (status === "ONLY_CONFIGURED") {
-      this.isMQTTConnected = false;
-    }
+    this.isMQTTConnected = (status.status === Status.CONNECTED);
     console.log("Retrieved status:", status, this.isMQTTConnected)
   }
 
@@ -82,21 +76,12 @@ export class BokerConfigurationComponent implements OnInit {
     });
   }
 
-  private async initConnectionDetails(): Promise<void> {
-    const connectionDetails = await this.configurationService.getConnectionDetails();
-    console.log("Connection details", connectionDetails)
-    if (!connectionDetails) {
+  private async loadConnectionDetails(): Promise<void> {
+    this.configuration = await this.configurationService.getConnectionDetails();
+    console.log("Connection details", this.configuration)
+    if (!this.configuration) {
       return;
     }
-
-    this.mqttForm.patchValue({
-      mqttHost: connectionDetails.mqttHost,
-      mqttPort: connectionDetails.mqttPort,
-      user: connectionDetails.user,
-      password: connectionDetails.password,
-      clientId: connectionDetails.clientId,
-      useTLS: connectionDetails.useTLS,
-    });
   }
 
   async onConnectButtonClicked() {
@@ -107,21 +92,16 @@ export class BokerConfigurationComponent implements OnInit {
     this.showTerminateConnectionModal();
   }
 
-
   async onUpdateButtonClicked() {
     this.updateConnectionDetails();
   }
 
   private async updateConnectionDetails() {
-    const response = await this.configurationService.updateConnectionDetails({
-      mqttHost: this.mqttForm.value.mqttHost,
-      mqttPort: this.mqttForm.value.mqttPort,
-      user: this.mqttForm.value.user,
-      password: this.mqttForm.value.password,
-      clientId: this.mqttForm.value.clientId,
-      useTLS: this.mqttForm.value.useTLS,
+    let conf: MQTTAuthentication = {
+      ...this.configuration,
       active: false
-    });
+    }
+    const response = await this.configurationService.updateConnectionDetails(conf);
 
     if (response.status < 300) {
       this.alertservice.success(gettext('Update successful'));
