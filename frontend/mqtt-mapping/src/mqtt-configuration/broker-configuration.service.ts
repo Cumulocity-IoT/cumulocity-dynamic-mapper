@@ -84,12 +84,12 @@ export class BrokerConfigurationService {
     return (await response.json()) as MQTTAuthentication;
   }
 
-  async getConnectionStatus(): Promise<string> {
+  async getConnectionStatus(): Promise<ServiceStatus> {
     const response = await this.client.fetch(`${BASE_URL}/${PATH_STATUS_ENDPOINT}`, {
       method: 'GET',
     });
-    const { status } = await response.json();
-    return status;
+    const result = await response.json();
+    return result;
   }
 
   public getCurrentServiceStatus(): Observable<ServiceStatus> {
@@ -97,6 +97,9 @@ export class BrokerConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
+    this.getConnectionStatus().then( status => {
+      this.serviceStatus.next(status);
+    })
     return this.realtime.subscribe(`/events/${this.agentId}`, this.updateStatus.bind(this));
   }
 

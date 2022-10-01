@@ -4,7 +4,6 @@ import { API, Mapping, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
-import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MappingService } from '../shared/mapping.service';
@@ -106,15 +105,6 @@ export class MappingComponent implements OnInit {
       cellRendererComponent: QOSRendererComponent,
       gridTrackSize: '5%'
     },
-/*     {
-      header: '# Snoopes',
-      name: 'snoopedTemplates',
-      path: 'snoopedTemplates',
-      filterable: false,
-      sortable: false,
-      cellRendererComponent: SnoopedTemplateRendererComponent,
-      gridTrackSize: '5%'
-    }, */
   ]
 
   value: string;
@@ -194,9 +184,6 @@ export class MappingComponent implements OnInit {
 
   async loadMappings(): Promise<void> {
     this.mappings = await this.mappingService.loadMappings();
-    /*      this.mqttMappingService.loadMappings().then( mappings => {
-          this.mappings = mappings
-        })  */
   }
 
   async onCommit(mapping: Mapping) {

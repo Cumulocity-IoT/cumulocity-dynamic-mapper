@@ -1,6 +1,6 @@
 
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="initConnectionStatus()">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="loadConnectionStatus()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh status' | translate }}
   </button>
@@ -33,7 +33,7 @@
           <div [formGroup]="mqttForm">
             <c8y-form-group>
               <label for="mqttHost" translate>MQTT Host</label>
-              <input formControlName="mqttHost" type="text" class="form-control" placeholder="e.g. test.mosquitto.org"
+              <input formControlName="mqttHost" [(ngModel)]="configuration.mqttHost" type="text" class="form-control" placeholder="e.g. test.mosquitto.org"
                 #mqttHostRef required />
               <c8y-messages>
                 <c8y-message *ngIf="!mqttForm.get('mqttHost').untouched && !mqttHostRef.value" translate>This field is
@@ -42,7 +42,7 @@
             </c8y-form-group>
             <c8y-form-group>
               <label for="mqttPort" translate>MQTT Port</label>
-              <input formControlName="mqttPort" type="number" class="form-control" placeholder="e.g. 1883" #mqttPortRef
+              <input formControlName="mqttPort" [(ngModel)]="configuration.mqttPort" type="number" class="form-control" placeholder="e.g. 1883" #mqttPortRef
                 required />
               <c8y-messages>
                 <c8y-message *ngIf="!mqttForm.get('mqttPort').untouched && !mqttPortRef.value" translate>This field is
@@ -51,7 +51,7 @@
             </c8y-form-group>
             <c8y-form-group>
               <label for="user" translate>User</label>
-              <input formControlName="user" type="text" class="form-control" placeholder="{{ 'user' | translate }}" #userRef
+              <input formControlName="user" [(ngModel)]="configuration.user" type="text" class="form-control" placeholder="{{ 'user' | translate }}" #userRef
                 required />
               <c8y-messages>
                 <c8y-message *ngIf="mqttForm.get('user').touched && !userRef.value" translate>This field is required.
@@ -60,7 +60,7 @@
             </c8y-form-group>
             <c8y-form-group>
               <label for="password" translate>Password</label>
-              <input formControlName="password" type="password" class="form-control"
+              <input formControlName="password" [(ngModel)]="configuration.password" type="password" class="form-control"
                 placeholder="{{ 'password' | translate }}" #passwordRef required />
               <c8y-messages>
                 <c8y-message *ngIf="!mqttForm.get('password').untouched && !passwordRef.value" translate>This field is
@@ -69,7 +69,7 @@
             </c8y-form-group>
             <c8y-form-group>
               <label for="clientId" translate>ClientId</label>
-              <input formControlName="clientId" type="text" class="form-control" placeholder="e.g. poc-1234" #clientIdRef
+              <input formControlName="clientId" [(ngModel)]="configuration.clientId" type="text" class="form-control" placeholder="e.g. poc-1234" #clientIdRef
                 required />
               <c8y-messages>
                 <c8y-message *ngIf="!mqttForm.get('clientId').untouched && !clientIdRef.value" translate>This field is
@@ -78,7 +78,7 @@
             </c8y-form-group>
             <c8y-form-group>
               <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
-                <input type="checkbox" formControlName="useTLS"  #useTLSRef required  />
+                <input type="checkbox" formControlName="useTLS" [(ngModel)]="configuration.useTLS"  #useTLSRef required  />
                 <span></span>
                 <span>
                   {{ 'Use TLS'}}
