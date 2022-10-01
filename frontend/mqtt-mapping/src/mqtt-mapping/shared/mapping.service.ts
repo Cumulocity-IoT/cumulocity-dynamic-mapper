@@ -4,6 +4,7 @@ import { API, Mapping } from '../../shared/configuration.model';
 import * as _ from 'lodash';
 import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { AlertService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -14,9 +15,8 @@ export class MappingService {
     private alarm: AlarmService,
     private measurement: MeasurementService,
     private client: FetchClient,
-    private configurationService: BrokerConfigurationService) {
-    // find mqtt agent for tesing
-  }
+    private configurationService: BrokerConfigurationService,
+    private alert: AlertService) { }
 
   private agentId: string;
   private mappingId: string;
@@ -25,7 +25,7 @@ export class MappingService {
   async loadMappings(): Promise<Mapping[]> {
     if (!this.agentId) {
       this.agentId = await this.configurationService.initializeMQTTAgent();
-    } 
+    }
     console.log("MappingService: Found MQTTAgent!", this.agentId);
 
     let identity: IExternalIdentity = {
@@ -39,7 +39,7 @@ export class MappingService {
       return response.data[MAPPING_FRAGMENT] as Mapping[];
     } catch (e) {
       console.log("So far no mqttMapping generated!")
-       // create new mapping mo
+      // create new mapping mo
       const response: IResult<IManagedObject> = await this.inventory.create({
         c8y_mqttMapping: [],
         name: "MQTT-Mapping",
@@ -112,38 +112,58 @@ export class MappingService {
     return result;
   }
 
-  async sendTestResult(mapping: Mapping): Promise<IResult<IEvent | IAlarm | IMeasurement | IManagedObject>> {
+  async sendTestResult(mapping: Mapping): Promise<string> {
+    let result: Promise<IResult<any>>;
     let test_payload = await this.testResult(mapping, true);
-
+    let error: string = '';
+    
     if (mapping.targetAPI == API.EVENT) {
       let p: IEvent = test_payload as IEvent;
       if (p != null) {
-        return this.event.create(p);
+        result = this.event.create(p);
       } else {
-        throw new Error("Payload is not a valid:" + mapping.targetAPI);
+        error = "Payload is not a valid:" + mapping.targetAPI;
       }
     } else if (mapping.targetAPI == API.ALARM) {
       let p: IAlarm = test_payload as IAlarm;
       if (p != null) {
-        return this.alarm.create(p);
+        result = this.alarm.create(p);
       } else {
-        throw new Error("Payload is not a valid:" + mapping.targetAPI);
+        error = "Payload is not a valid:" + mapping.targetAPI;
       }
     } else if (mapping.targetAPI == API.MEASUREMENT) {
       let p: IMeasurement = test_payload as IMeasurement;
       if (p != null) {
-        return this.measurement.create(p);
+        result = this.measurement.create(p);
       } else {
-        throw new Error("Payload is not a valid:" + mapping.targetAPI);
+        error = "Payload is not a valid:" + mapping.targetAPI;
       }
     } else {
       let p: IManagedObject = test_payload as IManagedObject;
       if (p != null) {
-        return this.inventory.create(p);
+        result = this.inventory.create(p);
       } else {
-        throw new Error("Payload is not a valid:" + mapping.targetAPI);
+        error = "Payload is not a valid:" + mapping.targetAPI;
       }
     }
+
+    try {
+      let { data, res } = await result;
+      //console.log ("My data:", data );
+      if ((res.status == 200 || res.status == 201) && error != '') {
+        this.alert.success("Successfully tested mapping!");
+        return data;
+      } else {
+        let error = await res.text();
+        this.alert.danger("Failed to tested mapping: " + error);
+        return '';
+      }
+    } catch (error) {
+      let {data, res} = await error;
+      this.alert.danger("Failed to tested mapping: " + data.message);
+      return '';
+    }
+
   }
 
   public evaluateExpression(json: JSON, path: string): string {

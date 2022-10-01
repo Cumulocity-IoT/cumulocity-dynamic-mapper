@@ -366,8 +366,9 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     //    +       /topic/+                /topic/value
     //    -       /topic/+                /topic/important/value
     //    +       /topic/+/value          /topic/important/value
+    //    +       device/#                device/+/rom/
 
-    let f = st=>ts=>new RegExp(ts.split`+`.join`[^/]+`.split`#`.join`.+`).test(st)
+    let f = st=>tt=>new RegExp(tt.split`+`.join`[^/]+`.split`#`.join`.+`).test(st)
     error = !f(subscriptionTopic)(templateTopic);
     if (error) {
       errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
