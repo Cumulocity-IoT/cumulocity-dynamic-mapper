@@ -3,16 +3,15 @@ import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { debounceTime, subscribeOn } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, splitTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
-import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
-import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
-import { MappingService } from '../shared/mapping.service';
 import * as _ from 'lodash';
-import { BehaviorSubject, Subject } from 'rxjs';
-
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { Subject } from 'rxjs';
+import { debounceTime } from "rxjs/operators";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopic, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
+import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
+import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
+import { MappingService } from '../shared/mapping.service';
 
 @Component({
   selector: 'mapping-stepper',
@@ -37,12 +36,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   values = Object.values;
   isWildcardTopic = isWildcardTopic;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
+  COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
-  paletteCounter: number = 0;
-  snoopedTemplateCounter: number = 0;
-  isSubstitutionValid: boolean;
-  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false);
-
+  propertyForm: FormGroup;
+  templateForm: FormGroup;
+  testForm: FormGroup;
   templateSource: any;
   templateTarget: any;
   dataTesting: any;
@@ -54,6 +52,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
   markedDeviceIdentifier: string = '';
+  showConfigMapping: boolean = false;
+  selectedSubstitution: number = -1;
+  snoopedTemplateCounter: number = 0;
+  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false);
+
 
   private setSelection = function (node: any, event: any) {
     if (event.type == "click") {
@@ -101,21 +104,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
 
-  showConfigMapping: boolean = false;
-
-  isConnectionToMQTTEstablished: boolean;
-
-  selectedSubstitution: number = -1;
-
-  propertyForm: FormGroup;
-  templateForm: FormGroup;
-  testForm: FormGroup;
-  COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
-
   constructor(
     private bsModalService: BsModalService,
     public mappingService: MappingService,
-    public alertService: AlertService,
     private elementRef: ElementRef,
   ) { }
 
@@ -265,23 +256,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   private getCurrentMapping(): Mapping {
-    //remove dummy field "_DEVICE_IDENT_", since it should not be stored
-    let dts = this.editorSource.get()
-    delete dts[TOKEN_DEVICE_TOPIC];
-    let st = JSON.stringify(dts);
-
-    let dtt = this.editorTarget.get()
-    delete dtt[TOKEN_DEVICE_TOPIC];
-    let tt = JSON.stringify(dtt);
-
     return {
       id: this.mapping.id,
       subscriptionTopic: normalizeTopic(this.mapping.subscriptionTopic),
       templateTopic: normalizeTopic(this.mapping.templateTopic),
       indexDeviceIdentifierInTemplateTopic: this.mapping.indexDeviceIdentifierInTemplateTopic,
       targetAPI: this.mapping.targetAPI,
-      source: st,
-      target: tt,
+      source: this.reduceTemplate(this.editorSource.get()),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
+      target: this.reduceTemplate(this.editorTarget.get()),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       active: this.mapping.active,
       tested: this.mapping.tested || false,
       qos: this.mapping.qos,
@@ -299,21 +281,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTestTransformation() {
-    let dataTesting = await this.mappingService.testResult(this.getCurrentMapping(), false);
-    this.dataTesting = dataTesting;
+    this.dataTesting = await this.mappingService.testResult(this.getCurrentMapping(), false);
   }
 
   async onSendTest() {
-    let { data, res } = await this.mappingService.sendTestResult(this.getCurrentMapping());
-    //console.log ("My data:", data );
-    if (res.status == 200 || res.status == 201) {
-      this.alertService.success("Successfully tested mapping!");
-      this.mapping.tested = true;
-      this.dataTesting = data as any;
-    } else {
-      let error = await res.text();
-      this.alertService.danger("Failed to tested mapping: " + error);
-    }
+    this.dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping());
+    this.mapping.tested = (this.dataTesting != '' );
   }
 
   onSelectDeviceIdentifier() {
@@ -347,10 +320,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   async onSampleButton() {
     this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.mapping.targetAPI]);
     if (this.mapping.targetAPI == API.INVENTORY) {
-      this.templateTarget = {
-        ...this.templateTarget,
-        _DEVICE_IDENT_: "909090"
-      };
+      this.templateTarget = this.expandTemplate (this.templateTarget);
     }
   }
 
@@ -389,10 +359,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = {
-        ...this.templateSource,
-        _DEVICE_IDENT_: "909090"
-      };
+      this.templateSource = this.expandTemplate(this.templateSource);
     }
     this.templateTarget = JSON.parse(this.mapping.target);
     if (!this.editMode) {
@@ -400,10 +367,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
     if (this.mapping.targetAPI == API.INVENTORY) {
-      this.templateTarget = {
-        ...this.templateTarget,
-        _DEVICE_IDENT_: "909090"
-      };
+      this.templateTarget = this.expandTemplate(this.templateTarget);
     }
   }
 
@@ -414,10 +378,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
     //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
     if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = {
-        ...this.templateSource,
-        _DEVICE_IDENT_: "909090"
-      };
+      this.templateSource = this.expandTemplate(this.templateSource);
     }
     // disable further snooping for this template
     this.mapping.snoopTemplates = SnoopStatus.STOPPED;
@@ -452,7 +413,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private updateSubstitutions() {
     if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.subscriptionTopic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
       if (this.mapping.targetAPI != API.INVENTORY) {
-        this.mapping.substitutions.push( new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
+        this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
       } else {
         // if creating new device then the json body contains only a dummy field
         this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
@@ -561,6 +522,18 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     for (let item of this.selectionList) {
       item.setAttribute('style', `background: ${this.COLOR_HIGHLIGHTED};`);
     }
-    console.log("Show substitutions!");
+  }
+
+  private expandTemplate(t: object): object {
+    return {
+      ...t,
+      _DEVICE_IDENT_: "909090"
+    };
+  }
+
+  private reduceTemplate(t: object): string {
+    delete t[TOKEN_DEVICE_TOPIC];
+    let tt = JSON.stringify(t);
+    return tt;
   }
 }
