@@ -74,8 +74,8 @@ public class MappingsRepresentation implements Serializable {
   static public ArrayList<ValidationError> isTemplateTopicValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
 
-    BiFunction<String, String, Boolean> topicMatcher = (ss,
-        ts) -> (Pattern.matches(String.join(".+", String.join("[^/]+", ss.replace("/", "\\/").split("\\+")).split("#")), ts));
+    BiFunction<String, String, Boolean> topicMatcher = (st,
+        tt) -> (Pattern.matches(String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"), tt));
     boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.templateTopic));
     if (error) {
       result.add(ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic);

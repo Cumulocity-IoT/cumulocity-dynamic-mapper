@@ -1,4 +1,4 @@
-import { AbstractControl, ValidationErrors, ValidatorFn, Validators } from "@angular/forms"
+import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { API, Mapping, ValidationError } from "./configuration.model"
 
 export const SAMPLE_TEMPLATES = {
@@ -227,7 +227,8 @@ export const SCHEMA_PAYLOAD = {
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
-export const MQTT_MONITORING_EVENT_TYPE = "mqtt_monitoring_event";
+export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
+export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONNECT_ENDPOINT = 'connection';
@@ -368,8 +369,8 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    let f = st=>tt=>new RegExp(tt.split`+`.join`[^/]+`.split`#`.join`.+`).test(st)
-    error = !f(subscriptionTopic)(templateTopic);
+    let f = ( st, tt ) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+    error = !f(subscriptionTopic, templateTopic);
     if (error) {
       errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
       defined = true

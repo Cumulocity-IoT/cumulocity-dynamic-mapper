@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { MappingStatus } from '../../shared/configuration.model';
-import { MQTT_MONITORING_EVENT_TYPE } from '../../shared/helper';
+import { STATUS_MAPPING_EVENT_TYPE } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
@@ -16,33 +16,33 @@ export class MonitoringService {
   }
   private realtime: Realtime
   private agentId: string;
-  private monitoringDetails = new BehaviorSubject<MappingStatus[]>([]);
-  private _currentMonitoringDetails = this.monitoringDetails.asObservable();
+  private mappingStatus = new BehaviorSubject<MappingStatus[]>([]);
+  private _currentMappingStatus = this.mappingStatus.asObservable();
 
-  public getCurrentMonitoringDetails(): Observable<MappingStatus[]>{
-    return this._currentMonitoringDetails;
+  public getCurrentMappingStatus(): Observable<MappingStatus[]>{
+    return this._currentMappingStatus;
   }
 
-  async subscribeToMonitoringChannel(): Promise<object> {
+  async subscribeMonitoringChannel(): Promise<object> {
     this.agentId = await this.configurationService.initializeMQTTAgent();
     console.log("Start subscription for monitoring:", this.agentId);
     let dateFrom = this.addHoursToDate(new Date(), -1).toISOString();
     let dateTo = new Date().toISOString();
-    let queryString = `type eq '${MQTT_MONITORING_EVENT_TYPE}' and dateFrom eq'${dateFrom} and dateTo eq '${dateTo}'`;
+    let queryString = `type eq '${STATUS_MAPPING_EVENT_TYPE}' and dateFrom eq'${dateFrom} and dateTo eq '${dateTo}'`;
     const filter: object = {
       pageSize: 1,
       withTotalPages: true,
-      type: MQTT_MONITORING_EVENT_TYPE,
+      type: STATUS_MAPPING_EVENT_TYPE,
       dateFrom: dateFrom,
       dateTo: dateTo,
       };
     let result : IResultList<IEvent> = await this.event.list(filter);
     if ( result?.data.length > 0) {
-      let monitoring: MappingStatus[] = result?.data[0]['monitoring'];
-      this.monitoringDetails.next(monitoring);
+      let monitoring: MappingStatus[] = result?.data[0]['status'];
+      this.mappingStatus.next(monitoring);
     }
     console.log("Found monitoring events", result.data);
-    return this.realtime.subscribe(`/events/${this.agentId}`, this.updateMonitoring.bind(this));
+    return this.realtime.subscribe(`/events/${this.agentId}`, this.updateStatus.bind(this));
   }
 
   private addHoursToDate(objDate, intHours) : Date{
@@ -56,13 +56,13 @@ export class MonitoringService {
     return this.realtime.unsubscribe(subscription);
   }
 
-  private updateMonitoring( p: object): void{
+  private updateStatus( p: object): void{
     let payload = p['data']['data'];
-    console.log("New generig event:", payload);
-    if ( payload.type == MQTT_MONITORING_EVENT_TYPE) {
-      let monitoring: MappingStatus[] = payload['monitoring'];
-      this.monitoringDetails.next(monitoring);
-      console.log("New monitoring event", monitoring);
-    }
+    //console.log("New generig event:", payload);
+    if ( payload.type == STATUS_MAPPING_EVENT_TYPE) {
+      let monitoring: MappingStatus[] = payload['status'];
+      this.mappingStatus.next(monitoring);
+      console.log("New statusMonitoring event", monitoring);
+    } 
   }
 }

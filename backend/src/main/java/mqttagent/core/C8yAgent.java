@@ -45,6 +45,7 @@ import mqttagent.model.Mapping;
 import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingsRepresentation;
 import mqttagent.service.MQTTClient;
+import mqttagent.service.ServiceStatus;
 
 @Slf4j
 @Service
@@ -462,23 +463,36 @@ public class C8yAgent {
         return mr[0];
     }
 
-    public void sendMonitoring(String type, Map<Long,MappingStatus> status) {
+    public void sendStatusMonitoring(String type, Map<Long,MappingStatus> status) {
         
         // avoid sending empty monitoring events
         if (status.values().size() > 0) {
-            log.info("Sending monitoring: {}", status.values().size());
+            log.debug("Sending monitoring: {}", status.values().size());
             EventRepresentation[] ers = { new EventRepresentation() };
             subscriptionsService.runForTenant(tenant, () -> {
                 ers[0].setSource(agentMOR);
-                ers[0].setText("New monitoring event:" + System.currentTimeMillis());
+                ers[0].setText("New status monitoring:" + System.currentTimeMillis());
                 ers[0].setDateTime(DateTime.now());
                 ers[0].setType(type);
                 ArrayList<MappingStatus> result = new ArrayList<>(status.values());;
-                ers[0].setProperty("monitoring", result);
+                ers[0].setProperty("status", result);
                 this.eventApi.createAsync(ers[0]);
             });
         } else {
             log.info("Ignoring monitoring: {}", status.values().size());
         }
+    }
+
+    public void sendStatusConfiguration(String type, ServiceStatus serviceStatus) {
+            log.debug("Sending status configuration: {}", serviceStatus);
+            EventRepresentation[] ers = { new EventRepresentation() };
+            subscriptionsService.runForTenant(tenant, () -> {
+                ers[0].setSource(agentMOR);
+                ers[0].setText("New status configuration:" + System.currentTimeMillis());
+                ers[0].setDateTime(DateTime.now());
+                ers[0].setType(type);
+                ers[0].setProperty("status", serviceStatus);
+                this.eventApi.createAsync(ers[0]);
+            });
     }
 }

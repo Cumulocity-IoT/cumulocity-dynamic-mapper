@@ -7,6 +7,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { ServiceStatus, Status } from '../shared/configuration.model';
 
 
 @Component({
@@ -15,15 +16,12 @@ import { map } from 'rxjs/operators';
 })
 export class BokerConfigurationComponent implements OnInit {
 
-  isMQTTInitialized: boolean;
-  isMQTTActivated: boolean;
   isMQTTConnected: boolean;
   isMQTTAgentCreated$: Observable<boolean>;
   mqttAgentId$: Observable<string>;
-
+  monitorings$: Observable<ServiceStatus>;
+  subscription: object;
   mqttForm: FormGroup;
-
-  liveData$: Observable<any>;
 
   constructor(
     private bsModalService: BsModalService,
@@ -35,30 +33,40 @@ export class BokerConfigurationComponent implements OnInit {
 
   ngOnInit() {
     this.initForm();
-    this.initConnectionStatus();
+    this.initializeMonitoringService();
     this.initConnectionDetails();
     this.mqttAgentId$ = from(this.configurationService.initializeMQTTAgent());
-    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map( agentId => agentId != null));
+    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map(agentId => agentId != null));
     //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
   }
 
+
+  private async initializeMonitoringService(): Promise<void> {
+    this.subscription = await this.configurationService.subscribeMonitoringChannel();
+    this.monitorings$ = this.configurationService.getCurrentServiceStatus();
+    this.monitorings$.subscribe(status => {
+      if (status.status === Status.ACTIVATED) {
+        this.isMQTTConnected = false;
+      } else if (status.status === Status.CONNECTED) {
+        this.isMQTTConnected = true;
+      } else if (status.status === Status.CONFIGURED) {
+        this.isMQTTConnected = false;
+      }
+    })
+  }
+
   async initConnectionStatus(): Promise<void> {
-    this.isMQTTInitialized = false;
-    this.isMQTTActivated = false;
+
     this.isMQTTConnected = false;
     let status = await this.configurationService.getConnectionStatus();
     if (status === "ACTIVATED") {
       this.isMQTTConnected = false;
-      this.isMQTTInitialized = true;
-      this.isMQTTActivated = true;
+
     } else if (status === "CONNECTED") {
       this.isMQTTConnected = true;
-      this.isMQTTInitialized = true;
-      this.isMQTTActivated = true;
+
     } else if (status === "ONLY_CONFIGURED") {
       this.isMQTTConnected = false;
-      this.isMQTTInitialized = true;
-      this.isMQTTActivated = false;
     }
     console.log("Retrieved status:", status, this.isMQTTConnected)
   }
@@ -117,11 +125,8 @@ export class BokerConfigurationComponent implements OnInit {
 
     if (response.status < 300) {
       this.alertservice.success(gettext('Update successful'));
-      this.isMQTTInitialized = true;
-      this.isMQTTActivated = false;
     } else {
       this.alertservice.danger(gettext('Failed to update connection'));
-      this.isMQTTActivated = false;
     }
   }
 
@@ -131,10 +136,8 @@ export class BokerConfigurationComponent implements OnInit {
     console.log("Details connectToMQTTBroker", response1, response2)
     if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext('Connection successful'));
-      this.isMQTTActivated = true;
     } else {
       this.alertservice.danger(gettext('Failed to establish connection'));
-      this.isMQTTActivated = false;
     }
   }
 
@@ -157,10 +160,14 @@ export class BokerConfigurationComponent implements OnInit {
     const response = await this.configurationService.disconnectFromMQTTBroker();
     console.log("Details disconnectFromMQTT", response)
     if (response.status < 300) {
-      this.isMQTTActivated = false;
       this.alertservice.success(gettext('Successfully disconnected'));
     } else {
       this.alertservice.danger(gettext('Failed to disconnect'));
     }
+  }
+
+  ngOnDestroy(): void {
+    console.log("Stop subscription");
+    this.configurationService.unsubscribeFromMonitoringChannel(this.subscription);
   }
 }
