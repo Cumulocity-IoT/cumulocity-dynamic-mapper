@@ -2,6 +2,10 @@ package mqttagent.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 public class MappingsRepresentationJUnitTest {
@@ -32,6 +36,26 @@ public class MappingsRepresentationJUnitTest {
     String topic2 = "///rom/hamburg/madrid/+//";
     assertEquals(MappingsRepresentation.normalizeTopic(topic2), "/rom/hamburg/madrid/+/");
 
+  }
+
+  @Test
+  void testIsTemplateTopicValid() {
+
+    Mapping m1 = new Mapping();
+    m1.setTemplateTopic("/device/+/east/");
+    m1.setSubscriptionTopic("/device/#");
+    assertEquals(new ArrayList<ValidationError>(), MappingsRepresentation.isTemplateTopicValid(m1));
+
+    Mapping m2 = new Mapping();
+    m2.setTemplateTopic("/device");
+    m2.setSubscriptionTopic("/device/#");
+    ValidationError[] l2 = {ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic};
+    assertEquals(Arrays.asList(l2), MappingsRepresentation.isTemplateTopicValid(m2));
+
+    Mapping m3 = new Mapping();
+    m3.setTemplateTopic("/device/");
+    m3.setSubscriptionTopic("/device/#");
+    assertEquals(new ArrayList<ValidationError>(), MappingsRepresentation.isTemplateTopicValid(m3));
   }
 
 }

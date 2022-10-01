@@ -8,16 +8,6 @@ export interface MQTTAuthentication {
   active: boolean;
 }
 
-// export interface MappingSubstitution {
-//   reset(): void;
-//   isValid(): boolean;
-//   hasPathSource(): boolean;
-//   hasPathTarget(): boolean;
-//   pathSource: string;
-//   pathTarget: string;
-//   definesIdentifier?: boolean;
-// }
-
 export class MappingSubstitution {
   public pathSource: string;
   public pathTarget: string;
@@ -76,8 +66,15 @@ export interface MappingStatus {
   snoopedTemplatesActive: number
 }
 
-export interface StatusMessage {
-  count: number;
+export interface ServiceStatus {
+  status: Status;
+}
+
+export enum Status {
+  CONNECTED = "CONNECTED",
+  ACTIVATED = "ACTIVATED",
+  CONFIGURED = "CONFIGURED",
+  NOT_READY = "NOT_READY"
 }
 
 export enum API {
@@ -86,7 +83,6 @@ export enum API {
   MEASUREMENT = "MEASUREMENT",
   INVENTORY = "INVENTORY"
 }
-
 
 export enum ValidationError {
   Only_One_Multi_Level_Wildcard,

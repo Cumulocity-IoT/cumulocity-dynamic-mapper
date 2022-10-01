@@ -1,36 +1,20 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse } from '@c8y/client';
-import { LoginService } from '@c8y/ngx-components';
-import { AGENT_ID, BASE_URL, PATH_CONNECT_ENDPOINT, PATH_MONITORING_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/helper';
-import { MQTTAuthentication } from '../shared/configuration.model';
+import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, Realtime } from '@c8y/client';
+import { AGENT_ID, BASE_URL, PATH_CONNECT_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/helper';
+import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class BrokerConfigurationService {
+  constructor(private client: FetchClient,
+    private identity: IdentityService) {
+    this.realtime = new Realtime(this.client);
+  }
 
   private agentId: string;
-
-  constructor(private client: FetchClient,
-    private identity: IdentityService,
-    private loginService: LoginService) { }
-
-  private getWebSocketUrl() {
-    let url: string = this.client.getUrl();
-    url = url.replace("http", "ws").replace("https", "wss");
-    console.log("Strategy: ", this.loginService.getAuthStrategy(), url);
-
-    if (true) {
-      const options = this.client.getFetchOptions()
-      const basicAuthHeader = options.headers.Authorization;
-      console.log("FetchOptions: ", options, basicAuthHeader);
-      const basicAuthtoken = basicAuthHeader.replace('Basic ', '');
-      //url = `${url}${this.BASE_URL}/${this.PATH_MONITORING_ENDPOINT}?token=${basicAuthtoken}`;
-      url = `${url}${BASE_URL}/${PATH_MONITORING_ENDPOINT}`;
-    } else {
-      let xsrf = this.getCookieValue('XSRF-TOKEN')
-      url = `${url}${BASE_URL}/${PATH_MONITORING_ENDPOINT}?XSRF-TOKEN=${xsrf}`;
-    }
-    return url;
-  }
+  private serviceStatus = new BehaviorSubject<ServiceStatus>({ status: Status.NOT_READY });
+  private _currentServiceStatus = this.serviceStatus.asObservable();
+  private realtime: Realtime
 
   async initializeMQTTAgent(): Promise<string> {
     if (!this.agentId) {
@@ -42,7 +26,7 @@ export class BrokerConfigurationService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
-        console.log("MQTTConfigurationService: Found MQTTAgent", this.agentId );
+        console.log("MQTTConfigurationService: Found MQTTAgent", this.agentId);
       }
     }
     return this.agentId;
@@ -108,4 +92,25 @@ export class BrokerConfigurationService {
     return status;
   }
 
+  public getCurrentServiceStatus(): Observable<ServiceStatus> {
+    return this._currentServiceStatus;
+  }
+
+  async subscribeMonitoringChannel(): Promise<object> {
+    return this.realtime.subscribe(`/events/${this.agentId}`, this.updateStatus.bind(this));
+  }
+
+  unsubscribeFromMonitoringChannel(subscription: object): object {
+    return this.realtime.unsubscribe(subscription);
+  }
+
+  private updateStatus(p: object): void {
+    let payload = p['data']['data'];
+    //console.log("New generig event:", payload);
+    if (payload.type == STATUS_SERVICE_EVENT_TYPE) {
+      let status: ServiceStatus = payload['status'];
+      this.serviceStatus.next(status);
+      console.log("New monitoring event", status);
+    }
+  }
 }

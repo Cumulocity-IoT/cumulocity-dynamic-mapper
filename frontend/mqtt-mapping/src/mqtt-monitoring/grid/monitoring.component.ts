@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, Column, ColumnDataType, DisplayOptions, Pagination } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
 import { MappingStatus } from '../../shared/configuration.model';
 import { IdRendererComponent } from '../renderer/id-cell.renderer.component';
@@ -95,8 +95,8 @@ export class MonitoringComponent implements OnInit {
   }
 
   private async initializeMonitoringService() {
-    this.subscription = await this.monitoringService.subscribeToMonitoringChannel();
-    this.monitorings$ = this.monitoringService.getCurrentMonitoringDetails();
+    this.subscription = await this.monitoringService.subscribeMonitoringChannel();
+    this.monitorings$ = this.monitoringService.getCurrentMappingStatus();
   }
 
   ngOnDestroy(): void {
