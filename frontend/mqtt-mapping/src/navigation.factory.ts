@@ -10,7 +10,7 @@ export class ConfigurationNavigationFactory implements NavigatorNodeFactory {
     parent: gettext('Settings'),
     label: gettext('MQTT'),
     icon: 'ftp-server',
-    path: '/mqtt/configuration',
+    path: '/mqtt/mapping',
     priority: 99,
     preventDuplicates: true,
   });

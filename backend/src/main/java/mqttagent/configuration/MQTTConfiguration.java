@@ -2,8 +2,10 @@ package mqttagent.configuration;
 import javax.validation.constraints.NotNull;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString ()
 public class MQTTConfiguration implements Cloneable {
 
     @NotNull
@@ -16,6 +18,7 @@ public class MQTTConfiguration implements Cloneable {
     public String user;
 
     @NotNull
+    @ToString.Exclude
     public String password;
 
     @NotNull

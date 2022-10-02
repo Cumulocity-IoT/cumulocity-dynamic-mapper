@@ -63,7 +63,6 @@ public class GenericCallback implements MqttCallback {
     @Override
     public void connectionLost(Throwable throwable) {
         log.error("Connection Lost to MQTT Broker: ", throwable);
-        throwable.printStackTrace();
         c8yAgent.createEvent("Connection lost to MQTT Broker", "mqtt_status_event", DateTime.now(), null);
         mqttClient.reconnect();
     }
