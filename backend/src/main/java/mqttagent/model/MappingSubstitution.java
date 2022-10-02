@@ -1,7 +1,6 @@
 package mqttagent.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -12,8 +11,7 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
-@Data
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
 @ToString()
 public class MappingSubstitution implements Serializable {
