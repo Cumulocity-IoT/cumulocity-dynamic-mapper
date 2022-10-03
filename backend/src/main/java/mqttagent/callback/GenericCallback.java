@@ -5,6 +5,9 @@ import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
@@ -157,7 +160,8 @@ public class GenericCallback implements MqttCallback {
             } else {
                 mapping.snoopTemplates = SnoopStatus.STARTED;
             }
-            log.info("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic, mapping.snoopedTemplates.size(),
+            log.info("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                    mapping.snoopedTemplates.size(),
                     mapping.snoopTemplates);
             mqttClient.setMappingDirty(mapping);
         } else {
@@ -182,7 +186,7 @@ public class GenericCallback implements MqttCallback {
             }
 
             var payloadTarget = new JSONObject(mapping.target);
-            ArrayList<String> resultDeviceIdentifier = new ArrayList<String>();
+            Map<String, ArrayList<String>> postProcessingCache = new HashMap<String, ArrayList<String>>();
             for (MappingSubstitution sub : mapping.substitutions) {
                 JsonNode extractedSourceContent = null;
                 /*
@@ -210,93 +214,92 @@ public class GenericCallback implements MqttCallback {
                     log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
                             payloadMessage);
                 } else {
-                    if (sub.definesIdentifier && mapping.targetAPI.equals(API.INVENTORY)) {
-                        if (extractedSourceContent.isArray()) {
-                            // extracted result from sourcPayload is an array, so we potentially have to
-                            // iterate over the result, e.g. creating multiple devices
-                            for (JsonNode jn : extractedSourceContent) {
-                                if (jn.isTextual()) {
-                                    resultDeviceIdentifier.add(jn.textValue());
-                                    substitute = jn.textValue();
-                                } else {
-                                    log.warn("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
-                                }
+                    var key = (sub.pathTarget.equals(TOKEN_DEVICE_TOPIC) ? SOURCE_ID : sub.pathTarget);
+                    ArrayList<String> pl = postProcessingCache.getOrDefault(key,
+                            new ArrayList<String>());
+                    if (extractedSourceContent.isArray()) {
+                        // extracted result from sourcPayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        for (JsonNode jn : extractedSourceContent) {
+                            if (jn.isTextual()) {
+                                pl.add(jn.textValue());
+                            } else {
+                                log.warn("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
                             }
-                            // create only one device
-                        } else if (extractedSourceContent.isTextual()) {
-                            resultDeviceIdentifier.add(extractedSourceContent.textValue());
-                            substitute = extractedSourceContent.textValue();
                         }
+                        postProcessingCache.put(key, pl);
                     } else if (extractedSourceContent.isTextual()) {
-                        substitute = extractedSourceContent.textValue();
+                        // extracted result from sourcPayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        pl.add(extractedSourceContent.textValue());
+                        postProcessingCache.put(key, pl);
                     } else {
-                        try {
-                            substitute = objectMapper.writeValueAsString(extractedSourceContent);
-                        } catch (JsonProcessingException e) {
-                            log.error("JsonProcessingException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
-                                    payloadMessage, e);
-                        }
+                        log.warn("Ignoring this substitution, sone no objects are allowed for: {}, {}, {}, {}",
+                                sub.pathSource, substitute);
                     }
-                    log.info("Evaluated substitution (pathSource, substitute): ({},{}), pathTarget: {}, {}, {}, {}", 
+                    log.info("Evaluated substitution (pathSource, substitute): ({},{}), pathTarget: {}, {}, {}, {}",
                             sub.pathSource, substitute, sub.pathTarget, payloadTarget,
                             payloadMessage, mapping.targetAPI.equals(API.INVENTORY));
                 }
 
+            }
+
+            ArrayList<String> listIdentifier = postProcessingCache.get(SOURCE_ID);
+            Set<String> pathTargets = postProcessingCache.keySet();
+            if (listIdentifier == null) {
+                throw new RuntimeException("Identified mapping has no substitution for source.id defined!");
+            }
+            int i = 0;
+            for (String device : listIdentifier) {
                 /*
                  * step 3 replace target with extract content from incoming payload
                  */
-                String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
-                if (pathTarget == null) {
-                    pathTarget = new String[] { sub.pathTarget };
-                }
-                if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (sub.pathTarget.equals(SOURCE_ID)
-                            && mapping.mapDeviceIdentifier
-                            && sub.definesIdentifier) {
-                        substitute = resolveExternalId(substitute, mapping.externalIdType);
-                        if (substitute == null) {
-                            throw new RuntimeException("External id " + substitute + " for type "
-                                    + mapping.externalIdType + " not found!");
+                for (String pathTarget : pathTargets) {
+                    String substitute = "NOT_DEFINED";
+                    if (i < postProcessingCache.get(pathTarget).size()) {
+                        substitute = postProcessingCache.get(pathTarget).get(i);
+                    }
+                    String[] pt = pathTarget.split(Pattern.quote("."));
+                    if (pt == null) {
+                        pt = new String[] { pathTarget };
+                    }
+                    if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                        if (pathTarget.equals(SOURCE_ID)) {
+                            substitute = resolveExternalId(substitute, mapping.externalIdType);
+                            if (substitute == null) {
+                                throw new RuntimeException("External id " + substitute + " for type "
+                                        + mapping.externalIdType + " not found!");
+                            }
                         }
-                    }
-                    substituteValue(substitute, payloadTarget, pathTarget);
-                } else {
-                    if (!sub.pathTarget.equals(TOKEN_DEVICE_TOPIC)) {
-                        // avoid substitution, since _DEVICE_IDENT_ since not present in target payload
-                        // for inventory
-                        substituteValue(substitute, payloadTarget, pathTarget);
+                        substituteValue(substitute, payloadTarget, pt);
+                    } else if (!pathTarget.equals(SOURCE_ID)) {
+                        substituteValue(substitute, payloadTarget, pt);
                     }
                 }
-            }
-            /*
-             * step 4 send target payload to c8y
-             */
-            log.info("Posting payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
-                    resultDeviceIdentifier.size());
-
-            if (resultDeviceIdentifier.size() > 0 && mapping.targetAPI.equals(API.INVENTORY)) {
-                String[] errors = {""};
-                resultDeviceIdentifier.forEach(d -> {
+                /*
+                 * step 4 send target payload to c8y
+                 */
+                if (mapping.targetAPI.equals(API.INVENTORY)) {
+                    String[] errors = { "" };
                     try {
-                        c8yAgent.upsertDevice(payloadTarget.toString(), d, mapping.externalIdType);
+                        c8yAgent.upsertDevice(payloadTarget.toString(), device, mapping.externalIdType);
                     } catch (ProcessingException e) {
                         errors[0] = e.getMessage();
                     }
-                });
-
-                if (!errors[0].equals("")) {
-                    throw new ProcessingException(errors[0]);
+                    if (!errors[0].equals("")) {
+                        throw new ProcessingException(errors[0]);
+                    }
+                } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                    c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+                } else {
+                    log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+                            postProcessingCache.size());
                 }
-
-            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
-            } else {
-                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
-                        resultDeviceIdentifier.size());
+                log.info("Posted payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+                        listIdentifier.size());
+                i++;
             }
-                
         }
-
     }
 
     private String resolveExternalId(String externalId, String externalIdType) {
