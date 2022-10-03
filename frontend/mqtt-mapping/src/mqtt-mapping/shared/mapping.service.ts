@@ -171,6 +171,7 @@ export class MappingService {
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path)
       result = expression.evaluate(json)
+      result = JSON.stringify(result, null, 4);
     }
     return result;
   }

@@ -12,13 +12,12 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString()
+@ToString(exclude = {""})
 public class InnerNode extends TreeNode {
     
     @Setter
     @Getter
     private Map <String,TreeNode> childNodes;
-
 
     static public InnerNode initTree() {
         InnerNode in = new InnerNode();
@@ -68,8 +67,7 @@ public class InnerNode extends TreeNode {
 
     public void insertMapping( InnerNode currentNode, Mapping mapping, ArrayList<String> levels) throws ResolveException{
         var currentLevel = levels.get(0);
-        String preToString = ( currentNode == null? "null" : currentNode.toString());
-        log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, preToString, levels);
+        log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, currentNode, levels);
         if (levels.size() == 1){
             MappingNode child = new MappingNode();
             child.setPreTreeNode(currentNode);

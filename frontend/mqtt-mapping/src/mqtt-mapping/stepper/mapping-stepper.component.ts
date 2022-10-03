@@ -1,7 +1,7 @@
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { C8yStepper } from '@c8y/ngx-components';
 import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -404,7 +404,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private addSubstitution(st: MappingSubstitution) {
     let sub: MappingSubstitution = _.clone(st);
-    if (sub.pathTarget == "source.id") {
+    if (sub.pathTarget == "source.id" || ( sub.pathTarget == TOKEN_DEVICE_TOPIC && this.mapping.targetAPI == API.INVENTORY )) {
       sub.definesIdentifier = true;
     }
     let updatePending = new Subject<boolean>();
@@ -491,17 +491,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onSelectSubstitution(selected: number) {
-    // reset background color of old selection list
-    for (let item of this.selectionList) {
-      item.setAttribute('style', null);
-    }
-    this.currentSubstitution = new MappingSubstitution(this.mapping.substitutions[selected].pathSource, this.mapping.substitutions[selected].pathTarget, this.mapping.substitutions[selected].definesIdentifier);
-    this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
-    this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
-    this.setSelectionToPath(this.editorTarget, this.currentSubstitution.pathTarget);
-    this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
-    for (let item of this.selectionList) {
-      item.setAttribute('style', `background: ${this.COLOR_HIGHLIGHTED};`);
+    if (selected < this.mapping.substitutions.length && selected > -1) {
+      // reset background color of old selection list
+      for (let item of this.selectionList) {
+        item.setAttribute('style', null);
+      }
+      const sel = this.mapping.substitutions[selected];
+      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.definesIdentifier);
+      this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
+      this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
+      this.setSelectionToPath(this.editorTarget, this.currentSubstitution.pathTarget);
+      this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
+      for (let item of this.selectionList) {
+        item.setAttribute('style', `background: ${this.COLOR_HIGHLIGHTED};`);
+      }
     }
   }
 

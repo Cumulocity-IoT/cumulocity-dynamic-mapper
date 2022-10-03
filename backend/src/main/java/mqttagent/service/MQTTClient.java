@@ -81,7 +81,7 @@ public class MQTTClient {
                 try {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId(), new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + "dummy_", new MemoryPersistence());
                     setInitilized(true);
                     log.info("Connecting to MQTT Broker {}", broker);
                 } catch (HttpServerErrorException e) {

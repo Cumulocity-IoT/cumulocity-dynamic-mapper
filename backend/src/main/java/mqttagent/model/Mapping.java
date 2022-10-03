@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = { "source", "target", "snoopTemplates" })
+@ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
 
   @NotNull
