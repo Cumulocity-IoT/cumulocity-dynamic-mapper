@@ -27,7 +27,7 @@
                     <div class="col-lg-5 form-group p-r-0">
                       <label for="subscriptionTopic" class="" translate>Subscription Topic</label>
                       <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text" class="form-control"
-                        placeholder="e.g. device/110" #topicRef required (change)="onTopicChanged($event)" />
+                        placeholder="e.g. device/110" #topicRef required (change)="onSubscriptionTopicChanged($event)" />
                       <c8y-messages>
                         <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"
                           translate>
@@ -46,8 +46,8 @@
                         <label translate><br></label>
                         <div class="input-group">
                           <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}">
-                            <input type="checkbox"  disabled="true"
-                              [value]="isWildcardTopic(mapping.templateTopic)" />
+                            <input name ="templateTopicWildcard" type="checkbox"  disabled="true"
+                            [checked]="isWildcardTopic(mapping.templateTopic)" />
                             <span></span>
                             <span>
                               {{ 'Wildcard TemlateTopic'}}
@@ -88,7 +88,7 @@
                         </div>
                         <div class="col-lg-4 no-gutter">
                           <button type="submit" style="width:100%" class="btn btn-primary"
-                            (click)="onSelectDeviceIdentifier()">Device Identifier</button>
+                            (click)="onSelectNextDeviceIdentifier()">Device Identifier</button>
                         </div>
                         <div class="col-lg-3 p-l-0">
                           <input formControlName="markedDeviceIdentifier" type="text" class="form-control"

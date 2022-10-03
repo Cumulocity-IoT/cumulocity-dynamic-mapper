@@ -88,8 +88,6 @@ public class C8yAgent {
 
     @EventListener
     public void init(MicroserviceSubscriptionAddedEvent event) {
-
-        // TODO handle what happens if multiple tenants subscribe to this microservice
         tenant = event.getCredentials().getTenant();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
@@ -136,13 +134,7 @@ public class C8yAgent {
                 log.info("Created new MQTT-Mapping: {}, {}", moMapping.getId().getValue(), moMapping.getId());
             }
         });
-        /* Connecting to MQTT Client */
-        /*
-         * TODO When no tenant options provided the microservice will not start unless
-         * unsubscribed + subscribed
-         * We should add logic to fetch tenant options regulary e.g. all 60 seconds
-         * until they could be retrieved or on REST Request when configuration is set
-         */
+
         try {
             mqttClient.init();
             mqttClient.reconnect();
@@ -227,7 +219,6 @@ public class C8yAgent {
                 log.info("External ID {} not found", externalId);
             }
         });
-
         return extIds[0];
     }
 
@@ -249,7 +240,6 @@ public class C8yAgent {
 
     public void createIdentity(ExternalIDRepresentation externalIDGid) {
         identityApi.create(externalIDGid);
-
     }
 
     public ManagedObjectRepresentation createMO(ManagedObjectRepresentation mor) {
