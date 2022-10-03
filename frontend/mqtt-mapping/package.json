@@ -1,6 +1,6 @@
 {
   "name": "mqtt-mapping",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "This is the Cumulocity module federation plugin to define mappings for custom JSON payloads to C8Y payloads.",
 
   "scripts": {

@@ -177,7 +177,7 @@ def main(argv):
                 "mapDeviceIdentifier": true,
                 "active": true,
                 "targetAPI": "INVENTORY",
-                "source": "{\"device\":[\"d1_id\",\"d2_id\"],\"types\":{\"type_A\":\"type_A\",\"type_B\":\"type_B\"},\"used_name\":\"Pressure\"}",
+                "source": "{\"device\":[\"d1_id\",\"d2_id\"],\"types\":{\"type_A\":\"type_A\",\"type_B\":\"type_B\"},\"used_name\":[\"Pressure_d1\",\"Pressure_d2\"]}",
                 "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
                 "externalIdType": "c8y_Serial",
                 "templateTopic": "special/devices",
@@ -190,17 +190,17 @@ def main(argv):
                     },
                     {
                         "definesIdentifier": false,
-                        "pathSource": " used_name",
-                        "pathTarget": "name"
+                        "pathSource": "types.type_A",
+                        "pathTarget": "type"
                     },
                     {
                         "definesIdentifier": false,
-                        "pathSource": "types.type_A",
-                        "pathTarget": "type"
+                        "pathSource": "$map(used_name, function($v, $i, $a) { $contains($v,'d1') ? $join(['Special_i0', $string($i)]) : $join([$string($v), $string($i)]) } )",
+                        "pathTarget": "name"
                     }
                 ],
                 "snoopTemplates": "NONE",
-                "lastUpdate": 1664797225697,
+                "lastUpdate": 1664822810101,
                 "snoopedTemplates": [],
                 "id": 5,
                 "subscriptionTopic": "special/devices",

@@ -204,7 +204,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private updateSourceExpressionResult(path: string) {
     try {
-      this.sourceExpressionResult = this.mappingService.evaluateExpression(this.editorSource?.get(), path);
+      this.sourceExpressionResult = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
       this.sourceExpressionErrorMsg = '';
     } catch (error) {
       console.log("Error evaluating expression: ", error);
