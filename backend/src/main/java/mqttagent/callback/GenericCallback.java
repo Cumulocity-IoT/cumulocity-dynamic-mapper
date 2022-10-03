@@ -237,8 +237,8 @@ public class GenericCallback implements MqttCallback {
                                     payloadMessage, e);
                         }
                     }
-                    log.info("Evaluated substitution {} for: pathSource {},  pathTarget {}, {}, {}, {}", substitute,
-                            sub.pathSource, sub.pathTarget, payloadTarget,
+                    log.info("Evaluated substitution (pathSource, substitute): ({},{}), pathTarget: {}, {}, {}, {}", 
+                            sub.pathSource, substitute, sub.pathTarget, payloadTarget,
                             payloadMessage, mapping.targetAPI.equals(API.INVENTORY));
                 }
 

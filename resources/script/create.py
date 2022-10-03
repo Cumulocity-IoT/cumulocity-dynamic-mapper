@@ -35,9 +35,9 @@ def main(argv):
         "type": "c8y_mqttMapping",
         "c8y_mqttMapping": [
             {
-                "tested": False,
-                "mapDeviceIdentifier": True,
-                "active": True,
+                "tested": false,
+                "mapDeviceIdentifier": true,
+                "active": true,
                 "targetAPI": "INVENTORY",
                 "source": "{\"customName\":\"Bus-Berlin-Rom\",\"customText\":\"Rom\",\"customFragment\":{\"customFragmentValue\":\"customValueNew\"},\"customNumber\":10,\"customArray\":[\"ArrayValue1\",\"ArrayValue2\"],\"customType\":\"type_Bus\"}",
                 "externalIdType": "c8y_Serial",
@@ -46,7 +46,7 @@ def main(argv):
                 "qos": 1,
                 "substitutions": [
                     {
-                        "definesIdentifier": True,
+                        "definesIdentifier": true,
                         "pathSource": "_DEVICE_IDENT_",
                         "pathTarget": "_DEVICE_IDENT_"
                     }
@@ -61,9 +61,9 @@ def main(argv):
                 "indexDeviceIdentifierInTemplateTopic": 2
             },
             {
-                "tested": False,
-                "mapDeviceIdentifier": True,
-                "active": True,
+                "tested": false,
+                "mapDeviceIdentifier": true,
+                "active": true,
                 "targetAPI": "ALARM",
                 "source": "{\"msg_type\":\"c8y_LoraBellAlarm\",\"tx\":\"Elevator was not called\",\"ts\":\"2022-09-08T16:21:53.389+02:00\"}",
                 "externalIdType": "c8y_Serial",
@@ -72,22 +72,22 @@ def main(argv):
                 "qos": 1,
                 "substitutions": [
                     {
-                        "definesIdentifier": True,
+                        "definesIdentifier": true,
                         "pathSource": "_DEVICE_IDENT_",
                         "pathTarget": "source.id"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "msg_type",
                         "pathTarget": "type"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "tx",
                         "pathTarget": "text"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "ts",
                         "pathTarget": "time"
                     }
@@ -100,9 +100,9 @@ def main(argv):
                 "indexDeviceIdentifierInTemplateTopic": 2
             },
             {
-                "tested": True,
-                "mapDeviceIdentifier": True,
-                "active": True,
+                "tested": true,
+                "mapDeviceIdentifier": true,
+                "active": true,
                 "targetAPI": "EVENT",
                 "source": "{\"msg_type\":\"c8y_LoraBellEvent\",\"txt\":\"Elevator was not called today!\",\"ts\":\"2022-09-08T16:21:53.389+02:00\"}",
                 "externalIdType": "c8y_Serial",
@@ -111,17 +111,17 @@ def main(argv):
                 "qos": 1,
                 "substitutions": [
                     {
-                        "definesIdentifier": True,
+                        "definesIdentifier": true,
                         "pathSource": "_DEVICE_IDENT_",
                         "pathTarget": "source.id"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "txt",
                         "pathTarget": "text"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "ts",
                         "pathTarget": "time"
                     }
@@ -139,9 +139,9 @@ def main(argv):
                 "indexDeviceIdentifierInTemplateTopic": 3
             },
             {
-                "tested": True,
-                "mapDeviceIdentifier": True,
-                "active": True,
+                "tested": true,
+                "mapDeviceIdentifier": true,
+                "active": true,
                 "targetAPI": "MEASUREMENT",
                 "source": "{\"value\":100,\"ts\":\"2022-08-05T00:14:49.389+02:00\",\"mea\":\"c8y_TemeratureMeasurement\"}",
                 "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
@@ -150,17 +150,17 @@ def main(argv):
                 "qos": 1,
                 "substitutions": [
                     {
-                        "definesIdentifier": True,
+                        "definesIdentifier": true,
                         "pathSource": "_DEVICE_IDENT_",
                         "pathTarget": "source.id"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "ts",
                         "pathTarget": "time"
                     },
                     {
-                        "definesIdentifier": False,
+                        "definesIdentifier": false,
                         "pathSource": "mea",
                         "pathTarget": "type"
                     }
@@ -171,6 +171,40 @@ def main(argv):
                 "id": 4,
                 "subscriptionTopic": "measure/#",
                 "indexDeviceIdentifierInTemplateTopic": 2
+            },
+            {
+                "tested": false,
+                "mapDeviceIdentifier": true,
+                "active": true,
+                "targetAPI": "INVENTORY",
+                "source": "{\"device\":[\"d1_id\",\"d2_id\"],\"types\":{\"type_A\":\"type_A\",\"type_B\":\"type_B\"},\"used_name\":\"Pressure\"}",
+                "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
+                "externalIdType": "c8y_Serial",
+                "templateTopic": "special/devices",
+                "qos": 1,
+                "substitutions": [
+                    {
+                        "definesIdentifier": true,
+                        "pathSource": "device",
+                        "pathTarget": "_DEVICE_IDENT_"
+                    },
+                    {
+                        "definesIdentifier": false,
+                        "pathSource": " used_name",
+                        "pathTarget": "name"
+                    },
+                    {
+                        "definesIdentifier": false,
+                        "pathSource": "types.type_A",
+                        "pathTarget": "type"
+                    }
+                ],
+                "snoopTemplates": "NONE",
+                "lastUpdate": 1664797225697,
+                "snoopedTemplates": [],
+                "id": 5,
+                "subscriptionTopic": "special/devices",
+                "indexDeviceIdentifierInTemplateTopic": -1
             }
         ]
     })
