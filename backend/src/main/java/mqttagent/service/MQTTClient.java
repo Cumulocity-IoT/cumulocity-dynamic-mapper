@@ -51,7 +51,6 @@ public class MQTTClient {
     private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
     MQTTConfiguration mqttConfiguration;
-
     private MqttClient mqttClient;
 
     @Autowired
@@ -59,18 +58,14 @@ public class MQTTClient {
 
     @Autowired
     private GenericCallback genericCallback;
-
     private ExecutorService newCachedThreadPool = Executors.newCachedThreadPool();
 
     private Future reconnectTask;
-
     private Future initTask;
 
     private boolean initilized = false;
-
     private Set<String> activeSubscriptionsSet = new HashSet<String>();
 
-    // mappings: tenant -> ( topic -> mqtt_mappping)
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
@@ -121,8 +116,6 @@ public class MQTTClient {
         disconnect();
         while (!isConnected()) {
             log.debug("Try to reestablish the MQTT connection now II");
-            // TODO If MQTT Connection is down due to MQTT Broker issues it will not
-            // reconnect.
             init();
             try {
                 connect();
@@ -167,7 +160,6 @@ public class MQTTClient {
             c8yAgent.createEvent("Successfully connected to Broker " + mqttClient.getServerURI(),
                     STATUS_MQTT_EVENT_TYPE,
                     DateTime.now(), null);
-
         }
     }
 
@@ -488,5 +480,4 @@ public class MQTTClient {
             disconnectFromBroker();
         }
     }
-
 }
