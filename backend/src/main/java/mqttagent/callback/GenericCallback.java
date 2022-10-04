@@ -117,7 +117,6 @@ public class GenericCallback implements MqttCallback {
                         mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
                     }
                 }
-
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
@@ -258,6 +257,9 @@ public class GenericCallback implements MqttCallback {
                     String substitute = "NOT_DEFINED";
                     if (i < postProcessingCache.get(pathTarget).size()) {
                         substitute = postProcessingCache.get(pathTarget).get(i);
+                    } else if ( postProcessingCache.get(pathTarget).size() == 1) {
+                        //this is an indication that the substitution is the same for all events/alarms/measurements/inventory
+                        substitute = postProcessingCache.get(pathTarget).get(0);
                     }
                     String[] pt = pathTarget.split(Pattern.quote("."));
                     if (pt == null) {
