@@ -250,7 +250,7 @@ To define a new substitution the following steps have to be performed:
 
 To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
 
-In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
+In the sample below, e.g. a warning is shown since the required property ```c8y_IsDevice``` is  missing in the payload.
 
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
