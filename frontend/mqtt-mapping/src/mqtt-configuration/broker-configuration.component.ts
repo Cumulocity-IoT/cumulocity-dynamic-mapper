@@ -23,13 +23,13 @@ export class BokerConfigurationComponent implements OnInit {
   subscription: object;
   mqttForm: FormGroup;
   configuration: MQTTAuthentication = {
-    mqttHost: undefined,
-    mqttPort: undefined,
-    user: undefined,
-    password: undefined,
-    clientId: undefined,
-    useTLS: undefined,
-    active: undefined
+    mqttHost: '',
+    mqttPort: 0,
+    user: '',
+    password: '',
+    clientId: '',
+    useTLS: false,
+    active: false,
   };
 
   constructor(
@@ -77,10 +77,10 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   private async loadConnectionDetails(): Promise<void> {
-    this.configuration = await this.configurationService.getConnectionDetails();
+    let conf = await this.configurationService.getConnectionDetails();
     console.log("Connection details", this.configuration)
-    if (!this.configuration) {
-      return;
+    if (conf) {
+      this.configuration = conf;
     }
   }
 

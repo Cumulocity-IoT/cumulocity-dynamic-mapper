@@ -317,7 +317,7 @@ public class C8yAgent {
     }
 
     public MQTTConfiguration loadConfiguration() {
-        MQTTConfiguration[] results = { null };
+        MQTTConfiguration[] results = { new MQTTConfiguration() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = configurationService.loadConfiguration();
             log.info("Found configuration {}", results[0]);

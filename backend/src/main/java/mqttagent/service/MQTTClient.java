@@ -81,7 +81,7 @@ public class MQTTClient {
                 try {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + "dummy_", new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() , new MemoryPersistence());
                     setInitilized(true);
                     log.info("Connecting to MQTT Broker {}", broker);
                 } catch (HttpServerErrorException e) {
@@ -93,7 +93,7 @@ public class MQTTClient {
             }
 
             try {
-                log.info("Try to retrieve MQTT connection configuration in 30s ...");
+                log.info("Try to retrieve MQTT connection configuration in 30s, active: {}...", mqttConfiguration.active);
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
                 log.error("Error on reconnect: ", e);
@@ -280,7 +280,7 @@ public class MQTTClient {
             if (!activeSubscriptionsSet.contains(topic)) {
                 try {
                     log.debug("Subscribing to topic: {} ...", topic);
-                    subscribe(topic, (int) updatedSubscriptionsMap.get(topic).qos);
+                    subscribe(topic, (int) updatedSubscriptionsMap.get(topic).qos.ordinal());
                 } catch (MqttException | IllegalArgumentException e) {
                     log.error("Could not subscribe topic: {}", topic);
                 }
