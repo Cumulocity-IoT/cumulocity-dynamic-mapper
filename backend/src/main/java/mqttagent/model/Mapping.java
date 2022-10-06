@@ -46,7 +46,7 @@ public class Mapping implements Serializable {
   public boolean tested;
 
   @NotNull
-  public long qos;
+  public QOS qos;
 
   @NotNull
   public MappingSubstitution[] substitutions;

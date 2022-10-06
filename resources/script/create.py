@@ -43,7 +43,7 @@ def main(argv):
                 "externalIdType": "c8y_Serial",
                 "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
                 "templateTopic": "device/+/rom/",
-                "qos": 1,
+                "qos": "AT_LEAST_ONCE",
                 "substitutions": [
                     {
                         "definesIdentifier": true,
@@ -69,7 +69,7 @@ def main(argv):
                 "externalIdType": "c8y_Serial",
                 "target": "{\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TestAlarm\",\"text\":\"This is a new test alarm!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-08-05T00:14:49.389+02:00\"}",
                 "templateTopic": "alarm/+",
-                "qos": 1,
+                "qos": "AT_LEAST_ONCE",
                 "substitutions": [
                     {
                         "definesIdentifier": true,
@@ -108,7 +108,7 @@ def main(argv):
                 "externalIdType": "c8y_Serial",
                 "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
                 "templateTopic": "/eventing/+/east",
-                "qos": 1,
+                "qos": "AT_LEAST_ONCE",
                 "substitutions": [
                     {
                         "definesIdentifier": true,
@@ -147,7 +147,7 @@ def main(argv):
                 "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
                 "externalIdType": "c8y_Serial",
                 "templateTopic": "measure/+",
-                "qos": 1,
+                "qos": "AT_LEAST_ONCE",
                 "substitutions": [
                     {
                         "definesIdentifier": true,
@@ -181,7 +181,7 @@ def main(argv):
                 "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
                 "externalIdType": "c8y_Serial",
                 "templateTopic": "special/devices",
-                "qos": 1,
+                "qos": "AT_LEAST_ONCE",
                 "substitutions": [
                     {
                         "definesIdentifier": true,

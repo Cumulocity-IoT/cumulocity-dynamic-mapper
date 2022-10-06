@@ -1,6 +1,6 @@
 export interface MQTTAuthentication {
   mqttHost: string;
-  mqttPort: string;
+  mqttPort: number;
   user: string;
   password: string;
   clientId: string;
@@ -95,9 +95,11 @@ export enum ValidationError {
   Device_Identifier_Must_Be_Selected
 }
 
-export const QOS = [{ name: 'At most once', value: 0 },
-{ name: 'At least once', value: 1 },
-{ name: 'Exactly once', value: 2 }]
+export enum QOS {
+  AT_MOST_ONCE = "AT_MOST_ONCE",
+  AT_LEAST_ONCE = "AT_LEAST_ONCE", 
+  EXACTLY_ONCE = "EXACTLY_ONCE",
+}
 
 
 export enum SnoopStatus {
