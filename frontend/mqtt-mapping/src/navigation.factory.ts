@@ -8,7 +8,7 @@ export class ConfigurationNavigationFactory implements NavigatorNodeFactory {
 
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext('Settings'),
-    label: gettext('MQTT'),
+    label: gettext('MQTT Mapping'),
     icon: 'ftp-server',
     path: '/mqtt/mapping',
     priority: 99,
