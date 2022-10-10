@@ -283,8 +283,10 @@ public class GenericCallback implements MqttCallback {
                         if (pathTarget.equals(SOURCE_ID)) {
                             var sourceId = resolveExternalId(substitute, mapping.externalIdType);
                             if (sourceId == null && mapping.createNonExistingDevice) {
-                                c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + sourceId,
+                                
+                                var d = c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + sourceId,
                                         "c8y_MQTTMapping_generated_type", sourceId, mapping.externalIdType);
+                                sourceId = d.getId().getValue();
 
                             } else if (sourceId == null) {
                                 throw new RuntimeException("External id " + substitute + " for type "

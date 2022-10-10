@@ -129,7 +129,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (event.type == "click") {
       // determine the json editor where the click happened
       let target = '';
-      event.path.forEach(element => {
+      var eventPath = event.path || (event.composedPath && event.composedPath());
+      eventPath.forEach(element => {
         if (element.localName == "json-editor") {
           target = element.parentElement.id;
         }
@@ -365,6 +366,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     // disable further snooping for this template
     this.mapping.snoopTemplates = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
+  }
+
+  async onTargetAPIChanged(evt) {
+    this.mapping.target = SAMPLE_TEMPLATES[this.mapping.targetAPI];
   }
 
   public onAddSubstitution() {
