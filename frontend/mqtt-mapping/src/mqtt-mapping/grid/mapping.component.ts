@@ -149,6 +149,7 @@ export class MappingComponent implements OnInit {
       qos: 1,
       substitutions: [],
       mapDeviceIdentifier: false,
+      createNonExistingDevice: false,
       externalIdType: 'c8y_Serial',
       snoopTemplates: SnoopStatus.NONE,
       snoopedTemplates: [],

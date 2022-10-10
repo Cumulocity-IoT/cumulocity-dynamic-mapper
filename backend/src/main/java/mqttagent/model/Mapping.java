@@ -55,6 +55,9 @@ public class Mapping implements Serializable {
   public boolean mapDeviceIdentifier;
 
   @NotNull
+  public boolean createNonExistingDevice;
+
+  @NotNull
   public String externalIdType;
 
   @NotNull

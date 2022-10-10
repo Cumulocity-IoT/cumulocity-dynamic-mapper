@@ -51,6 +51,8 @@ import mqttagent.service.MQTTClient;
 @Service
 public class GenericCallback implements MqttCallback {
 
+    private static final String TIME = "time";
+
     @Autowired
     C8yAgent c8yAgent;
 
@@ -105,7 +107,7 @@ public class GenericCallback implements MqttCallback {
                     try {
                         handleNewPayload(ctx, payloadMessage);
                         st.messagesReceived++;
-                        if (map.snoopTemplates == SnoopStatus.ENABLED) {
+                        if (map.snoopTemplates == SnoopStatus.ENABLED || map.snoopTemplates == SnoopStatus.STARTED) {
                             st.snoopedTemplatesTotal++;
                             st.snoopedTemplatesActive = map.snoopedTemplates.size();
                         }
@@ -186,6 +188,7 @@ public class GenericCallback implements MqttCallback {
 
             var payloadTarget = new JSONObject(mapping.target);
             Map<String, ArrayList<String>> postProcessingCache = new HashMap<String, ArrayList<String>>();
+            boolean substitutionTimeExists = false;
             for (MappingSubstitution sub : mapping.substitutions) {
                 JsonNode extractedSourceContent = null;
                 /*
@@ -241,6 +244,16 @@ public class GenericCallback implements MqttCallback {
                             payloadMessage, mapping.targetAPI.equals(API.INVENTORY));
                 }
 
+                if (sub.pathTarget.equals(TIME)) {
+                    ArrayList<String> pl = postProcessingCache.getOrDefault(TIME,
+                            new ArrayList<String>());
+                    pl.add(new DateTime().toString());
+                    postProcessingCache.put(TIME, pl);
+                }
+            }
+
+            if (!substitutionTimeExists) {
+                substitutionTimeExists = true;
             }
 
             ArrayList<String> listIdentifier = postProcessingCache.get(SOURCE_ID);
@@ -257,8 +270,9 @@ public class GenericCallback implements MqttCallback {
                     String substitute = "NOT_DEFINED";
                     if (i < postProcessingCache.get(pathTarget).size()) {
                         substitute = postProcessingCache.get(pathTarget).get(i);
-                    } else if ( postProcessingCache.get(pathTarget).size() == 1) {
-                        //this is an indication that the substitution is the same for all events/alarms/measurements/inventory
+                    } else if (postProcessingCache.get(pathTarget).size() == 1) {
+                        // this is an indication that the substitution is the same for all
+                        // events/alarms/measurements/inventory
                         substitute = postProcessingCache.get(pathTarget).get(0);
                     }
                     String[] pt = pathTarget.split(Pattern.quote("."));
@@ -267,10 +281,16 @@ public class GenericCallback implements MqttCallback {
                     }
                     if (!mapping.targetAPI.equals(API.INVENTORY)) {
                         if (pathTarget.equals(SOURCE_ID)) {
-                            substitute = resolveExternalId(substitute, mapping.externalIdType);
-                            if (substitute == null) {
+                            var sourceId = resolveExternalId(substitute, mapping.externalIdType);
+                            if (sourceId == null && mapping.createNonExistingDevice) {
+                                c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + sourceId,
+                                        "c8y_MQTTMapping_generated_type", sourceId, mapping.externalIdType);
+
+                            } else if (sourceId == null) {
                                 throw new RuntimeException("External id " + substitute + " for type "
                                         + mapping.externalIdType + " not found!");
+                            } else {
+                                substitute = sourceId;
                             }
                         }
                         substituteValue(substitute, payloadTarget, pt);

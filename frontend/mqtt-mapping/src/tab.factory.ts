@@ -3,7 +3,7 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 
 @Injectable()
-export class ConfigurationTabFactory implements TabFactory {
+export class MappingConfigurationTabFactory implements TabFactory {
   constructor(public router: Router) {}
 
   get() {
