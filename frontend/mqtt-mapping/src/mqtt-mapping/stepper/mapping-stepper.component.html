@@ -119,7 +119,7 @@
                     <div class="col-md-6 form-group">
                       <label for="targetAPI" class="" translate>Target API</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
+                        <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI" (change)="onTargetAPIChanged($event)"
                           #targetAPIRef>
                           <option *ngFor="let api of keys(API)" [ngValue]="api">
                             {{ api }}
