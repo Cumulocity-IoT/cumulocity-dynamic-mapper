@@ -51,6 +51,7 @@ export interface Mapping {
   qos: number;
   substitutions?: MappingSubstitution[];
   mapDeviceIdentifier: boolean;
+  createNonExistingDevice: boolean;
   externalIdType: string;
   snoopTemplates: SnoopStatus;
   snoopedTemplates?: string[];

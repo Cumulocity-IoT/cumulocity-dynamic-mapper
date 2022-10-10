@@ -31,7 +31,7 @@ import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
 import { ConfigurationNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { OverviewGuard } from './shared/overview.guard';
-import { ConfigurationTabFactory } from './tab.factory';
+import { MappingConfigurationTabFactory } from './tab.factory';
 
 @NgModule({
   imports: [
@@ -116,7 +116,7 @@ import { ConfigurationTabFactory } from './tab.factory';
     MonitoringService,
     MappingService,
     { provide: HOOK_NAVIGATOR_NODES, useClass: ConfigurationNavigationFactory, multi: true },
-    { provide: HOOK_TABS, useClass: ConfigurationTabFactory, multi: true },
+    { provide: HOOK_TABS, useClass: MappingConfigurationTabFactory, multi: true },
     {
       provide: HOOK_ROUTE,
       useValue: [

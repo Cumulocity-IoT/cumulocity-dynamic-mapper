@@ -148,6 +148,15 @@
                         </span>
                       </label>
                     </div>
+                    <div class="col-md-6">
+                      <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
+                        <input type="checkbox" formControlName="createNonExistingDevice" [(ngModel)]="mapping.createNonExistingDevice" />
+                        <span></span>
+                        <span>
+                          {{ 'Create Non Existing Device' | translate }}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                   <div class="form-group">
                     <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
