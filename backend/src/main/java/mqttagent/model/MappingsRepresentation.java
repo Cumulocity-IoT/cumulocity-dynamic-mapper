@@ -100,7 +100,7 @@ public class MappingsRepresentation implements Serializable {
     result.addAll(isSubstituionValid(mapping));
     result.addAll(isTopicNameValid(mapping.subscriptionTopic));
     result.addAll(isTopicNameValid(mapping.templateTopic));
-    result.addAll(isTemplateTopicUnique(mappings, mapping));
+    //result.addAll(isTemplateTopicUnique(mappings, mapping));
     return result;
   }
 

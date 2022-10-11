@@ -53,28 +53,31 @@ import mqttagent.service.MQTTClient;
 public class GenericCallback implements MqttCallback {
 
     static class SubstituteValue {
-        static enum TYPE  {
+        static enum TYPE {
             NUMBER,
             TEXTUAL
         }
+
         public String value;
         public TYPE type;
+
         public SubstituteValue(String value, TYPE type) {
             this.type = type;
             this.value = value;
         }
+
         public Object typedValue() {
             if (type.equals(TYPE.TEXTUAL)) {
                 return value;
             } else {
-                //check if int
-                try{
-                    return Integer.parseInt(value );
-                } catch(NumberFormatException e1){
-                    //not int
-                    try{
+                // check if int
+                try {
+                    return Integer.parseInt(value);
+                } catch (NumberFormatException e1) {
+                    // not int
+                    try {
                         Float.parseFloat(value);
-                    }catch(NumberFormatException e2){
+                    } catch (NumberFormatException e2) {
                         return null;
                     }
                 }
@@ -122,9 +125,9 @@ public class GenericCallback implements MqttCallback {
                 String payloadMessage = (mqttMessage.getPayload() != null
                         ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                         : "");
-                ProcessingContext ctx = null;
+                ArrayList<TreeNode> nodes = new ArrayList<TreeNode>();
                 try {
-                    ctx = resolveMap(topic, payloadMessage);
+                    nodes = resolveMap(topic, payloadMessage);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
                     e.printStackTrace();
@@ -133,22 +136,38 @@ public class GenericCallback implements MqttCallback {
                     mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
                 }
 
-                if (ctx != null) {
-                    Mapping map = ctx.getMapping();
-                    MappingStatus st = mqttClient.getMonitoring().get(map.id);
-                    try {
-                        handleNewPayload(ctx, payloadMessage);
-                        st.messagesReceived++;
-                        if (map.snoopTemplates == SnoopStatus.ENABLED || map.snoopTemplates == SnoopStatus.STARTED) {
-                            st.snoopedTemplatesTotal++;
-                            st.snoopedTemplatesActive = map.snoopedTemplates.size();
+                for (TreeNode node : nodes) {
+                    ProcessingContext ctx = new ProcessingContext();
+                    if (node instanceof MappingNode) {
+                        ctx.setMapping(((MappingNode) node).getMapping());
+                        ArrayList<String> topicLevels = new ArrayList<String>(
+                                Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+                        if (ctx.getMapping().indexDeviceIdentifierInTemplateTopic >= 0) {
+                            String deviceIdentifier = topicLevels
+                                    .get((int) (ctx.getMapping().indexDeviceIdentifierInTemplateTopic));
+                            log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
+                            ctx.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
+                            ctx.setDeviceIdentifier(deviceIdentifier);
                         }
-                        mqttClient.getMonitoring().put(map.id, st);
-                    } catch (Exception e) {
-                        log.warn("Message could NOT be parsed, ignoring this message.");
-                        e.printStackTrace();
-                        st.errors++;
-                        mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
+                        Mapping map = ctx.getMapping();
+                        MappingStatus st = mqttClient.getMonitoring().get(map.id);
+                        try {
+                            handleNewPayload(ctx, payloadMessage);
+                            st.messagesReceived++;
+                            if (map.snoopTemplates == SnoopStatus.ENABLED
+                                    || map.snoopTemplates == SnoopStatus.STARTED) {
+                                st.snoopedTemplatesTotal++;
+                                st.snoopedTemplatesActive = map.snoopedTemplates.size();
+                            }
+                            mqttClient.getMonitoring().put(map.id, st);
+                        } catch (Exception e) {
+                            log.warn("Message could NOT be parsed, ignoring this message.");
+                            e.printStackTrace();
+                            st.errors++;
+                            mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
+                        }
+                    } else {
+                        throw new ResolveException("Could not find appropriate mapping for topic: " + topic);
                     }
                 }
             }
@@ -157,29 +176,12 @@ public class GenericCallback implements MqttCallback {
         }
     }
 
-    private ProcessingContext resolveMap(String topic, String payloadMessage) throws ResolveException {
-        ProcessingContext context = new ProcessingContext();
+    private ArrayList<TreeNode> resolveMap(String topic, String payloadMessage) throws ResolveException {
         log.info("Message received on topic '{}'  with message {}", topic,
                 payloadMessage);
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
-        TreeNode node = mqttClient.getActiveMappings().resolveTopicPath(levels);
-        if (node instanceof MappingNode) {
-            context.setMapping(((MappingNode) node).getMapping());
-            // if (!context.getMapping().targetAPI.equals(API.INVENTORY)) {
-            ArrayList<String> topicLevels = new ArrayList<String>(
-                    Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
-            if (context.getMapping().indexDeviceIdentifierInTemplateTopic >= 0) {
-                String deviceIdentifier = topicLevels
-                        .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
-                log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
-                        context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
-                context.setDeviceIdentifier(deviceIdentifier);
-            }
-            // }
-        } else {
-            throw new ResolveException("Could not find appropriate mapping for topic: " + topic);
-        }
-        return context;
+        ArrayList<TreeNode> nodes = mqttClient.getActiveMappings().resolveTopicPath(levels);
+        return nodes;
     }
 
     private void handleNewPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException {
@@ -255,12 +257,13 @@ public class GenericCallback implements MqttCallback {
                         // extracted result from sourcPayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
                         for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()){
+                            if (jn.isTextual()) {
                                 pl.add(new SubstituteValue(jn.textValue(), TYPE.TEXTUAL));
-                            } else if (jn.isNumber()){
+                            } else if (jn.isNumber()) {
                                 pl.add(new SubstituteValue(jn.numberValue().toString(), TYPE.NUMBER));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}", jn.asText());
+                                log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
+                                        jn.asText());
                             }
                         }
                         postProcessingCache.put(key, pl);
@@ -324,7 +327,8 @@ public class GenericCallback implements MqttCallback {
                             var sourceId = resolveExternalId(substitute.value, mapping.externalIdType);
                             if (sourceId == null && mapping.createNonExistingDevice) {
 
-                                var d = c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + substitute.value,
+                                var d = c8yAgent.upsertDevice(
+                                        "device_" + mapping.externalIdType + "_" + substitute.value,
                                         "c8y_MQTTMapping_generated_type", substitute.value, mapping.externalIdType);
                                 substitute.value = d.getId().getValue();
                             } else if (sourceId == null) {

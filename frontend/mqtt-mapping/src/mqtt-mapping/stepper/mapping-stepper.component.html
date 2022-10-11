@@ -148,12 +148,21 @@
                         </span>
                       </label>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY">
                       <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                         <input type="checkbox" formControlName="createNonExistingDevice" [(ngModel)]="mapping.createNonExistingDevice" />
                         <span></span>
                         <span>
                           {{ 'Create Non Existing Device' | translate }}
+                        </span>
+                      </label>
+                    </div>
+                    <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY">
+                      <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
+                        <input type="checkbox" formControlName="updateExistingDevice" [(ngModel)]="mapping.updateExistingDevice" />
+                        <span></span>
+                        <span>
+                          {{ 'Update Existing Device' | translate }}
                         </span>
                       </label>
                     </div>

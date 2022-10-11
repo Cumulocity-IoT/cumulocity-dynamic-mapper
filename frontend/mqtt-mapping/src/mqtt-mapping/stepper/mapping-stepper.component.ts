@@ -177,6 +177,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
+      updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopTemplates: new FormControl(this.mapping.snoopTemplates),
     },
