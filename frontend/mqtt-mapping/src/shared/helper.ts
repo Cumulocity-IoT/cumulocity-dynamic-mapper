@@ -225,6 +225,7 @@ export const SCHEMA_PAYLOAD = {
 }
 
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
+export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";

@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.extern.slf4j.Slf4j;
+import mqttagent.callback.GenericCallback.SubstituteValue.TYPE;
 import mqttagent.callback.handler.SysHandler;
 import mqttagent.core.C8yAgent;
 import mqttagent.model.API;
@@ -50,6 +51,37 @@ import mqttagent.service.MQTTClient;
 @Slf4j
 @Service
 public class GenericCallback implements MqttCallback {
+
+    static class SubstituteValue {
+        static enum TYPE  {
+            NUMBER,
+            TEXTUAL
+        }
+        public String value;
+        public TYPE type;
+        public SubstituteValue(String value, TYPE type) {
+            this.type = type;
+            this.value = value;
+        }
+        public Object typedValue() {
+            if (type.equals(TYPE.TEXTUAL)) {
+                return value;
+            } else {
+                //check if int
+                try{
+                    return Integer.parseInt(value );
+                } catch(NumberFormatException e1){
+                    //not int
+                    try{
+                        Float.parseFloat(value);
+                    }catch(NumberFormatException e2){
+                        return null;
+                    }
+                }
+            }
+            return null;
+        }
+    }
 
     private static final String TIME = "time";
 
@@ -187,7 +219,7 @@ public class GenericCallback implements MqttCallback {
             }
 
             var payloadTarget = new JSONObject(mapping.target);
-            Map<String, ArrayList<String>> postProcessingCache = new HashMap<String, ArrayList<String>>();
+            Map<String, ArrayList<SubstituteValue>> postProcessingCache = new HashMap<String, ArrayList<SubstituteValue>>();
             boolean substitutionTimeExists = false;
             for (MappingSubstitution sub : mapping.substitutions) {
                 JsonNode extractedSourceContent = null;
@@ -217,23 +249,30 @@ public class GenericCallback implements MqttCallback {
                             payloadMessage);
                 } else {
                     var key = (sub.pathTarget.equals(TOKEN_DEVICE_TOPIC) ? SOURCE_ID : sub.pathTarget);
-                    ArrayList<String> pl = postProcessingCache.getOrDefault(key,
-                            new ArrayList<String>());
+                    ArrayList<SubstituteValue> pl = postProcessingCache.getOrDefault(key,
+                            new ArrayList<SubstituteValue>());
                     if (extractedSourceContent.isArray()) {
                         // extracted result from sourcPayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
                         for (JsonNode jn : extractedSourceContent) {
-                            if (jn.isTextual()) {
-                                pl.add(jn.textValue());
+                            if (jn.isTextual()){
+                                pl.add(new SubstituteValue(jn.textValue(), TYPE.TEXTUAL));
+                            } else if (jn.isNumber()){
+                                pl.add(new SubstituteValue(jn.numberValue().toString(), TYPE.NUMBER));
                             } else {
-                                log.warn("Since result is not textual it is ignored: {}, {}, {}, {}", jn.asText());
+                                log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}", jn.asText());
                             }
                         }
                         postProcessingCache.put(key, pl);
                     } else if (extractedSourceContent.isTextual()) {
                         // extracted result from sourcPayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
-                        pl.add(extractedSourceContent.textValue());
+                        pl.add(new SubstituteValue(extractedSourceContent.textValue(), TYPE.TEXTUAL));
+                        postProcessingCache.put(key, pl);
+                    } else if (extractedSourceContent.isNumber()) {
+                        // extracted result from sourcPayload is an array, so we potentially have to
+                        // iterate over the result, e.g. creating multiple devices
+                        pl.add(new SubstituteValue(extractedSourceContent.numberValue().toString(), TYPE.NUMBER));
                         postProcessingCache.put(key, pl);
                     } else {
                         log.warn("Ignoring this substitution, sone no objects are allowed for: {}, {}, {}, {}",
@@ -245,29 +284,30 @@ public class GenericCallback implements MqttCallback {
                 }
 
                 if (sub.pathTarget.equals(TIME)) {
-                    ArrayList<String> pl = postProcessingCache.getOrDefault(TIME,
-                            new ArrayList<String>());
-                    pl.add(new DateTime().toString());
-                    postProcessingCache.put(TIME, pl);
+                    substitutionTimeExists = true;
                 }
             }
 
+            // no substitution fot the time property exists, then use the system time
             if (!substitutionTimeExists) {
-                substitutionTimeExists = true;
+                ArrayList<SubstituteValue> pl = postProcessingCache.getOrDefault(TIME,
+                        new ArrayList<SubstituteValue>());
+                pl.add(new SubstituteValue(new DateTime().toString(), TYPE.TEXTUAL));
+                postProcessingCache.put(TIME, pl);
             }
 
-            ArrayList<String> listIdentifier = postProcessingCache.get(SOURCE_ID);
+            ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
             Set<String> pathTargets = postProcessingCache.keySet();
             if (listIdentifier == null) {
                 throw new RuntimeException("Identified mapping has no substitution for source.id defined!");
             }
             int i = 0;
-            for (String device : listIdentifier) {
+            for (SubstituteValue device : listIdentifier) {
                 /*
                  * step 3 replace target with extract content from incoming payload
                  */
                 for (String pathTarget : pathTargets) {
-                    String substitute = "NOT_DEFINED";
+                    SubstituteValue substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL);
                     if (i < postProcessingCache.get(pathTarget).size()) {
                         substitute = postProcessingCache.get(pathTarget).get(i);
                     } else if (postProcessingCache.get(pathTarget).size() == 1) {
@@ -281,18 +321,17 @@ public class GenericCallback implements MqttCallback {
                     }
                     if (!mapping.targetAPI.equals(API.INVENTORY)) {
                         if (pathTarget.equals(SOURCE_ID)) {
-                            var sourceId = resolveExternalId(substitute, mapping.externalIdType);
+                            var sourceId = resolveExternalId(substitute.value, mapping.externalIdType);
                             if (sourceId == null && mapping.createNonExistingDevice) {
-                                
-                                var d = c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + sourceId,
-                                        "c8y_MQTTMapping_generated_type", sourceId, mapping.externalIdType);
-                                sourceId = d.getId().getValue();
 
+                                var d = c8yAgent.upsertDevice("device_" + mapping.externalIdType + "_" + substitute.value,
+                                        "c8y_MQTTMapping_generated_type", substitute.value, mapping.externalIdType);
+                                substitute.value = d.getId().getValue();
                             } else if (sourceId == null) {
                                 throw new RuntimeException("External id " + substitute + " for type "
                                         + mapping.externalIdType + " not found!");
                             } else {
-                                substitute = sourceId;
+                                substitute.value = sourceId;
                             }
                         }
                         substituteValue(substitute, payloadTarget, pt);
@@ -306,7 +345,7 @@ public class GenericCallback implements MqttCallback {
                 if (mapping.targetAPI.equals(API.INVENTORY)) {
                     String[] errors = { "" };
                     try {
-                        c8yAgent.upsertDevice(payloadTarget.toString(), device, mapping.externalIdType);
+                        c8yAgent.upsertDevice(payloadTarget.toString(), device.value, mapping.externalIdType);
                     } catch (ProcessingException e) {
                         errors[0] = e.getMessage();
                     }
@@ -338,18 +377,18 @@ public class GenericCallback implements MqttCallback {
         return id;
     }
 
-    public JSONObject substituteValue(String value, JSONObject jsonObject, String[] keys) throws JSONException {
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
         String currentKey = keys[0];
 
         if (keys.length == 1) {
-            return jsonObject.put(currentKey, value);
+            return jsonObject.put(currentKey, sub.typedValue());
         } else if (!jsonObject.has(currentKey)) {
             throw new JSONException(currentKey + "is not a valid key.");
         }
 
         JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
         String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JSONObject updatedNestedValue = substituteValue(value, nestedJsonObjectVal, remainingKeys);
+        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
         return jsonObject.put(currentKey, updatedNestedValue);
     }
 

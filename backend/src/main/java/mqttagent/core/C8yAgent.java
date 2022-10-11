@@ -13,6 +13,7 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.svenson.JSONParser;
 
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -34,6 +35,7 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cumulocity.model.JSONBase;
 
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +76,8 @@ public class C8yAgent {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    private JSONParser jsonParser = JSONBase.getJSONParser();
 
     @Autowired
     private ConfigurationService configurationService;
@@ -157,6 +161,7 @@ public class C8yAgent {
 
     public ExternalIDRepresentation createExternalID(ManagedObjectRepresentation mor, String externalId,
             String externalIdType) {
+        /* Connecting to Cumulocity */
         ExternalIDRepresentation externalID = new ExternalIDRepresentation();
         externalID.setType(externalIdType);
         externalID.setExternalId(externalId);
@@ -166,20 +171,26 @@ public class C8yAgent {
         } catch (SDKException e) {
             log.error(e.getMessage());
         }
+
         return externalID;
+
     }
 
     public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
             String externalIdType) {
-        ManagedObjectRepresentation device = new ManagedObjectRepresentation();
-        device.setName(name);
-        device.setType(type);
-        device.set(new IsDevice());
-        ManagedObjectRepresentation deviceMOR = inventoryApi.create(device);
-        log.info("New device created with ID {}", deviceMOR.getId());
-        ExternalIDRepresentation externalAgentId = createExternalID(deviceMOR, externalId, externalIdType);
-        log.info("ExternalId created: {}", externalAgentId.getExternalId());
-        return deviceMOR;
+        ManagedObjectRepresentation[] devices = {new ManagedObjectRepresentation()};
+        subscriptionsService.runForTenant(tenant, () -> {
+            devices[0].setName(name);
+            devices[0].setType(type);
+            devices[0].set(new IsDevice());
+            devices[0] = inventoryApi.create(devices[0]);
+            log.info("New device created with ID {}", devices[0].getId());
+            ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
+            log.info("ExternalId created: {}", externalIdRep.getExternalId());
+        });
+
+        log.info("New device {} created with ID {}", devices[0], devices[0].getId());
+        return devices[0];
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
@@ -200,7 +211,6 @@ public class C8yAgent {
 
         }
         measure = measurementApi.create(measure);
-        log.info("Created " + eventType + " Measurement: " + measure.getSelf() + " for device: " + mor.getSelf());
         return measure;
     }
 
@@ -338,7 +348,7 @@ public class C8yAgent {
     }
 
     public void createMEA(API targetAPI, String payload) throws ProcessingException {
-        String[] errors = {""};
+        String[] errors = { "" };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 if (targetAPI.equals(API.EVENT)) {
@@ -350,7 +360,8 @@ public class C8yAgent {
                     ar = alarmApi.create(ar);
                     log.info("New alarm posted: {}", ar);
                 } else if (targetAPI.equals(API.MEASUREMENT)) {
-                    MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
+                    //MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
+                    MeasurementRepresentation mr = jsonParser.parse(MeasurementRepresentation.class, payload);
                     mr = measurementApi.create(mr);
                     log.info("New measurement posted: {}", mr);
                 } else {
@@ -358,10 +369,10 @@ public class C8yAgent {
                 }
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {} {}", targetAPI, payload);
-                errors[0] ="Could not map payload: " + targetAPI + "/" + payload;
+                errors[0] = "Could not map payload: " + targetAPI + "/" + payload;
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);
-                errors[0] ="Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s;
+                errors[0] = "Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s;
             }
         });
         if (!errors[0].equals("")) {
@@ -369,8 +380,8 @@ public class C8yAgent {
         }
     }
 
-    public void upsertDevice(String payload, String externalId, String externalIdType) throws ProcessingException{
-        String[] errors = {""};
+    public void upsertDevice(String payload, String externalId, String externalIdType) throws ProcessingException {
+        String[] errors = { "" };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 ExternalIDRepresentation extId = getExternalId(externalId, externalIdType);
@@ -396,10 +407,10 @@ public class C8yAgent {
 
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {}", payload);
-                errors[0] ="Could not map payload: " + payload;
+                errors[0] = "Could not map payload: " + payload;
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {}", payload, s);
-                errors[0] ="Could not sent payload to c8y: " + payload + " " + s;
+                errors[0] = "Could not sent payload to c8y: " + payload + " " + s;
             }
         });
         if (!errors[0].equals("")) {
@@ -453,8 +464,8 @@ public class C8yAgent {
         return mr[0];
     }
 
-    public void sendStatusMonitoring(String type, Map<Long,MappingStatus> status) {
-        
+    public void sendStatusMonitoring(String type, Map<Long, MappingStatus> status) {
+
         // avoid sending empty monitoring events
         if (status.values().size() > 0) {
             log.debug("Sending monitoring: {}", status.values().size());
@@ -464,7 +475,8 @@ public class C8yAgent {
                 ers[0].setText("New status monitoring:" + System.currentTimeMillis());
                 ers[0].setDateTime(DateTime.now());
                 ers[0].setType(type);
-                ArrayList<MappingStatus> result = new ArrayList<>(status.values());;
+                ArrayList<MappingStatus> result = new ArrayList<>(status.values());
+                ;
                 ers[0].setProperty("status", result);
                 this.eventApi.createAsync(ers[0]);
             });
@@ -474,15 +486,15 @@ public class C8yAgent {
     }
 
     public void sendStatusConfiguration(String type, ServiceStatus serviceStatus) {
-            log.debug("Sending status configuration: {}", serviceStatus);
-            EventRepresentation[] ers = { new EventRepresentation() };
-            subscriptionsService.runForTenant(tenant, () -> {
-                ers[0].setSource(agentMOR);
-                ers[0].setText("New status configuration:" + System.currentTimeMillis());
-                ers[0].setDateTime(DateTime.now());
-                ers[0].setType(type);
-                ers[0].setProperty("status", serviceStatus);
-                this.eventApi.createAsync(ers[0]);
-            });
+        log.debug("Sending status configuration: {}", serviceStatus);
+        EventRepresentation[] ers = { new EventRepresentation() };
+        subscriptionsService.runForTenant(tenant, () -> {
+            ers[0].setSource(agentMOR);
+            ers[0].setText("New status configuration:" + System.currentTimeMillis());
+            ers[0].setDateTime(DateTime.now());
+            ers[0].setType(type);
+            ers[0].setProperty("status", serviceStatus);
+            this.eventApi.createAsync(ers[0]);
+        });
     }
 }
