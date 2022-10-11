@@ -152,7 +152,11 @@ export class MappingService {
     } else {
       let p: IManagedObject = test_payload as IManagedObject;
       if (p != null) {
-        result = this.inventory.create(p);
+        if (mapping.updateExistingDevice) {
+          result = this.inventory.update(p);
+        } else {
+          result = this.inventory.create(p);
+        }
       } else {
         error = "Payload is not a valid:" + mapping.targetAPI;
       }

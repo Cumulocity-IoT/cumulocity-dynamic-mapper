@@ -301,9 +301,9 @@ export function isSubscriptionTopicUnique(mapping: Mapping, mappings: Mapping[])
 
 export function isTemplateTopicUnique(mapping: Mapping, mappings: Mapping[]): boolean {
   let result = true;
-  result = mappings.every(m => {
-    return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
-  })
+  // result = mappings.every(m => {
+  //   return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
+  // })
   return result;
 }
 
@@ -406,21 +406,21 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
             defined = true
           } */
 
-    error = !mappings.every(m => {
-      return (templateTopic != m.templateTopic || id == m.id)
-    })
-    if (error) {
-      errors[ValidationError.TemplateTopic_Not_Unique] = true
-      defined = true
-    }
+    // error = !mappings.every(m => {
+    //   return (templateTopic != m.templateTopic || id == m.id)
+    // })
+    // if (error) {
+    //   errors[ValidationError.TemplateTopic_Not_Unique] = true
+    //   defined = true
+    // }
 
-    error = !mappings.every(m => {
-      return ((!templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(templateTopic) || id == m.id))
-    })
-    if (error && templateTopic != '') {
-      errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
-      defined = true
-    }
+    // error = !mappings.every(m => {
+    //   return ((!templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(templateTopic) || id == m.id))
+    // })
+    // if (error && templateTopic != '') {
+    //   errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
+    //   defined = true
+    // }
 
     // if the template topic contains a wildcard a device identifier must be selected 
     let mdi = control.get('markedDeviceIdentifier').value;

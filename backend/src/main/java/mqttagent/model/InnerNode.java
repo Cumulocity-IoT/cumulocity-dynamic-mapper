@@ -12,12 +12,12 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString(exclude = {""})
+@ToString(exclude = { "" })
 public class InnerNode extends TreeNode {
-    
+
     @Setter
     @Getter
-    private Map <String,TreeNode> childNodes;
+    private Map<String, ArrayList<TreeNode>> childNodes;
 
     static public InnerNode initTree() {
         InnerNode in = new InnerNode();
@@ -27,84 +27,112 @@ public class InnerNode extends TreeNode {
         in.setAbsolutePath("");
         return in;
     }
-    
+
     public InnerNode() {
-        this.childNodes = new HashMap<String,TreeNode>();
+        this.childNodes = new HashMap<String, ArrayList<TreeNode>>();
     }
 
     public boolean isMappingNode() {
         return false;
     }
 
-    public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException {
+    public ArrayList<TreeNode> resolveTopicPath(ArrayList<String> levels) throws ResolveException {
         Set<String> set = childNodes.keySet();
-        String joinedSet = String.join("", set);
-        String joinedPath = String.join("", tp);
-        log.info("Trying to resolve: '{}'' in [{}]", joinedPath, joinedSet);
-        if (tp.size() >= 1 ) {
-            if ( childNodes.containsKey(tp.get(0))){
-                TreeNode tn = childNodes.get(tp.get(0));
+        String joinedSet = String.join(",", set);
+        String joinedPath = String.join("", levels);
+        log.info("Trying to resolve: '{}' in [{}]", joinedPath, joinedSet);
+        ArrayList<TreeNode> tn = new ArrayList<TreeNode>();
+        ArrayList<TreeNode> results = new ArrayList<TreeNode>();
+        if (levels.size() >= 1) {
+            if (childNodes.containsKey(levels.get(0))) {
+                tn = childNodes.get(levels.get(0));
                 // test if exact match exists for this level
-                tp.remove(0);
-                return tn.resolveTopicPath(tp);
             } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_MULTI)) {
-                TreeNode tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_MULTI);
+                tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_MULTI);
                 // test if multi level wildcard "#" match exists for this level
-                tp.remove(0);
-                return tn.resolveTopicPath(tp);
             } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_SINGLE)) {
-                TreeNode tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
+                tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
                 // test if single level wildcard "+" match exists for this level
-                tp.remove(0);
-                return tn.resolveTopicPath(tp);
-            }else {
-                throw new ResolveException("Path: " + tp.get(0).toString() + " could not be resolved further!");
+            } else {
+                throw new ResolveException("Path: " + levels.get(0).toString() + " could not be resolved further!");
             }
+            if (levels.size() > 1) {
+                if (tn.size() > 1) {
+                    throw new ResolveException("Path: " + levels.get(0).toString()
+                    + " could not be resolved uniquely, since too many innerNodes exist: " + tn.size() + "!");
+                }
+                levels.remove(0);
+                return tn.get(0).resolveTopicPath(levels);
+            } else if (levels.size() == 1) {
+                levels.remove(0);
+                for (TreeNode node : tn) {
+                    results.addAll(node.resolveTopicPath(levels));
+                }
+            }  
         } else {
             throw new ResolveException("Unknown Resolution Error!");
         }
+        return results;
     }
 
-    public void insertMapping( InnerNode currentNode, Mapping mapping, ArrayList<String> levels) throws ResolveException{
+    public void insertMapping(InnerNode currentNode, Mapping mapping, ArrayList<String> levels)
+            throws ResolveException {
         var currentLevel = levels.get(0);
         log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, currentNode, levels);
-        if (levels.size() == 1){
+        if (levels.size() == 1) {
             MappingNode child = new MappingNode();
             child.setPreTreeNode(currentNode);
             child.setMapping(mapping);
             child.setLevel(currentLevel);
             child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel);
             child.setDeviceIdentifierIndex(mapping.indexDeviceIdentifierInTemplateTopic);
-            child.setDepthIndex(currentNode.getDepthIndex()+1);
+            child.setDepthIndex(currentNode.getDepthIndex() + 1);
             log.debug("Adding mapNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
-            currentNode.getChildNodes().put(currentLevel,child);
-        } else if (levels.size() > 1){
+            ArrayList<TreeNode> cn = currentNode.getChildNodes().getOrDefault(currentLevel, new ArrayList<TreeNode>());
+            cn.add(child);
+            currentNode.getChildNodes().put(currentLevel, cn);
+            // currentNode.getChildNodes().put(currentLevel,child);
+        } else if (levels.size() > 1) {
             levels.remove(0);
             InnerNode child;
-            if (currentNode.getChildNodes().containsKey(currentLevel)){
-                if ( currentNode.getChildNodes().get(currentLevel) instanceof InnerNode) {
-                    child = (InnerNode) currentNode.getChildNodes().get(currentLevel);
+            if (currentNode.getChildNodes().containsKey(currentLevel)) {
+                ArrayList<TreeNode> cn = currentNode.getChildNodes().get(currentLevel);
+                if (cn.size() == 1) {
+                    if (cn.get(0) instanceof InnerNode) {
+                        child = (InnerNode) cn.get(0);
+                    } else {
+                        throw new ResolveException(
+                                "Could not add mapping to tree, since at this node is already blocked by mapping: "
+                                        + cn.get(0).toString());
+                    }
                 } else {
-                    throw new ResolveException("Could not add mapping to tree, since at this node at the parent node a mapping is already defined, {} " + mapping.toString());
+                    throw new ResolveException(
+                            "Could not add mapping to tree, multiple mappings are only allowed at the end of the tree. This node already contains: "
+                                    + cn.size() + " nodes");
                 }
             } else {
                 child = new InnerNode();
                 child.setPreTreeNode(currentNode);
                 child.setLevel(currentLevel);
                 child.setAbsolutePath(currentNode.getAbsolutePath() + currentLevel);
-                child.setDepthIndex(currentNode.getDepthIndex()+1);
+                child.setDepthIndex(currentNode.getDepthIndex() + 1);
                 log.debug("Adding innerNode: {}, {}, {}", currentNode.getLevel(), currentLevel, child.toString());
-                currentNode.getChildNodes().put(currentLevel,child);
+                ArrayList<TreeNode> cn = currentNode.getChildNodes().getOrDefault(currentLevel,
+                        new ArrayList<TreeNode>());
+                cn.add(child);
+                currentNode.getChildNodes().put(currentLevel, cn);
+                // currentNode.getChildNodes().put(currentLevel,child);
             }
             child.insertMapping(child, mapping, levels);
         } else {
             throw new ResolveException("Could not add mapping to tree: " + mapping.toString());
         }
     }
-    public void insertMapping(Mapping mapping) throws ResolveException{
+
+    public void insertMapping(Mapping mapping) throws ResolveException {
         var path = mapping.templateTopic;
         // if templateTopic is not set use topic instead
-        if (path == null || path.equals("")){
+        if (path == null || path.equals("")) {
             path = mapping.subscriptionTopic;
         }
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));

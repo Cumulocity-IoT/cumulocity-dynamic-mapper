@@ -30,6 +30,6 @@ public abstract class TreeNode implements Serializable {
 
     abstract public boolean isMappingNode();
 
-    abstract public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException;
+    abstract public ArrayList<TreeNode> resolveTopicPath(ArrayList<String> tp) throws ResolveException;
 
 }

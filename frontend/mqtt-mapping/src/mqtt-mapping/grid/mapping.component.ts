@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { API, Mapping, SnoopStatus } from '../../shared/configuration.model';
+import { API, Mapping, QOS, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -146,10 +146,11 @@ export class MappingComponent implements OnInit {
       target: SAMPLE_TEMPLATES[API.MEASUREMENT],
       active: false,
       tested: false,
-      qos: 1,
+      qos: QOS.AT_LEAST_ONCE,
       substitutions: [],
       mapDeviceIdentifier: false,
       createNonExistingDevice: false,
+      updateExistingDevice: false,
       externalIdType: 'c8y_Serial',
       snoopTemplates: SnoopStatus.NONE,
       snoopedTemplates: [],

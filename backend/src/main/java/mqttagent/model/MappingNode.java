@@ -1,6 +1,7 @@
 package mqttagent.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -22,10 +23,10 @@ public class MappingNode extends TreeNode{
         return true;
     }  
 
-    public TreeNode resolveTopicPath(ArrayList<String> tp) throws ResolveException {
+    public ArrayList<TreeNode> resolveTopicPath(ArrayList<String> tp) throws ResolveException {
         log.info("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
          if (tp.size() == 0){
-            return this;
+            return new ArrayList<TreeNode> (Arrays.asList(this));
         } else {
             throw new ResolveException("Unknown Resolution Error!");
         }
