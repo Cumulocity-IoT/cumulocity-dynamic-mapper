@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
 import { API, Mapping } from '../../shared/configuration.model';
 import * as _ from 'lodash';
-import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
+import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { AlertService } from '@c8y/ngx-components';
 
@@ -80,6 +80,7 @@ export class MappingService {
 
   async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
     let result = JSON.parse(mapping.target);
+    let substitutionTimeExists = false;
     if (!this.agentId) {
       console.error("Need to intialize MQTTAgent:", this.agentId);
       result = mapping.target;
@@ -99,11 +100,21 @@ export class MappingService {
           }
           _.set(result, sub.pathTarget, s)
         }
+
+        if (sub.pathTarget == TIME) {
+          substitutionTimeExists = true;
+      }
+
       })
 
       // for simulation replace source id with agentId
       if (simulation && mapping.targetAPI != API.INVENTORY) {
         result.source.id = this.agentId;
+        result.time = new Date().toISOString();
+      }
+
+      // no substitution fot the time property exists, then use the system time
+      if (!substitutionTimeExists){
         result.time = new Date().toISOString();
       }
     }
