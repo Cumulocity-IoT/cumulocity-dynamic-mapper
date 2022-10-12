@@ -370,7 +370,14 @@
                           <span class="hidden-xs hidden-sm p-l-4">
                             <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
                               in your
-                              expressions, e.g. to convert a UNIX timestamp to ISO date format use: <code>$fromMillis($number(deviceTimestamp))</code></ng-template>
+                              expressions:
+                              <ol>
+                                <li>to convert a UNIX timestamp to ISO date format use : <code>$fromMillis($number(deviceTimestamp))</code></li>
+                                <li>to join first 5 char. of proerty tx with device identifier use: <code>$join([$substring(tx,5), "-", _DEVICE_IDENT_])</code></li>
+                                <li>escape properties with special characters with <code>`</code>. The property <code>customer-1</code> becomes <code>`customer-1`</code></li>
+                                <li>function chaining using <code>~></code> is not supported, instead use function notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code> becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+                              </ol> 
+                              </ng-template>
                             <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
                               popoverTitle="JSONata" placement="right" type="button">
                               <i c8yIcon="question-circle-o"></i>
