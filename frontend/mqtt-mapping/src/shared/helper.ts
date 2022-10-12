@@ -228,6 +228,7 @@ export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttTest';
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
@@ -237,6 +238,7 @@ export const PATH_STATUS_ENDPOINT = 'status';
 export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 export const BASE_URL = 'service/generic-mqtt-agent';
 export const AGENT_ID = 'MQTT_AGENT';
+export const MQTT_TEST_DEVICE_ID = 'MQTT_TEST_DEVICE';
 
 export function getSchema(targetAPI: string): any {
   if (targetAPI == API.ALARM) {

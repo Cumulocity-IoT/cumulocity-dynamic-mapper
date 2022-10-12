@@ -19,8 +19,16 @@ export class MappingService {
     private alert: AlertService) { }
 
   private agentId: string;
+  private testDeviceId: string;
   private mappingId: string;
   private JSONATA = require("jsonata");
+
+
+  async loadTestDevice(): Promise<void> {
+    if (!this.testDeviceId) {
+      this.testDeviceId = await this.configurationService.initializeTestDevice();
+    }
+  }
 
   async loadMappings(): Promise<Mapping[]> {
     if (!this.agentId) {
@@ -81,11 +89,11 @@ export class MappingService {
   async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
     let result = JSON.parse(mapping.target);
     let substitutionTimeExists = false;
-    if (!this.agentId) {
-      console.error("Need to intialize MQTTAgent:", this.agentId);
+    if (!this.testDeviceId) {
+      console.error("Need to intialize MQTT test device:", this.testDeviceId);
       result = mapping.target;
     } else {
-      console.log("MQTTAgent is already initialized:", this.agentId);
+      console.log("MQTT test device is already initialized:", this.testDeviceId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
         if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
@@ -95,7 +103,7 @@ export class MappingService {
               console.error("No substitution for:", sub.pathSource, s, mapping.source);
               throw Error("Error: substitution not found:" + sub.pathSource);
             } else {
-              s = this.agentId;
+              s = this.testDeviceId;
             }
           }
           _.set(result, sub.pathTarget, s)
@@ -103,18 +111,18 @@ export class MappingService {
 
         if (sub.pathTarget == TIME) {
           substitutionTimeExists = true;
-      }
+        }
 
       })
 
       // for simulation replace source id with agentId
       if (simulation && mapping.targetAPI != API.INVENTORY) {
-        result.source.id = this.agentId;
+        result.source.id = this.testDeviceId;
         result.time = new Date().toISOString();
       }
 
       // no substitution fot the time property exists, then use the system time
-      if (!substitutionTimeExists){
+      if (!substitutionTimeExists) {
         result.time = new Date().toISOString();
       }
     }
@@ -127,7 +135,7 @@ export class MappingService {
     let result: Promise<IResult<any>>;
     let test_payload = await this.testResult(mapping, true);
     let error: string = '';
-    
+
     if (mapping.targetAPI == API.EVENT) {
       let p: IEvent = test_payload as IEvent;
       if (p != null) {
@@ -174,7 +182,7 @@ export class MappingService {
         return '';
       }
     } catch (error) {
-      let {data, res} = await error;
+      let { data, res } = await error;
       this.alert.danger("Failed to tested mapping: " + data.message);
       return '';
     }
@@ -182,13 +190,13 @@ export class MappingService {
   }
 
   public evaluateExpression(json: JSON, path: string, flat: boolean): string {
-    let result : any = '';
+    let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path)
       result = expression.evaluate(json) as JSON
       if (flat) {
-        if(Array.isArray(result)){
-          result = result [0];
+        if (Array.isArray(result)) {
+          result = result[0];
         }
       } else {
         result = JSON.stringify(result, null, 4);
