@@ -181,11 +181,10 @@ export class MappingComponent implements OnInit {
     this.activateMappings();
   }
 
-  /*   async loadMappings(): Promise<void> {
-  } */
 
   async loadMappings(): Promise<void> {
     this.mappings = await this.mappingService.loadMappings();
+    await this.mappingService.loadTestDevice();
   }
 
   async onCommit(mapping: Mapping) {
