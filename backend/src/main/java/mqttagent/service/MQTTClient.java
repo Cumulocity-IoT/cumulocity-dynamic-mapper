@@ -35,9 +35,12 @@ import mqttagent.model.InnerNode;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingsRepresentation;
+import mqttagent.model.QOS;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
 import mqttagent.model.ValidationError;
+
+import org.apache.commons.lang3.tuple.MutablePair;
 
 @Slf4j
 @Configuration
@@ -64,7 +67,7 @@ public class MQTTClient {
     private Future initTask;
 
     private boolean initilized = false;
-    private Set<String> activeSubscriptionsSet = new HashSet<String>();
+    private Set<String> activeSubscriptionsLog = new HashSet<String>();
 
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
@@ -227,67 +230,67 @@ public class MQTTClient {
     }
 
     public void reloadMappings() {
-        List<Mapping> mappings = c8yAgent.getMappings();
-        Set<String> updatedSubscriptionsSet = new HashSet<String>();
-        Map<String, Mapping> updatedSubscriptionsMap = new HashMap<String, Mapping>();
-        Set<Long> existingMaps = new HashSet<Long>(monitoring.keySet());
-        //log.info("Key set existingMaps before: {}", existingMaps.toString());
-        mappings.forEach(m -> {
+        List<Mapping> updatedMaps = c8yAgent.getMappings();
+        Map<String, MutablePair<Integer, QOS>> updatedSubscriptionsLog = new HashMap<String, MutablePair<Integer, QOS>>();
+        Set<Long> acticeMaps = new HashSet<Long>(monitoring.keySet());
+
+        // add existing subscriptionTopics to updatedSubscriptionLog, to verify if they are still needed
+        activeSubscriptionsLog.forEach((topic) -> {
+            MutablePair<Integer, QOS> p = updatedSubscriptionsLog.getOrDefault(topic, new MutablePair<Integer, QOS>(0, QOS.AT_LEAST_ONCE));
+            updatedSubscriptionsLog.put(topic, p);
+        });
+        updatedMaps.forEach(m -> {
             if (m.active) {
-                updatedSubscriptionsSet.add(m.subscriptionTopic);
-                updatedSubscriptionsMap.put(m.subscriptionTopic, m);
+                // if multiple subscriptions for a topic exist the qos is det by the first mapping (this can result in conflicts)
+                MutablePair<Integer, QOS> p = updatedSubscriptionsLog.getOrDefault(m.subscriptionTopic, new MutablePair<Integer, QOS>(0, m.qos));
+                p.left++;
+                updatedSubscriptionsLog.put(m.subscriptionTopic, p);
             }
             if (!monitoring.containsKey(m.id)) {
                 log.info("Adding: {}", m.id);
                 monitoring.put(m.id, new MappingStatus(m.id, m.subscriptionTopic, 0, 0, m.snoopedTemplates.size(), 0));
             }
-            //log.info("Processing addition for topic: {}, monitoringExists {}", m.topic, monitoring.containsKey(m.id));
-            existingMaps.remove(m.id);
+            acticeMaps.remove(m.id);
         });
 
-        //log.info("Key set existingMaps after: {}, {}", monitoring.keySet().toString(), monitoring.size());
 
         // always keep monitoring entry for monitoring that can't be related to any mapping and so they are unspecified 
         if (!monitoring.containsKey(KEY_MONITORING_UNSPECIFIED)) {
             log.info("Adding: {}", KEY_MONITORING_UNSPECIFIED);
             monitoring.put(KEY_MONITORING_UNSPECIFIED, new MappingStatus(KEY_MONITORING_UNSPECIFIED, "#", 0, 0, 0, 0));
         }
-        existingMaps.remove(KEY_MONITORING_UNSPECIFIED);
+        acticeMaps.remove(KEY_MONITORING_UNSPECIFIED);
         // remove monitorings for deleted maps
-        existingMaps.forEach(id -> {
+        acticeMaps.forEach(id -> {
             log.info("Removing monitoring not used: {}", id);
             monitoring.remove(id);
         });
 
         // unsubscribe not used topics
-        activeSubscriptionsSet.forEach((topic) -> {
-            log.info("Processing unsubscribe for topic: {}", topic);
+        updatedSubscriptionsLog.forEach((topic, entry) -> {
+            log.info("Processing unsubscribe for topic: {}, count: {}", topic, entry.left);
             // topic was deleted -> unsubscribe
-            if (!updatedSubscriptionsSet.contains(topic)) {
+            if (entry.left == 0) {
                 try {
                     log.debug("Unsubscribe from topic: {} ...", topic);
                     unsubscribe(topic);
+                    activeSubscriptionsLog.remove(topic);
                 } catch (MqttException e) {
                     log.error("Could not unsubscribe topic: {}", topic);
                 }
-            }
-        });
-
-        // subscribe to new topics
-        updatedSubscriptionsSet.forEach((topic) -> {
-            log.info("Processing subscribe for topic: {}", topic);
-            // topic was deleted -> unsubscribe
-            if (!activeSubscriptionsSet.contains(topic)) {
+            } else if (!activeSubscriptionsLog.contains(topic)) {
+                // subscription topic is new, we need to subscribe to it
                 try {
                     log.debug("Subscribing to topic: {} ...", topic);
-                    subscribe(topic, (int) updatedSubscriptionsMap.get(topic).qos.ordinal());
+                    subscribe(topic, (int) entry.right.ordinal());
+                    activeSubscriptionsLog.add(topic);
                 } catch (MqttException | IllegalArgumentException e) {
                     log.error("Could not subscribe topic: {}", topic);
                 }
             }
         });
         // update mappings tree
-        mappingTree = rebuildMappingTree(mappings);
+        mappingTree = rebuildMappingTree(updatedMaps);
     }
 
     private TreeNode rebuildMappingTree(List<Mapping> mappings) {
