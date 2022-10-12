@@ -24,7 +24,6 @@ import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
-import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -372,12 +371,10 @@ public class GenericCallback implements MqttCallback {
     private String resolveExternalId(String externalId, String externalIdType) {
         ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
         String id = null;
-        GId gid = null;
         if (extId != null) {
-            gid = extId.getManagedObject().getId();
-            id = gid.getValue();
+            id = extId.getManagedObject().getId().getValue();
         }
-        log.info("Found id {} for external id: {}, {},  {}", id, gid, externalId);
+        log.info("Found id {} for external id: {}, {}", id, externalId);
         return id;
     }
 
