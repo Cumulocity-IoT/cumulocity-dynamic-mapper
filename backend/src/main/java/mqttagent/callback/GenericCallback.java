@@ -145,7 +145,7 @@ public class GenericCallback implements MqttCallback {
                             String deviceIdentifier = topicLevels
                                     .get((int) (ctx.getMapping().indexDeviceIdentifierInTemplateTopic));
                             log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
-                            ctx.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
+                                    ctx.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
                             ctx.setDeviceIdentifier(deviceIdentifier);
                         }
                         Mapping map = ctx.getMapping();
@@ -290,7 +290,7 @@ public class GenericCallback implements MqttCallback {
                 }
             }
 
-            // no substitution fot the time property exists, then use the system time
+            // no substitution for the time property exists, then use the system time
             if (!substitutionTimeExists) {
                 ArrayList<SubstituteValue> pl = postProcessingCache.getOrDefault(TIME,
                         new ArrayList<SubstituteValue>());
