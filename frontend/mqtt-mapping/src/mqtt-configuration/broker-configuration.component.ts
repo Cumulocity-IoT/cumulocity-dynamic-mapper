@@ -112,9 +112,11 @@ export class BokerConfigurationComponent implements OnInit {
 
   private async connectToMQTTBroker() {
     const response1 = await this.configurationService.connectToMQTTBroker();
-    const response2 = await this.mappingService.activateMappings();
-    console.log("Details connectToMQTTBroker", response1, response2)
-    if (response1.status === 201 && response2.status === 201) {
+    //const response2 = await this.mappingService.activateMappings();
+    //console.log("Details connectToMQTTBroker", response1, response2)
+    console.log("Details connectToMQTTBroker", response1)
+    if (response1.status === 201) {
+    // if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext('Connection successful'));
     } else {
       this.alertservice.danger(gettext('Failed to establish connection'));
