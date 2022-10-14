@@ -4,7 +4,7 @@ import { gettext, NavigatorNode, NavigatorNodeFactory } from '@c8y/ngx-component
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
-  private static readonly APPLICATION_MQTT_GENERIC = 'generic-mqtt-agent';
+  private static readonly APPLICATION_MQTT_GENERIC = 'mqtt-mapping-service';
 
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext('Settings'),
