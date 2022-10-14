@@ -7,6 +7,7 @@ export class MappingTabFactory implements TabFactory {
   constructor(public router: Router) {}
 
   get() {
+    console.log("MappingTabFactory (1.0.19) ",this.router.url, this.router.url.match(/mqtt-mapping/g));
     const tabs: Tab[] = [];
     if (this.router.url.match(/mqtt-mapping/g)) {
       tabs.push({
