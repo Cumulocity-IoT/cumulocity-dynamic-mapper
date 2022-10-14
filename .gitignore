@@ -56,3 +56,6 @@ frontend/mqtt-mapping/src/mqtt-mapping/gc.html
 frontend/mqtt-mapping/src/mqtt-mapping/gc.ts
 frontend/mqtt-mapping/src/mqtt-mapping/data.ts
 resources/script/createSampleMappings_private.sh
+frontend/mqtt-mapping/src/shared/help/help.component.ts
+frontend/mqtt-mapping/src/shared/help/help.component.html
+frontend/mqtt-mapping/src/shared/help/help-mapping.html

@@ -5,16 +5,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +27,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpServerErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqttagent.callback.GenericCallback;
 import mqttagent.configuration.MQTTConfiguration;
@@ -35,12 +40,9 @@ import mqttagent.model.InnerNode;
 import mqttagent.model.Mapping;
 import mqttagent.model.MappingStatus;
 import mqttagent.model.MappingsRepresentation;
-import mqttagent.model.QOS;
 import mqttagent.model.ResolveException;
 import mqttagent.model.TreeNode;
 import mqttagent.model.ValidationError;
-
-import org.apache.commons.lang3.tuple.MutablePair;
 
 @Slf4j
 @Configuration
@@ -61,13 +63,16 @@ public class MQTTClient {
 
     @Autowired
     private GenericCallback genericCallback;
-    private ExecutorService newCachedThreadPool = Executors.newCachedThreadPool();
+    private ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
 
-    private Future reconnectTask;
+    private Future connectTask;
     private Future initTask;
 
+    @Getter
+    @Setter
     private boolean initilized = false;
-    private Set<String> activeSubscriptionsLog = new HashSet<String>();
+    private Set<String> activeSubscriptionTopic = new HashSet<String>();
+    private List<Mapping> activeMapping = new ArrayList<Mapping>();
 
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
@@ -75,7 +80,15 @@ public class MQTTClient {
     @Getter
     private Map<Long, MappingStatus> monitoring = new HashMap<Long, MappingStatus>();
 
-    private void runInit() {
+    public void submitInitialize() {
+        // test if init task is still running, then we don't need to start another task
+        log.info("Called init(): {}", initTask == null ? false : initTask.isDone());
+        if ((initTask != null && initTask.isDone()) || initTask == null) {
+            initTask = cachedThreadPool.submit(() -> initialize());
+        }
+    }
+
+    private void initialize() {
         while (!isInitilized()) {
             log.info("Try to retrieve MQTT connection configuration now ...");
             mqttConfiguration = c8yAgent.loadConfiguration();
@@ -84,86 +97,75 @@ public class MQTTClient {
                 try {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() , new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + "_d",
+                            new MemoryPersistence());
                     setInitilized(true);
-                    log.info("Connecting to MQTT Broker {}", broker);
-                } catch (HttpServerErrorException e) {
-                    log.error("Failed to authenticate to MQTT broker", e);
-
+                    log.info("MQTT client to broker {} is initialized", broker);
                 } catch (MqttException e) {
-                    log.error("Failed to connect to MQTT broker", e);
+                    log.error("Error initializing MQTT client", e);
                 }
             }
 
             try {
-                log.info("Try to retrieve MQTT connection configuration in 30s, active: {}...", mqttConfiguration.active);
+                log.info("Try to retrieve MQTT connection configuration in 30s, active: {}...",
+                        mqttConfiguration.active);
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
-                log.error("Error on reconnect: ", e);
+                log.error("Error initializing MQTT client: ", e);
             }
 
         }
     }
 
-    public void init() {
-        // test if init task is still running, then we don't need to start another task
-        log.info("Called init(): {}", initTask == null ? false : initTask.isDone());
-        if ((initTask != null && initTask.isDone()) || initTask == null) {
-            initTask = newCachedThreadPool.submit(() -> runInit());
+    public void submitConnect() {
+        // test if connect task is still running, then we don't need to start another
+        // task
+        log.info("Called connect(): {}",
+                connectTask == null ? false : connectTask.isDone());
+        if ((connectTask != null && connectTask.isDone()) || connectTask == null) {
+            connectTask = cachedThreadPool.submit(() -> {
+                connect();
+            });
         }
     }
 
-    private void runReconnect() {
-        // subscriptionsService.runForTenant(c8yAgent.tenant, () -> {
-        log.info("Try to reestablish the MQTT connection now I");
+    private void connect() {
+        log.info("Try to establish the MQTT connection now (phase I)");
         disconnect();
         while (!isConnected()) {
-            log.debug("Try to reestablish the MQTT connection now II");
-            init();
+            log.debug("Try to establish the MQTT connection now (phase II)");
+            // submitInitialize();
             try {
-                connect();
-                // Uncomment this if you want to subscribe on start on "#"
-                // subscribe("#", 0);
-                subscribe("$SYS/#", 0);
+                if (isConnectionConfigured() && !isConnected()) {
+                    MqttConnectOptions connOpts = new MqttConnectOptions();
+                    connOpts.setCleanSession(true);
+                    connOpts.setAutomaticReconnect(false);
+                    connOpts.setUserName(mqttConfiguration.getUser());
+                    connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
+                    mqttClient.connect(connOpts);
+                    log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                    c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
+                            STATUS_MQTT_EVENT_TYPE,
+                            DateTime.now(), null);
+                }
             } catch (MqttException e) {
                 log.error("Error on reconnect: ", e);
             }
 
             try {
-                Thread.sleep(10000);
+            Thread.sleep(10000);
             } catch (InterruptedException e) {
-                log.error("Error on reconnect: ", e);
+            log.error("Error on reconnect: ", e);
             }
         }
-        // });
 
-    }
-
-    public void reconnect() {
-        // test if reconnect task is still running, then we don't need to start another
-        // task
-        log.info("Called reconnect(): {}",
-                reconnectTask == null ? false : reconnectTask.isDone());
-        if ((reconnectTask != null && reconnectTask.isDone()) || reconnectTask == null) {
-            reconnectTask = newCachedThreadPool.submit(() -> {
-                runReconnect();
-            });
+        try {
+            subscribe("$SYS/#", 0);
+            reloadMappings();
+        } catch (MqttException e) {
+            log.error("Error on reconnect: ", e);
         }
-    }
 
-    private void connect() throws MqttException {
-        if (isConnectionConfigured() && !isConnected()) {
-            MqttConnectOptions connOpts = new MqttConnectOptions();
-            connOpts.setCleanSession(true);
-            connOpts.setAutomaticReconnect(false);
-            connOpts.setUserName(mqttConfiguration.getUser());
-            connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
-            mqttClient.connect(connOpts);
-            log.info("Successfully connected to Broker {}", mqttClient.getServerURI());
-            c8yAgent.createEvent("Successfully connected to Broker " + mqttClient.getServerURI(),
-                    STATUS_MQTT_EVENT_TYPE,
-                    DateTime.now(), null);
-        }
     }
 
     public boolean isConnected() {
@@ -171,15 +173,15 @@ public class MQTTClient {
     }
 
     public void disconnect() {
-        log.info("Disconnecting from MQTT Broker: {}, {}", (mqttClient == null ? null : mqttClient.getServerURI()),
+        log.info("Disconnecting from MQTT broker: {}, isInitialized: {}", (mqttClient == null ? null : mqttClient.getServerURI()),
                 isInitilized());
         try {
             if (isInitilized() && mqttClient != null && mqttClient.isConnected()) {
-                log.debug("Disconnected from MQTT Broker I: {}", mqttClient.getServerURI());
+                log.debug("Disconnected from MQTT broker I: {}", mqttClient.getServerURI());
                 mqttClient.unsubscribe("#");
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
-                log.debug("Disconnected from MQTT Broker II: {}", mqttClient.getServerURI());
+                log.debug("Disconnected from MQTT broker II: {}", mqttClient.getServerURI());
             }
         } catch (MqttException e) {
             log.error("Error on disconnecting MQTT Client: ", e);
@@ -193,7 +195,7 @@ public class MQTTClient {
 
     public void connectToBroker() {
         mqttConfiguration = c8yAgent.setConfigurationActive(true);
-        reconnect();
+        submitConnect();
     }
 
     public MQTTConfiguration getConnectionDetails() {
@@ -201,12 +203,12 @@ public class MQTTClient {
     }
 
     public void saveConfiguration(final MQTTConfiguration configuration) {
-
         c8yAgent.saveConfiguration(configuration);
+        disconnect();
         // invalidate broker client
         setInitilized(false);
-        reconnect();
-
+        submitInitialize();
+        submitConnect();
     }
 
     public boolean isConnectionConfigured() {
@@ -221,76 +223,62 @@ public class MQTTClient {
         return (mqttConfiguration != null) && mqttConfiguration.active;
     }
 
-    private boolean isInitilized() {
-        return initilized;
-    }
-
-    private void setInitilized(boolean init) {
-        initilized = init;
-    }
-
     public void reloadMappings() {
-        List<Mapping> updatedMaps = c8yAgent.getMappings();
-        Map<String, MutablePair<Integer, QOS>> updatedSubscriptionsLog = new HashMap<String, MutablePair<Integer, QOS>>();
-        Set<Long> acticeMaps = new HashSet<Long>(monitoring.keySet());
-
-        // add existing subscriptionTopics to updatedSubscriptionLog, to verify if they are still needed
-        activeSubscriptionsLog.forEach((topic) -> {
-            MutablePair<Integer, QOS> p = updatedSubscriptionsLog.getOrDefault(topic, new MutablePair<Integer, QOS>(0, QOS.AT_LEAST_ONCE));
-            updatedSubscriptionsLog.put(topic, p);
-        });
-        updatedMaps.forEach(m -> {
-            if (m.active) {
-                // if multiple subscriptions for a topic exist the qos is det by the first mapping (this can result in conflicts)
-                MutablePair<Integer, QOS> p = updatedSubscriptionsLog.getOrDefault(m.subscriptionTopic, new MutablePair<Integer, QOS>(0, m.qos));
-                p.left++;
-                updatedSubscriptionsLog.put(m.subscriptionTopic, p);
-            }
-            if (!monitoring.containsKey(m.id)) {
-                log.info("Adding: {}", m.id);
-                monitoring.put(m.id, new MappingStatus(m.id, m.subscriptionTopic, 0, 0, m.snoopedTemplates.size(), 0));
-            }
-            acticeMaps.remove(m.id);
-        });
-
-
-        // always keep monitoring entry for monitoring that can't be related to any mapping and so they are unspecified 
+        List<Mapping> updatedMapping = c8yAgent.getMappings();
+        Set<Long> updatedMappingSet = updatedMapping.stream().map(m -> m.id).collect(Collectors.toSet());
+        Set<Long> activeMappingSet = activeMapping.stream().map(m -> m.id).collect(Collectors.toSet());
+        Set<String> updatedSubscriptionTopic = c8yAgent.getMappings().stream().map(m -> m.subscriptionTopic)
+                .collect(Collectors.toSet());
+        Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
+                .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+        Set<String> subscribeTopic = updatedSubscriptionTopic.stream()
+                .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+        Set<Long> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
+                .collect(Collectors.toSet());
+        // always keep monitoring entry for monitoring that can't be related to any
+        // mapping and so they are unspecified
         if (!monitoring.containsKey(KEY_MONITORING_UNSPECIFIED)) {
             log.info("Adding: {}", KEY_MONITORING_UNSPECIFIED);
             monitoring.put(KEY_MONITORING_UNSPECIFIED, new MappingStatus(KEY_MONITORING_UNSPECIFIED, "#", 0, 0, 0, 0));
         }
-        acticeMaps.remove(KEY_MONITORING_UNSPECIFIED);
+
         // remove monitorings for deleted maps
-        acticeMaps.forEach(id -> {
+        removedMapping.forEach(id -> {
             log.info("Removing monitoring not used: {}", id);
             monitoring.remove(id);
         });
 
-        // unsubscribe not used topics
-        updatedSubscriptionsLog.forEach((topic, entry) -> {
-            log.info("Processing unsubscribe for topic: {}, count: {}", topic, entry.left);
-            // topic was deleted -> unsubscribe
-            if (entry.left == 0) {
-                try {
-                    log.debug("Unsubscribe from topic: {} ...", topic);
-                    unsubscribe(topic);
-                    activeSubscriptionsLog.remove(topic);
-                } catch (MqttException e) {
-                    log.error("Could not unsubscribe topic: {}", topic);
-                }
-            } else if (!activeSubscriptionsLog.contains(topic)) {
-                // subscription topic is new, we need to subscribe to it
-                try {
-                    log.debug("Subscribing to topic: {} ...", topic);
-                    subscribe(topic, (int) entry.right.ordinal());
-                    activeSubscriptionsLog.add(topic);
-                } catch (MqttException | IllegalArgumentException e) {
-                    log.error("Could not subscribe topic: {}", topic);
-                }
+        // unsubscribe topics not used
+        unsubscribeTopic.forEach((topic) -> {
+            log.info("Unsubscribe from topic: {}", topic);
+            try {
+                unsubscribe(topic);
+            } catch (MqttException e1) {
+                log.error("Exception when unsubsribing from topic {}, {}", topic, e1);
             }
         });
+
+        // subscribe to new topics
+        subscribeTopic.forEach(topic -> {
+            Optional<Integer> qosAcc = updatedMapping.stream().filter(m -> m.subscriptionTopic.equals(topic))
+                    .map(m -> m.qos.ordinal()).reduce(Integer::max);
+            int qos = 0;
+            if (qosAcc.isPresent()) {
+                qos = qosAcc.get();
+            } else {
+                log.error("Something went wrong, when subscribing to topic: {}, using 0 for QOS.", topic);
+            }
+            log.info("Processing subscribe to new topic: {}, qos: {}", topic, qos);
+            try {
+                subscribe(topic, qos);
+            } catch (MqttException e1) {
+                log.error("Exception when subsribing to topic {}, {}", topic, e1);
+            }
+        });
+        activeSubscriptionTopic = updatedSubscriptionTopic;
+        activeMapping = updatedMapping;
         // update mappings tree
-        mappingTree = rebuildMappingTree(updatedMaps);
+        mappingTree = rebuildMappingTree(updatedMapping);
     }
 
     private TreeNode rebuildMappingTree(List<Mapping> mappings) {
@@ -332,8 +320,8 @@ public class MQTTClient {
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
         try {
-            String statusReconnectTask = (reconnectTask == null ? "stopped"
-                    : reconnectTask.isDone() ? "stopped" : "running");
+            String statusReconnectTask = (connectTask == null ? "stopped"
+                    : connectTask.isDone() ? "stopped" : "running");
             String statusInitTask = (initTask == null ? "stopped" : initTask.isDone() ? "stopped" : "running");
             log.info("Status: reconnectTask {}, initTask {}, isConnected {}", statusReconnectTask,
                     statusInitTask, isConnected());
@@ -348,7 +336,6 @@ public class MQTTClient {
     private void sendStatusMonitoring() {
         c8yAgent.sendStatusMonitoring(STATUS_MAPPING_EVENT_TYPE, monitoring);
     }
-
 
     private void sendStatusConfiguration() {
         ServiceStatus serviceStatus;
@@ -376,7 +363,7 @@ public class MQTTClient {
         dirtyMappings = new HashSet<Mapping>();
     }
 
-    public TreeNode getActiveMappings() {
+    public TreeNode getMappingTree() {
         return mappingTree;
     }
 

@@ -101,9 +101,9 @@ public class GenericCallback implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT Broker: ", throwable);
-        c8yAgent.createEvent("Connection lost to MQTT Broker", "mqtt_status_event", DateTime.now(), null);
-        mqttClient.reconnect();
+        log.error("Connection Lost to MQTT broker: ", throwable);
+        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
+        mqttClient.submitConnect();
     }
 
     static SimpleDateFormat sdf;
@@ -149,14 +149,14 @@ public class GenericCallback implements MqttCallback {
                             ctx.setDeviceIdentifier(deviceIdentifier);
                         }
                         Mapping map = ctx.getMapping();
-                        MappingStatus st = mqttClient.getMonitoring().get(map.id);
+                        MappingStatus st = mqttClient.getMonitoring().getOrDefault(map.id, new MappingStatus(map.id,map.subscriptionTopic,0,0,0,0));
                         try {
                             handleNewPayload(ctx, payloadMessage);
                             st.messagesReceived++;
                             if (map.snoopTemplates == SnoopStatus.ENABLED
                                     || map.snoopTemplates == SnoopStatus.STARTED) {
-                                st.snoopedTemplatesTotal++;
-                                st.snoopedTemplatesActive = map.snoopedTemplates.size();
+                                st.snoopedTemplatesActive++;
+                                st.snoopedTemplatesTotal = map.snoopedTemplates.size();
                             }
                             mqttClient.getMonitoring().put(map.id, st);
                         } catch (Exception e) {
@@ -179,7 +179,7 @@ public class GenericCallback implements MqttCallback {
         log.info("Message received on topic '{}'  with message {}", topic,
                 payloadMessage);
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
-        ArrayList<TreeNode> nodes = mqttClient.getActiveMappings().resolveTopicPath(levels);
+        ArrayList<TreeNode> nodes = mqttClient.getMappingTree().resolveTopicPath(levels);
         return nodes;
     }
 
