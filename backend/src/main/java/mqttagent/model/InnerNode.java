@@ -78,7 +78,8 @@ public class InnerNode extends TreeNode {
     public void insertMapping(InnerNode currentNode, Mapping mapping, ArrayList<String> levels)
             throws ResolveException {
         var currentLevel = levels.get(0);
-        log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, currentNode, levels);
+        //log.info("Trying to add node: {}, {}, {}, {}", currentNode.getLevel(), currentLevel, currentNode, levels);
+        log.info("Trying to add node: {}, {}, {}", levels, currentLevel, currentNode.getLevel());
         if (levels.size() == 1) {
             MappingNode child = new MappingNode();
             child.setPreTreeNode(currentNode);

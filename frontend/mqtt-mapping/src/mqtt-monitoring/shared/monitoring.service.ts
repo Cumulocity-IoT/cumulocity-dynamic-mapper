@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { MappingStatus } from '../../shared/configuration.model';
-import { STATUS_MAPPING_EVENT_TYPE } from '../../shared/helper';
+import { STATUS_MAPPING_EVENT_TYPE, STATUS_SERVICE_EVENT_TYPE } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
@@ -26,9 +26,9 @@ export class MonitoringService {
   async subscribeMonitoringChannel(): Promise<object> {
     this.agentId = await this.configurationService.initializeMQTTAgent();
     console.log("Start subscription for monitoring:", this.agentId);
-    let dateFrom = this.addHoursToDate(new Date(), -1).toISOString();
+    let dateFrom = this.addHoursToDate(new Date(), -5*24).toISOString();
     let dateTo = new Date().toISOString();
-    let queryString = `type eq '${STATUS_MAPPING_EVENT_TYPE}' and dateFrom eq'${dateFrom} and dateTo eq '${dateTo}'`;
+    //let queryString = `type eq '${STATUS_MAPPING_EVENT_TYPE}' and dateFrom eq'${dateFrom} and dateTo eq '${dateTo}'`;
     const filter: object = {
       pageSize: 1,
       withTotalPages: true,

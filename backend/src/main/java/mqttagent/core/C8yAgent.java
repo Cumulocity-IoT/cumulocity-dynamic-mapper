@@ -91,7 +91,7 @@ public class C8yAgent {
     public String tenant = null;
 
     @EventListener
-    public void init(MicroserviceSubscriptionAddedEvent event) {
+    public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
@@ -140,15 +140,12 @@ public class C8yAgent {
         });
 
         try {
-            mqttClient.init();
-            mqttClient.reconnect();
+            mqttClient.submitInitialize();
+            mqttClient.submitConnect();
             mqttClient.runHouskeeping();
-            /* Uncomment this if you want to subscribe on start on "#" */
-            mqttClient.subscribe("#", null);
-            mqttClient.subscribe("$SYS/#", null);
         } catch (Exception e) {
             log.error("Error on MQTT Connection: ", e);
-            mqttClient.reconnect();
+            mqttClient.submitConnect();
         }
     }
 
@@ -319,7 +316,7 @@ public class C8yAgent {
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
             MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
-            log.info("Found Mapping {}", mqttMo);
+            log.debug("Found Mapping {}", mqttMo);
             result.addAll(mqttMo.getC8yMQTTMapping());
             log.info("Found Mapping {}", result.size());
         });

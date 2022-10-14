@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>generic.mqtt.agent</artifactId>
-    <version>1.251</version>
+    <version>1.256</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
