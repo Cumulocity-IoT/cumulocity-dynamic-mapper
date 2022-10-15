@@ -129,9 +129,8 @@ public class GenericCallback implements MqttCallback {
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
                     e.printStackTrace();
-                    MappingStatus st = mqttClient.getMonitoring().get(MQTTClient.KEY_MONITORING_UNSPECIFIED);
-                    st.errors++;
-                    mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
+                    MappingStatus ms = mqttClient.getMappingStatus(null, true);
+                    ms.errors++;
                 }
 
                 for (TreeNode node : nodes) {
@@ -148,21 +147,19 @@ public class GenericCallback implements MqttCallback {
                             ctx.setDeviceIdentifier(deviceIdentifier);
                         }
                         Mapping map = ctx.getMapping();
-                        MappingStatus st = mqttClient.getMonitoring().getOrDefault(map.id, new MappingStatus(map.id,map.subscriptionTopic,0,0,0,0));
+                        MappingStatus ms = mqttClient.getMappingStatus(map, false);
                         try {
                             handleNewPayload(ctx, payloadMessage);
-                            st.messagesReceived++;
+                            ms.messagesReceived++;
                             if (map.snoopTemplates == SnoopStatus.ENABLED
                                     || map.snoopTemplates == SnoopStatus.STARTED) {
-                                st.snoopedTemplatesActive++;
-                                st.snoopedTemplatesTotal = map.snoopedTemplates.size();
+                                ms.snoopedTemplatesActive++;
+                                ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
                             }
-                            mqttClient.getMonitoring().put(map.id, st);
                         } catch (Exception e) {
                             log.warn("Message could NOT be parsed, ignoring this message.");
                             e.printStackTrace();
-                            st.errors++;
-                            mqttClient.getMonitoring().put(MQTTClient.KEY_MONITORING_UNSPECIFIED, st);
+                            ms.errors++;
                         }
                     } else {
                         throw new ResolveException("Could not find appropriate mapping for topic: " + topic);

@@ -1,5 +1,8 @@
 package mqtt.mapping;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -51,10 +54,12 @@ public class App {
         return executor;
     }
 
-    public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
-    }
 
+    @Bean("cachedThreadPool")
+    public ExecutorService cachedThreadPool() {
+        return Executors.newCachedThreadPool();
+    }
+    
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -67,7 +72,7 @@ public class App {
         objectMapper.setDateFormat(new RFC3339DateFormat());
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new JodaModule());
-
+        
         SimpleModule module = new SimpleModule();
         module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         module.addSerializer(InnerNode.class, new InnerNodeSerializer());
@@ -75,4 +80,8 @@ public class App {
         objectMapper.registerModule(module);
         return objectMapper;
     }
+    
+        public static void main(String[] args) {
+            SpringApplication.run(App.class, args);
+        }
 }
