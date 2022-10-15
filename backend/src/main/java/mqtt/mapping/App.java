@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.InnerNodeSerializer;
@@ -32,7 +31,6 @@ import mqtt.mapping.model.TreeNodeSerializer;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
-@Slf4j
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication

@@ -11,10 +11,8 @@ import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.measurement.MeasurementValue;
 
-import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
 
-@Slf4j
 @Service
 public class SysHandler {
 

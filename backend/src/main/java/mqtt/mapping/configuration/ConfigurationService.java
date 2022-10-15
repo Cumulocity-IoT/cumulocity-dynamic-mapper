@@ -49,10 +49,10 @@ public class ConfigurationService {
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
-            log.info("Returning configuration found: {}:", configuration.mqttHost );
+            log.debug("Returning configuration found: {}:", configuration.mqttHost );
             return configuration;
         } catch (SDKException exception) {
-            log.info("No configuration found, returning empty element!");
+            log.error("No configuration found, returning empty element!");
             //exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();

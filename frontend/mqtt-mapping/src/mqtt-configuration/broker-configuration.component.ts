@@ -72,6 +72,7 @@ export class BokerConfigurationComponent implements OnInit {
       user: new FormControl('', Validators.required),
       password: new FormControl('', Validators.required),
       clientId: new FormControl('', Validators.required),
+      active: new FormControl('', Validators.required),
       useTLS: new FormControl('', Validators.required),
     });
   }
