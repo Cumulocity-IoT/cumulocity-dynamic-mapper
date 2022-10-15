@@ -163,12 +163,23 @@ Mappings are persisted as Managed Objects and can be easily changed, deleted or 
 
 #### Expression Language
 
-In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id. In this case the following function could be used:
+In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id.
+Complex mapping expressions are supported by using [JSONata](https://jsonata.org). \
+In this case the following function could be used:
 ```$join([device_name, _DEVICE_IDENT_])```. \
-Complex mapping expressions are supported by using [JSONata](https://jsonata.org). Example to concatenate JSON Properties with JSONata:
-```
-Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
-```
+
+Further example for JSONata expressions are:
+* to convert a UNIX timestamp to ISO date format use:
+      <code>$fromMillis($number(deviceTimestamp))</code>
+* to join substring starting at position 5 of property <code>txt</code> with device
+      identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code>
+
+>Note:
+> * escape properties with special characters with <code>`</code>. The property
+        <code>customer-1</code> becomes <code>`customer-1`</code>
+> * function chaining using <code>~></code> is not supported, instead use function
+        notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+        becomes <code>$sum(Account.Product.(Price * Quantity))</code>
 
 ### Wizzard to define a mapping
 
@@ -244,9 +255,9 @@ To define a new substitution the following steps have to be performed:
 1. Press the add button with the ```+``` sign.
 
 >Note: When adding a new substitution the following two consistency rules are checked:
+>1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
+>1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
-1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
-1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
 

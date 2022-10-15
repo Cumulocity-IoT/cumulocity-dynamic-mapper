@@ -33,9 +33,13 @@ public class MQTTConfiguration implements Cloneable {
     public boolean active;
 
 
-    public Object clone() throws CloneNotSupportedException
+    public Object clone() 
     {
-        return super.clone();
+        try {
+            return super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
     }
 
     public static boolean isValid (MQTTConfiguration mc){
@@ -47,7 +51,7 @@ public class MQTTConfiguration implements Cloneable {
     }
 
     public static boolean isActive(MQTTConfiguration mc) {
-        return (mc != null) && mc.active;
+        return MQTTConfiguration.isValid(mc) && mc.active;
     }
 }
 

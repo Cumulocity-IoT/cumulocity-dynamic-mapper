@@ -78,17 +78,30 @@
               </c8y-messages>
             </c8y-form-group>
             <c8y-form-group>
-              <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
-                <input type="checkbox" formControlName="useTLS" [(ngModel)]="configuration.useTLS"  #useTLSRef required  />
-                <span></span>
-                <span>
-                  {{ 'Use TLS'}}
-                </span>
-              </label>
-              <c8y-messages>
-                <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
-                </c8y-message>
-              </c8y-messages>
+              <div class ="row">
+                <div class="col-lg-6">
+                  <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
+                    <input type="checkbox" formControlName="useTLS" [(ngModel)]="configuration.useTLS"  #useTLSRef required  />
+                    <span></span>
+                    <span>
+                      {{ 'Use TLS'}}
+                    </span>
+                  </label>
+                  <c8y-messages>
+                    <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
+                    </c8y-message>
+                  </c8y-messages>
+                </div>
+                <div class="col-lg-6">
+                  <label class="c8y-switch" title="{{ 'Active' | translate }}">
+                    <input type="checkbox" formControlName="active" [(ngModel)]="configuration.active" disabled="true"  />
+                    <span></span>
+                    <span>
+                      {{ 'Active'}}
+                    </span>
+                  </label>
+                </div>
+              </div>
             </c8y-form-group>
           </div>
         </div>

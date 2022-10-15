@@ -316,9 +316,9 @@ public class C8yAgent {
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
             MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
-            log.debug("Found Mapping {}", mqttMo);
+            log.debug("Found mappings: {}", mqttMo);
             result.addAll(mqttMo.getC8yMQTTMapping());
-            log.info("Found Mapping {}", result.size());
+            log.info("Found mappings: {}", result.size());
         });
         return result;
     }
@@ -419,8 +419,6 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MQTT_MAPPING_TYPE);
-            // There should be always one mapping
-            // TODO Change to ext ID retrieval maybe
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
             ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
