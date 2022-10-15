@@ -82,7 +82,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getStatus() {
         log.info("query status: {}", mqttClient.isConnectionConfigured());
-         
+
         if (mqttClient.isConnected()) {
             return new ResponseEntity<>(ServiceStatus.connected(), HttpStatus.OK);
         } else if (mqttClient.isConnectionActicated()) {
@@ -110,19 +110,23 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> deleteMapping (@PathVariable Long id) {
+    public ResponseEntity<Long> deleteMapping(@PathVariable Long id) {
         log.info("Delete mapping {}", id);
-        Long result = mqttClient.deleteMapping(id);
-        if (result != null)
+        Long result;
+        try {
+            result = mqttClient.deleteMapping(id);
+            if (result == -1)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Mapping with id " + id + " could not be found.");
             return ResponseEntity.status(HttpStatus.OK).body(result);
-        else
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Mapping with id "+id+" could not be found.");
+        } catch (JsonProcessingException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+        }
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> addMapping (@Valid @RequestBody Mapping mapping) {
+    public ResponseEntity<Long> addMapping(@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping {}", mapping);
             Long result = mqttClient.addMapping(mapping);
@@ -138,7 +142,7 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> updateMapping (@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
+    public ResponseEntity<Long> updateMapping(@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping {}, {}", mapping, id);
             Long result = mqttClient.updateMapping(id, mapping, false);
@@ -154,13 +158,13 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getActiveTreeNode () {
+    public ResponseEntity<TreeNode> getActiveTreeNode() {
         TreeNode result = mqttClient.getMappingTree();
         InnerNode innerNode = null;
-        if ( result instanceof InnerNode){
+        if (result instanceof InnerNode) {
             innerNode = (InnerNode) result;
         }
-        log.info("Get tree {}", result, innerNode) ;
+        log.info("Get tree {}", result, innerNode);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 }
