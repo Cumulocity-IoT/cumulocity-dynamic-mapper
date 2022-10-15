@@ -16,15 +16,15 @@
         </h4>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isMQTTConnected,
-              inactive: !isMQTTConnected
+              active: isBrokerConnected,
+              inactive: !isBrokerConnected
             }"></span>
           {{ 'MQTTBroker connected' | translate }}
         </div>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isMQTTAgentCreated$ | async,
-              inactive: !isMQTTAgentCreated$ | async
+              active: isBrokerAgentCreated$ | async,
+              inactive: !isBrokerAgentCreated$ | async
             }"></span>
           {{ 'MQTTAgent registered' | translate }}
         </div>
@@ -94,7 +94,7 @@
                 </div>
                 <div class="col-lg-6">
                   <label class="c8y-switch" title="{{ 'Active' | translate }}">
-                    <input type="checkbox" formControlName="active" [(ngModel)]="configuration.active" disabled="true"  />
+                    <input type="checkbox" formControlName="active" [ngModel]="isBrokerActivated" disabled="true"  />
                     <span></span>
                     <span>
                       {{ 'Active'}}
@@ -112,11 +112,11 @@
               Update
             </button>
             <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-              [disabled]="isMQTTConnected" translate>
+              [disabled]="isBrokerConnected" translate>
               Connect
             </button>
             <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
-              [disabled]="!isMQTTConnected" translate>
+              [disabled]="!isBrokerConnected" translate>
               Disconnect
             </button>
           </div>

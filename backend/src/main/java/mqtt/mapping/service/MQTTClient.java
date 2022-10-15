@@ -44,7 +44,7 @@ import mqtt.mapping.model.ValidationError;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_d1";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -73,7 +73,7 @@ public class MQTTClient {
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
-    private Map<Long, MappingStatus> monitoring = new HashMap<Long, MappingStatus>();
+    private Map<Long, MappingStatus> statusMapping = new HashMap<Long, MappingStatus>();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -112,12 +112,12 @@ public class MQTTClient {
     }
 
     private boolean connect() {
-        log.info("Establishing the MQTT connection now (phase I)");
+        log.info("Establishing the MQTT connection now (phase I), shouldConnect:", shouldConnect());
         if (isConnected()) {
             disconnect();
         }
         var firstRun = true;
-        while (!isConnected() && (MQTTConfiguration.isValid(mqttConfiguration) && !MQTTConfiguration.isActive(mqttConfiguration))) {
+        while (!isConnected() && shouldConnect()) {
             log.debug("Establishing the MQTT connection now (phase II): {}, {}", MQTTConfiguration.isValid(mqttConfiguration), MQTTConfiguration.isActive(mqttConfiguration));
             if (!firstRun) {
                 try {
@@ -166,6 +166,10 @@ public class MQTTClient {
             return false;
         }
         return true;
+    }
+
+    private boolean shouldConnect() {
+        return !MQTTConfiguration.isValid(mqttConfiguration) || MQTTConfiguration.isActive(mqttConfiguration);
     }
 
     public boolean isConnected() {
@@ -233,7 +237,7 @@ public class MQTTClient {
         // remove monitorings for deleted maps
         removedMapping.forEach(id -> {
             log.info("Removing monitoring not used: {}", id);
-            monitoring.remove(id);
+            statusMapping.remove(id);
         });
 
         // unsubscribe topics not used
@@ -302,21 +306,21 @@ public class MQTTClient {
             log.info("Status: connectTask {}, initializeTask {}, isConnected {}", statusConnectTask,
                     statusInitializeTask, isConnected());
             cleanDirtyMappings();
-            sendStatusMonitoring();
-            sendStatusConfiguration();
+            sendStatusMapping();
+            sendStatusService();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
     }
 
-    private void sendStatusMonitoring() {
-        c8yAgent.sendStatusMonitoring(STATUS_MAPPING_EVENT_TYPE, monitoring);
+    private void sendStatusMapping() {
+        c8yAgent.sendStatusMapping(STATUS_MAPPING_EVENT_TYPE, statusMapping);
     }
 
-    private void sendStatusConfiguration() {
-        ServiceStatus serviceStatus;
-        serviceStatus = getServiceStatus();
-        c8yAgent.sendStatusConfiguration(STATUS_SERVICE_EVENT_TYPE, serviceStatus);
+    private void sendStatusService() {
+        ServiceStatus statusService;
+        statusService = getServiceStatus();
+        c8yAgent.sendStatusService(STATUS_SERVICE_EVENT_TYPE, statusService);
     }
 
     public ServiceStatus getServiceStatus() {
@@ -361,11 +365,11 @@ public class MQTTClient {
             key = m.id;
             t = m.subscriptionTopic;
         }
-        MappingStatus ms = monitoring.get(key);
+        MappingStatus ms = statusMapping.get(key);
         if (ms == null) {
             log.info("Adding: {}", key);
             ms = new MappingStatus(key, t, 0, 0, 0, 0);
-            monitoring.put(key, ms);
+            statusMapping.put(key, ms);
         }
         return ms;
     }

@@ -126,6 +126,7 @@ export class BrokerConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
+    console.log("Started subscription:", this.agentId);
     this.getConnectionStatus().then(status => {
       this.serviceStatus.next(status);
     })

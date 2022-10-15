@@ -86,7 +86,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getStatus() {
         ServiceStatus st = mqttClient.getServiceStatus();
-        log.info("Query status: {}", st);
+        log.info("Get status: {}", st);
         return new ResponseEntity<>(st, HttpStatus.OK);
     }
 
