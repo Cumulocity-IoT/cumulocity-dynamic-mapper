@@ -103,12 +103,12 @@ Make sure that you subscribe the microservice to your tenant when prompted
 
 In Adminstration App go to Ecosystem -> Packages and click on "Add Application" on the top right.
 
-> Note: If you don't see the Packages Menu you have to add "?beta=true" in your URL.
+> **_NOTE:_** If you don't see the Packages Menu you have to add "?beta=true" in your URL.
 > Example: {{url}}/apps/administration?beta=true
 
 Select "mqtt-mapping.zip" and wait until it is uploaded.
 
-> Note: We need to clone the Administration app to add the plugin to it
+> **_NOTE:_** We need to clone the Administration app to add the plugin to it
 
 After succesful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
 and afterwards "Administration".
@@ -174,7 +174,7 @@ Further example for JSONata expressions are:
 * to join substring starting at position 5 of property <code>txt</code> with device
       identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code>
 
->Note:
+>**_NOTE:_**
 > * escape properties with special characters with <code>`</code>. The property
         <code>customer-1</code> becomes <code>`customer-1`</code>
 > * function chaining using <code>~></code> is not supported, instead use function
@@ -201,7 +201,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
 When you use a wildcard it signals to the mapping that you want to extract the device identifier from the topic name. In this case the additinal property ```_DEVICE_IDENT_```is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
->Note: Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
+>**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
 
 #### Template Topic
@@ -254,7 +254,7 @@ To define a new substitution the following steps have to be performed:
 1.  Select  ```Defines device identifier``` if this property defines the device identifier, i.e. it is mapped to ```source.id```.
 1. Press the add button with the ```+``` sign.
 
->Note: When adding a new substitution the following two consistency rules are checked:
+>**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
 >1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
