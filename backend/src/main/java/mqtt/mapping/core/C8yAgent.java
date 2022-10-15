@@ -457,7 +457,7 @@ public class C8yAgent {
         return mr[0];
     }
 
-    public void sendStatusMonitoring(String type, Map<Long, MappingStatus> status) {
+    public void sendStatusMapping(String type, Map<Long, MappingStatus> status) {
 
         // avoid sending empty monitoring events
         if (status.values().size() > 0) {
@@ -478,7 +478,7 @@ public class C8yAgent {
         }
     }
 
-    public void sendStatusConfiguration(String type, ServiceStatus serviceStatus) {
+    public void sendStatusService(String type, ServiceStatus serviceStatus) {
         log.debug("Sending status configuration: {}", serviceStatus);
         EventRepresentation[] ers = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {

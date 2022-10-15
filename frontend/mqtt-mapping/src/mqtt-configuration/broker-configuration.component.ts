@@ -6,7 +6,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
 
 
@@ -16,11 +16,11 @@ import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configurati
 })
 export class BokerConfigurationComponent implements OnInit {
 
-  isMQTTConnected: boolean;
-  isMQTTAgentCreated$: Observable<boolean>;
-  mqttAgentId$: Observable<string>;
+  isBrokerConnected: boolean;
+  isBrokerActivated: boolean;
+  isBrokerAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
-  subscription: object;
+  subscription: any;
   mqttForm: FormGroup;
   configuration: MQTTAuthentication = {
     mqttHost: '',
@@ -42,11 +42,9 @@ export class BokerConfigurationComponent implements OnInit {
 
   ngOnInit() {
     this.initForm();
-    this.initializeMonitoringService();
     this.loadConnectionDetails();
-    this.mqttAgentId$ = from(this.configurationService.initializeMQTTAgent());
-    this.isMQTTAgentCreated$ = this.mqttAgentId$.pipe(map(agentId => agentId != null));
-    //console.log("Init configuration, mqttAgent", this.isMQTTAgentCreated);
+    this.isBrokerAgentCreated$ = from(this.configurationService.initializeMQTTAgent())
+        .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
   }
 
 
@@ -54,15 +52,16 @@ export class BokerConfigurationComponent implements OnInit {
     this.subscription = await this.configurationService.subscribeMonitoringChannel();
     this.monitorings$ = this.configurationService.getCurrentServiceStatus();
     this.monitorings$.subscribe(status => {
-      this.isMQTTConnected = (status.status === Status.CONNECTED);
+      this.isBrokerConnected = (status.status === Status.CONNECTED);
+      this.isBrokerActivated = (status.status === Status.ACTIVATED || status.status === Status.CONNECTED);
     })
   }
 
   async loadConnectionStatus(): Promise<void> {
-    this.isMQTTConnected = false;
     let status = await this.configurationService.getConnectionStatus();
-    this.isMQTTConnected = (status.status === Status.CONNECTED);
-    console.log("Retrieved status:", status, this.isMQTTConnected)
+    this.isBrokerConnected = (status.status === Status.CONNECTED);
+    this.isBrokerActivated = (status.status === Status.ACTIVATED || status.status === Status.CONNECTED);
+    console.log("Retrieved status:", status, this.isBrokerConnected)
   }
 
   private initForm(): void {
@@ -82,6 +81,7 @@ export class BokerConfigurationComponent implements OnInit {
     console.log("Connection details", this.configuration)
     if (conf) {
       this.configuration = conf;
+      this.isBrokerActivated = conf.active;
     }
   }
 
