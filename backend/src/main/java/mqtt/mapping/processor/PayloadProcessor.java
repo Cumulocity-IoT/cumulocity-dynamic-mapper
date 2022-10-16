@@ -1,44 +1,38 @@
 package mqtt.mapping.processor;
 
-import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.TimeZone;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
+import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.ProcessingContext;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.processor.JSONProcessor.SubstituteValue;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor  implements MqttCallback {
+public abstract class PayloadProcessor implements MqttCallback {
 
     @Autowired
-    C8yAgent c8yAgent;
+    protected C8yAgent c8yAgent;
 
     @Autowired
-    MQTTClient mqttClient;
+    protected MQTTClient mqttClient;
 
     @Autowired
     SysHandler sysHandler;
@@ -49,7 +43,7 @@ public abstract class PayloadProcessor  implements MqttCallback {
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
 
     public static final String TIME = "time";
-    
+
     public abstract String deserializePayload(MqttMessage mqttMessage);
 
     public abstract ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException;
@@ -59,8 +53,8 @@ public abstract class PayloadProcessor  implements MqttCallback {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                String payloadMessage =  deserializePayload(mqttMessage);
-                processPayload(topic, payloadMessage);
+                String payloadMessage = deserializePayload(mqttMessage);
+                processPayload(topic, payloadMessage, true);
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
@@ -77,8 +71,10 @@ public abstract class PayloadProcessor  implements MqttCallback {
         return id;
     }
 
-    public void processPayload(String topic, String payloadMessage) throws ResolveException {
+    public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {
         ArrayList<TreeNode> nodes = new ArrayList<TreeNode>();
+        ArrayList<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
+
         try {
             nodes = resolveMapping(topic, payloadMessage);
         } catch (Exception e) {
@@ -118,11 +114,17 @@ public abstract class PayloadProcessor  implements MqttCallback {
                             map.snoopTemplates = SnoopStatus.STARTED;
                         }
                         log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
-                        map.snoopedTemplates.size(),
-                        map.snoopTemplates);
+                                map.snoopedTemplates.size(),
+                                map.snoopTemplates);
                         mqttClient.setMappingDirty(map);
                     } else {
                         transformPayload(ctx, payloadMessage);
+                        if (sendPayload) {
+                            sendC8YRequests(ctx);
+                        }
+                        if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
+                            ms.errors++;
+                        }
                     }
                 } catch (Exception e) {
                     log.warn("Message could NOT be parsed, ignoring this message.");
@@ -130,7 +132,24 @@ public abstract class PayloadProcessor  implements MqttCallback {
                     ms.errors++;
                 }
             } else {
-                throw new ResolveException("Could not find appropriate mapping for topic: " + topic);
+                ctx.setError(new ResolveException("Could not find appropriate mapping for topic: " + topic));
+            }
+            processingResult.add(ctx);
+        }
+        return processingResult;
+    }
+
+    public void sendC8YRequests(ProcessingContext ctx) {
+        // send target payload to c8y
+        for (C8YRequest request : ctx.getRequests()) {
+            try {
+                if (request.getTargetAPI().equals(API.INVENTORY)) {
+                    c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
+                } else if (!request.getTargetAPI().equals(API.INVENTORY)) {
+                    c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
+                }
+            } catch (ProcessingException error) {
+                request.setError(error);
             }
         }
     }
@@ -145,4 +164,5 @@ public abstract class PayloadProcessor  implements MqttCallback {
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
     }
+
 }

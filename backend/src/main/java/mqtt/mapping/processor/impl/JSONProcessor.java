@@ -1,4 +1,4 @@
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.impl;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -15,6 +15,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
@@ -30,10 +31,13 @@ import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingsRepresentation;
-import mqtt.mapping.model.ProcessingContext;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.processor.JSONProcessor.SubstituteValue.TYPE;
+import mqtt.mapping.processor.C8YRequest;
+import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.impl.JSONProcessor.SubstituteValue.TYPE;
 
 @Slf4j
 @Service
@@ -77,7 +81,7 @@ public class JSONProcessor extends PayloadProcessor {
     ObjectMapper objectMapper;
 
     @Override
-    public String deserializePayload(MqttMessage mqttMessage){
+    public String deserializePayload(MqttMessage mqttMessage) {
         String payloadMessage = null;
         if (mqttMessage.getPayload() != null) {
             payloadMessage = (mqttMessage.getPayload() != null
@@ -118,6 +122,8 @@ public class JSONProcessor extends PayloadProcessor {
             log.info("Patched payload:{}, {}", containsWildcardTemplateTopic, payloadMessage);
         } catch (JsonProcessingException e) {
             log.error("JsonProcessingException parsing: {}, {}", payloadMessage, e);
+            ctx.setError(
+                    new ProcessingException("JsonProcessingException parsing: " + payloadMessage + " exception:" + e));
             throw new ProcessingException("JsonProcessingException parsing: " + payloadMessage + " exception:" + e);
         }
 
@@ -245,29 +251,26 @@ public class JSONProcessor extends PayloadProcessor {
                 }
             }
             /*
-             * step 4 send target payload to c8y
+             * step 4 prepare target payload for sending to c8y
              */
             if (mapping.targetAPI.equals(API.INVENTORY)) {
-                String[] errors = { "" };
-                try {
-                    c8yAgent.upsertDevice(payloadTarget.toString(), device.value, mapping.externalIdType);
-                } catch (ProcessingException e) {
-                    errors[0] = e.getMessage();
-                }
-                if (!errors[0].equals("")) {
-                    throw new ProcessingException(errors[0]);
-                }
+                // c8yAgent.upsertDevice(payloadTarget.toString(), device.value,
+                // mapping.externalIdType);
+                ctx.getRequests().add(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), API.INVENTORY, null));
             } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+                // c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+                ctx.getRequests().add(new C8YRequest(RequestMethod.POST, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), mapping.targetAPI, null));
+
             } else {
                 log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
                         postProcessingCache.size());
             }
-            log.info("Posted payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+            log.info("Added payload for sending: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
                     listIdentifier.size());
             i++;
         }
-
     }
 
     public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
