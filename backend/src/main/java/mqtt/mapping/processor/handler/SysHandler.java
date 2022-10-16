@@ -1,4 +1,4 @@
-package mqtt.mapping.callback.handler;
+package mqtt.mapping.processor.handler;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

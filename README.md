@@ -1,4 +1,4 @@
-# Generic MQTT Agent Microservice for Cumulocity
+# Dynamic MQTT Mapping Service for Cumulocity
 
 # Content
 - [Overview](#overview)
@@ -96,7 +96,7 @@ In Administration App go to Ecosystem -> Microservices and click on "Add Microse
 
 ![Upload Microservice](resources/image/Generic_MQTT_UploadMicroservice.png).
 
-Select the "generic-mqtt-agent.zip".
+Select the "mqtt.mapping.service.zip".
 Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web App Plugin
@@ -295,7 +295,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 A script to create sample MQTT mappings can be found [here](resources/script/createSampleMappings.sh).
 
 ## Enhance
-In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
+In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `JSONCallback.class` or add a new Handler in the handler folder.
 As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________

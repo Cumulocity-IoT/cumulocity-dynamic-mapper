@@ -28,6 +28,8 @@ import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
+import mqtt.mapping.processor.JSONProcessor;
+import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
@@ -56,6 +58,11 @@ public class App {
     @Bean("cachedThreadPool")
     public ExecutorService cachedThreadPool() {
         return Executors.newCachedThreadPool();
+    }
+
+    @Bean("payloadProcessor")
+    public PayloadProcessor payloadProcessor() {
+        return new JSONProcessor();
     }
     
     @Bean

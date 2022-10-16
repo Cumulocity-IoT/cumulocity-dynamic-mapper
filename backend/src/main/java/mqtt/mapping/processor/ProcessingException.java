@@ -1,4 +1,4 @@
-package mqtt.mapping.callback;
+package mqtt.mapping.processor;
 
 public class ProcessingException extends Exception {
     public ProcessingException(String string) {
