@@ -12,21 +12,21 @@
     <div class="card card--fullpage">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ 'MQTT' | translate }}
+          {{ 'Configuration Broker' | translate }}
         </h4>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
               active: isBrokerConnected,
               inactive: !isBrokerConnected
             }"></span>
-          {{ 'MQTTBroker connected' | translate }}
+          {{ 'Broker connected' | translate }}
         </div>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
               active: isBrokerAgentCreated$ | async,
               inactive: !isBrokerAgentCreated$ | async
             }"></span>
-          {{ 'MQTTAgent registered' | translate }}
+          {{ 'MQTT Mapping Service' | translate }}
         </div>
       </div>
       <div class="inner-scroll">

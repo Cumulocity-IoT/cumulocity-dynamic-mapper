@@ -85,6 +85,8 @@ public class MQTTClient {
 
     private boolean initialize() {
         var firstRun = true;
+        // initialize entry to record errors that can't be assigned to any map, i.e. UNSPECIFIED
+        getMappingStatus(null,true);
         while ( !MQTTConfiguration.isActive(mqttConfiguration)) {
             if (!firstRun) {
                 try {
@@ -201,11 +203,13 @@ public class MQTTClient {
     public void disconnectFromBroker() {
         mqttConfiguration = c8yAgent.setConfigurationActive(false);
         disconnect();
+        sendStatusService();
     }
 
     public void connectToBroker() {
         mqttConfiguration = c8yAgent.setConfigurationActive(true);
         submitConnect();
+        sendStatusService();
     }
 
     public MQTTConfiguration getConnectionDetails() {

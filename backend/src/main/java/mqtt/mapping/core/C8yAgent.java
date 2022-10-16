@@ -84,8 +84,8 @@ public class C8yAgent {
 
     private ManagedObjectRepresentation agentMOR;
 
-    private final String AGENT_ID = "MQTT_AGENT";
-    private final String AGENT_NAME = "Generic MQTT Agent";
+    private final String AGENT_ID = "MQTT_MAPPING_SERVICE";
+    private final String AGENT_NAME = "MQTT Mapping Service";
     private final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
     private final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
     public String tenant = null;
@@ -121,11 +121,6 @@ public class C8yAgent {
 
             // test if managedObject mqttMapping exists
             ExternalIDRepresentation moMappingExtId = getExternalId(MQTT_MAPPING_TYPE, "c8y_Serial");
-            // InventoryFilter inventoryFilter = new InventoryFilter();
-            // inventoryFilter.byType(MQTT_MAPPING_TYPE);
-            // List<ManagedObjectRepresentation> mol =
-            // inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
-            // .getManagedObjects();
             if (moMappingExtId == null) {
                 // create new managedObject
                 ManagedObjectRepresentation moMapping = new ManagedObjectRepresentation();
@@ -457,37 +452,34 @@ public class C8yAgent {
         return mr[0];
     }
 
-    public void sendStatusMapping(String type, Map<Long, MappingStatus> status) {
-
+    public void sendStatusMapping(String type, Map<Long, MappingStatus> mappingStatus) {
         // avoid sending empty monitoring events
-        if (status.values().size() > 0) {
-            log.debug("Sending monitoring: {}", status.values().size());
-            EventRepresentation[] ers = { new EventRepresentation() };
+        if (mappingStatus.values().size() > 0) {
+            log.debug("Sending monitoring: {}", mappingStatus.values().size());
             subscriptionsService.runForTenant(tenant, () -> {
-                ers[0].setSource(agentMOR);
-                ers[0].setText("New status monitoring:" + System.currentTimeMillis());
-                ers[0].setDateTime(DateTime.now());
-                ers[0].setType(type);
-                ArrayList<MappingStatus> result = new ArrayList<>(status.values());
-                ;
-                ers[0].setProperty("status", result);
-                this.eventApi.createAsync(ers[0]);
+                Map<String, Object> service = new HashMap<String,Object>();
+                MappingStatus[] array = mappingStatus.values().toArray(new MappingStatus[0]);
+                service.put("mapping_status", array);
+                ManagedObjectRepresentation update = new ManagedObjectRepresentation();
+                update.setId(agentMOR.getId());
+                update.setAttrs(service);
+                this.inventoryApi.update(update);
             });
         } else {
-            log.info("Ignoring monitoring: {}", status.values().size());
+            log.info("Ignoring monitoring: {}", mappingStatus.values().size());
         }
     }
 
     public void sendStatusService(String type, ServiceStatus serviceStatus) {
         log.debug("Sending status configuration: {}", serviceStatus);
-        EventRepresentation[] ers = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            ers[0].setSource(agentMOR);
-            ers[0].setText("New status configuration:" + System.currentTimeMillis());
-            ers[0].setDateTime(DateTime.now());
-            ers[0].setType(type);
-            ers[0].setProperty("status", serviceStatus);
-            this.eventApi.createAsync(ers[0]);
+            Map <String, String> entry = Map.of("status", serviceStatus.getStatus().name() );
+            Map<String, Object> service = new HashMap<String,Object>();
+            service.put("service_status", entry);
+            ManagedObjectRepresentation update = new ManagedObjectRepresentation();
+            update.setId(agentMOR.getId());
+            update.setAttrs(service);
+            this.inventoryApi.update(update);
         });
     }
 }

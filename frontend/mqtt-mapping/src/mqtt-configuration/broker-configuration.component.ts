@@ -9,6 +9,7 @@ import { from, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
 
+import packageJson from '../../package.json';
 
 @Component({
   selector: 'broker-configuration',
@@ -16,6 +17,7 @@ import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configurati
 })
 export class BokerConfigurationComponent implements OnInit {
 
+  version: string = packageJson.version;
   isBrokerConnected: boolean;
   isBrokerActivated: boolean;
   isBrokerAgentCreated$: Observable<boolean>;
@@ -41,6 +43,7 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   ngOnInit() {
+    console.log("Running version", this.version);
     this.initForm();
     this.loadConnectionDetails();
     this.isBrokerAgentCreated$ = from(this.configurationService.initializeMQTTAgent())
