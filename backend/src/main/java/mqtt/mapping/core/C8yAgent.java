@@ -39,13 +39,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.callback.ProcessingException;
 import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.MQTTConfiguration;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
+import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceStatus;
 

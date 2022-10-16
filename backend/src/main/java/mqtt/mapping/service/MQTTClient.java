@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.callback.GenericCallback;
 import mqtt.mapping.configuration.MQTTConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
@@ -37,6 +36,7 @@ import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
+import mqtt.mapping.processor.PayloadProcessor;
 
 @Slf4j
 @Configuration
@@ -58,7 +58,7 @@ public class MQTTClient {
     private C8yAgent c8yAgent;
 
     @Autowired
-    private GenericCallback genericCallback;
+    private PayloadProcessor payloadProcessor;
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -134,7 +134,7 @@ public class MQTTClient {
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
                     mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
                             new MemoryPersistence());
-                    mqttClient.setCallback(genericCallback);
+                    mqttClient.setCallback(payloadProcessor);
                     MqttConnectOptions connOpts = new MqttConnectOptions();
                     connOpts.setCleanSession(true);
                     connOpts.setAutomaticReconnect(false);
