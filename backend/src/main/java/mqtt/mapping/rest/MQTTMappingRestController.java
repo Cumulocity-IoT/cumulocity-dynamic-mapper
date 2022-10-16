@@ -1,6 +1,9 @@
 package mqtt.mapping.rest;
 
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.validation.Valid;
 
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,6 +27,7 @@ import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceOperation;
 import mqtt.mapping.service.ServiceStatus;
@@ -164,4 +169,20 @@ public class MQTTMappingRestController {
         log.info("Get tree {}", result, innerNode);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
+
+    @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ProcessingContext>> forwardPayload( @PathVariable String method, @RequestParam URI topic,
+            @Valid @RequestBody Map<String, Object> payload) {
+        String path = topic.getPath();
+        log.info("Test payload: {}, {}, {}", path, method, payload);
+        try {
+            boolean send = ("send").equals(method);
+            ArrayList<ProcessingContext> result = mqttClient.test(path, send, payload);
+            return new ResponseEntity<List<ProcessingContext>>(result, HttpStatus.OK);
+        } catch (Exception ex) {
+            log.error("Error transforming payload: {}", ex);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+        }
+    }
+ 
 }

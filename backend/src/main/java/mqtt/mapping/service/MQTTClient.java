@@ -25,6 +25,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.MQTTConfiguration;
@@ -37,6 +38,7 @@ import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
 import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.ProcessingContext;
 
 @Slf4j
 @Configuration
@@ -44,7 +46,7 @@ import mqtt.mapping.processor.PayloadProcessor;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "";
+    private static final String ADDITION_TEST_DUMMY = "_D1";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -59,6 +61,9 @@ public class MQTTClient {
 
     @Autowired
     private PayloadProcessor payloadProcessor;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -443,5 +448,10 @@ public class MQTTClient {
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
         }
+    }
+
+    public ArrayList<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
+        String payloadMessage =  objectMapper.writeValueAsString(payload);
+        return payloadProcessor.processPayload(topic, payloadMessage, send);
     }
 }
