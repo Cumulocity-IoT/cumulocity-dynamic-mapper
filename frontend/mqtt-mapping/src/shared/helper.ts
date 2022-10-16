@@ -237,8 +237,8 @@ export const PATH_CONNECT_ENDPOINT = 'connection';
 export const PATH_STATUS_ENDPOINT = 'status';
 export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 export const BASE_URL = 'service/mqtt-mapping-service';
-export const AGENT_ID = 'MQTT_AGENT';
-export const MQTT_TEST_DEVICE_ID = 'MQTT_TEST_DEVICE';
+export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
+export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 
 export function getSchema(targetAPI: string): any {
   if (targetAPI == API.ALARM) {

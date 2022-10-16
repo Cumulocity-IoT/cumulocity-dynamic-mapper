@@ -50,7 +50,7 @@ export class BrokerConfigurationService {
         console.log("So far no test device generated!")
         // create new mapping mo
         const response: IResult<IManagedObject> = await this.inventory.create({
-          name: "Generic MQTT Test Device",
+          name: "MQTT Mapping Test Device",
           type: MQTT_TEST_DEVICE_TYPE,
           c8y_IsDevice: {}
         });
@@ -68,45 +68,45 @@ export class BrokerConfigurationService {
     }
   }
 
-    updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise < IFetchResponse > {
-      return this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify(mqttConfiguration),
-        method: 'POST',
-      });
-    }
+  updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(mqttConfiguration),
+      method: 'POST',
+    });
+  }
 
-    connectToMQTTBroker(): Promise < IFetchResponse > {
-      return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ "operation": "CONNECT" }),
-        method: 'POST',
-      });
-    }
+  connectToMQTTBroker(): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ "operation": "CONNECT" }),
+      method: 'POST',
+    });
+  }
 
-    disconnectFromMQTTBroker(): Promise < IFetchResponse > {
-      return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ "operation": "DISCONNECT" }),
-        method: 'POST',
-      });
-    }
+  disconnectFromMQTTBroker(): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ "operation": "DISCONNECT" }),
+      method: 'POST',
+    });
+  }
 
-  async getConnectionDetails(): Promise < MQTTAuthentication > {
-      const response = await this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
-        headers: {
-          accept: 'application/json',
-        },
-        method: 'GET',
-      });
+  async getConnectionDetails(): Promise<MQTTAuthentication> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
+      headers: {
+        accept: 'application/json',
+      },
+      method: 'GET',
+    });
 
-      if(response.status != 200) {
+    if (response.status != 200) {
       return undefined;
     }
 
@@ -130,7 +130,7 @@ export class BrokerConfigurationService {
     this.getConnectionStatus().then(status => {
       this.serviceStatus.next(status);
     })
-    return this.realtime.subscribe(`/events/${this.agentId}`, this.updateStatus.bind(this));
+    return this.realtime.subscribe(`/managedobjects/${this.agentId}`, this.updateStatus.bind(this));
   }
 
   unsubscribeFromMonitoringChannel(subscription: object): object {
@@ -139,11 +139,8 @@ export class BrokerConfigurationService {
 
   private updateStatus(p: object): void {
     let payload = p['data']['data'];
-    //console.log("New generig event:", payload);
-    if (payload.type == STATUS_SERVICE_EVENT_TYPE) {
-      let status: ServiceStatus = payload['status'];
-      this.serviceStatus.next(status);
-      console.log("New monitoring event", status);
-    }
+    let status: ServiceStatus = payload['service_status'];
+    this.serviceStatus.next(status);
+    //console.log("New monitoring event", status);
   }
 }
