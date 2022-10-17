@@ -30,6 +30,7 @@ module.exports = function config(env) {
             new CopyPlugin({
                 patterns: [
                     { from: 'node_modules/jsoneditor/dist/img/jsoneditor-icons.svg', to:  path.join(__dirname, './dist/apps/mqtt-mapping/assets/img') },
+                   // { from: 'src/shared/help', to:  path.join(__dirname, './dist/apps/mqtt-mapping/assets/help') },
                 ],
             }),
         ],

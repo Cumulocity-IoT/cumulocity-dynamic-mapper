@@ -12,6 +12,7 @@ import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicF
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
+import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 
 @Component({
   selector: 'mapping-stepper',
@@ -332,7 +333,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
     if (this.mapping.snoopTemplates == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
-      this.onCommit.emit(this.getCurrentMapping());
+      const substitutionModalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent);
+      substitutionModalRef.content.closeSubject.subscribe(() => {
+        this.onCommit.emit(this.getCurrentMapping());
+      })
     } else {
       event.stepper.next();
     }
@@ -411,7 +415,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private addSubstitution(st: MappingSubstitution) {
     let sub: MappingSubstitution = _.clone(st);
-    if (sub.pathTarget == "source.id" || ( sub.pathTarget == TOKEN_DEVICE_TOPIC && this.mapping.targetAPI == API.INVENTORY )) {
+    if (sub.pathTarget == "source.id" || (sub.pathTarget == TOKEN_DEVICE_TOPIC && this.mapping.targetAPI == API.INVENTORY)) {
       sub.definesIdentifier = true;
     }
     let updatePending = new Subject<boolean>();

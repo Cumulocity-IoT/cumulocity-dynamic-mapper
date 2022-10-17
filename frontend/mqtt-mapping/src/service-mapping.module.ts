@@ -23,15 +23,16 @@ import { SnoopedTemplateRendererComponent } from './mqtt-mapping/renderer/snoope
 import { StatusRendererComponent } from './mqtt-mapping/renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './mqtt-mapping/renderer/template.renderer.component';
 import { MappingService } from './mqtt-mapping/shared/mapping.service';
+import { SnoopingModalComponent } from './mqtt-mapping/snooping/snooping-modal.component';
 import { MappingStepperComponent } from './mqtt-mapping/stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substitution/substitution-renderer.component';
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
 import { IdRendererComponent } from './mqtt-monitoring/renderer/id-cell.renderer.component';
 import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
-import { ConfigurationNavigationFactory } from './navigation.factory';
+import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { OverviewGuard } from './shared/overview.guard';
-import { MappingConfigurationTabFactory } from './tab.factory';
+import { MappingTabFactory } from './tab.factory';
 
 @NgModule({
   imports: [
@@ -43,17 +44,17 @@ import { MappingConfigurationTabFactory } from './tab.factory';
     NgJsonEditorModule,
     RouterModule.forChild([
       {
-        path: 'mqtt/configuration',
+        path: 'mqtt-mapping/configuration',
         pathMatch: 'full',
         component: BokerConfigurationComponent,
       },
       {
-        path: 'mqtt/mapping',
+        path: 'mqtt-mapping/mapping',
         pathMatch: 'full',
         component: MappingComponent,
       },
       {
-        path: 'mqtt/monitoring',
+        path: 'mqtt-mapping/monitoring',
         pathMatch: 'full',
         component: MonitoringComponent,
       },
@@ -75,6 +76,7 @@ import { MappingConfigurationTabFactory } from './tab.factory';
     APIRendererComponent,
     MonitoringComponent,
     IdRendererComponent,
+    SnoopingModalComponent,
   ],
   entryComponents: [
     ServiceMappingComponent,
@@ -92,6 +94,7 @@ import { MappingConfigurationTabFactory } from './tab.factory';
     APIRendererComponent,
     MonitoringComponent,
     IdRendererComponent,
+    SnoopingModalComponent,
   ],
   declarations: [
     ServiceMappingComponent,
@@ -109,27 +112,28 @@ import { MappingConfigurationTabFactory } from './tab.factory';
     APIRendererComponent,
     MonitoringComponent,
     IdRendererComponent,
+    SnoopingModalComponent,
   ],
   providers: [
     OverviewGuard,
     BrokerConfigurationService,
     MonitoringService,
     MappingService,
-    { provide: HOOK_NAVIGATOR_NODES, useClass: ConfigurationNavigationFactory, multi: true },
-    { provide: HOOK_TABS, useClass: MappingConfigurationTabFactory, multi: true },
+    { provide: HOOK_NAVIGATOR_NODES, useClass: MappingNavigationFactory, multi: true },
+    { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
     {
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt/configuration',
+          path: 'mqtt-mapping/configuration',
           component: BokerConfigurationComponent,
         },
         {
-          path: 'mqtt/mapping',
+          path: 'mqtt-mapping/mapping',
           component: MappingComponent,
         },
         {
-          path: 'mqtt/monitoring',
+          path: 'mqtt-mapping/monitoring',
           component: MonitoringComponent,
         },
       ] as Route[],

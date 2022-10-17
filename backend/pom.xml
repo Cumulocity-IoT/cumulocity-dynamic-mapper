@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
-    <artifactId>generic.mqtt.agent</artifactId>
-    <version>1.251</version>
+    <artifactId>mqtt.mapping.service</artifactId>
+    <version>1.12</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -15,7 +15,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <spring-boot-dependencies.version>2.5.4</spring-boot-dependencies.version>
-        <main.class>mqttagent.App</main.class>
+        <main.class>mqtt.mapping.App</main.class>
         <c8y.version>1014.134.0</c8y.version>
         <lombok.version>1.18.22</lombok.version>
     </properties>
@@ -110,7 +110,7 @@
                             <goal>package</goal>
                         </goals>
                         <configuration>
-                            <name>generic-mqtt-agent</name>
+                            <name>mqtt-mapping-service</name>
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
