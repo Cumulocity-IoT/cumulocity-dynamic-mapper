@@ -87,7 +87,6 @@ public class JSONProcessor extends PayloadProcessor {
             payloadMessage = (mqttMessage.getPayload() != null
                     ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
                     : "");
-
         }
         return payloadMessage;
     }
@@ -96,9 +95,7 @@ public class JSONProcessor extends PayloadProcessor {
     public ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException {
         log.info("Message received on topic '{}'  with message {}", topic,
                 payloadMessage);
-        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
-        ArrayList<TreeNode> nodes = mqttClient.getMappingTree().resolveTopicPath(levels);
-        return nodes;
+        return mqttClient.getMappingTree().resolveTopicPath(TreeNode.splitTopic(topic));
     }
 
     @Override
@@ -148,7 +145,6 @@ public class JSONProcessor extends PayloadProcessor {
                 log.error("EvaluateRuntimeException for: {}, {}, {}, {}", sub.pathSource, payloadTarget,
                         payloadMessage, e);
             }
-
             /*
              * step 2 analyse exctracted content: textual, array
              */
@@ -175,13 +171,9 @@ public class JSONProcessor extends PayloadProcessor {
                     }
                     postProcessingCache.put(key, pl);
                 } else if (extractedSourceContent.isTextual()) {
-                    // extracted result from sourcPayload is an array, so we potentially have to
-                    // iterate over the result, e.g. creating multiple devices
                     pl.add(new SubstituteValue(extractedSourceContent.textValue(), TYPE.TEXTUAL));
                     postProcessingCache.put(key, pl);
                 } else if (extractedSourceContent.isNumber()) {
-                    // extracted result from sourcPayload is an array, so we potentially have to
-                    // iterate over the result, e.g. creating multiple devices
                     pl.add(new SubstituteValue(extractedSourceContent.numberValue().toString(), TYPE.NUMBER));
                     postProcessingCache.put(key, pl);
                 } else {
@@ -206,16 +198,16 @@ public class JSONProcessor extends PayloadProcessor {
             postProcessingCache.put(TIME, pl);
         }
 
-        ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
+        /*
+         * step 3 replace target with extract content from incoming payload
+         */
         Set<String> pathTargets = postProcessingCache.keySet();
+        ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
         if (listIdentifier == null) {
             throw new RuntimeException("Identified mapping has no substitution for source.id defined!");
         }
         int i = 0;
         for (SubstituteValue device : listIdentifier) {
-            /*
-             * step 3 replace target with extract content from incoming payload
-             */
             for (String pathTarget : pathTargets) {
                 SubstituteValue substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL);
                 if (i < postProcessingCache.get(pathTarget).size()) {
@@ -233,7 +225,16 @@ public class JSONProcessor extends PayloadProcessor {
                     if (pathTarget.equals(SOURCE_ID)) {
                         var sourceId = resolveExternalId(substitute.value, mapping.externalIdType);
                         if (sourceId == null && mapping.createNonExistingDevice) {
-
+                            try {
+                                Map<String, Object> map = new HashMap<String, Object>();
+                                map.put("c8y_IsDevice", null);
+                                map.put("name", "device_" + mapping.externalIdType + "_" + substitute.value);
+                                var p = objectMapper.writeValueAsString(map);
+                                ctx.addRequest(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
+                                                p, API.INVENTORY, null, true));
+                            } catch (JsonProcessingException e) {
+                                // ignore
+                            }
                             var d = c8yAgent.upsertDevice(
                                     "device_" + mapping.externalIdType + "_" + substitute.value,
                                     "c8y_MQTTMapping_generated_type", substitute.value, mapping.externalIdType);
@@ -256,13 +257,12 @@ public class JSONProcessor extends PayloadProcessor {
             if (mapping.targetAPI.equals(API.INVENTORY)) {
                 // c8yAgent.upsertDevice(payloadTarget.toString(), device.value,
                 // mapping.externalIdType);
-                ctx.getRequests().add(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
-                        payloadTarget.toString(), API.INVENTORY, null));
+                ctx.addRequest(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), API.INVENTORY, null, false));
             } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 // c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
-                ctx.getRequests().add(new C8YRequest(RequestMethod.POST, device.value, mapping.externalIdType,
-                        payloadTarget.toString(), mapping.targetAPI, null));
-
+                ctx.addRequest(new C8YRequest(RequestMethod.POST, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), mapping.targetAPI, null, false));
             } else {
                 log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
                         postProcessingCache.size());

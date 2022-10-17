@@ -15,9 +15,13 @@ public class ProcessingContext {
     private List <C8YRequest> requests = new ArrayList<C8YRequest>();
     private Exception error;
     public boolean isDeviceIdentifierValid() {
-        return deviceIdentifier != null && !deviceIdentifier.equals("");
+        return !"".equals(deviceIdentifier);
     }
     public boolean hasError() {
         return error != null;
     }
+    public void addRequest(C8YRequest c8yRequest) {
+        requests.add(c8yRequest);
+    }
+
 }

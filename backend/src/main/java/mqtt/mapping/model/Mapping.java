@@ -16,6 +16,8 @@ import javax.validation.constraints.NotNull;
 @ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
 
+  public static int SNOOP_TEMPLATES_MAX = 5;
+
   @NotNull
   public long id;
 
@@ -91,15 +93,14 @@ public class Mapping implements Serializable {
     this.snoopTemplates = mapping.snoopTemplates;
     this.snoopedTemplates = mapping.snoopedTemplates;
   }
-}
 
-/**
- * export interface MQTTMapping {
- * id: number,
- * topic: string,
- * targetAPI: string,
- * source: string,
- * target: string,
- * lastUpdate: number
- * }
- */
+  public void addSnoopedTemplate(String payloadMessage) {
+    snoopedTemplates.add(payloadMessage);
+    if (snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+      // remove oldest payload
+      snoopedTemplates.remove(0);
+    } else {
+      snoopTemplates = SnoopStatus.STARTED;
+    }
+  }
+}
