@@ -1,7 +1,6 @@
 package mqtt.mapping.processor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -37,7 +36,6 @@ public abstract class PayloadProcessor implements MqttCallback {
     @Autowired
     SysHandler sysHandler;
 
-    public static int SNOOP_TEMPLATES_MAX = 5;
     public static String SOURCE_ID = "source.id";
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
@@ -61,16 +59,6 @@ public abstract class PayloadProcessor implements MqttCallback {
         }
     }
 
-    public String resolveExternalId(String externalId, String externalIdType) {
-        ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
-        String id = null;
-        if (extId != null) {
-            id = extId.getManagedObject().getId().getValue();
-        }
-        log.info("Found id {} for external id: {}, {}", id, externalId);
-        return id;
-    }
-
     public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {
         ArrayList<TreeNode> nodes = new ArrayList<TreeNode>();
         ArrayList<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
@@ -89,8 +77,7 @@ public abstract class PayloadProcessor implements MqttCallback {
             if (node instanceof MappingNode) {
                 ctx.setMapping(((MappingNode) node).getMapping());
                 Mapping map = ctx.getMapping();
-                ArrayList<String> topicLevels = new ArrayList<String>(
-                        Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+                ArrayList<String> topicLevels = TreeNode.splitTopic(topic);
                 if (map.indexDeviceIdentifierInTemplateTopic >= 0) {
                     String deviceIdentifier = topicLevels
                             .get((int) (map.indexDeviceIdentifierInTemplateTopic));
@@ -105,14 +92,8 @@ public abstract class PayloadProcessor implements MqttCallback {
                             || map.snoopTemplates == SnoopStatus.STARTED) {
                         ms.snoopedTemplatesActive++;
                         ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
+                        map.addSnoopedTemplate(payloadMessage);
 
-                        map.snoopedTemplates.add(payloadMessage);
-                        if (map.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
-                            // remove oldest payload
-                            map.snoopedTemplates.remove(0);
-                        } else {
-                            map.snoopTemplates = SnoopStatus.STARTED;
-                        }
                         log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
                                 map.snoopedTemplates.size(),
                                 map.snoopTemplates);
@@ -143,15 +124,25 @@ public abstract class PayloadProcessor implements MqttCallback {
         // send target payload to c8y
         for (C8YRequest request : ctx.getRequests()) {
             try {
-                if (request.getTargetAPI().equals(API.INVENTORY)) {
+                if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
                     c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
-                } else if (!request.getTargetAPI().equals(API.INVENTORY)) {
+                } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
                     c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
                 }
             } catch (ProcessingException error) {
                 request.setError(error);
             }
         }
+    }
+
+    public String resolveExternalId(String externalId, String externalIdType) {
+        ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
+        String id = null;
+        if (extId != null) {
+            id = extId.getManagedObject().getId().getValue();
+        }
+        log.info("Found id {} for external id: {}", id, externalId);
+        return id;
     }
 
     @Override

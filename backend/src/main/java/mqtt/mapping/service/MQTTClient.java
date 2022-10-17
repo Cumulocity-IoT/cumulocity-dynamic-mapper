@@ -46,7 +46,7 @@ import mqtt.mapping.processor.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D1";
+    private static final String ADDITION_TEST_DUMMY = "_d1";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -437,6 +437,8 @@ public class MQTTClient {
             throw new RuntimeException("Validation errors:" + errorList);
         }
 
+        c8yAgent.saveMappings(mappings);
+        reloadMappings();
         return (long) updateMapping;
     }
 

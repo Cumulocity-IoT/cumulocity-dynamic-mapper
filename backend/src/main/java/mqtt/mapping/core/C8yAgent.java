@@ -168,23 +168,6 @@ public class C8yAgent {
 
     }
 
-    public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
-            String externalIdType) {
-        ManagedObjectRepresentation[] devices = {new ManagedObjectRepresentation()};
-        subscriptionsService.runForTenant(tenant, () -> {
-            devices[0].setName(name);
-            devices[0].setType(type);
-            devices[0].set(new IsDevice());
-            devices[0] = inventoryApi.create(devices[0]);
-            log.info("New device created with ID {}", devices[0].getId());
-            ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
-            log.info("ExternalId created: {}", externalIdRep.getExternalId());
-        });
-
-        log.info("New device {} created with ID {}", devices[0], devices[0].getId());
-        return devices[0];
-    }
-
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
             String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
             throws SDKException {
@@ -352,7 +335,8 @@ public class C8yAgent {
                     ar = alarmApi.create(ar);
                     log.info("New alarm posted: {}", ar);
                 } else if (targetAPI.equals(API.MEASUREMENT)) {
-                    //MeasurementRepresentation mr = objectMapper.readValue(payload, MeasurementRepresentation.class);
+                    // MeasurementRepresentation mr = objectMapper.readValue(payload,
+                    // MeasurementRepresentation.class);
                     MeasurementRepresentation mr = jsonParser.parse(MeasurementRepresentation.class, payload);
                     mr = measurementApi.create(mr);
                     log.info("New measurement posted: {}", mr);
@@ -410,6 +394,23 @@ public class C8yAgent {
         }
     }
 
+    public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
+            String externalIdType) {
+        ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
+        subscriptionsService.runForTenant(tenant, () -> {
+            devices[0].setName(name);
+            devices[0].setType(type);
+            devices[0].set(new IsDevice());
+            devices[0] = inventoryApi.create(devices[0]);
+            log.info("New device created with ID {}", devices[0].getId());
+            ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
+            log.info("ExternalId created: {}", externalIdRep.getExternalId());
+        });
+
+        log.info("New device {} created with ID {}", devices[0], devices[0].getId());
+        return devices[0];
+    }
+
     public void saveMappings(List<Mapping> mappings) throws JsonProcessingException {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
@@ -457,7 +458,7 @@ public class C8yAgent {
         if (mappingStatus.values().size() > 0) {
             log.debug("Sending monitoring: {}", mappingStatus.values().size());
             subscriptionsService.runForTenant(tenant, () -> {
-                Map<String, Object> service = new HashMap<String,Object>();
+                Map<String, Object> service = new HashMap<String, Object>();
                 MappingStatus[] array = mappingStatus.values().toArray(new MappingStatus[0]);
                 service.put("mapping_status", array);
                 ManagedObjectRepresentation update = new ManagedObjectRepresentation();
@@ -473,8 +474,8 @@ public class C8yAgent {
     public void sendStatusService(String type, ServiceStatus serviceStatus) {
         log.debug("Sending status configuration: {}", serviceStatus);
         subscriptionsService.runForTenant(tenant, () -> {
-            Map <String, String> entry = Map.of("status", serviceStatus.getStatus().name() );
-            Map<String, Object> service = new HashMap<String,Object>();
+            Map<String, String> entry = Map.of("status", serviceStatus.getStatus().name());
+            Map<String, Object> service = new HashMap<String, Object>();
             service.put("service_status", entry);
             ManagedObjectRepresentation update = new ManagedObjectRepresentation();
             update.setId(agentMOR.getId());
