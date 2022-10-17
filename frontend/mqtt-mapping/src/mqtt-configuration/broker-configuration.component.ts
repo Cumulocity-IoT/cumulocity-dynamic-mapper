@@ -47,7 +47,8 @@ export class BokerConfigurationComponent implements OnInit {
     this.initForm();
     this.loadConnectionDetails();
     this.isBrokerAgentCreated$ = from(this.configurationService.initializeMQTTAgent())
-        .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
+    // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
+    .pipe(map(agentId => agentId != null));
   }
 
 
