@@ -12,7 +12,7 @@
 </div>
 <div class="c8y-realtime" title="Snooping">
   <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.snoopTemplates != 'NONE',
-      inactive: context.item.snoopTemplates == 'NONE'
+      active: context.item.snoopStatus == 'ENABLED' || context.item.snoopStatus == 'STARTED',
+      inactive: context.item.snoopStatus == 'NONE' || context.item.snoopStatus == 'STOPPED'
     }"></span>
 </div>

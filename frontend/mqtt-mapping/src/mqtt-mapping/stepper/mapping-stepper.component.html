@@ -200,8 +200,8 @@
                       </span>
                     </div>
                     <div class="c8y-select-wrapper">
-                      <select class="form-control" formControlName="snoopTemplates" [(ngModel)]="mapping.snoopTemplates"
-                        #snoopTemplatesRef>
+                      <select class="form-control" formControlName="snoopStatus" [(ngModel)]="mapping.snoopStatus"
+                        #snoopStatusRef>
                         <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                           [disabled]="q != 'ENABLED' && q != 'NONE'">
                           {{ SnoopStatus[q] }}

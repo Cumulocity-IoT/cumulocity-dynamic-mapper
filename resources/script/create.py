@@ -63,7 +63,7 @@ def main(argv):
                         "pathSource": "$join([operator, \"-\", line])"
                     }
                 ],
-                "snoopTemplates": "STOPPED",
+                "snoopStatus": "STOPPED",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666009770743,
                 "snoopedTemplates": [
@@ -96,7 +96,7 @@ def main(argv):
                         "pathSource": "customType"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": true,
                 "lastUpdate": 1666013932915,
                 "snoopedTemplates": [],
@@ -132,7 +132,7 @@ def main(argv):
                         "pathSource": "msg_type"
                     }
                 ],
-                "snoopTemplates": "STOPPED",
+                "snoopStatus": "STOPPED",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666024767545,
                 "snoopedTemplates": [
@@ -168,7 +168,7 @@ def main(argv):
                         "pathTarget": "c8y_FuelMeasurement.L.value"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666025431423,
                 "snoopedTemplates": [],
@@ -204,7 +204,7 @@ def main(argv):
                         "pathTarget": "text"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666027537992,
                 "snoopedTemplates": [],
@@ -240,7 +240,7 @@ def main(argv):
                         "pathSource": "$fromMillis($number(deviceTimestamp))"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1665468494071,
                 "snoopedTemplates": [],
@@ -276,7 +276,7 @@ def main(argv):
                         "pathSource": "$fromMillis($number(deviceTimestamp))"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666013314897,
                 "snoopedTemplates": [],
@@ -312,7 +312,7 @@ def main(argv):
                         "pathSource": "$map(used_name, function($v, $i, $a) { $contains($v,'d1') ? $join(['Special_i0', $string($i)]) : $join([$string($v), $string($i)]) } )"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1664823280448,
                 "snoopedTemplates": [],
@@ -348,7 +348,7 @@ def main(argv):
                         "pathSource": "tx"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666007300920,
                 "snoopedTemplates": [],
@@ -399,7 +399,7 @@ def main(argv):
                         "pathSource": "$fromMillis($number(timestamp))"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1666013140134,
                 "snoopedTemplates": [],
@@ -480,7 +480,7 @@ def main(argv):
                         "pathSource": "deviceId"
                     }
                 ],
-                "snoopTemplates": "NONE",
+                "snoopStatus": "NONE",
                 "updateExistingDevice": false,
                 "lastUpdate": 1665584441907,
                 "snoopedTemplates": [],

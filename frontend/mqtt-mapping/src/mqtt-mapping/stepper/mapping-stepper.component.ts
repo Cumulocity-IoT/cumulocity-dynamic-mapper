@@ -180,7 +180,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
-      snoopTemplates: new FormControl(this.mapping.snoopTemplates),
+      snoopStatus: new FormControl(this.mapping.snoopStatus),
     },
       checkPropertiesAreValid(this.mappings)
     );
@@ -332,24 +332,24 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     const initialState = {
-      snoopStatus: this.mapping.snoopTemplates
+      snoopStatus: this.mapping.snoopStatus
     }
-    if (this.mapping.snoopTemplates == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
+    if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
       const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe((confirm: boolean) => {
         if (confirm) {
           this.onCommit.emit(this.getCurrentMapping());
         } else {
-          this.mapping.snoopTemplates = SnoopStatus.NONE
+          this.mapping.snoopStatus = SnoopStatus.NONE
         }
       })
-    } else if (this.mapping.snoopTemplates == SnoopStatus.STARTED){
+    } else if (this.mapping.snoopStatus == SnoopStatus.STARTED){
       console.log("Continue snoop ...?");
       const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe((confirm: boolean) => {
         if (confirm) {
-          this.mapping.snoopTemplates = SnoopStatus.STOPPED
+          this.mapping.snoopStatus = SnoopStatus.STOPPED
         } else {
           this.onCancel.emit();
         }
@@ -386,7 +386,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateSource = this.expandTemplate(this.templateSource);
     }
     // disable further snooping for this template
-    this.mapping.snoopTemplates = SnoopStatus.STOPPED;
+    this.mapping.snoopStatus = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
   }
 

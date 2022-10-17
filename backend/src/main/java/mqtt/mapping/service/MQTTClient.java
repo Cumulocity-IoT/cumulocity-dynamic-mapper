@@ -350,7 +350,7 @@ public class MQTTClient {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
         for (Mapping mqttMapping : dirtyMappings) {
-            log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopTemplates);
+            log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopStatus);
             // no reload required
             updateMapping(mqttMapping.id, mqttMapping, false);
         }
