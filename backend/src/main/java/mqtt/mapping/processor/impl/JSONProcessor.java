@@ -148,7 +148,6 @@ public class JSONProcessor extends PayloadProcessor {
             /*
              * step 2 analyse exctracted content: textual, array
              */
-            var substitute = "";
             if (extractedSourceContent == null) {
                 log.error("No substitution for: {}, {}, {}", sub.pathSource, payloadTarget,
                         payloadMessage);
@@ -177,12 +176,12 @@ public class JSONProcessor extends PayloadProcessor {
                     pl.add(new SubstituteValue(extractedSourceContent.numberValue().toString(), TYPE.NUMBER));
                     postProcessingCache.put(key, pl);
                 } else {
-                    log.warn("Ignoring this substitution, sone no objects are allowed for: {}, {}, {}, {}",
-                            sub.pathSource, substitute);
+                    log.warn("Ignoring this substitution, no objects are allowed for: {}, {}",
+                            sub.pathSource, extractedSourceContent.toString());
                 }
-                log.info("Evaluated substitution (pathSource, substitute): ({},{}), pathTarget: {}, {}, {}, {}",
-                        sub.pathSource, substitute, sub.pathTarget, payloadTarget,
-                        payloadMessage, mapping.targetAPI.equals(API.INVENTORY));
+                log.info("Evaluated substitution (pathSource, substitute): ({},{}), (pathTarget): ({}), {}, {}",
+                        sub.pathSource, extractedSourceContent.toString(), sub.pathTarget,
+                        payloadMessage, payloadTarget);
             }
 
             if (sub.pathTarget.equals(TIME)) {
