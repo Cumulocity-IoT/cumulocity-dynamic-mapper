@@ -1,5 +1,14 @@
-<c8y-confirm-modal [title]="title" [status]="status" [labels]="labels" #substitutionRef>
-  <div><span>The snooping for payloads starts.</span></div>
-  <div><span>The wizzard closes at this step and can be continued, when payloads on the subscription topic are
-      recorded.</span></div>
+<c8y-confirm-modal [title]="title" [status]="status" [labels]="labels" #snoopingRef>
+  <div *ngIf= "snoopStatus == SnoopStatus.ENABLED">
+    <div>The snooping for payloads starts.</div>
+    <div>The wizzard closes at this step and can be continued, when payloads on the subscription topic are
+        recorded.
+    </div>
+  </div>
+
+  <div *ngIf= "snoopStatus == SnoopStatus.STARTED">
+    <div>The snooping for payloads started. Would you like to stop it?</div>
+    <div>In this case in the wizzard step  you can use the snooped payloads.
+    </div>
+  </div>
 </c8y-confirm-modal>

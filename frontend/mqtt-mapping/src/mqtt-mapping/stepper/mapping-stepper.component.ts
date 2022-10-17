@@ -331,11 +331,28 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.dataTesting = this.editorSource.get();
     }
 
+    const initialState = {
+      snoopStatus: this.mapping.snoopTemplates
+    }
     if (this.mapping.snoopTemplates == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
-      const substitutionModalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent);
-      substitutionModalRef.content.closeSubject.subscribe(() => {
-        this.onCommit.emit(this.getCurrentMapping());
+      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
+      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
+        if (confirm) {
+          this.onCommit.emit(this.getCurrentMapping());
+        } else {
+          this.mapping.snoopTemplates = SnoopStatus.NONE
+        }
+      })
+    } else if (this.mapping.snoopTemplates == SnoopStatus.STARTED){
+      console.log("Continue snoop ...?");
+      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
+      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
+        if (confirm) {
+          this.mapping.snoopTemplates = SnoopStatus.STOPPED
+        } else {
+          this.onCancel.emit();
+        }
       })
     } else {
       event.stepper.next();
@@ -435,8 +452,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             substitutionOld: substitutionOld[0],
             substitutionNew: sub
           }
-          const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
-          overwriteModalRef.content.closeSubject.subscribe(
+          const modalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
+          modalRef.content.closeSubject.subscribe(
             (overwrite: boolean) => {
               console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
               if (overwrite) {
@@ -472,8 +489,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       const initialState = {
         substitution: this.mapping.substitutions[existingSubstitution]
       }
-      const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
-      overwriteModalRef.content.closeSubject.subscribe(
+      const modalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
+      modalRef.content.closeSubject.subscribe(
         (overwrite: boolean) => {
           console.log("Overwriting substitution I:", overwrite, this.mapping.substitutions);
           if (overwrite) {

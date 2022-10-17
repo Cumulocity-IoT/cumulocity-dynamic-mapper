@@ -188,25 +188,28 @@ export class MappingComponent implements OnInit {
   }
 
   async onCommit(mapping: Mapping) {
-    mapping.lastUpdate = Date.now();
-    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
-    console.log("Changed mapping:", mapping, i);
+    // test if new/updated mapping was commited or if cancel
+    // if (mapping) {
+      mapping.lastUpdate = Date.now();
+      let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
+      console.log("Changed mapping:", mapping, i);
 
-    if (isTemplateTopicUnique(mapping, this.mappings)) {
-      if (i == -1) {
-        // new mapping
-        console.log("Push new mapping:", mapping, i);
-        this.mappings.push(mapping)
+      if (isTemplateTopicUnique(mapping, this.mappings)) {
+        if (i == -1) {
+          // new mapping
+          console.log("Push new mapping:", mapping, i);
+          this.mappings.push(mapping)
+        } else {
+          console.log("Update existing mapping:", this.mappings[i], mapping, i);
+          this.mappings[i] = mapping;
+        }
+        this.mappingGridComponent.reload();
+        this.saveMappings();
+        this.activateMappings();
       } else {
-        console.log("Update existing mapping:", this.mappings[i], mapping, i);
-        this.mappings[i] = mapping;
+        this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
       }
-      this.mappingGridComponent.reload();
-      this.saveMappings();
-      this.activateMappings();
-    } else {
-      this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
-    }
+    //}
     this.showConfigMapping = false;
   }
 
