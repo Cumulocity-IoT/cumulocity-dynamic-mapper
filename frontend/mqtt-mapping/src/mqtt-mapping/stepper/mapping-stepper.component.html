@@ -26,8 +26,9 @@
                   <div class="row">
                     <div class="col-lg-5 form-group p-r-0">
                       <label for="subscriptionTopic" class="" translate>Subscription Topic</label>
-                      <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text" class="form-control"
-                        placeholder="e.g. device/110" #topicRef required (change)="onSubscriptionTopicChanged($event)" />
+                      <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text"
+                        class="form-control" placeholder="e.g. device/110" #topicRef required
+                        (change)="onSubscriptionTopicChanged($event)" />
                       <c8y-messages>
                         <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]"
                           translate>
@@ -46,8 +47,8 @@
                         <label translate><br></label>
                         <div class="input-group">
                           <label class="c8y-switch" title="{{ 'Wildcard TemlateTopic'}}">
-                            <input name ="templateTopicWildcard" type="checkbox"  disabled="true"
-                            [checked]="isWildcardTopic(mapping.templateTopic)" />
+                            <input name="templateTopicWildcard" type="checkbox" disabled="true"
+                              [checked]="isWildcardTopic(mapping.templateTopic)" />
                             <span></span>
                             <span>
                               {{ 'Wildcard TemlateTopic'}}
@@ -109,18 +110,17 @@
                         *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic]"
                         translate>The Template Topic must match the Subscription Topic.
                       </c8y-message>
-                      <c8y-message
-                      *ngIf="propertyForm.errors?.[ValidationError.Device_Identifier_Must_Be_Selected]"
-                      translate>The device identifier must be selected.
-                    </c8y-message>
+                      <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Device_Identifier_Must_Be_Selected]"
+                        translate>The device identifier must be selected.
+                      </c8y-message>
                     </c8y-messages>
                   </c8y-form-group>
                   <div class="row">
                     <div class="col-md-6 form-group">
                       <label for="targetAPI" class="" translate>Target API</label>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI" (change)="onTargetAPIChanged($event)"
-                          #targetAPIRef>
+                        <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
+                          (change)="onTargetAPIChanged($event)" #targetAPIRef>
                           <option *ngFor="let api of keys(API)" [ngValue]="api">
                             {{ api }}
                           </option>
@@ -150,7 +150,8 @@
                     </div>
                     <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY">
                       <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
-                        <input type="checkbox" formControlName="createNonExistingDevice" [(ngModel)]="mapping.createNonExistingDevice" />
+                        <input type="checkbox" formControlName="createNonExistingDevice"
+                          [(ngModel)]="mapping.createNonExistingDevice" />
                         <span></span>
                         <span>
                           {{ 'Create Non Existing Device' | translate }}
@@ -159,7 +160,8 @@
                     </div>
                     <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY">
                       <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
-                        <input type="checkbox" formControlName="updateExistingDevice" [(ngModel)]="mapping.updateExistingDevice" />
+                        <input type="checkbox" formControlName="updateExistingDevice"
+                          [(ngModel)]="mapping.updateExistingDevice" />
                         <span></span>
                         <span>
                           {{ 'Update Existing Device' | translate }}
@@ -243,7 +245,8 @@
                           </json-editor>
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate>Select source node to define substitution!
+                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate>Select source node to
+                            define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
@@ -329,7 +332,8 @@
                           </json-editor>
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate>Select target node to define substitution!
+                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate>Select target node to
+                            define substitution!
                           </c8y-message>
                         </c8y-messages>
                       </div>
@@ -350,7 +354,8 @@
                       </label>
                       <div style="min-height: 32px;">
                         <mapping-substitution-renderer [substitutions]="mapping.substitutions"
-                          [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}" (onSelect)="onSelectSubstitution($event)">
+                          [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}"
+                          (onSelect)="onSelectSubstitution($event)">
                         </mapping-substitution-renderer>
                       </div>
                       <br>
@@ -358,7 +363,7 @@
                   </div>
 
                   <div class="row" formGroupName="cs">
-                  <!-- <div class="row" > -->
+                    <!-- <div class="row" > -->
                     <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
@@ -368,18 +373,28 @@
                           <label translate>Evaluate Expression on Source
                           </label>
                           <span class="hidden-xs hidden-sm p-l-4">
-                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-                              in your
-                              expressions, e.g. to convert a UNIX timestamp to ISO date format use: <code>$fromMillis($number(deviceTimestamp))</code></ng-template>
+                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a> in your expressions:
+                              <ol>
+                                <li>to convert a UNIX timestamp to ISO date format use:
+                                  <code>$fromMillis($number(deviceTimestamp))</code></li>
+                                <li>to join substring starting at position 5 of property <code>txt</code> with device
+                                  identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                                <li>escape properties with special characters with <code>`</code>. The property
+                                  <code>customer-1</code> becomes <code>`customer-1`</code></li>
+                                <li>function chaining using <code>~></code> is not supported, instead use function
+                                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+                              </ol>
+                            </ng-template>
                             <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
                               popoverTitle="JSONata" placement="right" type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
                         </div>
-                         <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
+                        <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
                           formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
-                          placeholder="e.g. $join([$substring(tx,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" /> 
+                          placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
                         <c8y-messages>
                           <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
                           </c8y-message>
@@ -389,7 +404,8 @@
                     <div class="col-lg-2">
                       <br>
                       <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
-                        <input type="checkbox" formControlName="di" [(ngModel)]="currentSubstitution.definesIdentifier" />
+                        <input type="checkbox" formControlName="di"
+                          [(ngModel)]="currentSubstitution.definesIdentifier" />
                         <span></span>
                         <span>
                           {{ 'Define Identifier' | translate }}
@@ -400,8 +416,7 @@
                       <div class="form-group">
                         <label translate>Substitute in Target</label>
                         <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                          formControlName="pt"
-                           [(ngModel)]="currentSubstitution.pathTarget" readonly disabled="true" />
+                          formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" readonly disabled="true" />
                       </div>
                     </div>
                   </div>

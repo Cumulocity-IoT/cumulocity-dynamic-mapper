@@ -12,21 +12,21 @@
     <div class="card card--fullpage">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ 'MQTT' | translate }}
+          {{ 'Configuration Broker' | translate }}
         </h4>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isMQTTConnected,
-              inactive: !isMQTTConnected
+              active: isBrokerConnected,
+              inactive: !isBrokerConnected
             }"></span>
-          {{ 'MQTTBroker connected' | translate }}
+          {{ 'Broker connected' | translate }}
         </div>
         <div class="c8y-realtime">
           <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isMQTTAgentCreated$ | async,
-              inactive: !isMQTTAgentCreated$ | async
+              active: isBrokerAgentCreated$ | async,
+              inactive: !isBrokerAgentCreated$ | async
             }"></span>
-          {{ 'MQTTAgent registered' | translate }}
+          {{ 'MQTT Mapping Service' | translate }}
         </div>
       </div>
       <div class="inner-scroll">
@@ -78,17 +78,30 @@
               </c8y-messages>
             </c8y-form-group>
             <c8y-form-group>
-              <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
-                <input type="checkbox" formControlName="useTLS" [(ngModel)]="configuration.useTLS"  #useTLSRef required  />
-                <span></span>
-                <span>
-                  {{ 'Use TLS'}}
-                </span>
-              </label>
-              <c8y-messages>
-                <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
-                </c8y-message>
-              </c8y-messages>
+              <div class ="row">
+                <div class="col-lg-6">
+                  <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
+                    <input type="checkbox" formControlName="useTLS" [(ngModel)]="configuration.useTLS"  #useTLSRef required  />
+                    <span></span>
+                    <span>
+                      {{ 'Use TLS'}}
+                    </span>
+                  </label>
+                  <c8y-messages>
+                    <c8y-message *ngIf="!mqttForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is required.
+                    </c8y-message>
+                  </c8y-messages>
+                </div>
+                <div class="col-lg-6">
+                  <label class="c8y-switch" title="{{ 'Active' | translate }}">
+                    <input type="checkbox" formControlName="active" [ngModel]="isBrokerActivated" disabled="true"  />
+                    <span></span>
+                    <span>
+                      {{ 'Active'}}
+                    </span>
+                  </label>
+                </div>
+              </div>
             </c8y-form-group>
           </div>
         </div>
@@ -99,11 +112,11 @@
               Update
             </button>
             <button type="button" name="connect" class="btn btn-primary" (click)="onConnectButtonClicked()"
-              [disabled]="isMQTTConnected" translate>
+              [disabled]="isBrokerConnected" translate>
               Connect
             </button>
             <button type="button" name="disconnect" class="btn btn-danger" (click)="onDisconnectButtonClicked()"
-              [disabled]="!isMQTTConnected" translate>
+              [disabled]="!isBrokerConnected" translate>
               Disconnect
             </button>
           </div>

@@ -3,14 +3,14 @@ import { ApplicationService } from '@c8y/client';
 import { gettext, NavigatorNode, NavigatorNodeFactory } from '@c8y/ngx-components';
 
 @Injectable()
-export class ConfigurationNavigationFactory implements NavigatorNodeFactory {
-  private static readonly APPLICATION_MQTT_GENERIC = 'generic-mqtt-agent';
+export class MappingNavigationFactory implements NavigatorNodeFactory {
+  private static readonly APPLICATION_MQTT_GENERIC = 'mqtt-mapping-service';
 
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext('Settings'),
     label: gettext('MQTT Mapping'),
     icon: 'ftp-server',
-    path: '/mqtt/mapping',
+    path: '/mqtt-mapping/mapping',
     priority: 99,
     preventDuplicates: true,
   });
@@ -19,7 +19,7 @@ export class ConfigurationNavigationFactory implements NavigatorNodeFactory {
 
   get() {
     return this.applicationService
-      .isAvailable(ConfigurationNavigationFactory.APPLICATION_MQTT_GENERIC)
+      .isAvailable(MappingNavigationFactory.APPLICATION_MQTT_GENERIC)
       .then((result) => {
         if (!(result && result.data)) {
           console.error('MQTT Generic Microservice not subscribed!');

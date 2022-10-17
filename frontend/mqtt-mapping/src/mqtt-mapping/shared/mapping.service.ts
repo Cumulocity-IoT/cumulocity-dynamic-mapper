@@ -170,19 +170,24 @@ export class MappingService {
       }
     }
 
+    if ( error != ''){
+      this.alert.danger("Failed to tested mapping: " + error);
+      return '';
+    }
+
     try {
       let { data, res } = await result;
       //console.log ("My data:", data );
-      if ((res.status == 200 || res.status == 201) && error != '') {
+      if ((res.status == 200 || res.status == 201)) {
         this.alert.success("Successfully tested mapping!");
         return data;
       } else {
-        let error = await res.text();
-        this.alert.danger("Failed to tested mapping: " + error);
+        let e = await res.text();
+        this.alert.danger("Failed to tested mapping: " + e);
         return '';
       }
-    } catch (error) {
-      let { data, res } = await error;
+    } catch (e) {
+      let { data, res } = await e;
       this.alert.danger("Failed to tested mapping: " + data.message);
       return '';
     }

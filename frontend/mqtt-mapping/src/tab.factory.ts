@@ -3,28 +3,29 @@ import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 
 @Injectable()
-export class MappingConfigurationTabFactory implements TabFactory {
+export class MappingTabFactory implements TabFactory {
   constructor(public router: Router) {}
 
   get() {
+    console.log("MappingTabFactory (1.0.22) ",this.router.url, this.router.url.match(/mqtt-mapping/g));
     const tabs: Tab[] = [];
-    if (this.router.url.match(/mqtt/g)) {
+    if (this.router.url.match(/mqtt-mapping/g)) {
       tabs.push({
-        path: 'mqtt/configuration',
+        path: 'mqtt-mapping/configuration',
         priority: 1000,
         label: 'Configuration',
         icon: 'cog',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt/mapping',
+        path: 'mqtt-mapping/mapping',
         priority: 1000,
         label: 'Mapping',
         icon: 'split-table',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt/monitoring',
+        path: 'mqtt-mapping/monitoring',
         priority: 1000,
         label: 'Monitoring',
         icon: 'monitoring',

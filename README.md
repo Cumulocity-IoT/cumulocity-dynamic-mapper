@@ -1,4 +1,4 @@
-# Generic MQTT Agent Microservice for Cumulocity
+# Dynamic MQTT Mapping Service for Cumulocity
 
 # Content
 - [Overview](#overview)
@@ -100,19 +100,19 @@ In Administration App go to Ecosystem -> Microservices and click on "Add Microse
 
 ![Upload Microservice](resources/image/Generic_MQTT_UploadMicroservice.png).
 
-Select the "generic-mqtt-agent.zip".
+Select the "mqtt.mapping.service.zip".
 Make sure that you subscribe the microservice to your tenant when prompted
 
 ### Web App Plugin
 
 In Adminstration App go to Ecosystem -> Packages and click on "Add Application" on the top right.
 
-> Note: If you don't see the Packages Menu you have to add "?beta=true" in your URL.
+> **_NOTE:_** If you don't see the Packages Menu you have to add "?beta=true" in your URL.
 > Example: {{url}}/apps/administration?beta=true
 
 Select "mqtt-mapping.zip" and wait until it is uploaded.
 
-> Note: We need to clone the Administration app to add the plugin to it
+> **_NOTE:_** We need to clone the Administration app to add the plugin to it
 
 After succesful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
 and afterwards "Administration".
@@ -167,12 +167,23 @@ Mappings are persisted as Managed Objects and can be easily changed, deleted or 
 
 #### Expression Language
 
-In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id. In this case the following function could be used:
+In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id.
+Complex mapping expressions are supported by using [JSONata](https://jsonata.org). \
+In this case the following function could be used:
 ```$join([device_name, _DEVICE_IDENT_])```. \
-Complex mapping expressions are supported by using [JSONata](https://jsonata.org). Example to concatenate JSON Properties with JSONata:
-```
-Account.Order[0].Product[0]."Product Name" & "_" &Account.Order[0].Product[0]."ProductID"
-```
+
+Further example for JSONata expressions are:
+* to convert a UNIX timestamp to ISO date format use:
+      <code>$fromMillis($number(deviceTimestamp))</code>
+* to join substring starting at position 5 of property <code>txt</code> with device
+      identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code>
+
+>**_NOTE:_**
+> * escape properties with special characters with <code>`</code>. The property
+        <code>customer-1</code> becomes <code>`customer-1`</code>
+> * function chaining using <code>~></code> is not supported, instead use function
+        notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+        becomes <code>$sum(Account.Product.(Price * Quantity))</code>
 
 ### Wizzard to define a mapping
 
@@ -194,7 +205,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
 When you use a wildcard it signals to the mapping that you want to extract the device identifier from the topic name. In this case the additinal property ```_DEVICE_IDENT_```is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
->Note: Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
+>**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
 
 #### Template Topic
@@ -247,10 +258,10 @@ To define a new substitution the following steps have to be performed:
 1.  Select  ```Defines device identifier``` if this property defines the device identifier, i.e. it is mapped to ```source.id```.
 1. Press the add button with the ```+``` sign.
 
->Note: When adding a new substitution the following two consistency rules are checked:
+>**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
+>1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
+>1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
-1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
-1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
 
@@ -288,7 +299,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 A script to create sample MQTT mappings can be found [here](resources/script/createSampleMappings.sh).
 
 ## Enhance
-In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `GenericCallback.class` or add a new Handler in the handler folder.
+In the folder [Callbacks](./backend/src/main/java/mqttagent/callbacks) you can either overwrite the existing `JSONCallback.class` or add a new Handler in the handler folder.
 As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
