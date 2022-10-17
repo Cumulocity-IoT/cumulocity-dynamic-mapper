@@ -50,6 +50,10 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 * **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
 * **MQTT Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
+> **Please Note:** A required MQTT Broker is not part of this repo and must be provided to make use of this component.
+> In upcoming releases a *Generic MQTT Broker* will be part of Cumulocity IoT. If necessary we will adapt this component
+> to work with it seamlessly!
+
 The following diagram describes what happens in the microservice if a new MQTT mapping is added.
 ![Mapping](resources/image/Generic_MQTT_Diagram_Map.png)
 
