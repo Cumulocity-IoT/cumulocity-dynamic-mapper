@@ -64,7 +64,7 @@ public class Mapping implements Serializable {
   public String externalIdType;
 
   @NotNull
-  public SnoopStatus snoopTemplates;
+  public SnoopStatus snoopStatus;
 
   @NotNull
   public ArrayList<String> snoopedTemplates;
@@ -90,7 +90,7 @@ public class Mapping implements Serializable {
     this.substitutions = mapping.substitutions;
     this.mapDeviceIdentifier = mapping.mapDeviceIdentifier;
     this.externalIdType = mapping.externalIdType;
-    this.snoopTemplates = mapping.snoopTemplates;
+    this.snoopStatus = mapping.snoopStatus;
     this.snoopedTemplates = mapping.snoopedTemplates;
   }
 
@@ -100,7 +100,7 @@ public class Mapping implements Serializable {
       // remove oldest payload
       snoopedTemplates.remove(0);
     } else {
-      snoopTemplates = SnoopStatus.STARTED;
+      snoopStatus = SnoopStatus.STARTED;
     }
   }
 }

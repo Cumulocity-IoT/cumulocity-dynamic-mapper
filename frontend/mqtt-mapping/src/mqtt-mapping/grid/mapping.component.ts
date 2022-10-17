@@ -152,7 +152,7 @@ export class MappingComponent implements OnInit {
       createNonExistingDevice: false,
       updateExistingDevice: false,
       externalIdType: 'c8y_Serial',
-      snoopTemplates: SnoopStatus.NONE,
+      snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
       lastUpdate: Date.now()
     }

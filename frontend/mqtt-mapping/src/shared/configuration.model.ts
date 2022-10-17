@@ -54,7 +54,7 @@ export interface Mapping {
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   externalIdType: string;
-  snoopTemplates: SnoopStatus;
+  snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
 }
 

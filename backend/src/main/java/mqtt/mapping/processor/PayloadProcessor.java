@@ -88,15 +88,15 @@ public abstract class PayloadProcessor implements MqttCallback {
                 MappingStatus ms = mqttClient.getMappingStatus(map, false);
                 try {
                     ms.messagesReceived++;
-                    if (map.snoopTemplates == SnoopStatus.ENABLED
-                            || map.snoopTemplates == SnoopStatus.STARTED) {
+                    if (map.snoopStatus == SnoopStatus.ENABLED
+                            || map.snoopStatus == SnoopStatus.STARTED) {
                         ms.snoopedTemplatesActive++;
                         ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
                         map.addSnoopedTemplate(payloadMessage);
 
                         log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
                                 map.snoopedTemplates.size(),
-                                map.snoopTemplates);
+                                map.snoopStatus);
                         mqttClient.setMappingDirty(map);
                     } else {
                         transformPayload(ctx, payloadMessage);
