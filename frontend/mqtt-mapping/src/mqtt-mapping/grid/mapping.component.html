@@ -11,11 +11,11 @@
     <i c8yIcon="plus-circle"></i>
     {{ 'Add mapping' | translate }}
   </button>
-<!--   <button class="btn btn-link" title="{{ 'Save changes' | translate }}" (click)="onSaveClicked()">
+  <!--   <button class="btn btn-link" title="{{ 'Save changes' | translate }}" (click)="onSaveClicked()">
     <i c8yIcon="save"></i>
     {{ 'Save changes' | translate }}
   </button> -->
-<button class="btn btn-link" title="{{ 'Activate mappings' | translate }}" (click)="onActivateClicked()">
+  <button class="btn btn-link" title="{{ 'Activate mappings' | translate }}" (click)="onActivateClicked()">
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Activate mappings' | translate }}
   </button>
@@ -23,19 +23,19 @@
 <div class="card">
   <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
     <div class="card-block">
-      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mappings" 
-        [pagination]="pagination" [actionControls]="actionControls" >
+      <c8y-data-grid [title]="'Mapping List' | translate" [columns]="columns" [rows]="mappings"
+        [pagination]="pagination" [actionControls]="actionControls">
       </c8y-data-grid>
     </div>
   </div>
-  
+
   <div class="card-block col-md-offset-5 bg-white">
     <div class="c8y-empty-state" *ngIf="mappings.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
-        <strong>No mappings available.</strong><br/>
-        <small translate>Add a new mapping by clicking below.</small><br/>
-         <button class="btn btn-primary" title="Add record" (click)="addMapping()" translate>Add mapping
+        <strong>No mappings available.</strong><br />
+        <small translate>Add a new mapping by clicking below.</small><br />
+        <button class="btn btn-primary" title="Add record" (click)="addMapping()" translate>Add mapping
         </button>
       </p>
     </div>
@@ -43,8 +43,8 @@
 
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
-      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false"
-        (onCommit)="onCommit($event)" [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
+      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false" (onCommit)="onCommit($event)"
+        [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
       </mapping-stepper>
     </div>
   </div>

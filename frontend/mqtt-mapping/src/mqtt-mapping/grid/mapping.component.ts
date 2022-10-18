@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { API, Mapping, QOS, SnoopStatus } from '../../shared/configuration.model';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { API, Mapping, Operation, QOS, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -117,6 +118,7 @@ export class MappingComponent implements OnInit {
 
   constructor(
     public mappingService: MappingService,
+    public configurationService: BrokerConfigurationService,
     public alertService: AlertService
   ) { }
 
@@ -222,7 +224,7 @@ export class MappingComponent implements OnInit {
   }
 
   private async activateMappings() {
-    const response2 = await this.mappingService.activateMappings();
+    const response2 = await this.configurationService.runOperation(Operation.RELOAD);
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings activated successfully'));

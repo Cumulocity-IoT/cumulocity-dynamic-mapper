@@ -187,7 +187,7 @@ public class MQTTClient {
         log.info("Disconnecting from MQTT broker: {}",
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
-            if (mqttClient.isConnected()) {
+            if (isConnected()) {
                 log.debug("Disconnected from MQTT broker I: {}", mqttClient.getServerURI());
                 activeSubscriptionTopic.forEach(topic -> {
                     try {
@@ -449,6 +449,8 @@ public class MQTTClient {
             connectToBroker();
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
+        } else if (operation.getOperation().equals(Operation.RESFRESH_MAPPING_STATUS)) {
+            sendStatusMapping();
         }
     }
 
