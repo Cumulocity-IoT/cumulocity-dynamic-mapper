@@ -17,15 +17,13 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
-import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 

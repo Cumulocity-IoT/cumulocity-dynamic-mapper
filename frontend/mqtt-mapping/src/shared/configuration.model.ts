@@ -110,3 +110,10 @@ export enum SnoopStatus {
   STARTED = "STARTED",
   STOPPED = "STOPPED"
 }
+
+export enum Operation {
+  RELOAD,
+  CONNECT,
+  DISCONNECT, 
+  RESFRESH_MAPPING_STATUS
+}
