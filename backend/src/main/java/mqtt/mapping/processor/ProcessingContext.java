@@ -12,7 +12,7 @@ import mqtt.mapping.model.Mapping;
 public class ProcessingContext {
     private Mapping mapping;
     private String deviceIdentifier;
-    private List <C8YRequest> requests = new ArrayList<C8YRequest>();
+    private ArrayList <C8YRequest> requests = new ArrayList<C8YRequest>();
     private Exception error;
     public boolean isDeviceIdentifierValid() {
         return !"".equals(deviceIdentifier);
@@ -20,8 +20,9 @@ public class ProcessingContext {
     public boolean hasError() {
         return error != null;
     }
-    public void addRequest(C8YRequest c8yRequest) {
+    public int addRequest(C8YRequest c8yRequest) {
         requests.add(c8yRequest);
+        return requests.size()-1;
     }
 
 }

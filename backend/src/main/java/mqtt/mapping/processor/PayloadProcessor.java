@@ -1,11 +1,15 @@
 package mqtt.mapping.processor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,8 +22,10 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.ResolveException;
+import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
@@ -46,7 +52,7 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public abstract ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException;
 
-    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException;
+    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send) throws ProcessingException;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
@@ -99,10 +105,7 @@ public abstract class PayloadProcessor implements MqttCallback {
                                 map.snoopStatus);
                         mqttClient.setMappingDirty(map);
                     } else {
-                        transformPayload(ctx, payloadMessage);
-                        if (sendPayload) {
-                            sendC8YRequests(ctx);
-                        }
+                        transformPayload(ctx, payloadMessage, sendPayload);
                         if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
                             ms.errors++;
                         }
@@ -120,20 +123,20 @@ public abstract class PayloadProcessor implements MqttCallback {
         return processingResult;
     }
 
-    public void sendC8YRequests(ProcessingContext ctx) {
-        // send target payload to c8y
-        for (C8YRequest request : ctx.getRequests()) {
-            try {
-                if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-                    c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
-                } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-                    c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
-                }
-            } catch (ProcessingException error) {
-                request.setError(error);
-            }
-        }
-    }
+    // public void sendC8YRequests(ProcessingContext ctx) {
+    //     // send target payload to c8y
+    //     for (C8YRequest request : ctx.getRequests()) {
+    //         try {
+    //             if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
+    //                 c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
+    //             } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
+    //                 c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
+    //             }
+    //         } catch (ProcessingException error) {
+    //             request.setError(error);
+    //         }
+    //     }
+    // }
 
     public String resolveExternalId(String externalId, String externalIdType) {
         ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
@@ -143,6 +146,29 @@ public abstract class PayloadProcessor implements MqttCallback {
         }
         log.info("Found id {} for external id: {}", id, externalId);
         return id;
+    }
+
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String key) throws JSONException {
+        String[] pt = key.split(Pattern.quote("."));
+        if (pt == null) {
+            pt = new String[] { key };
+        }
+        return substituteValue(sub, jsonObject, pt);
+    }
+
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
+        String currentKey = keys[0];
+
+        if (keys.length == 1) {
+            return jsonObject.put(currentKey, sub.typedValue());
+        } else if (!jsonObject.has(currentKey)) {
+            throw new JSONException(currentKey + "is not a valid key.");
+        }
+
+        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
+        return jsonObject.put(currentKey, updatedNestedValue);
     }
 
     @Override

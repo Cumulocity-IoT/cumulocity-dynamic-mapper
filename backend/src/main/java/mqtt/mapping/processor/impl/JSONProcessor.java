@@ -33,49 +33,16 @@ import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.C8YRequest;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.impl.JSONProcessor.SubstituteValue.TYPE;
 
 @Slf4j
 @Service
 public class JSONProcessor extends PayloadProcessor {
-
-    static class SubstituteValue {
-        static enum TYPE {
-            NUMBER,
-            TEXTUAL
-        }
-
-        public String value;
-        public TYPE type;
-
-        public SubstituteValue(String value, TYPE type) {
-            this.type = type;
-            this.value = value;
-        }
-
-        public Object typedValue() {
-            if (type.equals(TYPE.TEXTUAL)) {
-                return value;
-            } else {
-                // check if int
-                try {
-                    return Integer.parseInt(value);
-                } catch (NumberFormatException e1) {
-                    // not int
-                    try {
-                        Float.parseFloat(value);
-                    } catch (NumberFormatException e2) {
-                        return null;
-                    }
-                }
-            }
-            return null;
-        }
-    }
 
     @Autowired
     ObjectMapper objectMapper;
@@ -99,7 +66,8 @@ public class JSONProcessor extends PayloadProcessor {
     }
 
     @Override
-    public void transformPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException {
+    public void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send)
+            throws ProcessingException {
         Mapping mapping = ctx.getMapping();
         String deviceIdentifier = ctx.getDeviceIdentifier();
 
@@ -207,6 +175,7 @@ public class JSONProcessor extends PayloadProcessor {
         }
         int i = 0;
         for (SubstituteValue device : listIdentifier) {
+            int predecessor = -1;
             for (String pathTarget : pathTargets) {
                 SubstituteValue substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL);
                 if (i < postProcessingCache.get(pathTarget).size()) {
@@ -216,28 +185,28 @@ public class JSONProcessor extends PayloadProcessor {
                     // events/alarms/measurements/inventory
                     substitute = postProcessingCache.get(pathTarget).get(0);
                 }
-                String[] pt = pathTarget.split(Pattern.quote("."));
-                if (pt == null) {
-                    pt = new String[] { pathTarget };
-                }
+
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     if (pathTarget.equals(SOURCE_ID)) {
                         var sourceId = resolveExternalId(substitute.value, mapping.externalIdType);
                         if (sourceId == null && mapping.createNonExistingDevice) {
+                            if (send) {
+                                var d = c8yAgent.upsertDevice(
+                                        "device_" + mapping.externalIdType + "_" + substitute.value,
+                                        "c8y_MQTTMapping_generated_type", substitute.value, mapping.externalIdType);
+                                substitute.value = d.getId().getValue();
+                            }
                             try {
                                 Map<String, Object> map = new HashMap<String, Object>();
                                 map.put("c8y_IsDevice", null);
                                 map.put("name", "device_" + mapping.externalIdType + "_" + substitute.value);
                                 var p = objectMapper.writeValueAsString(map);
-                                ctx.addRequest(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
-                                                p, API.INVENTORY, null, true));
+                                predecessor = ctx.addRequest(
+                                        new C8YRequest(-1, RequestMethod.PATCH, device.value, mapping.externalIdType,
+                                                p, API.INVENTORY, null));
                             } catch (JsonProcessingException e) {
                                 // ignore
                             }
-                            var d = c8yAgent.upsertDevice(
-                                    "device_" + mapping.externalIdType + "_" + substitute.value,
-                                    "c8y_MQTTMapping_generated_type", substitute.value, mapping.externalIdType);
-                            substitute.value = d.getId().getValue();
                         } else if (sourceId == null) {
                             throw new RuntimeException("External id " + substitute + " for type "
                                     + mapping.externalIdType + " not found!");
@@ -245,45 +214,44 @@ public class JSONProcessor extends PayloadProcessor {
                             substitute.value = sourceId;
                         }
                     }
-                    substituteValue(substitute, payloadTarget, pt);
+                    substituteValue(substitute, payloadTarget, pathTarget);
                 } else if (!pathTarget.equals(SOURCE_ID)) {
-                    substituteValue(substitute, payloadTarget, pt);
+                    substituteValue(substitute, payloadTarget, pathTarget);
                 }
             }
             /*
              * step 4 prepare target payload for sending to c8y
              */
             if (mapping.targetAPI.equals(API.INVENTORY)) {
-                // c8yAgent.upsertDevice(payloadTarget.toString(), device.value,
-                // mapping.externalIdType);
-                ctx.addRequest(new C8YRequest(RequestMethod.PATCH, device.value, mapping.externalIdType,
-                        payloadTarget.toString(), API.INVENTORY, null, false));
+                Exception ex = null;
+                if (send) {
+                    try {
+                        c8yAgent.upsertDevice(payloadTarget.toString(), device.value, mapping.externalIdType); 
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                ctx.addRequest(new C8YRequest(predecessor, RequestMethod.PATCH, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), API.INVENTORY, ex));
             } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                // c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
-                ctx.addRequest(new C8YRequest(RequestMethod.POST, device.value, mapping.externalIdType,
-                        payloadTarget.toString(), mapping.targetAPI, null, false));
+                Exception ex = null;
+                if (send) {
+                    try {
+                        c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());   
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                ctx.addRequest(new C8YRequest(predecessor, RequestMethod.POST, device.value, mapping.externalIdType,
+                        payloadTarget.toString(), mapping.targetAPI, ex));
             } else {
-                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
                         postProcessingCache.size());
             }
-            log.info("Added payload for sending: {}, {}, {}", payloadTarget, mapping.targetAPI.equals(API.INVENTORY),
+            log.info("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
                     listIdentifier.size());
             i++;
         }
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return jsonObject.put(currentKey, sub.typedValue());
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + "is not a valid key.");
-        }
-
-        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
-        return jsonObject.put(currentKey, updatedNestedValue);
-    }
 }
