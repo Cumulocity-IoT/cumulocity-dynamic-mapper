@@ -42,7 +42,7 @@
                         </c8y-message>
                       </c8y-messages>
                     </div>
-                    <div class="col-lg-7 form-group">
+                    <!-- <div class="col-lg-7 form-group">
                       <div class="pull-right">
                         <label translate><br></label>
                         <div class="input-group">
@@ -66,7 +66,7 @@
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </div> -->
                   </div>
                   <c8y-form-group>
                     <div class="form-group">
@@ -81,7 +81,10 @@
                           </button>
                         </span>
                       </div>
-                      <div class="row">
+                      <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
+                        class="form-control" placeholder="e.g. device/110" #templateTopic
+                        (change)="onTemplateTopicChanged($event)" />
+                      <!-- <div class="row">
                         <div class="col-lg-5 p-r-0">
                           <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
                             class="form-control" placeholder="e.g. device/110" #templateTopic
@@ -95,25 +98,52 @@
                           <input formControlName="markedDeviceIdentifier" type="text" class="form-control"
                             [(ngModel)]="markedDeviceIdentifier" readonly />
                         </div>
-                      </div>
+                      </div> -->
                     </div>
                     <c8y-messages>
                       <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
-                        This Template Topic must be unique across other Template Topics.
+                        This TemplateTopic must be unique across other TemplateTopics.
                       </c8y-message>
                       <c8y-message
                         *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
-                        translate>This Template Topic can't be the starting part of another Template Topic or vice
+                        translate>This TemplateTopic can't be the starting part of another TemplateTopic or vice
                         versa.
                       </c8y-message>
                       <c8y-message
                         *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic]"
-                        translate>The Template Topic must match the Subscription Topic.
+                        translate>The TemplateTopic must match the SubscriptionTopic.
                       </c8y-message>
                       <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Device_Identifier_Must_Be_Selected]"
                         translate>The device identifier must be selected.
                       </c8y-message>
+                      <c8y-message
+                        *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name]"
+                        translate>The TemplateTopic and TemplateTopicSample do not have same number of levels in the
+                        Topic Name.
+                      </c8y-message>
+                      <c8y-message
+                        *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name]"
+                        translate>TemplateTopic and TemplateTopicSample do not have same structure in the Topic Name.
+                      </c8y-message>
                     </c8y-messages>
+                  </c8y-form-group>
+                  <c8y-form-group>
+                    <div class="input-group">
+                      <label for="templateTopic">Template Topic Sample</label>
+                      <span class="hidden-xs hidden-sm m-l-4">
+                        <ng-template #popTemplateTopicSample>The TemplateTopicSample name must have the same number of
+                          levels and must match the TemplateTopic.
+                        </ng-template>
+                        <button class="btn-clean text-primary" [popover]="popTemplateTopicSample"
+                          popoverTitle="Template Topic Name" placement="right" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
+                    </div>
+                    <div>
+                      <input formControlName="templateTopicSample" [(ngModel)]="mapping.templateTopicSample" type="text"
+                        class="form-control" placeholder="e.g. device/110" #topicRef required />
+                    </div>
                   </c8y-form-group>
                   <div class="row">
                     <div class="col-md-6 form-group">
@@ -373,14 +403,17 @@
                           <label translate>Evaluate Expression on Source
                           </label>
                           <span class="hidden-xs hidden-sm p-l-4">
-                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a> in your expressions:
+                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+                              in your expressions:
                               <ol>
                                 <li>to convert a UNIX timestamp to ISO date format use:
-                                  <code>$fromMillis($number(deviceTimestamp))</code></li>
+                                  <code>$fromMillis($number(deviceTimestamp))</code>
+                                </li>
                                 <li>to join substring starting at position 5 of property <code>txt</code> with device
                                   identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
                                 <li>escape properties with special characters with <code>`</code>. The property
-                                  <code>customer-1</code> becomes <code>`customer-1`</code></li>
+                                  <code>customer-1</code> becomes <code>`customer-1`</code>
+                                </li>
                                 <li>function chaining using <code>~></code> is not supported, instead use function
                                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>

@@ -88,12 +88,12 @@ export class MappingService {
         if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
           let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
           if (!s || s == '') {
-            if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
+            // if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
               console.error("No substitution for:", sub.pathSource, s, mapping.source);
               throw Error("Error: substitution not found:" + sub.pathSource);
-            } else {
-              s = this.testDeviceId;
-            }
+            // } else {
+              // s = this.testDeviceId;
+            // }
           }
           _.set(result, sub.pathTarget, s)
         }
