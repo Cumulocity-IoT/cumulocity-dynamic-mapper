@@ -142,6 +142,7 @@ export class MappingComponent implements OnInit {
       id: l,
       subscriptionTopic: '',
       templateTopic: '',
+      templateTopicSample:'',
       indexDeviceIdentifierInTemplateTopic: -1,
       targetAPI: API.MEASUREMENT,
       source: '{}',

@@ -225,6 +225,7 @@ export const SCHEMA_PAYLOAD = {
 }
 
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
+export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
@@ -280,6 +281,45 @@ export function deriveTemplateTopicFromTopic(topic: string) {
 export function isTopicNameValid(topic: string): any {
   topic = normalizeTopic(topic);
 
+  let errors = {};
+  // count number of "#"
+  let count_multi = (topic.match(/\#/g) || []).length;
+  if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+  // count number of "+"
+  let count_single = (topic.match(/\+/g) || []).length;
+  if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+
+  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+
+  return errors;
+}
+
+export function isTemplateTopicValid(topic: string): any {   
+  // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+  // TOPIC_WILDCARD_MULTI
+  topic = normalizeTopic(topic);
+
+  // let errors = {};
+  // // count number of "#"
+  // let count_multi = (topic.match(/\#/g) || []).length;
+  // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+  // // count number of "+"
+  // let count_single = (topic.match(/\+/g) || []).length;
+  // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+
+  // if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+
+  let errors = {};
+  // count number of "#"
+  let count_multi = (topic.match(/\#/g) || []).length;
+  if (count_multi >= 1) errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+
+  return errors;
+}
+
+export function isSubscriptionTopicValid(topic: string): any {
+  topic = normalizeTopic(topic);
+  
   let errors = {};
   // count number of "#"
   let count_multi = (topic.match(/\#/g) || []).length;
@@ -349,6 +389,7 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let defined = false
 
     let templateTopic = normalizeTopic(control.get('templateTopic').value);
+    let templateTopicSample = normalizeTopic(control.get('templateTopicSample').value);
     let subscriptionTopic = normalizeTopic(control.get('subscriptionTopic').value);
     let id = control.get('id').value;
     let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
@@ -372,34 +413,64 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
       defined = true
     }
 
-    // count number of "#"
+    // count number of "#" in subscriptionTopic
     let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
     if (count_multi > 1) {
       errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
       defined = true
     }
 
-    // count number of "+"_
+    // count number of "+" in subscriptionTopic
     let count_single = (subscriptionTopic.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
       defined = true
     }
 
-    // wildcard "'" can only appear at the end
+    // wildcard "#" can only appear at the end in subscriptionTopic
     if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
       errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
       defined = true
     }
 
-    /*       // topic cannot be startstring of another topic
-          error = !mappings.every(m => {
-            return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
-          })
-          if (error) {
-            errors['Topic_Not_Substring_Of_OtherTopic'] = true
-            defined = true
-          } */
+    // count number of "#" in templateTopic
+    count_multi = (templateTopic.match(/\#/g) || []).length;
+    if (count_multi >= 1) {
+      errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+      defined = true
+    }
+
+    let  splitTT : String[] = splitTopic(templateTopic);
+    let  splitTTS : String[] = splitTopic(templateTopicSample);
+    if (splitTT.length != splitTTS.length) {
+      errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
+    } else {
+      for (let i = 0; i < splitTT.length; i++) {
+        if ( "/" == splitTT[i] && !("/" == splitTTS[i])) {
+          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+          break;
+        }
+        if (("/" == splitTTS[i]) && !("/" == splitTT[i])) {
+          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+          break;
+        }
+        if (!("/" == splitTT[i]) && !("+" == splitTT[i])) {
+          if (splitTT[i] != splitTTS[i]) {
+            errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+            break;
+          }
+        }
+      }
+    }
+
+    // // topic cannot be startstring of another topic
+    //   error = !mappings.every(m => {
+    //     return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
+    //   })
+    //   if (error) {
+    //     errors['Topic_Not_Substring_Of_OtherTopic'] = true
+    //     defined = true
+    //   }
 
     // error = !mappings.every(m => {
     //   return (templateTopic != m.templateTopic || id == m.id)
@@ -418,11 +489,11 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     // }
 
     // if the template topic contains a wildcard a device identifier must be selected 
-    let mdi = control.get('markedDeviceIdentifier').value;
-    if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
-      errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
-      defined = true
-    }
+    // let mdi = control.get('markedDeviceIdentifier').value;
+    // if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
+    //   errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
+    //   defined = true
+    // }
 
 
     // let containsWildcardTemplateTopic = isWildcardTopic(templateTopic);

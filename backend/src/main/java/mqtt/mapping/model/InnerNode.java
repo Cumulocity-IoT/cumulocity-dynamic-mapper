@@ -41,37 +41,28 @@ public class InnerNode extends TreeNode {
         String joinedSet = String.join(",", set);
         String joinedPath = String.join("", levels);
         log.info("Trying to resolve: '{}' in [{}]", joinedPath, joinedSet);
-        ArrayList<TreeNode> tn = new ArrayList<TreeNode>();
         ArrayList<TreeNode> results = new ArrayList<TreeNode>();
         if (levels.size() >= 1) {
-            if (childNodes.containsKey(levels.get(0))) {
-                tn = childNodes.get(levels.get(0));
-                // test if exact match exists for this level
-            } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_MULTI)) {
-                tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_MULTI);
-                // test if multi level wildcard "#" match exists for this level
-            } else if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_SINGLE)) {
-                tn = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
-                // test if single level wildcard "+" match exists for this level
-            } else {
-                throw new ResolveException("Path: " + levels.get(0).toString() + " could not be resolved further!");
-            }
-            if (levels.size() > 1) {
-                if (tn.size() > 1) {
-                    throw new ResolveException("Path: " + levels.get(0).toString()
-                    + " could not be resolved uniquely, since too many innerNodes exist: " + tn.size() + "!");
-                }
-                levels.remove(0);
-                return tn.get(0).resolveTopicPath(levels);
-            } else if (levels.size() == 1) {
-                levels.remove(0);
-                for (TreeNode node : tn) {
+            String currentLevel = levels.get(0);
+            levels.remove(0);
+            if (childNodes.containsKey(currentLevel)) {
+                ArrayList<TreeNode> revolvedNodes = childNodes.get(currentLevel);
+                for (TreeNode node : revolvedNodes) {
                     results.addAll(node.resolveTopicPath(levels));
                 }
-            }  
-        } else {
-            throw new ResolveException("Unknown Resolution Error!");
-        }
+            }
+            if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_SINGLE)) {
+                ArrayList<TreeNode> revolvedNodes = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
+                for (TreeNode node : revolvedNodes) {
+                    results.addAll(node.resolveTopicPath(levels));
+                }
+                // test if single level wildcard "+" match exists for this level
+            } else {
+                throw new ResolveException("Path: " + currentLevel.toString() + " could not be resolved further!");
+            }
+        } else if (levels.size() == 0) 
+            throw new ResolveException("Path could not be resolved, since it is end in an InnerNodes instead of a mappingNode!");
+
         return results;
     }
 
@@ -136,7 +127,7 @@ public class InnerNode extends TreeNode {
         if (path == null || path.equals("")) {
             path = mapping.subscriptionTopic;
         }
-        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+        ArrayList<String> levels = TreeNode.splitTopic(path);
         insertMapping(this, mapping, levels);
     }
 }

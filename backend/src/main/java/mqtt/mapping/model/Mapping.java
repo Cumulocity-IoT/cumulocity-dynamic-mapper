@@ -20,15 +20,19 @@ import javax.validation.constraints.NotNull;
 public class Mapping implements Serializable {
 
   public static int SNOOP_TEMPLATES_MAX = 5;
+  public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
 
   @NotNull
   public long id;
-
+  
   @NotNull
   public String subscriptionTopic;
-
+  
   @NotNull
   public String templateTopic;
+  
+  @NotNull
+  public String templateTopicSample;
 
   @NotNull
   public long indexDeviceIdentifierInTemplateTopic;
@@ -75,6 +79,7 @@ public class Mapping implements Serializable {
   @NotNull
   public long lastUpdate;
 
+
   @Override
   public boolean equals(Object m) {
     return (m instanceof Mapping) && id == ((Mapping) m).id;
@@ -112,5 +117,9 @@ public class Mapping implements Serializable {
         (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
+  }
+
+  public static String[] splitTopic(String topic) {
+    return topic.split(SPLIT_TOPIC_REGEXP);
   }
 }
