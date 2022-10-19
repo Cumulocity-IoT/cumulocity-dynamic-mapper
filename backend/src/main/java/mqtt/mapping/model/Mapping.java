@@ -7,6 +7,9 @@ import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.validation.constraints.NotNull;
 
@@ -102,5 +105,12 @@ public class Mapping implements Serializable {
     } else {
       snoopStatus = SnoopStatus.STARTED;
     }
+  }
+
+  public void sortSubstitutions() {
+    MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
+        (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
+        .toArray(size -> new MappingSubstitution[size]);
+    substitutions = sortedSubstitutions;
   }
 }

@@ -7,6 +7,9 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class MappingsRepresentationJUnitTest {
 
   @Test
@@ -55,6 +58,28 @@ public class MappingsRepresentationJUnitTest {
     m3.setTemplateTopic("/device/");
     m3.setSubscriptionTopic("/device/#");
     assertEquals(new ArrayList<ValidationError>(), MappingsRepresentation.isTemplateTopicValid(m3));
+  }
+
+  @Test
+  void testSubstitutionIsSorted() {
+
+    Mapping m1 = new Mapping();
+    MappingSubstitution s1 = new MappingSubstitution();
+    s1.pathSource ="p1s";
+    s1.pathTarget ="p1t";
+    MappingSubstitution s2 = new MappingSubstitution();
+    s2.pathSource ="p2s";
+    s2.pathTarget ="p2t";
+    s2.definesIdentifier = true;
+    MappingSubstitution s3 = new MappingSubstitution();
+    s3.pathSource ="p3s";
+    s3.pathTarget ="p3t";
+    m1.substitutions = new MappingSubstitution[] {s1, s2, s3};
+
+    assertEquals("p1s", m1.substitutions[0].pathSource);
+    m1.sortSubstitutions();
+    log.info("My substitutions {}", Arrays.toString(m1.substitutions));
+    assertEquals("p2s", m1.substitutions[0].pathSource);
   }
 
 }

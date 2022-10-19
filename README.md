@@ -76,6 +76,14 @@ following Mappings are supported:
 
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
+Due to two different libraries to evaluate JSONata in:
+1. frontend (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+1. backend (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+
+differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
+
+The Paho java client uses memory persistence to persit its state (used to store outbound and inbound messages while they are in flight). When the microservice restarts this information is lost. Micorservice can not use the default ```MqttDefaultFilePersistence```.
+
 > **Pull Requests adding mappings for other data formats or additional functionaly are welcomed!**
 
 ## Prerequisites
