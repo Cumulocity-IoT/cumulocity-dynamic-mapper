@@ -1,7 +1,6 @@
 package mqtt.mapping.processor;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,6 +11,8 @@ import mqtt.mapping.model.Mapping;
 public class ProcessingContext {
     private Mapping mapping;
     private String deviceIdentifier;
+    private String topic;
+    private String payload;
     private ArrayList <C8YRequest> requests = new ArrayList<C8YRequest>();
     private Exception error;
     public boolean isDeviceIdentifierValid() {

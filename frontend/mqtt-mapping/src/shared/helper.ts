@@ -256,7 +256,12 @@ export function getSchema(targetAPI: string): any {
 /*
 * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
 */
-export function splitTopic(topic: string): string[] {
+export function splitTopicExcludingSeparator(topic: string): string[] {
+  topic = topic.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+  return topic.split(/\//g);
+}
+
+export function splitTopicIncludingSeparator(topic: string): string[] {
   return topic.split(/(?<=\/)|(?=\/)/g);
 }
 
@@ -388,9 +393,9 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let error: boolean = false;
     let defined = false
 
-    let templateTopic = normalizeTopic(control.get('templateTopic').value);
-    let templateTopicSample = normalizeTopic(control.get('templateTopicSample').value);
-    let subscriptionTopic = normalizeTopic(control.get('subscriptionTopic').value);
+    let templateTopic = control.get('templateTopic').value;
+    let templateTopicSample = control.get('templateTopicSample').value;
+    let subscriptionTopic = control.get('subscriptionTopic').value;
     let id = control.get('id').value;
     let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
 
@@ -440,8 +445,8 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
       defined = true
     }
 
-    let  splitTT : String[] = splitTopic(templateTopic);
-    let  splitTTS : String[] = splitTopic(templateTopicSample);
+    let  splitTT : String[] = splitTopicExcludingSeparator(templateTopic);
+    let  splitTTS : String[] = splitTopicExcludingSeparator(templateTopicSample);
     if (splitTT.length != splitTTS.length) {
       errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
     } else {

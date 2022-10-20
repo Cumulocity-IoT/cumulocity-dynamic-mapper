@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -20,24 +21,26 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MappingsRepresentation implements Serializable {
+public class MappingsRepresentation extends ManagedObjectRepresentation implements Serializable {
 
+  public static final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
+  public static final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
   static final String REGEXP_REMOVE_TRAILING_SLASHES = "#\\/$";
   static final String REGEXP_REDUCE_LEADING_TRAILING_SLASHES = "(\\/{2,}$)|(^\\/{2,})";
   static String TOPIC_WILDCARD_MULTI = "#";
   static String TOPIC_WILDCARD_SINGLE = "+";
 
-  @JsonProperty("id")
-  private String id;
+  // @JsonProperty("id")
+  // private String id;
 
-  @JsonProperty("type")
-  private String type;
+  // @JsonProperty("type")
+  // private String type;
 
-  @JsonProperty(value = "name")
-  private String name;
+  // @JsonProperty(value = "name")
+  // private String name;
 
-  @JsonProperty(value = "description")
-  private String description;
+  // @JsonProperty(value = "description")
+  // private String description;
 
   @JsonProperty(value = "c8y_mqttMapping")
   private ArrayList<Mapping> c8yMQTTMapping;
@@ -129,8 +132,8 @@ public class MappingsRepresentation implements Serializable {
   public static ArrayList<ValidationError> isTemplateTopicTemplateAndTopicSampleValid(String templateTopic,
       String templateTopicSample) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    String[] splitTT = Mapping.splitTopic(templateTopic);
-    String[] splitTTS = Mapping.splitTopic(templateTopicSample);
+    String[] splitTT = Mapping.splitTopicIncludingSeparatorAsArray(templateTopic);
+    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(templateTopicSample);
     if (splitTT.length != splitTTS.length) {
       result.add(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
     } else {

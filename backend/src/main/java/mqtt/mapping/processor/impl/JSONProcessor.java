@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,6 +22,7 @@ import com.api.jsonata4java.expressions.ParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.extern.slf4j.Slf4j;
@@ -56,17 +58,17 @@ public class JSONProcessor extends PayloadProcessor {
     }
 
     @Override
-    public ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException {
-        log.info("Message received on topic '{}'  with message {}", topic,
-                payloadMessage);
-        return mqttClient.getMappingTree().resolveTopicPath(TreeNode.splitTopic(topic));
+    public List<TreeNode> resolveMapping(ProcessingContext ctx) throws ResolveException {
+        log.info("Message received on topic '{}'  with message {}", ctx.getTopic(),
+                ctx.getPayload());
+        return mqttClient.getMappingTree().resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(ctx.getTopic()));
     }
 
     @Override
-    public void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send)
+    public void transformPayload(ProcessingContext ctx, boolean send)
             throws ProcessingException {
         Mapping mapping = ctx.getMapping();
-        String deviceIdentifier = ctx.getDeviceIdentifier();
+        String payloadMessage = ctx.getPayload();
 
         /*
          * step 0 patch payload with dummy property _DEVICE_IDENT_ in case of a wildcard
@@ -75,13 +77,12 @@ public class JSONProcessor extends PayloadProcessor {
         JsonNode payloadJsonNode;
         try {
             payloadJsonNode = objectMapper.readTree(payloadMessage);
-            boolean containsWildcardTemplateTopic = MappingsRepresentation
-                    .isWildcardTopic(mapping.getTemplateTopic());
-            if (containsWildcardTemplateTopic && payloadJsonNode instanceof ObjectNode) {
-                ((ObjectNode) payloadJsonNode).put(TOKEN_DEVICE_TOPIC, deviceIdentifier);
-            }
+            ArrayNode topicLevels = objectMapper.createArrayNode();
+            List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(ctx.getTopic());
+            splitTopicAsList.forEach(s -> topicLevels.add(s));
+            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
             payloadMessage = payloadJsonNode.toPrettyString();
-            log.info("Patched payload:{}, {}", containsWildcardTemplateTopic, payloadMessage);
+            log.info("Patched payload:{}", payloadMessage);
         } catch (JsonProcessingException e) {
             log.error("JsonProcessingException parsing: {}, {}", payloadMessage, e);
             ctx.setError(
@@ -98,8 +99,9 @@ public class JSONProcessor extends PayloadProcessor {
              * step 1 extract content from incoming payload
              */
             try {
-                // escape _DEVICE_IDENT_ with BACKQUOTE "`"
+                // have to escape _DEVICE_IDENT_ , _TOPIC_LEVEL_ with BACKQUOTE "`" since JSONata4Java does work for tokens with starting "_"
                 var p = sub.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
+                p = p.replace(TOKEN_TOPIC_LEVEL, TOKEN_TOPIC_LEVEL_BACKQUOTE);
                 log.info("Patched sub.pathSource: {}, {}", sub.pathSource, p);
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
