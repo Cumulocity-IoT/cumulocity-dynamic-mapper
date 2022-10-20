@@ -3,13 +3,9 @@ package mqtt.mapping.model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -104,24 +100,7 @@ public class MappingsRepresentation implements Serializable {
     result.addAll(isSubstituionValid(mapping));
     result.addAll(isTopicNameValid(mapping.subscriptionTopic));
     result.addAll(isTopicNameValid(mapping.templateTopic));
-    result.addAll(areJSONTemplatesValid(mapping));
     //result.addAll(isTemplateTopicUnique(mappings, mapping));
-    return result;
-  }
-
-  private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
-    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    try {
-      new JSONObject(mapping.target);
-    } catch (JSONException e) {
-      result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
-    }
-
-    try {
-      new JSONObject(mapping.source);
-    } catch (JSONException e) {
-      result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
-    }
     return result;
   }
 

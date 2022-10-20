@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
 @ToString
@@ -138,5 +139,12 @@ public class InnerNode extends TreeNode {
         }
         ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));
         insertMapping(this, mapping, levels);
+    }
+
+    public static void main(String[] args){
+        String path="uc/+/ucp/14/status";
+        ArrayList<String> levels = new ArrayList<String>(Arrays.asList(path.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+
+        System.out.println(StringUtils.join(levels,".."));
     }
 }

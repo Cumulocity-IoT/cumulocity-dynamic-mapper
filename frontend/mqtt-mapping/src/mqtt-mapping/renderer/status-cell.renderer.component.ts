@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from 'src/shared/configuration.model';
 
 @Component({
   templateUrl: './status-cell.renderer.component.html',
@@ -8,6 +7,5 @@ import { SnoopStatus } from 'src/shared/configuration.model';
 export class StatusRendererComponent {
   constructor(
     public context: CellRendererContext,
-  ) { }
-  SnoopStatus: SnoopStatus;
+  ) {}
 }

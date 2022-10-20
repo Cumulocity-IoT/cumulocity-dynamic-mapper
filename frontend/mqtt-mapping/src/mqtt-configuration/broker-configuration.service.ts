@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult, Realtime } from '@c8y/client';
 import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONNECT_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/helper';
-import { MQTTAuthentication, Operation, ServiceStatus, Status } from '../shared/configuration.model';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
+import { async, BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class BrokerConfigurationService {
@@ -78,6 +78,26 @@ export class BrokerConfigurationService {
     });
   }
 
+  connectToMQTTBroker(): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ "operation": "CONNECT" }),
+      method: 'POST',
+    });
+  }
+
+  disconnectFromMQTTBroker(): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ "operation": "DISCONNECT" }),
+      method: 'POST',
+    });
+  }
+
   async getConnectionDetails(): Promise<MQTTAuthentication> {
     const response = await this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
       headers: {
@@ -106,7 +126,6 @@ export class BrokerConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.initializeMQTTAgent();
     console.log("Started subscription:", this.agentId);
     this.getConnectionStatus().then(status => {
       this.serviceStatus.next(status);
@@ -123,15 +142,5 @@ export class BrokerConfigurationService {
     let status: ServiceStatus = payload['service_status'];
     this.serviceStatus.next(status);
     //console.log("New monitoring event", status);
-  }
-
-  runOperation(op: Operation): Promise<IFetchResponse> {
-    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ "operation": op }),
-      method: 'POST',
-    });
   }
 }

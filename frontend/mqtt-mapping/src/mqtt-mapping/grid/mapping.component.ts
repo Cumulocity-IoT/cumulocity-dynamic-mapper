@@ -1,12 +1,12 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, Operation, QOS, SnoopStatus } from '../../shared/configuration.model';
+import { API, Mapping, QOS, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+import { DirectRendererComponent } from '../renderer/direct.renderer.component';
 import { MappingService } from '../shared/mapping.service';
 
 @Component({
@@ -46,6 +46,15 @@ export class MappingComponent implements OnInit {
       filterable: false,
       dataType: ColumnDataType.TextShort,
       gridTrackSize: '3%'
+    },
+    {
+      name: '_direction',
+      header: 'Direct',
+      path: 'direct',
+      filterable: false,
+      sortable: false,
+      cellRendererComponent: DirectRendererComponent,
+      gridTrackSize: '7%'
     },
     {
       header: 'Subscription Topic',
@@ -118,7 +127,6 @@ export class MappingComponent implements OnInit {
 
   constructor(
     public mappingService: MappingService,
-    public configurationService: BrokerConfigurationService,
     public alertService: AlertService
   ) { }
 
@@ -154,9 +162,11 @@ export class MappingComponent implements OnInit {
       createNonExistingDevice: false,
       updateExistingDevice: false,
       externalIdType: 'c8y_Serial',
-      snoopStatus: SnoopStatus.NONE,
+      snoopTemplates: SnoopStatus.NONE,
       snoopedTemplates: [],
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      direct: false,
+      filterType: ''
     }
     this.mappingToUpdate = mapping;
     console.log("Add mappping", l, this.mappings)
@@ -190,28 +200,25 @@ export class MappingComponent implements OnInit {
   }
 
   async onCommit(mapping: Mapping) {
-    // test if new/updated mapping was commited or if cancel
-    // if (mapping) {
-      mapping.lastUpdate = Date.now();
-      let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
-      console.log("Changed mapping:", mapping, i);
+    mapping.lastUpdate = Date.now();
+    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
+    console.log("Changed mapping:", mapping, i);
 
-      if (isTemplateTopicUnique(mapping, this.mappings)) {
-        if (i == -1) {
-          // new mapping
-          console.log("Push new mapping:", mapping, i);
-          this.mappings.push(mapping)
-        } else {
-          console.log("Update existing mapping:", this.mappings[i], mapping, i);
-          this.mappings[i] = mapping;
-        }
-        this.mappingGridComponent.reload();
-        this.saveMappings();
-        this.activateMappings();
+    if (isTemplateTopicUnique(mapping, this.mappings)) {
+      if (i == -1) {
+        // new mapping
+        console.log("Push new mapping:", mapping, i);
+        this.mappings.push(mapping)
       } else {
-        this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
+        console.log("Update existing mapping:", this.mappings[i], mapping, i);
+        this.mappings[i] = mapping;
       }
-    //}
+      this.mappingGridComponent.reload();
+      this.saveMappings();
+      this.activateMappings();
+    } else {
+      this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
+    }
     this.showConfigMapping = false;
   }
 
@@ -224,7 +231,7 @@ export class MappingComponent implements OnInit {
   }
 
   private async activateMappings() {
-    const response2 = await this.configurationService.runOperation(Operation.RELOAD);
+    const response2 = await this.mappingService.activateMappings();
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings activated successfully'));

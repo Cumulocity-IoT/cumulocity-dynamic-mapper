@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import {
   ConfirmModalComponent,
   gettext,
@@ -8,20 +8,15 @@ import {
 } from '@c8y/ngx-components';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { SnoopStatus } from '../../shared/configuration.model';
 
 @Component({
   selector: 'mapping-snooping-modal',
   templateUrl: 'snooping-modal.component.html',
 })
 export class SnoopingModalComponent implements OnInit {
-  @ViewChild('snoopingRef', { static: false }) snoopingRef: ConfirmModalComponent;
-  
-  @Input()
-  snoopStatus: SnoopStatus
+  @ViewChild('substitutionRef', { static: false }) substitutionRef: ConfirmModalComponent;
 
-  SnoopStatus = SnoopStatus; 
-  labels: ModalLabels = { ok: gettext('Confirm') };
+  labels: ModalLabels = { ok: gettext('Close') };
   title = gettext('Snooping');
   status: StatusType = Status.INFO;
   closeSubject: Subject<boolean> = new Subject();
@@ -33,7 +28,7 @@ export class SnoopingModalComponent implements OnInit {
 
   async ngAfterViewInit() {
     try {
-      await this.snoopingRef.result;
+      await this.substitutionRef.result;
       this.onClose();
     } catch (error) {
       this.onDismiss();

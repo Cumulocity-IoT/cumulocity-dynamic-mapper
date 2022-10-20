@@ -1,0 +1,8 @@
+<div class="c8y-realtime" title="Direction">
+    <span class="direct-span" [ngClass]="{
+        active: context.item.direct,
+        inactive: !context.item.direct
+    }">
+    {{context.item.direct ? 'DownLink' : 'UpLink' }}</span>
+</div>
+

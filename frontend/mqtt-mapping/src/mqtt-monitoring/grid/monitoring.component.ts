@@ -1,8 +1,7 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, Column, ColumnDataType, DisplayOptions, Pagination } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { MappingStatus, Operation } from '../../shared/configuration.model';
+import { MappingStatus } from '../../shared/configuration.model';
 import { IdRendererComponent } from '../renderer/id-cell.renderer.component';
 import { MonitoringService } from '../shared/monitoring.service';
 
@@ -16,7 +15,7 @@ import { MonitoringService } from '../shared/monitoring.service';
 
 export class MonitoringComponent implements OnInit {
 
-  mappingStatus$: Observable<MappingStatus[]>;
+  monitorings$: Observable<MappingStatus[]>;
   subscription: object;
 
   displayOptions: DisplayOptions = {
@@ -88,7 +87,6 @@ export class MonitoringComponent implements OnInit {
 
   constructor(
     public monitoringService: MonitoringService,
-    public configurationService: BrokerConfigurationService,
     public alertService: AlertService
   ) { }
 
@@ -96,13 +94,9 @@ export class MonitoringComponent implements OnInit {
     this.initializeMonitoringService();
   }
 
-  async refreshMappingStatus(): Promise<void> {
-    await this.configurationService.runOperation(Operation.RESFRESH_MAPPING_STATUS);
-  }
-
   private async initializeMonitoringService() {
     this.subscription = await this.monitoringService.subscribeMonitoringChannel();
-    this.mappingStatus$ = this.monitoringService.getCurrentMappingStatus();
+    this.monitorings$ = this.monitoringService.getCurrentMappingStatus();
   }
 
   ngOnDestroy(): void {

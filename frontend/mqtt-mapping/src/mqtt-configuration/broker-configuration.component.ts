@@ -7,7 +7,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { MQTTAuthentication, Operation, ServiceStatus, Status } from '../shared/configuration.model';
+import { MQTTAuthentication, ServiceStatus, Status } from '../shared/configuration.model';
 
 import packageJson from '../../package.json';
 
@@ -46,10 +46,8 @@ export class BokerConfigurationComponent implements OnInit {
     console.log("Running version", this.version);
     this.initForm();
     this.loadConnectionDetails();
-    this.initializeMonitoringService();
     this.isBrokerAgentCreated$ = from(this.configurationService.initializeMQTTAgent())
-    // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
-    .pipe(map(agentId => agentId != null));
+        .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
   }
 
 
@@ -117,7 +115,7 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   private async connectToMQTTBroker() {
-    const response1 = await this.configurationService.runOperation(Operation.CONNECT);
+    const response1 = await this.configurationService.connectToMQTTBroker();
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToMQTTBroker", response1, response2)
     console.log("Details connectToMQTTBroker", response1)
@@ -145,7 +143,7 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   private async disconnectFromMQTT() {
-    const response = await this.configurationService.runOperation(Operation.DISCONNECT);
+    const response = await this.configurationService.disconnectFromMQTTBroker();
     console.log("Details disconnectFromMQTT", response)
     if (response.status < 300) {
       this.alertservice.success(gettext('Successfully disconnected'));

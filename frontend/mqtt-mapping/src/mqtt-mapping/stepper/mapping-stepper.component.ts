@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError, LINK_DIRECT, UPLINK_API_OPTION, DOWNLINK_API_OPTION } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopic, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
@@ -29,7 +29,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
-  API = API;
+  API = UPLINK_API_OPTION;
+  LINK_DIRECT = LINK_DIRECT;
   ValidationError = ValidationError;
   QOS = QOS;
   SnoopStatus = SnoopStatus;
@@ -170,6 +171,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
+      direct: new FormControl(this.mapping.direct,Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
       templateTopic: new FormControl(this.mapping.templateTopic),
@@ -180,7 +182,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
-      snoopStatus: new FormControl(this.mapping.snoopStatus),
+      snoopTemplates: new FormControl(this.mapping.snoopTemplates),
+      filterType: new FormControl(this.mapping.filterType),
     },
       checkPropertiesAreValid(this.mappings)
     );
@@ -237,6 +240,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   onTemplateTopicChanged(event): void {
     this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
+  }
+
+  onLinkDirectChanged(event): void{
+    if(this.mapping.direct){
+      this.API = DOWNLINK_API_OPTION;
+      this.mapping.targetAPI = this.API[0].value;
+    }else{
+      this.API = UPLINK_API_OPTION;
+    }
   }
 
   onSourceExpressionUpdated(): void {
@@ -331,28 +343,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.dataTesting = this.editorSource.get();
     }
 
-    const initialState = {
-      snoopStatus: this.mapping.snoopStatus
-    }
-    if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
+    if (this.mapping.snoopTemplates == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
-      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
-      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-        if (confirm) {
-          this.onCommit.emit(this.getCurrentMapping());
-        } else {
-          this.mapping.snoopStatus = SnoopStatus.NONE
-        }
-      })
-    } else if (this.mapping.snoopStatus == SnoopStatus.STARTED){
-      console.log("Continue snoop ...?");
-      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
-      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-        if (confirm) {
-          this.mapping.snoopStatus = SnoopStatus.STOPPED
-        } else {
-          this.onCancel.emit();
-        }
+      const substitutionModalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent);
+      substitutionModalRef.content.closeSubject.subscribe(() => {
+        this.onCommit.emit(this.getCurrentMapping());
       })
     } else {
       event.stepper.next();
@@ -374,6 +369,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (this.mapping.targetAPI == API.INVENTORY) {
       this.templateTarget = this.expandTemplate(this.templateTarget);
     }
+    //check direct , if download
+    if(this.mapping.direct){
+      if(this.mapping.source.length <= 2){
+        let _target = this.templateTarget;
+        let _source = this.templateSource;
+
+        this.templateTarget = _source;
+        this.templateSource = _target;
+      }
+      this.API = DOWNLINK_API_OPTION;
+    }
   }
 
   async onSnoopedSourceTemplates() {
@@ -386,7 +392,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateSource = this.expandTemplate(this.templateSource);
     }
     // disable further snooping for this template
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
+    this.mapping.snoopTemplates = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
   }
 
@@ -452,8 +458,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             substitutionOld: substitutionOld[0],
             substitutionNew: sub
           }
-          const modalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
-          modalRef.content.closeSubject.subscribe(
+          const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
+          overwriteModalRef.content.closeSubject.subscribe(
             (overwrite: boolean) => {
               console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
               if (overwrite) {
@@ -489,8 +495,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       const initialState = {
         substitution: this.mapping.substitutions[existingSubstitution]
       }
-      const modalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
-      modalRef.content.closeSubject.subscribe(
+      const overwriteModalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
+      overwriteModalRef.content.closeSubject.subscribe(
         (overwrite: boolean) => {
           console.log("Overwriting substitution I:", overwrite, this.mapping.substitutions);
           if (overwrite) {

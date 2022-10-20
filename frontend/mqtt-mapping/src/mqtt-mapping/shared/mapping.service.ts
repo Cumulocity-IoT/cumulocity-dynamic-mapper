@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { API, Mapping, Operation } from '../../shared/configuration.model';
+import { API, Mapping } from '../../shared/configuration.model';
 import * as _ from 'lodash';
 import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
@@ -74,6 +74,17 @@ export class MappingService {
       id: this.mappingId,
     });
   }
+
+  async activateMappings(): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ "operation": "RELOAD" }),
+      method: 'POST',
+    });
+  }
+
 
   async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
     let result = JSON.parse(mapping.target);

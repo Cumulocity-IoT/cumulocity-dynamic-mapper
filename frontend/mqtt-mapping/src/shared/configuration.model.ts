@@ -54,8 +54,10 @@ export interface Mapping {
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   externalIdType: string;
-  snoopStatus: SnoopStatus;
+  snoopTemplates: SnoopStatus;
   snoopedTemplates?: string[];
+  direct: boolean;
+  filterType: string;
 }
 
 
@@ -86,6 +88,22 @@ export enum API {
   INVENTORY = "INVENTORY"
 }
 
+export const DOWNLINK_API_OPTION = [
+  {name: "ALARM", value:"ALARM"}
+]
+
+export const UPLINK_API_OPTION = [
+  {name: "ALARM", value:"ALARM"},
+  {name: "EVENT", value:"EVENT"},
+  {name: "MEASUREMENT", value:"MEASUREMENT"},
+  {name: "INVENTORY", value:"INVENTORY"}
+]
+
+export const LINK_DIRECT =[
+  {name: 'UpLink', value: false},
+  {name: 'DownLink', value: true}
+]
+
 export enum ValidationError {
   Only_One_Multi_Level_Wildcard,
   Only_One_Single_Level_Wildcard,
@@ -109,11 +127,4 @@ export enum SnoopStatus {
   ENABLED = "ENABLED",
   STARTED = "STARTED",
   STOPPED = "STOPPED"
-}
-
-export enum Operation {
-  RELOAD,
-  CONNECT,
-  DISCONNECT, 
-  RESFRESH_MAPPING_STATUS
 }

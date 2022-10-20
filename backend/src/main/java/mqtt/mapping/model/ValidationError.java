@@ -7,7 +7,5 @@ public enum ValidationError {
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   TemplateTopic_Must_Match_The_SubscriptionTopic,
   TemplateTopic_Not_Unique,
-  TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic, 
-  Target_Template_Must_Be_Valid_JSON, 
-  Source_Template_Must_Be_Valid_JSON
+  TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic
 }

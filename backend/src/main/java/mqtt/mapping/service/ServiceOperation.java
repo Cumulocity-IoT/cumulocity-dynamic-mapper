@@ -9,8 +9,7 @@ import javax.validation.constraints.NotNull;
 enum Operation {
     RELOAD,
     CONNECT,
-    DISCONNECT, 
-    RESFRESH_MAPPING_STATUS
+    DISCONNECT
 }
 
 @Data

@@ -3,6 +3,7 @@ package mqtt.mapping;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,6 +34,7 @@ import mqtt.mapping.processor.impl.JSONProcessor;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
+@Slf4j
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
@@ -64,7 +66,7 @@ public class App {
     public PayloadProcessor payloadProcessor() {
         return new JSONProcessor();
     }
-    
+
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -77,7 +79,7 @@ public class App {
         objectMapper.setDateFormat(new RFC3339DateFormat());
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new JodaModule());
-        
+
         SimpleModule module = new SimpleModule();
         module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         module.addSerializer(InnerNode.class, new InnerNodeSerializer());
@@ -85,7 +87,7 @@ public class App {
         objectMapper.registerModule(module);
         return objectMapper;
     }
-    
+
         public static void main(String[] args) {
             SpringApplication.run(App.class, args);
         }
