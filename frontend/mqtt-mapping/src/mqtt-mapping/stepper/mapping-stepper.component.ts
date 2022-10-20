@@ -170,8 +170,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
-      templateTopic: new FormControl(this.mapping.templateTopic),
-      templateTopicSample: new FormControl(this.mapping.templateTopicSample),
+      templateTopic: new FormControl(this.mapping.templateTopic, Validators.required),
+      templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
@@ -228,10 +228,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   onSubscriptionTopicChanged(event): void {
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
-    this.mapping.templateTopicSample = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
+    this.mapping.templateTopicSample = this.mapping.templateTopic;
   }
 
   onTemplateTopicChanged(event): void {
+    this.mapping.templateTopicSample = this.mapping.templateTopic;
+
   }
 
   onSourceExpressionUpdated(): void {

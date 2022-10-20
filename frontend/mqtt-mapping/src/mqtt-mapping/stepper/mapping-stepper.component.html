@@ -52,7 +52,7 @@
                     </div>
                     <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
                       class="form-control" placeholder="e.g. device/110" #templateTopic
-                      (change)="onTemplateTopicChanged($event)" />
+                      (change)="onTemplateTopicChanged($event)" required/>
                   </div>
                   <div class="form-group">
                     <div class="input-group">
