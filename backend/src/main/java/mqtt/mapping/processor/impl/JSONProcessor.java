@@ -2,11 +2,15 @@ package mqtt.mapping.processor.impl;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.AbstractMap;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
@@ -31,7 +35,6 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.C8YRequest;
@@ -146,7 +149,7 @@ public class JSONProcessor extends PayloadProcessor {
                     log.warn("Ignoring this substitution, no objects are allowed for: {}, {}",
                             sub.pathSource, extractedSourceContent.toString());
                 }
-                log.info("Evaluated substitution (pathSource, substitute): ({},{}), (pathTarget): ({}), {}, {}",
+                log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({}), {}, {}",
                         sub.pathSource, extractedSourceContent.toString(), sub.pathTarget,
                         payloadMessage, payloadTarget);
             }
@@ -167,8 +170,16 @@ public class JSONProcessor extends PayloadProcessor {
         /*
          * step 3 replace target with extract content from incoming payload
          */
+
+        // determine the postProcessingCache entry with the most entries. This entry is used for the iteration
+        Stream<Entry<String, ArrayList<SubstituteValue>>> stream1 =  postProcessingCache.entrySet().stream(); 
+        Stream<SimpleEntry<String, Integer>> stream2 = stream1.map(entry -> new AbstractMap.SimpleEntry<String,Integer>(entry.getKey(), entry.getValue().size()));
+        String maxEntry = stream2.reduce ( new AbstractMap.SimpleEntry<String,Integer>(SOURCE_ID, postProcessingCache.get(SOURCE_ID).size()), (r,e) -> {
+            return ( r.getValue()>= e.getValue()? r : e);
+        }).getKey();
         Set<String> pathTargets = postProcessingCache.keySet();
-        ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
+        //ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
+        ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(maxEntry);
         if (listIdentifier == null) {
             throw new RuntimeException("Identified mapping has no substitution for source.id defined!");
         }

@@ -133,6 +133,6 @@ public class Mapping implements Serializable {
 
   public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
     return new ArrayList<String>(
-        Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
+        Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
   }
 }
