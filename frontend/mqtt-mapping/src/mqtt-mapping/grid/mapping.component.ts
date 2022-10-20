@@ -8,6 +8,7 @@ import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MappingService } from '../shared/mapping.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'mapping-grid',
@@ -140,10 +141,10 @@ export class MappingComponent implements OnInit {
 
     let mapping = {
       id: l,
+      ident: uuidv4(),
       subscriptionTopic: '',
       templateTopic: '',
       templateTopicSample:'',
-      indexDeviceIdentifierInTemplateTopic: -1,
       targetAPI: API.MEASUREMENT,
       source: '{}',
       target: SAMPLE_TEMPLATES[API.MEASUREMENT],

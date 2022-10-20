@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Predicate;
@@ -78,7 +79,7 @@ public class MQTTClient {
     private TreeNode mappingTree = InnerNode.initTree();;
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
-    private Map<Long, MappingStatus> statusMapping = new HashMap<Long, MappingStatus>();
+    private Map<String, MappingStatus> statusMapping = new HashMap<String, MappingStatus>();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -232,21 +233,21 @@ public class MQTTClient {
 
     public void reloadMappings() {
         List<Mapping> updatedMapping = c8yAgent.getMappings();
-        Set<Long> updatedMappingSet = updatedMapping.stream().map(m -> m.id).collect(Collectors.toSet());
-        Set<Long> activeMappingSet = activeMapping.stream().map(m -> m.id).collect(Collectors.toSet());
+        Set<String> updatedMappingSet = updatedMapping.stream().map(m -> m.ident).collect(Collectors.toSet());
+        Set<String> activeMappingSet = activeMapping.stream().map(m -> m.ident).collect(Collectors.toSet());
         Set<String> updatedSubscriptionTopic = updatedMapping.stream().map(m -> m.subscriptionTopic)
                 .collect(Collectors.toSet());
         Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
                 .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
         Set<String> subscribeTopic = updatedSubscriptionTopic.stream()
                 .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
-        Set<Long> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
+        Set<String> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
                 .collect(Collectors.toSet());
 
         // remove monitorings for deleted maps
-        removedMapping.forEach(id -> {
-            log.info("Removing monitoring not used: {}", id);
-            statusMapping.remove(id);
+        removedMapping.forEach(ident -> {
+            log.info("Removing monitoring not used: {}", ident);
+            statusMapping.remove(ident);
         });
 
         // unsubscribe topics not used
@@ -368,19 +369,25 @@ public class MQTTClient {
     }
 
     public MappingStatus getMappingStatus(Mapping m, boolean unspecified){
-        long key = -1;
-        String t = "#";
-        if ( !unspecified) {
-            key = m.id;
-            t = m.subscriptionTopic;
+        long key = m.id;
+        String ident = m.ident;
+        String t = m.subscriptionTopic;
+        if ( unspecified) {
+            t = "#";
+            key = -1;
+            ident = "#";
         }
-        MappingStatus ms = statusMapping.get(key);
+        MappingStatus ms = statusMapping.get(ident);
         if (ms == null) {
             log.info("Adding: {}", key);
-            ms = new MappingStatus(key, t, 0, 0, 0, 0);
-            statusMapping.put(key, ms);
+            ms = new MappingStatus(key, m.ident, t, 0, 0, 0, 0);
+            statusMapping.put(ident, ms);
         }
         return ms;
+    }
+
+    public void initializeMappingStatus(MappingStatus ms){
+        statusMapping.put(ms.ident, ms);
     }
 
     public Long deleteMapping(Long id) throws JsonProcessingException {
@@ -401,6 +408,7 @@ public class MQTTClient {
 
         if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();
+            mapping.ident = UUID.randomUUID().toString();
             mapping.id = MappingsRepresentation.nextId(mappings);
             mappings.add(mapping);
             result = mapping.id;
@@ -425,6 +433,7 @@ public class MQTTClient {
             if (updateMapping != -1) {
                 log.info("Update mapping with id: {}", mappings.get(updateMapping).id);
                 mapping.lastUpdate = System.currentTimeMillis();
+                mapping.ident = mappings.get(updateMapping).ident;
                 mappings.set(updateMapping, mapping);
                 c8yAgent.saveMappings(mappings);
                 if (reload) reloadMappings();
@@ -454,8 +463,11 @@ public class MQTTClient {
         }
     }
 
-    public ArrayList<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
+    public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
         String payloadMessage =  objectMapper.writeValueAsString(payload);
-        return payloadProcessor.processPayload(topic, payloadMessage, send);
+        ProcessingContext ctx = new ProcessingContext();
+        ctx.setPayload(payloadMessage);
+        ctx.setTopic(topic);
+        return payloadProcessor.processPayload(ctx, send);
     }
 }

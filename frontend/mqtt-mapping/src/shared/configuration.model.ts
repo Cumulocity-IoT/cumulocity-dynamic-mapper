@@ -42,7 +42,6 @@ export interface Mapping {
   subscriptionTopic: string;
   templateTopic: string;
   templateTopicSample: string;
-  indexDeviceIdentifierInTemplateTopic: number;
   targetAPI: string;
   source: string;
   target: string;
@@ -62,6 +61,7 @@ export interface Mapping {
 
 export interface MappingStatus {
   id: number;
+  ident: string;
   subscriptionTopic: string;
   errors: number;
   messagesReceived: number;

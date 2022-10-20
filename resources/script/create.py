@@ -71,8 +71,7 @@ def main(argv):
                 ],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "device/#",
-                "id": 1,
-                "indexDeviceIdentifierInTemplateTopic": 4
+                "id": 1
             },
             {
                 "tested": false,
@@ -102,8 +101,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "device/update",
-                "id": 2,
-                "indexDeviceIdentifierInTemplateTopic": 4
+                "id": 2
             },
             {
                 "tested": true,
@@ -143,8 +141,7 @@ def main(argv):
                 ],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "/event/#",
-                "id": 3,
-                "indexDeviceIdentifierInTemplateTopic": 3
+                "id": 3
             },
             {
                 "tested": true,
@@ -174,8 +171,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "measurement/#",
-                "id": 4,
-                "indexDeviceIdentifierInTemplateTopic": 2
+                "id": 4
             },
             {
                 "tested": false,
@@ -210,8 +206,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "id": 5,
-                "subscriptionTopic": "alarm/tires",
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "subscriptionTopic": "alarm/tires"
             },
             {
                 "tested": false,
@@ -246,8 +241,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": true,
                 "subscriptionTopic": "panel",
-                "id": 6,
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "id": 6
             },
             {
                 "tested": false,
@@ -282,8 +276,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "panel",
-                "id": 7,
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "id": 7
             },
             {
                 "tested": false,
@@ -318,8 +311,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "special/devices",
-                "id": 8,
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "id": 8
             },
             {
                 "tested": false,
@@ -354,8 +346,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": false,
                 "subscriptionTopic": "alarm/#",
-                "id": 9,
-                "indexDeviceIdentifierInTemplateTopic": 2
+                "id": 9
             },
             {
                 "tested": false,
@@ -405,8 +396,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": true,
                 "subscriptionTopic": "uc3",
-                "id": 10,
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "id": 10
             },
             {
                 "tested": false,
@@ -486,8 +476,7 @@ def main(argv):
                 "snoopedTemplates": [],
                 "createNonExistingDevice": true,
                 "subscriptionTopic": "uc4",
-                "id": 11,
-                "indexDeviceIdentifierInTemplateTopic": -1
+                "id": 11
             }
         ]
     })

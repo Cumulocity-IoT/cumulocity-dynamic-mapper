@@ -1,5 +1,6 @@
 package mqtt.mapping.model;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
@@ -104,6 +105,29 @@ public class MappingsRepresentationJUnitTest {
     assertEquals(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
         MappingsRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m3.templateTopic, m3.templateTopicSample)
             .get(0));
+
+  }
+
+  @Test
+  void testSplitTopic() {
+
+    String t1 = "/d1/e1/f1/";
+    String[] r1 = Mapping.splitTopicExcludingSeparatorAsArray(t1);
+    log.info("My topicSplit: {}", Arrays.toString(r1));
+    assertArrayEquals(new String[] {"d1", "e1", "f1"}, r1);
+
+
+    String t2 = "///d1/e1/f1///";
+    String[] r2 = Mapping.splitTopicExcludingSeparatorAsArray(t2);
+    log.info("My topicSplit: {}, size: {}", Arrays.toString(r2), r2.length);
+    assertArrayEquals(new String[] {"d1", "e1", "f1"}, r2);
+
+
+    String t3 = "///d1/e1/f1///";
+    String[] r3 = Mapping.splitTopicIncludingSeparatorAsArray(t3);
+    log.info("My topicSplit: {}", Arrays.toString(r3));
+
+    assertArrayEquals(new String[] {"/","d1", "/", "e1", "/","f1", "/"}, r3);
 
   }
 
