@@ -120,7 +120,7 @@ public class MQTTClient {
     }
 
     private boolean connect() {
-        log.info("Establishing the MQTT connection now (phase I), shouldConnect:", shouldConnect());
+        log.info("Establishing the MQTT connection now (phase I), (isConnected:shouldConnect) ({}:{})", isConnected(), shouldConnect());
         if (isConnected()) {
             disconnect();
         }
@@ -369,18 +369,18 @@ public class MQTTClient {
     }
 
     public MappingStatus getMappingStatus(Mapping m, boolean unspecified){
-        long key = m.id;
-        String ident = m.ident;
-        String t = m.subscriptionTopic;
-        if ( unspecified) {
-            t = "#";
-            key = -1;
-            ident = "#";
+        String to = "#";
+        long key = -1;
+        String ident = "#";
+        if ( !unspecified) {
+            to = m.subscriptionTopic;
+            key = m.id;
+            ident = m.ident;
         }
         MappingStatus ms = statusMapping.get(ident);
         if (ms == null) {
             log.info("Adding: {}", key);
-            ms = new MappingStatus(key, m.ident, t, 0, 0, 0, 0);
+            ms = new MappingStatus(key, ident, to, 0, 0, 0, 0);
             statusMapping.put(ident, ms);
         }
         return ms;

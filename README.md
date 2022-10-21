@@ -211,7 +211,6 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 #### Subscription Topic
 
 This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
-When you use a wildcard it signals to the mapping that you want to extract the device identifier from the topic name. In this case the additinal property ```_DEVICE_IDENT_```is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
 >**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
@@ -220,8 +219,18 @@ Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" e
 
 The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
 a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.\
-Examples are: "device/+/data, "device/date/north/+/events/", "device/+"\
-If the template topic contains a wildcard, you have to specify which part to the topic defined the device identfier by pressing the button ```Device Identifier```.
+Examples are: "device/+/data, "device/express/+", "device/+"\
+In order to use sample data instead of the wildcard you can add a Template Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Template Topic they must exactly be the same in the Template Topic Sample.
+The levels of the Template Topic are split and added to the payload:
+```
+  "_TOPIC_LEVEL_": [
+    "device",
+    "express",
+    "berlin_01"
+  ]
+```
+The entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Id.
+The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
 #### Snooping payloads on source topic
 
@@ -241,7 +250,8 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 #### Map Device Idenfifier
 
-Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this enable the switch ```Map Device Identifier``` and specify the name of the type of external id. When a payload from this device arries the external id is translated to the internal Cumulocity id.
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Ids. When a payload from this device arrives at runtime the external id is translated to the internal Cumulocity id.
+
 
 #### Define templates and substitutions for source and target payload
 

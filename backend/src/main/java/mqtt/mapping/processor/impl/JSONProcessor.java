@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
@@ -172,28 +173,39 @@ public class JSONProcessor extends PayloadProcessor {
          */
 
         // determine the postProcessingCache entry with the most entries. This entry is used for the iteration
-        Stream<Entry<String, ArrayList<SubstituteValue>>> stream1 =  postProcessingCache.entrySet().stream(); 
-        Stream<SimpleEntry<String, Integer>> stream2 = stream1.map(entry -> new AbstractMap.SimpleEntry<String,Integer>(entry.getKey(), entry.getValue().size()));
-        String maxEntry = stream2.reduce ( new AbstractMap.SimpleEntry<String,Integer>(SOURCE_ID, postProcessingCache.get(SOURCE_ID).size()), (r,e) -> {
-            return ( r.getValue()>= e.getValue()? r : e);
-        }).getKey();
+        // Stream<Entry<String, ArrayList<SubstituteValue>>> stream1 =  postProcessingCache.entrySet().stream(); 
+        // Stream<SimpleEntry<String, Integer>> stream2 = stream1.map(entry -> new AbstractMap.SimpleEntry<String,Integer>(entry.getKey(), entry.getValue().size()));
+        // String maxEntry = stream2.reduce ( new AbstractMap.SimpleEntry<String,Integer>(SOURCE_ID, postProcessingCache.get(SOURCE_ID).size()), (r,e) -> {
+        //     return ( r.getValue()>= e.getValue()? r : e);
+        // }).getKey();
+
+        String maxEntry = postProcessingCache.entrySet()
+        .stream()
+        .map(entry -> new AbstractMap.SimpleEntry<String,Integer>(entry.getKey(), entry.getValue().size()))
+        .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
+            .compareTo(e2.getValue())
+        ).get().getKey();
+
         Set<String> pathTargets = postProcessingCache.keySet();
-        //ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(SOURCE_ID);
-        ArrayList<SubstituteValue> listIdentifier = postProcessingCache.get(maxEntry);
-        if (listIdentifier == null) {
-            throw new RuntimeException("Identified mapping has no substitution for source.id defined!");
+        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(SOURCE_ID);
+        int  countMaxlistEntries = postProcessingCache.get(maxEntry).size();
+        SubstituteValue toDouble = deviceEntries.get(0);
+        while ( deviceEntries.size() < countMaxlistEntries){
+            deviceEntries.add(toDouble);
         }
+
         int i = 0;
-        for (SubstituteValue device : listIdentifier) {
+        for (SubstituteValue device : deviceEntries) {
+
             int predecessor = -1;
             for (String pathTarget : pathTargets) {
                 SubstituteValue substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL);
                 if (i < postProcessingCache.get(pathTarget).size()) {
-                    substitute = postProcessingCache.get(pathTarget).get(i);
+                    substitute =  postProcessingCache.get(pathTarget).get(i).clone();
                 } else if (postProcessingCache.get(pathTarget).size() == 1) {
                     // this is an indication that the substitution is the same for all
                     // events/alarms/measurements/inventory
-                    substitute = postProcessingCache.get(pathTarget).get(0);
+                    substitute =  postProcessingCache.get(pathTarget).get(0).clone();
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
@@ -259,7 +271,7 @@ public class JSONProcessor extends PayloadProcessor {
                         postProcessingCache.size());
             }
             log.info("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
-                    listIdentifier.size());
+                    deviceEntries.size());
             i++;
         }
     }
