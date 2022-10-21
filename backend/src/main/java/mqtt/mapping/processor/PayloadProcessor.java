@@ -2,12 +2,14 @@ package mqtt.mapping.processor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +17,10 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
-import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.model.TreeNode;
@@ -38,7 +40,6 @@ public abstract class PayloadProcessor implements MqttCallback {
     @Autowired
     SysHandler sysHandler;
 
-    public static int SNOOP_TEMPLATES_MAX = 5;
     public static String SOURCE_ID = "source.id";
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
@@ -49,9 +50,7 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public abstract ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException;
 
-    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException;
-
-    public abstract void transformDownLinkPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException;
+    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send) throws ProcessingException;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
@@ -62,44 +61,6 @@ public abstract class PayloadProcessor implements MqttCallback {
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
-    }
-
-    public void publishMessage(Mapping mapping, String message){
-        if (StringUtils.isNotBlank(mapping.getSubscriptionTopic()) && StringUtils.isNotBlank(message)) {
-            ProcessingContext ctx = processPublishPayload(mapping, message);
-            try {
-                transformDownLinkPayload(ctx, message);
-            }catch( ProcessingException e){
-                log.error(e.getMessage(),e);
-            }
-        }
-    }
-
-    public String resolveExternalId(String externalId, String externalIdType) {
-        ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
-        String id = null;
-        if (extId != null) {
-            id = extId.getManagedObject().getId().getValue();
-        }
-        log.info("Found id {} for external id: {}, {}", id, externalId);
-        return id;
-    }
-
-    public ProcessingContext processPublishPayload(Mapping mapping , String payloadMessage){
-        ProcessingContext context = new ProcessingContext();
-        context.setMapping(mapping);
-        ArrayList<String> topicLevels = new ArrayList<String>(
-                Arrays.asList(mapping.getSubscriptionTopic().split(TreeNode.SPLIT_TOPIC_REGEXP)));
-
-        String topicTemplate = mapping.getSubscriptionTopic();
-        String deviceIdentifier = topicLevels
-                .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
-
-        log.info("Resolving deviceIdentifier: {}, {} to {}", topicTemplate,
-                context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
-        context.setDeviceIdentifier(deviceIdentifier);
-
-        return context;
     }
 
     public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {
@@ -120,8 +81,7 @@ public abstract class PayloadProcessor implements MqttCallback {
             if (node instanceof MappingNode) {
                 ctx.setMapping(((MappingNode) node).getMapping());
                 Mapping map = ctx.getMapping();
-                ArrayList<String> topicLevels = new ArrayList<String>(
-                        Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+                ArrayList<String> topicLevels = TreeNode.splitTopic(topic);
                 if (map.indexDeviceIdentifierInTemplateTopic >= 0) {
                     String deviceIdentifier = topicLevels
                             .get((int) (map.indexDeviceIdentifierInTemplateTopic));
@@ -132,27 +92,18 @@ public abstract class PayloadProcessor implements MqttCallback {
                 MappingStatus ms = mqttClient.getMappingStatus(map, false);
                 try {
                     ms.messagesReceived++;
-                    if (map.snoopTemplates == SnoopStatus.ENABLED
-                            || map.snoopTemplates == SnoopStatus.STARTED) {
+                    if (map.snoopStatus == SnoopStatus.ENABLED
+                            || map.snoopStatus == SnoopStatus.STARTED) {
                         ms.snoopedTemplatesActive++;
                         ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
+                        map.addSnoopedTemplate(payloadMessage);
 
-                        map.snoopedTemplates.add(payloadMessage);
-                        if (map.snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
-                            // remove oldest payload
-                            map.snoopedTemplates.remove(0);
-                        } else {
-                            map.snoopTemplates = SnoopStatus.STARTED;
-                        }
                         log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
                                 map.snoopedTemplates.size(),
-                                map.snoopTemplates);
+                                map.snoopStatus);
                         mqttClient.setMappingDirty(map);
                     } else {
-                        transformPayload(ctx, payloadMessage);
-                        if (sendPayload) {
-                            sendC8YRequests(ctx);
-                        }
+                        transformPayload(ctx, payloadMessage, sendPayload);
                         if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
                             ms.errors++;
                         }
@@ -170,21 +121,53 @@ public abstract class PayloadProcessor implements MqttCallback {
         return processingResult;
     }
 
-    public void sendC8YRequests(ProcessingContext ctx) {
-        // send target payload to c8y
-        for (C8YRequest request : ctx.getRequests()) {
-            try {
-                if (request.getTargetAPI().equals(API.INVENTORY)) {
-                    c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
-                } else if (!request.getTargetAPI().equals(API.INVENTORY)) {
-                    c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
-                }
-            } catch (ProcessingException error) {
-                request.setError(error);
-            }
+    // public void sendC8YRequests(ProcessingContext ctx) {
+    //     // send target payload to c8y
+    //     for (C8YRequest request : ctx.getRequests()) {
+    //         try {
+    //             if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
+    //                 c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
+    //             } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
+    //                 c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
+    //             }
+    //         } catch (ProcessingException error) {
+    //             request.setError(error);
+    //         }
+    //     }
+    // }
+
+    public String resolveExternalId(String externalId, String externalIdType) {
+        ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
+        String id = null;
+        if (extId != null) {
+            id = extId.getManagedObject().getId().getValue();
         }
+        log.info("Found id {} for external id: {}", id, externalId);
+        return id;
     }
 
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String key) throws JSONException {
+        String[] pt = key.split(Pattern.quote("."));
+        if (pt == null) {
+            pt = new String[] { key };
+        }
+        return substituteValue(sub, jsonObject, pt);
+    }
+
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
+        String currentKey = keys[0];
+
+        if (keys.length == 1) {
+            return jsonObject.put(currentKey, sub.typedValue());
+        } else if (!jsonObject.has(currentKey)) {
+            throw new JSONException(currentKey + "is not a valid key.");
+        }
+
+        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
+        return jsonObject.put(currentKey, updatedNestedValue);
+    }
 
     @Override
     public void connectionLost(Throwable throwable) {

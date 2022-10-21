@@ -2,6 +2,7 @@ package mqtt.mapping.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -31,5 +32,10 @@ public abstract class TreeNode implements Serializable {
     abstract public boolean isMappingNode();
 
     abstract public ArrayList<TreeNode> resolveTopicPath(ArrayList<String> tp) throws ResolveException;
+
+    public static ArrayList<String> splitTopic(String topic) {
+        return new ArrayList<String>(
+            Arrays.asList(topic.split(TreeNode.SPLIT_TOPIC_REGEXP)));
+    }
 
 }

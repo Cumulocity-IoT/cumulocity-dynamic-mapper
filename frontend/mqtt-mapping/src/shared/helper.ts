@@ -317,13 +317,6 @@ export function isWildcardTopic(topic: string): boolean {
   return result;
 }
 
-export enum SnoopStatus {
-  NONE = "NONE",
-  ENABLED = "ENABLED",
-  STARTED = "STARTED",
-  STOPPED = "STOPPED"
-}
-
 export function isSubstituionValid(mapping: Mapping): boolean {
   let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;

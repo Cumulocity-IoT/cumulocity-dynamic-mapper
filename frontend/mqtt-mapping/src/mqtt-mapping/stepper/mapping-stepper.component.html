@@ -23,20 +23,6 @@
             <div class="card-block p-b-0">
               <div [formGroup]="propertyForm">
                 <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-
-                  <div class="form-group">
-                    <label for="direct" class="" translate>Direction</label>
-                    <div class="">
-                      <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="direct"  [(ngModel)]="mapping.direct" #directRef (change)="onLinkDirectChanged($event)">
-                          <option *ngFor="let _direct of LINK_DIRECT" [ngValue]="_direct.value">
-                            {{ _direct.name }}
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
                   <div class="row">
                     <div class="col-lg-5 form-group p-r-0">
                       <label for="subscriptionTopic" class="" translate>Subscription Topic</label>
@@ -135,8 +121,8 @@
                       <div class="c8y-select-wrapper">
                         <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
                           (change)="onTargetAPIChanged($event)" #targetAPIRef>
-                          <option *ngFor="let api of API" [ngValue]="api.value">
-                            {{ api.name }}
+                          <option *ngFor="let api of keys(API)" [ngValue]="api">
+                            {{ api }}
                           </option>
                         </select>
                       </div>
@@ -152,15 +138,6 @@
                       </div>
                     </div>
                   </div>
-
-                  <div class="form-group" *ngIf="mapping.direct">
-                    <label for="filterType" class="" translate>Filter Type</label>
-                    <div class="">
-                      <input formControlName="filterType" [(ngModel)]="mapping.filterType" type="text" class="form-control"
-                             placeholder="e.g. c8y_alarm_type" #filterTypeRef >
-                    </div>
-                  </div>
-
                   <div class="row">
                     <div class="col-md-6">
                       <label class="c8y-switch" title="{{ 'Active' | translate }}">
@@ -223,8 +200,8 @@
                       </span>
                     </div>
                     <div class="c8y-select-wrapper">
-                      <select class="form-control" formControlName="snoopTemplates" [(ngModel)]="mapping.snoopTemplates"
-                        #snoopTemplatesRef>
+                      <select class="form-control" formControlName="snoopStatus" [(ngModel)]="mapping.snoopStatus"
+                        #snoopStatusRef>
                         <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                           [disabled]="q != 'ENABLED' && q != 'NONE'">
                           {{ SnoopStatus[q] }}

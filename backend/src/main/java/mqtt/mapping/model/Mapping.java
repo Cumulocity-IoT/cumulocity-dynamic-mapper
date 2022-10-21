@@ -7,6 +7,9 @@ import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.validation.constraints.NotNull;
 
@@ -15,6 +18,8 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
+
+  public static int SNOOP_TEMPLATES_MAX = 5;
 
   @NotNull
   public long id;
@@ -62,20 +67,13 @@ public class Mapping implements Serializable {
   public String externalIdType;
 
   @NotNull
-  public SnoopStatus snoopTemplates;
+  public SnoopStatus snoopStatus;
 
   @NotNull
   public ArrayList<String> snoopedTemplates;
 
   @NotNull
   public long lastUpdate;
-
-  /**
-   * uplink is false
-   */
-  public boolean direct = false;
-
-  public String filterType;
 
   @Override
   public boolean equals(Object m) {
@@ -95,24 +93,24 @@ public class Mapping implements Serializable {
     this.substitutions = mapping.substitutions;
     this.mapDeviceIdentifier = mapping.mapDeviceIdentifier;
     this.externalIdType = mapping.externalIdType;
-    this.snoopTemplates = mapping.snoopTemplates;
+    this.snoopStatus = mapping.snoopStatus;
     this.snoopedTemplates = mapping.snoopedTemplates;
-    this.direct = mapping.direct;
-    this.filterType = mapping.filterType;
   }
 
-  public boolean isForUplink(){
-    return !Boolean.TRUE.equals(this.direct);
+  public void addSnoopedTemplate(String payloadMessage) {
+    snoopedTemplates.add(payloadMessage);
+    if (snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+      // remove oldest payload
+      snoopedTemplates.remove(0);
+    } else {
+      snoopStatus = SnoopStatus.STARTED;
+    }
+  }
+
+  public void sortSubstitutions() {
+    MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
+        (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
+        .toArray(size -> new MappingSubstitution[size]);
+    substitutions = sortedSubstitutions;
   }
 }
-
-/**
- * export interface MQTTMapping {
- * id: number,
- * topic: string,
- * targetAPI: string,
- * source: string,
- * target: string,
- * lastUpdate: number
- * }
- */

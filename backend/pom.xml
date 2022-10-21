@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.18</version>
+    <version>1.19</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -16,7 +16,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <spring-boot-dependencies.version>2.5.4</spring-boot-dependencies.version>
         <main.class>mqtt.mapping.App</main.class>
-        <c8y.version>1014.0.172</c8y.version>
+        <c8y.version>1014.134.0</c8y.version>
         <lombok.version>1.18.22</lombok.version>
     </properties>
 
@@ -53,11 +53,13 @@
             <artifactId>microservice-autoconfigure</artifactId>
             <version>${c8y.version}</version>
         </dependency>
+        
         <dependency>
             <groupId>com.nsn.cumulocity.model</groupId>
             <artifactId>device-capability-model</artifactId>
             <version>${c8y.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -77,26 +79,6 @@
             <artifactId>validation-api</artifactId>
             <version>1.1.0.Final</version>
         </dependency>
-
-        <!-- notification 2.0 dependency -->
-        <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-client</artifactId>
-            <version>9.4.40.v20210413</version>
-        </dependency>
-        <dependency>
-            <groupId>org.java-websocket</groupId>
-            <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.1</version>
-        </dependency>
-
-        <!-- c8y version update -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-joda</artifactId>
-            <version>2.3.0-rc1</version>
-        </dependency>
-
     </dependencies>
 
     <build>
@@ -132,7 +114,6 @@
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
-                            <deleteImage>false</deleteImage>
                         </configuration>
                     </execution>
                 </executions>
