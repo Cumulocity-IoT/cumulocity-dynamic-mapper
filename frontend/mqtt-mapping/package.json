@@ -30,6 +30,7 @@
     "@ngx-translate/core": "13.0.0",
     "jsonata": "^1.8.6",
     "rxjs": "~6.6.3",
+    "uuid": "^9.0.0",
     "zone.js": "~0.11.4"
   },
   "devDependencies": {

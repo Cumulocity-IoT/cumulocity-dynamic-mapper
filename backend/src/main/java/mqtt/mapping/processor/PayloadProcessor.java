@@ -2,6 +2,7 @@ package mqtt.mapping.processor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -43,52 +44,48 @@ public abstract class PayloadProcessor implements MqttCallback {
     public static String SOURCE_ID = "source.id";
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
+    public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+    public static String TOKEN_TOPIC_LEVEL_BACKQUOTE = "`_TOPIC_LEVEL_`";
 
     public static final String TIME = "time";
 
     public abstract String deserializePayload(MqttMessage mqttMessage);
 
-    public abstract ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException;
+    public abstract List<TreeNode> resolveMapping(ProcessingContext ctx) throws ResolveException;
 
-    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send) throws ProcessingException;
+    public abstract void transformPayload(ProcessingContext ctx, boolean send) throws ProcessingException;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                String payloadMessage = deserializePayload(mqttMessage);
-                processPayload(topic, payloadMessage, true);
+                ProcessingContext ctx = new ProcessingContext();
+                ctx.setPayload(deserializePayload(mqttMessage));
+                ctx.setTopic(topic);
+                processPayload(ctx, true);
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
     }
 
-    public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {
-        ArrayList<TreeNode> nodes = new ArrayList<TreeNode>();
-        ArrayList<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
+    public List<ProcessingContext> processPayload(ProcessingContext ctx, boolean sendPayload)  {
+        List<TreeNode> nodes = new ArrayList<TreeNode>();
+        List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
 
         try {
-            nodes = resolveMapping(topic, payloadMessage);
+            nodes = resolveMapping(ctx);
         } catch (Exception e) {
-            log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
+            log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message: {}", e);
             e.printStackTrace();
             MappingStatus ms = mqttClient.getMappingStatus(null, true);
             ms.errors++;
         }
 
         for (TreeNode node : nodes) {
-            ProcessingContext ctx = new ProcessingContext();
             if (node instanceof MappingNode) {
                 ctx.setMapping(((MappingNode) node).getMapping());
                 Mapping map = ctx.getMapping();
-                ArrayList<String> topicLevels = TreeNode.splitTopic(topic);
-                if (map.indexDeviceIdentifierInTemplateTopic >= 0) {
-                    String deviceIdentifier = topicLevels
-                            .get((int) (map.indexDeviceIdentifierInTemplateTopic));
-                    log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
-                            map.indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
-                    ctx.setDeviceIdentifier(deviceIdentifier);
-                }
+                String payloadMessage = ctx.getPayload();
                 MappingStatus ms = mqttClient.getMappingStatus(map, false);
                 try {
                     ms.messagesReceived++;
@@ -103,7 +100,7 @@ public abstract class PayloadProcessor implements MqttCallback {
                                 map.snoopStatus);
                         mqttClient.setMappingDirty(map);
                     } else {
-                        transformPayload(ctx, payloadMessage, sendPayload);
+                        transformPayload(ctx, sendPayload);
                         if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
                             ms.errors++;
                         }
@@ -114,27 +111,12 @@ public abstract class PayloadProcessor implements MqttCallback {
                     ms.errors++;
                 }
             } else {
-                ctx.setError(new ResolveException("Could not find appropriate mapping for topic: " + topic));
+                ctx.setError(new ResolveException("Could not find appropriate mapping for topic: " + ctx.getTopic()));
             }
             processingResult.add(ctx);
         }
         return processingResult;
     }
-
-    // public void sendC8YRequests(ProcessingContext ctx) {
-    //     // send target payload to c8y
-    //     for (C8YRequest request : ctx.getRequests()) {
-    //         try {
-    //             if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-    //                 c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
-    //             } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-    //                 c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
-    //             }
-    //         } catch (ProcessingException error) {
-    //             request.setError(error);
-    //         }
-    //     }
-    // }
 
     public String resolveExternalId(String externalId, String externalIdType) {
         ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
