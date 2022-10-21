@@ -33,6 +33,7 @@ export class MonitoringComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
+      sortOrder: 'asc',
       gridTrackSize: '10%',
       cellRendererComponent: IdRendererComponent
     },

@@ -51,8 +51,8 @@
                       </span>
                     </div>
                     <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
-                      class="form-control" placeholder="e.g. device/110" #templateTopic
-                      (change)="onTemplateTopicChanged($event)" required/>
+                      class="form-control" placeholder="e.g. device/110" #templateTopic id="templateTopic"
+                      (change)="onTemplateTopicChanged($event)" required />
                   </div>
                   <div class="form-group">
                     <div class="input-group">
@@ -91,6 +91,9 @@
                         <c8y-message
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name]"
                           translate>TemplateTopic and TemplateTopicSample do not have same structure in the Topic Name.
+                        </c8y-message>
+                        <c8y-message *ngIf="propertyForm.get('templateTopic').touched || propertyForm.get('subscriptionTopic').touched" translate>After changing the TemplateTopic or SubscriptionTopic all
+                          substitions might have to be revised.
                         </c8y-message>
                       </c8y-messages>
                     </div>
