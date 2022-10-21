@@ -125,10 +125,17 @@ export class MappingComponent implements OnInit {
 
   ngOnInit() {
     this.loadMappings();
-    this.actionControls.push({
-      type: BuiltInActionType.Edit,
-      callback: this.editMapping.bind(this)
-    },
+    this.actionControls.push(
+      {
+        type: BuiltInActionType.Edit,
+        callback: this.editMapping.bind(this)
+      },
+      {
+        text: 'Copy',
+        type: 'COPY',
+        icon: 'copy',
+        callback: this.copyMapping.bind(this)
+      },
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMapping.bind(this)
@@ -137,14 +144,14 @@ export class MappingComponent implements OnInit {
 
   async addMapping() {
     this.editMode = false;
-    let l = (this.mappings.length == 0 ? 0 : Math.max(...this.mappings.map(item => item.id))) + 1;
+    let l = this.newId();
 
     let mapping = {
       id: l,
       ident: uuidv4(),
       subscriptionTopic: '',
       templateTopic: '',
-      templateTopicSample:'',
+      templateTopicSample: '',
       targetAPI: API.MEASUREMENT,
       source: '{}',
       target: SAMPLE_TEMPLATES[API.MEASUREMENT],
@@ -166,11 +173,25 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
+  private newId() {
+    return (this.mappings.length == 0 ? 0 : Math.max(...this.mappings.map(item => item.id))) + 1;
+  }
+
   editMapping(mapping: Mapping) {
     this.editMode = true;
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
     console.log("Editing mapping", this.mappingToUpdate)
+    this.showConfigMapping = true;
+  }
+
+  copyMapping(mapping: Mapping) {
+    this.editMode = true;
+    // create deep copy of existing mapping, in case user cancels changes
+    this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
+    this.mappingToUpdate.ident = uuidv4();
+    this.mappingToUpdate.id = this.newId();
+    console.log("Copying mapping", this.mappingToUpdate)
     this.showConfigMapping = true;
   }
 
@@ -194,25 +215,25 @@ export class MappingComponent implements OnInit {
   async onCommit(mapping: Mapping) {
     // test if new/updated mapping was commited or if cancel
     // if (mapping) {
-      mapping.lastUpdate = Date.now();
-      let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
-      console.log("Changed mapping:", mapping, i);
+    mapping.lastUpdate = Date.now();
+    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
+    console.log("Changed mapping:", mapping, i);
 
-      if (isTemplateTopicUnique(mapping, this.mappings)) {
-        if (i == -1) {
-          // new mapping
-          console.log("Push new mapping:", mapping, i);
-          this.mappings.push(mapping)
-        } else {
-          console.log("Update existing mapping:", this.mappings[i], mapping, i);
-          this.mappings[i] = mapping;
-        }
-        this.mappingGridComponent.reload();
-        this.saveMappings();
-        this.activateMappings();
+    if (isTemplateTopicUnique(mapping, this.mappings)) {
+      if (i == -1) {
+        // new mapping
+        console.log("Push new mapping:", mapping, i);
+        this.mappings.push(mapping)
       } else {
-        this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
+        console.log("Update existing mapping:", this.mappings[i], mapping, i);
+        this.mappings[i] = mapping;
       }
+      this.mappingGridComponent.reload();
+      this.saveMappings();
+      this.activateMappings();
+    } else {
+      this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
+    }
     //}
     this.showConfigMapping = false;
   }
