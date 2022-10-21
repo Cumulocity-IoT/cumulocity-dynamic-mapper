@@ -295,9 +295,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (event.step.label == "Define topic") {
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
-      if (this.propertyForm.get('subscriptionTopic').touched) {
-        this.mapping.substitutions = [];
-      }
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
     } else if (event.step.label == "Define templates") {
