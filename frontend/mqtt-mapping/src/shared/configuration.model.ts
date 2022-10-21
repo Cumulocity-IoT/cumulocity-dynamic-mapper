@@ -39,6 +39,7 @@ export class MappingSubstitution {
 
 export interface Mapping {
   id: number;
+  ident: string;
   subscriptionTopic: string;
   templateTopic: string;
   templateTopicSample: string;
