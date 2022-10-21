@@ -20,6 +20,9 @@ public class MappingStatus implements Serializable {
   public long id;
 
   @NotNull
+  public String ident;
+
+  @NotNull
   public String subscriptionTopic;
 
   @NotNull

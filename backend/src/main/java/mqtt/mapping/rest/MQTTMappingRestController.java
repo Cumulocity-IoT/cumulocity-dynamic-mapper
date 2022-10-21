@@ -177,7 +177,7 @@ public class MQTTMappingRestController {
         log.info("Test payload: {}, {}, {}", path, method, payload);
         try {
             boolean send = ("send").equals(method);
-            ArrayList<ProcessingContext> result = mqttClient.test(path, send, payload);
+            List<ProcessingContext> result = mqttClient.test(path, send, payload);
             return new ResponseEntity<List<ProcessingContext>>(result, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error transforming payload: {}", ex);

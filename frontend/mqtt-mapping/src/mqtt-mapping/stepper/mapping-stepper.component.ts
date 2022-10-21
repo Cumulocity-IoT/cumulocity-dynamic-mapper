@@ -8,7 +8,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopic, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
@@ -52,7 +52,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   editorOptionsTesting: any
   sourceExpressionResult: string = '';
   sourceExpressionErrorMsg: string = '';
-  markedDeviceIdentifier: string = '';
   showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
@@ -121,7 +120,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     };
 
     this.enrichTemplates();
-    this.initMarkedDeviceIdentifier();
     //this.onTopicUpdated();
     this.onSourceExpressionUpdated();
   }
@@ -172,8 +170,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
-      templateTopic: new FormControl(this.mapping.templateTopic),
-      markedDeviceIdentifier: new FormControl(this.markedDeviceIdentifier),
+      templateTopic: new FormControl(this.mapping.templateTopic, Validators.required),
+      templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
@@ -229,14 +227,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   onSubscriptionTopicChanged(event): void {
-    this.mapping.subscriptionTopic = normalizeTopic(this.mapping.subscriptionTopic);
-    this.mapping.indexDeviceIdentifierInTemplateTopic = -1;
-    this.initMarkedDeviceIdentifier();
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
+    this.mapping.templateTopicSample = this.mapping.templateTopic;
   }
 
   onTemplateTopicChanged(event): void {
-    this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
+    this.mapping.templateTopicSample = this.mapping.templateTopic;
+
   }
 
   onSourceExpressionUpdated(): void {
@@ -248,64 +245,33 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       });
   }
 
-  private getCurrentMapping(): Mapping {
+  private getCurrentMapping(patched: boolean): Mapping {
     return {
       ... this.mapping,
-      source: this.reduceTemplate(this.editorSource.get()),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
-      target: this.reduceTemplate(this.editorTarget.get()),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
+      source: this.reduceSourceTemplate(this.editorSource.get(),patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
+      target: this.reduceTargetTemplate(this.editorTarget.get(),patched),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       lastUpdate: Date.now(),
     };
   }
 
   async onCommitButton() {
-    this.onCommit.emit(this.getCurrentMapping());
+    this.onCommit.emit(this.getCurrentMapping(false));
   }
 
   async onTestTransformation() {
-    this.dataTesting = await this.mappingService.testResult(this.getCurrentMapping(), false);
+    this.dataTesting = await this.mappingService.testResult(this.getCurrentMapping(true), false);
   }
 
   async onSendTest() {
-    this.dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping());
+    this.dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping(true));
     this.mapping.tested = (this.dataTesting != '');
   }
 
-  onSelectNextDeviceIdentifier() {
-    let parts: string[] = splitTopic(this.mapping.templateTopic);
-    if (parts.length > 0) {
-      let nextIndex = this.mapping.indexDeviceIdentifierInTemplateTopic;
-      nextIndex++;
-      if (nextIndex >= parts.length) {
-        nextIndex = 0;
-      }
-      while (nextIndex < parts.length && parts[nextIndex] == "/") {
-        nextIndex++;
-        if (nextIndex >= parts.length) {
-          nextIndex = 0;
-        }
-      }
-      if (parts[nextIndex] != "/") {
-        this.markedDeviceIdentifier = parts[nextIndex];
-        this.mapping.indexDeviceIdentifierInTemplateTopic = nextIndex;
-      }
-    }
-  }
-
-  private initMarkedDeviceIdentifier() {
-    if (this.mapping?.templateTopic != undefined) {
-      let parts: string[] = splitTopic(this.mapping.templateTopic);
-      if (this.mapping.indexDeviceIdentifierInTemplateTopic < parts.length && this.mapping.indexDeviceIdentifierInTemplateTopic != -1) {
-        this.markedDeviceIdentifier = parts[this.mapping.indexDeviceIdentifierInTemplateTopic];
-      } else {
-        this.markedDeviceIdentifier = '';
-      }
-    }
-  }
 
   async onSampleButton() {
     this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.mapping.targetAPI]);
     if (this.mapping.targetAPI == API.INVENTORY) {
-      this.templateTarget = this.expandTemplate(this.templateTarget);
+      this.templateTarget = this.expandTargetTemplate(this.templateTarget);
     }
   }
 
@@ -323,11 +289,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       if (this.propertyForm.get('subscriptionTopic').touched) {
         this.mapping.substitutions = [];
       }
-      this.updateSubstitutions();
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
     } else if (event.step.label == "Define templates") {
-      console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping())
+      console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping(true))
       this.dataTesting = this.editorSource.get();
     }
 
@@ -339,7 +304,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe((confirm: boolean) => {
         if (confirm) {
-          this.onCommit.emit(this.getCurrentMapping());
+          this.onCommit.emit(this.getCurrentMapping(false));
         } else {
           this.mapping.snoopStatus = SnoopStatus.NONE
         }
@@ -363,16 +328,16 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private enrichTemplates() {
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
-    if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = this.expandTemplate(this.templateSource);
-    }
+    //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
+      this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    //}
     this.templateTarget = JSON.parse(this.mapping.target);
     if (!this.editMode) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
     if (this.mapping.targetAPI == API.INVENTORY) {
-      this.templateTarget = this.expandTemplate(this.templateTarget);
+      this.templateTarget = this.expandTargetTemplate(this.templateTarget);
     }
   }
 
@@ -382,9 +347,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
     //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
-    if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = this.expandTemplate(this.templateSource);
-    }
+    //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
+      this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    //}
     // disable further snooping for this template
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
@@ -406,7 +371,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   public onDeleteSubstitutions() {
     this.mapping.substitutions = [];
-    this.updateSubstitutions();
     console.log("Cleared substitutions!");
   }
 
@@ -415,18 +379,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(this.selectedSubstitution, 1);
       this.selectedSubstitution = -1;
-    }
-    this.updateSubstitutions();
-  }
-
-  private updateSubstitutions() {
-    if (this.mapping.substitutions.length == 0 && (isWildcardTopic(this.mapping.subscriptionTopic) || this.mapping.indexDeviceIdentifierInTemplateTopic != -1)) {
-      if (this.mapping.targetAPI != API.INVENTORY) {
-        this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, "source.id", true));
-      } else {
-        // if creating new device then the json body contains only a dummy field
-        this.mapping.substitutions.push(new MappingSubstitution(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC, true));
-      }
     }
   }
 
@@ -536,15 +488,28 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  private expandTemplate(t: object): object {
+  private expandSourceTemplate(t: object, levels: String[]): object {
+    return {
+      ...t,
+      _TOPIC_LEVEL_: levels
+    };
+  }
+
+  private expandTargetTemplate(t: object): object {
     return {
       ...t,
       _DEVICE_IDENT_: "909090"
     };
   }
 
-  private reduceTemplate(t: object): string {
-    delete t[TOKEN_DEVICE_TOPIC];
+  private reduceSourceTemplate(t: object, patched: boolean): string {
+    if (!patched) delete t[TOKEN_TOPIC_LEVEL];
+    let tt = JSON.stringify(t);
+    return tt;
+  }
+
+  private reduceTargetTemplate(t: object, patched: boolean): string {
+    if (!patched) delete t[TOKEN_DEVICE_TOPIC];
     let tt = JSON.stringify(t);
     return tt;
   }

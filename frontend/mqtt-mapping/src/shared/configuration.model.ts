@@ -41,7 +41,7 @@ export interface Mapping {
   id: number;
   subscriptionTopic: string;
   templateTopic: string;
-  indexDeviceIdentifierInTemplateTopic: number;
+  templateTopicSample: string;
   targetAPI: string;
   source: string;
   target: string;
@@ -61,6 +61,7 @@ export interface Mapping {
 
 export interface MappingStatus {
   id: number;
+  ident: string;
   subscriptionTopic: string;
   errors: number;
   messagesReceived: number;
@@ -94,7 +95,12 @@ export enum ValidationError {
   TemplateTopic_Must_Match_The_SubscriptionTopic,
   TemplateTopic_Not_Unique,
   TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic,
-  Device_Identifier_Must_Be_Selected
+  Target_Template_Must_Be_Valid_JSON, 
+  Source_Template_Must_Be_Valid_JSON, 
+  No_Multi_Level_Wildcard_Allowed_In_TemplateTopic,
+  Device_Identifier_Must_Be_Selected,
+  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
 }
 
 export enum QOS {
