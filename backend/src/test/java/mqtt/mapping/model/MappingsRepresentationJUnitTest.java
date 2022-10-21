@@ -9,6 +9,7 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.MQTTConfiguration;
 
 @Slf4j
 public class MappingsRepresentationJUnitTest {
@@ -129,6 +130,16 @@ public class MappingsRepresentationJUnitTest {
 
     assertArrayEquals(new String[] {"/","d1", "/", "e1", "/","f1", "/"}, r3);
 
+  }
+
+
+
+  @Test
+  void testMQTTConfigurationIsActive() {
+    MQTTConfiguration conf = null;
+
+    log.info("My configuration is active: {}", MQTTConfiguration.isActive(conf));
+    assertEquals(false, MQTTConfiguration.isActive(conf));
   }
 
 }
