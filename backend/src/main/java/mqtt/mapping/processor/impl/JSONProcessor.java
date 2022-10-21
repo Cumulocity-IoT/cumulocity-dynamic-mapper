@@ -3,18 +3,16 @@ package mqtt.mapping.processor.impl;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.Map.Entry;
-import java.util.stream.Stream;
+import java.util.Set;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -84,7 +82,11 @@ public class JSONProcessor extends PayloadProcessor {
             ArrayNode topicLevels = objectMapper.createArrayNode();
             List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(ctx.getTopic());
             splitTopicAsList.forEach(s -> topicLevels.add(s));
-            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
+            if (payloadJsonNode instanceof ObjectNode){
+                ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
+            } else {
+                log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+            }
             payloadMessage = payloadJsonNode.toPrettyString();
             log.info("Patched payload:{}", payloadMessage);
         } catch (JsonProcessingException e) {

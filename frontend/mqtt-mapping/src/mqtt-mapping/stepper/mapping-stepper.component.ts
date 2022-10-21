@@ -151,6 +151,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
+
+      if (path.startsWith("[")) {
+        path = "$" + path;
+      }
       // test in which editor the click occured 
       if (target == "editorTargetRef") {
         this.setSelectionToPath(this.editorTarget, path)
@@ -200,6 +204,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private setSelectionToPath(editor: JsonEditorComponent, path: string) {
     console.log("Set selection to path:", path);
     const ns = path.split(".");
+    if (ns[0].startsWith("$")) {
+      let rx = /\[(-?\d+)\]/
+      ns[0] = ns[0].match(rx)[1]
+      console.log("Changed level 0:", ns[0])
+    }
     const selection = { path: ns };
     editor.setSelection(selection, selection)
   }
@@ -248,8 +257,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private getCurrentMapping(patched: boolean): Mapping {
     return {
       ... this.mapping,
-      source: this.reduceSourceTemplate(this.editorSource.get(),patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
-      target: this.reduceTargetTemplate(this.editorTarget.get(),patched),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
+      source: this.reduceSourceTemplate(this.editorSource.get(), patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
+      target: this.reduceTargetTemplate(this.editorTarget.get(), patched),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       lastUpdate: Date.now(),
     };
   }
@@ -309,7 +318,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           this.mapping.snoopStatus = SnoopStatus.NONE
         }
       })
-    } else if (this.mapping.snoopStatus == SnoopStatus.STARTED){
+    } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
       console.log("Continue snoop ...?");
       const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe((confirm: boolean) => {
@@ -329,7 +338,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
     //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
     //}
     this.templateTarget = JSON.parse(this.mapping.target);
     if (!this.editMode) {
@@ -348,7 +357,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
     //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
     //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-      this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
     //}
     // disable further snooping for this template
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
@@ -489,10 +498,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   private expandSourceTemplate(t: object, levels: String[]): object {
-    return {
-      ...t,
-      _TOPIC_LEVEL_: levels
-    };
+    if (Array.isArray(t)) {
+      return t
+    } else {
+      return {
+        ...t,
+        _TOPIC_LEVEL_: levels
+      };
+    }
   }
 
   private expandTargetTemplate(t: object): object {
