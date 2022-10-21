@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError, LINK_DIRECT, UPLINK_API_OPTION, DOWNLINK_API_OPTION } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, normalizeTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopic, TOKEN_DEVICE_TOPIC } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
@@ -29,7 +29,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
-  API = API;
+  API = UPLINK_API_OPTION;
+  LINK_DIRECT = LINK_DIRECT;
   ValidationError = ValidationError;
   QOS = QOS;
   SnoopStatus = SnoopStatus;
@@ -170,6 +171,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
       id: new FormControl(this.mapping.id, Validators.required),
+      direct: new FormControl(this.mapping.direct,Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
       templateTopic: new FormControl(this.mapping.templateTopic),
@@ -181,6 +183,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),
+      filterType: new FormControl(this.mapping.filterType),
     },
       checkPropertiesAreValid(this.mappings)
     );
@@ -237,6 +240,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   onTemplateTopicChanged(event): void {
     this.mapping.templateTopic = normalizeTopic(this.mapping.templateTopic);
+  }
+
+  onLinkDirectChanged(event): void{
+    if(this.mapping.direct){
+      this.API = DOWNLINK_API_OPTION;
+      this.mapping.targetAPI = this.API[0].value;
+    }else{
+      this.API = UPLINK_API_OPTION;
+    }
   }
 
   onSourceExpressionUpdated(): void {
@@ -373,6 +385,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
     if (this.mapping.targetAPI == API.INVENTORY) {
       this.templateTarget = this.expandTemplate(this.templateTarget);
+    }
+    //check direct , if download
+    if(this.mapping.direct){
+      if(this.mapping.source.length <= 2){
+        let _target = this.templateTarget;
+        let _source = this.templateSource;
+
+        this.templateTarget = _source;
+        this.templateSource = _target;
+      }
+      this.API = DOWNLINK_API_OPTION;
     }
   }
 

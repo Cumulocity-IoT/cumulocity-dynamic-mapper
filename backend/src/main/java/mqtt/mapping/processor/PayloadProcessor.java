@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -52,6 +53,8 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public abstract void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send) throws ProcessingException;
 
+    public abstract void transformDownLinkPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException;
+
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
@@ -61,6 +64,32 @@ public abstract class PayloadProcessor implements MqttCallback {
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
+    }
+
+    public void publishMessage(Mapping mapping, String message){
+        if (StringUtils.isNotBlank(mapping.getSubscriptionTopic()) && StringUtils.isNotBlank(message)) {
+            ProcessingContext ctx = processPublishPayload(mapping, message);
+            try {
+                transformDownLinkPayload(ctx, message);
+            }catch( ProcessingException e){
+                log.error(e.getMessage(),e);
+            }
+        }
+    }
+
+    public ProcessingContext processPublishPayload(Mapping mapping , String payloadMessage){
+        ProcessingContext context = new ProcessingContext();
+        context.setMapping(mapping);
+        ArrayList<String> topicLevels = TreeNode.splitTopic(mapping.getSubscriptionTopic());
+        String topicTemplate = mapping.getSubscriptionTopic();
+        String deviceIdentifier = topicLevels
+                .get((int) (context.getMapping().indexDeviceIdentifierInTemplateTopic));
+
+        log.info("Resolving deviceIdentifier: {}, {} to {}", topicTemplate,
+                context.getMapping().indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
+        context.setDeviceIdentifier(deviceIdentifier);
+
+        return context;
     }
 
     public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {

@@ -12,9 +12,9 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
+import mqtt.mapping.websocket.TenantNotificationMappingCallback;
+import mqtt.mapping.websocket.TenantNotificationService;
+import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,10 +75,14 @@ public class MQTTClient {
     private Set<String> activeSubscriptionTopic = new HashSet<String>();
     private List<Mapping> activeMapping = new ArrayList<Mapping>();
 
-    private TreeNode mappingTree = InnerNode.initTree();;
+    private TreeNode mappingTree = InnerNode.initTree();
+
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
     private Map<Long, MappingStatus> statusMapping = new HashMap<Long, MappingStatus>();
+
+    @Autowired
+    private TenantNotificationService tenantNotificationService;
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -231,49 +235,78 @@ public class MQTTClient {
     }
 
     public void reloadMappings() {
-        List<Mapping> updatedMapping = c8yAgent.getMappings();
-        Set<Long> updatedMappingSet = updatedMapping.stream().map(m -> m.id).collect(Collectors.toSet());
-        Set<Long> activeMappingSet = activeMapping.stream().map(m -> m.id).collect(Collectors.toSet());
-        Set<String> updatedSubscriptionTopic = updatedMapping.stream().map(m -> m.subscriptionTopic)
-                .collect(Collectors.toSet());
-        Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
-                .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
-        Set<String> subscribeTopic = updatedSubscriptionTopic.stream()
-                .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
-        Set<Long> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
-                .collect(Collectors.toSet());
+        List<Mapping> _updatedMapping = c8yAgent.getMappings();
 
-        // remove monitorings for deleted maps
-        removedMapping.forEach(id -> {
-            log.info("Removing monitoring not used: {}", id);
-            statusMapping.remove(id);
-        });
+        List<Mapping> uplinkMapping = _updatedMapping.stream().filter(m -> m.isForUplink()).collect(Collectors.toList());
+        List<Mapping> downlinkMapping = _updatedMapping.stream().filter(m -> !m.isForUplink()).collect(Collectors.toList());
 
-        // unsubscribe topics not used
-        unsubscribeTopic.forEach((topic) -> {
-            log.info("Unsubscribe from topic: {}", topic);
-            try {
-                unsubscribe(topic);
-            } catch (MqttException e1) {
-                log.error("Exception when unsubsribing from topic {}, {}", topic, e1);
+        log.info("uplinkMapping size:{}, downlink size:{}", uplinkMapping.size(),
+                downlinkMapping.size());
+
+        try {
+            final List<Mapping> updatedMapping = uplinkMapping;
+            Set<Long> updatedMappingSet = updatedMapping.stream().map(m -> m.id).collect(Collectors.toSet());
+            Set<Long> activeMappingSet = activeMapping.stream().map(m -> m.id).collect(Collectors.toSet());
+            Set<String> updatedSubscriptionTopic = updatedMapping.stream().map(m -> m.subscriptionTopic)
+                    .collect(Collectors.toSet());
+            Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
+                    .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+            Set<String> subscribeTopic = null;
+
+            if (activeSubscriptionTopic.isEmpty()) {
+                subscribeTopic = updatedSubscriptionTopic.stream().collect(Collectors.toSet());
+            } else {
+                subscribeTopic = updatedSubscriptionTopic.stream()
+                        .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
             }
-        });
+            Set<Long> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
+                    .collect(Collectors.toSet());
 
-        // subscribe to new topics
-        subscribeTopic.forEach(topic -> {
-            int qos = updatedMapping.stream().filter(m -> m.subscriptionTopic.equals(topic))
-                    .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-            log.info("Subscribing to topic: {}, qos: {}", topic, qos);
-            try {
-                subscribe(topic, qos);
-            } catch (MqttException e1) {
-                log.error("Exception when subsribing to topic {}, {}", topic, e1);
-            }
-        });
-        activeSubscriptionTopic = updatedSubscriptionTopic;
-        activeMapping = updatedMapping;
-        // update mappings tree
-        mappingTree = rebuildMappingTree(updatedMapping);
+            // remove monitorings for deleted maps
+            removedMapping.forEach(id -> {
+                log.info("Removing monitoring not used: {}", id);
+                statusMapping.remove(id);
+            });
+
+            // unsubscribe topics not used
+            unsubscribeTopic.forEach((topic) -> {
+                log.info("Unsubscribe from topic: {}", topic);
+                try {
+                    unsubscribe(topic);
+                } catch (MqttException e1) {
+                    log.error("Exception when unsubsribing from topic {}, {}", topic, e1);
+                }
+            });
+
+            // subscribe to new topics
+            subscribeTopic.forEach(topic -> {
+                int qos = updatedMapping.stream().filter(m -> m.subscriptionTopic.equals(topic))
+                        .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
+                log.info("Subscribing to topic: {}, qos: {}", topic, qos);
+                try {
+                    subscribe(topic, qos);
+                } catch (MqttException e1) {
+                    log.error("Exception when subsribing to topic {}, {}", topic, e1);
+                }
+            });
+            activeSubscriptionTopic = updatedSubscriptionTopic;
+            activeMapping = updatedMapping;
+            // update mappings tree
+            mappingTree = rebuildMappingTree(updatedMapping);
+
+            //for downLink
+            Set<String> activeNotificationKeys = new HashSet<>();
+            downlinkMapping.forEach(mapping -> {
+                String notificationKey = registerNotification(mapping);
+                if (notificationKey != null) {
+                    activeNotificationKeys.add(notificationKey);
+                }
+            });
+            //unactive notification
+            tenantNotificationService.closeUnActiveMapping(activeNotificationKeys);
+        }catch(Exception e){
+            log.error(e.getMessage(),e);
+        }
     }
 
     private TreeNode rebuildMappingTree(List<Mapping> mappings) {
@@ -298,6 +331,16 @@ public class MQTTClient {
             mqttClient.subscribe(topic);
         log.debug("Successfully subscribed on topic {}", topic);
 
+    }
+
+    public String registerNotification(Mapping _mapping){
+        log.info("downLink monitoring on topic {}", _mapping.getSubscriptionTopic());
+        try {
+            return tenantNotificationService.registerNotification(c8yAgent.tenant,_mapping, new TenantNotificationMappingCallback(_mapping, payloadProcessor));
+        }catch(Exception e){
+            log.error(e.getMessage(),e);
+        }
+        return null;
     }
 
     private void unsubscribe(String topic) throws MqttException {
@@ -440,6 +483,16 @@ public class MQTTClient {
         c8yAgent.saveMappings(mappings);
         reloadMappings();
         return (long) updateMapping;
+    }
+
+    public void pushMsg(String topic , String msg, int qos)throws MqttException, MqttPersistenceException {
+        if (isConnected() && mqttClient != null) {
+            MqttMessage mqttMessage = new MqttMessage();
+            mqttMessage.setQos(qos);
+            mqttMessage.setPayload(msg.getBytes());
+            mqttMessage.setRetained(false);
+            mqttClient.publish(topic,mqttMessage);
+        }
     }
 
     public void runOperation(ServiceOperation operation) {

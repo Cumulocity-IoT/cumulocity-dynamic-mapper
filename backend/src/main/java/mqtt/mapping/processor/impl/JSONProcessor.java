@@ -2,13 +2,14 @@ package mqtt.mapping.processor.impl;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.regex.Pattern;
 
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -251,4 +252,157 @@ public class JSONProcessor extends PayloadProcessor {
         }
     }
 
+    @Override
+    public void transformDownLinkPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException {
+        Mapping mapping = ctx.getMapping();
+
+        /*
+         * step 0 patch payload with dummy property _DEVICE_IDENT_ in case of a wildcard
+         * in the template topic
+         */
+        JsonNode payloadJsonNode;
+        try {
+            payloadJsonNode = objectMapper.readTree(payloadMessage);
+        }catch (JsonProcessingException e) {
+            log.error("JsonProcessingException parsing: {}, {}", payloadMessage, e);
+            throw new ProcessingException("JsonProcessingException parsing: " + payloadMessage + " exception:" + e);
+        }
+
+        var payloadTarget = new JSONObject(mapping.target);
+
+        for (MappingSubstitution sub : mapping.substitutions) {
+            resolveOneSubstitutionForDownLink(ctx,mapping, sub, payloadJsonNode,
+                    payloadTarget);
+        }
+        //check the external id whether find out
+        if(ctx.getDeviceIdentifier()==null){
+            MappingSubstitution sub = new MappingSubstitution();
+            sub.pathSource = SOURCE_ID;
+            sub.pathTarget = TOKEN_DEVICE_TOPIC;
+            sub.definesIdentifier = true;
+            resolveOneSubstitutionForDownLink(ctx, mapping,sub, payloadJsonNode, payloadTarget);
+        }
+
+        //update topic
+        boolean containsWildcardTemplateTopic = MappingsRepresentation
+                .isWildcardTopic(mapping.getTemplateTopic());
+        String targetTopic = mapping.getSubscriptionTopic();
+        if(containsWildcardTemplateTopic){
+            String topic = mapping.getSubscriptionTopic();
+            String[] topicLevels = topic.split(TreeNode.SPLIT_TOPIC_REGEXP);
+            if(ctx.getMapping().getIndexDeviceIdentifierInTemplateTopic() < topicLevels.length){
+                topicLevels[(int)ctx.getMapping().getIndexDeviceIdentifierInTemplateTopic()]
+                        = ctx.getDeviceIdentifier();
+            }
+            targetTopic = StringUtils.join(topicLevels,"");
+        }
+        /*
+         * step 4 send target payload to mqtt broker
+         */
+        log.info("Posting mqtt payload: {}, {}, {}", payloadTarget,
+                ctx.getDeviceIdentifier(), targetTopic);
+        try {
+            mqttClient.pushMsg(targetTopic, payloadTarget.toString(), mapping.getQos().ordinal());
+        }catch(Exception e ){
+            log.error(e.getMessage(),e);
+        }
+    }
+
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
+        String currentKey = keys[0];
+
+        if (keys.length == 1) {
+            return jsonObject.put(currentKey, sub.typedValue());
+        } else if (!jsonObject.has(currentKey)) {
+            throw new JSONException(currentKey + "is not a valid key.");
+        }
+
+        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
+        return jsonObject.put(currentKey, updatedNestedValue);
+    }
+
+    private void resolveOneSubstitutionForDownLink(ProcessingContext ctx,
+                                                   Mapping mapping,
+                                                   MappingSubstitution sub,
+                                                   JsonNode payloadJsonNode,
+                                                   JSONObject payloadTarget ){
+        JsonNode extractedSourceContent = null;
+        /*
+         * step 1 extract content from incoming payload
+         */
+        String _pathSource = sub.pathSource;
+        if(_pathSource.indexOf(TOKEN_DEVICE_TOPIC) > -1 ){
+            return;
+        }
+        try {
+            Expressions expr = Expressions.parse(_pathSource);
+            extractedSourceContent = expr.evaluate(payloadJsonNode);
+        } catch (ParseException | IOException | EvaluateException e) {
+            log.error("Exception for: {}, {}, {}", sub.pathSource, payloadTarget , e);
+        } catch (EvaluateRuntimeException e) {
+            log.error("EvaluateRuntimeException for: {}, {}, {}", sub.pathSource, payloadTarget,  e);
+        }
+
+        /*
+         * step 2 analyse exctracted content: textual, array
+         */
+        SubstituteValue substitute = null;
+        if (extractedSourceContent == null) {
+            log.error("No substitution for: sub.pathSource:-> [{}], payloadTarget-->: {}", sub.pathSource, payloadTarget );
+        } else {
+            if(extractedSourceContent.isArray()){
+
+            }else if (extractedSourceContent.isTextual()) {
+                // extracted result from sourcPayload is an array, so we potentially have to
+                // iterate over the result, e.g. creating multiple devices
+                substitute = new SubstituteValue(extractedSourceContent.textValue(), TYPE.TEXTUAL);
+            } else if (extractedSourceContent.isNumber()) {
+                // extracted result from sourcPayload is an array, so we potentially have to
+                // iterate over the result, e.g. creating multiple devices
+                substitute = new SubstituteValue(extractedSourceContent.numberValue().toString(), TYPE.NUMBER);
+            }
+        }
+
+        /*
+         * step 3 replace target with extract content from incoming payload
+         */
+        String[] pathTarget = sub.pathTarget.split(Pattern.quote("."));
+        if (pathTarget == null) {
+            pathTarget = new String[] { sub.pathTarget };
+        }
+        if (!mapping.targetAPI.equals(API.INVENTORY)) {
+            if (sub.pathSource.equals(SOURCE_ID)
+                    && mapping.mapDeviceIdentifier
+                    && sub.definesIdentifier) {
+                String sourceid = substitute.value;
+                String externalId = findoutExternalId(sourceid, mapping.externalIdType);
+                if (externalId == null) {
+                    throw new RuntimeException("source id " + sourceid + " for type "
+                            + mapping.externalIdType + " not found external id!");
+                }else{
+                    log.info("find out externalid for source {}-{}", sourceid, externalId);
+                }
+                ctx.setDeviceIdentifier(externalId);
+                substitute.value = externalId;
+            }
+            log.info("try to config-{} with val-{}",StringUtils.join(pathTarget,"."), substitute);
+            substituteValue(substitute,payloadTarget, pathTarget);
+        } else {
+            if (!sub.pathTarget.equals(TOKEN_DEVICE_TOPIC)) {
+                substituteValue(substitute,payloadTarget, pathTarget);
+            }
+        }
+    }
+
+    private String findoutExternalId(String sourceId, String externalIdType) {
+        ExternalIDRepresentation extId = c8yAgent.getMoExternalId(sourceId, externalIdType);
+        String externalid = null;
+        if(extId!=null){
+            externalid = extId.getExternalId();
+        }
+        log.info("Found external id {} for source id {} externalIdType {}", externalid, sourceId, externalIdType);
+        return externalid;
+    }
 }

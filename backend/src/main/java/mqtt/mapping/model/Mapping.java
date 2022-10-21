@@ -75,6 +75,13 @@ public class Mapping implements Serializable {
   @NotNull
   public long lastUpdate;
 
+  /**
+   * uplink is false
+   */
+  public boolean direct = false;
+
+  public String filterType;
+
   @Override
   public boolean equals(Object m) {
     return (m instanceof Mapping) && id == ((Mapping) m).id;
@@ -95,6 +102,8 @@ public class Mapping implements Serializable {
     this.externalIdType = mapping.externalIdType;
     this.snoopStatus = mapping.snoopStatus;
     this.snoopedTemplates = mapping.snoopedTemplates;
+    this.direct = mapping.direct;
+    this.filterType = mapping.filterType;
   }
 
   public void addSnoopedTemplate(String payloadMessage) {
@@ -112,5 +121,9 @@ public class Mapping implements Serializable {
         (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
+  }
+
+  public boolean isForUplink(){
+    return !Boolean.TRUE.equals(this.direct);
   }
 }

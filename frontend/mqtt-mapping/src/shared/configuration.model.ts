@@ -56,6 +56,8 @@ export interface Mapping {
   externalIdType: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
+  direct: boolean;
+  filterType: string;
 }
 
 
@@ -85,6 +87,22 @@ export enum API {
   MEASUREMENT = "MEASUREMENT",
   INVENTORY = "INVENTORY"
 }
+
+export const DOWNLINK_API_OPTION = [
+  {name: "ALARM", value:"ALARM"}
+]
+
+export const UPLINK_API_OPTION = [
+  {name: "ALARM", value:"ALARM"},
+  {name: "EVENT", value:"EVENT"},
+  {name: "MEASUREMENT", value:"MEASUREMENT"},
+  {name: "INVENTORY", value:"INVENTORY"}
+]
+
+export const LINK_DIRECT =[
+  {name: 'UpLink', value: false},
+  {name: 'DownLink', value: true}
+]
 
 export enum ValidationError {
   Only_One_Multi_Level_Wildcard,

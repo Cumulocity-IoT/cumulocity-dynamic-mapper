@@ -3,7 +3,7 @@
   "version": "1.0.25",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.",
   "scripts": {
-    "start": "c8ycli server -u ${url}",
+    "start": "c8ycli server -u https://apj-demos.cumulocity.com",
     "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpack.config.js",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
@@ -30,7 +30,9 @@
     "@ngx-translate/core": "13.0.0",
     "jsonata": "^1.8.6",
     "rxjs": "~6.6.3",
-    "zone.js": "~0.11.4"
+    "zone.js": "~0.11.4",
+    "ang-jsoneditor": "^1.10.5",
+    "jsoneditor": "^9.7"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "12.2.14",

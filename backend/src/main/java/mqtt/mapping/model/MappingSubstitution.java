@@ -40,13 +40,12 @@ public class MappingSubstitution implements Serializable {
                 } catch (NumberFormatException e1) {
                     // not int
                     try {
-                        Float.parseFloat(value);
+                        return Float.parseFloat(value);
                     } catch (NumberFormatException e2) {
                         return null;
                     }
                 }
             }
-            return null;
         }
     }
 

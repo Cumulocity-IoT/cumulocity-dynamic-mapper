@@ -7,6 +7,7 @@ import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+import { DirectRendererComponent } from '../renderer/direct.renderer.component';
 import { MappingService } from '../shared/mapping.service';
 
 @Component({
@@ -46,6 +47,15 @@ export class MappingComponent implements OnInit {
       filterable: false,
       dataType: ColumnDataType.TextShort,
       gridTrackSize: '3%'
+    },
+    {
+      name: '_direction',
+      header: 'Direct',
+      path: 'direct',
+      filterable: false,
+      sortable: false,
+      cellRendererComponent: DirectRendererComponent,
+      gridTrackSize: '7%'
     },
     {
       header: 'Subscription Topic',
@@ -156,7 +166,9 @@ export class MappingComponent implements OnInit {
       externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      direct: false,
+      filterType: ''
     }
     this.mappingToUpdate = mapping;
     console.log("Add mappping", l, this.mappings)
