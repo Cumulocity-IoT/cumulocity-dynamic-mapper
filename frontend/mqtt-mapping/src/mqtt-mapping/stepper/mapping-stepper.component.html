@@ -223,9 +223,7 @@
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Source</label>
-                        <div class="jsonColumnLarge" id="editorSourceRef">
-                          <json-editor [options]="editorOptionsSource" [data]="templateSource" #editorSource>
-                          </json-editor>
+                        <div class="jsonColumnLarge" #editorSourceRef id="editorSourceRef">
                         </div>
                         <c8y-messages>
                           <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate>Select source node to
@@ -310,9 +308,7 @@
                             </button>
                           </span>
                         </div>
-                        <div class="jsonColumnLarge" id="editorTargetRef">
-                          <json-editor [options]="editorOptionsTarget" [data]="templateTarget" #editorTarget>
-                          </json-editor>
+                        <div class="jsonColumnLarge" #editorTargetRef id="editorTargetRef">
                         </div>
                         <c8y-messages>
                           <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate>Select target node to
@@ -346,7 +342,6 @@
                   </div>
 
                   <div class="row" formGroupName="cs">
-                    <!-- <div class="row" > -->
                     <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
@@ -459,8 +454,7 @@
                 <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
-                    <div class="jsonColumnLarge">
-                      <json-editor [options]="editorOptionsTesting" [data]="dataTesting" #editorResting></json-editor>
+                    <div class="jsonColumnLarge" #editorTestingRef id="editorTestingRef">
                     </div>
                   </div>
                 </div>
