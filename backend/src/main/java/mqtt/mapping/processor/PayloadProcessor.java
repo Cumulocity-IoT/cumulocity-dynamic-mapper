@@ -58,62 +58,62 @@ public abstract class PayloadProcessor implements MqttCallback {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                ProcessingContext ctx = new ProcessingContext();
-                ctx.setPayload(deserializePayload(mqttMessage));
-                ctx.setTopic(topic);
-                processPayload(ctx, true);
+                ProcessingContext context = new ProcessingContext();
+                context.setPayload(deserializePayload(mqttMessage));
+                context.setTopic(topic);
+                processPayload(context, true);
             }
         } else {
             sysHandler.handleSysPayload(topic, mqttMessage);
         }
     }
 
-    public List<ProcessingContext> processPayload(ProcessingContext ctx, boolean sendPayload)  {
+    public List<ProcessingContext> processPayload(ProcessingContext context, boolean sendPayload)  {
         List<TreeNode> nodes = new ArrayList<TreeNode>();
         List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
 
         try {
-            nodes = resolveMapping(ctx);
+            nodes = resolveMapping(context);
         } catch (Exception e) {
             log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message: {}", e);
             e.printStackTrace();
-            MappingStatus ms = mqttClient.getMappingStatus(null, true);
-            ms.errors++;
+            MappingStatus mappingStatus = mqttClient.getMappingStatus(null, true);
+            mappingStatus.errors++;
         }
 
         for (TreeNode node : nodes) {
             if (node instanceof MappingNode) {
-                ctx.setMapping(((MappingNode) node).getMapping());
-                Mapping map = ctx.getMapping();
-                String payloadMessage = ctx.getPayload();
-                MappingStatus ms = mqttClient.getMappingStatus(map, false);
+                context.setMapping(((MappingNode) node).getMapping());
+                Mapping mapping = context.getMapping();
+                String payload = context.getPayload();
+                MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
                 try {
-                    ms.messagesReceived++;
-                    if (map.snoopStatus == SnoopStatus.ENABLED
-                            || map.snoopStatus == SnoopStatus.STARTED) {
-                        ms.snoopedTemplatesActive++;
-                        ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
-                        map.addSnoopedTemplate(payloadMessage);
+                    mappingStatus.messagesReceived++;
+                    if (mapping.snoopStatus == SnoopStatus.ENABLED
+                            || mapping.snoopStatus == SnoopStatus.STARTED) {
+                        mappingStatus.snoopedTemplatesActive++;
+                        mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                        mapping.addSnoopedTemplate(payload);
 
-                        log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
-                                map.snoopedTemplates.size(),
-                                map.snoopStatus);
-                        mqttClient.setMappingDirty(map);
+                        log.info("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                                mapping.snoopedTemplates.size(),
+                                mapping.snoopStatus);
+                        mqttClient.setMappingDirty(mapping);
                     } else {
-                        transformPayload(ctx, sendPayload);
-                        if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
-                            ms.errors++;
+                        transformPayload(context, sendPayload);
+                        if ( context.hasError() || context.getRequests().stream().anyMatch(r -> r.hasError())) {
+                            mappingStatus.errors++;
                         }
                     }
                 } catch (Exception e) {
                     log.warn("Message could NOT be parsed, ignoring this message.");
                     e.printStackTrace();
-                    ms.errors++;
+                    mappingStatus.errors++;
                 }
             } else {
-                ctx.setError(new ResolveException("Could not find appropriate mapping for topic: " + ctx.getTopic()));
+                context.setError(new ResolveException("Could not find appropriate mapping for topic: " + context.getTopic()));
             }
-            processingResult.add(ctx);
+            processingResult.add(context);
         }
         return processingResult;
     }
@@ -128,12 +128,12 @@ public abstract class PayloadProcessor implements MqttCallback {
         return id;
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String key) throws JSONException {
-        String[] pt = key.split(Pattern.quote("."));
-        if (pt == null) {
-            pt = new String[] { key };
+    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String keys) throws JSONException {
+        String[] splitKeys = keys.split(Pattern.quote("."));
+        if (splitKeys == null) {
+            splitKeys = new String[] { keys };
         }
-        return substituteValue(sub, jsonObject, pt);
+        return substituteValue(sub, jsonObject, splitKeys);
     }
 
     public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {

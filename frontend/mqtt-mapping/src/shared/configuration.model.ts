@@ -53,6 +53,7 @@ export interface Mapping {
   substitutions?: MappingSubstitution[];
   mapDeviceIdentifier: boolean;
   createNonExistingDevice: boolean;
+  repairStrategy: RepairStrategy;
   updateExistingDevice: boolean;
   externalIdType: string;
   snoopStatus: SnoopStatus;
@@ -123,4 +124,10 @@ export enum Operation {
   CONNECT,
   DISCONNECT, 
   RESFRESH_MAPPING_STATUS
+}
+
+export enum RepairStrategy {
+  USE_FIRST_VALUE_OF_ARRAY = "USE_FIRST_VALUE_OF_ARRAY",
+  USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
+  IGNORE = "IGNORE",
 }
