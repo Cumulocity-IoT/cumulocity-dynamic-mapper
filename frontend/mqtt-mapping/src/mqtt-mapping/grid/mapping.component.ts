@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, Operation, QOS, SnoopStatus } from '../../shared/configuration.model';
+import { API, Mapping, Operation, QOS, RepairStrategy, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -161,6 +161,7 @@ export class MappingComponent implements OnInit {
       substitutions: [],
       mapDeviceIdentifier: false,
       createNonExistingDevice: false,
+      repairStrategy: RepairStrategy.USE_FIRST_VALUE_OF_ARRAY,
       updateExistingDevice: false,
       externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,

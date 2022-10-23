@@ -7,7 +7,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
@@ -32,6 +32,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   API = API;
   ValidationError = ValidationError;
+  RepairStrategy = RepairStrategy;
   QOS = QOS;
   SnoopStatus = SnoopStatus;
   keys = Object.keys;
@@ -201,6 +202,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
+      repairStrategy: new FormControl(this.mapping.repairStrategy, Validators.required),
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),

@@ -82,7 +82,7 @@ public class C8yAgent {
     @Autowired
     private ConfigurationService configurationService;
 
-    private MappingServiceRepresentation agentMOR;
+    private MappingServiceRepresentation mappingServiceRepresentation;
 
     public String tenant = null;
 
@@ -95,44 +95,48 @@ public class C8yAgent {
         /* Connecting to Cumulocity */
         subscriptionsService.runForTenant(tenant, () -> {
             // register agent
-            ExternalIDRepresentation agentIdRep = null;
-            ManagedObjectRepresentation agentRep = null;
+            ExternalIDRepresentation agentIdRepresentation = null;
+            ManagedObjectRepresentation agentRepresentation = null;
             try {
-                agentIdRep = getExternalId(MappingServiceRepresentation.AGENT_ID, null);
+                agentIdRepresentation = getExternalId(MappingServiceRepresentation.AGENT_ID, null);
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
-            if (agentIdRep != null) {
-                log.info("Agent with ID {} already exists {}", MappingServiceRepresentation.AGENT_ID, agentIdRep);
-                agentRep = agentIdRep.getManagedObject();
+            if (agentIdRepresentation != null) {
+                log.info("Agent with ID {} already exists {}", MappingServiceRepresentation.AGENT_ID,
+                        agentIdRepresentation);
+                agentRepresentation = agentIdRepresentation.getManagedObject();
             } else {
-                agentRep = new ManagedObjectRepresentation();
-                agentRep.setName(MappingServiceRepresentation.AGENT_NAME);
-                agentRep.set(new Agent());
-                agentRep.set(new IsDevice());
-                agentRep = inventoryApi.create(agentRep);
-                log.info("Agent has been created with ID {}", agentMOR.getId());
-                ExternalIDRepresentation externalAgentId = createExternalID(agentRep, MappingServiceRepresentation.AGENT_ID, "c8y_Serial");
+                agentRepresentation = new ManagedObjectRepresentation();
+                agentRepresentation.setName(MappingServiceRepresentation.AGENT_NAME);
+                agentRepresentation.set(new Agent());
+                agentRepresentation.set(new IsDevice());
+                agentRepresentation = inventoryApi.create(agentRepresentation);
+                log.info("Agent has been created with ID {}", mappingServiceRepresentation.getId());
+                ExternalIDRepresentation externalAgentId = createExternalID(agentRepresentation,
+                        MappingServiceRepresentation.AGENT_ID, "c8y_Serial");
                 log.info("ExternalId created: {}", externalAgentId.getExternalId());
             }
-            agentRep = inventoryApi.get(agentRep.getId());
-            agentMOR = objectMapper.convertValue(agentRep, MappingServiceRepresentation.class);
-            agentMOR.getMappingStatus().forEach(m -> {
+            agentRepresentation = inventoryApi.get(agentRepresentation.getId());
+            mappingServiceRepresentation = objectMapper.convertValue(agentRepresentation,
+                    MappingServiceRepresentation.class);
+            mappingServiceRepresentation.getMappingStatus().forEach(m -> {
                 mqttClient.initializeMappingStatus(m);
             });
 
             // test if managedObject mqttMapping exists
-            ExternalIDRepresentation moMappingExtId = getExternalId(MappingsRepresentation.MQTT_MAPPING_TYPE, "c8y_Serial");
-            if (moMappingExtId == null) {
+            ExternalIDRepresentation mappingsRepresentationMappingExtId = getExternalId(
+                    MappingsRepresentation.MQTT_MAPPING_TYPE, "c8y_Serial");
+            if (mappingsRepresentationMappingExtId == null) {
                 // create new managedObject
-                ManagedObjectRepresentation moMapping = new ManagedObjectRepresentation();
-                moMapping.setType(MappingsRepresentation.MQTT_MAPPING_TYPE);
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setType(MappingsRepresentation.MQTT_MAPPING_TYPE);
                 // moMapping.set([], MQTT_MAPPING_FRAGMENT);
-                moMapping.setProperty(MappingsRepresentation.MQTT_MAPPING_FRAGMENT, new ArrayList<>());
-                moMapping.setName("MQTT-Mapping");
-                moMapping = inventoryApi.create(moMapping);
-                createExternalID(moMapping, MappingsRepresentation.MQTT_MAPPING_TYPE, "c8y_Serial");
-                log.info("Created new MQTT-Mapping: {}, {}", moMapping.getId().getValue(), moMapping.getId());
+                mor.setProperty(MappingsRepresentation.MQTT_MAPPING_FRAGMENT, new ArrayList<>());
+                mor.setName("MQTT-Mapping");
+                mor = inventoryApi.create(mor);
+                createExternalID(mor, MappingsRepresentation.MQTT_MAPPING_TYPE, "c8y_Serial");
+                log.info("Created new MQTT-Mapping: {}, {}", mor.getId().getValue(), mor.getId());
             }
         });
 
@@ -174,21 +178,21 @@ public class C8yAgent {
             String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
             throws SDKException {
 
-        MeasurementRepresentation measure = new MeasurementRepresentation();
-        measure.setAttrs(attributes);
-        measure.setSource(mor);
-        measure.setType(eventType);
-        measure.setDateTime(timestamp);
+        MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
+        measurementRepresentation.setAttrs(attributes);
+        measurementRepresentation.setSource(mor);
+        measurementRepresentation.setType(eventType);
+        measurementRepresentation.setDateTime(timestamp);
 
         // Step 3: Iterate over all fragments provided
         Iterator<Map.Entry<String, Object>> fragmentKeys = fragments.entrySet().iterator();
         while (fragmentKeys.hasNext()) {
             Map.Entry<String, Object> currentFragment = fragmentKeys.next();
-            measure.set(currentFragment.getValue(), currentFragment.getKey());
+            measurementRepresentation.set(currentFragment.getValue(), currentFragment.getKey());
 
         }
-        measure = measurementApi.create(measure);
-        return measure;
+        measurementRepresentation = measurementApi.create(measurementRepresentation);
+        return measurementRepresentation;
     }
 
     public ExternalIDRepresentation getExternalId(String externalId, String type) {
@@ -198,22 +202,22 @@ public class C8yAgent {
         ID id = new ID();
         id.setType(type);
         id.setValue(externalId);
-        ExternalIDRepresentation[] extIds = { null };
+        ExternalIDRepresentation[] externalIDRepresentations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                extIds[0] = identityApi.getExternalId(id);
+                externalIDRepresentations[0] = identityApi.getExternalId(id);
             } catch (SDKException e) {
                 log.info("External ID {} not found", externalId);
             }
         });
-        return extIds[0];
+        return externalIDRepresentations[0];
     }
 
     public void unregisterDevice(String externalId) {
-        ExternalIDRepresentation retExternalId = getExternalId(externalId, null);
-        if (retExternalId != null) {
-            inventoryApi.delete(retExternalId.getManagedObject().getId());
-            identityApi.deleteExternalId(retExternalId);
+        ExternalIDRepresentation externalIDRepresentation = getExternalId(externalId, null);
+        if (externalIDRepresentation != null) {
+            inventoryApi.delete(externalIDRepresentation.getManagedObject().getId());
+            identityApi.deleteExternalId(externalIDRepresentation);
         }
     }
 
@@ -222,7 +226,7 @@ public class C8yAgent {
     }
 
     public MappingServiceRepresentation getAgentMOR() {
-        return agentMOR;
+        return mappingServiceRepresentation;
     }
 
     public void createIdentity(ExternalIDRepresentation externalIDGid) {
@@ -235,47 +239,47 @@ public class C8yAgent {
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
             DateTime dateTime, HashMap<String, MeasurementValue> mvMap) {
-        MeasurementRepresentation mr = new MeasurementRepresentation();
+        MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                mr.set(mvMap, name);
-                mr.setType(type);
-                mr.setSource(mor);
-                mr.setDateTime(dateTime);
-                log.debug("Creating Measurement {}", mr);
-                MeasurementRepresentation mrn = measurementApi.create(mr);
-                mr.setId(mrn.getId());
+                measurementRepresentation.set(mvMap, name);
+                measurementRepresentation.setType(type);
+                measurementRepresentation.setSource(mor);
+                measurementRepresentation.setDateTime(dateTime);
+                log.debug("Creating Measurement {}", measurementRepresentation);
+                MeasurementRepresentation mrn = measurementApi.create(measurementRepresentation);
+                measurementRepresentation.setId(mrn.getId());
             } catch (SDKException e) {
                 log.error("Error creating Measurement", e);
             }
         });
-        return mr;
+        return measurementRepresentation;
     }
 
     public AlarmRepresentation createAlarm(String severity, String message, String type, DateTime alarmTime,
             ManagedObjectRepresentation parentMor) {
-        AlarmRepresentation[] ars = { new AlarmRepresentation() };
+        AlarmRepresentation[] alarmRepresentations = { new AlarmRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            ars[0].setSeverity(severity);
-            ars[0].setSource(parentMor);
-            ars[0].setText(message);
-            ars[0].setDateTime(alarmTime);
-            ars[0].setStatus("ACTIVE");
-            ars[0].setType(type);
+            alarmRepresentations[0].setSeverity(severity);
+            alarmRepresentations[0].setSource(parentMor);
+            alarmRepresentations[0].setText(message);
+            alarmRepresentations[0].setDateTime(alarmTime);
+            alarmRepresentations[0].setStatus("ACTIVE");
+            alarmRepresentations[0].setType(type);
 
-            ars[0] = this.alarmApi.create(ars[0]);
+            alarmRepresentations[0] = this.alarmApi.create(alarmRepresentations[0]);
         });
-        return ars[0];
+        return alarmRepresentations[0];
     }
 
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
-        EventRepresentation[] ers = { new EventRepresentation() };
+        EventRepresentation[] eventRepresentations = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            ers[0].setSource(parentMor != null ? parentMor : agentMOR);
-            ers[0].setText(message);
-            ers[0].setDateTime(eventTime);
-            ers[0].setType(type);
-            this.eventApi.createAsync(ers[0]);
+            eventRepresentations[0].setSource(parentMor != null ? parentMor : mappingServiceRepresentation);
+            eventRepresentations[0].setText(message);
+            eventRepresentations[0].setDateTime(eventTime);
+            eventRepresentations[0].setType(type);
+            this.eventApi.createAsync(eventRepresentations[0]);
         });
     }
 
@@ -320,19 +324,22 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 if (targetAPI.equals(API.EVENT)) {
-                    EventRepresentation er = objectMapper.readValue(payload, EventRepresentation.class);
-                    er = eventApi.create(er);
-                    log.info("New event posted: {}", er);
+                    EventRepresentation eventRepresentation = objectMapper.readValue(payload,
+                            EventRepresentation.class);
+                    eventRepresentation = eventApi.create(eventRepresentation);
+                    log.info("New event posted: {}", eventRepresentation);
                 } else if (targetAPI.equals(API.ALARM)) {
-                    AlarmRepresentation ar = objectMapper.readValue(payload, AlarmRepresentation.class);
-                    ar = alarmApi.create(ar);
-                    log.info("New alarm posted: {}", ar);
+                    AlarmRepresentation alarmRepresentation = objectMapper.readValue(payload,
+                            AlarmRepresentation.class);
+                    alarmRepresentation = alarmApi.create(alarmRepresentation);
+                    log.info("New alarm posted: {}", alarmRepresentation);
                 } else if (targetAPI.equals(API.MEASUREMENT)) {
                     // MeasurementRepresentation mr = objectMapper.readValue(payload,
                     // MeasurementRepresentation.class);
-                    MeasurementRepresentation mr = jsonParser.parse(MeasurementRepresentation.class, payload);
-                    mr = measurementApi.create(mr);
-                    log.info("New measurement posted: {}", mr);
+                    MeasurementRepresentation measurementRepresentation = jsonParser
+                            .parse(MeasurementRepresentation.class, payload);
+                    measurementRepresentation = measurementApi.create(measurementRepresentation);
+                    log.info("New measurement posted: {}", measurementRepresentation);
                 } else {
                     log.error("Not existing API!");
                 }
@@ -408,23 +415,23 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MappingsRepresentation.MQTT_MAPPING_TYPE);
-            ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
+            ManagedObjectRepresentation mor = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            ManagedObjectRepresentation moUpdate = new ManagedObjectRepresentation();
-            moUpdate.setId(mo.getId());
-            moUpdate.setProperty(MappingsRepresentation.MQTT_MAPPING_FRAGMENT, mappings);
-            inventoryApi.update(moUpdate);
+            ManagedObjectRepresentation updateMOR = new ManagedObjectRepresentation();
+            updateMOR.setId(mor.getId());
+            updateMOR.setProperty(MappingsRepresentation.MQTT_MAPPING_FRAGMENT, mappings);
+            inventoryApi.update(updateMOR);
             log.info("Updated Mapping after deletion!");
         });
     }
 
     public MQTTConfiguration setConfigurationActive(boolean b) {
-        MQTTConfiguration[] mcr = { null };
+        MQTTConfiguration[] configurations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mcr[0] = configurationService.setConfigurationActive(b);
+            configurations[0] = configurationService.setConfigurationActive(b);
             log.info("Saved configuration");
         });
-        return mcr[0];
+        return configurations[0];
     }
 
     public Mapping getMapping(Long id) {
@@ -434,9 +441,9 @@ public class C8yAgent {
             inventoryFilter.byType(MappingsRepresentation.MQTT_MAPPING_TYPE);
             ManagedObjectRepresentation mo = inventoryApi.getManagedObjectsByFilter(inventoryFilter).get()
                     .getManagedObjects().get(0);
-            MappingsRepresentation mqttMo = objectMapper.convertValue(mo, MappingsRepresentation.class);
-            log.debug("Found Mapping {}", mqttMo);
-            mqttMo.getC8yMQTTMapping().forEach((m) -> {
+            MappingsRepresentation mappingsRepresentation = objectMapper.convertValue(mo, MappingsRepresentation.class);
+            log.debug("Found Mapping {}", mappingsRepresentation);
+            mappingsRepresentation.getC8yMQTTMapping().forEach((m) -> {
                 if (m.id == id) {
                     mr[0] = m;
                 }
@@ -454,10 +461,10 @@ public class C8yAgent {
                 Map<String, Object> service = new HashMap<String, Object>();
                 MappingStatus[] array = mappingStatus.values().toArray(new MappingStatus[0]);
                 service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, array);
-                ManagedObjectRepresentation update = new ManagedObjectRepresentation();
-                update.setId(agentMOR.getId());
-                update.setAttrs(service);
-                this.inventoryApi.update(update);
+                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+                updateMor.setId(mappingServiceRepresentation.getId());
+                updateMor.setAttrs(service);
+                this.inventoryApi.update(updateMor);
             });
         } else {
             log.info("Ignoring monitoring: {}", mappingStatus.values().size());
@@ -470,10 +477,10 @@ public class C8yAgent {
             Map<String, String> entry = Map.of("status", serviceStatus.getStatus().name());
             Map<String, Object> service = new HashMap<String, Object>();
             service.put(MappingServiceRepresentation.SERVICE_STATUS_FRAGMENT, entry);
-            ManagedObjectRepresentation update = new ManagedObjectRepresentation();
-            update.setId(agentMOR.getId());
-            update.setAttrs(service);
-            this.inventoryApi.update(update);
+            ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+            updateMor.setId(mappingServiceRepresentation.getId());
+            updateMor.setAttrs(service);
+            this.inventoryApi.update(updateMor);
         });
     }
 }
