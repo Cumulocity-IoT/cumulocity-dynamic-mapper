@@ -1,8 +1,8 @@
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit } from '@angular/core/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper } from '@c8y/ngx-components';
-import { JsonEditorComponent } from '@maaxgr/ang-jsoneditor';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
@@ -13,6 +13,7 @@ import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
+import JSONEditor from 'jsoneditor';
 
 @Component({
   selector: 'mapping-stepper',
@@ -21,7 +22,7 @@ import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
   encapsulation: ViewEncapsulation.None,
 })
 
-export class MappingStepperComponent implements OnInit, AfterContentChecked {
+export class MappingStepperComponent implements OnInit, AfterContentChecked, AfterViewInit {
 
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
@@ -44,7 +45,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   testForm: FormGroup;
   templateSource: any;
   templateTarget: any;
-  dataTesting: any;
   selectionList: any = [];
 
   editorOptionsSource: any
@@ -59,11 +59,16 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
 
 
-  @ViewChild('editorSource', { static: false }) editorSource!: JsonEditorComponent;
-  @ViewChild('editorTarget', { static: false }) editorTarget!: JsonEditorComponent;
+  @ViewChild('editorSourceRef', { static: false }) editorSourceElement: ElementRef;
+  @ViewChild('editorTargetRef', { static: false }) editorTargetElement: ElementRef;
+  @ViewChild('editorTestingRef', { static: false }) editorTestingElement: ElementRef;
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
+
+  editorSource: JSONEditor;
+  editorTarget: JSONEditor;
+  editorTesting: JSONEditor;
 
   constructor(
     private bsModalService: BsModalService,
@@ -71,6 +76,21 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     private elementRef: ElementRef,
   ) { }
 
+  ngAfterViewInit(): void {
+    if ( this.editorSourceElement && this.editorTargetElement && !this.editorSource && ! this.editorTarget) {
+      this.editorSource = new JSONEditor(this.editorSourceElement.nativeElement, this.editorOptionsSource);
+      this.editorSource.set(this.templateSource);
+      this.editorTarget = new JSONEditor(this.editorTargetElement.nativeElement, this.editorOptionsSource);
+      this.editorTarget.set(this.templateTarget);
+    }
+
+    if ( this.editorTestingElement && !this.editorTesting) {
+      this.editorTesting = new JSONEditor(this.editorTestingElement.nativeElement, this.editorOptionsTesting);
+      this.editorTesting.set(this.editorSource.get());
+
+    }
+  }
+  
   ngAfterContentChecked(): void {
     // if json source editor is displayed then choose the first selection
     const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
@@ -130,8 +150,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       let target = '';
       var eventPath = event.path || (event.composedPath && event.composedPath());
       eventPath.forEach(element => {
-        if (element.localName == "json-editor") {
-          target = element.parentElement.id;
+       // if (element.localName == "json-editor") {
+        if (element.localName == "div" && element.className == 'jsonColumnLarge') {
+          target = element.id;
         }
       });
 
@@ -201,7 +222,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
   }
 
-  private setSelectionToPath(editor: JsonEditorComponent, path: string) {
+  private setSelectionToPath(editor: JSONEditor, path: string) {
     console.log("Set selection to path:", path);
     const ns = path.split(".");
     if (ns[0].startsWith("$")) {
@@ -268,12 +289,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTestTransformation() {
-    this.dataTesting = await this.mappingService.testResult(this.getCurrentMapping(true), false);
+    this.editorTesting.set(await this.mappingService.testResult(this.getCurrentMapping(true), false));
   }
 
   async onSendTest() {
-    this.dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping(true));
-    this.mapping.tested = (this.dataTesting != '');
+    let dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping(true));
+    this.mapping.tested = (dataTesting != '');
+    this.editorTesting.set(dataTesting);
   }
 
 
@@ -296,11 +318,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
-      this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-    } else if (event.step.label == "Define templates") {
-      console.log("Templates source from editor:", this.templateSource, this.editorSource.getText(), this.getCurrentMapping(true))
-      this.dataTesting = this.editorSource.get();
-    }
+      //this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+    } 
 
     const initialState = {
       snoopStatus: this.mapping.snoopStatus
