@@ -290,23 +290,27 @@ In the sample below, e.g. a warning is shown since the required property ```c8y_
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
 #### Different type of substitutions
-When you define an expression or a path in the source payload for a substitution the can result in the following cases:
+When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
 1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
-      * **if** only one device is identified in the payload **then** only one Cumulocity MEA-resquest is generated from this payload.\
-     This is **single-device** and **single-value**.
-     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024", ...]``` in the payload **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
-  This is **multi-device** and **single-value**.
-2. the result is an array, e.g. ```[10.4, 20.9]``` for multiple measurements values and
-  * **if** multiple devices are identified , e.g. ```["device_101023","device_101024"]``` **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+     * **if** only one device is identified in the payload \
+      **then** only one Cumulocity MEA-resquest is generated from this payload.\
+     This is **single-device** and **single-value** mapping.
+     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024", ...]``` in the payload \
+      **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
+  This is **multi-device** and **single-value** mapping.
+2. **if** the result is an array, e.g. ```[10.4, 20.9]``` for multiple measurements values **and**
+    * **if** multiple devices are identified , e.g. ```["device_101023","device_101024"]``` \
+      **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
     1. request: device ```"device_101023"``` and value ```10.4```
     2. request: device ```"device_101024"``` and value ```20.9```
 
-    This is **multi-device** and **multi-value**.
-  * **if** a single devices is identified , e.g. ```"device_101023"``` **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+    This is **multi-device** and **multi-value** mapping.
+    * **if** a single devices is identified , e.g. ```"device_101023"``` \
+     **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
     1. request: device ```"device_101023"``` and value ```10.4```
     2. request: device ```"device_101023"``` and value ```20.9```
 
-    This is **single-device** and **multi-value**.
+    This is **single-device** and **multi-value** mapping.
 
 3. the result is an object: this is not supported.
 
