@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.MQTTConfiguration;
+import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.ProcessingContext;
 
 @Slf4j
 public class MappingsRepresentationJUnitTest {
@@ -24,10 +26,6 @@ public class MappingsRepresentationJUnitTest {
     String topic2 = "////rom/hamburg/madrid/#/////";
     String nt2 = topic2.replaceAll(MappingsRepresentation.REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
     assertEquals(nt2, "/rom/hamburg/madrid/#/");
-
-    String topic3 = "////rom/hamburg/madrid//+//+//";
-    int count = topic3.length() - topic3.replace("+", "").length();
-    System.out.println(count);
 
   }
 
@@ -133,13 +131,32 @@ public class MappingsRepresentationJUnitTest {
   }
 
 
-
   @Test
   void testMQTTConfigurationIsActive() {
     MQTTConfiguration conf = null;
 
     log.info("My configuration is active: {}", MQTTConfiguration.isActive(conf));
     assertEquals(false, MQTTConfiguration.isActive(conf));
+  }
+
+  @Test
+  void testNeedsRepair() {
+
+    ProcessingContext p1 = new ProcessingContext();
+    p1.addCardinality("value1",   5);
+    p1.addCardinality("value2",   5);
+    p1.addCardinality(PayloadProcessor.SOURCE_ID, 1);
+    // log.info("My neeRepair1: {}", p1.needsRepair);
+    assertEquals(false, p1.needsRepair);
+
+
+    ProcessingContext p2 = new ProcessingContext();
+    p2.addCardinality("value1",   5);
+    p2.addCardinality("value2",   4);
+    p2.addCardinality(PayloadProcessor.SOURCE_ID, 1);
+    // log.info("My neeRepair1: {}", p2.needsRepair);
+    assertEquals(true, p2.needsRepair);
+
   }
 
 }
