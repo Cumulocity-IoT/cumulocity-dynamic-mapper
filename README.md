@@ -17,10 +17,12 @@
     + [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+    + [Different type of substitutions](#different-type-of-substitutions)
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
 - [Monitoring](#monitoring)
+- [REST API](#rest-api)
 - [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
 
 
@@ -287,6 +289,27 @@ In the sample below, e.g. a warning is shown since the required property ```c8y_
 
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
 
+#### Different type of substitutions
+When you define an expression or a path in the source payload for a substitution the can result in the following cases:
+1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
+      * **if** only one device is identified in the payload **then** only one Cumulocity MEA-resquest is generated from this payload.\
+     This is **single-device** and **single-value**.
+     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024", ...]``` in the payload **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
+  This is **multi-device** and **single-value**.
+2. the result is an array, e.g. ```[10.4, 20.9]``` for multiple measurements values and
+  * **if** multiple devices are identified , e.g. ```["device_101023","device_101024"]``` **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+    1. request: device ```"device_101023"``` and value ```10.4```
+    2. request: device ```"device_101024"``` and value ```20.9```
+
+    This is **multi-device** and **multi-value**.
+  * **if** a single devices is identified , e.g. ```"device_101023"``` **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+    1. request: device ```"device_101023"``` and value ```10.4```
+    2. request: device ```"device_101023"``` and value ```20.9```
+
+    This is **single-device** and **multi-value**.
+
+3. the result is an object: this is not supported.
+
 ### Test transformation from source to target format
 
 To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any error are displayed.
@@ -311,6 +334,17 @@ In order to use a previously snooped payload click the button
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
 ![Monitoring](resources/image/Generic_MQTT_Monitoring.png)
+
+
+### REST API
+
+The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
+1. ```.../connection```: retrieve and change the connection details to the MQTT broker
+1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker
+1. ```.../status```: retrieve service status: is microservice connected to broker, are connection details loaded
+1. ```.../mapping```: retrieve, delete, update mappings
+1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
+1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
 
 ## Setup Sample MQTT mappings
 
