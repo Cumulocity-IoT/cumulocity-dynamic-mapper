@@ -9,7 +9,6 @@ import {
   HOOK_TABS,
   Route
 } from '@c8y/ngx-components';
-import { NgJsonEditorModule } from '@maaxgr/ang-jsoneditor';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BokerConfigurationComponent } from './mqtt-configuration/broker-configuration.component';
 import { BrokerConfigurationService } from './mqtt-configuration/broker-configuration.service';
@@ -41,7 +40,6 @@ import { MappingTabFactory } from './tab.factory';
     FormsModule,
     PopoverModule,
     ReactiveFormsModule,
-    NgJsonEditorModule,
     RouterModule.forChild([
       {
         path: 'mqtt-mapping/configuration',

@@ -1,7 +1,6 @@
 package mqtt.mapping.rest;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -41,6 +41,24 @@ public class MQTTMappingRestController {
 
     @Autowired
     C8yAgent c8yAgent;
+
+    @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
+        log.info("Get connection details");
+        try {
+            final MQTTConfiguration configuration = mqttClient.getConnectionDetails();
+            if (configuration == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
+            }
+            // don't modify original copy
+            MQTTConfiguration configurationClone = (MQTTConfiguration) configuration.clone();
+            configurationClone.setPassword("");
+            return new ResponseEntity<MQTTConfiguration>(configurationClone, HttpStatus.OK);
+        } catch (Exception ex) {
+            log.error("Error on loading configuration {}", ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+    }
 
     @RequestMapping(value = "/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody MQTTConfiguration configuration) {
@@ -70,23 +88,6 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
-        log.info("Get connection details");
-        try {
-            final MQTTConfiguration configuration = mqttClient.getConnectionDetails();
-            if (configuration == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
-            }
-            // don't modify original copy
-            MQTTConfiguration configurationClone = (MQTTConfiguration) configuration.clone();
-            configurationClone.setPassword("");
-            return new ResponseEntity<MQTTConfiguration>(configurationClone, HttpStatus.OK);
-        } catch (Exception ex) {
-            log.error("Error on loading configuration {}", ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        }
-    }
 
     @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getStatus() {
