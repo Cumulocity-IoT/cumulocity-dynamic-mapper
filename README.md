@@ -294,25 +294,39 @@ When you define an expression or a path in the source payload for a substitution
 1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
      * **if** only one device is identified in the payload \
       **then** only one Cumulocity MEA-resquest is generated from this payload.\
-     This is **single-device** and **single-value** mapping.
-     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024", ...]``` in the payload \
+     This is a **single-device-single-value** mapping.
+     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024"]``` in the payload \
       **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
-  This is **multi-device** and **single-value** mapping.
+      This is a **multi-device-single-value** mapping.
 2. **if** the result is an array, e.g. ```[10.4, 20.9]``` for multiple measurements values **and**
     * **if** multiple devices are identified , e.g. ```["device_101023","device_101024"]``` \
       **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
-    1. request: device ```"device_101023"``` and value ```10.4```
-    2. request: device ```"device_101024"``` and value ```20.9```
+      1. request: for device ```"device_101023"``` and value ```10.4```
+      2. request: for device ```"device_101024"``` and value ```20.9``` 
 
-    This is **multi-device** and **multi-value** mapping.
+      This is a **multi-device-multi-value** mapping.
+
     * **if** a single devices is identified , e.g. ```"device_101023"``` \
      **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
-    1. request: device ```"device_101023"``` and value ```10.4```
-    2. request: device ```"device_101023"``` and value ```20.9```
+      1. request: for device ```"device_101023"``` and value ```10.4```
+      2. request: for device ```"device_101023"``` and value ```20.9```
 
-    This is **single-device** and **multi-value** mapping.
+      This is a **single-device-multi-value** mapping.
 
 3. the result is an object: this is not supported.
+
+___
+  **NOTE:** If the size of all extracted arrays do not match, then the first values in the array with less items is taken to fill the missing values.\
+  To illustrate this behavior, take the following case where:
+  * the first expression returns 2 values ```[10.4, 20.9]```
+  * the second expression returns 3 dates ```["2022-10-30T04:10:00.000Z", "2022-10-30T04:11:00.000Z", "2022-10-30T04:12:00.000Z"]```
+  * the third expression returns 3 ids ```["device_101023","device_101024","device_101025"]```
+
+  then three requests are generated:
+  1. request: for device ```"device_101023"```, timestamp ```2022-10-30T04:10:00.000Z``` and value ```10.4```
+  1. request: for device ```"device_101024"```, timestamp ```2022-10-30T04:11:00.000Z``` and value ```20.9```
+  1. request: for device ```"device_101025"```, timestamp ```2022-10-30T04:12:00.000Z``` and value ```10.4```
+___
 
 ### Test transformation from source to target format
 
