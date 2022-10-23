@@ -369,18 +369,18 @@ public class MQTTClient {
     }
 
     public MappingStatus getMappingStatus(Mapping m, boolean unspecified){
-        String to = "#";
+        String topic = "#";
         long key = -1;
         String ident = "#";
         if ( !unspecified) {
-            to = m.subscriptionTopic;
+            topic = m.subscriptionTopic;
             key = m.id;
             ident = m.ident;
         }
         MappingStatus ms = statusMapping.get(ident);
         if (ms == null) {
             log.info("Adding: {}", key);
-            ms = new MappingStatus(key, ident, to, 0, 0, 0, 0);
+            ms = new MappingStatus(key, ident, topic, 0, 0, 0, 0);
             statusMapping.put(ident, ms);
         }
         return ms;

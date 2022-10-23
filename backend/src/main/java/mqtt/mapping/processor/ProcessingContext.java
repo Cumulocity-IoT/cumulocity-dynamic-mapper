@@ -1,23 +1,38 @@
 package mqtt.mapping.processor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.Mapping;
 
+@Slf4j
 @Data
 @NoArgsConstructor
+/*
+* The class <code>ProcessingContext</code> collects all relevant information:
+* <code>mapping</code>, <code>topic</code>, <code>payload</code>,
+* <code>requests</code>, <code>error</code>,  <code>processingType</code>,
+* <code>cardinality</code>, <code>needsRepair</code>
+* when a  <code>mapping</code> is applied to an incoming  <code>payload</code>
+*/
 public class ProcessingContext {
     private Mapping mapping;
-    private String deviceIdentifier;
     private String topic;
     private String payload;
     private ArrayList <C8YRequest> requests = new ArrayList<C8YRequest>();
     private Exception error;
-    public boolean isDeviceIdentifierValid() {
-        return !"".equals(deviceIdentifier);
-    }
+    private ProcessingType processingType = ProcessingType.UNDEFINED;
+    private Map<String, Integer> cardinality= new HashMap<String, Integer>();
+    public boolean needsRepair = false;
     public boolean hasError() {
         return error != null;
     }
@@ -26,4 +41,26 @@ public class ProcessingContext {
         return requests.size()-1;
     }
 
+    /*
+     * Keep track of the extracted size of every extracted values for a <code>pathTarget</code>
+     * @param   pathTarget  jsonPath of target in a substitution
+     * @param   card        cardinality of this <code>pathTarget</code> found when extracting values from the payload
+     * @return  true if all added cardinalities are the same, fals if at least two different cardinalities exist.
+     */
+    public void addCardinality(String pathTarget,  Integer card) {
+        cardinality.put(pathTarget, card);
+        Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
+        Stream<Entry<String, Integer>> stream1 = entries.stream().filter( e -> 
+            !PayloadProcessor.SOURCE_ID.equals(e.getKey())
+        );
+        //stream1.forEach(s -> log.info("Result grouping: {}", s));
+
+        Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
+        // Iterator<Entry<Integer, Long>> itr = collect.entrySet().iterator();
+        // while (itr.hasNext()) {
+        //     log.info("Result grouping: {}", itr.next());
+        // }
+
+        needsRepair = (collect.size() != 1 ); 
+    }
 }
