@@ -315,6 +315,9 @@ When you define an expression or a path in the source payload for a substitution
 
 3. the result is an object: this is not supported.
 
+This is illustrated on the following diagram:
+![Different type of substitutions](resources/image/Generic_MQTT_DifferentSubstitutions.png)
+
 ___
   **NOTE:** If the size of all extracted arrays do not match, then the first values in the array with less items is taken to fill the missing values.\
   To illustrate this behavior, take the following case where:
