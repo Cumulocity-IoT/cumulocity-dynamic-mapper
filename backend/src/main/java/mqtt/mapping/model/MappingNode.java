@@ -25,7 +25,7 @@ public class MappingNode extends TreeNode{
     }  
 
     public List<TreeNode> resolveTopicPath(List<String> tp) throws ResolveException {
-        log.info("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
+        log.debug("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
          if (tp.size() == 0){
             return new ArrayList<TreeNode> (Arrays.asList(this));
         } else {

@@ -23,7 +23,7 @@ public class InnerNodeSerializer extends StdSerializer<InnerNode> {
     public void serialize(
         InnerNode value, JsonGenerator jgen, SerializerProvider provider) 
       throws IOException, JsonProcessingException {
-        log.info("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath() );
+        log.debug("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath() );
         jgen.writeStartObject();
         jgen.writeNumberField("depthIndex", value.getDepthIndex());
         jgen.writeStringField("level", value.getLevel());

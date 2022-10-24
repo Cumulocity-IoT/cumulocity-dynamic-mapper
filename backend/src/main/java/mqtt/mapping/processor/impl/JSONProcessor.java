@@ -60,10 +60,10 @@ public class JSONProcessor extends PayloadProcessor {
     }
 
     @Override
-    public List<TreeNode> resolveMapping(ProcessingContext ctx) throws ResolveException {
-        log.info("Message received on topic '{}'  with message {}", ctx.getTopic(),
-                ctx.getPayload());
-        return mqttClient.getMappingTree().resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(ctx.getTopic()));
+    public List<TreeNode> resolveMapping(ProcessingContext context) throws ResolveException {
+        log.info("Message received on topic '{}'  with message {}", context.getTopic(),
+                context.getPayload());
+        return mqttClient.getMappingTree().resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(context.getTopic()));
     }
 
     @Override
@@ -88,7 +88,7 @@ public class JSONProcessor extends PayloadProcessor {
                 log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
             }
             payload = payloadJsonNode.toPrettyString();
-            log.info("Patched payload:{}", payload);
+            log.info("Patched payload: {}", payload);
         } catch (JsonProcessingException e) {
             log.error("JsonProcessingException parsing: {}, {}", payload, e);
             context.setError(
