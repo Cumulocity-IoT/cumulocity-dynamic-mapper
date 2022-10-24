@@ -6,7 +6,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import { MQTTAuthentication, Operation, ServiceStatus, Status } from '../shared/configuration.model';
 
 import packageJson from '../../package.json';
@@ -35,7 +35,7 @@ export class BokerConfigurationComponent implements OnInit {
   };
 
   constructor(
-    private bsModalService: BsModalService,
+    public bsModalService: BsModalService,
     public configurationService: BrokerConfigurationService,
     public mappingService: MappingService,
     public alertservice: AlertService
