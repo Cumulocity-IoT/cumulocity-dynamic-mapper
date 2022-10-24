@@ -1,10 +1,10 @@
 import { CdkStep } from '@angular/cdk/stepper';
-import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { AfterViewInit } from '@angular/core/core';
+import { AfterContentChecked, AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import JSONEditor from 'jsoneditor';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
@@ -13,7 +13,6 @@ import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import JSONEditor from 'jsoneditor';
 
 @Component({
   selector: 'mapping-stepper',
@@ -72,7 +71,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   editorTesting: JSONEditor;
 
   constructor(
-    private bsModalService: BsModalService,
+    public bsModalService: BsModalService,
     public mappingService: MappingService,
     private elementRef: ElementRef,
   ) { }
