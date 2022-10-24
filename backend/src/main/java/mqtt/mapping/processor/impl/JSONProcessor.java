@@ -61,8 +61,6 @@ public class JSONProcessor extends PayloadProcessor {
 
     @Override
     public List<TreeNode> resolveMapping(ProcessingContext context) throws ResolveException {
-        log.info("Message received on topic '{}'  with message {}", context.getTopic(),
-                context.getPayload());
         return mqttClient.getMappingTree().resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(context.getTopic()));
     }
 
@@ -87,7 +85,8 @@ public class JSONProcessor extends PayloadProcessor {
             } else {
                 log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
             }
-            payload = payloadJsonNode.toPrettyString();
+            //payload = payloadJsonNode.toPrettyString();
+            payload = payloadJsonNode.toString();
             log.info("Patched payload: {}", payload);
         } catch (JsonProcessingException e) {
             log.error("JsonProcessingException parsing: {}, {}", payload, e);
@@ -109,7 +108,7 @@ public class JSONProcessor extends PayloadProcessor {
                 // JSONata4Java does work for tokens with starting "_"
                 var p = substitution.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
                 p = p.replace(TOKEN_TOPIC_LEVEL, TOKEN_TOPIC_LEVEL_BACKQUOTE);
-                log.info("Patched sub.pathSource: {}, {}", substitution.pathSource, p);
+                log.debug("Patched sub.pathSource: {}, {}", substitution.pathSource, p);
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
@@ -157,9 +156,8 @@ public class JSONProcessor extends PayloadProcessor {
                     log.warn("Ignoring this substitution, no objects are allowed for: {}, {}",
                             substitution.pathSource, extractedSourceContent.toString());
                 }
-                log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({}), {}, {}",
-                        substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget,
-                        payload, payloadTarget);
+                log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                        substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
             }
 
             if (substitution.pathTarget.equals(TIME)) {
@@ -294,7 +292,7 @@ public class JSONProcessor extends PayloadProcessor {
                 log.warn("Ignoring payload: {}, {}, {}, {}", payloadTarget, mapping.targetAPI,
                         postProcessingCache.size(), !(context.needsRepair && mapping.repairStrategy.equals(RepairStrategy.IGNORE)));
             }
-            log.info("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+            log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
                     deviceEntries.size());
             i++;
         }

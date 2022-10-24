@@ -61,6 +61,8 @@ public abstract class PayloadProcessor implements MqttCallback {
                 ProcessingContext context = new ProcessingContext();
                 context.setPayload(deserializePayload(mqttMessage));
                 context.setTopic(topic);
+                log.info("New messages: topic: '{}', message: {}", context.getTopic(),
+                context.getPayload());
                 processPayload(context, true);
             }
         } else {

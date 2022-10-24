@@ -40,7 +40,7 @@ public class InnerNode extends TreeNode {
         Set<String> set = childNodes.keySet();
         String joinedSet = String.join(",", set);
         String joinedPath = String.join("", levels);
-        log.info("Trying to resolve: '{}' in [{}]", joinedPath, joinedSet);
+        log.debug("Trying to resolve: '{}' in [{}]", joinedPath, joinedSet);
         List<TreeNode> results = new ArrayList<TreeNode>();
         if (levels.size() >= 1) {
             String currentLevel = levels.get(0);
