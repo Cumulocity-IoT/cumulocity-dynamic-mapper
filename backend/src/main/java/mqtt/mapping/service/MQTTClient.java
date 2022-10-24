@@ -458,16 +458,16 @@ public class MQTTClient {
             connectToBroker();
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
-        } else if (operation.getOperation().equals(Operation.RESFRESH_MAPPING_STATUS)) {
+        } else if (operation.getOperation().equals(Operation.RESFRESH_STATUS_MAPPING)) {
             sendStatusMapping();
         }
     }
 
     public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
         String payloadMessage =  objectMapper.writeValueAsString(payload);
-        ProcessingContext ctx = new ProcessingContext();
-        ctx.setPayload(payloadMessage);
-        ctx.setTopic(topic);
-        return payloadProcessor.processPayload(ctx, send);
+        ProcessingContext context = new ProcessingContext();
+        context.setPayload(payloadMessage);
+        context.setTopic(topic);
+        return payloadProcessor.processPayload(context, send);
     }
 }

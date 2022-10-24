@@ -39,6 +39,7 @@ import mqtt.mapping.processor.C8YRequest;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.RepairStrategy;
 
 @Slf4j
 @Service
@@ -217,7 +218,14 @@ public class JSONProcessor extends PayloadProcessor {
                 } else if (postProcessingCache.get(pathTarget).size() == 1) {
                     // this is an indication that the substitution is the same for all
                     // events/alarms/measurements/inventory
-                    substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                    if (mapping.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY)) {
+                        substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                    } else if (mapping.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                        int last = postProcessingCache.get(pathTarget).size() - 1;
+                        substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+                    }
+                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used: {}, {}, {}",
+                            pathTarget, mapping.repairStrategy);
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
@@ -257,7 +265,8 @@ public class JSONProcessor extends PayloadProcessor {
             /*
              * step 4 prepare target payload for sending to c8y
              */
-            if (mapping.targetAPI.equals(API.INVENTORY)) {
+            if (mapping.targetAPI.equals(API.INVENTORY)
+                    && !(context.needsRepair && mapping.repairStrategy.equals(RepairStrategy.IGNORE))) {
                 Exception ex = null;
                 if (send) {
                     try {
@@ -269,7 +278,8 @@ public class JSONProcessor extends PayloadProcessor {
                 context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value, mapping.externalIdType,
                                 payloadTarget.toString(), API.INVENTORY, ex));
-            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+            } else if (!mapping.targetAPI.equals(API.INVENTORY)
+                    && !(context.needsRepair && mapping.repairStrategy.equals(RepairStrategy.IGNORE))) {
                 Exception ex = null;
                 if (send) {
                     try {
@@ -281,8 +291,8 @@ public class JSONProcessor extends PayloadProcessor {
                 context.addRequest(new C8YRequest(predecessor, RequestMethod.POST, device.value, mapping.externalIdType,
                         payloadTarget.toString(), mapping.targetAPI, ex));
             } else {
-                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
-                        postProcessingCache.size());
+                log.warn("Ignoring payload: {}, {}, {}, {}", payloadTarget, mapping.targetAPI,
+                        postProcessingCache.size(), !(context.needsRepair && mapping.repairStrategy.equals(RepairStrategy.IGNORE)));
             }
             log.info("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
                     deviceEntries.size());

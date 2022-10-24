@@ -197,7 +197,7 @@
                       <div class="input-group">
                         <label class="m-r-4" translate>Repair strategy</label>
                         <span class="hidden-xs hidden-sm">
-                          <ng-template #popRepairStrategy>What should happen when array are extracted in expressions and not alls array have the same size..</ng-template>
+                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in different expressions do not have the same size. How are missing values handled?</ng-template>
                           <button class="btn-clean text-primary" [popover]="popRepairStrategy" popoverTitle="Repair strategy"
                             placement="top" triggers="focus" type="button">
                             <i c8yIcon="question-circle-o"></i>
@@ -406,12 +406,12 @@
                     </div>
                     <div class="col-lg-2">
                       <br>
-                      <label class="c8y-switch" title="{{ 'Define Identifier' | translate }}">
+                      <label class="c8y-switch" title="{{ 'Defines Identifier' | translate }}">
                         <input type="checkbox" formControlName="di"
                           [(ngModel)]="currentSubstitution.definesIdentifier" />
                         <span></span>
                         <span>
-                          {{ 'Define Identifier' | translate }}
+                          {{ 'Defines Identifier' | translate }}
                         </span>
                       </label>
                     </div>

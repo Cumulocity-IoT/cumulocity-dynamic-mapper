@@ -77,13 +77,14 @@ public class C8yAgent {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private JSONParser jsonParser = JSONBase.getJSONParser();
-
+    
     @Autowired
     private ConfigurationService configurationService;
-
+    
     private MappingServiceRepresentation mappingServiceRepresentation;
-
+    
+    private JSONParser jsonParser = JSONBase.getJSONParser();
+    
     public String tenant = null;
 
     @EventListener
