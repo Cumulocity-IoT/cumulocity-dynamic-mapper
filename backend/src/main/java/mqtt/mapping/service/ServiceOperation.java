@@ -10,7 +10,7 @@ enum Operation {
     RELOAD,
     CONNECT,
     DISCONNECT, 
-    RESFRESH_MAPPING_STATUS
+    RESFRESH_STATUS_MAPPING
 }
 
 @Data

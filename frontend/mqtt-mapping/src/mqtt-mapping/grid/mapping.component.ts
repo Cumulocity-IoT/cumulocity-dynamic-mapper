@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
+import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, Mapping, Operation, QOS, RepairStrategy, SnoopStatus } from '../../shared/configuration.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
@@ -8,7 +9,6 @@ import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MappingService } from '../shared/mapping.service';
-import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'mapping-grid',

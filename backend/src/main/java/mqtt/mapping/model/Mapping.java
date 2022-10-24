@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import mqtt.mapping.processor.RepairStrategy;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -62,6 +63,9 @@ public class Mapping implements Serializable {
 
   @NotNull
   public boolean createNonExistingDevice;
+
+  @NotNull
+  public RepairStrategy repairStrategy;
 
   @NotNull
   public boolean updateExistingDevice;
