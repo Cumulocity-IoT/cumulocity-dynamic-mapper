@@ -138,8 +138,9 @@ public class MQTTClient {
                 if (MQTTConfiguration.isActive(mqttConfiguration)) {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                            new MemoryPersistence());
+                    mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new MemoryPersistence());
+                    // mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                    //         new MemoryPersistence());
                     mqttClient.setCallback(payloadProcessor);
                     MqttConnectOptions connOpts = new MqttConnectOptions();
                     connOpts.setCleanSession(true);
@@ -158,11 +159,11 @@ public class MQTTClient {
             firstRun = false;
         }
 
-        try {
-            Thread.sleep(WAIT_PERIOD_MS / 30);
-        } catch (InterruptedException e) {
-            log.error("Error on reconnect: ", e);
-        }
+        // try {
+        //     Thread.sleep(WAIT_PERIOD_MS / 10);
+        // } catch (InterruptedException e) {
+        //     log.error("Error on reconnect: ", e);
+        // }
 
         try {
             subscribe("$SYS/#", 0);
@@ -194,7 +195,7 @@ public class MQTTClient {
                     try {
                         mqttClient.unsubscribe(topic);
                     } catch (MqttException e) {
-                        log.error("Exception when unsubsribing from topic: {}, {}", topic, e);
+                        log.error("Exception when unsubscribing from topic: {}, {}", topic, e);
                     }
                 });
                 mqttClient.unsubscribe("$SYS");
@@ -256,7 +257,7 @@ public class MQTTClient {
             try {
                 unsubscribe(topic);
             } catch (MqttException e1) {
-                log.error("Exception when unsubsribing from topic: {}, {}", topic, e1);
+                log.error("Exception when unsubscribing from topic: {}, {}", topic, e1);
             }
         });
 
@@ -268,7 +269,7 @@ public class MQTTClient {
             try {
                 subscribe(topic, qos);
             } catch (MqttException e1) {
-                log.error("Exception when subsribing to topic: {}, {}", topic, e1);
+                log.error("Exception when subscribing to topic: {}, {}", topic, e1);
             }
         });
         activeSubscriptionTopic = updatedSubscriptionTopic;
