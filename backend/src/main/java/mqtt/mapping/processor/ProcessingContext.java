@@ -52,14 +52,7 @@ public class ProcessingContext {
         Stream<Entry<String, Integer>> stream1 = entries.stream().filter( e -> 
             !PayloadProcessor.SOURCE_ID.equals(e.getKey())
         );
-        //stream1.forEach(s -> log.info("Result grouping: {}", s));
-
         Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-        // Iterator<Entry<Integer, Long>> itr = collect.entrySet().iterator();
-        // while (itr.hasNext()) {
-        //     log.info("Result grouping: {}", itr.next());
-        // }
-
         needsRepair = (collect.size() != 1 ); 
     }
 }

@@ -116,7 +116,7 @@ public class C8yAgent {
                 log.info("Agent has been created with ID {}", mappingServiceRepresentation.getId());
                 ExternalIDRepresentation externalAgentId = createExternalID(agentRepresentation,
                         MappingServiceRepresentation.AGENT_ID, "c8y_Serial");
-                log.info("ExternalId created: {}", externalAgentId.getExternalId());
+                log.debug("ExternalId created: {}", externalAgentId.getExternalId());
             }
             agentRepresentation = inventoryApi.get(agentRepresentation.getId());
             mappingServiceRepresentation = objectMapper.convertValue(agentRepresentation,
@@ -208,7 +208,7 @@ public class C8yAgent {
             try {
                 externalIDRepresentations[0] = identityApi.getExternalId(id);
             } catch (SDKException e) {
-                log.info("External ID {} not found", externalId);
+                log.warn("External ID {} not found", externalId);
             }
         });
         return externalIDRepresentations[0];
@@ -303,7 +303,7 @@ public class C8yAgent {
         MQTTConfiguration[] results = { new MQTTConfiguration() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = configurationService.loadConfiguration();
-            log.info("Found configuration {}", results[0]);
+            log.debug("Found configuration {}", results[0]);
         });
         return results[0];
     }
@@ -312,7 +312,7 @@ public class C8yAgent {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 configurationService.saveConfiguration(configuration);
-                log.info("Saved configuration");
+                log.debug("Saved configuration");
             } catch (JsonProcessingException e) {
                 log.error("JsonProcessingException configuration {}", e);
                 throw new RuntimeException(e);
@@ -403,9 +403,9 @@ public class C8yAgent {
             devices[0].setType(type);
             devices[0].set(new IsDevice());
             devices[0] = inventoryApi.create(devices[0]);
-            log.info("New device created with ID {}", devices[0].getId());
+            log.debug("New device created with ID {}", devices[0].getId());
             ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
-            log.info("ExternalId created: {}", externalIdRep.getExternalId());
+            log.debug("ExternalId created: {}", externalIdRep.getExternalId());
         });
 
         log.info("New device {} created with ID {}", devices[0], devices[0].getId());
@@ -422,7 +422,7 @@ public class C8yAgent {
             updateMOR.setId(mor.getId());
             updateMOR.setProperty(MappingsRepresentation.MQTT_MAPPING_FRAGMENT, mappings);
             inventoryApi.update(updateMOR);
-            log.info("Updated Mapping after deletion!");
+            log.debug("Updated Mapping after deletion!");
         });
     }
 
@@ -430,7 +430,7 @@ public class C8yAgent {
         MQTTConfiguration[] configurations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             configurations[0] = configurationService.setConfigurationActive(b);
-            log.info("Saved configuration");
+            log.debug("Saved configuration");
         });
         return configurations[0];
     }
@@ -468,7 +468,7 @@ public class C8yAgent {
                 this.inventoryApi.update(updateMor);
             });
         } else {
-            log.info("Ignoring monitoring: {}", mappingStatus.values().size());
+            log.debug("Ignoring monitoring: {}", mappingStatus.values().size());
         }
     }
 

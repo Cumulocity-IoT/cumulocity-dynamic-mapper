@@ -194,7 +194,7 @@ public class MQTTClient {
                     try {
                         mqttClient.unsubscribe(topic);
                     } catch (MqttException e) {
-                        log.error("Exception when unsubsribing from topic {}, {}", topic, e);
+                        log.error("Exception when unsubsribing from topic: {}, {}", topic, e);
                     }
                 });
                 mqttClient.unsubscribe("$SYS");
@@ -256,7 +256,7 @@ public class MQTTClient {
             try {
                 unsubscribe(topic);
             } catch (MqttException e1) {
-                log.error("Exception when unsubsribing from topic {}, {}", topic, e1);
+                log.error("Exception when unsubsribing from topic: {}, {}", topic, e1);
             }
         });
 
@@ -268,7 +268,7 @@ public class MQTTClient {
             try {
                 subscribe(topic, qos);
             } catch (MqttException e1) {
-                log.error("Exception when subsribing to topic {}, {}", topic, e1);
+                log.error("Exception when subsribing to topic: {}, {}", topic, e1);
             }
         });
         activeSubscriptionTopic = updatedSubscriptionTopic;
@@ -291,18 +291,18 @@ public class MQTTClient {
 
     public void subscribe(String topic, Integer qos) throws MqttException {
 
-        log.debug("Subscribing on topic {}", topic);
+        log.debug("Subscribing on topic: {}", topic);
         c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
             mqttClient.subscribe(topic);
-        log.debug("Successfully subscribed on topic {}", topic);
+        log.debug("Successfully subscribed on topic: {}", topic);
 
     }
 
     private void unsubscribe(String topic) throws MqttException {
-        log.info("Unsubscribing from topic {}", topic);
+        log.info("Unsubscribing from topic: {}", topic);
         c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
         mqttClient.unsubscribe(topic);
     }
@@ -313,7 +313,7 @@ public class MQTTClient {
             String statusConnectTask = (connectTask == null ? "stopped"
                     : connectTask.isDone() ? "stopped" : "running");
             String statusInitializeTask = (initializeTask == null ? "stopped" : initializeTask.isDone() ? "stopped" : "running");
-            log.info("Status: connectTask {}, initializeTask {}, isConnected {}", statusConnectTask,
+            log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
                     statusInitializeTask, isConnected());
             cleanDirtyMappings();
             sendStatusMapping();
@@ -364,7 +364,7 @@ public class MQTTClient {
     }
 
     public void setMappingDirty(Mapping mapping) {
-        log.info("Setting dirty: {}", mapping);
+        log.debug("Setting dirty: {}", mapping);
         dirtyMappings.add(mapping);
     }
 

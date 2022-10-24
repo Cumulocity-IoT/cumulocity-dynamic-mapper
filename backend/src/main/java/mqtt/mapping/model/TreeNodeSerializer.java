@@ -24,7 +24,7 @@ public class TreeNodeSerializer extends StdSerializer<TreeNode> {
     public void serialize(
         TreeNode value, JsonGenerator jgen, SerializerProvider provider) 
       throws IOException, JsonProcessingException {
-        log.info("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath() );
+        log.debug("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath() );
         jgen.writeStartObject();
         jgen.writeNumberField("depthIndex", value.getDepthIndex());
         jgen.writeStringField("level", value.getLevel());

@@ -95,7 +95,7 @@ public abstract class PayloadProcessor implements MqttCallback {
                         mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                         mapping.addSnoopedTemplate(payload);
 
-                        log.info("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                        log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                 mapping.snoopedTemplates.size(),
                                 mapping.snoopStatus);
                         mqttClient.setMappingDirty(mapping);
@@ -124,7 +124,7 @@ public abstract class PayloadProcessor implements MqttCallback {
         if (extId != null) {
             id = extId.getManagedObject().getId().getValue();
         }
-        log.info("Found id {} for external id: {}", id, externalId);
+        log.debug("Found id {} for external id: {}", id, externalId);
         return id;
     }
 

@@ -78,7 +78,7 @@ public class ConfigurationService {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final MQTTConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), MQTTConfiguration.class);
             configuration.active = active;
-            log.info("Setting connection: {}:", configuration.active );
+            log.debug("Setting connection: {}:", configuration.active );
             final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(OPTION_KEY_CONFIGURATION);
@@ -86,7 +86,7 @@ public class ConfigurationService {
             tenantOptionApi.save(optionRepresentation);
             return configuration;
         } catch (SDKException exception) {
-            log.info("No configuration found, returning empty element!");
+            log.warn("No configuration found, returning empty element!");
             //exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();

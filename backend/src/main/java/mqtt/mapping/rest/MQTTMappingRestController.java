@@ -105,7 +105,7 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> getMapping(@PathVariable Long id) {
-        log.info("Get mappings");
+        log.info("Get mapping: {}", id);
         Mapping result = c8yAgent.getMapping(id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
@@ -115,7 +115,7 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> deleteMapping(@PathVariable Long id) {
-        log.info("Delete mapping {}", id);
+        log.info("Delete mapping: {}", id);
         Long result;
         try {
             result = mqttClient.deleteMapping(id);
@@ -131,7 +131,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> addMapping(@Valid @RequestBody Mapping mapping) {
         try {
-            log.info("Add mapping {}", mapping);
+            log.info("Add mapping: {}", mapping);
             Long result = mqttClient.addMapping(mapping);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
@@ -147,7 +147,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateMapping(@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
         try {
-            log.info("Update mapping {}, {}", mapping, id);
+            log.info("Update mapping: {}, {}", mapping, id);
             Long result = mqttClient.updateMapping(id, mapping, false);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
@@ -167,7 +167,7 @@ public class MQTTMappingRestController {
         if (result instanceof InnerNode) {
             innerNode = (InnerNode) result;
         }
-        log.info("Get tree {}", result, innerNode);
+        log.info("Get mapping tree: {}", result, innerNode);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
