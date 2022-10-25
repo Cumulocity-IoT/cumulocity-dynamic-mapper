@@ -362,7 +362,8 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
 1. ```.../connection```: retrieve and change the connection details to the MQTT broker
 1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker
-1. ```.../status```: retrieve service status: is microservice connected to broker, are connection details loaded
+1. ```.../status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
+1. ```.../status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
 1. ```.../mapping```: retrieve, delete, update mappings
 1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
