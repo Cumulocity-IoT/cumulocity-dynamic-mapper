@@ -80,7 +80,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     if ( this.editorSourceElement && this.editorTargetElement && !this.editorSource && ! this.editorTarget) {
       this.editorSource = new JSONEditor(this.editorSourceElement.nativeElement, this.editorOptionsSource);
       this.editorSource.set(this.templateSource);
-      this.editorTarget = new JSONEditor(this.editorTargetElement.nativeElement, this.editorOptionsSource);
+      this.editorTarget = new JSONEditor(this.editorTargetElement.nativeElement, this.editorOptionsTarget);
       this.editorTarget.set(this.templateTarget);
     }
 

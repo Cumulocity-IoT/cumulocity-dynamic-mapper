@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -26,6 +25,7 @@ import mqtt.mapping.configuration.MQTTConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
@@ -89,11 +89,25 @@ public class MQTTMappingRestController {
     }
 
 
-    @RequestMapping(value = "/status", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ServiceStatus> getStatus() {
+    @RequestMapping(value = "/status/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ServiceStatus> getServiceStatus() {
         ServiceStatus st = mqttClient.getServiceStatus();
         log.info("Get status: {}", st);
         return new ResponseEntity<>(st, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<MappingStatus>> getMappingStatus() {
+        List<MappingStatus> ms = mqttClient.getMappingStatus();
+        log.info("Get mapping status: {}", ms);
+        return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/status/mapping", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<MappingStatus>> resetMappingStatus() {
+        List<MappingStatus> ms = mqttClient.resetMappingStatus();
+        log.info("Reset mapping status: {}", ms);
+        return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)

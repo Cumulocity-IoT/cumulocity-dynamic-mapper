@@ -490,4 +490,14 @@ public class MQTTClient {
         context.setTopic(topic);
         return payloadProcessor.processPayload(context, send);
     }
+
+    public List<MappingStatus> getMappingStatus() {
+        return new ArrayList<MappingStatus>(statusMapping.values()) ;
+    }
+
+    public List<MappingStatus> resetMappingStatus() {
+        ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
+        msl.forEach(ms -> ms.reset());
+        return msl;
+    }
 }

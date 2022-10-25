@@ -41,4 +41,11 @@ public class MappingStatus implements Serializable {
   public boolean equals(Object m) {
     return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
   }
+
+public void reset() {
+  messagesReceived = 0;
+  errors = 0;
+  snoopedTemplatesActive = 0;
+  snoopedTemplatesTotal = 0;
+}
 }
