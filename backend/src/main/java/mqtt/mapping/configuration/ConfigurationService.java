@@ -66,7 +66,6 @@ public class ConfigurationService {
         final OptionPK optionPK = new OptionPK();
         optionPK.setKey(OPTION_KEY_CONFIGURATION);
         optionPK.setCategory(OPTION_CATEGORY_CONFIGURATION);
-
         tenantOptionApi.delete(optionPK);
     }
 
