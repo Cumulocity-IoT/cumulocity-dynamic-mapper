@@ -227,7 +227,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     console.log("Set selection to path:", path);
     const ns = path.split(".");
     if (ns[0].startsWith("$")) {
-      let rx = /\[(-?\d+)\]/
+      let rx = /\[(-?\d*)\]/
       ns[0] = ns[0].match(rx)[1]
       console.log("Changed level 0:", ns[0])
     }

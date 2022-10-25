@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
@@ -54,7 +57,6 @@ public class App {
         return executor;
     }
 
-
     @Bean("cachedThreadPool")
     public ExecutorService cachedThreadPool() {
         return Executors.newCachedThreadPool();
@@ -64,7 +66,7 @@ public class App {
     public PayloadProcessor payloadProcessor() {
         return new JSONProcessor();
     }
-    
+
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -77,7 +79,7 @@ public class App {
         objectMapper.setDateFormat(new RFC3339DateFormat());
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new JodaModule());
-        
+
         SimpleModule module = new SimpleModule();
         module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         module.addSerializer(InnerNode.class, new InnerNodeSerializer());
@@ -85,8 +87,17 @@ public class App {
         objectMapper.registerModule(module);
         return objectMapper;
     }
-    
-        public static void main(String[] args) {
-            SpringApplication.run(App.class, args);
-        }
+
+    // @Bean
+    // public SecurityWebFilterChain securityWebFilterChain(
+    //         ServerHttpSecurity http) {
+    //     return http.authorizeExchange()
+    //             .pathMatchers("/actuator/**").permitAll()
+    //             .anyExchange().authenticated()
+    //             .and().build();
+    // }
+
+    public static void main(String[] args) {
+        SpringApplication.run(App.class, args);
+    }
 }

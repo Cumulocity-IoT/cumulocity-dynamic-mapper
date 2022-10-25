@@ -1,5 +1,7 @@
 package mqtt.mapping.service;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -81,6 +83,8 @@ public class MQTTClient {
 
     private Map<String, MappingStatus> statusMapping = new HashMap<String, MappingStatus>();
 
+    private Instant start = Instant.now() ;
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Called initialize(): {}", initializeTask == null || initializeTask.isDone());
@@ -91,9 +95,10 @@ public class MQTTClient {
 
     private boolean initialize() {
         var firstRun = true;
-        // initialize entry to record errors that can't be assigned to any map, i.e. UNSPECIFIED
-        getMappingStatus(null,true);
-        while ( !MQTTConfiguration.isActive(mqttConfiguration)) {
+        // initialize entry to record errors that can't be assigned to any map, i.e.
+        // UNSPECIFIED
+        getMappingStatus(null, true);
+        while (!canConnect()) {
             if (!firstRun) {
                 try {
                     log.info("Retrieving MQTT configuration in {}s ...",
@@ -120,13 +125,15 @@ public class MQTTClient {
     }
 
     private boolean connect() {
-        log.info("Establishing the MQTT connection now (phase I), (isConnected:shouldConnect) ({}:{})", isConnected(), shouldConnect());
+        log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
+                shouldConnect());
         if (isConnected()) {
             disconnect();
         }
         var firstRun = true;
         while (!isConnected() && shouldConnect()) {
-            log.debug("Establishing the MQTT connection now (phase II): {}, {}", MQTTConfiguration.isValid(mqttConfiguration), MQTTConfiguration.isActive(mqttConfiguration));
+            log.debug("Establishing the MQTT connection now - phase II: {}, {}",
+                    MQTTConfiguration.isValid(mqttConfiguration), canConnect());
             if (!firstRun) {
                 try {
                     Thread.sleep(WAIT_PERIOD_MS);
@@ -135,12 +142,13 @@ public class MQTTClient {
                 }
             }
             try {
-                if (MQTTConfiguration.isActive(mqttConfiguration)) {
+                if (canConnect()) {
                     String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
                     String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new MemoryPersistence());
-                    // mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                    //         new MemoryPersistence());
+                    // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
+                    // MemoryPersistence());
+                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                            new MemoryPersistence());
                     mqttClient.setCallback(payloadProcessor);
                     MqttConnectOptions connOpts = new MqttConnectOptions();
                     connOpts.setCleanSession(true);
@@ -160,9 +168,9 @@ public class MQTTClient {
         }
 
         // try {
-        //     Thread.sleep(WAIT_PERIOD_MS / 10);
+        // Thread.sleep(WAIT_PERIOD_MS / 10);
         // } catch (InterruptedException e) {
-        //     log.error("Error on reconnect: ", e);
+        // log.error("Error on reconnect: ", e);
         // }
 
         try {
@@ -175,6 +183,10 @@ public class MQTTClient {
             return false;
         }
         return true;
+    }
+
+    private boolean canConnect() {
+        return MQTTConfiguration.isActive(mqttConfiguration);
     }
 
     private boolean shouldConnect() {
@@ -310,12 +322,17 @@ public class MQTTClient {
 
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
-        try {
-            String statusConnectTask = (connectTask == null ? "stopped"
-                    : connectTask.isDone() ? "stopped" : "running");
-            String statusInitializeTask = (initializeTask == null ? "stopped" : initializeTask.isDone() ? "stopped" : "running");
-            log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
-                    statusInitializeTask, isConnected());
+        try { 
+            Instant now = Instant.now();
+            // only log this for the first 180 seconds to reduce log amount
+            if ( Duration.between( start , now ).getSeconds() < 180) {
+                String statusConnectTask = (connectTask == null ? "stopped"
+                        : connectTask.isDone() ? "stopped" : "running");
+                String statusInitializeTask = (initializeTask == null ? "stopped"
+                        : initializeTask.isDone() ? "stopped" : "running");
+                log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
+                statusInitializeTask, isConnected());
+            }
             cleanDirtyMappings();
             sendStatusMapping();
             sendStatusService();
@@ -338,7 +355,7 @@ public class MQTTClient {
         ServiceStatus serviceStatus;
         if (isConnected()) {
             serviceStatus = ServiceStatus.connected();
-        } else if (MQTTConfiguration.isActive(mqttConfiguration)) {
+        } else if (canConnect()) {
             serviceStatus = ServiceStatus.activated();
         } else if (MQTTConfiguration.isValid(mqttConfiguration)) {
             serviceStatus = ServiceStatus.configured();
@@ -369,11 +386,11 @@ public class MQTTClient {
         dirtyMappings.add(mapping);
     }
 
-    public MappingStatus getMappingStatus(Mapping m, boolean unspecified){
+    public MappingStatus getMappingStatus(Mapping m, boolean unspecified) {
         String topic = "#";
         long key = -1;
         String ident = "#";
-        if ( !unspecified) {
+        if (!unspecified) {
             topic = m.subscriptionTopic;
             key = m.id;
             ident = m.ident;
@@ -387,7 +404,7 @@ public class MQTTClient {
         return ms;
     }
 
-    public void initializeMappingStatus(MappingStatus ms){
+    public void initializeMappingStatus(MappingStatus ms) {
         statusMapping.put(ms.ident, ms);
     }
 
@@ -437,7 +454,8 @@ public class MQTTClient {
                 mapping.ident = mappings.get(updateMapping).ident;
                 mappings.set(updateMapping, mapping);
                 c8yAgent.saveMappings(mappings);
-                if (reload) reloadMappings();
+                if (reload)
+                    reloadMappings();
             } else {
                 log.error("Something went wrong when updating mapping: {}", id);
             }
@@ -464,8 +482,9 @@ public class MQTTClient {
         }
     }
 
-    public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
-        String payloadMessage =  objectMapper.writeValueAsString(payload);
+    public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload)
+            throws JsonProcessingException {
+        String payloadMessage = objectMapper.writeValueAsString(payload);
         ProcessingContext context = new ProcessingContext();
         context.setPayload(payloadMessage);
         context.setTopic(topic);
