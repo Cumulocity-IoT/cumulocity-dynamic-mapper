@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <stringProp name="TestPlan.comments"></stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="用户定义的变量" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="xmeter_runtime_vars" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="server" elementType="Argument">
+            <stringProp name="Argument.name">server</stringProp>
+            <stringProp name="Argument.value">YOUR_MQTT_BROKER</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="port" elementType="Argument">
+            <stringProp name="Argument.name">port</stringProp>
+            <stringProp name="Argument.value">8883</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="user" elementType="Argument">
+            <stringProp name="Argument.name">user</stringProp>
+            <stringProp name="Argument.value">YOUR_USER</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="password" elementType="Argument">
+            <stringProp name="Argument.name">password</stringProp>
+            <stringProp name="Argument.value">YOUR_PASSWORD</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="client" elementType="Argument">
+            <stringProp name="Argument.name">client</stringProp>
+            <stringProp name="Argument.value">mqtt-mapper-client-</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="wait_time" elementType="Argument">
+            <stringProp name="Argument.name">wait_time</stringProp>
+            <stringProp name="Argument.value">1000</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="iteration" elementType="Argument">
+            <stringProp name="Argument.name">iteration</stringProp>
+            <stringProp name="Argument.value">1000</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="topic_13" elementType="Argument">
+            <stringProp name="Argument.name">topic_13</stringProp>
+            <stringProp name="Argument.value">event/berlin_01</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="topic_14" elementType="Argument">
+            <stringProp name="Argument.name">topic_14</stringProp>
+            <stringProp name="Argument.value">measurement/berlin_01/gazoline</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="topic_16" elementType="Argument">
+            <stringProp name="Argument.name">topic_16</stringProp>
+            <stringProp name="Argument.value">arrayType/devices</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pub Group measurement/+/gazoline" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <longProp name="ThreadGroup.start_time">1518079165000</longProp>
+        <longProp name="ThreadGroup.end_time">1518079165000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <net.xmeter.samplers.ConnectSampler guiclass="net.xmeter.gui.ConnectSamplerUI" testclass="net.xmeter.samplers.ConnectSampler" testname="Connect" enabled="true">
+          <stringProp name="mqtt.keystore_file_path"></stringProp>
+          <stringProp name="mqtt.clientcert_file_path"></stringProp>
+          <stringProp name="mqtt.conn_keep_alive">8</stringProp>
+          <stringProp name="mqtt.conn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.client_id_prefix">${client}</stringProp>
+          <boolProp name="mqtt.conn_share">false</boolProp>
+          <boolProp name="mqtt.client_id_suffix">true</boolProp>
+          <stringProp name="mqtt.reconn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.conn_timeout">10</stringProp>
+          <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
+          <stringProp name="mqtt.keystore_password"></stringProp>
+          <stringProp name="mqtt.clientcert_password"></stringProp>
+          <stringProp name="mqtt.port">${port}</stringProp>
+          <stringProp name="mqtt.protocol">SSL</stringProp>
+          <stringProp name="mqtt.server">${server}</stringProp>
+          <stringProp name="mqtt.version">3.1.1</stringProp>
+          <stringProp name="mqtt.user_name">${user}</stringProp>
+          <stringProp name="mqtt.password">${password}</stringProp>
+          <stringProp name="mqtt.ws_path"></stringProp>
+          <stringProp name="mqtt.conn_clean_session">true</stringProp>
+        </net.xmeter.samplers.ConnectSampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller measurement/+/gazoline" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${iteration}</stringProp>
+        </LoopController>
+        <hashTree>
+          <RandomVariableConfig guiclass="TestBeanGUI" testclass="RandomVariableConfig" testname="Random Level" enabled="true">
+            <stringProp name="maximumValue">115</stringProp>
+            <stringProp name="minimumValue">15</stringProp>
+            <stringProp name="outputFormat">0</stringProp>
+            <boolProp name="perThread">false</boolProp>
+            <stringProp name="randomSeed">10000</stringProp>
+            <stringProp name="variableName">level</stringProp>
+          </RandomVariableConfig>
+          <hashTree/>
+          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="Publish Message" enabled="true">
+            <stringProp name="mqtt.topic_name">${topic_14}</stringProp>
+            <stringProp name="mqtt.qos_level">0</stringProp>
+            <boolProp name="mqtt.add_timestamp">false</boolProp>
+            <stringProp name="mqtt.message_type">String</stringProp>
+            <stringProp name="mqtt.message_type_fixed_length">1024</stringProp>
+            <stringProp name="mqtt.message_to_sent">{
+  &quot;fuel&quot;: ${level},
+  &quot;ts&quot;: &quot;${__time(yyyy-MM-dd-HH:mm:ss:SSS XXX)}&quot;,
+  &quot;mea&quot;: &quot;c8y_FuelMeasurement&quot;
+}</stringProp>
+            <boolProp name="mqtt.retained_message">false</boolProp>
+          </net.xmeter.samplers.PubSampler>
+          <hashTree/>
+        </hashTree>
+        <net.xmeter.samplers.DisConnectSampler guiclass="net.xmeter.gui.DisConnectSamplerUI" testclass="net.xmeter.samplers.DisConnectSampler" testname="Disconnect" enabled="true"/>
+        <hashTree/>
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Delay between sampler" enabled="true">
+          <stringProp name="ConstantTimer.delay">${wait_time}</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pub Group event/berlin_01" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <longProp name="ThreadGroup.start_time">1518079165000</longProp>
+        <longProp name="ThreadGroup.end_time">1518079165000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <net.xmeter.samplers.ConnectSampler guiclass="net.xmeter.gui.ConnectSamplerUI" testclass="net.xmeter.samplers.ConnectSampler" testname="Connect" enabled="true">
+          <stringProp name="mqtt.keystore_file_path"></stringProp>
+          <stringProp name="mqtt.clientcert_file_path"></stringProp>
+          <stringProp name="mqtt.conn_keep_alive">8</stringProp>
+          <stringProp name="mqtt.conn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.client_id_prefix">${client}</stringProp>
+          <boolProp name="mqtt.conn_share">false</boolProp>
+          <boolProp name="mqtt.client_id_suffix">true</boolProp>
+          <stringProp name="mqtt.reconn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.conn_timeout">10</stringProp>
+          <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
+          <stringProp name="mqtt.keystore_password"></stringProp>
+          <stringProp name="mqtt.clientcert_password"></stringProp>
+          <stringProp name="mqtt.port">${port}</stringProp>
+          <stringProp name="mqtt.protocol">SSL</stringProp>
+          <stringProp name="mqtt.server">${server}</stringProp>
+          <stringProp name="mqtt.version">3.1.1</stringProp>
+          <stringProp name="mqtt.user_name">${user}</stringProp>
+          <stringProp name="mqtt.password">${password}</stringProp>
+          <stringProp name="mqtt.ws_path"></stringProp>
+          <stringProp name="mqtt.conn_clean_session">true</stringProp>
+        </net.xmeter.samplers.ConnectSampler>
+        <hashTree/>
+        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables - random_bus_event" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="random_bus_events" elementType="Argument">
+              <stringProp name="Argument.name">random_bus_events</stringProp>
+              <stringProp name="Argument.value">c8y_BusStopEvent,c8y_BusStartEvent,c8y_BusRefillEvent</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </Arguments>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller event/berlin_01" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${iteration}</stringProp>
+        </LoopController>
+        <hashTree>
+          <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="BeanShell Sampler- random_bus_event" enabled="true">
+            <stringProp name="BeanShellSampler.query">import java.util.Random;
+
+String[] events = (vars.get(&quot;random_bus_events&quot;)).split(&quot;,&quot;);
+
+int idx = new Random().nextInt(events.length);
+String event = (events[idx]);
+
+vars.put(&quot;random_bus_event&quot;, event);</stringProp>
+            <stringProp name="BeanShellSampler.filename"></stringProp>
+            <stringProp name="BeanShellSampler.parameters"></stringProp>
+            <boolProp name="BeanShellSampler.resetInterpreter">false</boolProp>
+          </BeanShellSampler>
+          <hashTree/>
+          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="Publish Message" enabled="true">
+            <stringProp name="mqtt.topic_name">${topic_13}</stringProp>
+            <stringProp name="mqtt.qos_level">0</stringProp>
+            <boolProp name="mqtt.add_timestamp">false</boolProp>
+            <stringProp name="mqtt.message_type">String</stringProp>
+            <stringProp name="mqtt.message_type_fixed_length">1024</stringProp>
+            <stringProp name="mqtt.message_to_sent">{
+  &quot;ts&quot;: &quot;${__time(yyyy-MM-dd-HH:mm:ss:SSS XXX)}&quot;,
+  &quot;msg_type&quot;: &quot;${random_bus_event}&quot;,
+  &quot;txt&quot;: &quot;Bus ${random_bus_event} at ${__time(HH:mm:ss XXX)}!&quot;
+}</stringProp>
+            <boolProp name="mqtt.retained_message">false</boolProp>
+          </net.xmeter.samplers.PubSampler>
+          <hashTree/>
+        </hashTree>
+        <net.xmeter.samplers.DisConnectSampler guiclass="net.xmeter.gui.DisConnectSamplerUI" testclass="net.xmeter.samplers.DisConnectSampler" testname="Disconnect" enabled="true"/>
+        <hashTree/>
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Delay between sampler" enabled="true">
+          <stringProp name="ConstantTimer.delay">${wait_time}</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Pub Group arrayType/devices" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <longProp name="ThreadGroup.start_time">1518079165000</longProp>
+        <longProp name="ThreadGroup.end_time">1518079165000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <net.xmeter.samplers.ConnectSampler guiclass="net.xmeter.gui.ConnectSamplerUI" testclass="net.xmeter.samplers.ConnectSampler" testname="Connect" enabled="true">
+          <stringProp name="mqtt.keystore_file_path"></stringProp>
+          <stringProp name="mqtt.clientcert_file_path"></stringProp>
+          <stringProp name="mqtt.conn_keep_alive">8</stringProp>
+          <stringProp name="mqtt.conn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.client_id_prefix">${client}</stringProp>
+          <boolProp name="mqtt.conn_share">false</boolProp>
+          <boolProp name="mqtt.client_id_suffix">true</boolProp>
+          <stringProp name="mqtt.reconn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.conn_timeout">10</stringProp>
+          <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
+          <stringProp name="mqtt.keystore_password"></stringProp>
+          <stringProp name="mqtt.clientcert_password"></stringProp>
+          <stringProp name="mqtt.port">${port}</stringProp>
+          <stringProp name="mqtt.protocol">SSL</stringProp>
+          <stringProp name="mqtt.server">${server}</stringProp>
+          <stringProp name="mqtt.version">3.1.1</stringProp>
+          <stringProp name="mqtt.user_name">${user}</stringProp>
+          <stringProp name="mqtt.password">${password}</stringProp>
+          <stringProp name="mqtt.ws_path"></stringProp>
+          <stringProp name="mqtt.conn_clean_session">true</stringProp>
+        </net.xmeter.samplers.ConnectSampler>
+        <hashTree/>
+        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables - random_bus_event" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="crest_devices" elementType="Argument">
+              <stringProp name="Argument.name">crest_devices</stringProp>
+              <stringProp name="Argument.value">crest_01_AL1352,crest_02_AL1352,crest_03_AL1352,crest_04_AL1352,crest_05_AL1352</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </Arguments>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller arrayType/devices" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">${iteration}</stringProp>
+        </LoopController>
+        <hashTree>
+          <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="BeanShell Sampler- crest_device" enabled="true">
+            <stringProp name="BeanShellSampler.query">import java.util.Random;
+
+int min = 5;
+int max = 15;
+String[] devices = (vars.get(&quot;crest_devices&quot;)).split(&quot;,&quot;);
+Random r = new Random();
+
+int idx_01 = r.nextInt(devices.length);
+int idx_02 = r.nextInt(devices.length);
+
+String device_01 = (devices[idx_01]);
+String device_02 = (devices[idx_02]);
+
+float value_01 = min + r.nextDouble() * (max - min);
+float value_02 = min + r.nextDouble() * (max - min);
+
+long  current_millis_01 = System.currentTimeMillis();
+long  current_millis_02 = current_millis_01 +1000;
+
+vars.put(&quot;crest_device_01&quot;, device_01);
+vars.put(&quot;crest_device_02&quot;, device_02);
+
+vars.put(&quot;value_01&quot;, String.valueOf(value_01));
+vars.put(&quot;value_02&quot;, String.valueOf(value_02));
+
+vars.put(&quot;current_millis_01&quot;, String.valueOf(current_millis_01));
+vars.put(&quot;current_millis_02&quot;, String.valueOf(current_millis_02));</stringProp>
+            <stringProp name="BeanShellSampler.filename"></stringProp>
+            <stringProp name="BeanShellSampler.parameters"></stringProp>
+            <boolProp name="BeanShellSampler.resetInterpreter">false</boolProp>
+          </BeanShellSampler>
+          <hashTree/>
+          <net.xmeter.samplers.PubSampler guiclass="net.xmeter.gui.PubSamplerUI" testclass="net.xmeter.samplers.PubSampler" testname="Publish Message" enabled="true">
+            <stringProp name="mqtt.topic_name">${topic_16}</stringProp>
+            <stringProp name="mqtt.qos_level">0</stringProp>
+            <boolProp name="mqtt.add_timestamp">false</boolProp>
+            <stringProp name="mqtt.message_type">String</stringProp>
+            <stringProp name="mqtt.message_type_fixed_length">1024</stringProp>
+            <stringProp name="mqtt.message_to_sent">[
+  {
+    &quot;tid&quot;: &quot;5e4bac9f-b47a-499e-8601-68fc16a9847c&quot;,
+    &quot;psid&quot;: &quot;Crest&quot;,
+    &quot;devicePath&quot;: &quot;${crest_device_01}_AL1352&quot;,
+    &quot;processDataUnit&quot;: &quot;20&quot;,
+    &quot;values&quot;: [
+      {
+        &quot;value&quot;: ${value_01},
+        &quot;timestamp&quot;: ${current_millis_01}
+      }
+    ]
+  },
+  {
+    &quot;tid&quot;: &quot;5e4bac9f-b47a-499e-8601-68fc16a9847c&quot;,
+    &quot;psid&quot;: &quot;Crest&quot;,
+    &quot;devicePath&quot;: &quot;${crest_device_02}_AL1352&quot;,
+    &quot;processDataUnit&quot;: &quot;20&quot;,
+    &quot;values&quot;: [
+      {
+        &quot;value&quot;: ${value_02},
+        &quot;timestamp&quot;: ${current_millis_02}
+      }
+    ]
+  }
+]</stringProp>
+            <boolProp name="mqtt.retained_message">false</boolProp>
+          </net.xmeter.samplers.PubSampler>
+          <hashTree/>
+        </hashTree>
+        <net.xmeter.samplers.DisConnectSampler guiclass="net.xmeter.gui.DisConnectSamplerUI" testclass="net.xmeter.samplers.DisConnectSampler" testname="Disconnect" enabled="true"/>
+        <hashTree/>
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Delay between sampler" enabled="true">
+          <stringProp name="ConstantTimer.delay">${wait_time}</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Sub Group" enabled="false">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1518079165000</longProp>
+        <longProp name="ThreadGroup.end_time">1518079165000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <net.xmeter.samplers.ConnectSampler guiclass="net.xmeter.gui.ConnectSamplerUI" testclass="net.xmeter.samplers.ConnectSampler" testname="Connect" enabled="true">
+          <stringProp name="mqtt.keystore_file_path"></stringProp>
+          <stringProp name="mqtt.clientcert_file_path"></stringProp>
+          <stringProp name="mqtt.conn_keep_alive">8</stringProp>
+          <stringProp name="mqtt.conn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.client_id_prefix">sub_</stringProp>
+          <boolProp name="mqtt.conn_share">false</boolProp>
+          <boolProp name="mqtt.client_id_suffix">true</boolProp>
+          <stringProp name="mqtt.reconn_attampt_max">0</stringProp>
+          <stringProp name="mqtt.conn_timeout">10</stringProp>
+          <boolProp name="mqtt.dual_ssl_authentication">false</boolProp>
+          <stringProp name="mqtt.keystore_password"></stringProp>
+          <stringProp name="mqtt.clientcert_password"></stringProp>
+          <stringProp name="mqtt.port">${port}</stringProp>
+          <stringProp name="mqtt.protocol">TCP</stringProp>
+          <stringProp name="mqtt.server">${server}</stringProp>
+          <stringProp name="mqtt.version">3.1</stringProp>
+          <stringProp name="mqtt.user_name"></stringProp>
+          <stringProp name="mqtt.password"></stringProp>
+          <stringProp name="mqtt.ws_path"></stringProp>
+          <stringProp name="mqtt.conn_clean_session">true</stringProp>
+        </net.xmeter.samplers.ConnectSampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">3</stringProp>
+        </LoopController>
+        <hashTree>
+          <net.xmeter.samplers.SubSampler guiclass="net.xmeter.gui.SubSamplerUI" testclass="net.xmeter.samplers.SubSampler" testname="Subscribe Message" enabled="true">
+            <stringProp name="mqtt.topic_name">test_topic_${__threadNum}</stringProp>
+            <stringProp name="mqtt.qos_level">0</stringProp>
+            <boolProp name="mqtt.add_timestamp">true</boolProp>
+            <boolProp name="mqtt.debug_response">true</boolProp>
+            <stringProp name="mqtt.sample_condition">number of received messages</stringProp>
+            <stringProp name="mqtt.sample_condition_value">2</stringProp>
+          </net.xmeter.samplers.SubSampler>
+          <hashTree/>
+        </hashTree>
+        <net.xmeter.samplers.DisConnectSampler guiclass="net.xmeter.gui.DisConnectSamplerUI" testclass="net.xmeter.samplers.DisConnectSampler" testname="Disconnect" enabled="true"/>
+        <hashTree/>
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Delay between sampler" enabled="true">
+          <stringProp name="ConstantTimer.delay">300</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+      </hashTree>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -21,7 +21,8 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.MQTTConfiguration;
+import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
@@ -42,33 +43,63 @@ public class MQTTMappingRestController {
     @Autowired
     C8yAgent c8yAgent;
 
-    @RequestMapping(value = "/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<MQTTConfiguration> getConnectionDetails() {
+    @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectionConfiguration> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            final MQTTConfiguration configuration = mqttClient.getConnectionDetails();
+            final ConnectionConfiguration configuration = mqttClient.loadConnectionConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
             }
             // don't modify original copy
-            MQTTConfiguration configurationClone = (MQTTConfiguration) configuration.clone();
+            ConnectionConfiguration configurationClone = (ConnectionConfiguration) configuration.clone();
             configurationClone.setPassword("");
-            return new ResponseEntity<MQTTConfiguration>(configurationClone, HttpStatus.OK);
+            return new ResponseEntity<ConnectionConfiguration>(configurationClone, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error on loading configuration {}", ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
 
-    @RequestMapping(value = "/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody MQTTConfiguration configuration) {
+    @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ConnectionConfiguration configuration) {
         
         // don't modify original copy
-        MQTTConfiguration configurationClone = (MQTTConfiguration) configuration.clone();
+        ConnectionConfiguration configurationClone = (ConnectionConfiguration) configuration.clone();
         configurationClone.setPassword("");
         log.info("Post MQTT broker configuration: {}", configurationClone.toString());
         try {
-            mqttClient.saveConfiguration(configuration);
+            mqttClient.saveConnectionConfiguration(configuration);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception ex) {
+            log.error("Error getting mqtt broker configuration {}", ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+    }
+
+    @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
+        log.info("Get connection details");
+        try {
+            final ServiceConfiguration configuration = mqttClient.loadServiceConfiguration();
+            if (configuration == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
+            }
+            // don't modify original copy
+            return new ResponseEntity<ServiceConfiguration>(configuration, HttpStatus.OK);
+        } catch (Exception ex) {
+            log.error("Error on loading configuration {}", ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+    }
+
+    @RequestMapping(value = "/configuration/service", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ServiceConfiguration configuration) {
+        
+        // don't modify original copy
+        log.info("Post service configuration: {}", configuration.toString());
+        try {
+            mqttClient.saveConnectionConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);

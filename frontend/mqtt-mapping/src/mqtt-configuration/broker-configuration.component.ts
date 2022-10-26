@@ -7,7 +7,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
 import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { MQTTAuthentication, Operation, ServiceStatus, Status } from '../shared/configuration.model';
+import { ConnectionConfiguration as ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/configuration.model';
 
 import packageJson from '../../package.json';
 
@@ -23,8 +23,10 @@ export class BokerConfigurationComponent implements OnInit {
   isBrokerAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
-  mqttForm: FormGroup;
-  configuration: MQTTAuthentication = {
+  connectionForm: FormGroup;
+  serviceForm: FormGroup;
+
+  connectionConfiguration: ConnectionConfiguration = {
     mqttHost: '',
     mqttPort: 0,
     user: '',
@@ -33,6 +35,10 @@ export class BokerConfigurationComponent implements OnInit {
     useTLS: false,
     active: false,
   };
+  serviceConfiguration: ServiceConfiguration = {
+    logPayload: true,
+  };
+  
 
   constructor(
     public bsModalService: BsModalService,
@@ -44,8 +50,8 @@ export class BokerConfigurationComponent implements OnInit {
 
   ngOnInit() {
     console.log("Running version", this.version);
-    this.initForm();
-    this.loadConnectionDetails();
+    this.initForms();
+    this.loadData();
     this.initializeMonitoringService();
     this.isBrokerAgentCreated$ = from(this.configurationService.initializeMQTTAgent())
     // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
@@ -69,8 +75,8 @@ export class BokerConfigurationComponent implements OnInit {
     console.log("Retrieved status:", status, this.isBrokerConnected)
   }
 
-  private initForm(): void {
-    this.mqttForm = new FormGroup({
+  private initForms(): void {
+    this.connectionForm = new FormGroup({
       mqttHost: new FormControl('', Validators.required),
       mqttPort: new FormControl('', Validators.required),
       user: new FormControl('', Validators.required),
@@ -79,36 +85,47 @@ export class BokerConfigurationComponent implements OnInit {
       active: new FormControl('', Validators.required),
       useTLS: new FormControl('', Validators.required),
     });
+    this.serviceForm = new FormGroup({
+      logPayload: new FormControl('', Validators.required),
+    });
   }
 
-  private async loadConnectionDetails(): Promise<void> {
-    let conf = await this.configurationService.getConnectionDetails();
-    console.log("Connection details", this.configuration)
+  private async loadData(): Promise<void> {
+    let conn = await this.configurationService.getConnectionConfiguration();
+    let conf = await this.configurationService.getServiceConfiguration();
+    console.log("Configuration:", this.serviceConfiguration, this.connectionConfiguration)
+    if (conn) {
+      this.connectionConfiguration = conn;
+      this.isBrokerActivated = conn.active;
+    }
+
     if (conf) {
-      this.configuration = conf;
-      this.isBrokerActivated = conf.active;
+      this.serviceConfiguration = conf;
     }
   }
 
-  async onConnectButtonClicked() {
-    this.connectToMQTTBroker();
+  async clickedConnect() {
+    this.connectToBroker();
   }
 
-  async onDisconnectButtonClicked() {
+  async clickedDisconnect() {
     this.showTerminateConnectionModal();
   }
 
-  async onUpdateButtonClicked() {
-    this.updateConnectionDetails();
+  async clickedUpdateConnectionConfiguration() {
+    this.updateConnectionConfiguration();
   }
 
-  private async updateConnectionDetails() {
-    let conf: MQTTAuthentication = {
-      ...this.configuration,
+  async clickedUpdateServiceConfiguration() {
+    this.updateServiceConfiguration();
+  }
+
+  private async updateConnectionConfiguration() {
+    let conn: ConnectionConfiguration = {
+      ...this.connectionConfiguration,
       active: false
     }
-    const response = await this.configurationService.updateConnectionDetails(conf);
-
+    const response = await this.configurationService.updateConnectionConfiguration(conn);
     if (response.status < 300) {
       this.alertservice.success(gettext('Update successful'));
     } else {
@@ -116,7 +133,19 @@ export class BokerConfigurationComponent implements OnInit {
     }
   }
 
-  private async connectToMQTTBroker() {
+  private async updateServiceConfiguration() {
+    let conf: ServiceConfiguration = {
+      ...this.serviceConfiguration,
+    }
+    const response = await this.configurationService.updateServiceConfiguration(conf);
+    if (response.status < 300) {
+      this.alertservice.success(gettext('Update successful'));
+    } else {
+      this.alertservice.danger(gettext('Failed to update service configuration'));
+    }
+  }
+
+  private async connectToBroker() {
     const response1 = await this.configurationService.runOperation(Operation.CONNECT);
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToMQTTBroker", response1, response2)

@@ -1,4 +1,4 @@
-export interface MQTTAuthentication {
+export interface ConnectionConfiguration {
   mqttHost: string;
   mqttPort: number;
   user: string;
@@ -6,6 +6,10 @@ export interface MQTTAuthentication {
   clientId: string;
   useTLS: boolean;
   active: boolean;
+}
+
+export interface ServiceConfiguration {
+  logPayload: boolean;
 }
 
 export class MappingSubstitution {

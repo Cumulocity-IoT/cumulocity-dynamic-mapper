@@ -8,7 +8,7 @@ import lombok.ToString;
 
 @Data
 @ToString ()
-public class MQTTConfiguration implements Cloneable {
+public class ConnectionConfiguration implements Cloneable {
 
     @NotNull
     public String mqttHost;
@@ -32,7 +32,6 @@ public class MQTTConfiguration implements Cloneable {
     @NotNull
     public boolean active;
 
-
     public Object clone() 
     {
         try {
@@ -42,7 +41,7 @@ public class MQTTConfiguration implements Cloneable {
         }
     }
 
-    public static boolean isValid (MQTTConfiguration mc){
+    public static boolean isValid (ConnectionConfiguration mc){
         return (mc != null) && !StringUtils.isEmpty(mc.mqttHost) &&
         !(mc.mqttPort == 0) &&
         !StringUtils.isEmpty(mc.user) &&
@@ -50,8 +49,8 @@ public class MQTTConfiguration implements Cloneable {
         !StringUtils.isEmpty(mc.clientId);
     }
 
-    public static boolean isActive(MQTTConfiguration mc) {
-        return MQTTConfiguration.isValid(mc) && mc.active;
+    public static boolean isActive(ConnectionConfiguration mc) {
+        return ConnectionConfiguration.isValid(mc) && mc.active;
     }
 }
 
