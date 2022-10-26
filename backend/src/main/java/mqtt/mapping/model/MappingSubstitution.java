@@ -3,6 +3,7 @@ package mqtt.mapping.model;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import mqtt.mapping.processor.RepairStrategy;
 
 import java.io.Serializable;
 
@@ -25,10 +26,12 @@ public class MappingSubstitution implements Serializable {
 
         public JsonNode value;
         public TYPE type;
+        public RepairStrategy repairStrategy;
 
-        public SubstituteValue(JsonNode value, TYPE type) {
+        public SubstituteValue(JsonNode value, TYPE type, RepairStrategy repair) {
             this.type = type;
             this.value = value;
+            this.repairStrategy = repair;
         }
 
         public Object typedValue() {
@@ -58,7 +61,7 @@ public class MappingSubstitution implements Serializable {
 
         @Override
         public SubstituteValue clone() {
-            return new SubstituteValue(this.value, this.type);
+            return new SubstituteValue(this.value, this.type, this.repairStrategy);
         }
     }
 
@@ -67,6 +70,10 @@ public class MappingSubstitution implements Serializable {
 
     @NotNull
     public String pathTarget;
+
+    @NotNull
+    public RepairStrategy repairStrategy;
+    
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean definesIdentifier;
 }

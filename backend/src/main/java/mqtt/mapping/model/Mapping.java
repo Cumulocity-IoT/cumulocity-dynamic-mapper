@@ -65,9 +65,6 @@ public class Mapping implements Serializable {
   public boolean createNonExistingDevice;
 
   @NotNull
-  public RepairStrategy repairStrategy;
-
-  @NotNull
   public boolean updateExistingDevice;
 
   @NotNull

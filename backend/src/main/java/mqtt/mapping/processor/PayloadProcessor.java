@@ -139,13 +139,13 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
-        if ( !sub.type.equals(TYPE.IGNORE)) {
+        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING)) {
+            removeValueFromObect(jsonObject,splitKeys);
+        } else {
             if (splitKeys == null) {
                 splitKeys = new String[] { keys };
             }
             substituteValueInObject(sub, jsonObject, splitKeys);
-        } else {
-            removeValueFromObect(jsonObject,splitKeys);
         }
     }
 

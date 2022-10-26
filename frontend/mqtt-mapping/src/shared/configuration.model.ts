@@ -15,15 +15,18 @@ export interface ServiceConfiguration {
 export class MappingSubstitution {
   public pathSource: string;
   public pathTarget: string;
-  public definesIdentifier?: boolean
+  public definesIdentifier?: boolean;
+  public repairStrategy: RepairStrategy;
   constructor (
     ps: string,
     pt: string,
-    di: boolean
+    di: boolean,
+    rs: RepairStrategy
   ){
     this.pathSource = ps;
     this.pathTarget = pt;
     this.definesIdentifier = di;
+    this.repairStrategy = rs;
   }
   reset() {
     this.pathSource = '';
@@ -57,7 +60,6 @@ export interface Mapping {
   substitutions?: MappingSubstitution[];
   mapDeviceIdentifier: boolean;
   createNonExistingDevice: boolean;
-  repairStrategy: RepairStrategy;
   updateExistingDevice: boolean;
   externalIdType: string;
   snoopStatus: SnoopStatus;
@@ -131,7 +133,9 @@ export enum Operation {
 }
 
 export enum RepairStrategy {
+  DEFAULT = "DEFAULT",
   USE_FIRST_VALUE_OF_ARRAY = "USE_FIRST_VALUE_OF_ARRAY",
   USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
   IGNORE = "IGNORE",
+  REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
 }
