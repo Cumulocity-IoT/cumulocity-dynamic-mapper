@@ -92,7 +92,9 @@
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name]"
                           translate>TemplateTopic and TemplateTopicSample do not have same structure in the Topic Name.
                         </c8y-message>
-                        <c8y-message *ngIf="propertyForm.get('templateTopic').touched || propertyForm.get('subscriptionTopic').touched" translate>After changing the TemplateTopic or SubscriptionTopic all
+                        <c8y-message
+                          *ngIf="propertyForm.get('templateTopic').touched || propertyForm.get('subscriptionTopic').touched"
+                          translate>After changing the TemplateTopic or SubscriptionTopic all
                           substitions might have to be revised.
                         </c8y-message>
                       </c8y-messages>
@@ -175,10 +177,11 @@
                         <label class="m-r-4" translate>Snoop payload</label>
                         <span class="hidden-xs hidden-sm">
                           <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
-                            Once the snooping starts and payloads are recorded, they can be used as templates for defining
+                            Once the snooping starts and payloads are recorded, they can be used as templates for
+                            defining
                             the source format of the MQTT mapping.</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateSnoop" popoverTitle="Snoop payload"
-                            placement="top" triggers="focus" type="button">
+                          <button class="btn-clean text-primary" [popover]="popTemplateSnoop"
+                            popoverTitle="Snoop payload" placement="top" triggers="focus" type="button">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
@@ -197,16 +200,18 @@
                       <div class="input-group">
                         <label class="m-r-4" translate>Repair strategy</label>
                         <span class="hidden-xs hidden-sm">
-                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in different expressions do not have the same size. How are missing values handled?</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popRepairStrategy" popoverTitle="Repair strategy"
-                            placement="top" triggers="focus" type="button">
+                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in
+                            different expressions do not have the same size. How are missing values handled?
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popRepairStrategy"
+                            popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
                       </div>
                       <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="repairStrategy" [(ngModel)]="mapping.repairStrategy"
-                          #repairStrategyRef>
+                        <select class="form-control" formControlName="repairStrategy"
+                          [(ngModel)]="mapping.repairStrategy" #repairStrategyRef>
                           <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q">
                             {{ RepairStrategy[q] }}
                           </option>
@@ -419,16 +424,36 @@
                       <div class="form-group">
                         <label translate>Substitute in Target</label>
                         <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                          formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" readonly disabled="true" />
+                          formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
+                        <c8y-messages>
+                          <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate>{{targetExpressionErrorMsg}}
+                          </c8y-message>
+                        </c8y-messages>
                       </div>
                     </div>
                   </div>
                   <div class="row">
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
-                        <label translate>Expression - result</label>
+                        <div class="input-group">
+                          <label translate>Expression - result - </label>
+                          <span>{{sourceExpressionResultType}}</span>
+                        </div>
                         <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                           formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly
+                          disabled="true" />
+                      </div>
+                    </div>
+                    <div class="col-lg-2">
+                    </div>
+                    <div class="col-lg-4">
+                      <div class="form-group">
+                        <div class="input-group">
+                          <label translate>Expression - result - </label>
+                          <span>{{targetExpressionResultType}}</span>
+                        </div>
+                        <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                          formControlName="targetExpressionResult" [ngModel]="targetExpressionResult" readonly
                           disabled="true" />
                       </div>
                     </div>

@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
@@ -22,6 +24,7 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.model.TreeNode;
@@ -134,27 +137,45 @@ public abstract class PayloadProcessor implements MqttCallback {
         return id;
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String keys) throws JSONException {
+    public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
-        if (splitKeys == null) {
-            splitKeys = new String[] { keys };
+        if ( !sub.type.equals(TYPE.IGNORE)) {
+            if (splitKeys == null) {
+                splitKeys = new String[] { keys };
+            }
+            substituteValueInObject(sub, jsonObject, splitKeys);
+        } else {
+            removeValueFromObect(jsonObject,splitKeys);
         }
-        return substituteValue(sub, jsonObject, splitKeys);
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
+    public JsonNode removeValueFromObect(JsonNode jsonObject, String[] keys) throws JSONException {
         String currentKey = keys[0];
 
         if (keys.length == 1) {
-            return jsonObject.put(currentKey, sub.typedValue());
+            return ((ObjectNode) jsonObject).remove(currentKey);
         } else if (!jsonObject.has(currentKey)) {
             throw new JSONException(currentKey + "is not a valid key.");
         }
 
-        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
         String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
-        return jsonObject.put(currentKey, updatedNestedValue);
+        return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
+    }
+
+    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys) throws JSONException {
+        String currentKey = keys[0];
+
+        if (keys.length == 1) {
+            return ((ObjectNode) jsonObject).set(currentKey, sub.value);
+        } else if (!jsonObject.has(currentKey)) {
+            throw new JSONException(currentKey + "is not a valid key.");
+        }
+
+        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
+        return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
     }
 
     @Override

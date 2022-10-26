@@ -85,14 +85,6 @@ public class App {
         return objectMapper;
     }
 
-    // @Bean
-    // public SecurityWebFilterChain securityWebFilterChain(
-    //         ServerHttpSecurity http) {
-    //     return http.authorizeExchange()
-    //             .pathMatchers("/actuator/**").permitAll()
-    //             .anyExchange().authenticated()
-    //             .and().build();
-    // }
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

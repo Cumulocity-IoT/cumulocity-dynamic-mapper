@@ -10,6 +10,7 @@ import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Getter
 @NoArgsConstructor
@@ -19,32 +20,34 @@ public class MappingSubstitution implements Serializable {
     public static class SubstituteValue implements Cloneable {
         public static enum TYPE {
             NUMBER,
-            TEXTUAL
+            TEXTUAL, OBJECT, IGNORE
         }
 
-        public String value;
+        public JsonNode value;
         public TYPE type;
 
-        public SubstituteValue(String value, TYPE type) {
+        public SubstituteValue(JsonNode value, TYPE type) {
             this.type = type;
             this.value = value;
         }
 
         public Object typedValue() {
             if (type.equals(TYPE.TEXTUAL)) {
+                return value.textValue();
+            } else if (type.equals(TYPE.OBJECT)) {
                 return value;
             } else {
                 // check if int
                 try {
-                    return Integer.parseInt(value);
+                    return Integer.parseInt(value.textValue());
                 } catch (NumberFormatException e1) {
                     // not int
                     try {
-                        return Float.parseFloat(value);
+                        return Float.parseFloat(value.textValue());
                     } catch (NumberFormatException e2) {
                         // not int
                         try {
-                            return Double.parseDouble(value);
+                            return Double.parseDouble(value.textValue());
                         } catch (NumberFormatException e3) {
                             return value;
                         }
@@ -52,6 +55,7 @@ public class MappingSubstitution implements Serializable {
                 }
             }
         }
+
         @Override
         public SubstituteValue clone() {
             return new SubstituteValue(this.value, this.type);
