@@ -59,9 +59,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
-  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false);
-
-
+  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false, RepairStrategy.DEFAULT);
 
   @ViewChild('editorSourceRef', { static: false }) editorSourceElement: ElementRef;
   @ViewChild('editorTargetRef', { static: false }) editorTargetElement: ElementRef;
@@ -206,7 +204,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       qos: new FormControl(this.mapping.qos, Validators.required),
       mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
       createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
-      repairStrategy: new FormControl(this.mapping.repairStrategy, Validators.required),
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),
@@ -217,11 +214,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   private initTemplateForm(): void {
     this.templateForm = new FormGroup({
-      cs: new FormGroup({
-        ps: new FormControl(this.currentSubstitution.pathSource),
-        pt: new FormControl(this.currentSubstitution.pathTarget),
-        di: new FormControl(this.currentSubstitution.definesIdentifier),
-      }),
+      ps: new FormControl(this.currentSubstitution.pathSource),
+      pt: new FormControl(this.currentSubstitution.pathTarget),
+      di: new FormControl(this.currentSubstitution.definesIdentifier),
+      rs: new FormControl(this.currentSubstitution.repairStrategy),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
       targetExpressionResult: new FormControl(this.targetExpressionResult),
     },
@@ -234,11 +230,18 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     const ns = path.split(".");
     if (ns[0].startsWith("$")) {
       let rx = /\[(-?\d*)\]/
-      ns[0] = ns[0].match(rx)[1]
+      let result = ns[0].match(rx)
+      if (result && result.length >= 2) {
+        ns[0] = result[1]
+      }
       console.log("Changed level 0:", ns[0])
     }
     const selection = { path: ns };
-    editor.setSelection(selection, selection)
+    try {
+      editor.setSelection(selection, selection)
+    } catch (error) {
+      console.warn("Set selection to path not possible:", ns, error);
+    }
   }
 
   private whatIsIt(object) {
@@ -313,14 +316,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   }
 
   onExpressionsUpdated(): void {
-    this.templateForm.get('cs').get('ps').valueChanges.pipe(debounceTime(500))
+    this.templateForm.get('ps').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
         //console.log(`Updated sourcePath ${val}.`, val);
         this.updateSourceExpressionResult(val);
       });
 
-    this.templateForm.get('cs').get('pt').valueChanges.pipe(debounceTime(500))
+    this.templateForm.get('pt').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
         //console.log(`Updated targetPath ${val}.`, val);
@@ -555,7 +558,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
         item.setAttribute('style', null);
       }
       const sel = this.mapping.substitutions[selected];
-      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.definesIdentifier);
+      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.definesIdentifier, sel.repairStrategy);
       this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
       this.updateTargetExpressionResult(this.currentSubstitution.pathTarget);
       this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);

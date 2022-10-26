@@ -171,52 +171,28 @@
                         class="form-control" placeholder="e.g. c8y_Serial" #externalIdTypeRef />
                     </div>
                   </div>
-                  <div class="row">
-                    <div class="col-md-6  form-group">
-                      <div class="input-group">
-                        <label class="m-r-4" translate>Snoop payload</label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
-                            Once the snooping starts and payloads are recorded, they can be used as templates for
-                            defining
-                            the source format of the MQTT mapping.</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateSnoop"
-                            popoverTitle="Snoop payload" placement="top" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
-                      <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="snoopStatus" [(ngModel)]="mapping.snoopStatus"
-                          #snoopStatusRef>
-                          <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
-                            [disabled]="q != 'ENABLED' && q != 'NONE'">
-                            {{ SnoopStatus[q] }}
-                          </option>
-                        </select>
-                      </div>
+                  <div class="form-group">
+                    <div class="input-group">
+                      <label class="m-r-4" translate>Snoop payload</label>
+                      <span class="hidden-xs hidden-sm">
+                        <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
+                          Once the snooping starts and payloads are recorded, they can be used as templates for
+                          defining
+                          the source format of the MQTT mapping.</ng-template>
+                        <button class="btn-clean text-primary" [popover]="popTemplateSnoop" popoverTitle="Snoop payload"
+                          placement="top" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
                     </div>
-                    <div class="col-md-6  form-group">
-                      <div class="input-group">
-                        <label class="m-r-4" translate>Repair strategy</label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in
-                            different expressions do not have the same size. How are missing values handled?
-                          </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popRepairStrategy"
-                            popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
-                      <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="repairStrategy"
-                          [(ngModel)]="mapping.repairStrategy" #repairStrategyRef>
-                          <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q">
-                            {{ RepairStrategy[q] }}
-                          </option>
-                        </select>
-                      </div>
+                    <div class="c8y-select-wrapper">
+                      <select class="form-control" formControlName="snoopStatus" [(ngModel)]="mapping.snoopStatus"
+                        #snoopStatusRef>
+                        <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
+                          [disabled]="q != 'ENABLED' && q != 'NONE'">
+                          {{ SnoopStatus[q] }}
+                        </option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -368,7 +344,7 @@
                     </div>
                   </div>
 
-                  <div class="row" formGroupName="cs">
+                  <div class="row">
                     <div class="legend form-block col-lg-10 col-lg-offset-1">
                       Substitution
                     </div>
@@ -444,7 +420,27 @@
                           disabled="true" />
                       </div>
                     </div>
-                    <div class="col-lg-2">
+                    <div class="col-lg-2 form-group">
+                      <div class="input-group">
+                        <label class="m-r-4" translate>Repair strategy</label>
+                        <span class="hidden-xs hidden-sm">
+                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in
+                            different expressions do not have the same size. How are missing values handled?
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popRepairStrategy"
+                            popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                      <div class="c8y-select-wrapper">
+                        <select class="form-control" formControlName="rs"
+                          [(ngModel)]="currentSubstitution.repairStrategy" #repairStrategyRef>
+                          <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q">
+                            {{ RepairStrategy[q] }}
+                          </option>
+                        </select>
+                      </div>
                     </div>
                     <div class="col-lg-4">
                       <div class="form-group">
@@ -458,6 +454,7 @@
                       </div>
                     </div>
                   </div>
+
                   <c8y-messages>
                     <c8y-message
                       *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
