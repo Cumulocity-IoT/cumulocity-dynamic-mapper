@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONNECT_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/helper';
-import { MQTTAuthentication, Operation, ServiceStatus, Status } from '../shared/configuration.model';
+import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/helper';
+import { ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/configuration.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -68,18 +68,28 @@ export class BrokerConfigurationService {
     }
   }
 
-  updateConnectionDetails(mqttConfiguration: MQTTAuthentication): Promise<IFetchResponse> {
-    return this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
+  updateConnectionConfiguration(configuration: ConnectionConfiguration): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify(mqttConfiguration),
+      body: JSON.stringify(configuration),
       method: 'POST',
     });
   }
 
-  async getConnectionDetails(): Promise<MQTTAuthentication> {
-    const response = await this.client.fetch(`${BASE_URL}/${PATH_CONNECT_ENDPOINT}`, {
+  updateServiceConfiguration(configuration: ServiceConfiguration): Promise<IFetchResponse> {
+    return this.client.fetch(`${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(configuration),
+      method: 'POST',
+    });
+  }
+
+  async getConnectionConfiguration(): Promise<ConnectionConfiguration> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
       },
@@ -90,7 +100,22 @@ export class BrokerConfigurationService {
       return undefined;
     }
 
-    return (await response.json()) as MQTTAuthentication;
+    return (await response.json()) as ConnectionConfiguration;
+  }
+
+  async getServiceConfiguration(): Promise<ServiceConfiguration> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`, {
+      headers: {
+        accept: 'application/json',
+      },
+      method: 'GET',
+    });
+
+    if (response.status != 200) {
+      return undefined;
+    }
+
+    return (await response.json()) as ServiceConfiguration;
   }
 
   async getConnectionStatus(): Promise<ServiceStatus> {

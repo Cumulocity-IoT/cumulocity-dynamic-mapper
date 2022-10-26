@@ -39,7 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationService;
-import mqtt.mapping.configuration.MQTTConfiguration;
+import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
@@ -299,24 +300,45 @@ public class C8yAgent {
         return result;
     }
 
-    public MQTTConfiguration loadConfiguration() {
-        MQTTConfiguration[] results = { new MQTTConfiguration() };
+    public ConnectionConfiguration loadConnectionConfiguration() {
+        ConnectionConfiguration[] results = { new ConnectionConfiguration() };
         subscriptionsService.runForTenant(tenant, () -> {
-            results[0] = configurationService.loadConfiguration();
+            results[0] = configurationService.loadConnectionConfiguration();
             //COMMENT OUT ONLY DEBUG
             //results[0].active = true;
-            log.info("Found configuration {}", results[0]);
+            log.info("Found connection configuration: {}", results[0]);
         });
         return results[0];
     }
 
-    public void saveConfiguration(MQTTConfiguration configuration) {
+    public void saveConnectionConfiguration(ConnectionConfiguration configuration) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                configurationService.saveConfiguration(configuration);
-                log.debug("Saved configuration");
+                configurationService.saveConnectionConfiguration(configuration);
+                log.debug("Saved connection configuration");
             } catch (JsonProcessingException e) {
-                log.error("JsonProcessingException configuration {}", e);
+                log.error("JsonProcessingException configuration: {}", e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    public ServiceConfiguration loadServiceConfiguration() {
+        ServiceConfiguration[] results = { new ServiceConfiguration() };
+        subscriptionsService.runForTenant(tenant, () -> {
+            results[0] = configurationService.loadServiceConfiguration();
+            log.info("Found service configuration: {}", results[0]);
+        });
+        return results[0];
+    }
+
+    public void saveServiceConfiguration(ServiceConfiguration configuration) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                configurationService.saveServiceConfiguration(configuration);
+                log.debug("Saved service configuration");
+            } catch (JsonProcessingException e) {
+                log.error("JsonProcessingException configuration: {}", e);
                 throw new RuntimeException(e);
             }
         });
@@ -428,8 +450,8 @@ public class C8yAgent {
         });
     }
 
-    public MQTTConfiguration setConfigurationActive(boolean b) {
-        MQTTConfiguration[] configurations = { null };
+    public ConnectionConfiguration setConfigurationActive(boolean b) {
+        ConnectionConfiguration[] configurations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             configurations[0] = configurationService.setConfigurationActive(b);
             log.debug("Saved configuration");

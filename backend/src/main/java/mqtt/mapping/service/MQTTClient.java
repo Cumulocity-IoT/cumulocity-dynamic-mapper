@@ -30,8 +30,10 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.MQTTConfiguration;
+import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
@@ -56,7 +58,11 @@ public class MQTTClient {
     private static final String STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
     private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
-    private MQTTConfiguration mqttConfiguration;
+    private ConnectionConfiguration connectionConfiguration;
+
+    @Getter
+    private ServiceConfiguration serviceConfiguration;
+
     private MqttClient mqttClient;
 
     @Autowired
@@ -108,7 +114,8 @@ public class MQTTClient {
                     log.error("Error initializing MQTT client: ", e);
                 }
             }
-            mqttConfiguration = c8yAgent.loadConfiguration();
+            connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+            serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
         }
         return true;
@@ -133,7 +140,7 @@ public class MQTTClient {
         var firstRun = true;
         while (!isConnected() && shouldConnect()) {
             log.debug("Establishing the MQTT connection now - phase II: {}, {}",
-                    MQTTConfiguration.isValid(mqttConfiguration), canConnect());
+                    ConnectionConfiguration.isValid(connectionConfiguration), canConnect());
             if (!firstRun) {
                 try {
                     Thread.sleep(WAIT_PERIOD_MS);
@@ -143,18 +150,18 @@ public class MQTTClient {
             }
             try {
                 if (canConnect()) {
-                    String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
-                    String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
+                    String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
+                    String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
                     // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
                     // MemoryPersistence());
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                    mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
                             new MemoryPersistence());
                     mqttClient.setCallback(payloadProcessor);
                     MqttConnectOptions connOpts = new MqttConnectOptions();
                     connOpts.setCleanSession(true);
                     connOpts.setAutomaticReconnect(false);
-                    connOpts.setUserName(mqttConfiguration.getUser());
-                    connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
+                    connOpts.setUserName(connectionConfiguration.getUser());
+                    connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
                     mqttClient.connect(connOpts);
                     log.info("Successfully connected to broker {}", mqttClient.getServerURI());
                     c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
@@ -186,11 +193,11 @@ public class MQTTClient {
     }
 
     private boolean canConnect() {
-        return MQTTConfiguration.isActive(mqttConfiguration);
+        return ConnectionConfiguration.isActive(connectionConfiguration);
     }
 
     private boolean shouldConnect() {
-        return !MQTTConfiguration.isValid(mqttConfiguration) || MQTTConfiguration.isActive(mqttConfiguration);
+        return !ConnectionConfiguration.isValid(connectionConfiguration) || ConnectionConfiguration.isActive(connectionConfiguration);
     }
 
     public boolean isConnected() {
@@ -220,26 +227,26 @@ public class MQTTClient {
     }
 
     public void disconnectFromBroker() {
-        mqttConfiguration = c8yAgent.setConfigurationActive(false);
+        connectionConfiguration = c8yAgent.setConfigurationActive(false);
         disconnect();
         sendStatusService();
     }
 
     public void connectToBroker() {
-        mqttConfiguration = c8yAgent.setConfigurationActive(true);
+        connectionConfiguration = c8yAgent.setConfigurationActive(true);
         submitConnect();
         sendStatusService();
     }
 
-    public MQTTConfiguration getConnectionDetails() {
-        return c8yAgent.loadConfiguration();
+    public ConnectionConfiguration loadConnectionConfiguration() {
+        return c8yAgent.loadConnectionConfiguration();
     }
 
-    public void saveConfiguration(final MQTTConfiguration configuration) {
-        c8yAgent.saveConfiguration(configuration);
+    public void saveConnectionConfiguration(final ConnectionConfiguration configuration) {
+        c8yAgent.saveConnectionConfiguration(configuration);
         disconnect();
         // invalidate broker client
-        mqttConfiguration = null;
+        connectionConfiguration = null;
         submitInitialize();
         submitConnect();
     }
@@ -357,7 +364,7 @@ public class MQTTClient {
             serviceStatus = ServiceStatus.connected();
         } else if (canConnect()) {
             serviceStatus = ServiceStatus.activated();
-        } else if (MQTTConfiguration.isValid(mqttConfiguration)) {
+        } else if (ConnectionConfiguration.isValid(connectionConfiguration)) {
             serviceStatus = ServiceStatus.configured();
         } else {
             serviceStatus = ServiceStatus.notReady();
@@ -499,5 +506,14 @@ public class MQTTClient {
         ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
         msl.forEach(ms -> ms.reset());
         return msl;
+    }
+
+    public void saveConnectionConfiguration(ServiceConfiguration configuration) {
+        serviceConfiguration = configuration;
+        c8yAgent.saveServiceConfiguration(configuration);
+    }
+
+    public ServiceConfiguration loadServiceConfiguration() {
+        return c8yAgent.loadServiceConfiguration();
     }
 }
