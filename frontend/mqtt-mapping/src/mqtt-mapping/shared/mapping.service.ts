@@ -86,8 +86,8 @@ export class MappingService {
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
         if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
-          let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
-          if (!s || s == '') {
+          let s : JSON = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
+          if (!s) {
             // if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
               console.error("No substitution for:", sub.pathSource, s, mapping.source);
               throw Error("Error: substitution not found:" + sub.pathSource);
@@ -183,18 +183,18 @@ export class MappingService {
 
   }
 
-  public evaluateExpression(json: JSON, path: string, flat: boolean): string {
+  public evaluateExpression(json: JSON, path: string, flat: boolean): JSON {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path)
       result = expression.evaluate(json) as JSON
-      if (flat) {
-        if (Array.isArray(result)) {
-          result = result[0];
-        }
-      } else {
-        result = JSON.stringify(result, null, 4);
-      }
+      // if (flat) {
+      //   if (Array.isArray(result)) {
+      //     result = result[0];
+      //   }
+      // } else {
+      //   result = JSON.stringify(result, null, 4);
+      // }
     }
     return result;
   }

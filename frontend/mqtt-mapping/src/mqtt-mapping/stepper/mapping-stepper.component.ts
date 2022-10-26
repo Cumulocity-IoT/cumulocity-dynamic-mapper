@@ -51,7 +51,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   editorOptionsTarget: any
   editorOptionsTesting: any
   sourceExpressionResult: string = '';
+  sourceExpressionResultType: string = 'empty';
   sourceExpressionErrorMsg: string = '';
+  targetExpressionResult: string = '';
+  targetExpressionResultType: string = 'empty';
+  targetExpressionErrorMsg: string = '';
   showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
@@ -77,20 +81,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   ) { }
 
   ngAfterViewInit(): void {
-    if ( this.editorSourceElement && this.editorTargetElement && !this.editorSource && ! this.editorTarget) {
+    if (this.editorSourceElement && this.editorTargetElement && !this.editorSource && !this.editorTarget) {
       this.editorSource = new JSONEditor(this.editorSourceElement.nativeElement, this.editorOptionsSource);
       this.editorSource.set(this.templateSource);
       this.editorTarget = new JSONEditor(this.editorTargetElement.nativeElement, this.editorOptionsTarget);
       this.editorTarget.set(this.templateTarget);
     }
 
-    if ( this.editorTestingElement && !this.editorTesting) {
+    if (this.editorTestingElement && !this.editorTesting) {
       this.editorTesting = new JSONEditor(this.editorTestingElement.nativeElement, this.editorOptionsTesting);
       this.editorTesting.set(this.editorSource.get());
 
     }
   }
-  
+
   ngAfterContentChecked(): void {
     // if json source editor is displayed then choose the first selection
     const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSourceRef');
@@ -141,7 +145,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
     this.enrichTemplates();
     //this.onTopicUpdated();
-    this.onSourceExpressionUpdated();
+    this.onExpressionsUpdated();
   }
 
   private setSelection(node: any, event: any) {
@@ -150,7 +154,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       let target = '';
       var eventPath = event.path || (event.composedPath && event.composedPath());
       eventPath.forEach(element => {
-       // if (element.localName == "json-editor") {
+        // if (element.localName == "json-editor") {
         if (element.localName == "div" && element.className == 'jsonColumnLarge') {
           target = element.id;
         }
@@ -179,6 +183,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       // test in which editor the click occured 
       if (target == "editorTargetRef") {
         this.setSelectionToPath(this.editorTarget, path)
+        this.updateTargetExpressionResult(path);
         this.currentSubstitution.pathTarget = path;
         this.currentSubstitution.definesIdentifier = false;
       } else if (target == "editorSourceRef") {
@@ -218,6 +223,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
         di: new FormControl(this.currentSubstitution.definesIdentifier),
       }),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
+      targetExpressionResult: new FormControl(this.targetExpressionResult),
     },
       checkSubstitutionIsValid(this.mapping)
     );
@@ -235,13 +241,52 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     editor.setSelection(selection, selection)
   }
 
+  private whatIsIt(object) {
+    var stringConstructor = "test".constructor;
+    var arrayConstructor = [].constructor;
+    var objectConstructor = ({}).constructor;
+    if (object === null) {
+      return "null";
+    }
+    if (object === undefined) {
+      return "undefined";
+    }
+    if (object.constructor === stringConstructor) {
+      return "String";
+    }
+    if (object.constructor === arrayConstructor) {
+      return "Array";
+    }
+    if (object.constructor === objectConstructor) {
+      return "Object";
+    }
+    {
+      return "don't know";
+    }
+  }
+
   private updateSourceExpressionResult(path: string) {
     try {
-      this.sourceExpressionResult = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
+      let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
+      this.sourceExpressionResultType = this.whatIsIt(r);
+      this.sourceExpressionResult = JSON.stringify(r, null, 4);
       this.sourceExpressionErrorMsg = '';
     } catch (error) {
-      console.log("Error evaluating expression: ", error);
+      console.log("Error evaluating source expression: ", error);
       this.sourceExpressionErrorMsg = error.message
+    }
+  }
+
+  private updateTargetExpressionResult(path: string) {
+    try {
+      let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path, false);
+      this.targetExpressionResultType = this.whatIsIt(r);
+      this.targetExpressionResult = JSON.stringify(r, null, 4);
+
+      this.targetExpressionErrorMsg = '';
+    } catch (error) {
+      console.log("Error evaluating target expression: ", error);
+      this.targetExpressionErrorMsg = error.message
     }
   }
 
@@ -267,12 +312,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   }
 
-  onSourceExpressionUpdated(): void {
+  onExpressionsUpdated(): void {
     this.templateForm.get('cs').get('ps').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
         //console.log(`Updated sourcePath ${val}.`, val);
         this.updateSourceExpressionResult(val);
+      });
+
+    this.templateForm.get('cs').get('pt').valueChanges.pipe(debounceTime(500))
+      // distinctUntilChanged()
+      .subscribe(val => {
+        //console.log(`Updated targetPath ${val}.`, val);
+        this.updateTargetExpressionResult(val);
       });
   }
 
@@ -320,7 +372,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       //this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-    } 
+    }
 
     const initialState = {
       snoopStatus: this.mapping.snoopStatus
@@ -505,6 +557,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       const sel = this.mapping.substitutions[selected];
       this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.definesIdentifier);
       this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
+      this.updateTargetExpressionResult(this.currentSubstitution.pathTarget);
       this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
       this.setSelectionToPath(this.editorTarget, this.currentSubstitution.pathTarget);
       this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
