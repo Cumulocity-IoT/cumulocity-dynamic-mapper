@@ -113,8 +113,9 @@ public class C8yAgent {
                 agentRepresentation.setName(MappingServiceRepresentation.AGENT_NAME);
                 agentRepresentation.set(new Agent());
                 agentRepresentation.set(new IsDevice());
+                agentRepresentation.setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, new ArrayList<>());
                 agentRepresentation = inventoryApi.create(agentRepresentation);
-                log.info("Agent has been created with ID {}", mappingServiceRepresentation.getId());
+                log.info("Agent has been created with ID {}", agentRepresentation.getId());
                 ExternalIDRepresentation externalAgentId = createExternalID(agentRepresentation,
                         MappingServiceRepresentation.AGENT_ID, "c8y_Serial");
                 log.debug("ExternalId created: {}", externalAgentId.getExternalId());
