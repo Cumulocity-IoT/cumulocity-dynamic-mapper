@@ -14,7 +14,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @Getter
-@NoArgsConstructor
 @ToString()
 public class MappingSubstitution implements Serializable {
 
@@ -65,13 +64,18 @@ public class MappingSubstitution implements Serializable {
         }
     }
 
+    public MappingSubstitution () {
+        this.repairStrategy = RepairStrategy.DEFAULT;
+    }
     @NotNull
     public String pathSource;
 
     @NotNull
     public String pathTarget;
 
+
     @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
     public RepairStrategy repairStrategy;
     
     @JsonSetter(nulls = Nulls.SKIP)

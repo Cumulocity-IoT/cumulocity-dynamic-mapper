@@ -139,7 +139,7 @@ public class MQTTClient {
         }
         var firstRun = true;
         while (!isConnected() && shouldConnect()) {
-            log.debug("Establishing the MQTT connection now - phase II: {}, {}",
+            log.info("Establishing the MQTT connection now - phase II: {}, {}",
                     ConnectionConfiguration.isValid(connectionConfiguration), canConnect());
             if (!firstRun) {
                 try {

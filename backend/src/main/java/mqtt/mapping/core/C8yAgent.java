@@ -325,7 +325,7 @@ public class C8yAgent {
     }
 
     public ServiceConfiguration loadServiceConfiguration() {
-        ServiceConfiguration[] results = { new ServiceConfiguration() };
+        ServiceConfiguration[] results = { new ServiceConfiguration(false) };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = configurationService.loadServiceConfiguration();
             log.info("Found service configuration: {}", results[0]);
