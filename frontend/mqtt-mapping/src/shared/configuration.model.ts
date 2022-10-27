@@ -81,6 +81,10 @@ export interface ServiceStatus {
   status: Status;
 }
 
+export interface PayloadWrapper {
+  message: string;
+}
+
 export enum Status {
   CONNECTED = "CONNECTED",
   ACTIVATED = "ACTIVATED",

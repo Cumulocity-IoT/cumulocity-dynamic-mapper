@@ -12,7 +12,6 @@ import java.util.Set;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -21,6 +20,7 @@ import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -80,24 +80,25 @@ public class JSONProcessor extends PayloadProcessor {
         JsonNode payloadJsonNode;
         try {
             payloadJsonNode = objectMapper.readTree(payload);
-            ArrayNode topicLevels = objectMapper.createArrayNode();
-            List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-            splitTopicAsList.forEach(s -> topicLevels.add(s));
-            if (payloadJsonNode instanceof ObjectNode) {
-                ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
-            } else {
-                log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
-            }
-            // payload = payloadJsonNode.toPrettyString();
-            payload = payloadJsonNode.toString();
-            log.info("Patched payload: {}", payload);
         } catch (JsonProcessingException e) {
-            log.error("JsonProcessingException parsing: {}, {}, try to continue with wrapped payload!", payload, e);
+            log.error("JsonProcessingException parsing: {}, try to continue with wrapped payload:", payload, e);
             context.setError(
                     new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
-            payloadJsonNode = objectMapper.valueToTree(new Wrapper (payload));     
-            //throw new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e);
+            payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payload));
+            // throw new ProcessingException("JsonProcessingException parsing: " + payload +
+            // " exception:" + e);
         }
+        ArrayNode topicLevels = objectMapper.createArrayNode();
+        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        splitTopicAsList.forEach(s -> topicLevels.add(s));
+        if (payloadJsonNode instanceof ObjectNode) {
+            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
+        } else {
+            log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+        }
+        // payload = payloadJsonNode.toPrettyString();
+        payload = payloadJsonNode.toString();
+        log.info("Patched payload: {}", payload);
 
         // var payloadTarget = new JSONObject(mapping.target);
         JsonNode payloadTarget = null;
@@ -138,7 +139,8 @@ public class JSONProcessor extends PayloadProcessor {
             if (extractedSourceContent == null) {
                 log.error("No substitution for: {}, {}, {}", substitution.pathSource, payloadTarget,
                         payload);
-                postProcessingCacheEntry.add(new SubstituteValue(extractedSourceContent, TYPE.IGNORE, substitution.repairStrategy));
+                postProcessingCacheEntry
+                        .add(new SubstituteValue(extractedSourceContent, TYPE.IGNORE, substitution.repairStrategy));
                 postProcessingCache.put(key, postProcessingCacheEntry);
             } else {
                 if (extractedSourceContent.isArray()) {
@@ -146,9 +148,11 @@ public class JSONProcessor extends PayloadProcessor {
                     // iterate over the result, e.g. creating multiple devices
                     for (JsonNode jn : extractedSourceContent) {
                         if (jn.isTextual()) {
-                            postProcessingCacheEntry.add(new SubstituteValue(jn, TYPE.TEXTUAL, substitution.repairStrategy));
+                            postProcessingCacheEntry
+                                    .add(new SubstituteValue(jn, TYPE.TEXTUAL, substitution.repairStrategy));
                         } else if (jn.isNumber()) {
-                            postProcessingCacheEntry.add(new SubstituteValue(jn, TYPE.NUMBER, substitution.repairStrategy));
+                            postProcessingCacheEntry
+                                    .add(new SubstituteValue(jn, TYPE.NUMBER, substitution.repairStrategy));
                         } else {
                             log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
                                     jn.asText());
@@ -158,7 +162,8 @@ public class JSONProcessor extends PayloadProcessor {
                     postProcessingCache.put(key, postProcessingCacheEntry);
                 } else if (extractedSourceContent.isTextual()) {
                     context.addCardinality(key, extractedSourceContent.size());
-                    postProcessingCacheEntry.add(new SubstituteValue(extractedSourceContent, TYPE.TEXTUAL, substitution.repairStrategy));
+                    postProcessingCacheEntry.add(
+                            new SubstituteValue(extractedSourceContent, TYPE.TEXTUAL, substitution.repairStrategy));
                     postProcessingCache.put(key, postProcessingCacheEntry);
                 } else if (extractedSourceContent.isNumber()) {
                     context.addCardinality(key, extractedSourceContent.size());
@@ -186,7 +191,8 @@ public class JSONProcessor extends PayloadProcessor {
         if (!substitutionTimeExists) {
             ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
                     new ArrayList<SubstituteValue>());
-            postProcessingCacheEntry.add(new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+            postProcessingCacheEntry.add(
+                    new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));
             postProcessingCache.put(TIME, postProcessingCacheEntry);
         }
 
@@ -227,7 +233,8 @@ public class JSONProcessor extends PayloadProcessor {
 
             int predecessor = -1;
             for (String pathTarget : pathTargets) {
-                SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL, RepairStrategy.DEFAULT);
+                SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
+                        RepairStrategy.DEFAULT);
                 if (i < postProcessingCache.get(pathTarget).size()) {
                     substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
                 } else if (postProcessingCache.get(pathTarget).size() == 1) {
