@@ -426,10 +426,16 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     if (this.snoopedTemplateCounter >= this.mapping.snoopedTemplates.length) {
       this.snoopedTemplateCounter = 0;
     }
-    this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
+    try {
+      this.templateSource = JSON.parse(this.mapping.snoopedTemplates[this.snoopedTemplateCounter]);
+    } catch (error) {
+      this.templateSource = { message: this.mapping.snoopedTemplates[this.snoopedTemplateCounter] };
+      console.warn("The payload was not in JSON format, now wrap it:", this.templateSource)
+    }
     //add dummy field "_DEVICE_IDENT_" to use for mapping the device identifier form the topic ending
     //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
     this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    this.editorSource.set(this.templateSource);
     //}
     // disable further snooping for this template
     this.mapping.snoopStatus = SnoopStatus.STOPPED;

@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @AllArgsConstructor
-public class Wrapper {
+public class PayloadWrapper {
 
     @Getter
     private String message;
