@@ -139,7 +139,8 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
-        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && jsonObject == null) {
+        boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
+        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
             removeValueFromObect(jsonObject,splitKeys);
         } else {
             if (splitKeys == null) {
