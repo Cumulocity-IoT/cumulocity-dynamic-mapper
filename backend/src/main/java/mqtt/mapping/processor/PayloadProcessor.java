@@ -80,14 +80,14 @@ public abstract class PayloadProcessor implements MqttCallback {
     public List<ProcessingContext> processPayload(ProcessingContext context, boolean sendPayload)  {
         List<TreeNode> nodes = new ArrayList<TreeNode>();
         List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
+        MappingStatus mappingStatusUnspecified = mqttClient.getMappingStatus(null, true);
 
         try {
             nodes = resolveMapping(context);
         } catch (Exception e) {
             log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message: {}", e);
             e.printStackTrace();
-            MappingStatus mappingStatus = mqttClient.getMappingStatus(null, true);
-            mappingStatus.errors++;
+            mappingStatusUnspecified.errors++;
         }
 
         for (TreeNode node : nodes) {
@@ -139,7 +139,7 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
-        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING)) {
+        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && jsonObject == null) {
             removeValueFromObect(jsonObject,splitKeys);
         } else {
             if (splitKeys == null) {

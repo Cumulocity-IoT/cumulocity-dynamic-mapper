@@ -92,10 +92,11 @@ public class JSONProcessor extends PayloadProcessor {
             payload = payloadJsonNode.toString();
             log.info("Patched payload: {}", payload);
         } catch (JsonProcessingException e) {
-            log.error("JsonProcessingException parsing: {}, {}", payload, e);
+            log.error("JsonProcessingException parsing: {}, {}, try to continue with wrapped payload!", payload, e);
             context.setError(
                     new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
-            throw new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e);
+            payloadJsonNode = objectMapper.valueToTree(new Wrapper (payload));     
+            //throw new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e);
         }
 
         // var payloadTarget = new JSONObject(mapping.target);
