@@ -87,7 +87,8 @@ public class ConfigurationService {
             log.debug("Returning service configuration found: {}:", configuration.logPayload );
             return configuration;
         } catch (SDKException exception) {
-            log.error("No configuration found, returning empty element!");
+            log.warn("No configuration found, returning empty element!");
+            return new ServiceConfiguration(false);
             //exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();
