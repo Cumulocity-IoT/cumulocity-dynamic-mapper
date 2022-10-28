@@ -37,7 +37,7 @@ public  class Dispatcher implements MqttCallback {
 
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        processMessage(topic, mqttMessage, false);
+        processMessage(topic, mqttMessage, true);
     }
     
     public  List<ProcessingContext> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload) throws Exception {

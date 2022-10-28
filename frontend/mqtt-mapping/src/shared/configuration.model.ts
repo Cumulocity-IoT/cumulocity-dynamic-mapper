@@ -55,7 +55,6 @@ export interface Mapping {
   targetAPI: string;
   source: string;
   target: string;
-  lastUpdate: number;
   active: boolean;
   tested: boolean;
   qos: QOS;
@@ -66,6 +65,8 @@ export interface Mapping {
   externalIdType: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
+  mappingType: MappingType;
+  lastUpdate: number;
 }
 
 
