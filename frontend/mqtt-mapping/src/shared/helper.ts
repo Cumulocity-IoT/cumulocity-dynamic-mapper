@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, ValidationError } from "./configuration.model"
+import { API, Mapping, MappingSubstitution, ValidationError } from "./configuration.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -364,7 +364,7 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -375,7 +375,7 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
       return previousValue + currentValue;
     }, 0)
     if (count > 1) {
@@ -528,4 +528,8 @@ export function whatIsIt(object) {
   } else {
     return "don't know";
   }
+}
+
+export function  definesDeviceIdentifier(sub: MappingSubstitution): boolean {
+  return sub.pathTarget == "source.id" || sub.pathTarget == TOKEN_DEVICE_TOPIC
 }
