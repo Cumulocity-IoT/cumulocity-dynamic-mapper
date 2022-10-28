@@ -35,13 +35,16 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public abstract class PayloadProcessor {
 
-    @Autowired
+    public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
+        this.objectMapper = objectMapper;
+        this.mqttClient = mqttClient;
+        this.c8yAgent = c8yAgent;
+    }
+
     protected C8yAgent c8yAgent;
 
-    @Autowired
     protected ObjectMapper objectMapper;
 
-    @Autowired
     protected MQTTClient mqttClient;
 
     @Autowired

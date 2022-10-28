@@ -62,11 +62,6 @@ public class App {
         return Executors.newCachedThreadPool();
     }
 
-    @Bean("payloadProcessors")
-    public  Map <MappingType, PayloadProcessor> payloadProcessor() {
-        return Map.of(MappingType.JSON, new JSONProcessor(), MappingType.FLAT_FILE, new FlatFileProcessor()) ;
-    }
-
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -88,6 +83,12 @@ public class App {
         return objectMapper;
     }
 
+    @Bean("payloadProcessors")
+    public Map<MappingType, PayloadProcessor> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
+            C8yAgent c8yAgent) {
+        return Map.of(MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent), MappingType.FLAT_FILE,
+                new FlatFileProcessor(objectMapper, mqttClient, c8yAgent));
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

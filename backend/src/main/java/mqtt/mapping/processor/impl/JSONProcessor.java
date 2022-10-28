@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -31,13 +32,15 @@ import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.RepairStrategy;
+import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
 public class JSONProcessor extends PayloadProcessor {
 
-    @Autowired
-    ObjectMapper objectMapper;
+    public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent){
+        super(objectMapper, mqttClient, c8yAgent);
+    }
 
     @Override
     public ProcessingContext deserializePayload(ProcessingContext context, MqttMessage mqttMessage) {
