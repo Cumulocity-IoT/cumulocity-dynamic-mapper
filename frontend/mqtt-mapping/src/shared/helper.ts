@@ -1,7 +1,7 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { API, Mapping, ValidationError } from "./configuration.model"
 
-export const SAMPLE_TEMPLATES = {
+export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
