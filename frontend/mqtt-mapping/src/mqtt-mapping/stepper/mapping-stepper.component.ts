@@ -8,7 +8,7 @@ import JSONEditor from 'jsoneditor';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL } from "../../shared/helper";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
@@ -218,6 +218,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       pt: new FormControl(this.currentSubstitution.pathTarget),
       di: new FormControl(this.currentSubstitution.definesIdentifier),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
+      ea: new FormControl(this.currentSubstitution.expandArray),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
       targetExpressionResult: new FormControl(this.targetExpressionResult),
     },
@@ -244,34 +245,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     }
   }
 
-  private whatIsIt(object) {
-    var stringConstructor = "test".constructor;
-    var arrayConstructor = [].constructor;
-    var objectConstructor = ({}).constructor;
-    if (object === null) {
-      return "null";
-    }
-    if (object === undefined) {
-      return "undefined";
-    }
-    if (object.constructor === stringConstructor) {
-      return "String";
-    }
-    if (object.constructor === arrayConstructor) {
-      return "Array";
-    }
-    if (object.constructor === objectConstructor) {
-      return "Object";
-    }
-    {
-      return "don't know";
-    }
-  }
+
 
   private updateSourceExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
-      this.sourceExpressionResultType = this.whatIsIt(r);
+      this.sourceExpressionResultType = whatIsIt(r);
       this.sourceExpressionResult = JSON.stringify(r, null, 4);
       this.sourceExpressionErrorMsg = '';
     } catch (error) {
@@ -283,7 +262,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   private updateTargetExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path, false);
-      this.targetExpressionResultType = this.whatIsIt(r);
+      this.targetExpressionResultType = whatIsIt(r);
       this.targetExpressionResult = JSON.stringify(r, null, 4);
 
       this.targetExpressionErrorMsg = '';

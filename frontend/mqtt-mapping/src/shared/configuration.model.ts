@@ -10,6 +10,7 @@ export interface ConnectionConfiguration {
 
 export interface ServiceConfiguration {
   logPayload: boolean;
+  logSubstitution: boolean;
 }
 
 export class MappingSubstitution {
@@ -17,6 +18,7 @@ export class MappingSubstitution {
   public pathTarget: string;
   public definesIdentifier?: boolean;
   public repairStrategy: RepairStrategy;
+  public expandArray: boolean;
   constructor (
     ps: string,
     pt: string,
@@ -134,6 +136,11 @@ export enum Operation {
   CONNECT,
   DISCONNECT, 
   RESFRESH_STATUS_MAPPING
+}
+
+export enum MappingType {
+  JSON,
+  FLAT_FILE,
 }
 
 export enum RepairStrategy {

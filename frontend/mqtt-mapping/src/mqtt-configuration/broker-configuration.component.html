@@ -157,6 +157,16 @@
                   </span>
                 </label>
               </div>
+              <div class="col-lg-6">
+                <label class="c8y-switch" title="{{ 'Log substitution in Backend' | translate }}">
+                  <input type="checkbox" formControlName="logSubstitution" [(ngModel)]="serviceConfiguration.logSubstitution"
+                    #useTLSRef/>
+                  <span></span>
+                  <span>
+                    {{ 'Log Substitution'}}
+                  </span>
+                </label>
+              </div>
             </div>
           </c8y-form-group>
         </div>

@@ -147,7 +147,7 @@ public class MappingsRepresentationJUnitTest {
     p1.addCardinality("value2",   5);
     p1.addCardinality(PayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p1.needsRepair);
-    assertEquals(false, p1.needsRepair);
+    assertEquals(false, p1.isNeedsRepair());
 
 
     ProcessingContext p2 = new ProcessingContext();
@@ -155,7 +155,7 @@ public class MappingsRepresentationJUnitTest {
     p2.addCardinality("value2",   4);
     p2.addCardinality(PayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p2.needsRepair);
-    assertEquals(true, p2.needsRepair);
+    assertEquals(true, p2.isNeedsRepair());
 
   }
 
