@@ -37,6 +37,7 @@ export class BokerConfigurationComponent implements OnInit {
   };
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
+    logSubstitution: true,
   };
   
 
@@ -83,10 +84,10 @@ export class BokerConfigurationComponent implements OnInit {
       password: new FormControl('', Validators.required),
       clientId: new FormControl('', Validators.required),
       active: new FormControl('', Validators.required),
-      useTLS: new FormControl('', Validators.required),
+      useTLS: new FormControl(''),
     });
     this.serviceForm = new FormGroup({
-      logPayload: new FormControl('', Validators.required),
+      logPayload: new FormControl(''),
     });
   }
 

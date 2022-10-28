@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import mqtt.mapping.processor.RepairStrategy;
+import mqtt.mapping.processor.MappingType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -65,9 +65,6 @@ public class Mapping implements Serializable {
   public boolean createNonExistingDevice;
 
   @NotNull
-  public RepairStrategy repairStrategy;
-
-  @NotNull
   public boolean updateExistingDevice;
 
   @NotNull
@@ -78,6 +75,9 @@ public class Mapping implements Serializable {
 
   @NotNull
   public ArrayList<String> snoopedTemplates;
+
+  @NotNull
+  public MappingType mappingType;
 
   @NotNull
   public long lastUpdate;
@@ -115,7 +115,7 @@ public class Mapping implements Serializable {
 
   public void sortSubstitutions() {
     MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-        (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
+        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier()).compareTo(Boolean.valueOf(s2.definesDeviceIdentifier()))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
   }
