@@ -88,13 +88,14 @@ export class BokerConfigurationComponent implements OnInit {
     });
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(''),
+      logSubstitution: new FormControl(''),
     });
   }
 
   private async loadData(): Promise<void> {
     let conn = await this.configurationService.getConnectionConfiguration();
     let conf = await this.configurationService.getServiceConfiguration();
-    console.log("Configuration:", this.serviceConfiguration, this.connectionConfiguration)
+    console.log("Configuration:", conn, conf)
     if (conn) {
       this.connectionConfiguration = conn;
       this.isBrokerActivated = conn.active;
