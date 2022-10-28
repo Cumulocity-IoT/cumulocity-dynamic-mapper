@@ -18,6 +18,7 @@ import java.util.stream.IntStream;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,12 +38,13 @@ import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
-import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.Dispatcher;
 import mqtt.mapping.processor.ProcessingContext;
 
 @Slf4j
@@ -69,7 +71,7 @@ public class MQTTClient {
     private C8yAgent c8yAgent;
 
     @Autowired
-    private PayloadProcessor payloadProcessor;
+    private Dispatcher dispatcher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -89,7 +91,7 @@ public class MQTTClient {
 
     private Map<String, MappingStatus> statusMapping = new HashMap<String, MappingStatus>();
 
-    private Instant start = Instant.now() ;
+    private Instant start = Instant.now();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -156,7 +158,7 @@ public class MQTTClient {
                     // MemoryPersistence());
                     mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
                             new MemoryPersistence());
-                    mqttClient.setCallback(payloadProcessor);
+                    mqttClient.setCallback(dispatcher);
                     MqttConnectOptions connOpts = new MqttConnectOptions();
                     connOpts.setCleanSession(true);
                     connOpts.setAutomaticReconnect(false);
@@ -197,7 +199,8 @@ public class MQTTClient {
     }
 
     private boolean shouldConnect() {
-        return !ConnectionConfiguration.isValid(connectionConfiguration) || ConnectionConfiguration.isActive(connectionConfiguration);
+        return !ConnectionConfiguration.isValid(connectionConfiguration)
+                || ConnectionConfiguration.isActive(connectionConfiguration);
     }
 
     public boolean isConnected() {
@@ -329,16 +332,16 @@ public class MQTTClient {
 
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
-        try { 
+        try {
             Instant now = Instant.now();
             // only log this for the first 180 seconds to reduce log amount
-            if ( Duration.between( start , now ).getSeconds() < 180) {
+            if (Duration.between(start, now).getSeconds() < 180) {
                 String statusConnectTask = (connectTask == null ? "stopped"
                         : connectTask.isDone() ? "stopped" : "running");
                 String statusInitializeTask = (initializeTask == null ? "stopped"
                         : initializeTask.isDone() ? "stopped" : "running");
                 log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
-                statusInitializeTask, isConnected());
+                        statusInitializeTask, isConnected());
             }
             cleanDirtyMappings();
             sendStatusMapping();
@@ -490,16 +493,15 @@ public class MQTTClient {
     }
 
     public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload)
-            throws JsonProcessingException {
+            throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
-        ProcessingContext context = new ProcessingContext();
-        context.setPayload(payloadMessage);
-        context.setTopic(topic);
-        return payloadProcessor.processPayload(context, send);
+        MqttMessage mqttMessage = new MqttMessage();
+        mqttMessage.setPayload(payloadMessage.getBytes());
+        return dispatcher.processMessage(topic, mqttMessage, send);
     }
 
     public List<MappingStatus> getMappingStatus() {
-        return new ArrayList<MappingStatus>(statusMapping.values()) ;
+        return new ArrayList<MappingStatus>(statusMapping.values());
     }
 
     public List<MappingStatus> resetMappingStatus() {
@@ -515,5 +517,12 @@ public class MQTTClient {
 
     public ServiceConfiguration loadServiceConfiguration() {
         return c8yAgent.loadServiceConfiguration();
+    }
+
+    public List<Mapping> resolveMappings(String topic) throws ResolveException {
+        List<TreeNode> resolvedMappings = getMappingTree()
+                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
+        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
+                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
     }
 }

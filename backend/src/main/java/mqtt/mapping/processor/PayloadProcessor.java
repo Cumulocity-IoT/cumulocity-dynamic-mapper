@@ -1,40 +1,45 @@
 package mqtt.mapping.processor;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.joda.time.DateTime;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
-import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor implements MqttCallback {
+public abstract class PayloadProcessor {
 
     @Autowired
     protected C8yAgent c8yAgent;
+
+    @Autowired
+    protected ObjectMapper objectMapper;
 
     @Autowired
     protected MQTTClient mqttClient;
@@ -50,79 +55,134 @@ public abstract class PayloadProcessor implements MqttCallback {
 
     public static final String TIME = "time";
 
-    public abstract String deserializePayload(MqttMessage mqttMessage);
+    public abstract ProcessingContext deserializePayload(ProcessingContext contect, MqttMessage mqttMessage);
 
-    public abstract List<TreeNode> resolveMapping(ProcessingContext ctx) throws ResolveException;
+    public abstract void extractSource(ProcessingContext context) throws ProcessingException;
 
-    public abstract void transformPayload(ProcessingContext ctx, boolean send) throws ProcessingException;
-
-    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        if (topic != null && !topic.startsWith("$SYS")) {
-            if (mqttMessage.getPayload() != null) {
-                ProcessingContext context = new ProcessingContext();
-                context.setPayload(deserializePayload(mqttMessage));
-                context.setTopic(topic);
-                if (mqttClient.getServiceConfiguration().logPayload) {
-                    log.info("New messages: topic: '{}', message: {}", context.getTopic(),
-                    context.getPayload());
-                } else {
-                    log.info("New messages: topic: '{}'", context.getTopic());
-                }
-                processPayload(context, true);
-            }
-        } else {
-            sysHandler.handleSysPayload(topic, mqttMessage);
-        }
-    }
-
-    public List<ProcessingContext> processPayload(ProcessingContext context, boolean sendPayload)  {
-        List<TreeNode> nodes = new ArrayList<TreeNode>();
-        List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
-        MappingStatus mappingStatusUnspecified = mqttClient.getMappingStatus(null, true);
-
+    public void patchTargetAndSend(ProcessingContext context) throws ProcessingException {
+        /*
+         * step 3 replace target with extract content from incoming payload
+         */
+        Mapping mapping = context.getMapping();
+        JsonNode payloadTarget = null;
         try {
-            nodes = resolveMapping(context);
-        } catch (Exception e) {
-            log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message: {}", e);
-            e.printStackTrace();
-            mappingStatusUnspecified.errors++;
+            payloadTarget = objectMapper.readTree(mapping.target);
+        } catch (JsonProcessingException e) {
+            throw new ProcessingException(e.getMessage());
         }
 
-        for (TreeNode node : nodes) {
-            if (node instanceof MappingNode) {
-                context.setMapping(((MappingNode) node).getMapping());
-                Mapping mapping = context.getMapping();
-                String payload = context.getPayload();
-                MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
-                try {
-                    mappingStatus.messagesReceived++;
-                    if (mapping.snoopStatus == SnoopStatus.ENABLED
-                            || mapping.snoopStatus == SnoopStatus.STARTED) {
-                        mappingStatus.snoopedTemplatesActive++;
-                        mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                        mapping.addSnoopedTemplate(payload);
+        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        String maxEntry = postProcessingCache.entrySet()
+                .stream()
+                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
+                .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
+                        .compareTo(e2.getValue()))
+                .get().getKey();
 
-                        log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
-                                mapping.snoopedTemplates.size(),
-                                mapping.snoopStatus);
-                        mqttClient.setMappingDirty(mapping);
-                    } else {
-                        transformPayload(context, sendPayload);
-                        if ( context.hasError() || context.getRequests().stream().anyMatch(r -> r.hasError())) {
-                            mappingStatus.errors++;
+        Set<String> pathTargets = postProcessingCache.keySet();
+        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(SOURCE_ID);
+        int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
+        SubstituteValue toDouble = deviceEntries.get(0);
+        while (deviceEntries.size() < countMaxlistEntries) {
+            deviceEntries.add(toDouble);
+        }
+
+        int i = 0;
+        for (SubstituteValue device : deviceEntries) {
+
+            int predecessor = -1;
+            for (String pathTarget : pathTargets) {
+                SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
+                        RepairStrategy.DEFAULT);
+                if (i < postProcessingCache.get(pathTarget).size()) {
+                    substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
+                } else if (postProcessingCache.get(pathTarget).size() == 1) {
+                    // this is an indication that the substitution is the same for all
+                    // events/alarms/measurements/inventory
+                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY)) {
+                        substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                    } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                        int last = postProcessingCache.get(pathTarget).size() - 1;
+                        substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+                    }
+                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used: {}, {}, {}",
+                            pathTarget, substituteValue.repairStrategy);
+                }
+
+                if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                    if (pathTarget.equals(SOURCE_ID)) {
+                        var sourceId = resolveExternalId(substituteValue.typedValue().toString(),
+                                mapping.externalIdType);
+                        if (sourceId == null && mapping.createNonExistingDevice) {
+                            if (context.isSendPayload()) {
+                                var d = c8yAgent.upsertDevice(
+                                        "device_" + mapping.externalIdType + "_"
+                                                + substituteValue.typedValue().toString(),
+                                        "c8y_MQTTMapping_generated_type", substituteValue.typedValue().toString(),
+                                        mapping.externalIdType);
+                                substituteValue.value = new TextNode(d.getId().getValue());
+                            }
+                            try {
+                                Map<String, Object> map = new HashMap<String, Object>();
+                                map.put("c8y_IsDevice", null);
+                                map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value);
+                                var p = objectMapper.writeValueAsString(map);
+                                predecessor = context.addRequest(
+                                        new C8YRequest(-1, RequestMethod.PATCH, device.value.asText(),
+                                                mapping.externalIdType,
+                                                p, API.INVENTORY, null));
+                            } catch (JsonProcessingException e) {
+                                // ignore
+                            }
+                        } else if (sourceId == null) {
+                            throw new RuntimeException("External id " + substituteValue + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        } else {
+                            substituteValue.value = new TextNode(sourceId);
                         }
                     }
-                } catch (Exception e) {
-                    log.warn("Message could NOT be parsed, ignoring this message.");
-                    e.printStackTrace();
-                    mappingStatus.errors++;
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                } else if (!pathTarget.equals(SOURCE_ID)) {
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
-            } else {
-                context.setError(new ResolveException("Could not find appropriate mapping for topic: " + context.getTopic()));
             }
-            processingResult.add(context);
+            /*
+             * step 4 prepare target payload for sending to c8y
+             */
+            if (mapping.targetAPI.equals(API.INVENTORY)) {
+                Exception ex = null;
+                if (context.isSendPayload()) {
+                    try {
+                        c8yAgent.upsertDevice(payloadTarget.toString(), device.typedValue().toString(),
+                                mapping.externalIdType);
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.PATCH, device.typedValue().toString(),
+                                mapping.externalIdType,
+                                payloadTarget.toString(), API.INVENTORY, ex));
+            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                Exception ex = null;
+                if (context.isSendPayload()) {
+                    try {
+                        c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.POST, device.type.toString(), mapping.externalIdType,
+                                payloadTarget.toString(), mapping.targetAPI, ex));
+            } else {
+                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+                        postProcessingCache.size());
+            }
+            log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+                    deviceEntries.size());
+            i++;
         }
-        return processingResult;
     }
 
     public String resolveExternalId(String externalId, String externalIdType) {
@@ -138,8 +198,8 @@ public abstract class PayloadProcessor implements MqttCallback {
     public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
-        if ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
-            removeValueFromObect(jsonObject,splitKeys);
+        if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
+            removeValueFromObect(jsonObject, splitKeys);
         } else {
             if (splitKeys == null) {
                 splitKeys = new String[] { keys };
@@ -162,7 +222,8 @@ public abstract class PayloadProcessor implements MqttCallback {
         return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
     }
 
-    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys) throws JSONException {
+    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys)
+            throws JSONException {
         String currentKey = keys[0];
 
         if (keys.length == 1) {
@@ -175,17 +236,6 @@ public abstract class PayloadProcessor implements MqttCallback {
         String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
         JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
         return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
-    }
-
-    @Override
-    public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT broker: ", throwable);
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
-        mqttClient.submitConnect();
-    }
-
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
     }
 
 }

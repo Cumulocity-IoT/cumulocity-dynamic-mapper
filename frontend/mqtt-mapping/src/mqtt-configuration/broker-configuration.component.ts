@@ -37,6 +37,7 @@ export class BokerConfigurationComponent implements OnInit {
   };
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
+    logSubstitution: true,
   };
   
 

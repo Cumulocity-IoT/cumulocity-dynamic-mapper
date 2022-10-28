@@ -20,7 +20,10 @@ public class MappingSubstitution implements Serializable {
     public static class SubstituteValue implements Cloneable {
         public static enum TYPE {
             NUMBER,
-            TEXTUAL, OBJECT, IGNORE
+            TEXTUAL, 
+            OBJECT, 
+            IGNORE,
+            ARRAY
         }
 
         public JsonNode value;
@@ -66,13 +69,15 @@ public class MappingSubstitution implements Serializable {
 
     public MappingSubstitution () {
         this.repairStrategy = RepairStrategy.DEFAULT;
+        this.expandArray = false;
+        this.definesIdentifier = false;
     }
+    
     @NotNull
     public String pathSource;
 
     @NotNull
     public String pathTarget;
-
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
@@ -80,4 +85,7 @@ public class MappingSubstitution implements Serializable {
     
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean definesIdentifier;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean expandArray;
 }

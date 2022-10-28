@@ -1,5 +1,7 @@
 package mqtt.mapping;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,6 +30,7 @@ import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
+import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.impl.JSONProcessor;
 import mqtt.mapping.service.MQTTClient;
@@ -59,9 +62,9 @@ public class App {
         return Executors.newCachedThreadPool();
     }
 
-    @Bean("payloadProcessor")
-    public PayloadProcessor payloadProcessor() {
-        return new JSONProcessor();
+    @Bean("payloadProcessors")
+    public  Map <MappingType, PayloadProcessor> payloadProcessor() {
+        return Map.of(MappingType.JSON, new JSONProcessor()) ;
     }
 
     @Bean

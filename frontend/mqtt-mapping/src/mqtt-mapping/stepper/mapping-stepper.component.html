@@ -344,113 +344,145 @@
                     </div>
                   </div>
 
-                  <div class="row">
-                    <div class="legend form-block col-lg-10 col-lg-offset-1">
-                      Substitution
-                    </div>
-                    <div class="col-lg-4 col-lg-offset-1">
-                      <div class="form-group">
-                        <div class="input-group">
-                          <label translate>Evaluate Expression on Source
+                  <div>
+                    <div class="row">
+                      <div class="legend form-block col-lg-10 col-lg-offset-1">
+                        Substitution
+                      </div>
+                      <div class="col-lg-2 col-lg-offset-1">
+                        <div class="form-group">
+                          <br>
+                          <label class="c8y-switch" title="{{ 'Defines Identifier' | translate }}">
+                            <input type="checkbox" formControlName="di"
+                              [(ngModel)]="currentSubstitution.definesIdentifier" />
+                            <span></span>
+                            <span>
+                              {{ 'Defines Identifier' | translate }}
+                            </span>
                           </label>
-                          <span class="hidden-xs hidden-sm p-l-4">
-                            <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-                              in your expressions:
-                              <ol>
-                                <li>to convert a UNIX timestamp to ISO date format use:
-                                  <code>$fromMillis($number(deviceTimestamp))</code>
-                                </li>
-                                <li>to join substring starting at position 5 of property <code>txt</code> with device
-                                  identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
-                                <li>escape properties with special characters with <code>`</code>. The property
-                                  <code>customer-1</code> becomes <code>`customer-1`</code>
-                                </li>
-                                <li>function chaining using <code>~></code> is not supported, instead use function
-                                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-                              </ol>
+                        </div>
+                      </div>
+                      <div class="col-lg-2 col-lg-offset-1">
+                        <div class="form-group">
+                          <br>
+                          <div class="input-group">
+                            <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
+                              <input type="checkbox" formControlName="ea"
+                                [(ngModel)]="currentSubstitution.expandArray" />
+                              <span></span>
+                              <span>
+                                {{ 'Expand Array' | translate }}
+                              </span>
+                            </label>
+                            <span class="hidden-xs hidden-sm">
+                              <ng-template #popExpandArray>Expand items of array to allow MULTI_VALUE or MULTI_DEVICE substitutions.</ng-template>
+                              <button class="btn-clean text-primary" [popover]="popExpandArray" popoverTitle="Expand Array"
+                                placement="top" triggers="focus" type="button">
+                                <i c8yIcon="question-circle-o"></i>
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-lg-5">
+                        <div class="input-group">
+                          <label class="m-r-4" translate>Repair strategy</label>
+                          <span class="hidden-xs hidden-sm">
+                            <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in
+                              different expressions do not have the same size. How are missing values handled?
                             </ng-template>
-                            <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
-                              popoverTitle="JSONata" placement="right" type="button">
+                            <button class="btn-clean text-primary" [popover]="popRepairStrategy"
+                              popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
                         </div>
-                        <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
-                          formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
-                          placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
-                        <c8y-messages>
-                          <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
-                          </c8y-message>
-                        </c8y-messages>
-                      </div>
-                    </div>
-                    <div class="col-lg-2">
-                      <br>
-                      <label class="c8y-switch" title="{{ 'Defines Identifier' | translate }}">
-                        <input type="checkbox" formControlName="di"
-                          [(ngModel)]="currentSubstitution.definesIdentifier" />
-                        <span></span>
-                        <span>
-                          {{ 'Defines Identifier' | translate }}
-                        </span>
-                      </label>
-                    </div>
-                    <div class="col-lg-4">
-                      <div class="form-group">
-                        <label translate>Substitute in Target</label>
-                        <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                          formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
-                        <c8y-messages>
-                          <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate>{{targetExpressionErrorMsg}}
-                          </c8y-message>
-                        </c8y-messages>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-lg-4 col-lg-offset-1">
-                      <div class="form-group">
-                        <div class="input-group">
-                          <label translate>Expression - result - </label>
-                          <span>{{sourceExpressionResultType}}</span>
+                        <div class="c8y-select-wrapper">
+                          <select class="form-control" formControlName="rs"
+                            [(ngModel)]="currentSubstitution.repairStrategy" #repairStrategyRef>
+                            <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [disabled]="!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')">
+                              {{ RepairStrategy[q] }}
+                            </option>
+                          </select>
                         </div>
-                        <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                          formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly
-                          disabled="true" />
                       </div>
                     </div>
-                    <div class="col-lg-2 form-group">
-                      <div class="input-group">
-                        <label class="m-r-4" translate>Repair strategy</label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays in
-                            different expressions do not have the same size. How are missing values handled?
-                          </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popRepairStrategy"
-                            popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
-                      <div class="c8y-select-wrapper">
-                        <select class="form-control" formControlName="rs"
-                          [(ngModel)]="currentSubstitution.repairStrategy" #repairStrategyRef>
-                          <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q">
-                            {{ RepairStrategy[q] }}
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                    <div class="col-lg-4">
-                      <div class="form-group">
-                        <div class="input-group">
-                          <label translate>Expression - result - </label>
-                          <span>{{targetExpressionResultType}}</span>
+                    <div class="row">
+                      <div class="col-lg-5 col-lg-offset-1">
+                        <div class="form-group">
+                          <div class="input-group">
+                            <label translate>Evaluate Expression on Source
+                            </label>
+                            <span class="hidden-xs hidden-sm p-l-4">
+                              <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+                                in your expressions:
+                                <ol>
+                                  <li>to convert a UNIX timestamp to ISO date format use:
+                                    <code>$fromMillis($number(deviceTimestamp))</code>
+                                  </li>
+                                  <li>to join substring starting at position 5 of property <code>txt</code> with device
+                                    identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                                  <li>escape properties with special characters with <code>`</code>. The property
+                                    <code>customer-1</code> becomes <code>`customer-1`</code>
+                                  </li>
+                                  <li>function chaining using <code>~></code> is not supported, instead use function
+                                    notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                                    becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+                                </ol>
+                              </ng-template>
+                              <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
+                                popoverTitle="JSONata" placement="right" type="button">
+                                <i c8yIcon="question-circle-o"></i>
+                              </button>
+                            </span>
+                          </div>
+                          <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
+                            formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
+                            placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
+                          <c8y-messages>
+                            <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate>{{sourceExpressionErrorMsg}}
+                            </c8y-message>
+                          </c8y-messages>
                         </div>
-                        <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                          formControlName="targetExpressionResult" [ngModel]="targetExpressionResult" readonly
-                          disabled="true" />
+                      </div>
+                      <div class="col-lg-0">
+                      </div>
+                      <div class="col-lg-5">
+                        <div class="form-group">
+                          <label translate>Substitute in Target</label>
+                          <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
+                            formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
+                          <c8y-messages>
+                            <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate>{{targetExpressionErrorMsg}}
+                            </c8y-message>
+                          </c8y-messages>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-5 col-lg-offset-1">
+                        <div class="form-group">
+                          <div class="input-group">
+                            <label translate>Expression - result - </label>
+                            <span>{{sourceExpressionResultType}}</span>
+                          </div>
+                          <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                            formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly
+                            disabled="true" />
+                        </div>
+                      </div>
+                      <div class="col-lg-0">
+                      </div>
+                      <div class="col-lg-5">
+                        <div class="form-group">
+                          <div class="input-group">
+                            <label translate>Expression - result - </label>
+                            <span>{{targetExpressionResultType}}</span>
+                          </div>
+                          <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                            formControlName="targetExpressionResult" [ngModel]="targetExpressionResult" readonly
+                            disabled="true" />
+                        </div>
                       </div>
                     </div>
                   </div>
