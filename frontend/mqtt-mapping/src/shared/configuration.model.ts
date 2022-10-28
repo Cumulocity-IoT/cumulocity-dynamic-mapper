@@ -1,3 +1,5 @@
+import { TOKEN_DEVICE_TOPIC } from "./helper";
+
 export interface ConnectionConfiguration {
   mqttHost: string;
   mqttPort: number;
@@ -16,28 +18,26 @@ export interface ServiceConfiguration {
 export class MappingSubstitution {
   public pathSource: string;
   public pathTarget: string;
-  public definesIdentifier?: boolean;
   public repairStrategy: RepairStrategy;
   public expandArray: boolean;
-  constructor (
+  constructor(
     ps: string,
     pt: string,
-    di: boolean,
-    rs: RepairStrategy
-  ){
+    rs: RepairStrategy,
+    di: boolean
+  ) {
     this.pathSource = ps;
     this.pathTarget = pt;
-    this.definesIdentifier = di;
     this.repairStrategy = rs;
   }
   reset() {
     this.pathSource = '';
     this.pathTarget = '';
-    this.definesIdentifier = false;
   }
   isValid() {
     return this.hasPathSource() && this.hasPathTarget()
   }
+
   hasPathSource() {
     return this.pathSource != ''
   }
@@ -110,8 +110,8 @@ export enum ValidationError {
   TemplateTopic_Must_Match_The_SubscriptionTopic,
   TemplateTopic_Not_Unique,
   TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic,
-  Target_Template_Must_Be_Valid_JSON, 
-  Source_Template_Must_Be_Valid_JSON, 
+  Target_Template_Must_Be_Valid_JSON,
+  Source_Template_Must_Be_Valid_JSON,
   No_Multi_Level_Wildcard_Allowed_In_TemplateTopic,
   Device_Identifier_Must_Be_Selected,
   TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
@@ -120,7 +120,7 @@ export enum ValidationError {
 
 export enum QOS {
   AT_MOST_ONCE = "AT_MOST_ONCE",
-  AT_LEAST_ONCE = "AT_LEAST_ONCE", 
+  AT_LEAST_ONCE = "AT_LEAST_ONCE",
   EXACTLY_ONCE = "EXACTLY_ONCE",
 }
 
@@ -134,7 +134,7 @@ export enum SnoopStatus {
 export enum Operation {
   RELOAD,
   CONNECT,
-  DISCONNECT, 
+  DISCONNECT,
   RESFRESH_STATUS_MAPPING
 }
 

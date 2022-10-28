@@ -69,8 +69,7 @@ public class MappingsRepresentationJUnitTest {
     s1.pathTarget = "p1t";
     MappingSubstitution s2 = new MappingSubstitution();
     s2.pathSource = "p2s";
-    s2.pathTarget = "p2t";
-    s2.definesIdentifier = true;
+    s2.pathTarget = "source.id";
     MappingSubstitution s3 = new MappingSubstitution();
     s3.pathSource = "p3s";
     s3.pathTarget = "p3t";

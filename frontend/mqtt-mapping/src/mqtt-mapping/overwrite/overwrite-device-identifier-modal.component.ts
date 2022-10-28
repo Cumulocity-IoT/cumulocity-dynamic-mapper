@@ -8,6 +8,7 @@ import {
 } from '@c8y/ngx-components';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
+import { definesDeviceIdentifier } from '../../shared/helper';
 import { MappingSubstitution } from '../../shared/configuration.model';
 
 @Component({
@@ -41,9 +42,9 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
       gettext('with the new substitution:'));
     this.message3 = this.translateService.instant(
       gettext('Do you want to proceed?'));
-    let marksDeviceIdentifierOld = (this.substitutionOld.definesIdentifier ? "* " : "");
+    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.substitutionOld) ? "* " : "");
     this.substitutionOldText = `[ ${marksDeviceIdentifierOld}${this.substitutionOld.pathSource} -> ${this.substitutionOld.pathTarget} ]`;
-    let marksDeviceIdentifierNew = (this.substitutionNew.definesIdentifier ? "* " : "");
+    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.substitutionNew) ? "* " : "");
     this.substitutionNewText = `[ ${marksDeviceIdentifierNew}${this.substitutionNew.pathSource} -> ${this.substitutionNew.pathTarget} ]`;
   }
 

@@ -1,8 +1,8 @@
 package mqtt.mapping.model;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
+import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.RepairStrategy;
 
 import java.io.Serializable;
@@ -70,7 +70,6 @@ public class MappingSubstitution implements Serializable {
     public MappingSubstitution () {
         this.repairStrategy = RepairStrategy.DEFAULT;
         this.expandArray = false;
-        this.definesIdentifier = false;
     }
     
     @NotNull
@@ -84,7 +83,9 @@ public class MappingSubstitution implements Serializable {
     public RepairStrategy repairStrategy;
     
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesIdentifier;
+    public boolean definesDeviceIdentifier(){
+        return "source.id".equals(pathTarget)  || PayloadProcessor.TOKEN_DEVICE_TOPIC.equals(pathTarget);
+    }
 
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;

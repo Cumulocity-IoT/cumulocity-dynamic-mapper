@@ -9,7 +9,6 @@ import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
-import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -59,7 +58,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
-  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', false, RepairStrategy.DEFAULT);
+  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', RepairStrategy.DEFAULT, false);
 
   @ViewChild('editorSourceRef', { static: false }) editorSourceElement: ElementRef;
   @ViewChild('editorTargetRef', { static: false }) editorTargetElement: ElementRef;
@@ -183,7 +182,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
         this.setSelectionToPath(this.editorTarget, path)
         this.updateTargetExpressionResult(path);
         this.currentSubstitution.pathTarget = path;
-        this.currentSubstitution.definesIdentifier = false;
       } else if (target == "editorSourceRef") {
         // test if double-clicked then select item and evaluate expression
         this.setSelectionToPath(this.editorSource, path)
@@ -216,7 +214,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     this.templateForm = new FormGroup({
       ps: new FormControl(this.currentSubstitution.pathSource),
       pt: new FormControl(this.currentSubstitution.pathTarget),
-      di: new FormControl(this.currentSubstitution.definesIdentifier),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
       sourceExpressionResult: new FormControl(this.sourceExpressionResult),
@@ -450,49 +447,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   private addSubstitution(st: MappingSubstitution) {
     let sub: MappingSubstitution = _.clone(st);
-    if (sub.pathTarget == "source.id" || (sub.pathTarget == TOKEN_DEVICE_TOPIC && this.mapping.targetAPI == API.INVENTORY)) {
-      sub.definesIdentifier = true;
-    }
-    let updatePending = new Subject<boolean>();
-    // test 2
-    // only one susbsitution can define the deviceIdentifier, thus set the others to false
-    let suby = updatePending.subscribe(update => {
-      if (update) {
-        let substitutionOld: MappingSubstitution[] = [];
-        this.mapping.substitutions.forEach(s => {
-          if (sub.definesIdentifier && s.definesIdentifier) {
-            substitutionOld.push(s)
-          }
-        })
-
-        if (substitutionOld.length == 1) {
-          const initialState = {
-            substitutionOld: substitutionOld[0],
-            substitutionNew: sub
-          }
-          const modalRef: BsModalRef = this.bsModalService.show(OverwriteDeviceIdentifierModalComponent, { initialState });
-          modalRef.content.closeSubject.subscribe(
-            (overwrite: boolean) => {
-              console.log("Overwriting definesIdentifier I:", overwrite, substitutionOld[0], sub);
-              if (overwrite) {
-                substitutionOld[0].definesIdentifier = false;
-              } else {
-                sub.definesIdentifier = false;
-              }
-              this.templateForm.updateValueAndValidity({ 'emitEvent': true });
-              console.log("Overwriting definesIdentifier II:", overwrite, substitutionOld[0], sub);
-            }
-          )
-          this.mapping.substitutions.push(sub);
-        } else if (substitutionOld.length == 0) {
-          this.mapping.substitutions.push(sub);
-        } else {
-          console.error("Someting is wrong, since more than one substitution is marked to define the device identifier:", substitutionOld);
-        }
-      }
-
-    });
-
+    // if (sub.pathTarget == "source.id" || (sub.pathTarget == TOKEN_DEVICE_TOPIC && this.mapping.targetAPI == API.INVENTORY)) {
+    //   sub.definesIdentifier = true;
+    // }
     // test 1
     // test if mapping for sub.pathTarget already exists. Then ignore the new substitution. 
     // User has to remove the old substitution.
@@ -513,18 +470,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
           console.log("Overwriting substitution I:", overwrite, this.mapping.substitutions);
           if (overwrite) {
             // when overwritting substitution then copy deviceIdentifier property
-            sub.definesIdentifier = this.mapping.substitutions[existingSubstitution].definesIdentifier;
             this.mapping.substitutions[existingSubstitution] = sub;
           }
-          updatePending.next(false);
           this.templateForm.updateValueAndValidity({ 'emitEvent': true });
           console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
         }
       );
-    } else {
-      updatePending.next(true);
-    }
-    suby.unsubscribe();
+    } 
   }
 
   public onSelectNextSubstitution() {
@@ -544,7 +496,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
         item.setAttribute('style', null);
       }
       const sel = this.mapping.substitutions[selected];
-      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.definesIdentifier, sel.repairStrategy);
+      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.repairStrategy, sel.expandArray);
       this.updateSourceExpressionResult(this.currentSubstitution.pathSource);
       this.updateTargetExpressionResult(this.currentSubstitution.pathTarget);
       this.setSelectionToPath(this.editorSource, this.currentSubstitution.pathSource);
