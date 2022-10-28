@@ -1,5 +1,6 @@
 package mqtt.mapping.processor;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public  class Dispatcher implements MqttCallback {
+public class Dispatcher implements MqttCallback {
 
     @Autowired
     protected C8yAgent c8yAgent;
@@ -33,14 +34,14 @@ public  class Dispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map <MappingType, PayloadProcessor> payloadProcessors;
-
+    Map<MappingType, PayloadProcessor> payloadProcessors;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         processMessage(topic, mqttMessage, true);
     }
-    
-    public  List<ProcessingContext> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload) throws Exception {
+
+    public List<ProcessingContext> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
+            throws Exception {
         MappingStatus mappingStatusUnspecified = mqttClient.getMappingStatus(null, true);
         List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
 
@@ -55,43 +56,44 @@ public  class Dispatcher implements MqttCallback {
                     throw e;
                 }
 
-                resolveMappings.forEach( mapping -> {
+                resolveMappings.forEach(mapping -> {
                     MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
-                    
+
                     ProcessingContext context = new ProcessingContext();
                     context.setTopic(topic);
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
                     if (mqttClient.getServiceConfiguration().logPayload) {
-                        log.info("New messages: topic: '{}', message: {}", context.getTopic(),
-                        context.getPayload());
+                        log.info("New messages topic: '{}', message: {}", context.getTopic(),
+                                (mqttMessage.getPayload() != null
+                                        ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
+                                        : ""));
                     } else {
-                        log.info("New messages: topic: '{}'", context.getTopic());
+                        log.info("New message: topic: '{}'", context.getTopic());
                     }
-                    
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     PayloadProcessor processor = payloadProcessors.get(mappingType);
-                    if (processor != null){
+                    if (processor != null) {
                         String payload = context.getPayload();
                         try {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
-                            || mapping.snoopStatus == SnoopStatus.STARTED) {
+                                    || mapping.snoopStatus == SnoopStatus.STARTED) {
                                 mappingStatus.snoopedTemplatesActive++;
                                 mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                 mapping.addSnoopedTemplate(payload);
-                                
+
                                 log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
-                                mapping.snoopedTemplates.size(),
-                                mapping.snoopStatus);
+                                        mapping.snoopedTemplates.size(),
+                                        mapping.snoopStatus);
                                 mqttClient.setMappingDirty(mapping);
                             } else {
                                 processor.deserializePayload(context, mqttMessage);
                                 processor.extractSource(context);
                                 processor.patchTargetAndSend(context);
-                                if ( context.hasError() || context.getRequests().stream().anyMatch(r -> r.hasError())) {
+                                if (context.hasError() || context.getRequests().stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }

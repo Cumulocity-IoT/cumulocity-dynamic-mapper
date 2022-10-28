@@ -232,7 +232,7 @@ public abstract class PayloadProcessor {
         if (keys.length == 1) {
             return ((ObjectNode) jsonObject).set(currentKey, sub.value);
         } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + "is not a valid key.");
+            throw new JSONException(currentKey + " is not a valid key.");
         }
 
         JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);

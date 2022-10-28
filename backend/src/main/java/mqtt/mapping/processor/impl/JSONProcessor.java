@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.api.jsonata4java.expressions.EvaluateException;
