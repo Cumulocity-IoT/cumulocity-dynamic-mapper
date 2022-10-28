@@ -1,7 +1,7 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, ValidationError } from "./configuration.model"
+import { API, Mapping, MappingSubstitution, ValidationError } from "./configuration.model"
 
-export const SAMPLE_TEMPLATES = {
+export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
@@ -300,7 +300,7 @@ export function isTopicNameValid(topic: string): any {
   return errors;
 }
 
-export function isTemplateTopicValid(topic: string): any {   
+export function isTemplateTopicValid(topic: string): any {
   // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
   // TOPIC_WILDCARD_MULTI
   topic = normalizeTopic(topic);
@@ -325,7 +325,7 @@ export function isTemplateTopicValid(topic: string): any {
 
 export function isSubscriptionTopicValid(topic: string): any {
   topic = normalizeTopic(topic);
-  
+
   let errors = {};
   // count number of "#"
   let count_multi = (topic.match(/\#/g) || []).length;
@@ -364,7 +364,7 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -375,7 +375,7 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
       return previousValue + currentValue;
     }, 0)
     if (count > 1) {
@@ -412,7 +412,7 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    let f = ( st, tt ) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+    let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
     error = !f(subscriptionTopic, templateTopic);
     if (error) {
       errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
@@ -446,13 +446,13 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
       defined = true
     }
 
-    let  splitTT : String[] = splitTopicExcludingSeparator(templateTopic);
-    let  splitTTS : String[] = splitTopicExcludingSeparator(templateTopicSample);
+    let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
+    let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
     if (splitTT.length != splitTTS.length) {
       errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
     } else {
       for (let i = 0; i < splitTT.length; i++) {
-        if ( "/" == splitTT[i] && !("/" == splitTTS[i])) {
+        if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
           errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
           break;
         }
@@ -511,3 +511,25 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
 
 }
 
+export function whatIsIt(object) {
+  var stringConstructor = "test".constructor;
+  var arrayConstructor = [].constructor;
+  var objectConstructor = ({}).constructor;
+  if (object === null) {
+    return "null";
+  } else if (object === undefined) {
+    return "undefined";
+  } else if (object.constructor === stringConstructor) {
+    return "String";
+  } else if (object.constructor === arrayConstructor) {
+    return "Array";
+  } else if (object.constructor === objectConstructor) {
+    return "Object";
+  } else {
+    return "don't know";
+  }
+}
+
+export function  definesDeviceIdentifier(sub: MappingSubstitution): boolean {
+  return sub.pathTarget == "source.id" || sub.pathTarget == TOKEN_DEVICE_TOPIC
+}

@@ -1,5 +1,6 @@
 package mqtt.mapping;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,7 +29,9 @@ import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
+import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.impl.FlatFileProcessor;
 import mqtt.mapping.processor.impl.JSONProcessor;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
@@ -59,11 +62,6 @@ public class App {
         return Executors.newCachedThreadPool();
     }
 
-    @Bean("payloadProcessor")
-    public PayloadProcessor payloadProcessor() {
-        return new JSONProcessor();
-    }
-
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
@@ -85,14 +83,12 @@ public class App {
         return objectMapper;
     }
 
-    // @Bean
-    // public SecurityWebFilterChain securityWebFilterChain(
-    //         ServerHttpSecurity http) {
-    //     return http.authorizeExchange()
-    //             .pathMatchers("/actuator/**").permitAll()
-    //             .anyExchange().authenticated()
-    //             .and().build();
-    // }
+    @Bean("payloadProcessors")
+    public Map<MappingType, PayloadProcessor> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
+            C8yAgent c8yAgent) {
+        return Map.of(MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent), MappingType.FLAT_FILE,
+                new FlatFileProcessor(objectMapper, mqttClient, c8yAgent));
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

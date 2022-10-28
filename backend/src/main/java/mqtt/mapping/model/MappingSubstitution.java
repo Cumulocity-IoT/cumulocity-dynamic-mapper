@@ -1,8 +1,9 @@
 package mqtt.mapping.model;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
+import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.RepairStrategy;
 
 import java.io.Serializable;
 
@@ -10,41 +11,48 @@ import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Getter
-@NoArgsConstructor
 @ToString()
 public class MappingSubstitution implements Serializable {
 
     public static class SubstituteValue implements Cloneable {
         public static enum TYPE {
             NUMBER,
-            TEXTUAL
+            TEXTUAL, 
+            OBJECT, 
+            IGNORE,
+            ARRAY
         }
 
-        public String value;
+        public JsonNode value;
         public TYPE type;
+        public RepairStrategy repairStrategy;
 
-        public SubstituteValue(String value, TYPE type) {
+        public SubstituteValue(JsonNode value, TYPE type, RepairStrategy repair) {
             this.type = type;
             this.value = value;
+            this.repairStrategy = repair;
         }
 
         public Object typedValue() {
             if (type.equals(TYPE.TEXTUAL)) {
+                return value.textValue();
+            } else if (type.equals(TYPE.OBJECT)) {
                 return value;
             } else {
                 // check if int
                 try {
-                    return Integer.parseInt(value);
+                    return Integer.parseInt(value.textValue());
                 } catch (NumberFormatException e1) {
                     // not int
                     try {
-                        return Float.parseFloat(value);
+                        return Float.parseFloat(value.textValue());
                     } catch (NumberFormatException e2) {
                         // not int
                         try {
-                            return Double.parseDouble(value);
+                            return Double.parseDouble(value.textValue());
                         } catch (NumberFormatException e3) {
                             return value;
                         }
@@ -52,17 +60,33 @@ public class MappingSubstitution implements Serializable {
                 }
             }
         }
+
         @Override
         public SubstituteValue clone() {
-            return new SubstituteValue(this.value, this.type);
+            return new SubstituteValue(this.value, this.type, this.repairStrategy);
         }
     }
 
+    public MappingSubstitution () {
+        this.repairStrategy = RepairStrategy.DEFAULT;
+        this.expandArray = false;
+    }
+    
     @NotNull
     public String pathSource;
 
     @NotNull
     public String pathTarget;
+
+    @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesIdentifier;
+    public RepairStrategy repairStrategy;
+    
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean definesDeviceIdentifier(){
+        return "source.id".equals(pathTarget)  || PayloadProcessor.TOKEN_DEVICE_TOPIC.equals(pathTarget);
+    }
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean expandArray;
 }

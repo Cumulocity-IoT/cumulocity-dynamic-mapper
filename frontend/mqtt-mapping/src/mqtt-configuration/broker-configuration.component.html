@@ -86,7 +86,7 @@
               <div class="col-lg-6">
                 <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
                   <input type="checkbox" formControlName="useTLS" [(ngModel)]="connectionConfiguration.useTLS"
-                    #useTLSRef required />
+                    #useTLSRef />
                   <span></span>
                   <span>
                     {{ 'Use TLS'}}
@@ -150,10 +150,20 @@
               <div class="col-lg-6">
                 <label class="c8y-switch" title="{{ 'Log payload in Backend' | translate }}">
                   <input type="checkbox" formControlName="logPayload" [(ngModel)]="serviceConfiguration.logPayload"
-                    #useTLSRef required />
+                    #useTLSRef/>
                   <span></span>
                   <span>
                     {{ 'Log Payload'}}
+                  </span>
+                </label>
+              </div>
+              <div class="col-lg-6">
+                <label class="c8y-switch" title="{{ 'Log substitution in Backend' | translate }}">
+                  <input type="checkbox" formControlName="logSubstitution" [(ngModel)]="serviceConfiguration.logSubstitution"
+                    #useTLSRef/>
+                  <span></span>
+                  <span>
+                    {{ 'Log Substitution'}}
                   </span>
                 </label>
               </div>

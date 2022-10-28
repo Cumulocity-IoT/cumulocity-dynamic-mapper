@@ -1,6 +1,6 @@
 {
   "name": "mqtt-mapping",
-  "version": "1.0.27",
+  "version": "1.0.30",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.",
   "scripts": {
     "start": "c8ycli server -u ${url}",

@@ -69,8 +69,7 @@ public class MappingsRepresentationJUnitTest {
     s1.pathTarget = "p1t";
     MappingSubstitution s2 = new MappingSubstitution();
     s2.pathSource = "p2s";
-    s2.pathTarget = "p2t";
-    s2.definesIdentifier = true;
+    s2.pathTarget = "source.id";
     MappingSubstitution s3 = new MappingSubstitution();
     s3.pathSource = "p3s";
     s3.pathTarget = "p3t";
@@ -147,7 +146,7 @@ public class MappingsRepresentationJUnitTest {
     p1.addCardinality("value2",   5);
     p1.addCardinality(PayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p1.needsRepair);
-    assertEquals(false, p1.needsRepair);
+    assertEquals(false, p1.isNeedsRepair());
 
 
     ProcessingContext p2 = new ProcessingContext();
@@ -155,7 +154,7 @@ public class MappingsRepresentationJUnitTest {
     p2.addCardinality("value2",   4);
     p2.addCardinality(PayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p2.needsRepair);
-    assertEquals(true, p2.needsRepair);
+    assertEquals(true, p2.isNeedsRepair());
 
   }
 

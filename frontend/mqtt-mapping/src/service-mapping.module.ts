@@ -7,6 +7,7 @@ import {
   HOOK_NAVIGATOR_NODES,
   HOOK_ROUTE,
   HOOK_TABS,
+  HOOK_WIZARD,
   Route
 } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -14,6 +15,7 @@ import { BokerConfigurationComponent } from './mqtt-configuration/broker-configu
 import { BrokerConfigurationService } from './mqtt-configuration/broker-configuration.service';
 import { TerminateBrokerConnectionModalComponent } from './mqtt-configuration/terminate/terminate-connection-modal.component';
 import { MappingComponent } from './mqtt-mapping/grid/mapping.component';
+import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.component';
 import { OverwriteDeviceIdentifierModalComponent } from './mqtt-mapping/overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from './mqtt-mapping/overwrite/overwrite-substitution-modal.component';
 import { APIRendererComponent } from './mqtt-mapping/renderer/api.renderer.component';
@@ -75,6 +77,7 @@ import { MappingTabFactory } from './tab.factory';
     MonitoringComponent,
     IdRendererComponent,
     SnoopingModalComponent,
+    MappingTypeComponent,
   ],
   entryComponents: [
     ServiceMappingComponent,
@@ -93,6 +96,7 @@ import { MappingTabFactory } from './tab.factory';
     MonitoringComponent,
     IdRendererComponent,
     SnoopingModalComponent,
+    MappingTypeComponent,
   ],
   declarations: [
     ServiceMappingComponent,
@@ -111,6 +115,7 @@ import { MappingTabFactory } from './tab.factory';
     MonitoringComponent,
     IdRendererComponent,
     SnoopingModalComponent,
+    MappingTypeComponent,
   ],
   providers: [
     OverviewGuard,
@@ -137,6 +142,20 @@ import { MappingTabFactory } from './tab.factory';
       ] as Route[],
       multi: true,
     },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        // The id of a wizard to which the entry should be hooked.
+        wizardId: 'addMappingWizard_Id',
+        // The container component is responsible for handling subsequent steps in the wizard.
+        component: MappingTypeComponent,
+        // Menu entry name
+        name: 'App mapping',
+        // Menu entry icon
+        c8yIcon: 'plus-circle'
+      },
+      multi: true
+    }
   ],
 })
 export class MQTTMappingModule {
