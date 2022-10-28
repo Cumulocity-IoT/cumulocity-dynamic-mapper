@@ -34,7 +34,7 @@ import mqtt.mapping.processor.RepairStrategy;
 
 @Slf4j
 @Service
-public class JSONProcessor extends PayloadProcessor {
+public class FlatFileProcessor extends PayloadProcessor {
 
     @Autowired
     ObjectMapper objectMapper;
@@ -62,16 +62,7 @@ public class JSONProcessor extends PayloadProcessor {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        JsonNode payloadJsonNode;
-        try {
-            payloadJsonNode = objectMapper.readTree(payload);
-        } catch (JsonProcessingException e) {
-            log.error("JsonProcessingException parsing: {}:", payload, e);
-            context.setError(
-                    new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
-            throw new ProcessingException("JsonProcessingException parsing: " + payload +
-            " exception:" + e);
-        }
+        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payload));
         ArrayNode topicLevels = objectMapper.createArrayNode();
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
         splitTopicAsList.forEach(s -> topicLevels.add(s));

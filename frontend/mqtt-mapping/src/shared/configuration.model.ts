@@ -123,7 +123,6 @@ export enum QOS {
   EXACTLY_ONCE = "EXACTLY_ONCE",
 }
 
-
 export enum SnoopStatus {
   NONE = "NONE",
   ENABLED = "ENABLED",
@@ -139,8 +138,8 @@ export enum Operation {
 }
 
 export enum MappingType {
-  JSON,
-  FLAT_FILE,
+  JSON = "JSON",
+  FLAT_FILE = "FLAT_FILE",
 }
 
 export enum RepairStrategy {

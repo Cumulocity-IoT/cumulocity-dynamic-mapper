@@ -1,0 +1,27 @@
+<c8y-wizard-header>
+  <h1 [c8yIcon]="headerIcon"></h1>
+  <h4>{{headerText}}</h4>
+</c8y-wizard-header>
+
+<c8y-wizard-body>
+  <p class="p-16 text-medium text-center bg-white separator-bottom sticky-top">
+    {{ bodyHeaderText | translate }}
+  </p>
+  <div class="modal-inner-scroll animated fadeIn">
+    <div class="modal-body">
+      <label title="{{ 'Mapping Types' }}" *ngFor="let q of MappingType | keyvalue" [ngValue]="q.key" class="c8y-radio">
+        <input type="radio" value="{{ q.value }}" [(ngModel)]="mappingType" ng-class="{ active: mappingType === q}" />
+        <span></span>
+        <span>{{q.value}}</span>
+      </label>
+    </div>
+  </div>
+</c8y-wizard-body>
+<c8y-wizard-footer>
+  <button (click)="cancel()" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate type="button">
+    Cancel
+  </button>
+  <button (click)="done()" class="btn btn-default" title="{{ 'Done' | translate }}" translate type="button">
+    Done
+  </button>
+</c8y-wizard-footer>

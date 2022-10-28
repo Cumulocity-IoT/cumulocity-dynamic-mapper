@@ -8,7 +8,7 @@ import JSONEditor from 'jsoneditor';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
 import { OverwriteDeviceIdentifierModalComponent } from '../overwrite/overwrite-device-identifier-modal.component';
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
@@ -37,7 +37,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   keys = Object.keys;
   values = Object.values;
   isWildcardTopic = isWildcardTopic;
-  SAMPLE_TEMPLATES = SAMPLE_TEMPLATES;
+  SAMPLE_TEMPLATES = SAMPLE_TEMPLATES_C8Y;
   COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
   propertyForm: FormGroup;
@@ -335,7 +335,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
 
   async onSampleButton() {
-    this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.mapping.targetAPI]);
+    this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
     if (this.mapping.targetAPI == API.INVENTORY) {
       this.templateTarget = this.expandTargetTemplate(this.templateTarget);
     }
@@ -393,7 +393,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     //}
     this.templateTarget = JSON.parse(this.mapping.target);
     if (!this.editMode) {
-      this.templateTarget = JSON.parse(SAMPLE_TEMPLATES[this.mapping.targetAPI]);
+      this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
     if (this.mapping.targetAPI == API.INVENTORY) {
@@ -422,7 +422,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   }
 
   async onTargetAPIChanged(evt) {
-    this.mapping.target = SAMPLE_TEMPLATES[this.mapping.targetAPI];
+    this.mapping.target = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
   }
 
   public onAddSubstitution() {
@@ -538,6 +538,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
+      this.selectedSubstitution = selected
       // reset background color of old selection list
       for (let item of this.selectionList) {
         item.setAttribute('style', null);

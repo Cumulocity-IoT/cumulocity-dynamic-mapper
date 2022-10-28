@@ -1,14 +1,17 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, WizardConfig, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, Operation, QOS, RepairStrategy, SnoopStatus } from '../../shared/configuration.model';
-import { isTemplateTopicUnique, SAMPLE_TEMPLATES } from '../../shared/helper';
+import { API, Mapping, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/configuration.model';
+import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/helper';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { MappingService } from '../shared/mapping.service';
+import { ModalOptions } from 'ngx-bootstrap/modal';
+import { takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'mapping-grid',
@@ -110,6 +113,8 @@ export class MappingComponent implements OnInit {
   ]
 
   value: string;
+  mappingType: MappingType;
+  destroy$: Subject<boolean> = new Subject<boolean>();
 
   pagination: Pagination = {
     pageSize: 3,
@@ -120,7 +125,8 @@ export class MappingComponent implements OnInit {
   constructor(
     public mappingService: MappingService,
     public configurationService: BrokerConfigurationService,
-    public alertService: AlertService
+    public alertService: AlertService,
+    private wizardService: WizardService,
   ) { }
 
   ngOnInit() {
@@ -142,9 +148,38 @@ export class MappingComponent implements OnInit {
       });
   }
 
+  onAddMapping() {
+    const wizardConfig: WizardConfig = {
+      headerText: 'Add Mapping',
+      headerIcon: 'plus-circle',
+      bodyHeaderText: 'Select mapping type',
+    };
+    const initialState = {
+      id: 'addMappingWizard_Id',
+      wizardConfig,
+    };
+
+    const modalOptions: ModalOptions = { initialState } as any;
+    const modalRef = this.wizardService.show(modalOptions);
+    modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
+      console.log("Was selected:", result);
+      this.mappingType = result;
+      if (result) {
+        this.addMapping();
+      }
+    });
+  }
+
   async addMapping() {
     this.editMode = false;
-    let l = this.newId();
+    let l = this.nextId();
+
+    let sampleSource = '{}';
+    if (this.mappingType == MappingType.FLAT_FILE) {
+      sampleSource = JSON.stringify({
+        message: '10,temp,1666963367'
+      } as PayloadWrapper)
+    }
 
     let mapping = {
       id: l,
@@ -153,15 +188,15 @@ export class MappingComponent implements OnInit {
       templateTopic: '',
       templateTopicSample: '',
       targetAPI: API.MEASUREMENT,
-      source: '{}',
-      target: SAMPLE_TEMPLATES[API.MEASUREMENT],
+      source: sampleSource,
+      target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT],
       active: false,
       tested: false,
       qos: QOS.AT_LEAST_ONCE,
       substitutions: [],
       mapDeviceIdentifier: false,
       createNonExistingDevice: false,
-      repairStrategy: RepairStrategy.USE_FIRST_VALUE_OF_ARRAY,
+      mappingType: this.mappingType,
       updateExistingDevice: false,
       externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,
@@ -174,7 +209,7 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
-  private newId() {
+  private nextId() {
     return (this.mappings.length == 0 ? 0 : Math.max(...this.mappings.map(item => item.id))) + 1;
   }
 
@@ -191,7 +226,7 @@ export class MappingComponent implements OnInit {
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.ident = uuidv4();
-    this.mappingToUpdate.id = this.newId();
+    this.mappingToUpdate.id = this.nextId();
     console.log("Copying mapping", this.mappingToUpdate)
     this.showConfigMapping = true;
   }
@@ -267,6 +302,11 @@ export class MappingComponent implements OnInit {
     } else {
       this.alertService.danger(gettext('Failed to save mappings'));
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next(true);
+    this.destroy$.unsubscribe();
   }
 
 }
