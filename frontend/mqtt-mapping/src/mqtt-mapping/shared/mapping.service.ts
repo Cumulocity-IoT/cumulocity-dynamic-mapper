@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { API, Mapping, Operation } from '../../shared/configuration.model';
-import * as _ from 'lodash';
-import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IManagedObject, IMeasurement, InventoryService, IResult, MeasurementService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
+import * as _ from 'lodash';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { API, Mapping } from '../../shared/configuration.model';
+import { MAPPING_FRAGMENT, MAPPING_TYPE, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -14,7 +14,6 @@ export class MappingService {
     private event: EventService,
     private alarm: AlarmService,
     private measurement: MeasurementService,
-    private client: FetchClient,
     private configurationService: BrokerConfigurationService,
     private alert: AlertService) { }
 
@@ -87,13 +86,10 @@ export class MappingService {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
         if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
           let s : JSON = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
-          if (!s) {
-            // if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
+          if ( s == undefined) {
               console.error("No substitution for:", sub.pathSource, s, mapping.source);
-              throw Error("Error: substitution not found:" + sub.pathSource);
-            // } else {
-              // s = this.testDeviceId;
-            // }
+              this.alert.warning("Warning: no substitution found for : " + sub.pathSource)
+              //throw Error("Error: substitution not found:" + sub.pathSource);
           }
           _.set(result, sub.pathTarget, s)
         }
@@ -101,7 +97,6 @@ export class MappingService {
         if (sub.pathTarget == TIME) {
           substitutionTimeExists = true;
         }
-
       })
 
       // for simulation replace source id with agentId
