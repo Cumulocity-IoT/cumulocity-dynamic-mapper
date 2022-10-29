@@ -360,8 +360,9 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 ### REST API
 
 The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
-1. ```.../connection```: retrieve and change the connection details to the MQTT broker
-1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker
+1. ```.../configuration/connection```: retrieve and change the connection details to the MQTT broker
+1. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
+1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic
 1. ```.../status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
 1. ```.../status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
 1. ```.../mapping```: retrieve, delete, update mappings

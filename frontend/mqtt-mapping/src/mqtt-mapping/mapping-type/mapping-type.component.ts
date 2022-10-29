@@ -32,4 +32,7 @@ export class MappingTypeComponent implements OnInit {
   done() {
     this.wizardComponent.close(this.mappingType);
   }
+  onSelect(t){
+    this.mappingType = t;
+  }
 }
