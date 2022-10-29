@@ -135,7 +135,8 @@ export enum Operation {
   RELOAD,
   CONNECT,
   DISCONNECT,
-  RESFRESH_STATUS_MAPPING
+  RESFRESH_STATUS_MAPPING,
+  RESET_STATUS_MAPPING
 }
 
 export enum MappingType {

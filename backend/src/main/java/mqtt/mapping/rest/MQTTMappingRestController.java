@@ -134,13 +134,6 @@ public class MQTTMappingRestController {
         return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/status/mapping", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<MappingStatus>> resetMappingStatus() {
-        List<MappingStatus> ms = mqttClient.resetMappingStatus();
-        log.info("Reset mapping status: {}", ms);
-        return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
-    }
-
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings() {
         log.info("Get mappings");

@@ -489,6 +489,8 @@ public class MQTTClient {
             disconnectFromBroker();
         } else if (operation.getOperation().equals(Operation.RESFRESH_STATUS_MAPPING)) {
             sendStatusMapping();
+        } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
+            resetMappingStatus();
         }
     }
 
