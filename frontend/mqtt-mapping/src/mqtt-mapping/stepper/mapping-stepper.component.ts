@@ -8,7 +8,7 @@ import JSONEditor from 'jsoneditor';
 import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -36,6 +36,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   keys = Object.keys;
   values = Object.values;
   isWildcardTopic = isWildcardTopic;
+  definesDeviceIdentifier = definesDeviceIdentifier;
   SAMPLE_TEMPLATES = SAMPLE_TEMPLATES_C8Y;
   COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
@@ -476,7 +477,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
           console.log("Overwriting substitution II:", overwrite, this.mapping.substitutions);
         }
       );
-    } 
+    } else {
+      this.mapping.substitutions.push(sub);
+    }
   }
 
   public onSelectNextSubstitution() {
