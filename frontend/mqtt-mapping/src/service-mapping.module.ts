@@ -77,27 +77,9 @@ import { MappingTabFactory } from './tab.factory';
     MonitoringComponent,
     IdRendererComponent,
     SnoopingModalComponent,
-    MappingTypeComponent,
+    MappingTypeComponent
   ],
-  entryComponents: [
-    ServiceMappingComponent,
-    BokerConfigurationComponent,
-    MappingComponent,
-    MappingStepperComponent,
-    TerminateBrokerConnectionModalComponent,
-    OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
-    StatusRendererComponent,
-    QOSRendererComponent,
-    TemplateRendererComponent,
-    SnoopedTemplateRendererComponent,
-    SubstitutionRendererComponent,
-    APIRendererComponent,
-    MonitoringComponent,
-    IdRendererComponent,
-    SnoopingModalComponent,
-    MappingTypeComponent,
-  ],
+  entryComponents: [ServiceMappingComponent],
   declarations: [
     ServiceMappingComponent,
     BokerConfigurationComponent,
@@ -159,5 +141,5 @@ import { MappingTabFactory } from './tab.factory';
   ],
 })
 export class MQTTMappingModule {
-  constructor() {}
+  constructor() { }
 }

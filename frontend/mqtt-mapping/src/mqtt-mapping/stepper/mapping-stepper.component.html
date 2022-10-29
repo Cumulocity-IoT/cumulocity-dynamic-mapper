@@ -58,8 +58,9 @@
                     <div class="input-group">
                       <label for="templateTopic">Template Topic Sample</label>
                       <span class="hidden-xs hidden-sm m-l-4">
-                        <ng-template #popTemplateTopicSample><span class="text-warning">The TemplateTopicSample name must have the same number of
-                          levels and must match the TemplateTopic.</span>
+                        <ng-template #popTemplateTopicSample><span class="text-warning">The TemplateTopicSample name
+                            must have the same number of
+                            levels and must match the TemplateTopic.</span>
                         </ng-template>
                         <button class="btn-clean text-primary" [popover]="popTemplateTopicSample"
                           popoverTitle="Template Topic Name" placement="right" triggers="focus" type="button">
@@ -72,30 +73,35 @@
                         class="form-control" placeholder="e.g. device/110" #topicRef required />
                       <c8y-messages>
                         <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
-                          <span class="text-warning">This TemplateTopic must be unique across other TemplateTopics.</span>
+                          <span class="text-warning">This TemplateTopic must be unique across other
+                            TemplateTopics.</span>
                         </c8y-message>
                         <c8y-message
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
-                          translate><span class="text-warning">This TemplateTopic can't be the starting part of another TemplateTopic or vice</span>
+                          translate><span class="text-warning">This TemplateTopic can't be the starting part of another
+                            TemplateTopic or vice</span>
                           versa.
                         </c8y-message>
                         <c8y-message
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic]"
-                          translate><span class="text-warning">The TemplateTopic must match the SubscriptionTopic.</span>
+                          translate><span class="text-warning">The TemplateTopic must match the
+                            SubscriptionTopic.</span>
                         </c8y-message>
                         <c8y-message
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name]"
-                          translate><span class="text-warning">The TemplateTopic and TemplateTopicSample do not have same number of levels in the
-                          Topic Name.</span>
+                          translate><span class="text-warning">The TemplateTopic and TemplateTopicSample do not have
+                            same number of levels in the
+                            Topic Name.</span>
                         </c8y-message>
                         <c8y-message
                           *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name]"
-                          translate><span class="text-warning">TemplateTopic and TemplateTopicSample do not have same structure in the Topic Name.</span>
+                          translate><span class="text-warning">TemplateTopic and TemplateTopicSample do not have same
+                            structure in the Topic Name.</span>
                         </c8y-message>
                         <c8y-message
                           *ngIf="propertyForm.get('templateTopic').touched || propertyForm.get('subscriptionTopic').touched"
                           translate><span class="text-info">After changing the TemplateTopic or SubscriptionTopic all
-                          substitions should to be revised.</span>
+                            substitions should to be revised.</span>
                         </c8y-message>
                       </c8y-messages>
                     </div>
@@ -229,29 +235,15 @@
                         <div class="jsonColumnLarge" #editorSourceRef id="editorSourceRef">
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate><span class="text-warning">Select source node to
-                            define substitution!</span>
+                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate><span
+                              class="text-warning">Select source node to
+                              define substitution!</span>
                           </c8y-message>
                         </c8y-messages>
                       </div>
                     </div>
                     <div class="col-lg-2 d-flex d-col a-i-center">
                       <label translate>Manage Substitutions</label>
-                      <div class="p-b-8">
-                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                          (click)="onAddSubstitution()" translate title="Map" title="Map">
-                          <i c8yIcon="add-new"></i>
-                        </button>
-                        <span class="hidden-xs hidden-sm p-l-4">
-                          <ng-template #popTemplateAdd>Add substitution. Before target and source property in templates
-                            have to be selected (double-clicked).
-                          </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateAdd" popoverTitle="Add"
-                            placement="right" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
                           (click)="onSelectNextSubstitution()" translate title="Select substitution">
@@ -268,34 +260,83 @@
                       </div>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                          (click)="onDeleteSubstitution()" translate title="Delete Selected">
-                          <i c8yIcon="negative"></i>
+                          (click)="onAddSubstitution()" translate title="Add new substitution">
+                          <i c8yIcon="add-new"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
-                          <ng-template #popTemplateDelete><span class="text-warning">Delete selected substitution. Before substitution has to be
-                            selected with the "Skip-Button".</span>
+                          <ng-template #popTemplateAdd>Add new substitution. Before target and source property in templates
+                            have to be selected.
                           </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
+                          <button class="btn-clean text-primary" [popover]="popTemplateAdd" popoverTitle="Add new substitution"
                             placement="right" triggers="focus" type="button">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
                       </div>
-                      <div>
-                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                          (click)="onDeleteSubstitutions()" translate title="Delete All">
-                          <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
-                        </button>
-                        <span class="hidden-xs hidden-sm p-l-4">
-                          <ng-template #popTemplateDeleteAll>Delete all substitutions.
-                          </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateDeleteAll"
-                            popoverTitle="Delete All" placement="right" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
+                      <div class="p-b-8 d-flex">
+                        <div>
+                          <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                            (click)="onDeleteSubstitution()" translate title="Delete selected substitution">
+                            <i c8yIcon="negative"></i>
                           </button>
-                        </span>
+                          <span class="hidden-xs hidden-sm p-l-4">
+                            <ng-template #popTemplateDelete><span class="text-warning">Delete selected substitution.
+                                Before substitution has to be
+                                selected with the "Skip-Button".</span>
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
+                              placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                        <div>
+                          <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                            (click)="onDeleteSubstitutions()" translate title="Delete all substitutions">
+                            <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
+                          </button>
+                          <span class="hidden-xs hidden-sm p-l-4">
+                            <ng-template #popTemplateDeleteAll>Delete all substitutions.
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popTemplateDeleteAll"
+                              popoverTitle="Delete All" placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="p-b-8 d-flex">
+                        <div>
+                          <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                            (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates">
+                            <i c8yIcon="enter-left"></i>
+                          </button>
+                          <span class="hidden-xs hidden-sm p-l-4">
+                            <ng-template #popSnoopedTemplates>Use snooped templates in the source template.
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popSnoopedTemplates"
+                              popoverTitle="Use snooped templates" placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
+                        <div>
+                          <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                            (click)="onSampleButton()" translate title="Use sample templates">
+                            <i c8yIcon="enter-right"></i>
+                          </button>
+                          <span class="hidden-xs hidden-sm p-l-4">
+                            <ng-template #popSampleTemplates>Use sample templates in the target template.
+                            </ng-template>
+                            <button class="btn-clean text-primary" [popover]="popSampleTemplates"
+                              popoverTitle="Use sample templates" placement="right" triggers="focus" type="button">
+                              <i c8yIcon="question-circle-o"></i>
+                            </button>
+                          </span>
+                        </div>
                       </div>
                     </div>
+
                     <div class="col-lg-4 vcenter">
                       <div class="form-group">
                         <div class="input-group">
@@ -431,7 +472,8 @@
                             formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
                             placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
                           <c8y-messages>
-                            <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate><span class="text-warning">{{sourceExpressionErrorMsg}}</span>
+                            <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate><span
+                                class="text-warning">{{sourceExpressionErrorMsg}}</span>
                             </c8y-message>
                           </c8y-messages>
                         </div>
@@ -444,11 +486,13 @@
                           <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
                             formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
                           <c8y-messages>
-                            <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate><span class="text-warning">{{targetExpressionErrorMsg}}</span>
+                            <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate><span
+                                class="text-warning">{{targetExpressionErrorMsg}}</span>
                             </c8y-message>
-                            <c8y-message *ngIf="definesDeviceIdentifier(currentSubstitution)" translate><span class="text-info"> <b>source.id</b>
-                              is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
-                              previous step.</span>
+                            <c8y-message *ngIf="definesDeviceIdentifier(currentSubstitution)" translate><span
+                                class="text-info"> <b>source.id</b>
+                                is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
+                                previous step.</span>
                             </c8y-message>
                           </c8y-messages>
                         </div>
@@ -485,7 +529,8 @@
                   <c8y-messages>
                     <c8y-message
                       *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
-                      translate><span class="text-warning">Only one substitution defining the DeviceIdentifier_Can_Be_Used.</span>
+                      translate><span class="text-warning">Only one substitution defining the
+                        DeviceIdentifier_Can_Be_Used.</span>
                     </c8y-message>
                   </c8y-messages>
                 </div>
@@ -494,7 +539,7 @@
           </div>
         </div>
 
-        <div class="col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2 text-center">
+        <!-- <div class="col-md-8 col-md-offset-2 col-lg-8 col-lg-offset-2 text-center">
           <button type="button" name="sample" class="btn btn-default" (click)="onSnoopedSourceTemplates()" translate
             [disabled]="mapping.snoopedTemplates?.length==0">
             Snooped templates
@@ -502,7 +547,7 @@
           <button type="button" name="sample" class="btn btn-default" (click)="onSampleButton()" translate>
             Sample target templates
           </button>
-        </div>
+        </div> -->
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
           (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
       </cdk-step> -->
