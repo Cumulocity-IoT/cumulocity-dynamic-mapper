@@ -99,11 +99,11 @@
                 </c8y-messages>
               </div>
               <div class="col-lg-6">
-                <label class="c8y-switch" title="{{ 'Active' | translate }}">
+                <label class="c8y-switch" title="{{ 'Is active' | translate }}">
                   <input type="checkbox" formControlName="active" [ngModel]="isBrokerActivated" disabled="true" />
                   <span></span>
                   <span>
-                    {{ 'Active'}}
+                    {{ 'Is active'}}
                   </span>
                 </label>
               </div>
@@ -113,9 +113,9 @@
       </div>
       <div class="card-footer text-center">
         <div class="form-group">
-          <button type="button" name="update" class="btn btn-primary" (click)="clickedUpdateConnectionConfiguration()"
+          <button type="button" name="save" class="btn btn-primary" (click)="clickedSaveConnectionConfiguration()"
             [disabled]="!connectionForm.valid" translate>
-            Update
+            Save
           </button>
           <button type="button" name="connect" class="btn btn-primary" (click)="clickedConnect()"
             [disabled]="isBrokerConnected" translate>
@@ -173,8 +173,8 @@
       </div>
       <div class="card-footer text-center">
         <div class="form-group">
-          <button type="button" name="update" class="btn btn-primary" (click)="clickedUpdateServiceConfiguration()" translate>
-            Update Service
+          <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate>
+            Save
           </button>
         </div>
       </div>

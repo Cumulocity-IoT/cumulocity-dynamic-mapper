@@ -114,11 +114,11 @@ export class BokerConfigurationComponent implements OnInit {
     this.showTerminateConnectionModal();
   }
 
-  async clickedUpdateConnectionConfiguration() {
+  async clickedSaveConnectionConfiguration() {
     this.updateConnectionConfiguration();
   }
 
-  async clickedUpdateServiceConfiguration() {
+  async clickedSaveServiceConfiguration() {
     this.updateServiceConfiguration();
   }
 
