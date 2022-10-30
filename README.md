@@ -149,21 +149,21 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.\
 Furthermore, connections to the MQTT broker can be enabled or disabled.
 
-<br/>
+<!-- <br/>
 <p align="center" style="text-indent:70px;">
   <a>
     <img width="100%" src="http://g.recordit.co/dm3Qah19Ar.gif">
   </a>
 </p>
-<br/>
-
+<br/> -->
+![MQTT connection](resources/image/Generic_MQTT_Connection.png)
 
 ## Definition and Deployment of MQTT mappings
 
 ### Table of MQTT mappings
 
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
-1. Creating new MQTT mappings: Press button ```Add Mapping```
+1. Creating new MQTT mappings: Press button ```Add mapping```
 1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
 1. Deleting exsiting MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
@@ -259,7 +259,7 @@ Connected devices send their data using an external device identifier, e.g. IMEI
 
 In the second wizzard step, shown on the screenshot below the mapping is furher defined:
 1. Editing the source template directly or use a snooped template by pressing button ```Snooped templates```
-2. Editing the target templatedirectly or use a sample template by pressing button ```Sample target template```
+2. Editing the target template directly or use a sample template by pressing button ```Sample target template```
 3. Adding substitutions
 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
@@ -273,10 +273,14 @@ In order to define a substitution ( substitute values in the target payload with
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate_annnotated.png)
 
 To define a new substitution the following steps have to be performed:
-1. Select a property in the source JSON payload by double-click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
-1. Select a property in the target JSON payload by double-click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
-1.  Select  ```Defines device identifier``` if this property defines the device identifier, i.e. it is mapped to ```source.id```.
-1. Press the add button with the ```+``` sign.
+1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
+1. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
+1. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
+  * **multi-device-single-value**
+  * **multi-device-multi-value**
+  * **single-device-multi-value**\
+  Otherwise an extracted array is treated as a single valie, see [Different type of substitutions](#different-type-of-substitutions).
+4. Press the add button with the ```+``` sign, to add the substitution to the list.
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
