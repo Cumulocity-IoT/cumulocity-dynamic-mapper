@@ -355,8 +355,9 @@
                         <div class="jsonColumnLarge" #editorTargetRef id="editorTargetRef">
                         </div>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate>Select target node to
-                            define substitution!
+                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate><span
+                            class="text-warning">Select target node to
+                            define substitution!</span>
                           </c8y-message>
                         </c8y-messages>
                       </div>

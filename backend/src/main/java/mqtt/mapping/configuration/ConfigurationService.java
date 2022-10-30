@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class ConfigurationService {
-    private static final String OPTION_CATEGORY_CONFIGURATION = "mqttclient.configuration";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "mqtt.dynamic.service";
 
-    private static final String OPTION_KEY_CONNECTION_CONFIGURATION = "credentials.mqttclient.connection.configuration";
+    private static final String OPTION_KEY_CONNECTION_CONFIGURATION = "credentials.connection.configuration";
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 
     private final TenantOptionApi tenantOptionApi;
