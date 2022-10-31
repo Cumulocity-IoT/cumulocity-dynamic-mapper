@@ -33,7 +33,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor {
+public abstract class PayloadProcessor<I,O> {
 
     public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
         this.objectMapper = objectMapper;
@@ -58,11 +58,11 @@ public abstract class PayloadProcessor {
 
     public static final String TIME = "time";
 
-    public abstract ProcessingContext deserializePayload(ProcessingContext contect, MqttMessage mqttMessage);
+    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage);
 
-    public abstract void extractSource(ProcessingContext context) throws ProcessingException;
+    public abstract void extractSource(ProcessingContext<O> context) throws ProcessingException;
 
-    public void patchTargetAndSend(ProcessingContext context) throws ProcessingException {
+    public void patchTargetAndSend(ProcessingContext<O> context) throws ProcessingException {
         /*
          * step 3 replace target with extract content from incoming payload
          */

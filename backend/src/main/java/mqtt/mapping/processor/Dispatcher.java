@@ -34,16 +34,16 @@ public class Dispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, PayloadProcessor> payloadProcessors;
+    Map<MappingType, PayloadProcessor<?,?>> payloadProcessors;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         processMessage(topic, mqttMessage, true);
     }
 
-    public List<ProcessingContext> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
+    public List<ProcessingContext<?>> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
             throws Exception {
         MappingStatus mappingStatusUnspecified = mqttClient.getMappingStatus(null, true);
-        List<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
+        List<ProcessingContext<?>> processingResult = new ArrayList<ProcessingContext<?>>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
@@ -58,42 +58,50 @@ public class Dispatcher implements MqttCallback {
 
                 resolveMappings.forEach(mapping -> {
                     MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
+                    
+                    ProcessingContext context;
+                    if (mapping.mappingType.payloadType.equals(String.class)) {
+                        context = new ProcessingContext<String>();
+                    } else {
+                        context = new ProcessingContext<byte[]>();
 
-                    ProcessingContext context = new ProcessingContext();
+                    }
                     context.setTopic(topic);
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
-                    if (mqttClient.getServiceConfiguration().logPayload) {
-                        log.info("New messages topic: '{}', message: {}", context.getTopic(),
-                                (mqttMessage.getPayload() != null
-                                        ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
-                                        : ""));
-                    } else {
-                        log.info("New message: topic: '{}'", context.getTopic());
-                    }
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    PayloadProcessor processor = payloadProcessors.get(mappingType);
+                    PayloadProcessor<?,?> processor = payloadProcessors.get(mappingType);
                     if (processor != null) {
-                        String payload = context.getPayload();
+                        processor.deserializePayload(context, mqttMessage);
+                        if (mqttClient.getServiceConfiguration().logPayload) {
+                            log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
+                                    context.getPayload().toString());
+                        } else {
+                            log.info("New message on topic: '{}'", context.getTopic());
+                        }
                         try {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
-                                    || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                mappingStatus.snoopedTemplatesActive++;
-                                mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                                mapping.addSnoopedTemplate(payload);
+                            || mapping.snoopStatus == SnoopStatus.STARTED ) {
+                                if( context.getPayload() instanceof String){
+                                    String payload = (String) context.getPayload();
+                                    mappingStatus.snoopedTemplatesActive++;
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mapping.addSnoopedTemplate(payload);
+    
+                                    log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                                            mapping.snoopedTemplates.size(),
+                                            mapping.snoopStatus);
+                                    mqttClient.setMappingDirty(mapping);
 
-                                log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
-                                        mapping.snoopedTemplates.size(),
-                                        mapping.snoopStatus);
-                                mqttClient.setMappingDirty(mapping);
+                                }
                             } else {
-                                processor.deserializePayload(context, mqttMessage);
                                 processor.extractSource(context);
                                 processor.patchTargetAndSend(context);
-                                if (context.hasError() || context.getRequests().stream().anyMatch(r -> r.hasError())) {
+                                ArrayList<C8YRequest> requests = context.getRequests();
+                                if (context.hasError() || requests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }
