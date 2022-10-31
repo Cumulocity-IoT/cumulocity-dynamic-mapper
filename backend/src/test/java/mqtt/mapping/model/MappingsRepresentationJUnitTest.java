@@ -64,6 +64,7 @@ public class MappingsRepresentationJUnitTest {
   void testSubstitutionIsSorted() {
 
     Mapping m1 = new Mapping();
+    m1.targetAPI = API.EVENT;
     MappingSubstitution s1 = new MappingSubstitution();
     s1.pathSource = "p1s";
     s1.pathTarget = "p1t";

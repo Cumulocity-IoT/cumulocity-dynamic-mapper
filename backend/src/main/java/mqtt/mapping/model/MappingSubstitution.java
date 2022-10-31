@@ -83,8 +83,8 @@ public class MappingSubstitution implements Serializable {
     public RepairStrategy repairStrategy;
     
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesDeviceIdentifier(){
-        return "source.id".equals(pathTarget)  || PayloadProcessor.TOKEN_DEVICE_TOPIC.equals(pathTarget);
+    public boolean definesDeviceIdentifier(API api){
+        return api.identifier.equals(pathTarget);
     }
 
     @JsonSetter(nulls = Nulls.SKIP)

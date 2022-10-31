@@ -170,7 +170,7 @@ public abstract class PayloadProcessor<I,O> {
                 Exception ex = null;
                 if (context.isSendPayload()) {
                     try {
-                        c8yAgent.createMEA(mapping.targetAPI, payloadTarget.toString());
+                        c8yAgent.createMEAO(mapping.targetAPI, payloadTarget.toString());
                     } catch (Exception e) {
                         ex = e;
                     }

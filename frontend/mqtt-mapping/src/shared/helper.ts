@@ -30,13 +30,17 @@ export const SAMPLE_TEMPLATES_C8Y = {
     \"text\": \"This is a new test event.\",
     \"time\": \"2022-08-05T00:14:49.389+02:00\",
     \"type\": \"c8y_TestEvent\"
- }`
-  ,
+ }`,
   INVENTORY: `{ 
     \"c8y_IsDevice\": {},
     \"name\": \"Vibration Sensor\",
     \"type\": \"maker_Vibration_Sensor\"
- }`
+ }`,
+ OPERATION: `{ 
+   \"deviceId\": \"909090\",
+   \"decription\": \"New camery operation!\",
+   \"type\": \"maker_Vibration_Sensor\"
+}`
 }
 
 export const SCHEMA_EVENT = {
@@ -214,6 +218,29 @@ export const SCHEMA_INVENTORY = {
   }
 }
 
+export const SCHEMA_OPERATION = {
+  'definitions': {},
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  '$id': 'http://example.com/root.json',
+  'type': 'object',
+  'title': 'Operation',
+  'required': [
+    'deviceId',
+  ],
+  'properties': {
+    'deviceId': {
+      '$id': '#/properties/deviceId',
+      'type': 'string',
+      'title': 'Identifier of the target device where the operation should be performed..',
+    },
+    'description': {
+      '$id': '#/properties/description',
+      'type': 'string',
+      'title': 'Description of the operation.',
+    },
+  }
+}
+
 export const SCHEMA_PAYLOAD = {
   'definitions': {},
   '$schema': 'http://json-schema.org/draft-07/schema#',
@@ -243,14 +270,16 @@ export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 
 export function getSchema(targetAPI: string): any {
-  if (targetAPI == API.ALARM) {
+  if (targetAPI == API.ALARM.name) {
     return SCHEMA_ALARM;
-  } else if (targetAPI == API.EVENT) {
+  } else if (targetAPI == API.EVENT.name) {
     return SCHEMA_EVENT;
-  } else if (targetAPI == API.MEASUREMENT) {
+  } else if (targetAPI == API.MEASUREMENT.name) {
     return SCHEMA_MEASUREMENT;
-  } else {
+  } else if ((targetAPI == API.INVENTORY.name)) {
     return SCHEMA_INVENTORY;
+  } else {
+    return SCHEMA_OPERATION;
   }
 }
 
@@ -364,7 +393,7 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -375,7 +404,7 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(m => definesDeviceIdentifier(m)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
       return previousValue + currentValue;
     }, 0)
     if (count > 1) {
@@ -530,6 +559,6 @@ export function whatIsIt(object) {
   }
 }
 
-export function  definesDeviceIdentifier(sub: MappingSubstitution): boolean {
-  return sub.pathTarget == "source.id" || sub.pathTarget == TOKEN_DEVICE_TOPIC
+export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
+  return sub.pathTarget == API[api].identifier
 }

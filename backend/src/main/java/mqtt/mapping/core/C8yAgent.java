@@ -28,10 +28,12 @@ import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
 import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
+import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
@@ -72,6 +74,9 @@ public class C8yAgent {
 
     @Autowired
     private AlarmApi alarmApi;
+
+    @Autowired
+    private DeviceControlApi deviceControlApi;
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
@@ -361,7 +366,7 @@ public class C8yAgent {
         });
     }
 
-    public void createMEA(API targetAPI, String payload) throws ProcessingException {
+    public void createMEAO(API targetAPI, String payload) throws ProcessingException {
         String[] errors = { "" };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
@@ -382,6 +387,11 @@ public class C8yAgent {
                             .parse(MeasurementRepresentation.class, payload);
                     measurementRepresentation = measurementApi.create(measurementRepresentation);
                     log.info("New measurement posted: {}", measurementRepresentation);
+                } else if (targetAPI.equals(API.OPERATION)) {
+                    OperationRepresentation operationRepresentation = jsonParser
+                            .parse(OperationRepresentation.class, payload);
+                    operationRepresentation = deviceControlApi.create(operationRepresentation);
+                    log.info("New operation posted: {}", operationRepresentation);
                 } else {
                     log.error("Not existing API!");
                 }

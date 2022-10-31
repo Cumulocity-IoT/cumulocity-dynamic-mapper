@@ -22,6 +22,8 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
   substitutionOld: MappingSubstitution;
   @Input()
   substitutionNew: MappingSubstitution;
+  @Input()
+  targetAPI: string;
 
   message1: string;
   message2: string;
@@ -42,9 +44,9 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
       gettext('with the new substitution:'));
     this.message3 = this.translateService.instant(
       gettext('Do you want to proceed?'));
-    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.substitutionOld) ? "* " : "");
+    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.targetAPI, this.substitutionOld) ? "* " : "");
     this.substitutionOldText = `[ ${marksDeviceIdentifierOld}${this.substitutionOld.pathSource} -> ${this.substitutionOld.pathTarget} ]`;
-    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.substitutionNew) ? "* " : "");
+    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.targetAPI, this.substitutionNew) ? "* " : "");
     this.substitutionNewText = `[ ${marksDeviceIdentifierNew}${this.substitutionNew.pathSource} -> ${this.substitutionNew.pathTarget} ]`;
   }
 
