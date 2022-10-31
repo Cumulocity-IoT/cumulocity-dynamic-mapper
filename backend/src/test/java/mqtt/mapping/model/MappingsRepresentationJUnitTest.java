@@ -9,7 +9,7 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 
@@ -131,11 +131,11 @@ public class MappingsRepresentationJUnitTest {
 
 
   @Test
-  void testMQTTConfigurationIsActive() {
-    ConnectionConfiguration conf = null;
+  void testMQTTConfigurationIsEnabled() {
+    ConfigurationConnection conf = null;
 
-    log.info("My configuration is active: {}", ConnectionConfiguration.isActive(conf));
-    assertEquals(false, ConnectionConfiguration.isActive(conf));
+    log.info("My configuration is active: {}", ConfigurationConnection.isEnabled(conf));
+    assertEquals(false, ConfigurationConnection.isEnabled(conf));
   }
 
   @Test

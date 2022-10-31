@@ -21,7 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
@@ -44,17 +44,17 @@ public class MQTTMappingRestController {
     C8yAgent c8yAgent;
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectionConfiguration> getConnectionConfiguration() {
+    public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            final ConnectionConfiguration configuration = mqttClient.loadConnectionConfiguration();
+            final ConfigurationConnection configuration = mqttClient.loadConnectionConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
             }
             // don't modify original copy
-            ConnectionConfiguration configurationClone = (ConnectionConfiguration) configuration.clone();
+            ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
             configurationClone.setPassword("");
-            return new ResponseEntity<ConnectionConfiguration>(configurationClone, HttpStatus.OK);
+            return new ResponseEntity<ConfigurationConnection>(configurationClone, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error on loading configuration {}", ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -62,10 +62,10 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ConnectionConfiguration configuration) {
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ConfigurationConnection configuration) {
         
         // don't modify original copy
-        ConnectionConfiguration configurationClone = (ConnectionConfiguration) configuration.clone();
+        ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
         configurationClone.setPassword("");
         log.info("Post MQTT broker configuration: {}", configurationClone.toString());
         try {

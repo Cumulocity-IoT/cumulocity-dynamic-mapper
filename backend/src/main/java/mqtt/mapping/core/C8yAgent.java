@@ -9,12 +9,14 @@ import java.util.TimeZone;
 
 import javax.annotation.PreDestroy;
 
+import org.eclipse.jetty.util.security.Password;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
@@ -26,6 +28,8 @@ import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
+import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
+import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.event.EventApi;
@@ -39,7 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationService;
-import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -78,7 +82,6 @@ public class C8yAgent {
     @Autowired
     private ObjectMapper objectMapper;
 
-    
     @Autowired
     private ConfigurationService configurationService;
     
@@ -88,9 +91,13 @@ public class C8yAgent {
     
     public String tenant = null;
 
+    private MicroserviceCredentials credentials;
+
+
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
+        credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
 
@@ -301,8 +308,8 @@ public class C8yAgent {
         return result;
     }
 
-    public ConnectionConfiguration loadConnectionConfiguration() {
-        ConnectionConfiguration[] results = { new ConnectionConfiguration() };
+    public ConfigurationConnection loadConnectionConfiguration() {
+        ConfigurationConnection[] results = { new ConfigurationConnection() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = configurationService.loadConnectionConfiguration();
             //COMMENT OUT ONLY DEBUG
@@ -312,7 +319,16 @@ public class C8yAgent {
         return results[0];
     }
 
-    public void saveConnectionConfiguration(ConnectionConfiguration configuration) {
+    public TrustedCertificateRepresentation loadCertificateByName(String fingerprint) {
+        TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
+        subscriptionsService.runForTenant(tenant, () -> {
+            results[0] = configurationService.loadCertificateByName(fingerprint, credentials);
+            log.info("Found certificate with fingerprint: {}", results[0].getFingerprint());
+        });
+        return results[0];
+    }
+
+    public void saveConnectionConfiguration(ConfigurationConnection configuration) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 configurationService.saveConnectionConfiguration(configuration);
@@ -451,10 +467,10 @@ public class C8yAgent {
         });
     }
 
-    public ConnectionConfiguration setConfigurationActive(boolean b) {
-        ConnectionConfiguration[] configurations = { null };
+    public ConfigurationConnection enableConnection(boolean b) {
+        ConfigurationConnection[] configurations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            configurations[0] = configurationService.setConfigurationActive(b);
+            configurations[0] = configurationService.enableConnection(b);
             log.debug("Saved configuration");
         });
         return configurations[0];

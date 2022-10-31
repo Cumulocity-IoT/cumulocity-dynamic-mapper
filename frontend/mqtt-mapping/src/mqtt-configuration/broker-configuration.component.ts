@@ -19,7 +19,7 @@ export class BokerConfigurationComponent implements OnInit {
 
   version: string = packageJson.version;
   isBrokerConnected: boolean;
-  isBrokerActivated: boolean;
+  isConnectionEnabled: boolean;
   isBrokerAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
@@ -33,7 +33,10 @@ export class BokerConfigurationComponent implements OnInit {
     password: '',
     clientId: '',
     useTLS: false,
-    active: false,
+    enabled: false,
+    useSelfSignedCertificate: false,
+    fingerprintSelfSignedCertificate: '',
+    nameCertificate: ''
   };
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -65,14 +68,14 @@ export class BokerConfigurationComponent implements OnInit {
     this.monitorings$ = this.configurationService.getCurrentServiceStatus();
     this.monitorings$.subscribe(status => {
       this.isBrokerConnected = (status.status === Status.CONNECTED);
-      this.isBrokerActivated = (status.status === Status.ACTIVATED || status.status === Status.CONNECTED);
+      this.isConnectionEnabled = (status.status === Status.ENABLED || status.status === Status.CONNECTED);
     })
   }
 
   async loadConnectionStatus(): Promise<void> {
     let status = await this.configurationService.getConnectionStatus();
     this.isBrokerConnected = (status.status === Status.CONNECTED);
-    this.isBrokerActivated = (status.status === Status.ACTIVATED || status.status === Status.CONNECTED);
+    this.isConnectionEnabled = (status.status === Status.ENABLED || status.status === Status.CONNECTED);
     console.log("Retrieved status:", status, this.isBrokerConnected)
   }
 
@@ -83,8 +86,9 @@ export class BokerConfigurationComponent implements OnInit {
       user: new FormControl('', Validators.required),
       password: new FormControl('', Validators.required),
       clientId: new FormControl('', Validators.required),
-      active: new FormControl('', Validators.required),
       useTLS: new FormControl(''),
+      useSelfSignedCertificate: new FormControl(''),
+      nameCertificate: new FormControl(''),
     });
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(''),
@@ -98,7 +102,7 @@ export class BokerConfigurationComponent implements OnInit {
     console.log("Configuration:", conn, conf)
     if (conn) {
       this.connectionConfiguration = conn;
-      this.isBrokerActivated = conn.active;
+      this.isConnectionEnabled = conn.enabled;
     }
 
     if (conf) {
@@ -125,7 +129,7 @@ export class BokerConfigurationComponent implements OnInit {
   private async updateConnectionConfiguration() {
     let conn: ConnectionConfiguration = {
       ...this.connectionConfiguration,
-      active: false
+      enabled: false
     }
     const response = await this.configurationService.updateConnectionConfiguration(conn);
     if (response.status < 300) {

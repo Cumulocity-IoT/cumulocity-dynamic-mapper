@@ -15,7 +15,7 @@ public class ServiceStatus {
     }
     
     public static ServiceStatus activated() {
-        return new ServiceStatus(Status.ACTIVATED);
+        return new ServiceStatus(Status.ENABLED);
     }
     
     public static ServiceStatus configured() {

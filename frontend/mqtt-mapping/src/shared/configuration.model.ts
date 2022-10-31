@@ -7,7 +7,10 @@ export interface ConnectionConfiguration {
   password: string;
   clientId: string;
   useTLS: boolean;
-  active: boolean;
+  enabled: boolean;
+  useSelfSignedCertificate: boolean;
+  fingerprintSelfSignedCertificate: string;
+  nameCertificate: string;
 }
 
 export interface ServiceConfiguration {
@@ -90,7 +93,7 @@ export interface PayloadWrapper {
 
 export enum Status {
   CONNECTED = "CONNECTED",
-  ACTIVATED = "ACTIVATED",
+  ENABLED = "ACTIVATED",
   CONFIGURED = "CONFIGURED",
   NOT_READY = "NOT_READY"
 }

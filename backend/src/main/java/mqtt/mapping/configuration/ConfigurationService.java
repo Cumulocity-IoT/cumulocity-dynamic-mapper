@@ -1,13 +1,21 @@
 package mqtt.mapping.configuration;
 
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
+import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.option.TenantOptionApi;
+import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateCollectionRepresentation;
+import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+
+import javax.ws.rs.core.MediaType;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +29,32 @@ public class ConfigurationService {
 
     private final TenantOptionApi tenantOptionApi;
 
+    private final Platform platform;
+
     @Autowired
     private ObjectMapper objectMapper;
 
+
+
     @Autowired
-    public ConfigurationService(final TenantOptionApi tenantOptionApi) {
+    public ConfigurationService(TenantOptionApi tenantOptionApi, Platform platform) {
         this.tenantOptionApi = tenantOptionApi;
+        this.platform = platform;
     }
 
-    public void saveConnectionConfiguration(final ConnectionConfiguration configuration) throws JsonProcessingException {
+    public TrustedCertificateRepresentation loadCertificateByName(String certificateName, MicroserviceCredentials credentials) {
+        TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
+        TrustedCertificateCollectionRepresentation certificates = platform.rest().get(String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()), MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);        
+        certificates.forEach(cert -> {
+            if ( cert.getName().equals(certificateName)) {
+                results[0] = cert;
+            log.info("Found certificate with fingerprint:{} with name: {}", cert.getFingerprint(), cert.getName() );
+            }
+        });
+        return results[0];
+    }
+
+    public void saveConnectionConfiguration(final ConfigurationConnection configuration) throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
@@ -57,13 +82,13 @@ public class ConfigurationService {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public ConnectionConfiguration loadConnectionConfiguration() {
+    public ConfigurationConnection loadConnectionConfiguration() {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final ConnectionConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConnectionConfiguration.class);
+            final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConfigurationConnection.class);
             log.debug("Returning connection configuration found: {}:", configuration.mqttHost );
             return configuration;
         } catch (SDKException exception) {
@@ -107,15 +132,15 @@ public class ConfigurationService {
         tenantOptionApi.delete(optionPK);
     }
 
-    public ConnectionConfiguration setConfigurationActive(boolean active) {
+    public ConfigurationConnection enableConnection(boolean enabled) {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final ConnectionConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConnectionConfiguration.class);
-            configuration.active = active;
-            log.debug("Setting connection: {}:", configuration.active );
+            final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConfigurationConnection.class);
+            configuration.enabled = enabled;
+            log.debug("Setting connection: {}:", configuration.enabled );
             final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
@@ -132,4 +157,5 @@ public class ConfigurationService {
         }
         return null;
     }
+
 }
