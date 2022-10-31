@@ -91,6 +91,7 @@
           <c8y-form-group>
             <div class="row">
               <div class="col-lg-3">
+                <br>
                 <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
                   <input type="checkbox" formControlName="useTLS" [(ngModel)]="connectionConfiguration.useTLS"
                     #useTLSRef />
@@ -106,6 +107,7 @@
                 </c8y-messages>
               </div>
               <div class="col-lg-3" *ngIf = "connectionConfiguration.useTLS">
+                <br>
                 <label class="c8y-switch" title="{{ 'Use Self signed certificate' | translate }}">
                   <input type="checkbox" formControlName="useSelfSignedCertificate" [(ngModel)]="connectionConfiguration.useSelfSignedCertificate"
                     #useTLSRef />

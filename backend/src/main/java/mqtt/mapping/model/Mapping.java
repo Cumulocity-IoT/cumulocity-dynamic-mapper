@@ -115,7 +115,8 @@ public class Mapping implements Serializable {
 
   public void sortSubstitutions() {
     MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier()).compareTo(Boolean.valueOf(s2.definesDeviceIdentifier()))))
+        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI))
+            .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI)))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
   }

@@ -55,7 +55,8 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
    */
   static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    long count = Arrays.asList(mapping.substitutions).stream().filter(sub -> sub.definesDeviceIdentifier()).count();
+    long count = Arrays.asList(mapping.substitutions).stream()
+        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
     if (count > 1) {
       result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
     }

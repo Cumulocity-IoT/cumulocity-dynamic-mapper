@@ -139,7 +139,7 @@
                         </span>
                       </label>
                     </div>
-                    <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY">
+                    <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name">
                       <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                         <input type="checkbox" formControlName="createNonExistingDevice"
                           [(ngModel)]="mapping.createNonExistingDevice" />
@@ -149,7 +149,7 @@
                         </span>
                       </label>
                     </div>
-                    <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY">
+                    <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY.name">
                       <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
                         <input type="checkbox" formControlName="updateExistingDevice"
                           [(ngModel)]="mapping.updateExistingDevice" />
@@ -490,7 +490,7 @@
                             <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate><span
                                 class="text-warning">{{targetExpressionErrorMsg}}</span>
                             </c8y-message>
-                            <c8y-message *ngIf="definesDeviceIdentifier(currentSubstitution)" translate><span
+                            <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate><span
                                 class="text-info"> <b>source.id</b>
                                 is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
                                 previous step.</span>

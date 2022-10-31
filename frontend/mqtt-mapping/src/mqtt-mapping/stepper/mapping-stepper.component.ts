@@ -5,7 +5,6 @@ import { C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import JSONEditor from 'jsoneditor';
-import { Subject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
@@ -334,7 +333,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   async onSampleButton() {
     this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-    if (this.mapping.targetAPI == API.INVENTORY) {
+    if (this.mapping.targetAPI == API.INVENTORY.name) {
       this.templateTarget = this.expandTargetTemplate(this.templateTarget);
     }
   }
@@ -355,7 +354,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     }
 
     const initialState = {
-      snoopStatus: this.mapping.snoopStatus
+      snoopStatus: this.mapping.snoopStatus,
+      targetAPI: this.mapping.targetAPI
     }
     if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
       console.log("Ready to snoop ...");
@@ -394,7 +394,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
-    if (this.mapping.targetAPI == API.INVENTORY) {
+    if (this.mapping.targetAPI == API.INVENTORY.name) {
       this.templateTarget = this.expandTargetTemplate(this.templateTarget);
     }
   }
@@ -463,7 +463,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
     if (existingSubstitution != -1) {
       const initialState = {
-        substitution: this.mapping.substitutions[existingSubstitution]
+        substitution: this.mapping.substitutions[existingSubstitution],
+        targetAPI: this.mapping.targetAPI
       }
       const modalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe(

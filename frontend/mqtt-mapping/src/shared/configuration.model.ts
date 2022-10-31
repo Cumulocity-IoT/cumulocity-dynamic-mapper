@@ -98,11 +98,19 @@ export enum Status {
   NOT_READY = "NOT_READY"
 }
 
-export enum API {
-  ALARM = "ALARM",
-  EVENT = "EVENT",
-  MEASUREMENT = "MEASUREMENT",
-  INVENTORY = "INVENTORY"
+// export enum API {
+//   ALARM = "ALARM",
+//   EVENT = "EVENT",
+//   MEASUREMENT = "MEASUREMENT",
+//   INVENTORY = "INVENTORY"
+// }
+
+export const API = {
+  ALARM : { name: "ALARM", identifier: "source.id" },
+  EVENT : { name: "EVENT", identifier: "source.id" },
+  MEASUREMENT : { name: "MEASUREMENT", identifier: "source.id" },
+  INVENTORY : { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
+  OPERATION : { name: "OPERATION", identifier: "deviceId" },
 }
 
 export enum ValidationError {
