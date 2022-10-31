@@ -139,57 +139,62 @@ public class MQTTClient {
         if (isConnected()) {
             disconnect();
         }
-        var firstRun = true;
-        while (!isConnected() && shouldConnect()) {
-            log.info("Establishing the MQTT connection now - phase II: {}, {}",
-                    ConnectionConfiguration.isValid(connectionConfiguration), canConnect());
-            if (!firstRun) {
+        // stay in the loop until successful
+        boolean successful = false;
+        while (!successful) {
+            var firstRun = true;
+            while (!isConnected() && shouldConnect()) {
+                log.info("Establishing the MQTT connection now - phase II: {}, {}",
+                        ConnectionConfiguration.isValid(connectionConfiguration), canConnect());
+                if (!firstRun) {
+                    try {
+                        Thread.sleep(WAIT_PERIOD_MS);
+                    } catch (InterruptedException e) {
+                        log.error("Error on reconnect: ", e);
+                    }
+                }
                 try {
-                    Thread.sleep(WAIT_PERIOD_MS);
-                } catch (InterruptedException e) {
+                    if (canConnect()) {
+                        String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
+                        String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
+                        // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
+                        // MemoryPersistence());
+                        mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                                new MemoryPersistence());
+                        mqttClient.setCallback(dispatcher);
+                        MqttConnectOptions connOpts = new MqttConnectOptions();
+                        connOpts.setCleanSession(true);
+                        connOpts.setAutomaticReconnect(false);
+                        connOpts.setUserName(connectionConfiguration.getUser());
+                        connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                        mqttClient.connect(connOpts);
+                        log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                        c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
+                                STATUS_MQTT_EVENT_TYPE,
+                                DateTime.now(), null);
+                    }
+                } catch (MqttException e) {
                     log.error("Error on reconnect: ", e);
                 }
+                firstRun = false;
             }
+    
+            // try {
+            // Thread.sleep(WAIT_PERIOD_MS / 10);
+            // } catch (InterruptedException e) {
+            // log.error("Error on reconnect: ", e);
+            // }
+    
             try {
-                if (canConnect()) {
-                    String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
-                    String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
-                    // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
-                    // MemoryPersistence());
-                    mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                            new MemoryPersistence());
-                    mqttClient.setCallback(dispatcher);
-                    MqttConnectOptions connOpts = new MqttConnectOptions();
-                    connOpts.setCleanSession(true);
-                    connOpts.setAutomaticReconnect(false);
-                    connOpts.setUserName(connectionConfiguration.getUser());
-                    connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
-                    mqttClient.connect(connOpts);
-                    log.info("Successfully connected to broker {}", mqttClient.getServerURI());
-                    c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                            STATUS_MQTT_EVENT_TYPE,
-                            DateTime.now(), null);
-                }
+                subscribe("$SYS/#", 0);
+                activeSubscriptionTopic = new HashSet<String>();
+                activeMapping = new ArrayList<Mapping>();
+                reloadMappings();
             } catch (MqttException e) {
-                log.error("Error on reconnect: ", e);
+                log.error("Error on reconnect, retrying ... ", e);
             }
-            firstRun = false;
-        }
-
-        // try {
-        // Thread.sleep(WAIT_PERIOD_MS / 10);
-        // } catch (InterruptedException e) {
-        // log.error("Error on reconnect: ", e);
-        // }
-
-        try {
-            subscribe("$SYS/#", 0);
-            activeSubscriptionTopic = new HashSet<String>();
-            activeMapping = new ArrayList<Mapping>();
-            reloadMappings();
-        } catch (MqttException e) {
-            log.error("Error on reconnect: ", e);
-            return false;
+            successful = true;
+        
         }
         return true;
     }
@@ -335,7 +340,7 @@ public class MQTTClient {
         try {
             Instant now = Instant.now();
             // only log this for the first 180 seconds to reduce log amount
-            if (Duration.between(start, now).getSeconds() < 180) {
+            if (Duration.between(start, now).getSeconds() < 1800) {
                 String statusConnectTask = (connectTask == null ? "stopped"
                         : connectTask.isDone() ? "stopped" : "running");
                 String statusInitializeTask = (initializeTask == null ? "stopped"
@@ -474,9 +479,6 @@ public class MQTTClient {
                     (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
-
-        c8yAgent.saveMappings(mappings);
-        reloadMappings();
         return (long) updateMapping;
     }
 
@@ -494,7 +496,7 @@ public class MQTTClient {
         }
     }
 
-    public List<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload)
+    public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         MqttMessage mqttMessage = new MqttMessage();

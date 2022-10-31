@@ -35,14 +35,14 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor extends PayloadProcessor {
+public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
 
     public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
     @Override
-    public ProcessingContext deserializePayload(ProcessingContext context, MqttMessage mqttMessage) {
+    public ProcessingContext<String> deserializePayload(ProcessingContext<String> context, MqttMessage mqttMessage) {
         String payloadMessage = null;
         if (mqttMessage.getPayload() != null) {
             payloadMessage = (mqttMessage.getPayload() != null
@@ -54,7 +54,7 @@ public class JSONProcessor extends PayloadProcessor {
     }
 
     @Override
-    public void extractSource(ProcessingContext context)
+    public void extractSource(ProcessingContext<String> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();

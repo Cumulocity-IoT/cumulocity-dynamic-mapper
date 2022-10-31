@@ -2,7 +2,6 @@ package mqtt.mapping.processor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -11,11 +10,9 @@ import java.util.stream.Stream;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 
-@Slf4j
 @Data
 @NoArgsConstructor
 /*
@@ -25,10 +22,10 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
  * <code>cardinality</code>, <code>needsRepair</code>
  * when a <code>mapping</code> is applied to an incoming <code>payload</code>
  */
-public class ProcessingContext {
+public class ProcessingContext<T> {
     private Mapping mapping;
     private String topic;
-    private String payload;
+    private T payload;
     private ArrayList<C8YRequest> requests = new ArrayList<C8YRequest>();
     private Exception error;
     private ProcessingType processingType = ProcessingType.UNDEFINED;
@@ -37,10 +34,10 @@ public class ProcessingContext {
     private MappingType mappingType;
     private Map<String, ArrayList<SubstituteValue>> postProcessingCache = new HashMap<String, ArrayList<SubstituteValue>>();
     private boolean sendPayload = false;
+
     public boolean hasError() {
         return error != null;
     }
-
     public int addRequest(C8YRequest c8yRequest) {
         requests.add(c8yRequest);
         return requests.size() - 1;

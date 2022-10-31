@@ -23,6 +23,7 @@
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
 - [Monitoring](#monitoring)
 - [REST API](#rest-api)
+- [Load Test](#load-test)
 - [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
 
 
@@ -372,6 +373,10 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 1. ```.../mapping```: retrieve, delete, update mappings
 1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
+
+### Load Test
+In the resource section you find a test profil [jmeter_test_01.jmx](resources/script/jmeter_test_01.jmx) using jmeter and an extention for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
+This was used to run simple loadtest.
 
 ## Setup Sample MQTT mappings
 

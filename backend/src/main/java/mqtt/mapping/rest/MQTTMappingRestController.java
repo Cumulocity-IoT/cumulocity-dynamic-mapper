@@ -210,14 +210,14 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ProcessingContext>> forwardPayload( @PathVariable String method, @RequestParam URI topic,
+    public ResponseEntity<List<ProcessingContext<?>>> forwardPayload( @PathVariable String method, @RequestParam URI topic,
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         log.info("Test payload: {}, {}, {}", path, method, payload);
         try {
             boolean send = ("send").equals(method);
-            List<ProcessingContext> result = mqttClient.test(path, send, payload);
-            return new ResponseEntity<List<ProcessingContext>>(result, HttpStatus.OK);
+            List<ProcessingContext<?>> result = mqttClient.test(path, send, payload);
+            return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error transforming payload: {}", ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());

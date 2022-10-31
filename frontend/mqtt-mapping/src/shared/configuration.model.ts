@@ -142,6 +142,7 @@ export enum Operation {
 export enum MappingType {
   JSON = "JSON",
   FLAT_FILE = "FLAT_FILE",
+  GENERIC_BINARY = "GENERIC_BINARY",
 }
 
 export enum RepairStrategy {
