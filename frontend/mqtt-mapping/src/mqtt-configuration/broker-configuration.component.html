@@ -15,6 +15,13 @@
       </h4>
       <div class="c8y-realtime">
         <span class="c8y-pulse animated pulse" [ngClass]="{
+              active: isConnectionEnabled,
+              inactive: !isConnectionEnabled
+            }"></span>
+        {{ 'Connection enabled' | translate }}
+      </div>
+      <div class="c8y-realtime">
+        <span class="c8y-pulse animated pulse" [ngClass]="{
               active: isBrokerConnected,
               inactive: !isBrokerConnected
             }"></span>
@@ -83,7 +90,7 @@
           </c8y-form-group>
           <c8y-form-group>
             <div class="row">
-              <div class="col-lg-6">
+              <div class="col-lg-3">
                 <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
                   <input type="checkbox" formControlName="useTLS" [(ngModel)]="connectionConfiguration.useTLS"
                     #useTLSRef />
@@ -98,15 +105,30 @@
                   </c8y-message>
                 </c8y-messages>
               </div>
-              <div class="col-lg-6">
-                <label class="c8y-switch" title="{{ 'Is active' | translate }}">
-                  <input type="checkbox" formControlName="active" [ngModel]="isBrokerActivated" disabled="true" />
+              <div class="col-lg-3" *ngIf = "connectionConfiguration.useTLS">
+                <label class="c8y-switch" title="{{ 'Use Self signed certificate' | translate }}">
+                  <input type="checkbox" formControlName="useSelfSignedCertificate" [(ngModel)]="connectionConfiguration.useSelfSignedCertificate"
+                    #useTLSRef />
                   <span></span>
                   <span>
-                    {{ 'Is active'}}
+                    {{ 'Use Self signed certificate'}}
                   </span>
                 </label>
               </div>
+              <!-- <div class="col-lg-4" *ngIf = "connectionConfiguration.useSelfSignedCertificate">
+                <label  translate>Fingerprint of self-signed certificate</label>
+                <input formControlName="fingerprintSelfSignedCertificate" [(ngModel)]="connectionConfiguration.fingerprintSelfSignedCertificate" type="text"
+                  class="form-control" placeholder="{{ 'fingerprint' | translate }}"  required />
+              </div> -->
+              <div class="col-lg-6" *ngIf = "connectionConfiguration.useSelfSignedCertificate">
+                <label  translate>Name of self-signed certificate uploaded to Cumulocity</label>
+                <input formControlName="nameCertificate" [(ngModel)]="connectionConfiguration.nameCertificate" type="text"
+                  class="form-control" placeholder="{{ 'name certificate' | translate }}"/>
+              </div>
+            </div>
+          </c8y-form-group>
+          <c8y-form-group *ngIf = "connectionConfiguration.useTLS">
+            <div class="row">
             </div>
           </c8y-form-group>
         </div>

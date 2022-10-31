@@ -1,5 +1,16 @@
 package mqtt.mapping.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringBufferInputStream;
+import java.io.StringReader;
+import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,6 +25,12 @@ import java.util.concurrent.Future;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.security.cert.X509Certificate;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -33,7 +50,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectionConfiguration;
+import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
@@ -53,14 +70,15 @@ import mqtt.mapping.processor.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "";
+    private static final String ADDITION_TEST_DUMMY = "_D1";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
     private static final String STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
     private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
-    private ConnectionConfiguration connectionConfiguration;
+    private ConfigurationConnection connectionConfiguration;
+    private String certInPemFormat = "";
 
     @Getter
     private ServiceConfiguration serviceConfiguration;
@@ -117,6 +135,9 @@ public class MQTTClient {
                 }
             }
             connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+            if (connectionConfiguration.useSelfSignedCertificate){
+                certInPemFormat = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate).getCertInPemFormat();
+            }
             serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
         }
@@ -133,7 +154,7 @@ public class MQTTClient {
         }
     }
 
-    private boolean connect() {
+    private boolean connect() throws Exception{
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
         if (isConnected()) {
@@ -145,7 +166,7 @@ public class MQTTClient {
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
                 log.info("Establishing the MQTT connection now - phase II: {}, {}",
-                        ConnectionConfiguration.isValid(connectionConfiguration), canConnect());
+                        ConfigurationConnection.isValid(connectionConfiguration), canConnect());
                 if (!firstRun) {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
@@ -155,23 +176,48 @@ public class MQTTClient {
                 }
                 try {
                     if (canConnect()) {
-                        String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
-                        String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
-                        // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
-                        // MemoryPersistence());
-                        mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                                new MemoryPersistence());
-                        mqttClient.setCallback(dispatcher);
-                        MqttConnectOptions connOpts = new MqttConnectOptions();
-                        connOpts.setCleanSession(true);
-                        connOpts.setAutomaticReconnect(false);
-                        connOpts.setUserName(connectionConfiguration.getUser());
-                        connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
-                        mqttClient.connect(connOpts);
-                        log.info("Successfully connected to broker {}", mqttClient.getServerURI());
-                        c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                                STATUS_MQTT_EVENT_TYPE,
-                                DateTime.now(), null);
+                            String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
+                            String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
+                            // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
+                            // MemoryPersistence());
+                            mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                                    new MemoryPersistence());
+                            mqttClient.setCallback(dispatcher);
+                            MqttConnectOptions connOpts = new MqttConnectOptions();
+                            connOpts.setCleanSession(true);
+                            connOpts.setAutomaticReconnect(false);
+                            connOpts.setUserName(connectionConfiguration.getUser());
+                            connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                            if (connectionConfiguration.useSelfSignedCertificate) {
+                                log.info("Using certificate: {}", certInPemFormat);
+
+                                try {
+                                    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                                    StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n").append(certInPemFormat).append("\n").append("-----END CERTIFICATE-----");
+                                    trustStore.load(null,null);
+                                    trustStore.setCertificateEntry("Custom CA", (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(new ByteArrayInputStream(cert.toString().getBytes(Charset.defaultCharset()))));
+                                    
+                                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                                    tmf.init(trustStore);
+                                    TrustManager[] trustManagers = tmf.getTrustManagers();
+                                    
+                                    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                                    sslContext.init(null, trustManagers, null);
+                                    SSLSocketFactory sslSocketFactory =  sslContext.getSocketFactory();
+                                    
+                                    //where options is the MqttConnectOptions object
+                                    connOpts.setSocketFactory(sslSocketFactory);
+                                } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | KeyManagementException e) {
+                                    log.error("Exception when configuraing socketFactory for TLS!", e);
+                                    throw new Exception(e);
+                                }
+                            }
+                            mqttClient.connect(connOpts);
+                            log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                            c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
+                                    STATUS_MQTT_EVENT_TYPE,
+                                    DateTime.now(), null);
+
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: ", e);
@@ -200,12 +246,12 @@ public class MQTTClient {
     }
 
     private boolean canConnect() {
-        return ConnectionConfiguration.isActive(connectionConfiguration);
+        return ConfigurationConnection.isEnabled(connectionConfiguration) && ( !connectionConfiguration.useSelfSignedCertificate || (connectionConfiguration.useSelfSignedCertificate && !"".equals(certInPemFormat) && certInPemFormat != null));
     }
 
     private boolean shouldConnect() {
-        return !ConnectionConfiguration.isValid(connectionConfiguration)
-                || ConnectionConfiguration.isActive(connectionConfiguration);
+        return !ConfigurationConnection.isValid(connectionConfiguration)
+                || ConfigurationConnection.isEnabled(connectionConfiguration);
     }
 
     public boolean isConnected() {
@@ -235,22 +281,22 @@ public class MQTTClient {
     }
 
     public void disconnectFromBroker() {
-        connectionConfiguration = c8yAgent.setConfigurationActive(false);
+        connectionConfiguration = c8yAgent.enableConnection(false);
         disconnect();
         sendStatusService();
     }
 
     public void connectToBroker() {
-        connectionConfiguration = c8yAgent.setConfigurationActive(true);
+        connectionConfiguration = c8yAgent.enableConnection(true);
         submitConnect();
         sendStatusService();
     }
 
-    public ConnectionConfiguration loadConnectionConfiguration() {
+    public ConfigurationConnection loadConnectionConfiguration() {
         return c8yAgent.loadConnectionConfiguration();
     }
 
-    public void saveConnectionConfiguration(final ConnectionConfiguration configuration) {
+    public void saveConnectionConfiguration(final ConfigurationConnection configuration) {
         c8yAgent.saveConnectionConfiguration(configuration);
         disconnect();
         // invalidate broker client
@@ -372,7 +418,7 @@ public class MQTTClient {
             serviceStatus = ServiceStatus.connected();
         } else if (canConnect()) {
             serviceStatus = ServiceStatus.activated();
-        } else if (ConnectionConfiguration.isValid(connectionConfiguration)) {
+        } else if (ConfigurationConnection.isValid(connectionConfiguration)) {
             serviceStatus = ServiceStatus.configured();
         } else {
             serviceStatus = ServiceStatus.notReady();
