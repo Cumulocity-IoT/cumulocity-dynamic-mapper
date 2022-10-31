@@ -1,3 +1,6 @@
 <div class="substitution-list font-smaller">
-  <span class= "text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" [ngStyle]="{'background': ( i == setting.selectedSubstitutionIndex ? setting.color : 'none')}" (click)="onSubstitutionSelected(i)">{{'[ ' + (sub.definesIdentifier ? "* " : "") +  sub.pathSource + ' -> ' + sub.pathTarget +  ' ]'}}</span>
+  <span class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index"
+    [ngStyle]="{'background': ( i == setting.selectedSubstitutionIndex ? setting.color : 'none')}"
+    (click)="onSubstitutionSelected(i)">{{'[ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
+    ' -> ' + sub.pathTarget + ' ]'}}</span>
 </div>

@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { Mapping } from '../../../shared/configuration.model';
+import { definesDeviceIdentifier } from '../../../shared/helper';
+import { Mapping, MappingSubstitution } from '../../../shared/configuration.model';
 
 
 @Component({
@@ -13,12 +14,17 @@ import { Mapping } from '../../../shared/configuration.model';
 export class SubstitutionRendererComponent implements OnInit {
 
   @Input()
-  substitutions: Mapping[] = [];
+  substitutions: MappingSubstitution[] = [];
+
+  @Input()
+  targetAPI: string;
 
   @Input()
   setting: any;
 
   @Output() onSelect = new EventEmitter<number>();
+
+  definesDeviceIdentifier = definesDeviceIdentifier;
 
   constructor() { }
 

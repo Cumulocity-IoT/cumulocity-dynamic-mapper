@@ -140,7 +140,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       schema: SCHEMA_PAYLOAD
     };
 
-    this.enrichTemplates();
+    //this.enrichTemplates();
     //this.onTopicUpdated();
     this.onExpressionsUpdated();
   }
@@ -350,7 +350,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
-      //this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+      this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+      this.editorTarget.set(this.templateTarget);
+      this.editorSource.set(this.templateSource);
     }
 
     const initialState = {
@@ -387,11 +389,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     this.templateSource = JSON.parse(this.mapping.source);
     //add dummy field TOKEN_DEVICE_TOPIC to use for mapping the device identifier form the topic ending
     //if (isWildcardTopic(this.mapping.subscriptionTopic)) {
-    this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
+    this.templateSource = this.expandSourceTemplate(this.templateSource, levels);
     //}
     this.templateTarget = JSON.parse(this.mapping.target);
     if (!this.editMode) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
+
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
     if (this.mapping.targetAPI == API.INVENTORY.name) {

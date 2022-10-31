@@ -36,9 +36,9 @@ export const SAMPLE_TEMPLATES_C8Y = {
     \"name\": \"Vibration Sensor\",
     \"type\": \"maker_Vibration_Sensor\"
  }`,
- OPERATION: `{ 
+  OPERATION: `{ 
    \"deviceId\": \"909090\",
-   \"decription\": \"New camery operation!\",
+   \"decription\": \"New camera operation!\",
    \"type\": \"maker_Vibration_Sensor\"
 }`
 }

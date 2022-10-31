@@ -83,7 +83,7 @@ public abstract class PayloadProcessor<I,O> {
                 .get().getKey();
 
         Set<String> pathTargets = postProcessingCache.keySet();
-        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(SOURCE_ID);
+        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -113,7 +113,7 @@ public abstract class PayloadProcessor<I,O> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (pathTarget.equals(SOURCE_ID)) {
+                    if (pathTarget.equals(mapping.targetAPI.identifier)) {
                         var sourceId = resolveExternalId(substituteValue.typedValue().toString(),
                                 mapping.externalIdType);
                         if (sourceId == null && mapping.createNonExistingDevice) {
@@ -145,7 +145,7 @@ public abstract class PayloadProcessor<I,O> {
                         }
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                } else if (!pathTarget.equals(SOURCE_ID)) {
+                } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
             }
