@@ -377,7 +377,7 @@
                         </span>
                       </label>
                       <div style="min-height: 32px;">
-                        <mapping-substitution-renderer [substitutions]="mapping.substitutions"
+                        <mapping-substitution-renderer [substitutions]="mapping.substitutions" [targetAPI]="mapping.targetAPI"
                           [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}"
                           (onSelect)="onSelectSubstitution($event)">
                         </mapping-substitution-renderer>
