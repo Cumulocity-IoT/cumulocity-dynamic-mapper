@@ -1,5 +1,6 @@
 package mqtt.mapping.processor;
 
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,7 +34,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor<I,O> {
+public abstract class PayloadProcessor<O> {
 
     public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
         this.objectMapper = objectMapper;
@@ -58,7 +59,7 @@ public abstract class PayloadProcessor<I,O> {
 
     public static final String TIME = "time";
 
-    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage);
+    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage) throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 

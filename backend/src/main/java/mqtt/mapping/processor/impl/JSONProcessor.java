@@ -35,45 +35,40 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
+public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
 
     public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
     @Override
-    public ProcessingContext<String> deserializePayload(ProcessingContext<String> context, MqttMessage mqttMessage) {
-        String payloadMessage = null;
-        if (mqttMessage.getPayload() != null) {
-            payloadMessage = (mqttMessage.getPayload() != null
-                    ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
-                    : "");
-        }
-        context.setPayload(payloadMessage);
+    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException {
+        JsonNode jsonNode = objectMapper.readTree(mqttMessage.getPayload());
+        context.setPayload(jsonNode);
         return context;
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<String> context)
+    public void extractFromSource(ProcessingContext<JsonNode> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
-        String payload = context.getPayload();
+        JsonNode payloadJsonNode = context.getPayload();
         Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        JsonNode payloadJsonNode;
-        try {
-            payloadJsonNode = objectMapper.readTree(payload);
-        } catch (JsonProcessingException e) {
-            log.error("JsonProcessingException parsing: {}:", payload, e);
-            context.setError(
-                    new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
-            throw new ProcessingException("JsonProcessingException parsing: " + payload +
-            " exception:" + e);
-        }
+        // try {
+        //     payloadJsonNode = objectMapper.readTree(payload);
+
+        // } catch (JsonProcessingException e) {
+        //     log.error("JsonProcessingException parsing: {}:", payload, e);
+        //     context.setError(
+        //             new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
+        //     throw new ProcessingException("JsonProcessingException parsing: " + payload +
+        //     " exception:" + e);
+        // }
         ArrayNode topicLevels = objectMapper.createArrayNode();
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
         splitTopicAsList.forEach(s -> topicLevels.add(s));
@@ -82,11 +77,8 @@ public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
         } else {
             log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
         }
-        // payload = payloadJsonNode.toPrettyString();
-        payload = payloadJsonNode.toString();
+        String  payload = payloadJsonNode.toPrettyString();
         log.info("Patched payload: {}", payload);
-
-
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {

@@ -16,6 +16,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -85,12 +86,12 @@ public class App {
     }
 
     @Bean("payloadProcessors")
-    public Map<MappingType, PayloadProcessor<?,?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
+    public Map<MappingType, PayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
             C8yAgent c8yAgent) {
         return Map.of(
-            MappingType.JSON, new JSONProcessor<String,String>(objectMapper, mqttClient, c8yAgent),
-            MappingType.FLAT_FILE, new FlatFileProcessor<String,String>(objectMapper, mqttClient, c8yAgent),
-            MappingType.GENERIC_BINARY, new GenericBinaryProcessor<byte[], String>(objectMapper, mqttClient, c8yAgent)
+            MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
+            MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
+            MappingType.GENERIC_BINARY, new GenericBinaryProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
             );
     }
 

@@ -29,7 +29,8 @@ public class MappingNode extends TreeNode{
          if (tp.size() == 0){
             return new ArrayList<TreeNode> (Arrays.asList(this));
         } else {
-            throw new ResolveException("Unknown Resolution Error!");
+            String remaining = String.join("/", tp);
+            throw new ResolveException("No mapping registered for this path: " + this.getAbsolutePath() + remaining + "!");
         }
     }
 }
