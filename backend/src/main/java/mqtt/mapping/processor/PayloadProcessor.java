@@ -60,9 +60,9 @@ public abstract class PayloadProcessor<I,O> {
 
     public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage);
 
-    public abstract void extractSource(ProcessingContext<O> context) throws ProcessingException;
+    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 
-    public void patchTargetAndSend(ProcessingContext<O> context) throws ProcessingException {
+    public void substituteInTargetAndSend(ProcessingContext<O> context) throws ProcessingException {
         /*
          * step 3 replace target with extract content from incoming payload
          */
