@@ -21,7 +21,7 @@ export class MappingTabFactory implements TabFactory {
         path: 'mqtt-mapping/mapping',
         priority: 1000,
         label: 'Mapping',
-        icon: 'split-table',
+        icon: 'grid-view',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({

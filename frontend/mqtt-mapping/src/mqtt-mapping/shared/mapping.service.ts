@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IFetchResponse, IManagedObject, IMeasurement, InventoryService, IResult, IResultList, MeasurementService } from '@c8y/client';
-import { API, Mapping, Operation } from '../../shared/configuration.model';
-import * as _ from 'lodash';
-import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_OPERATION_ENDPOINT, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IManagedObject, IMeasurement, InventoryService, IResult, MeasurementService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
+import * as _ from 'lodash';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { API, Mapping } from '../../shared/configuration.model';
+import { definesDeviceIdentifier, MAPPING_FRAGMENT, MAPPING_TYPE, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -14,7 +14,6 @@ export class MappingService {
     private event: EventService,
     private alarm: AlarmService,
     private measurement: MeasurementService,
-    private client: FetchClient,
     private configurationService: BrokerConfigurationService,
     private alert: AlertService) { }
 
@@ -85,15 +84,13 @@ export class MappingService {
       console.log("MQTT test device is already initialized:", this.testDeviceId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
-          let s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
-          if (!s || s == '') {
-            if (sub.pathSource != TOKEN_DEVICE_TOPIC) {
+        //if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
+        if (definesDeviceIdentifier(mapping.targetAPI, sub)) {
+          let s : JSON = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
+          if ( s == undefined) {
               console.error("No substitution for:", sub.pathSource, s, mapping.source);
-              throw Error("Error: substitution not found:" + sub.pathSource);
-            } else {
-              s = this.testDeviceId;
-            }
+              this.alert.warning("Warning: no substitution found for : " + sub.pathSource)
+              //throw Error("Error: substitution not found:" + sub.pathSource);
           }
           _.set(result, sub.pathTarget, s)
         }
@@ -101,11 +98,10 @@ export class MappingService {
         if (sub.pathTarget == TIME) {
           substitutionTimeExists = true;
         }
-
       })
 
       // for simulation replace source id with agentId
-      if (simulation && mapping.targetAPI != API.INVENTORY) {
+      if (simulation && mapping.targetAPI != API.INVENTORY.name) {
         result.source.id = this.testDeviceId;
         result.time = new Date().toISOString();
       }
@@ -125,21 +121,21 @@ export class MappingService {
     let test_payload = await this.testResult(mapping, true);
     let error: string = '';
 
-    if (mapping.targetAPI == API.EVENT) {
+    if (mapping.targetAPI == API.EVENT.name) {
       let p: IEvent = test_payload as IEvent;
       if (p != null) {
         result = this.event.create(p);
       } else {
         error = "Payload is not a valid:" + mapping.targetAPI;
       }
-    } else if (mapping.targetAPI == API.ALARM) {
+    } else if (mapping.targetAPI == API.ALARM.name) {
       let p: IAlarm = test_payload as IAlarm;
       if (p != null) {
         result = this.alarm.create(p);
       } else {
         error = "Payload is not a valid:" + mapping.targetAPI;
       }
-    } else if (mapping.targetAPI == API.MEASUREMENT) {
+    } else if (mapping.targetAPI == API.MEASUREMENT.name) {
       let p: IMeasurement = test_payload as IMeasurement;
       if (p != null) {
         result = this.measurement.create(p);
@@ -183,18 +179,18 @@ export class MappingService {
 
   }
 
-  public evaluateExpression(json: JSON, path: string, flat: boolean): string {
+  public evaluateExpression(json: JSON, path: string, flat: boolean): JSON {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path)
       result = expression.evaluate(json) as JSON
-      if (flat) {
-        if (Array.isArray(result)) {
-          result = result[0];
-        }
-      } else {
-        result = JSON.stringify(result, null, 4);
-      }
+      // if (flat) {
+      //   if (Array.isArray(result)) {
+      //     result = result[0];
+      //   }
+      // } else {
+      //   result = JSON.stringify(result, null, 4);
+      // }
     }
     return result;
   }

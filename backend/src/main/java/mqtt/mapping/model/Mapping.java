@@ -4,12 +4,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import mqtt.mapping.processor.MappingType;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.List;
 
 import javax.validation.constraints.NotNull;
 
@@ -20,9 +20,13 @@ import javax.validation.constraints.NotNull;
 public class Mapping implements Serializable {
 
   public static int SNOOP_TEMPLATES_MAX = 5;
+  public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
 
   @NotNull
   public long id;
+
+  @NotNull
+  public String ident;
 
   @NotNull
   public String subscriptionTopic;
@@ -31,7 +35,7 @@ public class Mapping implements Serializable {
   public String templateTopic;
 
   @NotNull
-  public long indexDeviceIdentifierInTemplateTopic;
+  public String templateTopicSample;
 
   @NotNull
   public API targetAPI;
@@ -73,6 +77,9 @@ public class Mapping implements Serializable {
   public ArrayList<String> snoopedTemplates;
 
   @NotNull
+  public MappingType mappingType;
+
+  @NotNull
   public long lastUpdate;
 
   /**
@@ -90,7 +97,6 @@ public class Mapping implements Serializable {
   public void copyFrom(Mapping mapping) {
     this.subscriptionTopic = mapping.subscriptionTopic;
     this.templateTopic = mapping.templateTopic;
-    this.indexDeviceIdentifierInTemplateTopic = mapping.indexDeviceIdentifierInTemplateTopic;
     this.targetAPI = mapping.targetAPI;
     this.source = mapping.source;
     this.target = mapping.target;
@@ -118,12 +124,34 @@ public class Mapping implements Serializable {
 
   public void sortSubstitutions() {
     MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-        (s1, s2) -> -(Boolean.valueOf(s1.isDefinesIdentifier()).compareTo(Boolean.valueOf(s2.isDefinesIdentifier()))))
+        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI))
+            .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI)))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
   }
 
+
   public boolean isForUplink(){
     return !Boolean.TRUE.equals(this.direct);
+ }
+
+  public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
+    topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "/");
+    return topic.split(SPLIT_TOPIC_REGEXP);
+  }
+
+  public static List<String> splitTopicIncludingSeparatorAsList(String topic) {
+    return new ArrayList<String>(
+        Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
+  }
+
+  public static String[] splitTopicExcludingSeparatorAsArray(String topic) {
+    topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
+    return topic.split("\\/");
+  }
+
+  public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
+    return new ArrayList<String>(
+        Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
   }
 }

@@ -2,6 +2,7 @@ package mqtt.mapping.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -23,8 +24,8 @@ public class MappingNode extends TreeNode{
         return true;
     }  
 
-    public ArrayList<TreeNode> resolveTopicPath(ArrayList<String> tp) throws ResolveException {
-        log.info("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
+    public List<TreeNode> resolveTopicPath(List<String> tp) throws ResolveException {
+        log.debug("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
          if (tp.size() == 0){
             return new ArrayList<TreeNode> (Arrays.asList(this));
         } else {

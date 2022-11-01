@@ -33,6 +33,7 @@ export class MonitoringComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
+      sortOrder: 'asc',
       gridTrackSize: '10%',
       cellRendererComponent: IdRendererComponent
     },
@@ -97,7 +98,7 @@ export class MonitoringComponent implements OnInit {
   }
 
   async refreshMappingStatus(): Promise<void> {
-    await this.configurationService.runOperation(Operation.RESFRESH_MAPPING_STATUS);
+    await this.configurationService.runOperation(Operation.RESFRESH_STATUS_MAPPING);
   }
 
   private async initializeMonitoringService() {

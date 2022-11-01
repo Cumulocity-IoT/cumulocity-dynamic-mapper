@@ -1,41 +1,50 @@
 package mqtt.mapping.processor;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.joda.time.DateTime;
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
-import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor implements MqttCallback {
+public abstract class PayloadProcessor<I,O> {
 
-    @Autowired
+    public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
+        this.objectMapper = objectMapper;
+        this.mqttClient = mqttClient;
+        this.c8yAgent = c8yAgent;
+    }
+
     protected C8yAgent c8yAgent;
 
-    @Autowired
+    protected ObjectMapper objectMapper;
+
     protected MQTTClient mqttClient;
 
     @Autowired
@@ -44,27 +53,16 @@ public abstract class PayloadProcessor implements MqttCallback {
     public static String SOURCE_ID = "source.id";
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
+    public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+    public static String TOKEN_TOPIC_LEVEL_BACKQUOTE = "`_TOPIC_LEVEL_`";
 
     public static final String TIME = "time";
 
-    public abstract String deserializePayload(MqttMessage mqttMessage);
+    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage);
 
-    public abstract ArrayList<TreeNode> resolveMapping(String topic, String payloadMessage) throws ResolveException;
-
-    public abstract void transformPayload(ProcessingContext ctx, String payloadMessage, boolean send) throws ProcessingException;
+    public abstract void extractSource(ProcessingContext<O> context) throws ProcessingException;
 
     public abstract void transformDownLinkPayload(ProcessingContext ctx, String payloadMessage) throws ProcessingException;
-
-    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        if (topic != null && !topic.startsWith("$SYS")) {
-            if (mqttMessage.getPayload() != null) {
-                String payloadMessage = deserializePayload(mqttMessage);
-                processPayload(topic, payloadMessage, true);
-            }
-        } else {
-            sysHandler.handleSysPayload(topic, mqttMessage);
-        }
-    }
 
     public void publishMessage(Mapping mapping, String message){
         if (StringUtils.isNotBlank(mapping.getSubscriptionTopic()) && StringUtils.isNotBlank(message)) {
@@ -92,78 +90,132 @@ public abstract class PayloadProcessor implements MqttCallback {
         return context;
     }
 
-    public ArrayList<ProcessingContext> processPayload(String topic, String payloadMessage, boolean sendPayload)  {
-        ArrayList<TreeNode> nodes = new ArrayList<TreeNode>();
-        ArrayList<ProcessingContext> processingResult = new ArrayList<ProcessingContext>();
-
+    public void patchTargetAndSend(ProcessingContext<O> context) throws ProcessingException {
+        /*
+         * step 3 replace target with extract content from incoming payload
+         */
+        Mapping mapping = context.getMapping();
+        JsonNode payloadTarget = null;
         try {
-            nodes = resolveMapping(topic, payloadMessage);
-        } catch (Exception e) {
-            log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message.");
-            e.printStackTrace();
-            MappingStatus ms = mqttClient.getMappingStatus(null, true);
-            ms.errors++;
+            payloadTarget = objectMapper.readTree(mapping.target);
+        } catch (JsonProcessingException e) {
+            throw new ProcessingException(e.getMessage());
+
         }
 
-        for (TreeNode node : nodes) {
-            ProcessingContext ctx = new ProcessingContext();
-            if (node instanceof MappingNode) {
-                ctx.setMapping(((MappingNode) node).getMapping());
-                Mapping map = ctx.getMapping();
-                ArrayList<String> topicLevels = TreeNode.splitTopic(topic);
-                if (map.indexDeviceIdentifierInTemplateTopic >= 0) {
-                    String deviceIdentifier = topicLevels
-                            .get((int) (map.indexDeviceIdentifierInTemplateTopic));
-                    log.info("Resolving deviceIdentifier: {}, {} to {}", topic,
-                            map.indexDeviceIdentifierInTemplateTopic, deviceIdentifier);
-                    ctx.setDeviceIdentifier(deviceIdentifier);
-                }
-                MappingStatus ms = mqttClient.getMappingStatus(map, false);
-                try {
-                    ms.messagesReceived++;
-                    if (map.snoopStatus == SnoopStatus.ENABLED
-                            || map.snoopStatus == SnoopStatus.STARTED) {
-                        ms.snoopedTemplatesActive++;
-                        ms.snoopedTemplatesTotal = map.snoopedTemplates.size();
-                        map.addSnoopedTemplate(payloadMessage);
+        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        String maxEntry = postProcessingCache.entrySet()
+                .stream()
+                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
+                .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
+                        .compareTo(e2.getValue()))
+                .get().getKey();
 
-                        log.info("Adding snoopedTemplate to map: {},{},{}", map.subscriptionTopic,
-                                map.snoopedTemplates.size(),
-                                map.snoopStatus);
-                        mqttClient.setMappingDirty(map);
-                    } else {
-                        transformPayload(ctx, payloadMessage, sendPayload);
-                        if ( ctx.hasError() || ctx.getRequests().stream().anyMatch(r -> r.hasError())) {
-                            ms.errors++;
+        Set<String> pathTargets = postProcessingCache.keySet();
+        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
+        int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
+        SubstituteValue toDouble = deviceEntries.get(0);
+        while (deviceEntries.size() < countMaxlistEntries) {
+            deviceEntries.add(toDouble);
+        }
+
+        int i = 0;
+        for (SubstituteValue device : deviceEntries) {
+
+            int predecessor = -1;
+            for (String pathTarget : pathTargets) {
+                SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
+                        RepairStrategy.DEFAULT);
+                if (i < postProcessingCache.get(pathTarget).size()) {
+                    substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
+                } else if (postProcessingCache.get(pathTarget).size() == 1) {
+                    // this is an indication that the substitution is the same for all
+                    // events/alarms/measurements/inventory
+                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY)) {
+                        substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                    } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                        int last = postProcessingCache.get(pathTarget).size() - 1;
+                        substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
+                    }
+                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used: {}, {}, {}",
+                            pathTarget, substituteValue.repairStrategy);
+                }
+
+                if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                    if (pathTarget.equals(mapping.targetAPI.identifier)) {
+                        var sourceId = resolveExternalId(substituteValue.typedValue().toString(),
+                                mapping.externalIdType);
+                        if (sourceId == null && mapping.createNonExistingDevice) {
+                            if (context.isSendPayload()) {
+                                var d = c8yAgent.upsertDevice(
+                                        "device_" + mapping.externalIdType + "_"
+                                                + substituteValue.typedValue().toString(),
+                                        "c8y_MQTTMapping_generated_type", substituteValue.typedValue().toString(),
+                                        mapping.externalIdType);
+                                substituteValue.value = new TextNode(d.getId().getValue());
+                            }
+                            try {
+                                Map<String, Object> map = new HashMap<String, Object>();
+                                map.put("c8y_IsDevice", null);
+                                map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value);
+                                var p = objectMapper.writeValueAsString(map);
+                                predecessor = context.addRequest(
+                                        new C8YRequest(-1, RequestMethod.PATCH, device.value.asText(),
+                                                mapping.externalIdType,
+                                                p, API.INVENTORY, null));
+                            } catch (JsonProcessingException e) {
+                                // ignore
+                            }
+                        } else if (sourceId == null) {
+                            throw new RuntimeException("External id " + substituteValue + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        } else {
+                            substituteValue.value = new TextNode(sourceId);
                         }
                     }
-                } catch (Exception e) {
-                    log.warn("Message could NOT be parsed, ignoring this message.");
-                    e.printStackTrace();
-                    ms.errors++;
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
-            } else {
-                ctx.setError(new ResolveException("Could not find appropriate mapping for topic: " + topic));
             }
-            processingResult.add(ctx);
+            /*
+             * step 4 prepare target payload for sending to c8y
+             */
+            if (mapping.targetAPI.equals(API.INVENTORY)) {
+                Exception ex = null;
+                if (context.isSendPayload()) {
+                    try {
+                        c8yAgent.upsertDevice(payloadTarget.toString(), device.typedValue().toString(),
+                                mapping.externalIdType);
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.PATCH, device.typedValue().toString(),
+                                mapping.externalIdType,
+                                payloadTarget.toString(), API.INVENTORY, ex));
+            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                Exception ex = null;
+                if (context.isSendPayload()) {
+                    try {
+                        c8yAgent.createMEAO(mapping.targetAPI, payloadTarget.toString());
+                    } catch (Exception e) {
+                        ex = e;
+                    }
+                }
+                context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.POST, device.type.toString(), mapping.externalIdType,
+                                payloadTarget.toString(), mapping.targetAPI, ex));
+            } else {
+                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+                        postProcessingCache.size());
+            }
+            log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+                    deviceEntries.size());
+            i++;
         }
-        return processingResult;
     }
-
-    // public void sendC8YRequests(ProcessingContext ctx) {
-    //     // send target payload to c8y
-    //     for (C8YRequest request : ctx.getRequests()) {
-    //         try {
-    //             if (request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-    //                 c8yAgent.upsertDevice(request.getPayload(), request.getSource(), request.getExternalIdType());
-    //             } else if (!request.getTargetAPI().equals(API.INVENTORY) && !request.isAlreadySubmitted()) {
-    //                 c8yAgent.createMEA(request.getTargetAPI(), request.getPayload());
-    //             }
-    //         } catch (ProcessingException error) {
-    //             request.setError(error);
-    //         }
-    //     }
-    // }
 
     public String resolveExternalId(String externalId, String externalIdType) {
         ExternalIDRepresentation extId = c8yAgent.getExternalId(externalId, externalIdType);
@@ -171,42 +223,51 @@ public abstract class PayloadProcessor implements MqttCallback {
         if (extId != null) {
             id = extId.getManagedObject().getId().getValue();
         }
-        log.info("Found id {} for external id: {}", id, externalId);
+        log.debug("Found id {} for external id: {}", id, externalId);
         return id;
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String key) throws JSONException {
-        String[] pt = key.split(Pattern.quote("."));
-        if (pt == null) {
-            pt = new String[] { key };
+    public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
+        String[] splitKeys = keys.split(Pattern.quote("."));
+        boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
+        if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
+            removeValueFromObect(jsonObject, splitKeys);
+        } else {
+            if (splitKeys == null) {
+                splitKeys = new String[] { keys };
+            }
+            substituteValueInObject(sub, jsonObject, splitKeys);
         }
-        return substituteValue(sub, jsonObject, pt);
     }
 
-    public JSONObject substituteValue(SubstituteValue sub, JSONObject jsonObject, String[] keys) throws JSONException {
+    public JsonNode removeValueFromObect(JsonNode jsonObject, String[] keys) throws JSONException {
         String currentKey = keys[0];
 
         if (keys.length == 1) {
-            return jsonObject.put(currentKey, sub.typedValue());
+            return ((ObjectNode) jsonObject).remove(currentKey);
         } else if (!jsonObject.has(currentKey)) {
             throw new JSONException(currentKey + "is not a valid key.");
         }
 
-        JSONObject nestedJsonObjectVal = jsonObject.getJSONObject(currentKey);
+        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
         String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JSONObject updatedNestedValue = substituteValue(sub, nestedJsonObjectVal, remainingKeys);
-        return jsonObject.put(currentKey, updatedNestedValue);
+        return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
     }
 
-    @Override
-    public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT broker: ", throwable);
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
-        mqttClient.submitConnect();
-    }
+    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys)
+            throws JSONException {
+        String currentKey = keys[0];
 
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+        if (keys.length == 1) {
+            return ((ObjectNode) jsonObject).set(currentKey, sub.value);
+        } else if (!jsonObject.has(currentKey)) {
+            throw new JSONException(currentKey + " is not a valid key.");
+        }
+
+        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
+        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
+        JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
+        return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
     }
 
 }

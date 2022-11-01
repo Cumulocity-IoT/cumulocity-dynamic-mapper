@@ -2,7 +2,7 @@ package mqtt.mapping.service;
 
 public enum Status {
     CONNECTED,
-    ACTIVATED,
+    ENABLED,
     CONFIGURED,
     NOT_READY
 }

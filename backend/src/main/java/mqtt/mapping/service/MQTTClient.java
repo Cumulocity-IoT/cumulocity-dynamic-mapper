@@ -1,20 +1,42 @@
 package mqtt.mapping.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.StringBufferInputStream;
+import java.io.StringReader;
+import java.nio.charset.Charset;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import mqtt.mapping.websocket.TenantNotificationMappingCallback;
-import mqtt.mapping.websocket.TenantNotificationService;
-import org.eclipse.paho.client.mqttv3.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.security.cert.X509Certificate;
+
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,17 +49,20 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.MQTTConfiguration;
+import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
-import mqtt.mapping.processor.PayloadProcessor;
+import mqtt.mapping.processor.Dispatcher;
 import mqtt.mapping.processor.ProcessingContext;
 
 @Slf4j
@@ -46,21 +71,26 @@ import mqtt.mapping.processor.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_d1";
+    private static final String ADDITION_TEST_DUMMY = "_D2";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
     private static final String STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
     private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
-    private MQTTConfiguration mqttConfiguration;
+    private ConfigurationConnection connectionConfiguration;
+    private String certInPemFormat = "";
+
+    @Getter
+    private ServiceConfiguration serviceConfiguration;
+
     private MqttClient mqttClient;
 
     @Autowired
     private C8yAgent c8yAgent;
 
     @Autowired
-    private PayloadProcessor payloadProcessor;
+    private Dispatcher dispatcher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -79,7 +109,9 @@ public class MQTTClient {
 
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
-    private Map<Long, MappingStatus> statusMapping = new HashMap<Long, MappingStatus>();
+    private Map<String, MappingStatus> statusMapping = new HashMap<String, MappingStatus>();
+
+    private Instant start = Instant.now();
 
     @Autowired
     private TenantNotificationService tenantNotificationService;
@@ -94,9 +126,10 @@ public class MQTTClient {
 
     private boolean initialize() {
         var firstRun = true;
-        // initialize entry to record errors that can't be assigned to any map, i.e. UNSPECIFIED
-        getMappingStatus(null,true);
-        while ( !MQTTConfiguration.isActive(mqttConfiguration)) {
+        // initialize entry to record errors that can't be assigned to any map, i.e.
+        // UNSPECIFIED
+        getMappingStatus(null, true);
+        while (!canConnect()) {
             if (!firstRun) {
                 try {
                     log.info("Retrieving MQTT configuration in {}s ...",
@@ -106,7 +139,11 @@ public class MQTTClient {
                     log.error("Error initializing MQTT client: ", e);
                 }
             }
-            mqttConfiguration = c8yAgent.loadConfiguration();
+            connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+            if (connectionConfiguration.useSelfSignedCertificate){
+                certInPemFormat = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate).getCertInPemFormat();
+            }
+            serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
         }
         return true;
@@ -122,65 +159,104 @@ public class MQTTClient {
         }
     }
 
-    private boolean connect() {
-        log.info("Establishing the MQTT connection now (phase I), shouldConnect:", shouldConnect());
+    private boolean connect() throws Exception{
+        log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
+                shouldConnect());
         if (isConnected()) {
             disconnect();
         }
-        var firstRun = true;
-        while (!isConnected() && shouldConnect()) {
-            log.debug("Establishing the MQTT connection now (phase II): {}, {}", MQTTConfiguration.isValid(mqttConfiguration), MQTTConfiguration.isActive(mqttConfiguration));
-            if (!firstRun) {
+        // stay in the loop until successful
+        boolean successful = false;
+        while (!successful) {
+            var firstRun = true;
+            while (!isConnected() && shouldConnect()) {
+                log.info("Establishing the MQTT connection now - phase II: {}, {}",
+                        ConfigurationConnection.isValid(connectionConfiguration), canConnect());
+                if (!firstRun) {
+                    try {
+                        Thread.sleep(WAIT_PERIOD_MS);
+                    } catch (InterruptedException e) {
+                        log.error("Error on reconnect: ", e);
+                    }
+                }
                 try {
-                    Thread.sleep(WAIT_PERIOD_MS);
-                } catch (InterruptedException e) {
+                    if (canConnect()) {
+                            String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
+                            String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
+                            // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
+                            // MemoryPersistence());
+                            mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                                    new MemoryPersistence());
+                            mqttClient.setCallback(dispatcher);
+                            MqttConnectOptions connOpts = new MqttConnectOptions();
+                            connOpts.setCleanSession(true);
+                            connOpts.setAutomaticReconnect(false);
+                            connOpts.setUserName(connectionConfiguration.getUser());
+                            connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                            if (connectionConfiguration.useSelfSignedCertificate) {
+                                log.info("Using certificate: {}", certInPemFormat);
+
+                                try {
+                                    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                                    StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n").append(certInPemFormat).append("\n").append("-----END CERTIFICATE-----");
+                                    trustStore.load(null,null);
+                                    trustStore.setCertificateEntry("Custom CA", (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(new ByteArrayInputStream(cert.toString().getBytes(Charset.defaultCharset()))));
+                                    
+                                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                                    tmf.init(trustStore);
+                                    TrustManager[] trustManagers = tmf.getTrustManagers();
+                                    
+                                    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                                    sslContext.init(null, trustManagers, null);
+                                    SSLSocketFactory sslSocketFactory =  sslContext.getSocketFactory();
+                                    
+                                    //where options is the MqttConnectOptions object
+                                    connOpts.setSocketFactory(sslSocketFactory);
+                                } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | KeyManagementException e) {
+                                    log.error("Exception when configuraing socketFactory for TLS!", e);
+                                    throw new Exception(e);
+                                }
+                            }
+                            mqttClient.connect(connOpts);
+                            log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                            c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
+                                    STATUS_MQTT_EVENT_TYPE,
+                                    DateTime.now(), null);
+
+                    }
+                } catch (MqttException e) {
                     log.error("Error on reconnect: ", e);
                 }
+                firstRun = false;
             }
+    
+            // try {
+            // Thread.sleep(WAIT_PERIOD_MS / 10);
+            // } catch (InterruptedException e) {
+            // log.error("Error on reconnect: ", e);
+            // }
+    
             try {
-                if (MQTTConfiguration.isActive(mqttConfiguration)) {
-                    String prefix = mqttConfiguration.useTLS ? "ssl://" : "tcp://";
-                    String broker = prefix + mqttConfiguration.mqttHost + ":" + mqttConfiguration.mqttPort;
-                    mqttClient = new MqttClient(broker, mqttConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                            new MemoryPersistence());
-                    mqttClient.setCallback(payloadProcessor);
-                    MqttConnectOptions connOpts = new MqttConnectOptions();
-                    connOpts.setCleanSession(true);
-                    connOpts.setAutomaticReconnect(false);
-                    connOpts.setUserName(mqttConfiguration.getUser());
-                    connOpts.setPassword(mqttConfiguration.getPassword().toCharArray());
-                    mqttClient.connect(connOpts);
-                    log.info("Successfully connected to broker {}", mqttClient.getServerURI());
-                    c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                            STATUS_MQTT_EVENT_TYPE,
-                            DateTime.now(), null);
-                }
+                subscribe("$SYS/#", 0);
+                activeSubscriptionTopic = new HashSet<String>();
+                activeMapping = new ArrayList<Mapping>();
+                reloadMappings();
             } catch (MqttException e) {
-                log.error("Error on reconnect: ", e);
+                log.error("Error on reconnect, retrying ... ", e);
             }
-            firstRun = false;
-        }
-
-        try {
-            Thread.sleep(WAIT_PERIOD_MS / 30);
-        } catch (InterruptedException e) {
-            log.error("Error on reconnect: ", e);
-        }
-
-        try {
-            subscribe("$SYS/#", 0);
-            activeSubscriptionTopic = new HashSet<String>();
-            activeMapping = new ArrayList<Mapping>();
-            reloadMappings();
-        } catch (MqttException e) {
-            log.error("Error on reconnect: ", e);
-            return false;
+            successful = true;
+        
         }
         return true;
     }
 
+    private boolean canConnect() {
+        return ConfigurationConnection.isEnabled(connectionConfiguration) && ( !connectionConfiguration.useSelfSignedCertificate || (connectionConfiguration.useSelfSignedCertificate && !"".equals(certInPemFormat) && certInPemFormat != null));
+    }
+
     private boolean shouldConnect() {
-        return !MQTTConfiguration.isValid(mqttConfiguration) || MQTTConfiguration.isActive(mqttConfiguration);
+        return !ConfigurationConnection.isValid(connectionConfiguration)
+                || ConfigurationConnection.isEnabled(connectionConfiguration);
     }
 
     public boolean isConnected() {
@@ -197,7 +273,7 @@ public class MQTTClient {
                     try {
                         mqttClient.unsubscribe(topic);
                     } catch (MqttException e) {
-                        log.error("Exception when unsubsribing from topic {}, {}", topic, e);
+                        log.error("Exception when unsubscribing from topic: {}, {}", topic, e);
                     }
                 });
                 mqttClient.unsubscribe("$SYS");
@@ -210,54 +286,71 @@ public class MQTTClient {
     }
 
     public void disconnectFromBroker() {
-        mqttConfiguration = c8yAgent.setConfigurationActive(false);
+        connectionConfiguration = c8yAgent.enableConnection(false);
         disconnect();
         sendStatusService();
     }
 
     public void connectToBroker() {
-        mqttConfiguration = c8yAgent.setConfigurationActive(true);
+        connectionConfiguration = c8yAgent.enableConnection(true);
         submitConnect();
         sendStatusService();
     }
 
-    public MQTTConfiguration getConnectionDetails() {
-        return c8yAgent.loadConfiguration();
+    public ConfigurationConnection loadConnectionConfiguration() {
+        return c8yAgent.loadConnectionConfiguration();
     }
 
-    public void saveConfiguration(final MQTTConfiguration configuration) {
-        c8yAgent.saveConfiguration(configuration);
+    public void saveConnectionConfiguration(final ConfigurationConnection configuration) {
+        c8yAgent.saveConnectionConfiguration(configuration);
         disconnect();
         // invalidate broker client
-        mqttConfiguration = null;
+        connectionConfiguration = null;
         submitInitialize();
         submitConnect();
     }
 
     public void reloadMappings() {
-        List<Mapping> _updatedMapping = c8yAgent.getMappings();
 
+        List<Mapping> updatedMapping = c8yAgent.getMappings();
         List<Mapping> uplinkMapping = _updatedMapping.stream().filter(m -> m.isForUplink()).collect(Collectors.toList());
         List<Mapping> downlinkMapping = _updatedMapping.stream().filter(m -> !m.isForUplink()).collect(Collectors.toList());
+        Set<String> updatedMappingSet = uplinkMapping.stream().map(m -> m.ident).collect(Collectors.toSet());
+        Set<String> activeMappingSet = activeMapping.stream().map(m -> m.ident).collect(Collectors.toSet());
+        Set<String> updatedSubscriptionTopic = uplinkMapping.stream().map(m -> m.subscriptionTopic)
+                .collect(Collectors.toSet());
+        Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
+                .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+        Set<String> subscribeTopic = updatedSubscriptionTopic.stream()
+                .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+        Set<String> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
+                .collect(Collectors.toSet());
 
-        log.info("uplinkMapping size:{}, downlink size:{}", uplinkMapping.size(),
-                downlinkMapping.size());
+        // remove monitorings for deleted maps
+        removedMapping.forEach(ident -> {
+            log.info("Removing monitoring not used: {}", ident);
+            statusMapping.remove(ident);
+        });
 
-        try {
-            final List<Mapping> updatedMapping = uplinkMapping;
-            Set<Long> updatedMappingSet = updatedMapping.stream().map(m -> m.id).collect(Collectors.toSet());
-            Set<Long> activeMappingSet = activeMapping.stream().map(m -> m.id).collect(Collectors.toSet());
-            Set<String> updatedSubscriptionTopic = updatedMapping.stream().map(m -> m.subscriptionTopic)
-                    .collect(Collectors.toSet());
-            Set<String> unsubscribeTopic = activeSubscriptionTopic.stream()
-                    .filter(e -> !updatedSubscriptionTopic.contains(e)).collect(Collectors.toSet());
-            Set<String> subscribeTopic = null;
+        // unsubscribe topics not used
+        unsubscribeTopic.forEach((topic) -> {
+            log.info("Unsubscribe from topic: {}", topic);
+            try {
+                unsubscribe(topic);
+            } catch (MqttException e1) {
+                log.error("Exception when unsubscribing from topic: {}, {}", topic, e1);
+            }
+        });
 
-            if (activeSubscriptionTopic.isEmpty()) {
-                subscribeTopic = updatedSubscriptionTopic.stream().collect(Collectors.toSet());
-            } else {
-                subscribeTopic = updatedSubscriptionTopic.stream()
-                        .filter(e -> !activeSubscriptionTopic.contains(e)).collect(Collectors.toSet());
+        // subscribe to new topics
+        subscribeTopic.forEach(topic -> {
+            int qos = updatedMapping.stream().filter(m -> m.subscriptionTopic.equals(topic))
+                    .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
+            log.info("Subscribing to topic: {}, qos: {}", topic, qos);
+            try {
+                subscribe(topic, qos);
+            } catch (MqttException e1) {
+                log.error("Exception when subscribing to topic: {}, {}", topic, e1);
             }
             Set<Long> removedMapping = activeMappingSet.stream().filter(m -> !updatedMappingSet.contains(m))
                     .collect(Collectors.toSet());
@@ -323,13 +416,13 @@ public class MQTTClient {
 
     public void subscribe(String topic, Integer qos) throws MqttException {
 
-        log.debug("Subscribing on topic {}", topic);
+        log.debug("Subscribing on topic: {}", topic);
         c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
             mqttClient.subscribe(topic);
-        log.debug("Successfully subscribed on topic {}", topic);
+        log.debug("Successfully subscribed on topic: {}", topic);
 
     }
 
@@ -344,7 +437,7 @@ public class MQTTClient {
     }
 
     private void unsubscribe(String topic) throws MqttException {
-        log.info("Unsubscribing from topic {}", topic);
+        log.info("Unsubscribing from topic: {}", topic);
         c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
         mqttClient.unsubscribe(topic);
     }
@@ -352,11 +445,16 @@ public class MQTTClient {
     @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
         try {
-            String statusConnectTask = (connectTask == null ? "stopped"
-                    : connectTask.isDone() ? "stopped" : "running");
-            String statusInitializeTask = (initializeTask == null ? "stopped" : initializeTask.isDone() ? "stopped" : "running");
-            log.info("Status: connectTask {}, initializeTask {}, isConnected {}", statusConnectTask,
-                    statusInitializeTask, isConnected());
+            Instant now = Instant.now();
+            // only log this for the first 180 seconds to reduce log amount
+            if (Duration.between(start, now).getSeconds() < 1800) {
+                String statusConnectTask = (connectTask == null ? "stopped"
+                        : connectTask.isDone() ? "stopped" : "running");
+                String statusInitializeTask = (initializeTask == null ? "stopped"
+                        : initializeTask.isDone() ? "stopped" : "running");
+                log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
+                        statusInitializeTask, isConnected());
+            }
             cleanDirtyMappings();
             sendStatusMapping();
             sendStatusService();
@@ -379,9 +477,9 @@ public class MQTTClient {
         ServiceStatus serviceStatus;
         if (isConnected()) {
             serviceStatus = ServiceStatus.connected();
-        } else if (MQTTConfiguration.isActive(mqttConfiguration)) {
+        } else if (canConnect()) {
             serviceStatus = ServiceStatus.activated();
-        } else if (MQTTConfiguration.isValid(mqttConfiguration)) {
+        } else if (ConfigurationConnection.isValid(connectionConfiguration)) {
             serviceStatus = ServiceStatus.configured();
         } else {
             serviceStatus = ServiceStatus.notReady();
@@ -406,24 +504,30 @@ public class MQTTClient {
     }
 
     public void setMappingDirty(Mapping mapping) {
-        log.info("Setting dirty: {}", mapping);
+        log.debug("Setting dirty: {}", mapping);
         dirtyMappings.add(mapping);
     }
 
-    public MappingStatus getMappingStatus(Mapping m, boolean unspecified){
+    public MappingStatus getMappingStatus(Mapping m, boolean unspecified) {
+        String topic = "#";
         long key = -1;
-        String t = "#";
-        if ( !unspecified) {
+        String ident = "#";
+        if (!unspecified) {
+            topic = m.subscriptionTopic;
             key = m.id;
-            t = m.subscriptionTopic;
+            ident = m.ident;
         }
-        MappingStatus ms = statusMapping.get(key);
+        MappingStatus ms = statusMapping.get(ident);
         if (ms == null) {
             log.info("Adding: {}", key);
-            ms = new MappingStatus(key, t, 0, 0, 0, 0);
-            statusMapping.put(key, ms);
+            ms = new MappingStatus(key, ident, topic, 0, 0, 0, 0);
+            statusMapping.put(ident, ms);
         }
         return ms;
+    }
+
+    public void initializeMappingStatus(MappingStatus ms) {
+        statusMapping.put(ms.ident, ms);
     }
 
     public Long deleteMapping(Long id) throws JsonProcessingException {
@@ -444,6 +548,7 @@ public class MQTTClient {
 
         if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();
+            mapping.ident = UUID.randomUUID().toString();
             mapping.id = MappingsRepresentation.nextId(mappings);
             mappings.add(mapping);
             result = mapping.id;
@@ -468,9 +573,11 @@ public class MQTTClient {
             if (updateMapping != -1) {
                 log.info("Update mapping with id: {}", mappings.get(updateMapping).id);
                 mapping.lastUpdate = System.currentTimeMillis();
+                mapping.ident = mappings.get(updateMapping).ident;
                 mappings.set(updateMapping, mapping);
                 c8yAgent.saveMappings(mappings);
-                if (reload) reloadMappings();
+                if (reload)
+                    reloadMappings();
             } else {
                 log.error("Something went wrong when updating mapping: {}", id);
             }
@@ -479,9 +586,6 @@ public class MQTTClient {
                     (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
-
-        c8yAgent.saveMappings(mappings);
-        reloadMappings();
         return (long) updateMapping;
     }
 
@@ -502,13 +606,44 @@ public class MQTTClient {
             connectToBroker();
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
-        } else if (operation.getOperation().equals(Operation.RESFRESH_MAPPING_STATUS)) {
+        } else if (operation.getOperation().equals(Operation.RESFRESH_STATUS_MAPPING)) {
             sendStatusMapping();
+        } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
+            resetMappingStatus();
         }
     }
 
-    public ArrayList<ProcessingContext> test(String topic, boolean send, Map<String, Object> payload) throws JsonProcessingException {
-        String payloadMessage =  objectMapper.writeValueAsString(payload);
-        return payloadProcessor.processPayload(topic, payloadMessage, send);
+    public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
+            throws Exception {
+        String payloadMessage = objectMapper.writeValueAsString(payload);
+        MqttMessage mqttMessage = new MqttMessage();
+        mqttMessage.setPayload(payloadMessage.getBytes());
+        return dispatcher.processMessage(topic, mqttMessage, send);
+    }
+
+    public List<MappingStatus> getMappingStatus() {
+        return new ArrayList<MappingStatus>(statusMapping.values());
+    }
+
+    public List<MappingStatus> resetMappingStatus() {
+        ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
+        msl.forEach(ms -> ms.reset());
+        return msl;
+    }
+
+    public void saveConnectionConfiguration(ServiceConfiguration configuration) {
+        serviceConfiguration = configuration;
+        c8yAgent.saveServiceConfiguration(configuration);
+    }
+
+    public ServiceConfiguration loadServiceConfiguration() {
+        return c8yAgent.loadServiceConfiguration();
+    }
+
+    public List<Mapping> resolveMappings(String topic) throws ResolveException {
+        List<TreeNode> resolvedMappings = getMappingTree()
+                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
+        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
+                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
     }
 }

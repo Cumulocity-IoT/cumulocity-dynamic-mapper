@@ -1,34 +1,46 @@
-export interface MQTTAuthentication {
+import { TOKEN_DEVICE_TOPIC } from "./helper";
+
+export interface ConnectionConfiguration {
   mqttHost: string;
   mqttPort: number;
   user: string;
   password: string;
   clientId: string;
   useTLS: boolean;
-  active: boolean;
+  enabled: boolean;
+  useSelfSignedCertificate: boolean;
+  fingerprintSelfSignedCertificate: string;
+  nameCertificate: string;
+}
+
+export interface ServiceConfiguration {
+  logPayload: boolean;
+  logSubstitution: boolean;
 }
 
 export class MappingSubstitution {
   public pathSource: string;
   public pathTarget: string;
-  public definesIdentifier?: boolean
-  constructor (
+  public repairStrategy: RepairStrategy;
+  public expandArray: boolean;
+  constructor(
     ps: string,
     pt: string,
+    rs: RepairStrategy,
     di: boolean
-  ){
+  ) {
     this.pathSource = ps;
     this.pathTarget = pt;
-    this.definesIdentifier = di;
+    this.repairStrategy = rs;
   }
   reset() {
     this.pathSource = '';
     this.pathTarget = '';
-    this.definesIdentifier = false;
   }
   isValid() {
     return this.hasPathSource() && this.hasPathTarget()
   }
+
   hasPathSource() {
     return this.pathSource != ''
   }
@@ -39,13 +51,13 @@ export class MappingSubstitution {
 
 export interface Mapping {
   id: number;
+  ident: string;
   subscriptionTopic: string;
   templateTopic: string;
-  indexDeviceIdentifierInTemplateTopic: number;
+  templateTopicSample: string;
   targetAPI: string;
   source: string;
   target: string;
-  lastUpdate: number;
   active: boolean;
   tested: boolean;
   qos: QOS;
@@ -58,11 +70,14 @@ export interface Mapping {
   snoopedTemplates?: string[];
   direct: boolean;
   filterType: string;
+  mappingType: MappingType;
+  lastUpdate: number;
 }
 
 
 export interface MappingStatus {
   id: number;
+  ident: string;
   subscriptionTopic: string;
   errors: number;
   messagesReceived: number;
@@ -74,18 +89,30 @@ export interface ServiceStatus {
   status: Status;
 }
 
+export interface PayloadWrapper {
+  message: string;
+}
+
 export enum Status {
   CONNECTED = "CONNECTED",
-  ACTIVATED = "ACTIVATED",
+  ENABLED = "ACTIVATED",
   CONFIGURED = "CONFIGURED",
   NOT_READY = "NOT_READY"
 }
 
-export enum API {
-  ALARM = "ALARM",
-  EVENT = "EVENT",
-  MEASUREMENT = "MEASUREMENT",
-  INVENTORY = "INVENTORY"
+// export enum API {
+//   ALARM = "ALARM",
+//   EVENT = "EVENT",
+//   MEASUREMENT = "MEASUREMENT",
+//   INVENTORY = "INVENTORY"
+// }
+
+export const API = {
+  ALARM : { name: "ALARM", identifier: "source.id" },
+  EVENT : { name: "EVENT", identifier: "source.id" },
+  MEASUREMENT : { name: "MEASUREMENT", identifier: "source.id" },
+  INVENTORY : { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
+  OPERATION : { name: "OPERATION", identifier: "deviceId" },
 }
 
 export const DOWNLINK_API_OPTION = [
@@ -112,15 +139,19 @@ export enum ValidationError {
   TemplateTopic_Must_Match_The_SubscriptionTopic,
   TemplateTopic_Not_Unique,
   TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic,
-  Device_Identifier_Must_Be_Selected
+  Target_Template_Must_Be_Valid_JSON,
+  Source_Template_Must_Be_Valid_JSON,
+  No_Multi_Level_Wildcard_Allowed_In_TemplateTopic,
+  Device_Identifier_Must_Be_Selected,
+  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
 }
 
 export enum QOS {
   AT_MOST_ONCE = "AT_MOST_ONCE",
-  AT_LEAST_ONCE = "AT_LEAST_ONCE", 
+  AT_LEAST_ONCE = "AT_LEAST_ONCE",
   EXACTLY_ONCE = "EXACTLY_ONCE",
 }
-
 
 export enum SnoopStatus {
   NONE = "NONE",
@@ -132,6 +163,21 @@ export enum SnoopStatus {
 export enum Operation {
   RELOAD,
   CONNECT,
-  DISCONNECT, 
-  RESFRESH_MAPPING_STATUS
+  DISCONNECT,
+  RESFRESH_STATUS_MAPPING,
+  RESET_STATUS_MAPPING
+}
+
+export enum MappingType {
+  JSON = "JSON",
+  FLAT_FILE = "FLAT_FILE",
+  GENERIC_BINARY = "GENERIC_BINARY",
+}
+
+export enum RepairStrategy {
+  DEFAULT = "DEFAULT",
+  USE_FIRST_VALUE_OF_ARRAY = "USE_FIRST_VALUE_OF_ARRAY",
+  USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
+  IGNORE = "IGNORE",
+  REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
 }

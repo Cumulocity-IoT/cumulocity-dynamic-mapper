@@ -17,10 +17,13 @@
     + [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+    + [Different type of substitutions](#different-type-of-substitutions)
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
 - [Monitoring](#monitoring)
+- [REST API](#rest-api)
+- [Load Test](#load-test)
 - [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
 
 
@@ -147,21 +150,21 @@ The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutoria
 The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.\
 Furthermore, connections to the MQTT broker can be enabled or disabled.
 
-<br/>
+<!-- <br/>
 <p align="center" style="text-indent:70px;">
   <a>
     <img width="100%" src="http://g.recordit.co/dm3Qah19Ar.gif">
   </a>
 </p>
-<br/>
-
+<br/> -->
+![MQTT connection](resources/image/Generic_MQTT_Connection.png)
 
 ## Definition and Deployment of MQTT mappings
 
 ### Table of MQTT mappings
 
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
-1. Creating new MQTT mappings: Press button ```Add Mapping```
+1. Creating new MQTT mappings: Press button ```Add mapping```
 1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
 1. Deleting exsiting MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
@@ -211,7 +214,6 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 #### Subscription Topic
 
 This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
-When you use a wildcard it signals to the mapping that you want to extract the device identifier from the topic name. In this case the additinal property ```_DEVICE_IDENT_```is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
 >**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
@@ -220,8 +222,18 @@ Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" e
 
 The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
 a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.\
-Examples are: "device/+/data, "device/date/north/+/events/", "device/+"\
-If the template topic contains a wildcard, you have to specify which part to the topic defined the device identfier by pressing the button ```Device Identifier```.
+Examples are: "device/+/data, "device/express/+", "device/+"\
+In order to use sample data instead of the wildcard you can add a Template Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Template Topic they must exactly be the same in the Template Topic Sample.
+The levels of the Template Topic are split and added to the payload:
+```
+  "_TOPIC_LEVEL_": [
+    "device",
+    "express",
+    "berlin_01"
+  ]
+```
+The entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Id.
+The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
 
 #### Snooping payloads on source topic
 
@@ -241,13 +253,14 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 #### Map Device Idenfifier
 
-Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this enable the switch ```Map Device Identifier``` and specify the name of the type of external id. When a payload from this device arries the external id is translated to the internal Cumulocity id.
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Ids. When a payload from this device arrives at runtime the external id is translated to the internal Cumulocity id.
+
 
 #### Define templates and substitutions for source and target payload
 
 In the second wizzard step, shown on the screenshot below the mapping is furher defined:
 1. Editing the source template directly or use a snooped template by pressing button ```Snooped templates```
-2. Editing the target templatedirectly or use a sample template by pressing button ```Sample target template```
+2. Editing the target template directly or use a sample template by pressing button ```Sample target template```
 3. Adding substitutions
 
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate.png)
@@ -261,10 +274,14 @@ In order to define a substitution ( substitute values in the target payload with
 ![Define Templates](resources/image/Generic_MQTT_MappingTemplate_annnotated.png)
 
 To define a new substitution the following steps have to be performed:
-1. Select a property in the source JSON payload by double-click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
-1. Select a property in the target JSON payload by double-click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
-1.  Select  ```Defines device identifier``` if this property defines the device identifier, i.e. it is mapped to ```source.id```.
-1. Press the add button with the ```+``` sign.
+1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
+1. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
+1. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
+  * **multi-device-single-value**
+  * **multi-device-multi-value**
+  * **single-device-multi-value**\
+  Otherwise an extracted array is treated as a single valie, see [Different type of substitutions](#different-type-of-substitutions).
+4. Press the add button with the ```+``` sign, to add the substitution to the list.
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
@@ -276,6 +293,48 @@ To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined
 In the sample below, e.g. a warning is shown since the required property ```c8y_IsDevice``` is  missing in the payload.
 
 ![Enable Snooping](resources/image/Generic_MQTT_SchemaValidation.png)
+
+#### Different type of substitutions
+When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
+1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
+     * **if** only one device is identified in the payload \
+      **then** only one Cumulocity MEA-resquest is generated from this payload.\
+     This is a **single-device-single-value** mapping.
+     * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024"]``` in the payload \
+      **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
+      This is a **multi-device-single-value** mapping.
+2. **if** the result is an array, e.g. ```[10.4, 20.9]``` for multiple measurements values **and**
+    * **if** multiple devices are identified , e.g. ```["device_101023","device_101024"]``` \
+      **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+      1. request: for device ```"device_101023"``` and value ```10.4```
+      2. request: for device ```"device_101024"``` and value ```20.9``` 
+
+      This is a **multi-device-multi-value** mapping.
+
+    * **if** a single devices is identified , e.g. ```"device_101023"``` \
+     **then**  multiple Cumulocity MEA-requests are generated from this single payload. In this case two requests: 
+      1. request: for device ```"device_101023"``` and value ```10.4```
+      2. request: for device ```"device_101023"``` and value ```20.9```
+
+      This is a **single-device-multi-value** mapping.
+
+3. the result is an object: this is not supported.
+
+This is illustrated on the following diagram:
+![Different type of substitutions](resources/image/Generic_MQTT_DifferentSubstitutions.png)
+
+___
+  **NOTE:** If the size of all extracted arrays do not match, then the first values in the array with less items is taken to fill the missing values.\
+  To illustrate this behavior, take the following case where:
+  * the first expression returns 2 values ```[10.4, 20.9]```
+  * the second expression returns 3 dates ```["2022-10-30T04:10:00.000Z", "2022-10-30T04:11:00.000Z", "2022-10-30T04:12:00.000Z"]```
+  * the third expression returns 3 ids ```["device_101023","device_101024","device_101025"]```
+
+  then three requests are generated:
+  1. request: for device ```"device_101023"```, timestamp ```2022-10-30T04:10:00.000Z``` and value ```10.4```
+  1. request: for device ```"device_101024"```, timestamp ```2022-10-30T04:11:00.000Z``` and value ```20.9```
+  1. request: for device ```"device_101025"```, timestamp ```2022-10-30T04:12:00.000Z``` and value ```10.4```
+___
 
 ### Test transformation from source to target format
 
@@ -301,6 +360,23 @@ In order to use a previously snooped payload click the button
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
 ![Monitoring](resources/image/Generic_MQTT_Monitoring.png)
+
+
+### REST API
+
+The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
+1. ```.../configuration/connection```: retrieve and change the connection details to the MQTT broker
+1. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
+1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic
+1. ```.../status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
+1. ```.../status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
+1. ```.../mapping```: retrieve, delete, update mappings
+1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
+1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
+
+### Load Test
+In the resource section you find a test profil [jmeter_test_01.jmx](resources/script/jmeter_test_01.jmx) using jmeter and an extention for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
+This was used to run simple loadtest.
 
 ## Setup Sample MQTT mappings
 

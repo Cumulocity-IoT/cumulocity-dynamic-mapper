@@ -1,7 +1,7 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, ValidationError } from "./configuration.model"
+import { API, Mapping, MappingSubstitution, ValidationError } from "./configuration.model"
 
-export const SAMPLE_TEMPLATES = {
+export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
     \"c8y_TemperatureMeasurement\": {
         \"T\": {
@@ -30,13 +30,17 @@ export const SAMPLE_TEMPLATES = {
     \"text\": \"This is a new test event.\",
     \"time\": \"2022-08-05T00:14:49.389+02:00\",
     \"type\": \"c8y_TestEvent\"
- }`
-  ,
+ }`,
   INVENTORY: `{ 
     \"c8y_IsDevice\": {},
     \"name\": \"Vibration Sensor\",
     \"type\": \"maker_Vibration_Sensor\"
- }`
+ }`,
+  OPERATION: `{ 
+   \"deviceId\": \"909090\",
+   \"decription\": \"New camera operation!\",
+   \"type\": \"maker_Vibration_Sensor\"
+}`
 }
 
 export const SCHEMA_EVENT = {
@@ -214,6 +218,29 @@ export const SCHEMA_INVENTORY = {
   }
 }
 
+export const SCHEMA_OPERATION = {
+  'definitions': {},
+  '$schema': 'http://json-schema.org/draft-07/schema#',
+  '$id': 'http://example.com/root.json',
+  'type': 'object',
+  'title': 'Operation',
+  'required': [
+    'deviceId',
+  ],
+  'properties': {
+    'deviceId': {
+      '$id': '#/properties/deviceId',
+      'type': 'string',
+      'title': 'Identifier of the target device where the operation should be performed..',
+    },
+    'description': {
+      '$id': '#/properties/description',
+      'type': 'string',
+      'title': 'Description of the operation.',
+    },
+  }
+}
+
 export const SCHEMA_PAYLOAD = {
   'definitions': {},
   '$schema': 'http://json-schema.org/draft-07/schema#',
@@ -225,6 +252,7 @@ export const SCHEMA_PAYLOAD = {
 }
 
 export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
+export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
@@ -233,29 +261,37 @@ export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
-export const PATH_CONNECT_ENDPOINT = 'connection';
-export const PATH_STATUS_ENDPOINT = 'status';
+export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connection';
+export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
+export const PATH_STATUS_ENDPOINT = 'status/service';
 export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 export const BASE_URL = 'service/mqtt-mapping-service';
 export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 
 export function getSchema(targetAPI: string): any {
-  if (targetAPI == API.ALARM) {
+  if (targetAPI == API.ALARM.name) {
     return SCHEMA_ALARM;
-  } else if (targetAPI == API.EVENT) {
+  } else if (targetAPI == API.EVENT.name) {
     return SCHEMA_EVENT;
-  } else if (targetAPI == API.MEASUREMENT) {
+  } else if (targetAPI == API.MEASUREMENT.name) {
     return SCHEMA_MEASUREMENT;
-  } else {
+  } else if ((targetAPI == API.INVENTORY.name)) {
     return SCHEMA_INVENTORY;
+  } else {
+    return SCHEMA_OPERATION;
   }
 }
 
 /*
 * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
 */
-export function splitTopic(topic: string): string[] {
+export function splitTopicExcludingSeparator(topic: string): string[] {
+  topic = topic.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+  return topic.split(/\//g);
+}
+
+export function splitTopicIncludingSeparator(topic: string): string[] {
   return topic.split(/(?<=\/)|(?=\/)/g);
 }
 
@@ -278,6 +314,45 @@ export function deriveTemplateTopicFromTopic(topic: string) {
 }
 
 export function isTopicNameValid(topic: string): any {
+  topic = normalizeTopic(topic);
+
+  let errors = {};
+  // count number of "#"
+  let count_multi = (topic.match(/\#/g) || []).length;
+  if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+  // count number of "+"
+  let count_single = (topic.match(/\+/g) || []).length;
+  if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+
+  if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+
+  return errors;
+}
+
+export function isTemplateTopicValid(topic: string): any {
+  // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+  // TOPIC_WILDCARD_MULTI
+  topic = normalizeTopic(topic);
+
+  // let errors = {};
+  // // count number of "#"
+  // let count_multi = (topic.match(/\#/g) || []).length;
+  // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+  // // count number of "+"
+  // let count_single = (topic.match(/\+/g) || []).length;
+  // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+
+  // if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+
+  let errors = {};
+  // count number of "#"
+  let count_multi = (topic.match(/\#/g) || []).length;
+  if (count_multi >= 1) errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+
+  return errors;
+}
+
+export function isSubscriptionTopicValid(topic: string): any {
   topic = normalizeTopic(topic);
 
   let errors = {};
@@ -318,7 +393,7 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -329,7 +404,7 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(m => m.definesIdentifier).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
       return previousValue + currentValue;
     }, 0)
     if (count > 1) {
@@ -348,8 +423,9 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let error: boolean = false;
     let defined = false
 
-    let templateTopic = normalizeTopic(control.get('templateTopic').value);
-    let subscriptionTopic = normalizeTopic(control.get('subscriptionTopic').value);
+    let templateTopic = control.get('templateTopic').value;
+    let templateTopicSample = control.get('templateTopicSample').value;
+    let subscriptionTopic = control.get('subscriptionTopic').value;
     let id = control.get('id').value;
     let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
 
@@ -365,41 +441,71 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    let f = ( st, tt ) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+    let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
     error = !f(subscriptionTopic, templateTopic);
     if (error) {
       errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
       defined = true
     }
 
-    // count number of "#"
+    // count number of "#" in subscriptionTopic
     let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
     if (count_multi > 1) {
       errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
       defined = true
     }
 
-    // count number of "+"_
+    // count number of "+" in subscriptionTopic
     let count_single = (subscriptionTopic.match(/\+/g) || []).length;
     if (count_single > 1) {
       errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
       defined = true
     }
 
-    // wildcard "'" can only appear at the end
+    // wildcard "#" can only appear at the end in subscriptionTopic
     if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
       errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
       defined = true
     }
 
-    /*       // topic cannot be startstring of another topic
-          error = !mappings.every(m => {
-            return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
-          })
-          if (error) {
-            errors['Topic_Not_Substring_Of_OtherTopic'] = true
-            defined = true
-          } */
+    // count number of "#" in templateTopic
+    count_multi = (templateTopic.match(/\#/g) || []).length;
+    if (count_multi >= 1) {
+      errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+      defined = true
+    }
+
+    let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
+    let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+    if (splitTT.length != splitTTS.length) {
+      errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
+    } else {
+      for (let i = 0; i < splitTT.length; i++) {
+        if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
+          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+          break;
+        }
+        if (("/" == splitTTS[i]) && !("/" == splitTT[i])) {
+          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+          break;
+        }
+        if (!("/" == splitTT[i]) && !("+" == splitTT[i])) {
+          if (splitTT[i] != splitTTS[i]) {
+            errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+            break;
+          }
+        }
+      }
+    }
+
+    // // topic cannot be startstring of another topic
+    //   error = !mappings.every(m => {
+    //     return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
+    //   })
+    //   if (error) {
+    //     errors['Topic_Not_Substring_Of_OtherTopic'] = true
+    //     defined = true
+    //   }
 
     // error = !mappings.every(m => {
     //   return (templateTopic != m.templateTopic || id == m.id)
@@ -418,11 +524,11 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     // }
 
     // if the template topic contains a wildcard a device identifier must be selected 
-    let mdi = control.get('markedDeviceIdentifier').value;
-    if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
-      errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
-      defined = true
-    }
+    // let mdi = control.get('markedDeviceIdentifier').value;
+    // if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
+    //   errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
+    //   defined = true
+    // }
 
 
     // let containsWildcardTemplateTopic = isWildcardTopic(templateTopic);
@@ -434,3 +540,25 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
 
 }
 
+export function whatIsIt(object) {
+  var stringConstructor = "test".constructor;
+  var arrayConstructor = [].constructor;
+  var objectConstructor = ({}).constructor;
+  if (object === null) {
+    return "null";
+  } else if (object === undefined) {
+    return "undefined";
+  } else if (object.constructor === stringConstructor) {
+    return "String";
+  } else if (object.constructor === arrayConstructor) {
+    return "Array";
+  } else if (object.constructor === objectConstructor) {
+    return "Object";
+  } else {
+    return "don't know";
+  }
+}
+
+export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
+  return sub.pathTarget == API[api].identifier
+}
