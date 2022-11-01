@@ -182,7 +182,7 @@ Mappings are persisted as Managed Objects and can be easily changed, deleted or 
 In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id.
 Complex mapping expressions are supported by using [JSONata](https://jsonata.org). \
 In this case the following function could be used:
-```$join([device_name, _DEVICE_IDENT_])```. \
+```$join([device_name, _DEVICE_IDENT_])```. 
 
 Further example for JSONata expressions are:
 * to convert a UNIX timestamp to ISO date format use:
@@ -216,6 +216,11 @@ For flat file messages:
   "message": "oil,100,1666863595",
 }
 ```
+You can use the JSONata function ```$split(str, separator)``` for splitting the payload, e.g:
+```
+$split(message,",")[1]
+```
+splits the payload and return the second field: ```100```.
 
 And for the binary payload is encoded as hex string:
 ```

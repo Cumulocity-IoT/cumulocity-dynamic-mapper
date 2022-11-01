@@ -19,6 +19,8 @@ export class SnoopingModalComponent implements OnInit {
   
   @Input()
   snoopStatus: SnoopStatus
+  @Input()
+  numberSnooped: number
 
   SnoopStatus = SnoopStatus; 
   labels: ModalLabels = { ok: gettext('Confirm') };

@@ -1,7 +1,7 @@
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { C8yStepper } from '@c8y/ngx-components';
+import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import JSONEditor from 'jsoneditor';
@@ -76,6 +76,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     private elementRef: ElementRef,
+    private alertService: AlertService
   ) { }
 
   ngAfterViewInit(): void {
@@ -104,6 +105,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   ngOnInit() {
     console.log("Mapping to be updated:", this.mapping, this.editMode);
+    let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
+    if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
+      this.alertService.success("Already " +  numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
+    }
+
     //console.log ("ElementRef:", this.elementRef.nativeElement);
     this.initPropertyForm();
     this.initTemplateForm();
@@ -353,9 +359,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
       this.editorTarget.set(this.templateTarget);
       this.editorSource.set(this.templateSource);
 
+      let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {
         snoopStatus: this.mapping.snoopStatus,
-        targetAPI: this.mapping.targetAPI
+        numberSnooped: numberSnooped,
       }
       if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
         console.log("Ready to snoop ...");
@@ -374,6 +381,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
         modalRef.content.closeSubject.subscribe((confirm: boolean) => {
           if (confirm) {
             this.mapping.snoopStatus = SnoopStatus.STOPPED
+            if (numberSnooped > 0) {
+              this.templateSource = JSON.parse(this.mapping.snoopedTemplates[0]);
+              let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
+              this.templateSource = this.expandSourceTemplate(this.templateSource, levels);
+              this.editorSource.set(this.templateSource),
+              this.onSampleButton();
+            }
             event.stepper.next();
           } else {
             this.onCancel.emit();
