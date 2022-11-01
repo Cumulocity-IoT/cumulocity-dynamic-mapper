@@ -7,8 +7,9 @@
   </div>
 
   <div *ngIf= "snoopStatus == SnoopStatus.STARTED">
-    <div>The snooping for payloads started. Would you like to stop it?</div>
-    <div>In this case in the wizzard step  you can use the snooped payloads.
+    <div>The snooping for payloads started. Already {{numberSnooped}} templates exist.</div>
+      <div>Would you like to stop it?</div>
+    <div>In this case in the wizzard step you can stop the snooping process and use the snooped payloads.
     </div>
   </div>
 </c8y-confirm-modal>
