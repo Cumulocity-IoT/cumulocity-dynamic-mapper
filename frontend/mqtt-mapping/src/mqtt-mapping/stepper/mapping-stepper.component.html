@@ -491,7 +491,7 @@
                                 class="text-warning">{{targetExpressionErrorMsg}}</span>
                             </c8y-message>
                             <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate><span
-                                class="text-info"> <b>source.id</b>
+                                class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
                                 is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
                                 previous step.</span>
                             </c8y-message>
@@ -553,7 +553,7 @@
           (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
       </cdk-step> -->
 
-      <cdk-step state="final" [stepControl]="testForm" label="Test mapping">
+      <cdk-step state="final" [stepControl]="testForm" stepLabel="step3" label="Test mapping">
         <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
           <div class="row">
             <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">

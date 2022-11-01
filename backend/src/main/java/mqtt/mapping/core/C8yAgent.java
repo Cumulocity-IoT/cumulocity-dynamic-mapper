@@ -324,13 +324,15 @@ public class C8yAgent {
         return results[0];
     }
 
-    public TrustedCertificateRepresentation loadCertificateByName(String fingerprint) {
+    public MQTTClient.Certificate loadCertificateByName(String fingerprint) {
         TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = configurationService.loadCertificateByName(fingerprint, credentials);
             log.info("Found certificate with fingerprint: {}", results[0].getFingerprint());
         });
-        return results[0];
+        StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n").append(results[0].getCertInPemFormat()).append("\n").append("-----END CERTIFICATE-----");
+
+        return new MQTTClient.Certificate(results[0].getFingerprint(), cert.toString()) ;
     }
 
     public void saveConnectionConfiguration(ConfigurationConnection configuration) {

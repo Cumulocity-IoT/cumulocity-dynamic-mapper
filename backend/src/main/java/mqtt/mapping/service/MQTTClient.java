@@ -2,8 +2,6 @@ package mqtt.mapping.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.StringBufferInputStream;
-import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -48,6 +46,8 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
@@ -78,7 +78,7 @@ public class MQTTClient {
     private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
     private ConfigurationConnection connectionConfiguration;
-    private String certInPemFormat = "";
+    private Certificate cert;
 
     @Getter
     private ServiceConfiguration serviceConfiguration;
@@ -111,6 +111,13 @@ public class MQTTClient {
 
     private Instant start = Instant.now();
 
+    @Data
+    @AllArgsConstructor
+    public static class Certificate {
+        private String fingerprint;
+        private String certInPemFormat;
+    }
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Called initialize(): {}", initializeTask == null || initializeTask.isDone());
@@ -135,8 +142,8 @@ public class MQTTClient {
                 }
             }
             connectionConfiguration = c8yAgent.loadConnectionConfiguration();
-            if (connectionConfiguration.useSelfSignedCertificate){
-                certInPemFormat = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate).getCertInPemFormat();
+            if (connectionConfiguration.useSelfSignedCertificate) {
+                cert = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate);
             }
             serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
@@ -154,7 +161,7 @@ public class MQTTClient {
         }
     }
 
-    private boolean connect() throws Exception{
+    private boolean connect() throws Exception {
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
         if (isConnected()) {
@@ -176,47 +183,52 @@ public class MQTTClient {
                 }
                 try {
                     if (canConnect()) {
-                            String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
-                            String broker = prefix + connectionConfiguration.mqttHost + ":" + connectionConfiguration.mqttPort;
-                            // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
-                            // MemoryPersistence());
-                            mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
-                                    new MemoryPersistence());
-                            mqttClient.setCallback(dispatcher);
-                            MqttConnectOptions connOpts = new MqttConnectOptions();
-                            connOpts.setCleanSession(true);
-                            connOpts.setAutomaticReconnect(false);
-                            connOpts.setUserName(connectionConfiguration.getUser());
-                            connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
-                            if (connectionConfiguration.useSelfSignedCertificate) {
-                                log.info("Using certificate: {}", certInPemFormat);
+                        String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
+                        String broker = prefix + connectionConfiguration.mqttHost + ":"
+                                + connectionConfiguration.mqttPort;
+                        // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
+                        // MemoryPersistence());
+                        mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                                new MemoryPersistence());
+                        mqttClient.setCallback(dispatcher);
+                        MqttConnectOptions connOpts = new MqttConnectOptions();
+                        connOpts.setCleanSession(true);
+                        connOpts.setAutomaticReconnect(false);
+                        connOpts.setUserName(connectionConfiguration.getUser());
+                        connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                        if (connectionConfiguration.useSelfSignedCertificate) {
+                            log.debug("Using certificate: {}", cert.certInPemFormat);
 
-                                try {
-                                    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                                    StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n").append(certInPemFormat).append("\n").append("-----END CERTIFICATE-----");
-                                    trustStore.load(null,null);
-                                    trustStore.setCertificateEntry("Custom CA", (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(new ByteArrayInputStream(cert.toString().getBytes(Charset.defaultCharset()))));
-                                    
-                                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                                    tmf.init(trustStore);
-                                    TrustManager[] trustManagers = tmf.getTrustManagers();
-                                    
-                                    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-                                    sslContext.init(null, trustManagers, null);
-                                    SSLSocketFactory sslSocketFactory =  sslContext.getSocketFactory();
-                                    
-                                    //where options is the MqttConnectOptions object
-                                    connOpts.setSocketFactory(sslSocketFactory);
-                                } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException | KeyManagementException e) {
-                                    log.error("Exception when configuraing socketFactory for TLS!", e);
-                                    throw new Exception(e);
-                                }
+                            try {
+                                KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                                trustStore.load(null, null);
+                                trustStore.setCertificateEntry("Custom CA",
+                                        (X509Certificate) CertificateFactory.getInstance("X509")
+                                                .generateCertificate(new ByteArrayInputStream(
+                                                        cert.certInPemFormat.getBytes(Charset.defaultCharset()))));
+
+                                TrustManagerFactory tmf = TrustManagerFactory
+                                        .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                                tmf.init(trustStore);
+                                TrustManager[] trustManagers = tmf.getTrustManagers();
+
+                                SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                                sslContext.init(null, trustManagers, null);
+                                SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+                                // where options is the MqttConnectOptions object
+                                connOpts.setSocketFactory(sslSocketFactory);
+                            } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
+                                    | KeyManagementException e) {
+                                log.error("Exception when configuraing socketFactory for TLS!", e);
+                                throw new Exception(e);
                             }
-                            mqttClient.connect(connOpts);
-                            log.info("Successfully connected to broker {}", mqttClient.getServerURI());
-                            c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                                    STATUS_MQTT_EVENT_TYPE,
-                                    DateTime.now(), null);
+                        }
+                        mqttClient.connect(connOpts);
+                        log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                        c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
+                                STATUS_MQTT_EVENT_TYPE,
+                                DateTime.now(), null);
 
                     }
                 } catch (MqttException e) {
@@ -224,13 +236,13 @@ public class MQTTClient {
                 }
                 firstRun = false;
             }
-    
+
             // try {
             // Thread.sleep(WAIT_PERIOD_MS / 10);
             // } catch (InterruptedException e) {
             // log.error("Error on reconnect: ", e);
             // }
-    
+
             try {
                 subscribe("$SYS/#", 0);
                 activeSubscriptionTopic = new HashSet<String>();
@@ -240,13 +252,16 @@ public class MQTTClient {
                 log.error("Error on reconnect, retrying ... ", e);
             }
             successful = true;
-        
+
         }
         return true;
     }
 
     private boolean canConnect() {
-        return ConfigurationConnection.isEnabled(connectionConfiguration) && ( !connectionConfiguration.useSelfSignedCertificate || (connectionConfiguration.useSelfSignedCertificate && !"".equals(certInPemFormat) && certInPemFormat != null));
+        return ConfigurationConnection.isEnabled(connectionConfiguration)
+                && (!connectionConfiguration.useSelfSignedCertificate
+                        || (connectionConfiguration.useSelfSignedCertificate && 
+                                cert != null));
     }
 
     private boolean shouldConnect() {

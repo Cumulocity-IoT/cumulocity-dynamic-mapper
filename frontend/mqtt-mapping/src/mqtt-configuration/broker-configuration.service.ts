@@ -52,7 +52,8 @@ export class BrokerConfigurationService {
         const response: IResult<IManagedObject> = await this.inventory.create({
           name: "MQTT Mapping Test Device",
           type: MQTT_TEST_DEVICE_TYPE,
-          c8y_IsDevice: {}
+          c8y_IsDevice: {},
+          com_cumulocity_model_Agent: {}
         });
 
         //create identity for mo

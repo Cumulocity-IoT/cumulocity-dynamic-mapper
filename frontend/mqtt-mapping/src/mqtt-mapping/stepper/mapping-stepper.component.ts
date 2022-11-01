@@ -59,6 +59,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
   currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', RepairStrategy.DEFAULT, false);
+  step: any;
 
   @ViewChild('editorSourceRef', { static: false }) editorSourceElement: ElementRef;
   @ViewChild('editorTargetRef', { static: false }) editorTargetElement: ElementRef;
@@ -87,8 +88,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
     if (this.editorTestingElement && !this.editorTesting) {
       this.editorTesting = new JSONEditor(this.editorTestingElement.nativeElement, this.editorOptionsTesting);
-      this.editorTesting.set(this.editorSource.get());
-
     }
   }
 
@@ -345,41 +344,47 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   public onNextSelected(event: { stepper: C8yStepper; step: CdkStep }): void {
 
     console.log("OnNextSelected", event.step.label, this.mapping)
+    this.step = event.step.label;
 
-    if (event.step.label == "Define topic") {
+    if (this.step == "Define topic") {
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
       this.editorTarget.set(this.templateTarget);
       this.editorSource.set(this.templateSource);
-    }
 
-    const initialState = {
-      snoopStatus: this.mapping.snoopStatus,
-      targetAPI: this.mapping.targetAPI
-    }
-    if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
-      console.log("Ready to snoop ...");
-      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
-      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-        if (confirm) {
-          this.onCommit.emit(this.getCurrentMapping(false));
-        } else {
-          this.mapping.snoopStatus = SnoopStatus.NONE
-        }
-      })
-    } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
-      console.log("Continue snoop ...?");
-      const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
-      modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-        if (confirm) {
-          this.mapping.snoopStatus = SnoopStatus.STOPPED
-        } else {
-          this.onCancel.emit();
-        }
-      })
-    } else {
+      const initialState = {
+        snoopStatus: this.mapping.snoopStatus,
+        targetAPI: this.mapping.targetAPI
+      }
+      if (this.mapping.snoopStatus == SnoopStatus.ENABLED && this.mapping.snoopedTemplates.length == 0) {
+        console.log("Ready to snoop ...");
+        const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
+        modalRef.content.closeSubject.subscribe((confirm: boolean) => {
+          if (confirm) {
+            this.onCommit.emit(this.getCurrentMapping(false));
+          } else {
+            this.mapping.snoopStatus = SnoopStatus.NONE
+            event.stepper.next();
+          }
+        })
+      } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
+        console.log("Continue snoop ...?");
+        const modalRef: BsModalRef = this.bsModalService.show(SnoopingModalComponent, { initialState });
+        modalRef.content.closeSubject.subscribe((confirm: boolean) => {
+          if (confirm) {
+            this.mapping.snoopStatus = SnoopStatus.STOPPED
+            event.stepper.next();
+          } else {
+            this.onCancel.emit();
+          }
+        })
+      }  else {
+        event.stepper.next();
+      }
+    } else if (this.step == "Define templates and substitutions") {
+      this.editorTesting.set(this.editorSource.get());
       event.stepper.next();
     }
 
