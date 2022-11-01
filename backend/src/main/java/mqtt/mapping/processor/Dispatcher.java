@@ -53,7 +53,8 @@ public class Dispatcher implements MqttCallback {
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message: {}", e);
                     mappingStatusUnspecified.errors++;
-                    throw e;
+                    // TODO review if exception has to be thrown
+                    //throw e;
                 }
 
                 resolveMappings.forEach(mapping -> {
