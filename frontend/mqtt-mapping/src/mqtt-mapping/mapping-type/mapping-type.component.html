@@ -13,7 +13,7 @@
         <span></span>
         <span>{{q.value}}</span>
       </label> -->
-    <div class="list-group">
+    <div class="list-group list-group-links">
       <button class="list-group-item" title="{{ q.value }}" 
         *ngFor="let q of MappingType | keyvalue"
         (click)="onSelect(q.value)">
@@ -27,7 +27,7 @@
   <button (click)="cancel()" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate type="button">
     Cancel
   </button>
-  <button (click)="done()" class="btn btn-default" title="{{ 'Done' | translate }}" translate type="button">
+  <!-- <button (click)="done()" class="btn btn-default" title="{{ 'Done' | translate }}" translate type="button">
     Done
-  </button>
+  </button> -->
 </c8y-wizard-footer>
