@@ -332,9 +332,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   async onSampleButton() {
     this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-    if (this.mapping.targetAPI == API.INVENTORY.name) {
-      this.templateTarget = this.expandTargetTemplate(this.templateTarget);
-    }
+    this.templateTarget = this.expandTargetTemplate(this.templateTarget);
+    this.editorTarget.set(this.templateTarget);
   }
 
   async onCancelButton() {
@@ -403,9 +402,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     }
-    if (this.mapping.targetAPI == API.INVENTORY.name) {
-      this.templateTarget = this.expandTargetTemplate(this.templateTarget);
-    }
+    this.templateTarget = this.expandTargetTemplate(this.templateTarget);
   }
 
   async onSnoopedSourceTemplates() {
@@ -533,10 +530,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   }
 
   private expandTargetTemplate(t: object): object {
-    return {
-      ...t,
-      _DEVICE_IDENT_: "909090"
-    };
+    if (this.mapping.targetAPI == API.INVENTORY.name) {
+      return {
+        ...t,
+        _DEVICE_IDENT_: "909090"
+      };
+    } else {
+      return t;
+    }
   }
 
   private reduceSourceTemplate(t: object, patched: boolean): string {

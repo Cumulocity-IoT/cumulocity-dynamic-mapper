@@ -84,27 +84,23 @@ export class MappingService {
       console.log("MQTT test device is already initialized:", this.testDeviceId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        //if (sub.pathTarget != TOKEN_DEVICE_TOPIC) {
-        if (definesDeviceIdentifier(mapping.targetAPI, sub)) {
-          let s : JSON = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
-          if ( s == undefined) {
-              console.error("No substitution for:", sub.pathSource, s, mapping.source);
-              this.alert.warning("Warning: no substitution found for : " + sub.pathSource)
-              //throw Error("Error: substitution not found:" + sub.pathSource);
+        let s: JSON 
+        if (sub.pathTarget == API[mapping.targetAPI].identifier) {
+          s = this.testDeviceId as any;
+        } else {
+          s = this.evaluateExpression(JSON.parse(mapping.source), sub.pathSource, true);
+          if (s == undefined) {
+            console.error("No substitution for:", sub.pathSource, s, mapping.source);
+            this.alert.warning("Warning: no substitution found for : " + sub.pathSource)
+            //throw Error("Error: substitution not found:" + sub.pathSource);
           }
-          _.set(result, sub.pathTarget, s)
         }
+        _.set(result, sub.pathTarget, s)
 
         if (sub.pathTarget == TIME) {
           substitutionTimeExists = true;
         }
       })
-
-      // for simulation replace source id with agentId
-      if (simulation && mapping.targetAPI != API.INVENTORY.name) {
-        result[API[mapping.targetAPI].identifier] = this.testDeviceId;
-        result.time = new Date().toISOString();
-      }
 
       // no substitution fot the time property exists, then use the system time
       if (!substitutionTimeExists) {
@@ -155,7 +151,7 @@ export class MappingService {
       }
     }
 
-    if ( error != ''){
+    if (error != '') {
       this.alert.danger("Failed to tested mapping: " + error);
       return '';
     }

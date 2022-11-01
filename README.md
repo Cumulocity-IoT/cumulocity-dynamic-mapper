@@ -76,6 +76,7 @@ following Mappings are supported:
 * Events
 * Measurements
 * Alarms
+* Operations (Downstream)
 
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
@@ -199,9 +200,38 @@ Further example for JSONata expressions are:
 ### Wizzard to define a mapping
 
 The wizzard to define a mapping consists of the steps:
-1. Define the properties of the topic and API to be used
-1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
-1. Test the mapping by applying the transformation and send the result to a test device.
+
+1. Select the type of mapping:
+  *  JSON
+  *  FLAT_FILE
+  *  GENERIC_BINARY
+
+![Mappingtype](resources/image/Generic_MQTT_MappingType.png)
+
+Payload for ```FLAT_FILE``` and ```GENERIC_BINARY``` are wrapped.
+For flat file messages:
+
+```
+{
+  "message": "oil,100,1666863595",
+}
+```
+
+And for the binary payload is encoded as hex string:
+```
+{
+  "message": "5a75207370c3a47420303821",
+}
+```
+Using appropriate JSONata expression you can parse the payload:
+```
+$parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
+```
+
+
+2. Define the properties of the topic and API to be used
+3. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+4. Test the mapping by applying the transformation and send the result to a test device.
 
 #### Define MQTT topic properties
 

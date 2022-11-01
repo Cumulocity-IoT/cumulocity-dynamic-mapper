@@ -98,8 +98,8 @@ public class Dispatcher implements MqttCallback {
 
                                 }
                             } else {
-                                processor.extractSource(context);
-                                processor.patchTargetAndSend(context);
+                                processor.extractFromSource(context);
+                                processor.substituteInTargetAndSend(context);
                                 ArrayList<C8YRequest> requests = context.getRequests();
                                 if (context.hasError() || requests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;

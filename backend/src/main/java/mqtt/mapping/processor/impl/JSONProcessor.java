@@ -54,7 +54,7 @@ public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
     }
 
     @Override
-    public void extractSource(ProcessingContext<String> context)
+    public void extractFromSource(ProcessingContext<String> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();

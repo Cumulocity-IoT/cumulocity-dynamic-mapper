@@ -22,22 +22,33 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
  * <code>cardinality</code>, <code>needsRepair</code>
  * when a <code>mapping</code> is applied to an incoming <code>payload</code>
  */
-public class ProcessingContext<T> {
+public class ProcessingContext<O> {
     private Mapping mapping;
+
     private String topic;
-    private T payload;
+
+    private O payload;
+
     private ArrayList<C8YRequest> requests = new ArrayList<C8YRequest>();
+
     private Exception error;
+
     private ProcessingType processingType = ProcessingType.UNDEFINED;
+
     private Map<String, Integer> cardinality = new HashMap<String, Integer>();
+
     private boolean needsRepair = false;
+
     private MappingType mappingType;
+
     private Map<String, ArrayList<SubstituteValue>> postProcessingCache = new HashMap<String, ArrayList<SubstituteValue>>();
+    
     private boolean sendPayload = false;
 
     public boolean hasError() {
         return error != null;
     }
+
     public int addRequest(C8YRequest c8yRequest) {
         requests.add(c8yRequest);
         return requests.size() - 1;
@@ -64,10 +75,4 @@ public class ProcessingContext<T> {
         needsRepair = (collect.size() != 1);
     }
 
-    // public void updateMappingType() {
-    //     if (resolvedMappings != null && resolvedMappings.size() > 0) {
-    //         Mapping mapping = resolvedMappings.get(0);
-    //         mappingType = mapping.mappingType;
-    //     }
-    // }
 }
