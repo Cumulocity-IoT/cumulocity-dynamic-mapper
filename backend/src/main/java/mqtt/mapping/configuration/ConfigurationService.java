@@ -48,7 +48,7 @@ public class ConfigurationService {
         certificates.forEach(cert -> {
             if ( cert.getName().equals(certificateName)) {
                 results[0] = cert;
-            log.info("Found certificate with fingerprint:{} with name: {}", cert.getFingerprint(), cert.getName() );
+            log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(), cert.getName() );
             }
         });
         return results[0];

@@ -102,7 +102,7 @@ export class MappingService {
 
       // for simulation replace source id with agentId
       if (simulation && mapping.targetAPI != API.INVENTORY.name) {
-        result.source.id = this.testDeviceId;
+        result[API[mapping.targetAPI].identifier] = this.testDeviceId;
         result.time = new Date().toISOString();
       }
 

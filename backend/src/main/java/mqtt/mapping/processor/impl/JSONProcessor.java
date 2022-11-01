@@ -112,15 +112,14 @@ public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
             /*
              * step 2 analyse exctracted content: textual, array
              */
-            var key = (substitution.pathTarget.equals(TOKEN_DEVICE_TOPIC) ? SOURCE_ID : substitution.pathTarget);
-            ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(key,
+            ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
                     new ArrayList<SubstituteValue>());
             if (extractedSourceContent == null) {
                 log.error("No substitution for: {}, {}", substitution.pathSource,
                         payload);
                 postProcessingCacheEntry
                         .add(new SubstituteValue(extractedSourceContent, TYPE.IGNORE, substitution.repairStrategy));
-                postProcessingCache.put(key, postProcessingCacheEntry);
+                postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
             } else {
                 if (extractedSourceContent.isArray()) {
                     if (substitution.expandArray) {
@@ -138,32 +137,32 @@ public class JSONProcessor<I,O> extends PayloadProcessor<String,String> {
                                         jn.asText());
                             }
                         }
-                        context.addCardinality(key, extractedSourceContent.size());
-                        postProcessingCache.put(key, postProcessingCacheEntry);
+                        context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
+                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     } else {
                         // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE substitution
-                        context.addCardinality(key, 1);
+                        context.addCardinality(substitution.pathTarget, 1);
                         postProcessingCacheEntry
                                 .add(new SubstituteValue(extractedSourceContent, TYPE.ARRAY, substitution.repairStrategy));
-                        postProcessingCache.put(key, postProcessingCacheEntry);
+                        postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
-                    context.addCardinality(key, extractedSourceContent.size());
+                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry.add(
                             new SubstituteValue(extractedSourceContent, TYPE.TEXTUAL, substitution.repairStrategy));
-                    postProcessingCache.put(key, postProcessingCacheEntry);
+                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else if (extractedSourceContent.isNumber()) {
-                    context.addCardinality(key, extractedSourceContent.size());
+                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
                             .add(new SubstituteValue(extractedSourceContent, TYPE.NUMBER, substitution.repairStrategy));
-                    postProcessingCache.put(key, postProcessingCacheEntry);
+                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
                     log.info("This substitution, involves an objects for: {}, {}",
                             substitution.pathSource, extractedSourceContent.toString());
-                    context.addCardinality(key, extractedSourceContent.size());
+                    context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
                             .add(new SubstituteValue(extractedSourceContent, TYPE.OBJECT, substitution.repairStrategy));
-                    postProcessingCache.put(key, postProcessingCacheEntry);
+                    postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
                 if (mqttClient.getServiceConfiguration().logSubstitution) {
                     log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
