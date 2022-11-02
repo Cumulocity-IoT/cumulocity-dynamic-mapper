@@ -30,7 +30,7 @@ jobs:
       with:
         java-version: 11
     - name: Build with Maven
-      run: mvn -B package --file backend/pom.xml
+      run: mvn -B package --file pom.xml
     - name: Get Version
       id: get_version
       run: echo ::set-output name=version::$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
@@ -51,6 +51,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./backend/target/mqtt-mapping-service-${{ steps.get_version.outputs.version }}.zip
+        asset_path: ./target/mqtt-mapping-service-${{ steps.get_version.outputs.version }}.zip
         asset_name: mqtt-mapping-service-${{ steps.get_version.outputs.version }}.zip
         asset_content_type: application/zip
