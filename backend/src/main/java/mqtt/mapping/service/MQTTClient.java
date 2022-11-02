@@ -311,7 +311,7 @@ public class MQTTClient {
         return c8yAgent.loadConnectionConfiguration();
     }
 
-    public void saveConnectionConfiguration(final ConfigurationConnection configuration) {
+    public void saveConnectionConfiguration(ConfigurationConnection configuration) {
         c8yAgent.saveConnectionConfiguration(configuration);
         disconnect();
         // invalidate broker client
@@ -575,7 +575,7 @@ public class MQTTClient {
         return msl;
     }
 
-    public void saveConnectionConfiguration(ServiceConfiguration configuration) {
+    public void saveServiceConfiguration(ServiceConfiguration configuration) {
         serviceConfiguration = configuration;
         c8yAgent.saveServiceConfiguration(configuration);
     }
