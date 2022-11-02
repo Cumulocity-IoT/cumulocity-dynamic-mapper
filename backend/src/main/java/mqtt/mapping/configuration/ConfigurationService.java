@@ -1,6 +1,5 @@
 package mqtt.mapping.configuration;
 
-import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
@@ -33,8 +32,6 @@ public class ConfigurationService {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-
 
     @Autowired
     public ConfigurationService(TenantOptionApi tenantOptionApi, Platform platform) {

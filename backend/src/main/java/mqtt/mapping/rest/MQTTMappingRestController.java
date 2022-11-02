@@ -99,7 +99,7 @@ public class MQTTMappingRestController {
         // don't modify original copy
         log.info("Post service configuration: {}", configuration.toString());
         try {
-            mqttClient.saveConnectionConfiguration(configuration);
+            mqttClient.saveServiceConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
