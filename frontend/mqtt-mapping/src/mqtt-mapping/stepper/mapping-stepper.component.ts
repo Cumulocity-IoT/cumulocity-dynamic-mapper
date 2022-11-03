@@ -76,9 +76,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   editorTarget: JSONEditor;
   editorTesting: JSONEditor;
 
-
-  scrollTo: number = 0;
-
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
@@ -511,9 +508,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   public onSelectNextSubstitution() {
     // changing of colors is currently diabled, to enable these uncomment the following stmt.
     //this.scroller.scrollToAnchor("sub-" + this.selectedSubstitution);
-    const st = this.selectedSubstitution ;
     this.substitutionChild.scrollToSubstitution(this.selectedSubstitution);
-    //this.router.navigate([], { fragment: "sub-" + st });
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
     }
