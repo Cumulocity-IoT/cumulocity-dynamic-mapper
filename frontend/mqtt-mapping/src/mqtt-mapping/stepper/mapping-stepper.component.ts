@@ -11,6 +11,9 @@ import { checkPropertiesAreValid, checkSubstitutionIsValid, definesDeviceIdentif
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
+import { ViewportScroller } from '@angular/common';
+import { Router } from '@angular/router';
+import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 
 @Component({
   selector: 'mapping-stepper',
@@ -64,6 +67,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   @ViewChild('editorSourceRef', { static: false }) editorSourceElement: ElementRef;
   @ViewChild('editorTargetRef', { static: false }) editorTargetElement: ElementRef;
   @ViewChild('editorTestingRef', { static: false }) editorTestingElement: ElementRef;
+  @ViewChild( SubstitutionRendererComponent, { static: false }) substitutionChild: SubstitutionRendererComponent;
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
@@ -72,11 +76,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
   editorTarget: JSONEditor;
   editorTesting: JSONEditor;
 
+
+  scrollTo: number = 0;
+
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     private elementRef: ElementRef,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) { }
 
   ngAfterViewInit(): void {
@@ -107,7 +114,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     console.log("Mapping to be updated:", this.mapping, this.editMode);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-      this.alertService.success("Already " +  numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
+      this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
     }
 
     //console.log ("ElementRef:", this.elementRef.nativeElement);
@@ -247,8 +254,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
     }
   }
 
-
-
   private updateSourceExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
@@ -296,7 +301,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   }
 
-  onExpressionsUpdated(): void {
+  private onExpressionsUpdated(): void {
     this.templateForm.get('ps').valueChanges.pipe(debounceTime(500))
       // distinctUntilChanged()
       .subscribe(val => {
@@ -386,14 +391,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
               let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
               this.templateSource = this.expandSourceTemplate(this.templateSource, levels);
               this.editorSource.set(this.templateSource),
-              this.onSampleButton();
+                this.onSampleButton();
             }
             event.stepper.next();
           } else {
             this.onCancel.emit();
           }
         })
-      }  else {
+      } else {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
@@ -505,6 +510,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked, Aft
 
   public onSelectNextSubstitution() {
     // changing of colors is currently diabled, to enable these uncomment the following stmt.
+    //this.scroller.scrollToAnchor("sub-" + this.selectedSubstitution);
+    const st = this.selectedSubstitution ;
+    this.substitutionChild.scrollToSubstitution(this.selectedSubstitution);
+    //this.router.navigate([], { fragment: "sub-" + st });
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
     }
