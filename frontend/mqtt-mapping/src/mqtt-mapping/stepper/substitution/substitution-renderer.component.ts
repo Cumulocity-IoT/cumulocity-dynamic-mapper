@@ -39,6 +39,11 @@ export class SubstitutionRendererComponent implements OnInit {
   }
 
   public scrollToSubstitution(i: number){
+    i++;
+    if (!i || i < 0 || i >= this.substitutions.length) {
+      i = 0;
+    }
+    console.log ("Scroll to:", i);
     this.elementRef.nativeElement.querySelector("#sub-" + i ).scrollIntoView();
   }
 }
