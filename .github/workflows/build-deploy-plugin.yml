@@ -1,6 +1,6 @@
 # This is a basic workflow to deploy the web-app to sematicon.cumulocity.com
 
-name: Deploy WebApp Administration
+name: Deploy Plugin MQTT Mapping
 
 # Controls when the workflow will run
 on:  
