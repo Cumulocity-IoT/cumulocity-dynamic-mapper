@@ -9,6 +9,7 @@ defaults:
 on:
   workflow_dispatch:
 
+
 jobs:
   build:
 
@@ -21,5 +22,5 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        release_id: ${{ steps.create-test-release.outputs.id }}
-        aasset_name: mqtt-mapping-service-${{ steps.get_version.outputs.version }}.zip
+        release_id: v1.3_beta
+        aasset_name: mqtt-mapping-service-v1.3_beta.zip
