@@ -35,5 +35,5 @@ jobs:
         working-directory: ./frontend/mqtt-mapping
       - run: npm run build --if-present
         working-directory: ./frontend/mqtt-mapping
-      - run: npm run deploy-ci --param1=${{ secrets.SECRET_URL }} --param2=${{ secrets.SECRET_TENANT }} --param3=${{ secrets.SECRET_PASSWORD }} --param4=${{ secrets.SECRET_USER }}
+      - run: npm run deploy-ci --param1=${{ secrets.SECRET_URL }} --param3=${{ secrets.SECRET_PASSWORD }} --param4=${{ secrets.SECRET_USER }}
         working-directory: ./frontend/mqtt-mapping
