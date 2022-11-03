@@ -232,8 +232,7 @@
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Source</label>
-                        <div class="jsonColumnLarge" #editorSourceRef id="editorSourceRef">
-                        </div>
+                        <json-editor [options]="editorOptionsSource"  (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource></json-editor>
                         <c8y-messages>
                           <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate><span
                               class="text-warning">Select source node to
@@ -352,8 +351,7 @@
                             </button>
                           </span>
                         </div>
-                        <div class="jsonColumnLarge" #editorTargetRef id="editorTargetRef">
-                        </div>
+                        <json-editor [options]="editorOptionsTarget"  (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget></json-editor>
                         <c8y-messages>
                           <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate><span
                             class="text-warning">Select target node to
@@ -570,8 +568,7 @@
                 <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
-                    <div class="jsonColumnLarge" #editorTestingRef id="editorTestingRef">
-                    </div>
+                    <json-editor [options]="editorOptionsTesting"  [data]="templateTesting" #editorTesting></json-editor>
                   </div>
                 </div>
               </div>
