@@ -116,7 +116,10 @@ button.jsoneditor-button.jsoneditor-dragarea {
   background-color: #fff;
   border: 1px solid rgb(170, 170, 170);
   font-size: smaller !important;
-  min-height: 32px;
+  /* min-height: 32px; */
+  /* max-height: 33px; */
+  height: 5em;
+  overflow: auto;
 }
 
 .font-smaller {

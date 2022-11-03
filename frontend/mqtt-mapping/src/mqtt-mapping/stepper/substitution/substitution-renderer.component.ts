@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { definesDeviceIdentifier } from '../../../shared/helper';
 import { Mapping, MappingSubstitution } from '../../../shared/configuration.model';
 
@@ -26,7 +26,7 @@ export class SubstitutionRendererComponent implements OnInit {
 
   definesDeviceIdentifier = definesDeviceIdentifier;
 
-  constructor() { }
+  constructor(  private elementRef: ElementRef,) { }
 
   ngOnInit() {
     console.log ("Setting for renderer:", this.setting)
@@ -36,5 +36,9 @@ export class SubstitutionRendererComponent implements OnInit {
     console.log("Selected substitution:", index);
     this.setting.selectedSubstitutionIndex = index;
     this.onSelect.emit(index);
+  }
+
+  public scrollToSubstitution(i: number){
+    this.elementRef.nativeElement.querySelector("#sub-" + i ).scrollIntoView();
   }
 }
