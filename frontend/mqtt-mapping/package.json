@@ -7,6 +7,7 @@
     "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpack.config.js",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
+    "deploy-ci": "c8ycli deploy -u $url --tenant $tenant --password $password --user $user",
     "postinstall": "ngcc"
   },
   "keywords": [],
