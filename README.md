@@ -30,7 +30,7 @@
 
 ## Overview
 
-Cumulocity IoT has a MQTT endpoint but does not yet allow devices to send generic MQTT payloads. This project addresses
+Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses
 this gap by providing the following artifcats:
 
 * A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
