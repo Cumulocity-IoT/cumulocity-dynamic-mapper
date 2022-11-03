@@ -268,6 +268,7 @@ export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 export const BASE_URL = 'service/mqtt-mapping-service';
 export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
+export const COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
 export function getSchema(targetAPI: string): any {
   if (targetAPI == API.ALARM.name) {
