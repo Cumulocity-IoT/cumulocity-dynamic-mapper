@@ -1,0 +1,39 @@
+# This is a basic workflow to deploy the web-app to sematicon.cumulocity.com
+
+name: Deploy WebApp Administration
+
+# Controls when the workflow will run
+on:  
+  #push:
+  #  branches: [ "main" ]
+  #  paths: ./frontend/mqtt-mapping
+  #pull_request:
+  #  branches: [ "main" ]
+  #  paths: ./frontend/mqtt-mapping
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    environment: 
+      name: ck2
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      - name: deploy      
+        uses: actions/setup-node@v2
+        with:
+         node-version: 16.x        
+      - run: npm ci
+        working-directory: ./frontend/mqtt-mapping
+      - run: npm run build --if-present
+        working-directory: ./frontend/mqtt-mapping
+      - run: npm run deploy-ci --param1=${{ secrets.SECRET_URL }} --param2=${{ secrets.SECRET_TENANT }} --param3=${{ secrets.SECRET_PASSWORD }} --param4=${{ secrets.SECRET_USER }}
+        working-directory: ./frontend/mqtt-mapping
