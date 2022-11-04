@@ -25,6 +25,7 @@ import { StatusRendererComponent } from './mqtt-mapping/renderer/status-cell.ren
 import { TemplateRendererComponent } from './mqtt-mapping/renderer/template.renderer.component';
 import { MappingService } from './mqtt-mapping/shared/mapping.service';
 import { SnoopingModalComponent } from './mqtt-mapping/snooping/snooping-modal.component';
+import { JsonEditorComponent } from './mqtt-mapping/stepper/editor/jsoneditor.component';
 import { MappingStepperComponent } from './mqtt-mapping/stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substitution/substitution-renderer.component';
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
@@ -77,7 +78,8 @@ import { MappingTabFactory } from './tab.factory';
     MonitoringComponent,
     IdRendererComponent,
     SnoopingModalComponent,
-    MappingTypeComponent
+    MappingTypeComponent,
+    JsonEditorComponent,
   ],
   entryComponents: [ServiceMappingComponent],
   declarations: [
@@ -98,6 +100,7 @@ import { MappingTabFactory } from './tab.factory';
     IdRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
+    JsonEditorComponent,
   ],
   providers: [
     OverviewGuard,

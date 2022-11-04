@@ -18,35 +18,11 @@ export interface ServiceConfiguration {
   logSubstitution: boolean;
 }
 
-export class MappingSubstitution {
-  public pathSource: string;
-  public pathTarget: string;
-  public repairStrategy: RepairStrategy;
-  public expandArray: boolean;
-  constructor(
-    ps: string,
-    pt: string,
-    rs: RepairStrategy,
-    di: boolean
-  ) {
-    this.pathSource = ps;
-    this.pathTarget = pt;
-    this.repairStrategy = rs;
-  }
-  reset() {
-    this.pathSource = '';
-    this.pathTarget = '';
-  }
-  isValid() {
-    return this.hasPathSource() && this.hasPathTarget()
-  }
-
-  hasPathSource() {
-    return this.pathSource != ''
-  }
-  hasPathTarget() {
-    return this.pathTarget != ''
-  }
+export interface MappingSubstitution {
+  pathSource: string;
+  pathTarget: string;
+  repairStrategy: RepairStrategy;
+  expandArray: boolean;
 }
 
 export interface Mapping {
@@ -106,11 +82,11 @@ export enum Status {
 // }
 
 export const API = {
-  ALARM : { name: "ALARM", identifier: "source.id" },
-  EVENT : { name: "EVENT", identifier: "source.id" },
-  MEASUREMENT : { name: "MEASUREMENT", identifier: "source.id" },
-  INVENTORY : { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
-  OPERATION : { name: "OPERATION", identifier: "deviceId" },
+  ALARM: { name: "ALARM", identifier: "source.id" },
+  EVENT: { name: "EVENT", identifier: "source.id" },
+  MEASUREMENT: { name: "MEASUREMENT", identifier: "source.id" },
+  INVENTORY: { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
+  OPERATION: { name: "OPERATION", identifier: "deviceId" },
 }
 
 export enum ValidationError {
