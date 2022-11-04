@@ -1,0 +1,84 @@
+.jsoneditor-menu a.jsoneditor-poweredBy {
+    display: none;
+}
+
+.jsoneditor-menu>button {
+    display: none !important;
+}
+
+div.jsoneditor-menu>div.jsoneditor-search {
+    display: none !important;
+}
+
+div>div.jsoneditor-menu {
+    background-color: var(--navigator-bg-color, var(--navigator-dark-bg-color, var(--brand-primary, #1776BF)));
+}
+
+.jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-contextmenu .jsoneditor-icon {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+div.jsoneditor-tree button.jsoneditor-button {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+div.jsoneditor-tree button.jsoneditor-dragarea {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-text-errors tr .jsoneditor-schema-error {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-text-errors tr.parse-error .jsoneditor-schema-error {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-search button {
+    background: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-statusbar>.jsoneditor-validation-error-icon {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-statusbar>.jsoneditor-parse-error-icon {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+button.jsoneditor-button.jsoneditor-dragarea {
+    display: none !important;
+}
+
+.jsoneditor-value {
+    font-size: smaller !important;
+}
+
+.jsoneditor-field {
+    font-size: smaller !important;
+}
+
+.jsoneditor {
+    line-height: 75% !important;
+}
+
+.jsoneditor-readonly {
+    font-size: smaller !important;
+}
+
+.jsoneditor-popover {
+    font-size: smaller !important;
+    width: 150px !important;
+}
+
+.ace_editor {
+    font-size: smaller !important;
+}
