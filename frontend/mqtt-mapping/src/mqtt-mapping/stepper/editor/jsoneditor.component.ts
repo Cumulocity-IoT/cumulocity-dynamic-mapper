@@ -1,6 +1,6 @@
 import {
   Component, ElementRef, Input, OnInit, OnDestroy, ViewChild,
-  Output, EventEmitter, forwardRef, ChangeDetectionStrategy, ViewEncapsulation
+  Output, EventEmitter, forwardRef, ChangeDetectionStrategy, ViewEncapsulation, AfterContentInit, AfterViewInit, AfterContentChecked, AfterViewChecked
 } from '@angular/core';
 import JSONEditor from "jsoneditor";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -24,7 +24,7 @@ import { COLOR_HIGHLIGHTED } from '../../../shared/helper';
   encapsulation: ViewEncapsulation.None,
 })
 
-export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDestroy {
+export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDestroy, AfterViewInit, AfterContentInit, AfterContentChecked, AfterViewChecked {
   private editor: any;
   public id = 'angjsoneditor' + Math.floor(Math.random() * 1000000);
   disabled = false;
@@ -51,13 +51,28 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
   @Output()
   change: EventEmitter<any> = new EventEmitter<any>();
   @Output()
+  onInit: EventEmitter<any> = new EventEmitter<any>();
+  @Output()
   jsonChange: EventEmitter<any> = new EventEmitter<any>();
   @Output()
   onPathChanged: EventEmitter<string> = new EventEmitter<string>();
 
-  constructor(private elementRef: ElementRef) {
-  }
+  constructor(private elementRef: ElementRef) {}
+  ngAfterViewChecked(): void {
+    //console.log("ngAfterViewChecked:", Object.keys(this.editor?.get()))
 
+  }
+  ngAfterContentChecked(): void {
+    //console.log("ngAfterContentChecked:", Object.keys(this.editor?.get()))
+
+  }
+  ngAfterContentInit(): void {
+    //console.log("ngAfterContentInit:", Object.keys(this.editor?.get()))
+  }
+  ngAfterViewInit(): void {
+    //this.onInit.emit('INITIALISED');
+    //console.log("ngAfterViewInit:", Object.keys(this.editor?.get()))
+  }
 
   ngOnInit() {
     let optionsBefore = this.options;
@@ -97,7 +112,6 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
       this.editor.expandAll();
     }
 
-
   }
 
   ngOnDestroy() {
@@ -124,7 +138,7 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
   registerOnTouched(fn) {
     this.onTouched = fn;
   }
-    
+
   // Implemented as part of ControlValueAccessor.
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
@@ -150,6 +164,12 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
           console.log(e);
         }
       }
+    }
+  }
+
+  public onFocus(e) {
+    if (this.editor) {
+      console.log("Was focused");
     }
   }
 
@@ -304,19 +324,34 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
   public setSelectionToPath(path: string) {
     console.log("Set selection to path:", path);
     const ns = path.split(".");
+    // if payload is an json array then we have to transform the path
     if (ns[0].startsWith("$")) {
-      let rx = /\[(-?\d*)\]/
-      let result = ns[0].match(rx)
+      const patternIndex = /\[(-?\d*)\]/
+      let result = ns[0].match(patternIndex)
       if (result && result.length >= 2) {
         ns[0] = result[1]
       }
       console.log("Changed level 0:", ns[0])
     }
-    const selection = { path: ns };
+    let nsCopy = [];
+    //const patternArray = /.*(?=\[*)/
+    const patternArray = /^[^\[]+/
+    const patternIndex = /(?<=\[)(-?\d*)(?=\])/
+    ns.forEach (l => {
+      let ar = l.match(patternArray)
+      if (ar?.length > 0 ){
+        nsCopy.push(ar[0])
+      }
+      let ind = l.match(patternIndex)
+      if (ind?.length > 0 ){
+        nsCopy.push(ind[0])
+      }
+    })
+    const selection = { path: nsCopy };
     try {
       this.editor.setSelection(selection, selection)
     } catch (error) {
-      console.warn("Set selection to path not possible:", ns, error);
+      console.warn("Set selection to path not possible:", nsCopy, error);
     }
     this.onPathChanged.emit(path);
   }

@@ -15,15 +15,14 @@ export class SubstitutionRendererComponent implements OnInit {
 
   @Input()
   substitutions: MappingSubstitution[] = [];
-
   @Input()
   targetAPI: string;
-
   @Input()
   setting: any;
 
   @Output() onSelect = new EventEmitter<number>();
 
+  public id =  Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
 
   constructor(  private elementRef: ElementRef,) { }
@@ -44,6 +43,6 @@ export class SubstitutionRendererComponent implements OnInit {
       i = 0;
     }
     console.log ("Scroll to:", i);
-    this.elementRef.nativeElement.querySelector("#sub-" + i ).scrollIntoView();
+    this.elementRef.nativeElement.querySelector(`#sub-${this.id}-${i}` ).scrollIntoView();
   }
 }
