@@ -1,5 +1,5 @@
 import { CdkStep } from '@angular/cdk/stepper';
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
@@ -20,7 +20,7 @@ import { SubstitutionRendererComponent } from './substitution/substitution-rende
   encapsulation: ViewEncapsulation.None,
 })
 
-export class MappingStepperComponent implements OnInit {
+export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
@@ -50,16 +50,26 @@ export class MappingStepperComponent implements OnInit {
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTesting: any
-  sourceExpressionResult: string = '';
-  sourceExpressionResultType: string = 'empty';
-  sourceExpressionErrorMsg: string = '';
-  targetExpressionResult: string = '';
-  targetExpressionResultType: string = 'empty';
-  targetExpressionErrorMsg: string = '';
+  sourceExpression = {
+    Rresult: '',
+    resultType: 'empty',
+    errrorMsg: ''
+  } as any
+  targetExpression = {
+    Rresult: '',
+    resultType: 'empty',
+    errrorMsg: ''
+  } as any
+
   showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
-  currentSubstitution: MappingSubstitution = new MappingSubstitution('', '', RepairStrategy.DEFAULT, false);
+  currentSubstitution: MappingSubstitution = {
+    pathSource: '',
+    pathTarget: '',
+    repairStrategy: RepairStrategy.DEFAULT,
+    expandArray: false
+  };
   step: any;
 
   @ViewChild('editorSource', { static: false }) editorSource: JsonEditorComponent;
@@ -75,6 +85,7 @@ export class MappingStepperComponent implements OnInit {
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     private alertService: AlertService,
+    private elementRef: ElementRef
   ) { }
 
   ngOnInit() {
@@ -118,6 +129,16 @@ export class MappingStepperComponent implements OnInit {
     this.onExpressionsUpdated();
   }
 
+  ngAfterContentChecked(): void {
+    // if json source editor is displayed then choose the first selection
+    const editorSourceRef = this.elementRef.nativeElement.querySelector('#editorSource');
+    if (editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
+      //console.log("I'm here, ngAfterContentChecked", editorSourceRef, editorSourceRef.getAttribute("listener"));
+      this.selectedSubstitution = 0;
+      this.onSelectSubstitution(this.selectedSubstitution);
+      editorSourceRef.setAttribute("listener", "true");
+    }
+  }
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
@@ -144,8 +165,8 @@ export class MappingStepperComponent implements OnInit {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
-      sourceExpressionResult: new FormControl(this.sourceExpressionResult),
-      targetExpressionResult: new FormControl(this.targetExpressionResult),
+      sourceExpressionResult: new FormControl(this.sourceExpression.result),
+      targetExpressionResult: new FormControl(this.targetExpression.result),
     },
       checkSubstitutionIsValid(this.mapping)
     );
@@ -156,16 +177,17 @@ export class MappingStepperComponent implements OnInit {
     this.currentSubstitution.pathSource = path;
   }
 
-
   public updateSourceExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
-      this.sourceExpressionResultType = whatIsIt(r);
-      this.sourceExpressionResult = JSON.stringify(r, null, 4);
-      this.sourceExpressionErrorMsg = '';
+      this.sourceExpression = {
+        resultType: whatIsIt(r),
+        result: JSON.stringify(r, null, 4),
+        errorMsg: ''
+      }
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
-      this.sourceExpressionErrorMsg = error.message
+      this.sourceExpression.errorMsg = error.message
     }
   }
 
@@ -177,13 +199,14 @@ export class MappingStepperComponent implements OnInit {
   public updateTargetExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path, false);
-      this.targetExpressionResultType = whatIsIt(r);
-      this.targetExpressionResult = JSON.stringify(r, null, 4);
-
-      this.targetExpressionErrorMsg = '';
+      this.targetExpression = {
+        resultType: whatIsIt(r),
+        result: JSON.stringify(r, null, 4),
+        errorMsg: ''
+      }
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
-      this.targetExpressionErrorMsg = error.message
+      this.targetExpression.errorMsg = error.message
     }
   }
 
@@ -206,7 +229,6 @@ export class MappingStepperComponent implements OnInit {
 
   onTemplateTopicChanged(event): void {
     this.mapping.templateTopicSample = this.mapping.templateTopic;
-
   }
 
   private onExpressionsUpdated(): void {
@@ -248,10 +270,8 @@ export class MappingStepperComponent implements OnInit {
     this.templateTesting = dataTesting;
   }
 
-
   async onSampleButton() {
-    this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-    this.templateTarget = this.expandTargetTemplate(this.templateTarget);
+    this.templateTarget = this.expandTargetTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
     this.editorTarget.set(this.templateTarget);
   }
 
@@ -307,20 +327,20 @@ export class MappingStepperComponent implements OnInit {
       }
     } else if (this.step == "Define templates and substitutions") {
       this.editorTesting.set(this.editorSource.get());
+      this.onSelectSubstitution(0);
       event.stepper.next();
     }
 
   }
 
   private enrichTemplates() {
-    this.templateSource = JSON.parse(this.mapping.source);
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
-    this.templateSource = this.expandSourceTemplate(this.templateSource, levels);
-    this.templateTarget = JSON.parse(this.mapping.target);
+    this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
     if (!this.editMode) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
+    } else {
+      this.templateTarget = JSON.parse(this.mapping.target);
     }
     this.templateTarget = this.expandTargetTemplate(this.templateTarget);
   }
@@ -345,11 +365,16 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public onAddSubstitution() {
-    if (this.currentSubstitution.isValid()) {
+    if (this.currentSubstitution.pathSource != '' && this.currentSubstitution.pathTarget != '') {
       this.addSubstitution(this.currentSubstitution);
       this.selectedSubstitution = -1;
       console.log("New substitution", this.currentSubstitution, this.mapping.substitutions);
-      this.currentSubstitution.reset();
+      this.currentSubstitution = {
+        pathSource: '',
+        pathTarget: '',
+        repairStrategy: RepairStrategy.DEFAULT,
+        expandArray: false
+      };
       this.templateForm.updateValueAndValidity({ 'emitEvent': true });
     }
   }
@@ -410,8 +435,7 @@ export class MappingStepperComponent implements OnInit {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected
-      const sel = this.mapping.substitutions[selected];
-      this.currentSubstitution = new MappingSubstitution(sel.pathSource, sel.pathTarget, sel.repairStrategy, sel.expandArray);
+      this.currentSubstitution = _.clone(this.mapping.substitutions[selected])
       this.editorSource.setSelectionToPath(this.currentSubstitution.pathSource);
       this.editorTarget.setSelectionToPath(this.currentSubstitution.pathTarget);
     }

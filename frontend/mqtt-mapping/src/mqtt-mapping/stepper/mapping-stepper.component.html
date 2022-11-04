@@ -232,9 +232,9 @@
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Source</label>
-                        <json-editor [options]="editorOptionsSource"  (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource></json-editor>
+                        <json-editor [options]="editorOptionsSource" (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource id="editorSource"></json-editor>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathSource()" translate><span
+                          <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
                               class="text-warning">Select source node to
                               define substitution!</span>
                           </c8y-message>
@@ -353,7 +353,7 @@
                         </div>
                         <json-editor [options]="editorOptionsTarget"  (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget></json-editor>
                         <c8y-messages>
-                          <c8y-message *ngIf="!currentSubstitution.hasPathTarget()" translate><span
+                          <c8y-message *ngIf="currentSubstitution.pathTarget != ''" translate><span
                             class="text-warning">Select target node to
                             define substitution!</span>
                           </c8y-message>
@@ -471,7 +471,7 @@
                             formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
                             placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
                           <c8y-messages>
-                            <c8y-message *ngIf="sourceExpressionErrorMsg !== ''" translate><span
+                            <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
                                 class="text-warning">{{sourceExpressionErrorMsg}}</span>
                             </c8y-message>
                           </c8y-messages>
@@ -485,7 +485,7 @@
                           <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
                             formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
                           <c8y-messages>
-                            <c8y-message *ngIf="targetExpressionErrorMsg !== ''" translate><span
+                            <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
                                 class="text-warning">{{targetExpressionErrorMsg}}</span>
                             </c8y-message>
                             <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate><span
@@ -502,10 +502,10 @@
                         <div class="form-group">
                           <div class="input-group">
                             <label translate>Expression - result - </label>
-                            <span>{{sourceExpressionResultType}}</span>
+                            <span>{{sourceExpression.resultType}}</span>
                           </div>
                           <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                            formControlName="sourceExpressionResult" [ngModel]="sourceExpressionResult" readonly
+                            formControlName="sourceExpressionResult" [ngModel]="sourceExpression.result" readonly
                             disabled="true" />
                         </div>
                       </div>
@@ -515,10 +515,10 @@
                         <div class="form-group">
                           <div class="input-group">
                             <label translate>Expression - result - </label>
-                            <span>{{targetExpressionResultType}}</span>
+                            <span>{{targetExpression.resultType}}</span>
                           </div>
                           <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                            formControlName="targetExpressionResult" [ngModel]="targetExpressionResult" readonly
+                            formControlName="targetExpressionResult" [ngModel]="targetExpression.result" readonly
                             disabled="true" />
                         </div>
                       </div>
