@@ -57,7 +57,7 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
   @Output()
   onPathChanged: EventEmitter<string> = new EventEmitter<string>();
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(private elementRef: ElementRef) { }
   ngAfterViewChecked(): void {
     //console.log("ngAfterViewChecked:", Object.keys(this.editor?.get()))
 
@@ -117,7 +117,6 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
   ngOnDestroy() {
     this.destroy();
   }
-
 
   /**
    * ngModel
@@ -282,78 +281,82 @@ export class JsonEditorComponent implements ControlValueAccessor, OnInit, OnDest
 
   private delegateSetSelection(node: any, event: any) {
     if (event.type == "click") {
-      // determine the json editor where the click happened
-      let target = '';
-      var eventPath = event.path || (event.composedPath && event.composedPath());
-      eventPath.forEach(element => {
-        // if (element.localName == "json-editor") {
-        if (element.localName == "div" && element.className == 'jsonColumnLarge') {
-          target = element.id;
-        }
-      });
-
-      var path = "";
-      node.path.forEach(n => {
-        if (typeof n === 'number') {
-          path = path.substring(0, path.length - 1);
-          path += '[' + n + ']';
-        } else {
-          path += n;
-        }
-        path += ".";
-      });
-      path = path.replace(/\.$/g, '')
-
+      // reset style on previously selected items
       for (let item of this.selectionList) {
-        //console.log("Reset item:", item);
         item.setAttribute('style', null);
       }
-
+      // set style on currently selected items
       this.selectionList = this.elementRef.nativeElement.querySelectorAll('.jsoneditor-selected');
       for (let item of this.selectionList) {
         item.setAttribute('style', `background: ${COLOR_HIGHLIGHTED};`);
       }
-
-      if (path.startsWith("[")) {
-        path = "$" + path;
+      const selection = { path: node.path };
+      try {
+        this.editor.setSelection(selection, selection)
+      } catch (error) {
+        console.warn("Set selection to path not possible:", node.path, error);
       }
-      this.setSelectionToPath(path)
+      this.onPathChanged.emit(this.editorPath2jsonPath(node.path));
     }
   }
 
   public setSelectionToPath(path: string) {
     console.log("Set selection to path:", path);
-    const ns = path.split(".");
-    // if payload is an json array then we have to transform the path
-    if (ns[0].startsWith("$")) {
-      const patternIndex = /\[(-?\d*)\]/
-      let result = ns[0].match(patternIndex)
-      if (result && result.length >= 2) {
-        ns[0] = result[1]
-      }
-      console.log("Changed level 0:", ns[0])
-    }
-    let nsCopy = [];
-    //const patternArray = /.*(?=\[*)/
-    const patternArray = /^[^\[]+/
-    const patternIndex = /(?<=\[)(-?\d*)(?=\])/
-    ns.forEach (l => {
-      let ar = l.match(patternArray)
-      if (ar?.length > 0 ){
-        nsCopy.push(ar[0])
-      }
-      let ind = l.match(patternIndex)
-      if (ind?.length > 0 ){
-        nsCopy.push(ind[0])
-      }
-    })
-    const selection = { path: nsCopy };
+    let levels = this.jsonPath2EditorPath(path);
+    const selection = { path: levels };
     try {
       this.editor.setSelection(selection, selection)
     } catch (error) {
-      console.warn("Set selection to path not possible:", nsCopy, error);
+      console.warn("Set selection to path not possible:", levels, error);
     }
     this.onPathChanged.emit(path);
+  }
+
+  private editorPath2jsonPath(levels: string[]) : string {
+    let path = "";
+    levels.forEach(n => {
+      if (typeof n === 'number') {
+        path = path.substring(0, path.length - 1);
+        path += '[' + n + ']';
+      } else {
+        path += n;
+      }
+      path += ".";
+    });
+    path = path.replace(/\.$/g, '')
+    if (path.startsWith("[")) {
+      path = "$" + path;
+    }
+
+    return path;
+  }
+
+  private jsonPath2EditorPath(path: string) : string[]{
+    const ns = path.split(".");
+    // if payload is an json array then we have to transform the path
+    if (ns[0].startsWith("$")) {
+      const patternIndex = /\[(-?\d*)\]/;
+      let result = ns[0].match(patternIndex);
+      if (result && result.length >= 2) {
+        ns[0] = result[1];
+      }
+      console.log("Changed level 0:", ns[0]);
+    }
+    let levels = [];
+    //const patternArray = /.*(?=\[*)/
+    const patternArray = /^[^\[]+/;
+    const patternIndex = /(?<=\[)(-?\d*)(?=\])/;
+    ns.forEach(l => {
+      let ar = l.match(patternArray);
+      if (ar?.length > 0) {
+        levels.push(ar[0]);
+      }
+      let ind = l.match(patternIndex);
+      if (ind?.length > 0) {
+        levels.push(ind[0]);
+      }
+    });
+    return levels;
   }
 }
 
