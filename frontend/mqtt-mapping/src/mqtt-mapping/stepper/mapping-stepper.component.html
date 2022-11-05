@@ -353,7 +353,7 @@
                         </div>
                         <json-editor [options]="editorOptionsTarget"  (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget></json-editor>
                         <c8y-messages>
-                          <c8y-message *ngIf="currentSubstitution.pathTarget != ''" translate><span
+                          <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
                             class="text-warning">Select target node to
                             define substitution!</span>
                           </c8y-message>
