@@ -93,10 +93,10 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Exception for: {}, {}, {}", substitution.pathSource,
+                log.error("Exception for: {}, {}", substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("EvaluateRuntimeException for: {}, {}, {}", substitution.pathSource,
+                log.error("EvaluateRuntimeException for: {}, {}", substitution.pathSource,
                         payload, e);
             }
             /*

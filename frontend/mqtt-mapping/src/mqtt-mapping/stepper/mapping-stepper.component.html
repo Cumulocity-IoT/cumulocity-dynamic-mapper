@@ -308,6 +308,7 @@
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                             (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates">
+                            <span *ngIf ="mapping.snoopedTemplates.length > 0" class="badge badge-success"> {{mapping.snoopedTemplates.length}}</span>
                             <i c8yIcon="enter-left"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -569,6 +570,11 @@
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
                     <json-editor [options]="editorOptionsTesting"  [data]="templateTesting" #editorTesting></json-editor>
+                    <c8y-messages>
+                      <c8y-message *ngIf="templateTestingErrorMsg"
+                        translate><span class="text-warning">{{templateTestingErrorMsg}}</span>
+                      </c8y-message>
+                    </c8y-messages>
                   </div>
                 </div>
               </div>
@@ -576,11 +582,15 @@
           </div>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" name="test" class="btn btn-default" (click)="onTestTransformation()" translate>
-            Transform test message
+          <button type="button" class="btn btn-default" (click)="onTestTransformation()">
+            Transform Test Message
           </button>
-          <button type="button" name="test" class="btn btn-default" (click)="onSendTest()" translate>
-            Send test message
+          <!-- {{buttonValue}}<span *ngIf ="(templateTestingResultLength$ | async ) >= 0" class="badge badge-success"> {{templateTestingResultLength$ | async}}</span> -->
+          <button type="button" class="btn btn-default" (click)="onSelectNextTestResult()" >
+            Show Next Test Result<span *ngIf ="templateTestingResults.length > 0" class="badge badge-success"> {{templateTestingResults.length}}</span>
+          </button>
+          <button type="button" class="btn btn-default" (click)="onSendTest()" >
+            Send Test Message
           </button>
         </div>
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCustom)="onCommitButton()"
