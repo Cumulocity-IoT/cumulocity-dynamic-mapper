@@ -164,10 +164,23 @@ export interface SubstituteValue {
   repairStrategy: RepairStrategy
 }
 
+export interface  C8YRequest {
+  predecessor: number ;
+  method: string;
+  source: string;
+  externalIdType: string;
+  processingType?: ProcessingType;
+  payload: string;
+  targetAPI: string;
+  error: Error;
+  postProcessingCche: Map<string, SubstituteValue[]>;
+}
+
 export interface  ProcessingContext {
   mapping: Mapping ;
   topic: string;
   payload: JSON;
+  requests?: C8YRequest[];
   processingType?: ProcessingType;
   cardinality: Map<string,number>;
   needsRepair: boolean;
