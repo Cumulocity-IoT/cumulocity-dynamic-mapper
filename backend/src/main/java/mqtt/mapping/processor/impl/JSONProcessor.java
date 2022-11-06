@@ -1,7 +1,6 @@
 package mqtt.mapping.processor.impl;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -125,7 +123,7 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
                                 postProcessingCacheEntry
                                         .add(new SubstituteValue(jn, TYPE.NUMBER, substitution.repairStrategy));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
+                                log.warn("Since result is not textual or number it is ignored: {}",
                                         jn.asText());
                             }
                         }

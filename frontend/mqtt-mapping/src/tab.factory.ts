@@ -12,23 +12,30 @@ export class MappingTabFactory implements TabFactory {
     if (this.router.url.match(/mqtt-mapping/g)) {
       tabs.push({
         path: 'mqtt-mapping/configuration',
-        priority: 1000,
+        priority: 930,
         label: 'Configuration',
         icon: 'cog',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: 'mqtt-mapping/mapping',
-        priority: 1000,
+        priority: 920,
         label: 'Mapping',
         icon: 'grid-view',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
         path: 'mqtt-mapping/monitoring',
-        priority: 1000,
+        priority: 910,
         label: 'Monitoring',
         icon: 'monitoring',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/testing',
+        priority: 900,
+        label: 'Testing',
+        icon: 'test',
         orientation: 'horizontal',
       } as Tab);
     }

@@ -2,7 +2,6 @@ package mqtt.mapping.model;
 
 import lombok.Getter;
 import lombok.ToString;
-import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.RepairStrategy;
 
 import java.io.Serializable;

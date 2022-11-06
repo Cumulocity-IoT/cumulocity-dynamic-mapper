@@ -1,0 +1,31 @@
+<c8y-title>MQTT Mapping</c8y-title>
+
+<div class="card">
+  <div class="card-header separator">
+    <h4 class="card-title">MQTT Mapping Test Devices</h4>
+  </div>
+  <div class="card-block">
+    <c8y-data-grid
+      [title]="'MQTT Mapping Test Devices'"
+      [loadMoreItemsLabel]="loadMoreItemsLabel"
+      [loadingItemsLabel]="loadingItemsLabel"
+      [displayOptions]="displayOptions"
+      [columns]="columns"
+      [pagination]="pagination"
+      [infiniteScroll]="infiniteScroll"
+      [serverSideDataCallback]="serverSideDataCallback"
+      [refresh]="refresh"
+      [actionControls]="actionControls"
+      [selectable]="selectable"
+      [bulkActionControls]="bulkActionControls"
+      (onConfigChange)="onConfigChange($event)"
+    >
+      <c8y-ui-empty-state
+        [icon]="'search'"
+        [title]="'No test devices exist.' | translate"
+        [subtitle]="'Test your mappings and then test devices are created.' | translate"
+        [horizontal]="true"
+      ></c8y-ui-empty-state>
+    </c8y-data-grid>
+  </div>
+</div>

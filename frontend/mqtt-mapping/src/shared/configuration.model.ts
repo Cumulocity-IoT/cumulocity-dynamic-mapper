@@ -139,3 +139,39 @@ export enum RepairStrategy {
   IGNORE = "IGNORE",
   REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
 }
+
+
+export enum ProcessingType {
+  UNDEFINED,
+  ONE_DEVICE_ONE_VALUE,
+  ONE_DEVICE_MULTIPLE_VALUE,
+  MULTIPLE_DEVICE_ONE_VALUE,
+  MULTIPLE_DEVICE_MULTIPLE_VALUE,
+}
+
+export enum SubstituteValueType {
+    NUMBER,
+    TEXTUAL, 
+    OBJECT, 
+    IGNORE,
+    ARRAY
+}
+
+
+export interface SubstituteValue {
+  value: JSON;
+  type: SubstituteValueType;
+  repairStrategy: RepairStrategy
+}
+
+export interface  ProcessingContext {
+  mapping: Mapping ;
+  topic: string;
+  payload: JSON;
+  processingType?: ProcessingType;
+  cardinality: Map<string,number>;
+  needsRepair: boolean;
+  mappingType: MappingType;
+  postProcessingCache: Map<string, SubstituteValue[]>;
+}
+  
