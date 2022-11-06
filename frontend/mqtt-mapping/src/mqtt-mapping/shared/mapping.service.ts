@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { AlarmService, EventService, FetchClient, IAlarm, IdentityService, IEvent, IExternalIdentity, IManagedObject, IMeasurement, InventoryService, IResult, MeasurementService } from '@c8y/client';
+import { AlarmService, EventService, IAlarm, IdentityService, IEvent, IExternalIdentity, IManagedObject, IMeasurement, InventoryService, IResult, MeasurementService } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping } from '../../shared/configuration.model';
-import { definesDeviceIdentifier, MAPPING_FRAGMENT, MAPPING_TYPE, TIME, TOKEN_DEVICE_TOPIC } from '../../shared/helper';
+import { API, Mapping, ProcessingContext, ProcessingType, RepairStrategy, SubstituteValue, SubstituteValueType } from '../../shared/configuration.model';
+import { MAPPING_FRAGMENT, MAPPING_TYPE, splitTopicExcludingSeparator, TIME, TOKEN_TOPIC_LEVEL, whatIsIt } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -74,6 +74,126 @@ export class MappingService {
     });
   }
 
+
+
+  async initializeContext(mapping: Mapping, context: ProcessingContext) {
+    let ctx: ProcessingContext = {
+      mapping: mapping,
+      topic: mapping.templateTopicSample,
+      payload: JSON.parse(mapping.source),
+      processingType: ProcessingType.UNDEFINED,
+      cardinality: new Map<string, number>(),
+      needsRepair: false,
+      mappingType: mapping.mappingType,
+      postProcessingCache: new Map<string, SubstituteValue[]>()
+    }
+  }
+
+  private extractFromSource(context: ProcessingContext) {
+    let mapping: Mapping = context.mapping;
+    let payloadJsonNode: JSON = context.payload;
+    let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
+    let topicLevels = splitTopicExcludingSeparator(context.topic);
+    payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
+
+    let payload: string = JSON.stringify(payloadJsonNode, null, 4);
+    let substitutionTimeExists: boolean = false;
+
+    mapping.substitutions.forEach(substitution => {
+      let extractedSourceContent: JSON;
+      // step 1 extract content from incoming payload
+      extractedSourceContent = this.evaluateExpression(JSON.parse(mapping.source), substitution.pathSource, true);
+
+      //step 2 analyse exctracted content: textual, array
+      let postProcessingCacheEntry: SubstituteValue[] = _.get(postProcessingCache, substitution.pathTarget, []);
+      if (extractedSourceContent == undefined) {
+        console.error("No substitution for: ", substitution.pathSource, payload);
+        postProcessingCacheEntry.push(
+          {
+            value: extractedSourceContent,
+            type: SubstituteValueType.IGNORE,
+            repairStrategy: substitution.repairStrategy
+          });
+        postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+      } else {
+        if (Array.isArray(extractedSourceContent)) {
+          if (substitution.expandArray) {
+            // extracted result from sourcPayload is an array, so we potentially have to
+            // iterate over the result, e.g. creating multiple devices
+            extractedSourceContent.forEach(jn => {
+              if (isNaN(jn)) {
+                postProcessingCacheEntry
+                  .push({
+                    value: JSON.parse(jn.toString()),
+                    type: SubstituteValueType.NUMBER,
+                    repairStrategy: substitution.repairStrategy
+                  });
+              } 
+              else if  (isString(jn)) {
+                postProcessingCacheEntry
+                  .push({
+                    value: JSON.parse(jn),
+                    type: SubstituteValueType.TEXTUAL,
+                    repairStrategy: substitution.repairStrategy
+                  });
+              }  
+              else {
+                console.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
+                  jn.asText());
+              }
+            })
+            context.cardinality.set(substitution.pathTarget, extractedSourceContent.length);
+            postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+          } else {
+            // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE substitution
+            context.cardinality.set(substitution.pathTarget, 1);
+            postProcessingCacheEntry
+              .push({
+                value: extractedSourceContent,
+                type: SubstituteValueType.ARRAY,
+                repairStrategy: substitution.repairStrategy
+              })
+            postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+          }
+        } else if (isNaN( JSON.stringify(extractedSourceContent))) {
+          context.cardinality.set(substitution.pathTarget, 1);
+          postProcessingCacheEntry.push(
+            { value: extractedSourceContent, type: SubstituteValueType.NUMBER, repairStrategy: substitution.repairStrategy });
+          postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+        } else if (whatIsIt(extractedSourceContent) == "String") {
+          context.cardinality.set(substitution.pathTarget, 1);
+          postProcessingCacheEntry.push(
+            { value: extractedSourceContent, type: SubstituteValueType.TEXTUAL, repairStrategy: substitution.repairStrategy });
+          postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+        } else {
+          console.log(`This substitution, involves an objects for: ${substitution.pathSource}, ${extractedSourceContent}`);
+          context.cardinality.set(substitution.pathTarget, 1);
+          postProcessingCacheEntry.push(
+            { value: extractedSourceContent, type: SubstituteValueType.OBJECT, repairStrategy: substitution.repairStrategy });
+          postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
+        }
+        console.log(`Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget}`);
+      }
+      if (substitution.pathTarget === TIME) {
+        substitutionTimeExists = true;
+      }
+    })
+
+    // no substitution for the time property exists, then use the system time
+    if (!substitutionTimeExists) {
+      let postProcessingCacheEntry: SubstituteValue[] = _.get(postProcessingCache, TIME, []);
+      postProcessingCacheEntry.push(
+        { value: JSON.parse(new Date().toISOString()), type: SubstituteValueType.TEXTUAL, repairStrategy: RepairStrategy.DEFAULT });
+
+      postProcessingCache.set(TIME, postProcessingCacheEntry);
+    }
+  }
+
+
+  private substituteInTargetAndSend(context: ProcessingContext) {
+
+  }
+
   async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
     let result = JSON.parse(mapping.target);
     let substitutionTimeExists = false;
@@ -84,7 +204,7 @@ export class MappingService {
       console.log("MQTT test device is already initialized:", this.testDeviceId);
       mapping.substitutions.forEach(sub => {
         console.log("Looking substitution for:", sub.pathSource, mapping.source, result);
-        let s: JSON 
+        let s: JSON
         if (sub.pathTarget == API[mapping.targetAPI].identifier) {
           s = this.testDeviceId as any;
         } else {

@@ -256,7 +256,8 @@ export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
-export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttTest';
+export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
+export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
@@ -559,6 +560,8 @@ export function whatIsIt(object) {
     return "don't know";
   }
 }
+
+export const isNumeric = (num: any) => (typeof(num) === 'number' || typeof(num) === "string" && num.trim() !== '') && !isNaN(num as number);
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
   return sub.pathTarget == API[api].identifier

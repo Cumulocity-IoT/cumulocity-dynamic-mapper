@@ -9,8 +9,7 @@ import { MonitoringService } from '../shared/monitoring.service';
 @Component({
   selector: 'monitoring-grid',
   templateUrl: 'monitoring.component.html',
-  styleUrls: ['../../mqtt-mapping/shared/mapping.style.css',
-    '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
+  styleUrls: ['../../mqtt-mapping/shared/mapping.style.css',],
   encapsulation: ViewEncapsulation.None,
 })
 

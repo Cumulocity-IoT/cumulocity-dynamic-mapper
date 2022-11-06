@@ -53,6 +53,7 @@ export class BrokerConfigurationService {
           name: "MQTT Mapping Test Device",
           type: MQTT_TEST_DEVICE_TYPE,
           c8y_IsDevice: {},
+          c8y_mqttMapping_TestDevice:{},
           com_cumulocity_model_Agent: {}
         });
 

@@ -31,6 +31,9 @@ import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substituti
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
 import { IdRendererComponent } from './mqtt-monitoring/renderer/id-cell.renderer.component';
 import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
+import { TestingComponent } from './mqtt-testing/grid/testing.component';
+import { TestingDeviceService } from './mqtt-testing/grid/testing.service';
+import { TestingModule } from './mqtt-testing/testing.module';
 import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { OverviewGuard } from './shared/overview.guard';
@@ -40,6 +43,7 @@ import { MappingTabFactory } from './tab.factory';
   imports: [
     CoreModule,
     CommonModule,
+    TestingModule,
     FormsModule,
     PopoverModule,
     ReactiveFormsModule,
@@ -58,6 +62,11 @@ import { MappingTabFactory } from './tab.factory';
         path: 'mqtt-mapping/monitoring',
         pathMatch: 'full',
         component: MonitoringComponent,
+      },
+      {
+        path: 'mqtt-mapping/testing',
+        pathMatch: 'full',
+        component: TestingComponent,
       },
     ]),
   ],
@@ -123,6 +132,10 @@ import { MappingTabFactory } from './tab.factory';
         {
           path: 'mqtt-mapping/monitoring',
           component: MonitoringComponent,
+        },
+        {
+          path: 'mqtt-mapping/testing',
+          component: TestingComponent,
         },
       ] as Route[],
       multi: true,
