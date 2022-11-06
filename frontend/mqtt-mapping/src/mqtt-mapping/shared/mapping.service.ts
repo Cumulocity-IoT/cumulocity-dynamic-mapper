@@ -4,7 +4,7 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, Mapping, ProcessingContext, ProcessingType, RepairStrategy, SubstituteValue, SubstituteValueType } from '../../shared/configuration.model';
-import { MAPPING_FRAGMENT, MAPPING_TYPE, splitTopicExcludingSeparator, TIME, TOKEN_TOPIC_LEVEL, whatIsIt } from '../../shared/helper';
+import { isNumeric, MAPPING_FRAGMENT, MAPPING_TYPE, MQTT_TEST_DEVICE_TYPE, splitTopicExcludingSeparator, TIME, TOKEN_TOPIC_LEVEL, whatIsIt } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -74,19 +74,23 @@ export class MappingService {
     });
   }
 
-
-
-  async initializeContext(mapping: Mapping, context: ProcessingContext) {
+  private initializeContext(mapping: Mapping): ProcessingContext {
     let ctx: ProcessingContext = {
       mapping: mapping,
       topic: mapping.templateTopicSample,
-      payload: JSON.parse(mapping.source),
       processingType: ProcessingType.UNDEFINED,
       cardinality: new Map<string, number>(),
       needsRepair: false,
       mappingType: mapping.mappingType,
-      postProcessingCache: new Map<string, SubstituteValue[]>()
+      postProcessingCache: new Map<string, SubstituteValue[]>(),
+      sendPayload: true
     }
+    return ctx;
+  }
+
+
+  private deserializePayload(context: ProcessingContext, mapping: Mapping) {
+    context.payload = JSON.parse(mapping.source);
   }
 
   private extractFromSource(context: ProcessingContext) {
@@ -121,25 +125,22 @@ export class MappingService {
             // extracted result from sourcPayload is an array, so we potentially have to
             // iterate over the result, e.g. creating multiple devices
             extractedSourceContent.forEach(jn => {
-              if (isNaN(jn)) {
+              if (isNumeric(jn)) {
                 postProcessingCacheEntry
                   .push({
                     value: JSON.parse(jn.toString()),
                     type: SubstituteValueType.NUMBER,
                     repairStrategy: substitution.repairStrategy
                   });
-              } 
-              else if  (isString(jn)) {
+              } else if (whatIsIt(jn) == 'Array') {
                 postProcessingCacheEntry
                   .push({
                     value: JSON.parse(jn),
                     type: SubstituteValueType.TEXTUAL,
                     repairStrategy: substitution.repairStrategy
                   });
-              }  
-              else {
-                console.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
-                  jn.asText());
+              } else {
+                console.warn(`Since result is not textual or number it is ignored: ${jn}`);
               }
             })
             context.cardinality.set(substitution.pathTarget, extractedSourceContent.length);
@@ -155,7 +156,7 @@ export class MappingService {
               })
             postProcessingCache.set(substitution.pathTarget, postProcessingCacheEntry);
           }
-        } else if (isNaN( JSON.stringify(extractedSourceContent))) {
+        } else if (isNumeric(JSON.stringify(extractedSourceContent))) {
           context.cardinality.set(substitution.pathTarget, 1);
           postProcessingCacheEntry.push(
             { value: extractedSourceContent, type: SubstituteValueType.NUMBER, repairStrategy: substitution.repairStrategy });
@@ -190,11 +191,160 @@ export class MappingService {
   }
 
 
-  private substituteInTargetAndSend(context: ProcessingContext) {
+  private async substituteInTargetAndSend(context: ProcessingContext) {
+    //step 3 replace target with extract content from incoming payload
+    let mapping = context.mapping;
+    let payloadTarget: JSON = null;
+    try {
+      payloadTarget = JSON.parse(mapping.target);
+    } catch (e) {
+      this.alert.warning("Target Payload is not a valid json object!");
+      throw e;
+    }
 
+    let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
+    let maxEntry: string = API[mapping.targetAPI].identifier;
+    for (let entry of postProcessingCache.entries()) {
+      if (postProcessingCache.get(maxEntry).length < entry[1].length) {
+        maxEntry = entry[0];
+      }
+    }
+
+    let deviceEntries: SubstituteValue[] = postProcessingCache.get(API[mapping.targetAPI].identifier);
+
+
+    let countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
+    let toDouble: SubstituteValue = deviceEntries[0];
+    while (deviceEntries.length < countMaxlistEntries) {
+      deviceEntries.push(toDouble);
+    }
+
+    let i: number = 0;
+    for (let device of deviceEntries) {
+      let predecessor: number = -1;
+      for (let pathTarget of postProcessingCache.keys()) {
+        let substituteValue: SubstituteValue = {
+          value: JSON.parse("NOT_DEFINED"),
+          type: SubstituteValueType.TEXTUAL,
+          repairStrategy: RepairStrategy.DEFAULT
+        }
+        if (i < postProcessingCache.get(pathTarget).length) {
+          substituteValue = _.clone(postProcessingCache.get(pathTarget)[i]);
+        } else if (postProcessingCache.get(pathTarget).length == 1) {
+          // this is an indication that the substitution is the same for all
+          // events/alarms/measurements/inventory
+          if (substituteValue.repairStrategy == RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) {
+            substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
+          } else if (substituteValue.repairStrategy == RepairStrategy.USE_LAST_VALUE_OF_ARRAY) {
+            let last: number = postProcessingCache.get(pathTarget).length - 1;
+            substituteValue = _.clone(postProcessingCache.get(pathTarget)[last]);
+          }
+          console.warn(`During the processing of this pathTarget: ${pathTarget} a repair strategy: ${substituteValue.repairStrategy} was used!`);
+        }
+
+        if (mapping.targetAPI != (API.INVENTORY.name)) {
+          if (pathTarget == API[mapping.targetAPI].identifier) {
+            let sourceId: string = await resolveExternalId(JSON.stringify(substituteValue.value),
+              mapping.externalIdType);
+            if (sourceId == null && mapping.createNonExistingDevice) {
+              if (context.sendPayload) {
+                let d: IManagedObject = await upsertDevice({
+                  name: "device_" + mapping.externalIdType + "_" + JSON.stringify(substituteValue.value),
+                  type: MQTT_TEST_DEVICE_TYPE
+                }, JSON.stringify(substituteValue.value), mapping.externalIdType);
+                substituteValue.value = JSON.parse(d.getId().getValue());
+              }
+
+              let map = {
+                c8y_IsDevice: null,
+                name: "device_" + mapping.externalIdType + "_" + substituteValue.value
+              }
+              context.requests.push(
+                {
+                  predecessor: predecessor,
+                  method: "PATCH",
+                  source: JSON.stringify(device.value),
+                  externalIdType: mapping.externalIdType,
+                  payload: JSON.stringify(map),
+                  targetAPI: API.INVENTORY.name,
+                  error: null,
+                  postProcessingCache: postProcessingCache
+                });
+              predecessor = context.requests.length;
+
+            } else if (sourceId == null) {
+              throw new Error("External id " + substituteValue + " for type "
+                + mapping.externalIdType + " not found!");
+            } else {
+              substituteValue.value = JSON.parse(sourceId);
+            }
+          }
+          _.set(payloadTarget, pathTarget, substituteValue.value)
+        } else if (pathTarget != (API[mapping.targetAPI].identifier)) {
+          _.set(payloadTarget, pathTarget, substituteValue.value)
+
+        }
+      }
+      /*
+       * step 4 prepare target payload for sending to c8y
+       */
+      if (mapping.targetAPI == API.INVENTORY.name) {
+        let ex: Error = null;
+        if (context.sendPayload) {
+          try {
+            upsertDevice(payloadTarget, JSON.stringify(device.value), mapping.externalIdType);
+          } catch (e) {
+            ex = e;
+          }
+        }
+        context.requests.push(
+          {
+            predecessor: predecessor,
+            method: "PATCH",
+            source: JSON.stringify(device.value),
+            externalIdType: mapping.externalIdType,
+            payload: JSON.stringify(payloadTarget),
+            targetAPI: API.INVENTORY.name,
+            error: ex,
+            postProcessingCache: postProcessingCache
+          });
+        predecessor = context.requests.length;
+
+      } else if (mapping.targetAPI == (API.INVENTORY.name)) {
+        let ex: Error = null;
+        if (context.sendPayload) {
+          try {
+            createMEAO(mapping.targetAPI, payloadTarget, mapping);
+          } catch (e) {
+            ex = e;
+          }
+        }
+        context.requests.push(
+          {
+            predecessor: predecessor,
+            method: "POST",
+            source: JSON.stringify(device.value),
+            externalIdType: mapping.externalIdType,
+            payload: JSON.stringify(payloadTarget),
+            targetAPI: API.INVENTORY.name,
+            error: ex,
+            postProcessingCache: postProcessingCache
+          })
+        predecessor = context.requests.length;
+      } else {
+        console.warn("Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}", mapping.targetAPI,
+          postProcessingCache.size);
+      }
+      console.log(`Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`, payloadTarget, mapping.targetAPI);
+      i++;
+    }
   }
 
   async testResult(mapping: Mapping, simulation: boolean): Promise<any> {
+    let context = this.initializeContext(mapping);
+    this.deserializePayload(context, mapping);
+    this.extractFromSource(context);
+    this.substituteInTargetAndSend(context);
     let result = JSON.parse(mapping.target);
     let substitutionTimeExists = false;
     if (!this.testDeviceId) {
@@ -233,7 +383,7 @@ export class MappingService {
   }
 
   async sendTestResult(mapping: Mapping): Promise<string> {
-    let result: Promise<IResult<any>>;
+    let result: any;
     let test_payload = await this.testResult(mapping, true);
     let error: string = '';
 
@@ -311,3 +461,84 @@ export class MappingService {
     return result;
   }
 }
+
+async function resolveExternalId(externalId: string, externalIdType: string): Promise<string> {
+  let identity: IExternalIdentity = {
+    type: externalIdType,
+    externalId: externalId
+  };
+  try {
+    const { data, res } = await this.identity.detail(identity);
+    this.mappingId = data.managedObject.id as string;
+    const response: IResult<IManagedObject> = await this.inventory.detail(this.mappingId);
+    return data.managedObject.id as string;
+  } catch (e) {
+    console.log(`External id ${externalId} doesn't exist!`);
+    return;
+  }
+
+}
+async function upsertDevice(payload: any, externalId: string, externalIdType: string): Promise<IManagedObject> {
+  let deviceId: string = await this.resolveExternalId(externalId, externalIdType);
+  let device: Partial<IManagedObject> = {
+    ...payload,
+    c8y_IsDevice: {},
+    c8y_mqttMapping_TestDevice: {},
+    com_cumulocity_model_Agent: {}
+  }
+  if (deviceId) {
+    const response: IResult<IManagedObject> = await this.inventory.update(device);
+    return response.data;
+  } else {
+    const response: IResult<IManagedObject> = await this.inventory.create(device);
+    //create identity for mo
+    let identity = {
+      type: externalIdType,
+      externalId: externalId,
+      managedObject: {
+        id: response.data.id
+      }
+    }
+    const { data, res } = await this.identity.create(identity);
+    return response.data;
+  }
+}
+
+function createMEAO(targetAPI: string, payloadTarget: JSON, mapping:Mapping) {
+  let result: any;
+  let error: string = '';
+  if (targetAPI == API.EVENT.name) {
+    let p: IEvent = payloadTarget as any;
+    if (p != null) {
+      result = this.event.create(p);
+    } else {
+      error = "Payload is not a valid:" + targetAPI;
+    }
+  } else if (targetAPI == API.ALARM.name) {
+    let p: IAlarm = payloadTarget as any;
+    if (p != null) {
+      result = this.alarm.create(p);
+    } else {
+      error = "Payload is not a valid:" + targetAPI;
+    }
+  } else if (targetAPI == API.MEASUREMENT.name) {
+    let p: IMeasurement = payloadTarget as any;
+    if (p != null) {
+      result = this.measurement.create(p);
+    } else {
+      error = "Payload is not a valid:" + targetAPI;
+    }
+  } else {
+    let p: IManagedObject = payloadTarget as any;
+    if (p != null) {
+      if (mapping.updateExistingDevice) {
+        result = this.inventory.update(p);
+      } else {
+        result = this.inventory.create(p);
+      }
+    } else {
+      error = "Payload is not a valid:" + targetAPI;
+    }
+  }
+}
+

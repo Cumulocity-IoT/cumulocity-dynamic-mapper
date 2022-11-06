@@ -14,6 +14,7 @@ import {
 import { TypeDataGridColumn } from './type-data-grid-column/type.data-grid-column';
 import { Subject } from 'rxjs';
 import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
+import { MQTT_TEST_DEVICE_TYPE } from '../../shared/helper';
 
 /** Model for custom type filtering form. */
 export interface TypeFilteringModel {
@@ -166,7 +167,7 @@ export class TestingDeviceService {
     /** Returns filters for given columns and pagination setup. */
     private getFilters(columns: Column[], pagination: Pagination) {
         let query1: any = this.getQueryString(columns);
-        let query2 = this.queriesUtil.addAndFilter(query1, { __has: 'c8y_mqttMapping_TestDevice' });
+        let query2 = this.queriesUtil.addAndFilter(query1, { __has: MQTT_TEST_DEVICE_TYPE });
         let queryBuilt = this.queriesUtil.buildQuery(query2);
         return {
             query: queryBuilt,
