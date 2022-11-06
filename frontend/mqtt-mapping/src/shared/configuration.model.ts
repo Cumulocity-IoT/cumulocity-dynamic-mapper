@@ -169,22 +169,22 @@ export interface  C8YRequest {
   method: string;
   source: string;
   externalIdType: string;
-  processingType?: ProcessingType;
   payload: string;
   targetAPI: string;
   error: Error;
-  postProcessingCche: Map<string, SubstituteValue[]>;
+  postProcessingCache: Map<string, SubstituteValue[]>;
 }
 
 export interface  ProcessingContext {
   mapping: Mapping ;
   topic: string;
-  payload: JSON;
+  payload?: JSON;
   requests?: C8YRequest[];
   processingType?: ProcessingType;
   cardinality: Map<string,number>;
   needsRepair: boolean;
   mappingType: MappingType;
   postProcessingCache: Map<string, SubstituteValue[]>;
+  sendPayload?: boolean;
 }
   
