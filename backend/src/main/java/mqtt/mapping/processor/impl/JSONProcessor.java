@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -166,7 +167,7 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
         }
 
         // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists) {
+        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY) {
             ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
                     new ArrayList<SubstituteValue>());
             postProcessingCacheEntry.add(

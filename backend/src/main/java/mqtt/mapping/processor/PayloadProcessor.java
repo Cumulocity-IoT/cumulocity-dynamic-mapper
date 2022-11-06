@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.handler.SysHandler;
@@ -70,12 +71,7 @@ public abstract class PayloadProcessor<O> {
          * step 3 replace target with extract content from incoming payload
          */
         Mapping mapping = context.getMapping();
-        JsonNode payloadTarget = null;
-        try {
-            payloadTarget = objectMapper.readTree(mapping.target);
-        } catch (JsonProcessingException e) {
-            throw new ProcessingException(e.getMessage());
-        }
+
 
         // if there are to little device idenfified then we replicate the first device
         Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
@@ -98,6 +94,12 @@ public abstract class PayloadProcessor<O> {
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
+            JsonNode payloadTarget = null;
+            try {
+                payloadTarget = objectMapper.readTree(mapping.target);
+            } catch (JsonProcessingException e) {
+                throw new ProcessingException(e.getMessage());
+            }
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -123,8 +125,8 @@ public abstract class PayloadProcessor<O> {
                         if (sourceId == null && mapping.createNonExistingDevice) {
                             ManagedObjectRepresentation attocDevice = null;
                             Map<String, Object> map = new HashMap<String, Object>();
-                            map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value);
-                            map.put("c8y_MQTTMapping_generated_type", null);
+                            map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                            map.put(MappingsRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
                             map.put("c8y_IsDevice", null);
                             String request = null;
                             String response = null;
@@ -132,7 +134,7 @@ public abstract class PayloadProcessor<O> {
                                 request = objectMapper.writeValueAsString(map);
                                 if (context.isSendPayload()) {
                                     attocDevice = c8yAgent.upsertDevice(request,
-                                            substituteValue.typedValue().toString(),
+                                            substituteValue.value.asText(),
                                             mapping.externalIdType);
                                     response = objectMapper.writeValueAsString(map);
                                     substituteValue.value = new TextNode(attocDevice.getId().getValue());
@@ -171,7 +173,7 @@ public abstract class PayloadProcessor<O> {
                 String response = null;
                 if (context.isSendPayload()) {
                     try {
-                        attocDevice = c8yAgent.upsertDevice(payloadTarget.toString(), device.typedValue().toString(),
+                        attocDevice = c8yAgent.upsertDevice(payloadTarget.toString(), device.value.asText(),
                                 mapping.externalIdType);
                         response = objectMapper.writeValueAsString(attocDevice);
                     } catch (Exception e) {

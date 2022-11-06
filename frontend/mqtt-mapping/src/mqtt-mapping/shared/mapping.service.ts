@@ -4,7 +4,7 @@ import { AlertService } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, C8YRequest, Mapping, ProcessingContext, ProcessingType, RepairStrategy, SubstituteValue, SubstituteValueType } from '../../shared/configuration.model';
-import { isNumeric, MAPPING_FRAGMENT, MAPPING_TYPE, MQTT_TEST_DEVICE_TYPE, splitTopicExcludingSeparator, TIME, TOKEN_TOPIC_LEVEL, whatIsIt } from '../../shared/helper';
+import { isNumeric, MAPPING_FRAGMENT, MAPPING_TYPE, MQTT_TEST_DEVICE_TYPE, returnTypedValue, splitTopicExcludingSeparator, TIME, TOKEN_TOPIC_LEVEL, whatIsIt } from '../../shared/helper';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -129,15 +129,22 @@ export class MappingService {
               if (isNumeric(jn)) {
                 postProcessingCacheEntry
                   .push({
-                    value: JSON.parse(jn.toString()),
+                    value: jn.toString(),
                     type: SubstituteValueType.NUMBER,
+                    repairStrategy: substitution.repairStrategy
+                  });
+              } else if (whatIsIt(jn) == 'String') {
+                postProcessingCacheEntry
+                  .push({
+                    value: jn,
+                    type: SubstituteValueType.TEXTUAL,
                     repairStrategy: substitution.repairStrategy
                   });
               } else if (whatIsIt(jn) == 'Array') {
                 postProcessingCacheEntry
                   .push({
-                    value: JSON.parse(jn),
-                    type: SubstituteValueType.TEXTUAL,
+                    value: jn,
+                    type: SubstituteValueType.ARRAY,
                     repairStrategy: substitution.repairStrategy
                   });
               } else {
@@ -182,10 +189,10 @@ export class MappingService {
     })
 
     // no substitution for the time property exists, then use the system time
-    if (!substitutionTimeExists) {
+    if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name) {
       let postProcessingCacheEntry: SubstituteValue[] = _.get(postProcessingCache, TIME, []);
       postProcessingCacheEntry.push(
-        { value: JSON.parse(new Date().toISOString()), type: SubstituteValueType.TEXTUAL, repairStrategy: RepairStrategy.DEFAULT });
+        { value: new Date().toISOString(), type: SubstituteValueType.TEXTUAL, repairStrategy: RepairStrategy.DEFAULT });
 
       postProcessingCache.set(TIME, postProcessingCacheEntry);
     }
@@ -195,13 +202,7 @@ export class MappingService {
   private async substituteInTargetAndSend(context: ProcessingContext) {
     //step 3 replace target with extract content from incoming payload
     let mapping = context.mapping;
-    let payloadTarget: JSON = null;
-    try {
-      payloadTarget = JSON.parse(mapping.target);
-    } catch (e) {
-      this.alert.warning("Target Payload is not a valid json object!");
-      throw e;
-    }
+
 
     let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
     let maxEntry: string = API[mapping.targetAPI].identifier;
@@ -223,6 +224,13 @@ export class MappingService {
     let i: number = 0;
     for (let device of deviceEntries) {
       let predecessor: number = -1;
+      let payloadTarget: JSON = null;
+      try {
+        payloadTarget = JSON.parse(mapping.target);
+      } catch (e) {
+        this.alert.warning("Target Payload is not a valid json object!");
+        throw e;
+      }
       for (let pathTarget of postProcessingCache.keys()) {
         let substituteValue: SubstituteValue = {
           value: "NOT_DEFINED" as any,
@@ -245,7 +253,7 @@ export class MappingService {
 
         if (mapping.targetAPI != (API.INVENTORY.name)) {
           if (pathTarget == API[mapping.targetAPI].identifier) {
-            let sourceId: string = await this.resolveExternalId(JSON.stringify(substituteValue.value),
+            let sourceId: string = await this.resolveExternalId(substituteValue.value.toString(),
               mapping.externalIdType);
             if (!sourceId && mapping.createNonExistingDevice) {
               let response: IManagedObject = null;
@@ -253,21 +261,22 @@ export class MappingService {
               let map = {
                 c8y_IsDevice: {},
                 name: "device_" + mapping.externalIdType + "_" + substituteValue.value,
-                c8y_MQTTMapping_generated_type: {},
+                c8y_mqttMapping_Generated_Type: {},
+                c8y_mqttMapping_TestDevice: {},
                 type: MQTT_TEST_DEVICE_TYPE
               }
               if (context.sendPayload) {
-                response = await this.upsertDevice(map, JSON.stringify(substituteValue.value), mapping.externalIdType);
+                response = await this.upsertDevice(map, substituteValue.value, mapping.externalIdType);
                 substituteValue.value = response.id as any;
               }
               context.requests.push(
                 {
                   predecessor: predecessor,
                   method: "PATCH",
-                  source: JSON.stringify(device.value),
+                  source: device.value,
                   externalIdType: mapping.externalIdType,
-                  request: JSON.stringify(map),
-                  response: JSON.stringify(response),
+                  request: map,
+                  response: response,
                   targetAPI: API.INVENTORY.name,
                   error: null,
                   postProcessingCache: postProcessingCache
@@ -280,19 +289,19 @@ export class MappingService {
             } else if (sourceId == null) {
               substituteValue.value = null
             } else {
-              substituteValue.value = JSON.parse(sourceId);
+              substituteValue.value = sourceId.toString();
             }
           }
           if (substituteValue.repairStrategy == RepairStrategy.REMOVE_IF_MISSING && !substituteValue) {
             _.unset(payloadTarget, pathTarget);
           } else {
-            _.set(payloadTarget, pathTarget, substituteValue.value)
+            _.set(payloadTarget, pathTarget, returnTypedValue(substituteValue))
           }
         } else if (pathTarget != (API[mapping.targetAPI].identifier)) {
           if (substituteValue.repairStrategy == RepairStrategy.REMOVE_IF_MISSING && !substituteValue) {
             _.unset(payloadTarget, pathTarget);
           } else {
-            _.set(payloadTarget, pathTarget, substituteValue.value)
+            _.set(payloadTarget, pathTarget, returnTypedValue(substituteValue))
           }
 
         }
@@ -314,9 +323,9 @@ export class MappingService {
           {
             predecessor: predecessor,
             method: "PATCH",
-            source: JSON.stringify(device.value),
+            source: device.value,
             externalIdType: mapping.externalIdType,
-            request: JSON.stringify(payloadTarget),
+            request: payloadTarget,
             response: response,
             targetAPI: API.INVENTORY.name,
             error: ex,
@@ -338,11 +347,11 @@ export class MappingService {
           {
             predecessor: predecessor,
             method: "POST",
-            source: JSON.stringify(device.value),
+            source: device.value,
             externalIdType: mapping.externalIdType,
-            request: JSON.stringify(payloadTarget),
+            request: payloadTarget,
             response: response,
-            targetAPI: API.INVENTORY.name,
+            targetAPI: API[mapping.targetAPI].name,
             error: ex,
             postProcessingCache: postProcessingCache
           })
