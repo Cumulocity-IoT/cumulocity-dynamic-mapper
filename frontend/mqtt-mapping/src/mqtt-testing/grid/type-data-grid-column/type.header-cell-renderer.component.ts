@@ -8,7 +8,6 @@ import { CellRendererContext } from '@c8y/ngx-components';
  */
 @Component({
   template: `
-    <i c8yIcon="rocket"></i>
     <span style="text-transform: uppercase; font-variant: small-caps; text-decoration: underline;">
       {{ context.property.header }}
     </span>

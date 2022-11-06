@@ -13,6 +13,7 @@ import {
 
 import { TypeDataGridColumn } from './type-data-grid-column/type.data-grid-column';
 import { Subject } from 'rxjs';
+import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
 
 /** Model for custom type filtering form. */
 export interface TypeFilteringModel {
@@ -51,12 +52,20 @@ export class TestingDeviceService {
                 header: 'ID',
                 path: 'id',
                 filterable: true,
-                sortable: true
+                sortable: true,
+                cellRendererComponent: DeviceIdCellRendererComponent
             },
             {
                 name: 'name',
                 header: 'Name',
                 path: 'name',
+                filterable: true,
+                sortable: true
+            },
+            {
+                name: 'creationTime',
+                header: 'Date Created',
+                path: 'creationTime',
                 filterable: true,
                 sortable: true
             },

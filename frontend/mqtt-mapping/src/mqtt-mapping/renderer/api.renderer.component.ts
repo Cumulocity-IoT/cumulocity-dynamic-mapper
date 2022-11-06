@@ -2,7 +2,9 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  templateUrl: './api.renderer.component.html'
+  template: `
+    <span title="{{context.value}}">{{(context.value?.length > 0 ? context.value.charAt(0) : 0 )}}</span>
+    `
 })
 export class APIRendererComponent {
   constructor(
