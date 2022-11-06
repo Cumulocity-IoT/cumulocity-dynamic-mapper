@@ -15,7 +15,8 @@ public class C8YRequest {
     private RequestMethod method;
     private String source;
     private String externalIdType;
-    private String payload;
+    private String request;
+    private String response;
     private API targetAPI;
     private Exception error;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.

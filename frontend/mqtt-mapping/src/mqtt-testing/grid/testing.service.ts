@@ -1,7 +1,7 @@
 import { Injectable, OnInit } from '@angular/core';
 import { transform } from 'lodash-es';
 
-import { IManagedObject, InventoryService, QueriesUtil } from '@c8y/client';
+import { IManagedObject, InventoryService, IResult, QueriesUtil } from '@c8y/client';
 import {
     ActionControl,
     AlertService,
@@ -232,12 +232,13 @@ export class TestingDeviceService {
         const params: any = {
             cascade: true
         }
-
+        let deletePromises: Promise<IResult<any>>[] = [];
         ms.forEach (async m => {
-            await this.inventoryService.delete(m, params);
+             deletePromises.push(this.inventoryService.delete(m, params));
         })
-
-        this.refreshData$.next(true);
+        Promise.all(deletePromises).then(() => {
+            this.refreshData$.next(true);
+        })
         this.alert.success("Test Devices are deleted!");
     }
 }

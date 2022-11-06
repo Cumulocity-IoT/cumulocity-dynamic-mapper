@@ -3,7 +3,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   template: `
-    <textarea class="text-monospace font-smaller" style="border:none; background-color: transparent;" rows="3" cols="40" title="{{json}}">{{json}}</textarea>
+    <textarea class="text-monospace font-smaller" style="border:none; background-color: transparent;" rows="3" cols="40" title="{{json}}" readonly>{{json}}</textarea>
     `
 })
 export class TemplateRendererComponent {

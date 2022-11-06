@@ -169,7 +169,8 @@ export interface  C8YRequest {
   method: string;
   source: string;
   externalIdType: string;
-  payload: string;
+  request: string;
+  response: string;
   targetAPI: string;
   error: Error;
   postProcessingCache: Map<string, SubstituteValue[]>;

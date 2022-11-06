@@ -4,8 +4,9 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { API, C8YRequest, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
@@ -45,7 +46,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   testForm: FormGroup;
   templateSource: any;
   templateTarget: any;
+  templateTestingResults: C8YRequest[] = [];
+  templateTestingErrorMsg: string;
   templateTesting: any;
+  selectedTestingResult: number = -1;
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
@@ -80,6 +84,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
+  buttonValue: string = `Show Next Test Result`;;
 
   constructor(
     public bsModalService: BsModalService,
@@ -261,13 +266,30 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTestTransformation() {
-    this.templateTesting = (await this.mappingService.testResult(this.getCurrentMapping(true), false));
+    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), false);
+    this.onSelectNextTestResult();
   }
 
   async onSendTest() {
-    let dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping(true));
-    this.mapping.tested = (dataTesting != '');
-    this.templateTesting = dataTesting;
+    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), true);
+    this.mapping.tested = (! this.templateTestingResults);
+    this.onSelectNextTestResult();
+
+  }
+
+  public onSelectNextTestResult() {
+    if (this.selectedTestingResult >= this.templateTestingResults.length - 1) {
+      this.selectedTestingResult = -1;
+    }
+    this.selectedTestingResult++;
+    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length ) {
+      this.templateTesting = JSON.parse(this.templateTestingResults[this.selectedTestingResult].request);
+      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
+      this.buttonValue = `Show Next Test Result - <span class="badge badge-success">${this.templateTestingResults.length}</span>`
+    } else {
+      this.templateTesting = JSON.parse("{}");
+      this.templateTestingErrorMsg = undefined;
+    }
   }
 
   async onSampleButton() {
