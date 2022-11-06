@@ -159,7 +159,7 @@ export enum SubstituteValueType {
 
 
 export interface SubstituteValue {
-  value: JSON;
+  value: any;
   type: SubstituteValueType;
   repairStrategy: RepairStrategy
 }
@@ -167,10 +167,10 @@ export interface SubstituteValue {
 export interface  C8YRequest {
   predecessor: number ;
   method: string;
-  source: string;
+  source: any;
   externalIdType: string;
-  request: string;
-  response: string;
+  request: any;
+  response: any;
   targetAPI: string;
   error: Error;
   postProcessingCache: Map<string, SubstituteValue[]>;

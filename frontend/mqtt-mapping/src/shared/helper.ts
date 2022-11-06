@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, MappingSubstitution, ValidationError } from "./configuration.model"
+import { API, Mapping, MappingSubstitution, SubstituteValue, SubstituteValueType, ValidationError } from "./configuration.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -48,7 +48,7 @@ export const SCHEMA_EVENT = {
   '$schema': 'http://json-schema.org/draft-07/schema#',
   '$id': 'http://example.com/root.json',
   'type': 'object',
-  'title': 'Event',
+  'title': 'EVENT',
   'required': [
     'source',
     'type',
@@ -95,7 +95,7 @@ export const SCHEMA_ALARM = {
   '$schema': 'http://json-schema.org/draft-07/schema#',
   '$id': 'http://example.com/root.json',
   'type': 'object',
-  'title': 'Alarm',
+  'title': 'ALARM',
   'required': [
     'source',
     'type',
@@ -150,7 +150,7 @@ export const SCHEMA_MEASUREMENT = {
   '$schema': 'http://json-schema.org/draft-07/schema#',
   '$id': 'http://example.com/root.json',
   'type': 'object',
-  'title': 'Measurement',
+  'title': 'MEASUREMENT',
   'required': [
     'source',
     'type',
@@ -223,7 +223,7 @@ export const SCHEMA_OPERATION = {
   '$schema': 'http://json-schema.org/draft-07/schema#',
   '$id': 'http://example.com/root.json',
   'type': 'object',
-  'title': 'Operation',
+  'title': 'OPERATION',
   'required': [
     'deviceId',
   ],
@@ -258,6 +258,7 @@ export const TIME = "time";
 export const MAPPING_TYPE = 'c8y_mqttMapping';
 export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
 export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
+export const  MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
@@ -565,4 +566,14 @@ export const isNumeric = (num: any) => (typeof(num) === 'number' || typeof(num) 
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
   return sub.pathTarget == API[api].identifier
+}
+
+export function returnTypedValue(subValue: SubstituteValue): any {
+  if (subValue.type ==  SubstituteValueType.NUMBER) {
+    return Number(subValue.value)
+  } else if (subValue.type ==  SubstituteValueType.TEXTUAL) {
+    return String(subValue.value)
+  } else {
+    return subValue.value
+  }
 }

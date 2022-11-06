@@ -84,7 +84,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  buttonValue: string = `Show Next Test Result`;;
 
   constructor(
     public bsModalService: BsModalService,
@@ -283,9 +282,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
     this.selectedTestingResult++;
     if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length ) {
-      this.templateTesting = JSON.parse(this.templateTestingResults[this.selectedTestingResult].request);
+      this.templateTesting = this.templateTestingResults[this.selectedTestingResult].request;
+      this.editorTesting.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI),null);
       this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
-      this.buttonValue = `Show Next Test Result - <span class="badge badge-success">${this.templateTestingResults.length}</span>`
     } else {
       this.templateTesting = JSON.parse("{}");
       this.templateTestingErrorMsg = undefined;
