@@ -18,6 +18,7 @@
         <main.class>mqtt.mapping.App</main.class>
         <c8y.version>1014.134.0</c8y.version>
         <lombok.version>1.18.22</lombok.version>
+        <c8y-artefact-name>mqtt-mapping-service</c8y-artefact-name>
     </properties>
 
     <repositories>
@@ -117,6 +118,24 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.coderplus.maven.plugins</groupId>
+                <artifactId>copy-rename-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <executions>
+                  <execution>
+                    <id>rename-file</id>
+                    <phase>package</phase>
+                    <goals>
+                      <goal>copy</goal>
+                    </goals>
+                    <configuration>
+                      <sourceFile>${project.build.directory}/${c8y-artefact-name}-${project.version}.zip</sourceFile>
+                      <destinationFile>${project.build.directory}/mqtt-mapping-service.zip</destinationFile>
+                    </configuration>
+                  </execution>
+                </executions>
+              </plugin>
         </plugins>
     </build>
 </project>
