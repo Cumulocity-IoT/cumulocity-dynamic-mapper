@@ -48,7 +48,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateTarget: any;
   templateTestingResults: C8YRequest[] = [];
   templateTestingErrorMsg: string;
-  templateTesting: any;
+  templateTestingRequest: any;
+  templateTestingResponse: any;
   selectedTestingResult: number = -1;
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
 
@@ -79,7 +80,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild('editorSource', { static: false }) editorSource: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget: JsonEditorComponent;
-  @ViewChild('editorTesting', { static: false }) editorTesting: JsonEditorComponent;
+  @ViewChild('editorTestingRequest', { static: false }) editorTestingRequest: JsonEditorComponent;
+  @ViewChild('editorTestingResponse', { static: false }) editorTestingResponse: JsonEditorComponent;
 
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild: SubstitutionRendererComponent;
 
@@ -284,11 +286,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
     this.selectedTestingResult++;
     if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length ) {
-      this.templateTesting = this.templateTestingResults[this.selectedTestingResult].request;
-      this.editorTesting.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI),null);
+      this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
+      this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
+      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI),null);
       this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
     } else {
-      this.templateTesting = JSON.parse("{}");
+      this.templateTestingRequest = JSON.parse("{}");
+      this.templateTestingResponse = JSON.parse("{}");
       this.templateTestingErrorMsg = undefined;
     }
   }
@@ -350,7 +354,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
-      this.editorTesting.set(this.editorSource.get());
+      this.editorTestingRequest.set(this.editorSource.get());
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
