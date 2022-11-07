@@ -235,7 +235,7 @@
                         <json-editor [options]="editorOptionsSource"
                           (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
                           id="editorSource"></json-editor>
-                        <c8y-messages>
+                          <c8y-messages class="text-left">
                           <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
                               class="text-warning">Select source node to
                               define substitution!</span>
@@ -359,7 +359,7 @@
                         <json-editor [options]="editorOptionsTarget"
                           (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
                         </json-editor>
-                        <c8y-messages>
+                        <c8y-messages class="text-right">
                           <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
                               class="text-warning">Select target node to
                               define substitution!</span>

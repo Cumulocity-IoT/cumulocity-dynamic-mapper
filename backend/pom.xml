@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.56</version>
+    <version>1.57</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -14,10 +14,10 @@
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <spring-boot-dependencies.version>2.5.4</spring-boot-dependencies.version>
+        <spring-boot-dependencies.version>2.5.14</spring-boot-dependencies.version>
         <main.class>mqtt.mapping.App</main.class>
         <c8y.version>1014.134.0</c8y.version>
-        <lombok.version>1.18.22</lombok.version>
+        <lombok.version>1.18.24</lombok.version>
         <c8y-artefact-name>mqtt-mapping-service</c8y-artefact-name>
     </properties>
 
