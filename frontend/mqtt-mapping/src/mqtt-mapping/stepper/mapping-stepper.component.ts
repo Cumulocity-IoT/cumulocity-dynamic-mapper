@@ -4,9 +4,10 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/helper";
+import { API, C8YRequest, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/configuration.model";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/helper";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { MappingService } from '../shared/mapping.service';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -45,7 +46,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   testForm: FormGroup;
   templateSource: any;
   templateTarget: any;
+  templateTestingResults: C8YRequest[] = [];
+  templateTestingErrorMsg: string;
   templateTesting: any;
+  selectedTestingResult: number = -1;
+  countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
@@ -85,7 +90,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     private alertService: AlertService,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+
   ) { }
 
   ngOnInit() {
@@ -127,6 +133,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       schema: SCHEMA_PAYLOAD
     };
     this.onExpressionsUpdated();
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));                         
   }
 
   ngAfterContentChecked(): void {
@@ -261,13 +268,30 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTestTransformation() {
-    this.templateTesting = (await this.mappingService.testResult(this.getCurrentMapping(true), false));
+    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), false);
+    this.onNextTestResult();
   }
 
   async onSendTest() {
-    let dataTesting = await this.mappingService.sendTestResult(this.getCurrentMapping(true));
-    this.mapping.tested = (dataTesting != '');
-    this.templateTesting = dataTesting;
+    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), true);
+    this.mapping.tested = (! this.templateTestingResults);
+    this.onNextTestResult();
+
+  }
+
+  public onNextTestResult() {
+    if (this.selectedTestingResult >= this.templateTestingResults.length - 1) {
+      this.selectedTestingResult = -1;
+    }
+    this.selectedTestingResult++;
+    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length ) {
+      this.templateTesting = this.templateTestingResults[this.selectedTestingResult].request;
+      this.editorTesting.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI),null);
+      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
+    } else {
+      this.templateTesting = JSON.parse("{}");
+      this.templateTestingErrorMsg = undefined;
+    }
   }
 
   async onSampleButton() {
@@ -279,9 +303,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.onCancel.emit();
   }
 
-  public onNextSelected(event: { stepper: C8yStepper; step: CdkStep }): void {
+  public onNextStep(event: { stepper: C8yStepper; step: CdkStep }): void {
 
-    console.log("OnNextSelected", event.step.label, this.mapping)
+    console.log("OnNextStep", event.step.label, this.mapping)
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
@@ -381,15 +405,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   public onDeleteSubstitutions() {
     this.mapping.substitutions = [];
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+
     console.log("Cleared substitutions!");
   }
-
+  
   public onDeleteSubstitution() {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(this.selectedSubstitution, 1);
       this.selectedSubstitution = -1;
     }
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    console.log("Deleted substitution", this.mapping.substitutions.length);
+
   }
 
   private addSubstitution(st: MappingSubstitution) {
@@ -421,9 +450,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     } else {
       this.mapping.substitutions.push(sub);
     }
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+
   }
 
-  public onSelectNextSubstitution() {
+  public onNextSubstitution() {
     this.substitutionChild.scrollToSubstitution(this.selectedSubstitution);
     if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
       this.selectedSubstitution = -1;
