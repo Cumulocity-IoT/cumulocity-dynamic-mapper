@@ -6,12 +6,28 @@
     display: none !important;
 }
 
+.jsoneditor-menu>.jsoneditor-modes>button, .jsoneditor-menu>button {
+    color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
+}
+
+.jsoneditor-menu>.jsoneditor-modes>button:hover, .jsoneditor-menu>button:hover {
+    color: var(--brand-primary, #1776BF);
+    background: white;
+    border-color: var(--brand-primary, #1776BF);
+    box-shadow: inset 0 0 0 1px var(--brand-primary, #1776BF);
+}
+
+.jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected, .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:focus, .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:hover {
+    color: #fff !important;
+    background-color: var(--brand-primary, #1776BF) !important;
+}
+
 div.jsoneditor-menu>div.jsoneditor-search {
     display: none !important;
 }
 
 div>div.jsoneditor-menu {
-    background-color: var(--navigator-bg-color, var(--navigator-dark-bg-color, var(--brand-primary, #1776BF)));
+    background-color: var(--navigator-bg-color,var(--navigator-dark-bg-color,var(--brand-primary,#1776bf)));
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
