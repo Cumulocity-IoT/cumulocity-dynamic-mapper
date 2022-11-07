@@ -246,7 +246,7 @@ export const SCHEMA_PAYLOAD = {
   '$schema': 'http://json-schema.org/draft-07/schema#',
   '$id': 'http://example.com/root.json',
   'type': 'object',
-  'title': 'Payload',
+  'title': 'PAYLOAD',
   'required': [
   ],
 }
