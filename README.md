@@ -373,9 +373,18 @@ ___
 
 ### Test transformation from source to target format
 
-To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any error are displayed.
+To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any errors are displayed.
+On test transformation can result in multiple Cumulocity reqests, e.g. when a measurement is created for a device that is implicitly created, then two requests result from this transformation.
+To iterate and show all results press the button ```Show Next Test Result```.
+
 
 ![Test Transformation](resources/image/Generic_MQTT_TestTransformation.png)
+
+When the transformation is tested and the resulting request are sent to Cumulocity, this result respective test devices are generated. These can be viewed on the tab ```Testing```. Generated devices can be deleted.
+All generated test devices have a fragment ```c8y_mqttMapping_TestDevice```.
+
+![Test Devices](resources/image/Generic_MQTT_TestDevices.png)
+
 
 ### Send transformed test message to test device in Cumulocity
 
