@@ -232,7 +232,9 @@
                     <div class="col-lg-4 col-lg-offset-1">
                       <div class="form-group">
                         <label translate>Source</label>
-                        <json-editor [options]="editorOptionsSource" (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource id="editorSource"></json-editor>
+                        <json-editor [options]="editorOptionsSource"
+                          (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
+                          id="editorSource"></json-editor>
                         <c8y-messages>
                           <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
                               class="text-warning">Select source node to
@@ -263,11 +265,12 @@
                           <i c8yIcon="add-new"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
-                          <ng-template #popTemplateAdd>Add new substitution. Before target and source property in templates
+                          <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
+                            templates
                             have to be selected.
                           </ng-template>
-                          <button class="btn-clean text-primary" [popover]="popTemplateAdd" popoverTitle="Add new substitution"
-                            placement="right" triggers="focus" type="button">
+                          <button class="btn-clean text-primary" [popover]="popTemplateAdd"
+                            popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
@@ -308,7 +311,8 @@
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                             (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates">
-                            <span *ngIf ="mapping.snoopedTemplates.length > 0" class="badge badge-success"> {{mapping.snoopedTemplates.length}}</span>
+                            <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge badge-success">
+                              {{mapping.snoopedTemplates.length}}</span>
                             <i c8yIcon="enter-left"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -352,11 +356,13 @@
                             </button>
                           </span>
                         </div>
-                        <json-editor [options]="editorOptionsTarget"  (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget></json-editor>
+                        <json-editor [options]="editorOptionsTarget"
+                          (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
+                        </json-editor>
                         <c8y-messages>
                           <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
-                            class="text-warning">Select target node to
-                            define substitution!</span>
+                              class="text-warning">Select target node to
+                              define substitution!</span>
                           </c8y-message>
                         </c8y-messages>
                       </div>
@@ -376,7 +382,8 @@
                         </span>
                       </label>
                       <div style="min-height: 32px;">
-                        <mapping-substitution-renderer [substitutions]="mapping.substitutions" [targetAPI]="mapping.targetAPI"
+                        <mapping-substitution-renderer [substitutions]="mapping.substitutions"
+                          [targetAPI]="mapping.targetAPI"
                           [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}"
                           (onSelect)="onSelectSubstitution($event)">
                         </mapping-substitution-renderer>
@@ -410,6 +417,15 @@
                                 <i c8yIcon="question-circle-o"></i>
                               </button>
                             </span>
+                            <c8y-messages>
+                              <c8y-message
+                                *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
+                                translate><span class="text-warning">Current expression extracts an array. Consider to
+                                  use the option <code>Expand Array</code> if you want to create multiple measurements,
+                                  alarms, events or devices, i.e. <code>multi-device</code> or
+                                  <code>multi-value</code></span>
+                              </c8y-message>
+                            </c8y-messages>
                           </div>
                         </div>
                       </div>
@@ -489,8 +505,8 @@
                             <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
                                 class="text-warning">{{targetExpressionErrorMsg}}</span>
                             </c8y-message>
-                            <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate><span
-                                class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
+                            <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)"
+                              translate><span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
                                 is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
                                 previous step.</span>
                             </c8y-message>
@@ -502,7 +518,7 @@
                       <div class="col-lg-5 col-lg-offset-1">
                         <div class="form-group">
                           <div class="input-group">
-                            <label translate>Expression - result - </label>
+                            <label translate>Expression - result -&nbsp;</label>
                             <span>{{sourceExpression.resultType}}</span>
                           </div>
                           <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
@@ -515,7 +531,7 @@
                       <div class="col-lg-5">
                         <div class="form-group">
                           <div class="input-group">
-                            <label translate>Expression - result - </label>
+                            <label translate>Expression - result -&nbsp;</label>
                             <span>{{targetExpression.resultType}}</span>
                           </div>
                           <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
@@ -569,10 +585,10 @@
                 <div>
                   <div class="form-group">
                     <label for="testResult" class="" translate>Cumulocity message - test</label>
-                    <json-editor [options]="editorOptionsTesting"  [data]="templateTesting" #editorTesting></json-editor>
+                    <json-editor [options]="editorOptionsTesting" [data]="templateTesting" #editorTesting></json-editor>
                     <c8y-messages>
-                      <c8y-message *ngIf="templateTestingErrorMsg"
-                        translate><span class="text-warning">{{templateTestingErrorMsg}}</span>
+                      <c8y-message *ngIf="templateTestingErrorMsg" translate><span
+                          class="text-warning">{{templateTestingErrorMsg}}</span>
                       </c8y-message>
                     </c8y-messages>
                   </div>
@@ -585,11 +601,11 @@
           <button type="button" class="btn btn-default" (click)="onTestTransformation()">
             Transform Test Message
           </button>
-          <!-- {{buttonValue}}<span *ngIf ="(templateTestingResultLength$ | async ) >= 0" class="badge badge-success"> {{templateTestingResultLength$ | async}}</span> -->
-          <button type="button" class="btn btn-default" (click)="onSelectNextTestResult()" >
-            Show Next Test Result<span *ngIf ="templateTestingResults.length > 0" class="badge badge-success"> {{templateTestingResults.length}}</span>
+          <button type="button" class="btn btn-default" (click)="onSelectNextTestResult()">
+            Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
+              {{templateTestingResults.length}}</span>
           </button>
-          <button type="button" class="btn btn-default" (click)="onSendTest()" >
+          <button type="button" class="btn btn-default" (click)="onSendTest()">
             Send Test Message
           </button>
         </div>
