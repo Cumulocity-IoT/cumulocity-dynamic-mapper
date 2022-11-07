@@ -110,7 +110,7 @@
                             <goal>package</goal>
                         </goals>
                         <configuration>
-                            <name>mqtt-mapping-service</name>
+                            <name>${c8y-artefact-name}</name>
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
@@ -131,7 +131,7 @@
                     </goals>
                     <configuration>
                       <sourceFile>${project.build.directory}/${c8y-artefact-name}-${project.version}.zip</sourceFile>
-                      <destinationFile>${project.build.directory}/mqtt-mapping-service.zip</destinationFile>
+                      <destinationFile>${project.build.directory}/${c8y-artefact-name}.zip</destinationFile>
                     </configuration>
                   </execution>
                 </executions>
