@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  templateUrl: './id-cell.renderer.component.html'
+  template: `'<span>{{context.item.id == -1 ? 'UNSPECIFIED' : context.item.id}}</span>`
 })
 export class IdRendererComponent {
   constructor(

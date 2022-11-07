@@ -3,7 +3,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 import { SnoopStatus } from 'src/shared/configuration.model';
 
 @Component({
-  templateUrl: './snoopedTemplate.renderer.component.html'
+  template: `<span>{{context.item.snoopedTemplates.length}}</span>`
 })
 export class SnoopedTemplateRendererComponent {
   constructor(

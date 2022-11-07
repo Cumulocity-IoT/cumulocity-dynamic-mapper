@@ -408,8 +408,9 @@ public class C8yAgent {
         }
     }
 
-    public void upsertDevice(String payload, String externalId, String externalIdType) throws ProcessingException {
+    public ManagedObjectRepresentation upsertDevice(String payload, String externalId, String externalIdType) throws ProcessingException {
         String[] errors = { "" };
+        ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 ExternalIDRepresentation extId = getExternalId(externalId, externalIdType);
@@ -422,6 +423,7 @@ public class C8yAgent {
                     mor.set(new IsDevice());
                     mor = inventoryApi.create(mor);
                     log.info("New device created: {}", mor);
+                    devices[0] = mor;
                     ExternalIDRepresentation externalAgentId = createExternalID(mor, externalId,
                             externalIdType);
                 } else {
@@ -429,7 +431,8 @@ public class C8yAgent {
                     ManagedObjectRepresentation mor = objectMapper.readValue(payload,
                             ManagedObjectRepresentation.class);
                     mor.setId(extId.getManagedObject().getId());
-                    inventoryApi.update(mor);
+                    mor = inventoryApi.update(mor);
+                    devices[0] = mor;
                     log.info("Device updated: {}", mor);
                 }
 
@@ -444,24 +447,25 @@ public class C8yAgent {
         if (!errors[0].equals("")) {
             throw new ProcessingException(errors[0]);
         }
-    }
-
-    public ManagedObjectRepresentation upsertDevice(String name, String type, String externalId,
-            String externalIdType) {
-        ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            devices[0].setName(name);
-            devices[0].setType(type);
-            devices[0].set(new IsDevice());
-            devices[0] = inventoryApi.create(devices[0]);
-            log.debug("New device created with ID {}", devices[0].getId());
-            ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
-            log.debug("ExternalId created: {}", externalIdRep.getExternalId());
-        });
-
-        log.info("New device {} created with ID {}", devices[0], devices[0].getId());
         return devices[0];
     }
+
+    // public ManagedObjectRepresentation upsertDevice(String name, String deviceType, String externalId,
+    //         String externalIdType) {
+    //     ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
+    //     subscriptionsService.runForTenant(tenant, () -> {
+    //         devices[0].setName(name);
+    //         devices[0].setType(deviceType);
+    //         devices[0].set(new IsDevice());
+    //         devices[0] = inventoryApi.create(devices[0]);
+    //         log.debug("New device created with ID {}", devices[0].getId());
+    //         ExternalIDRepresentation externalIdRep = createExternalID(devices[0], externalId, externalIdType);
+    //         log.debug("ExternalId created: {}", externalIdRep.getExternalId());
+    //     });
+
+    //     log.info("New device {} created with ID {}", devices[0], devices[0].getId());
+    //     return devices[0];
+    // }
 
     public void saveMappings(List<Mapping> mappings) throws JsonProcessingException {
         subscriptionsService.runForTenant(tenant, () -> {

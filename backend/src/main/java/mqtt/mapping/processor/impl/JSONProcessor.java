@@ -1,7 +1,6 @@
 package mqtt.mapping.processor.impl;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -23,6 +21,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -95,10 +94,10 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Exception for: {}, {}, {}", substitution.pathSource,
+                log.error("Exception for: {}, {}", substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("EvaluateRuntimeException for: {}, {}, {}", substitution.pathSource,
+                log.error("EvaluateRuntimeException for: {}, {}", substitution.pathSource,
                         payload, e);
             }
             /*
@@ -125,7 +124,7 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
                                 postProcessingCacheEntry
                                         .add(new SubstituteValue(jn, TYPE.NUMBER, substitution.repairStrategy));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}, {}, {}, {}",
+                                log.warn("Since result is not textual or number it is ignored: {}",
                                         jn.asText());
                             }
                         }
@@ -168,7 +167,7 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
         }
 
         // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists) {
+        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY) {
             ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
                     new ArrayList<SubstituteValue>());
             postProcessingCacheEntry.add(

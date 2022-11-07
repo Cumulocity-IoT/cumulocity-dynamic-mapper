@@ -25,6 +25,7 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
 
   public static final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
   public static final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
+  public static final String MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
   static final String REGEXP_REMOVE_TRAILING_SLASHES = "#\\/$";
   static final String REGEXP_REDUCE_LEADING_TRAILING_SLASHES = "(\\/{2,}$)|(^\\/{2,})";
   static String TOPIC_WILDCARD_MULTI = "#";
@@ -59,6 +60,9 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
         .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
     if (count > 1) {
       result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
+    }
+    if (count < 1) {
+      result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
     }
     return result;
   }

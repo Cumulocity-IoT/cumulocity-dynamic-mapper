@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.handler.SysHandler;
@@ -59,7 +61,8 @@ public abstract class PayloadProcessor<O> {
 
     public static final String TIME = "time";
 
-    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage) throws IOException;
+    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage)
+            throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 
@@ -68,13 +71,9 @@ public abstract class PayloadProcessor<O> {
          * step 3 replace target with extract content from incoming payload
          */
         Mapping mapping = context.getMapping();
-        JsonNode payloadTarget = null;
-        try {
-            payloadTarget = objectMapper.readTree(mapping.target);
-        } catch (JsonProcessingException e) {
-            throw new ProcessingException(e.getMessage());
-        }
 
+
+        // if there are to little device idenfified then we replicate the first device
         Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         String maxEntry = postProcessingCache.entrySet()
                 .stream()
@@ -83,18 +82,24 @@ public abstract class PayloadProcessor<O> {
                         .compareTo(e2.getValue()))
                 .get().getKey();
 
-        Set<String> pathTargets = postProcessingCache.keySet();
         ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
             deviceEntries.add(toDouble);
         }
+        Set<String> pathTargets = postProcessingCache.keySet();
 
         int i = 0;
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
+            JsonNode payloadTarget = null;
+            try {
+                payloadTarget = objectMapper.readTree(mapping.target);
+            } catch (JsonProcessingException e) {
+                throw new ProcessingException(e.getMessage());
+            }
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -109,7 +114,7 @@ public abstract class PayloadProcessor<O> {
                         int last = postProcessingCache.get(pathTarget).size() - 1;
                         substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
                     }
-                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used: {}, {}, {}",
+                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used.",
                             pathTarget, substituteValue.repairStrategy);
                 }
 
@@ -118,29 +123,38 @@ public abstract class PayloadProcessor<O> {
                         var sourceId = resolveExternalId(substituteValue.typedValue().toString(),
                                 mapping.externalIdType);
                         if (sourceId == null && mapping.createNonExistingDevice) {
-                            if (context.isSendPayload()) {
-                                var d = c8yAgent.upsertDevice(
-                                        "device_" + mapping.externalIdType + "_"
-                                                + substituteValue.typedValue().toString(),
-                                        "c8y_MQTTMapping_generated_type", substituteValue.typedValue().toString(),
-                                        mapping.externalIdType);
-                                substituteValue.value = new TextNode(d.getId().getValue());
-                            }
+                            ManagedObjectRepresentation attocDevice = null;
+                            Map<String, Object> map = new HashMap<String, Object>();
+                            map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                            map.put(MappingsRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
+                            map.put("c8y_IsDevice", null);
+                            String request = null;
+                            String response = null;
                             try {
-                                Map<String, Object> map = new HashMap<String, Object>();
-                                map.put("c8y_IsDevice", null);
-                                map.put("name", "device_" + mapping.externalIdType + "_" + substituteValue.value);
-                                var p = objectMapper.writeValueAsString(map);
-                                predecessor = context.addRequest(
-                                        new C8YRequest(-1, RequestMethod.PATCH, device.value.asText(),
-                                                mapping.externalIdType,
-                                                p, API.INVENTORY, null));
-                            } catch (JsonProcessingException e) {
-                                // ignore
+                                request = objectMapper.writeValueAsString(map);
+                                if (context.isSendPayload()) {
+                                    attocDevice = c8yAgent.upsertDevice(request,
+                                            substituteValue.value.asText(),
+                                            mapping.externalIdType);
+                                    response = objectMapper.writeValueAsString(map);
+                                    substituteValue.value = new TextNode(attocDevice.getId().getValue());
+                                }
+                                var newPredecessor = context.addRequest(
+                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                                mapping.externalIdType, request, response, API.INVENTORY, null));
+                                predecessor = newPredecessor;
+                            } catch (ProcessingException | JsonProcessingException e) {
+                                context.addRequest(
+                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                                mapping.externalIdType, request, response, API.INVENTORY, e));
+                                throw new ProcessingException(e.getMessage());
+
                             }
-                        } else if (sourceId == null) {
+                        } else if (sourceId == null && context.isSendPayload()) {
                             throw new RuntimeException("External id " + substituteValue + " for type "
                                     + mapping.externalIdType + " not found!");
+                        } else if (sourceId == null) {
+                            substituteValue.value = null;
                         } else {
                             substituteValue.value = new TextNode(sourceId);
                         }
@@ -155,18 +169,22 @@ public abstract class PayloadProcessor<O> {
              */
             if (mapping.targetAPI.equals(API.INVENTORY)) {
                 Exception ex = null;
+                ManagedObjectRepresentation attocDevice = null;
+                String response = null;
                 if (context.isSendPayload()) {
                     try {
-                        c8yAgent.upsertDevice(payloadTarget.toString(), device.typedValue().toString(),
+                        attocDevice = c8yAgent.upsertDevice(payloadTarget.toString(), device.value.asText(),
                                 mapping.externalIdType);
+                        response = objectMapper.writeValueAsString(attocDevice);
                     } catch (Exception e) {
                         ex = e;
                     }
                 }
-                context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.PATCH, device.typedValue().toString(),
-                                mapping.externalIdType,
-                                payloadTarget.toString(), API.INVENTORY, ex));
+                var newPredecessor = context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(), mapping.externalIdType,
+                                payloadTarget.toString(),
+                                response, API.INVENTORY, ex));
+                predecessor = newPredecessor;
             } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 Exception ex = null;
                 if (context.isSendPayload()) {
@@ -176,9 +194,11 @@ public abstract class PayloadProcessor<O> {
                         ex = e;
                     }
                 }
-                context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.POST, device.type.toString(), mapping.externalIdType,
+                var newPredecessor = context.addRequest(
+                        new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
+                                payloadTarget.toString(),
                                 payloadTarget.toString(), mapping.targetAPI, ex));
+                predecessor = newPredecessor;
             } else {
                 log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
                         postProcessingCache.size());

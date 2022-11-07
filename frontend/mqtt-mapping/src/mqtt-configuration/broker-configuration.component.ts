@@ -8,7 +8,6 @@ import { MappingService } from '../mqtt-mapping/shared/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ConnectionConfiguration as ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/configuration.model';
-
 import packageJson from '../../package.json';
 
 @Component({
