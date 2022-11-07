@@ -10,29 +10,14 @@ import {
   HOOK_WIZARD,
   Route
 } from '@c8y/ngx-components';
-import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BokerConfigurationComponent } from './mqtt-configuration/broker-configuration.component';
-import { BrokerConfigurationService } from './mqtt-configuration/broker-configuration.service';
-import { TerminateBrokerConnectionModalComponent } from './mqtt-configuration/terminate/terminate-connection-modal.component';
+import { ConfigurationModule } from './mqtt-configuration/configuration.module';
 import { MappingComponent } from './mqtt-mapping/grid/mapping.component';
 import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.component';
-import { OverwriteDeviceIdentifierModalComponent } from './mqtt-mapping/overwrite/overwrite-device-identifier-modal.component';
-import { OverwriteSubstitutionModalComponent } from './mqtt-mapping/overwrite/overwrite-substitution-modal.component';
-import { APIRendererComponent } from './mqtt-mapping/renderer/api.renderer.component';
-import { QOSRendererComponent } from './mqtt-mapping/renderer/qos-cell.renderer.component';
-import { SnoopedTemplateRendererComponent } from './mqtt-mapping/renderer/snoopedTemplate.renderer.component';
-import { StatusRendererComponent } from './mqtt-mapping/renderer/status-cell.renderer.component';
-import { TemplateRendererComponent } from './mqtt-mapping/renderer/template.renderer.component';
-import { MappingService } from './mqtt-mapping/shared/mapping.service';
-import { SnoopingModalComponent } from './mqtt-mapping/snooping/snooping-modal.component';
-import { JsonEditorComponent } from './mqtt-mapping/stepper/editor/jsoneditor.component';
-import { MappingStepperComponent } from './mqtt-mapping/stepper/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './mqtt-mapping/stepper/substitution/substitution-renderer.component';
+import { MappingModule } from './mqtt-mapping/mapping.module';
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
-import { IdRendererComponent } from './mqtt-monitoring/renderer/id-cell.renderer.component';
-import { MonitoringService } from './mqtt-monitoring/shared/monitoring.service';
+import { MonitoringModule } from './mqtt-monitoring/monitoring.module';
 import { TestingComponent } from './mqtt-testing/grid/testing.component';
-import { TestingDeviceService } from './mqtt-testing/grid/testing.service';
 import { TestingModule } from './mqtt-testing/testing.module';
 import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
@@ -44,8 +29,10 @@ import { MappingTabFactory } from './tab.factory';
     CoreModule,
     CommonModule,
     TestingModule,
+    MappingModule,
+    MonitoringModule,
+    ConfigurationModule,
     FormsModule,
-    PopoverModule,
     ReactiveFormsModule,
     RouterModule.forChild([
       {
@@ -72,50 +59,14 @@ import { MappingTabFactory } from './tab.factory';
   ],
   exports: [
     ServiceMappingComponent,
-    BokerConfigurationComponent,
-    MappingComponent,
-    MappingStepperComponent,
-    TerminateBrokerConnectionModalComponent,
-    OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
-    StatusRendererComponent,
-    QOSRendererComponent,
-    TemplateRendererComponent,
-    SnoopedTemplateRendererComponent,
-    SubstitutionRendererComponent,
-    APIRendererComponent,
-    MonitoringComponent,
-    IdRendererComponent,
-    SnoopingModalComponent,
-    MappingTypeComponent,
-    JsonEditorComponent,
+
   ],
   entryComponents: [ServiceMappingComponent],
   declarations: [
     ServiceMappingComponent,
-    BokerConfigurationComponent,
-    MappingComponent,
-    MappingStepperComponent,
-    TerminateBrokerConnectionModalComponent,
-    OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
-    StatusRendererComponent,
-    QOSRendererComponent,
-    TemplateRendererComponent,
-    SnoopedTemplateRendererComponent,
-    SubstitutionRendererComponent,
-    APIRendererComponent,
-    MonitoringComponent,
-    IdRendererComponent,
-    SnoopingModalComponent,
-    MappingTypeComponent,
-    JsonEditorComponent,
   ],
   providers: [
     OverviewGuard,
-    BrokerConfigurationService,
-    MonitoringService,
-    MappingService,
     { provide: HOOK_NAVIGATOR_NODES, useClass: MappingNavigationFactory, multi: true },
     { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
     {

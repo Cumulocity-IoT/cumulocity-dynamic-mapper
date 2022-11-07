@@ -61,6 +61,9 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
     if (count > 1) {
       result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
     }
+    if (count < 1) {
+      result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+    }
     return result;
   }
 

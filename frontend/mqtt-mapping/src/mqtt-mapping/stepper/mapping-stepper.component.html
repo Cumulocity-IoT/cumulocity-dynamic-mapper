@@ -207,7 +207,7 @@
           </div>
         </div>
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
-          (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }">
+          (onNext)="onNextStep($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }">
         </c8y-stepper-buttons>
       </cdk-step>
       <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
@@ -247,7 +247,7 @@
                       <label translate>Manage Substitutions</label>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
-                          (click)="onSelectNextSubstitution()" translate title="Select substitution">
+                          (click)="onNextSubstitution()" translate title="Select substitution">
                           <i c8yIcon="skip"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
@@ -388,7 +388,12 @@
                           (onSelect)="onSelectSubstitution($event)">
                         </mapping-substitution-renderer>
                       </div>
-                      <br>
+                      <c8y-messages class="text-right">
+                        <c8y-message
+                          *ngIf="(countDeviceIdentifers$ |async) != 1"><span class="text-warning">Excactly one substitution defining the
+                            DeviceIdentifier must be used.</span>
+                        </c8y-message>
+                      </c8y-messages>
                     </div>
                   </div>
 
@@ -546,7 +551,12 @@
                     <c8y-message
                       *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
                       translate><span class="text-warning">Only one substitution defining the
-                        DeviceIdentifier_Can_Be_Used.</span>
+                        DeviceIdentifier can be used.</span>
+                    </c8y-message>
+                    <c8y-message
+                      *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
+                      translate><span class="text-warning">Excactly one substitution defining the
+                        DeviceIdentifier must be used.</span>
                     </c8y-message>
                   </c8y-messages>
                 </div>
@@ -565,7 +575,7 @@
           </button>
         </div> -->
         <c8y-stepper-buttons class="d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
-          (onNext)="onNextSelected($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+          (onNext)="onNextStep($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
       </cdk-step> -->
 
       <cdk-step state="final" [stepControl]="testForm" stepLabel="step3" label="Test mapping">
@@ -601,7 +611,7 @@
           <button type="button" class="btn btn-default" (click)="onTestTransformation()">
             Transform Test Message
           </button>
-          <button type="button" class="btn btn-default" (click)="onSelectNextTestResult()">
+          <button type="button" class="btn btn-default" (click)="onNextTestResult()">
             Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
               {{templateTestingResults.length}}</span>
           </button>
