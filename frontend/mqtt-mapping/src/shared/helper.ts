@@ -258,7 +258,7 @@ export const TIME = "time";
 export const MAPPING_TYPE = 'c8y_mqttMapping';
 export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
 export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
-export const  MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
+export const MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
@@ -407,17 +407,29 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     const errors = {}
     let defined = false
 
-    let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
-      return previousValue + currentValue;
-    }, 0)
+    // let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+    //   return previousValue + currentValue;
+    // }, 0)
+
+    let count = countDeviceIdentifiers(mapping);
     if (count > 1) {
       errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
       defined = true
     }
+    if (count < 1) {
+      errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
+      defined = true
+    }
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
+
+
   }
 
+}
+
+export function countDeviceIdentifiers(mapping: Mapping): number {
+  return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).length
 }
 
 export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
@@ -562,16 +574,16 @@ export function whatIsIt(object) {
   }
 }
 
-export const isNumeric = (num: any) => (typeof(num) === 'number' || typeof(num) === "string" && num.trim() !== '') && !isNaN(num as number);
+export const isNumeric = (num: any) => (typeof (num) === 'number' || typeof (num) === "string" && num.trim() !== '') && !isNaN(num as number);
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
   return sub.pathTarget == API[api].identifier
 }
 
 export function returnTypedValue(subValue: SubstituteValue): any {
-  if (subValue.type ==  SubstituteValueType.NUMBER) {
+  if (subValue.type == SubstituteValueType.NUMBER) {
     return Number(subValue.value)
-  } else if (subValue.type ==  SubstituteValueType.TEXTUAL) {
+  } else if (subValue.type == SubstituteValueType.TEXTUAL) {
     return String(subValue.value)
   } else {
     return subValue.value
