@@ -136,7 +136,7 @@ export abstract class PayloadProcessor {
         let response = null
         if (context.sendPayload) {
           try {
-            response = await this.c8yClient.upsertDevice(payloadTarget, JSON.stringify(device.value), mapping.externalIdType);
+            response = await this.c8yClient.upsertDevice(payloadTarget, getTypedValue(device), mapping.externalIdType);
           } catch (e) {
             ex = e;
           }

@@ -188,7 +188,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   public updateSourceExpressionResult(path: string) {
     try {
-      let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path, false);
+      let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path);
       this.sourceExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
@@ -207,7 +207,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   public updateTargetExpressionResult(path: string) {
     try {
-      let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path, false);
+      let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path);
       this.targetExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),

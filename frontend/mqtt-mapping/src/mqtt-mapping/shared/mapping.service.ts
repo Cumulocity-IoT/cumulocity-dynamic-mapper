@@ -89,7 +89,7 @@ export class MappingService {
     return context.requests;
   }
 
-  public evaluateExpression(json: JSON, path: string, flat: boolean): JSON {
+  public evaluateExpression(json: JSON, path: string): JSON {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path)

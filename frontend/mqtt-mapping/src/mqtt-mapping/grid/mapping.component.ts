@@ -16,8 +16,7 @@ import { Subject } from 'rxjs';
 @Component({
   selector: 'mapping-grid',
   templateUrl: 'mapping.component.html',
-  styleUrls: ['../shared/mapping.style.css',
-    '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
+  styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
 })
 
