@@ -38,6 +38,13 @@ export class MappingTabFactory implements TabFactory {
         icon: 'test',
         orientation: 'horizontal',
       } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/tree',
+        priority: 890,
+        label: 'Mapping Tree',
+        icon: 'tree-structure',
+        orientation: 'horizontal',
+      } as Tab);
     }
 
     return tabs;

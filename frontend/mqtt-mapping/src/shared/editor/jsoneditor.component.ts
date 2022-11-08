@@ -5,7 +5,7 @@ import {
 import JSONEditor from "jsoneditor";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { JsonEditorOptions, JsonEditorMode, JsonEditorTreeNode, IError } from './jsoneditor-options';
-import { COLOR_HIGHLIGHTED } from '../../../shared/util';
+import { COLOR_HIGHLIGHTED } from '../util';
 
 @Component({
   // tslint:disable-next-line:component-selector

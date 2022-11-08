@@ -12,7 +12,7 @@ import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-subs
 import { MappingService } from '../shared/mapping.service';
 import { C8YRequest } from '../shared/prosessor.model';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import { JsonEditorComponent, JsonEditorOptions } from './editor/jsoneditor.component';
+import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 
 @Component({
@@ -56,7 +56,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
-  editorOptionsTesting: any
+  editorOptionsTesting: JsonEditorOptions = new JsonEditorOptions();
   sourceExpression = {
     Rresult: '',
     resultType: 'empty',
@@ -126,12 +126,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     };
 
     this.editorOptionsTesting = {
+      ...this.editorOptionsTesting,
       modes: ['form'],
       statusBar: false,
       navigationBar: false,
       enableSort: false,
       enableTransform: false,
-      enableSearch: false,
       schema: SCHEMA_PAYLOAD
     };
     this.onExpressionsUpdated();

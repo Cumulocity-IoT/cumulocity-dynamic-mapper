@@ -265,6 +265,7 @@ export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connection';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
+export const PATH_MAPPING_TREE_ENDPOINT = 'tree';
 export const PATH_STATUS_ENDPOINT = 'status/service';
 export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
 export const BASE_URL = 'service/mqtt-mapping-service';
