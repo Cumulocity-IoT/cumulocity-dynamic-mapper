@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from 'src/shared/configuration.model';
+import { SnoopStatus } from 'src/shared/mapping.model';
 
 @Component({
   template: `<span>{{context.item.snoopedTemplates.length}}</span>`

@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { definesDeviceIdentifier } from '../../../shared/helper';
-import { Mapping, MappingSubstitution } from '../../../shared/configuration.model';
+import { definesDeviceIdentifier } from '../../../shared/util';
+import { Mapping, MappingSubstitution } from '../../../shared/mapping.model';
 
 
 @Component({

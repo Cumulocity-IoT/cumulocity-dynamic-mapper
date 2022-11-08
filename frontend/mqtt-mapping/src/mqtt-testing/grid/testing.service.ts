@@ -14,7 +14,7 @@ import {
 import { TypeDataGridColumn } from './type-data-grid-column/type.data-grid-column';
 import { Subject } from 'rxjs';
 import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
-import { MQTT_TEST_DEVICE_TYPE } from '../../shared/helper';
+import { MQTT_TEST_DEVICE_TYPE } from '../../shared/util';
 
 /** Model for custom type filtering form. */
 export interface TypeFilteringModel {

@@ -2,7 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, Column, ColumnDataType, DisplayOptions, Pagination } from '@c8y/ngx-components';
 import { Observable } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { MappingStatus, Operation } from '../../shared/configuration.model';
+import { MappingStatus, Operation } from '../../shared/mapping.model';
 import { IdRendererComponent } from '../renderer/id-cell.renderer.component';
 import { MonitoringService } from '../shared/monitoring.service';
 

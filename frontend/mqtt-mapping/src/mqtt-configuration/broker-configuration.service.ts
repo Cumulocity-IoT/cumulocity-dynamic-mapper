@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/helper';
-import { ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/configuration.model';
+import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/util';
+import { ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })

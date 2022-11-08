@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { FetchClient, InventoryService, Realtime } from '@c8y/client';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { MappingStatus } from '../../shared/configuration.model';
+import { MappingStatus } from '../../shared/mapping.model';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {

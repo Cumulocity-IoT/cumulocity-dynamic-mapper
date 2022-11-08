@@ -8,8 +8,8 @@ import {
 } from '@c8y/ngx-components';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { definesDeviceIdentifier } from '../../shared/helper';
-import { MappingSubstitution } from '../../shared/configuration.model';
+import { definesDeviceIdentifier } from '../../shared/util';
+import { MappingSubstitution } from '../../shared/mapping.model';
 
 @Component({
   selector: 'mapping-overwrite-device-identifier-modal',

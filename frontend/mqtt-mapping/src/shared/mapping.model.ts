@@ -1,5 +1,3 @@
-import { TOKEN_DEVICE_TOPIC } from "./helper";
-
 export interface ConnectionConfiguration {
   mqttHost: string;
   mqttPort: number;
@@ -74,13 +72,6 @@ export enum Status {
   NOT_READY = "NOT_READY"
 }
 
-// export enum API {
-//   ALARM = "ALARM",
-//   EVENT = "EVENT",
-//   MEASUREMENT = "MEASUREMENT",
-//   INVENTORY = "INVENTORY"
-// }
-
 export const API = {
   ALARM: { name: "ALARM", identifier: "source.id" },
   EVENT: { name: "EVENT", identifier: "source.id" },
@@ -140,53 +131,3 @@ export enum RepairStrategy {
   IGNORE = "IGNORE",
   REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
 }
-
-
-export enum ProcessingType {
-  UNDEFINED,
-  ONE_DEVICE_ONE_VALUE,
-  ONE_DEVICE_MULTIPLE_VALUE,
-  MULTIPLE_DEVICE_ONE_VALUE,
-  MULTIPLE_DEVICE_MULTIPLE_VALUE,
-}
-
-export enum SubstituteValueType {
-    NUMBER,
-    TEXTUAL, 
-    OBJECT, 
-    IGNORE,
-    ARRAY
-}
-
-
-export interface SubstituteValue {
-  value: any;
-  type: SubstituteValueType;
-  repairStrategy: RepairStrategy
-}
-
-export interface  C8YRequest {
-  predecessor: number ;
-  method: string;
-  source: any;
-  externalIdType: string;
-  request: any;
-  response: any;
-  targetAPI: string;
-  error: Error;
-  postProcessingCache: Map<string, SubstituteValue[]>;
-}
-
-export interface  ProcessingContext {
-  mapping: Mapping ;
-  topic: string;
-  payload?: JSON;
-  requests?: C8YRequest[];
-  processingType?: ProcessingType;
-  cardinality: Map<string,number>;
-  needsRepair: boolean;
-  mappingType: MappingType;
-  postProcessingCache: Map<string, SubstituteValue[]>;
-  sendPayload?: boolean;
-}
-  
