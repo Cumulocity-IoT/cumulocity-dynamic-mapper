@@ -3,12 +3,16 @@
 }
 
 .jsoneditor-menu>button {
-    display: none !important;
-}
+    display: none; 
+} 
 
-.jsoneditor-menu>.jsoneditor-modes>button, .jsoneditor-menu>button {
+/* .jsoneditor-menu>.jsoneditor-modes>button, .jsoneditor-menu>button {
     color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
-}
+} */
+
+.jsoneditor-menu>.jsoneditor-modes>button {
+    color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
+} 
 
 .jsoneditor-menu>.jsoneditor-modes>button:hover, .jsoneditor-menu>button:hover {
     color: var(--brand-primary, #1776BF);
@@ -23,6 +27,10 @@
 }
 
 div.jsoneditor-menu>div.jsoneditor-search {
+    display: none;
+}
+
+button.jsoneditor-button.jsoneditor-dragarea {
     display: none !important;
 }
 
@@ -59,7 +67,11 @@ div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
 }
 
 .jsoneditor-search button {
-    background: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+}
+
+.jsoneditor-frame button.jsoneditor-refresh {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-statusbar>.jsoneditor-validation-error-icon {
@@ -70,8 +82,8 @@ div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
     background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
-button.jsoneditor-button.jsoneditor-dragarea {
-    display: none !important;
+.jsoneditor-menu>button {
+    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-value {

@@ -25,6 +25,10 @@ export class MappingTreeService {
             return undefined;
         }
         let tree = (await response.json()) as JSON
+        // ignore first level of the object, as it does not contain any information
+        if (tree?.['childNodes']) {
+            tree = tree?.['childNodes']
+        }
         this.clean(tree, ['level', 'depthIndex', 'preTreeNode']);
         return tree;
     }
@@ -44,7 +48,7 @@ export class MappingTreeService {
             }
         } else if (t == 'Array') {
             for (var item in tree) {
-                console.log("New items:", item, whatIsIt(item));
+                //console.log("New items:", item, whatIsIt(item));
                 this.clean(tree[item], removeSet);
             }
         }

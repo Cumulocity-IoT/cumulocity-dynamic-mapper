@@ -26,7 +26,7 @@ export class JSONProcessor extends PayloadProcessor {
     mapping.substitutions.forEach(substitution => {
       let extractedSourceContent: JSON;
       // step 1 extract content from incoming payload
-      extractedSourceContent = this.evaluateExpression(JSON.parse(mapping.source), substitution.pathSource, true);
+      extractedSourceContent = this.evaluateExpression(JSON.parse(mapping.source), substitution.pathSource, false);
 
       //step 2 analyse exctracted content: textual, array
       let postProcessingCacheEntry: SubstituteValue[] = _.get(postProcessingCache, substitution.pathTarget, []);

@@ -19,7 +19,8 @@ import { COLOR_HIGHLIGHTED } from '../util';
   ],
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./jsoneditor.style.css'],
+  styleUrls: ['./jsoneditor.style.css',
+  '../../../node_modules/jsoneditor/dist/jsoneditor.min.css'],
   encapsulation: ViewEncapsulation.None,
 })
 

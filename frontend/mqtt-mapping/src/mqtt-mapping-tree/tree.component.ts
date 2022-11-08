@@ -20,12 +20,13 @@ export class MappingTreeComponent implements OnInit {
   ngOnInit(): void {
     this.editorOptionsTree = {
       ...this.editorOptionsTree,
-      modes: ['form'],
+      modes: ['tree'],
       statusBar: true,
       navigationBar: true,
       enableSort: true,
       enableTransform: false,
-      mainMenuBar: true
+      mainMenuBar: true,
+      search: true
     };
     this.loadMappingTree();
   }
