@@ -2,8 +2,8 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, WizardConfig, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/configuration.model';
-import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/helper';
+import { API, Mapping, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
+import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
@@ -245,7 +245,6 @@ export class MappingComponent implements OnInit {
 
   async loadMappings(): Promise<void> {
     this.mappings = await this.mappingService.loadMappings();
-    //await this.mappingService.loadTestDevice();
   }
 
   async onCommit(mapping: Mapping) {

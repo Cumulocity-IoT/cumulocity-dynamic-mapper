@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, MappingSubstitution, SubstituteValue, SubstituteValueType, ValidationError } from "./configuration.model"
+import { API, Mapping, MappingSubstitution, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -578,14 +578,4 @@ export const isNumeric = (num: any) => (typeof (num) === 'number' || typeof (num
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
   return sub.pathTarget == API[api].identifier
-}
-
-export function returnTypedValue(subValue: SubstituteValue): any {
-  if (subValue.type == SubstituteValueType.NUMBER) {
-    return Number(subValue.value)
-  } else if (subValue.type == SubstituteValueType.TEXTUAL) {
-    return String(subValue.value)
-  } else {
-    return subValue.value
-  }
 }

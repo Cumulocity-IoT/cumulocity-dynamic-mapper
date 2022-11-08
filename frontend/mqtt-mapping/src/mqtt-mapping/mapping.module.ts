@@ -12,6 +12,8 @@ import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
+import { C8YClient } from './shared/c8y-client.service';
+import { JSONProcessor } from './shared/impl/json-processor.service';
 import { MappingService } from './shared/mapping.service';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { JsonEditorComponent } from './stepper/editor/jsoneditor.component';
@@ -53,7 +55,10 @@ import { SubstitutionRendererComponent } from './stepper/substitution/substituti
     JsonEditorComponent,
   ],
   exports: [],
-  providers: [MappingService,
+  providers: [
+    MappingService,
+    JSONProcessor,
+    C8YClient
   ]
 })
 export class MappingModule { }

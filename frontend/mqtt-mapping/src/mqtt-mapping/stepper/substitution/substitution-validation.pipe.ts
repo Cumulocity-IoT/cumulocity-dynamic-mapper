@@ -1,6 +1,6 @@
 import { Pipe, PipeTransform } from "@angular/core";
-import { Mapping } from "src/shared/configuration.model";
-import { definesDeviceIdentifier } from "../../../shared/helper";
+import { Mapping } from "src/shared/mapping.model";
+import { definesDeviceIdentifier } from "../../../shared/util";
 
 @Pipe({ name: 'countDeviceIdentifers',
 pure: true})

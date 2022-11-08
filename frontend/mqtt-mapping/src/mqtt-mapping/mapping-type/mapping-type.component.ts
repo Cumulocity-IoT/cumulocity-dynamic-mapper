@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { WizardComponent } from '@c8y/ngx-components';
-import { MappingType } from '../../shared/configuration.model';
+import { MappingType } from '../../shared/mapping.model';
 
 @Component({
   selector: 'app-mapping-type',
