@@ -8,7 +8,6 @@ import { JsonEditorOptions, JsonEditorMode, JsonEditorTreeNode, IError } from '.
 import { COLOR_HIGHLIGHTED } from '../util';
 
 @Component({
-  // tslint:disable-next-line:component-selector
   selector: 'json-editor',
   template: `<div [id]="id" #jsonEditorContainer></div>`,
   providers: [
