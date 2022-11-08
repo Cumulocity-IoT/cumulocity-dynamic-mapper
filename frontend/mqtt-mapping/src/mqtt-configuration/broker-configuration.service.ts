@@ -1,19 +1,17 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, MQTT_TEST_DEVICE_ID, MQTT_TEST_DEVICE_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT, STATUS_SERVICE_EVENT_TYPE } from '../shared/util';
+import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, Realtime } from '@c8y/client';
+import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/util';
 import { ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class BrokerConfigurationService {
   constructor(private client: FetchClient,
-    private identity: IdentityService,
-    private inventory: InventoryService,) {
+    private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
   }
 
   private agentId: string;
-  private testDeviceId: string;
   private serviceStatus = new BehaviorSubject<ServiceStatus>({ status: Status.NOT_READY });
   private _currentServiceStatus = this.serviceStatus.asObservable();
   private realtime: Realtime
@@ -32,42 +30,6 @@ export class BrokerConfigurationService {
       }
     }
     return this.agentId;
-  }
-
-  async initializeTestDevice(): Promise<string> {
-    if (!this.testDeviceId) {
-      let identity: IExternalIdentity = {
-        type: 'c8y_Serial',
-        externalId: MQTT_TEST_DEVICE_ID
-      };
-
-      try {
-        const { data, res } = await this.identity.detail(identity);
-        this.testDeviceId = data.managedObject.id.toString();
-        console.log("MQTTConfigurationService: Found MQTT Test Device", this.testDeviceId);
-        return this.testDeviceId;
-      } catch (e) {
-        console.log("So far no test device generated!")
-        // create new mapping mo
-        const response: IResult<IManagedObject> = await this.inventory.create({
-          name: "MQTT Mapping Test Device",
-          type: MQTT_TEST_DEVICE_TYPE,
-          c8y_IsDevice: {},
-          c8y_mqttMapping_TestDevice:{},
-          com_cumulocity_model_Agent: {}
-        });
-
-        //create identity for mo
-        identity = {
-          ...identity,
-          managedObject: {
-            id: response.data.id
-          }
-        }
-        const { data, res } = await this.identity.create(identity);
-      }
-      return this.testDeviceId;
-    }
   }
 
   updateConnectionConfiguration(configuration: ConnectionConfiguration): Promise<IFetchResponse> {
@@ -94,6 +56,7 @@ export class BrokerConfigurationService {
     const response = await this.client.fetch(`${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
+
       },
       method: 'GET',
     });

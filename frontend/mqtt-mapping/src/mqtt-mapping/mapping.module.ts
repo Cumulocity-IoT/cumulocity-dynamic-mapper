@@ -16,9 +16,10 @@ import { C8YClient } from './shared/c8y-client.service';
 import { JSONProcessor } from './shared/impl/json-processor.service';
 import { MappingService } from './shared/mapping.service';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
-import { JsonEditorComponent } from './stepper/editor/jsoneditor.component';
+import { JsonEditorComponent } from '../shared/editor/jsoneditor.component';
 import { MappingStepperComponent } from './stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
+import { SharedModule } from '../shared/shared.module';
 
 
 @NgModule({
@@ -35,10 +36,10 @@ import { SubstitutionRendererComponent } from './stepper/substitution/substituti
     APIRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
-    JsonEditorComponent,
   ],
   imports: [
     CoreModule,
+    SharedModule,
     PopoverModule,
   ],
   entryComponents: [
