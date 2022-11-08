@@ -13,23 +13,24 @@ import { MappingTreeService } from './tree.service';
 export class MappingTreeComponent implements OnInit {
   constructor(private service: MappingTreeService) {
   }
-  
-  @ViewChild('editorTree', { static: false }) editorSource: JsonEditorComponent;
+  @ViewChild('editorTree', { static: false }) editorTree: JsonEditorComponent;
   templateTree: any;
   editorOptionsTree: JsonEditorOptions = new JsonEditorOptions();
+
   ngOnInit(): void {
     this.editorOptionsTree = {
       ...this.editorOptionsTree,
       modes: ['form'],
-      statusBar: false,
-      navigationBar: false,
-      enableSort: false,
+      statusBar: true,
+      navigationBar: true,
+      enableSort: true,
       enableTransform: false,
+      mainMenuBar: true
     };
     this.loadMappingTree();
   }
   async loadMappingTree() {
     this.templateTree = await this.service.loadMappingTree();
-    console.log ("MappingTree:", this.templateTree);
+    console.log("MappingTree:", this.templateTree);
   }
 }

@@ -25,7 +25,6 @@ import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { JsonEditorComponent } from './shared/editor/jsoneditor.component';
 import { OverviewGuard } from './shared/overview.guard';
-import { SharedModule } from './shared/shared.module';
 import { MappingTabFactory } from './tab.factory';
 
 @NgModule({
