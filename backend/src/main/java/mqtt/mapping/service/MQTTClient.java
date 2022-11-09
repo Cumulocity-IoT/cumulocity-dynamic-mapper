@@ -9,6 +9,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,8 +29,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import java.security.cert.X509Certificate;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -194,8 +195,10 @@ public class MQTTClient {
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
-                        connOpts.setUserName(connectionConfiguration.getUser());
-                        connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                        if ( !StringUtils.isEmpty(connectionConfiguration.user) && !StringUtils.isEmpty(connectionConfiguration.password)){
+                            connOpts.setUserName(connectionConfiguration.getUser());
+                            connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                        }
                         if (connectionConfiguration.useSelfSignedCertificate) {
                             log.debug("Using certificate: {}", cert.certInPemFormat);
 

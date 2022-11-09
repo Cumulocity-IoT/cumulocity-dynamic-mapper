@@ -82,8 +82,8 @@ export class BokerConfigurationComponent implements OnInit {
     this.connectionForm = new FormGroup({
       mqttHost: new FormControl('', Validators.required),
       mqttPort: new FormControl('', Validators.required),
-      user: new FormControl('', Validators.required),
-      password: new FormControl('', Validators.required),
+      user: new FormControl(''),
+      password: new FormControl(''),
       clientId: new FormControl('', Validators.required),
       useTLS: new FormControl(''),
       useSelfSignedCertificate: new FormControl(''),
