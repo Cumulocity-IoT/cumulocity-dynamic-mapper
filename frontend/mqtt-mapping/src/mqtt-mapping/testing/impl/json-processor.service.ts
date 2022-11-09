@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import { PayloadProcessor } from "../payload-processor.service";
 import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import { splitTopicExcludingSeparator, TOKEN_TOPIC_LEVEL, isNumeric, whatIsIt, TIME } from "../../../shared/util";
-import { ProcessingContext, SubstituteValue, SubstituteValueType } from "../prosessor.model";
+import { ProcessingContext, SubstituteValue, SubstituteValueType } from "../../testing/prosessor.model";
 import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })

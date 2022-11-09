@@ -19,8 +19,8 @@ import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.c
 import { MappingModule } from './mqtt-mapping/mapping.module';
 import { MonitoringComponent } from './mqtt-monitoring/grid/monitoring.component';
 import { MonitoringModule } from './mqtt-monitoring/monitoring.module';
-import { TestingComponent } from './mqtt-testing/grid/testing.component';
-import { TestingModule } from './mqtt-testing/testing.module';
+import { TestingComponent } from './mqtt-testing-devices/grid/testing.component';
+import { TestingModule } from './mqtt-testing-devices/testing.module';
 import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { JsonEditorComponent } from './shared/editor/jsoneditor.component';

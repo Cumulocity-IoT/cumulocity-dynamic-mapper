@@ -4,7 +4,6 @@ import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { MonitoringComponent } from './grid/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
-import { MonitoringService } from './shared/monitoring.service';
 
 @NgModule({
   declarations: [
@@ -18,6 +17,6 @@ import { MonitoringService } from './shared/monitoring.service';
     IdRendererComponent,
   ],
   exports: [],
-  providers: [MonitoringService]
+  providers: []
 })
 export class MonitoringModule {}

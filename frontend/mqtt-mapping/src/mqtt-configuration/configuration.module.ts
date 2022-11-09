@@ -3,9 +3,7 @@
 import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { BokerConfigurationComponent } from './broker-configuration.component';
-import { BrokerConfigurationService } from './broker-configuration.service';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
-
 
 @NgModule({
   declarations: [
@@ -19,6 +17,6 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
     TerminateBrokerConnectionModalComponent
   ],
   exports: [],
-  providers: [BrokerConfigurationService]
+  providers: []
 })
 export class ConfigurationModule {}

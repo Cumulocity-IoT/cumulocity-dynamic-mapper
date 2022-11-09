@@ -12,15 +12,11 @@ import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { C8YClient } from './shared/c8y-client.service';
-import { JSONProcessor } from './shared/impl/json-processor.service';
-import { MappingService } from './shared/mapping.service';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { JsonEditorComponent } from '../shared/editor/jsoneditor.component';
 import { MappingStepperComponent } from './stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
 import { SharedModule } from '../shared/shared.module';
-
 
 @NgModule({
   declarations: [
@@ -56,10 +52,6 @@ import { SharedModule } from '../shared/shared.module';
     JsonEditorComponent,
   ],
   exports: [],
-  providers: [
-    MappingService,
-    JSONProcessor,
-    C8YClient
-  ]
+  providers: []
 })
 export class MappingModule { }

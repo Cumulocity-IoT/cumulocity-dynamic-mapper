@@ -1,4 +1,4 @@
-import { SubstituteValue, SubstituteValueType } from "./prosessor.model"
+import { SubstituteValue, SubstituteValueType } from "../testing/prosessor.model"
 
 
 export function getTypedValue(subValue: SubstituteValue): any {
