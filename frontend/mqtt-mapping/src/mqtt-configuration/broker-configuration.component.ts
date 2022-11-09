@@ -4,7 +4,7 @@ import { BrokerConfigurationService } from './broker-configuration.service';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
-import { MappingService } from '../mqtt-mapping/shared/mapping.service';
+import { MappingService } from '../mqtt-mapping/service/mapping.service';
 import { from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ConnectionConfiguration as ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';

@@ -1,12 +1,12 @@
+import { Injectable } from "@angular/core";
 import { IManagedObject } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
-import { Mapping, API, RepairStrategy } from "../../shared/mapping.model";
-import { MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
-import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
 import * as _ from 'lodash';
-import { getTypedValue } from "./util";
+import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
+import { MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
+import { getTypedValue } from "../shared/util";
 import { C8YClient } from "./c8y-client.service";
-import { Injectable } from "@angular/core";
+import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
 
 @Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessor {
@@ -76,7 +76,7 @@ export abstract class PayloadProcessor {
         if (mapping.targetAPI != (API.INVENTORY.name)) {
           if (pathTarget == API[mapping.targetAPI].identifier) {
             let sourceId: string = await this.c8yClient.resolveExternalId(substituteValue.value.toString(),
-              mapping.externalIdType);
+              mapping.externalIdType, context);
             if (!sourceId && mapping.createNonExistingDevice) {
               let response: IManagedObject = null;
 
@@ -87,10 +87,10 @@ export abstract class PayloadProcessor {
                 c8y_mqttMapping_TestDevice: {},
                 type: MQTT_TEST_DEVICE_TYPE
               }
-              if (context.sendPayload) {
-                response = await this.c8yClient.upsertDevice(map, substituteValue.value, mapping.externalIdType);
+//
+                response = await this.c8yClient.upsertDevice(map, substituteValue.value, mapping.externalIdType, context);
                 substituteValue.value = response.id as any;
-              }
+//              }
               context.requests.push(
                 {
                   predecessor: predecessor,
@@ -136,7 +136,7 @@ export abstract class PayloadProcessor {
         let response = null
         if (context.sendPayload) {
           try {
-            response = await this.c8yClient.upsertDevice(payloadTarget, getTypedValue(device), mapping.externalIdType);
+            response = await this.c8yClient.upsertDevice(payloadTarget, getTypedValue(device), mapping.externalIdType, context);
           } catch (e) {
             ex = e;
           }

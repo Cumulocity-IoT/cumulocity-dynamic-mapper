@@ -4,8 +4,8 @@ import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { Mapping } from '../../shared/mapping.model';
 import { MAPPING_FRAGMENT, MAPPING_TYPE } from '../../shared/util';
-import { JSONProcessor } from './impl/json-processor.service';
-import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from './prosessor.model';
+import { JSONProcessor } from '../testing/impl/json-processor.service';
+import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../testing/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {

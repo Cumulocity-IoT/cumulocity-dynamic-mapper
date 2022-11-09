@@ -2,12 +2,17 @@ import { Injectable } from "@angular/core";
 import { InventoryService, IdentityService, EventService, AlarmService, MeasurementService, IEvent, IAlarm, IMeasurement, IManagedObject, IResult, IExternalIdentity } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
 import { Mapping, API } from "../../shared/mapping.model";
+import { MockIdentityService } from "./mock/mock-identity.service";
+import { MockInventoryService } from "./mock/mock-inventory.service";
+import { ProcessingContext } from "./prosessor.model";
 
 @Injectable({ providedIn: 'root' })
 export class C8YClient {
   constructor(
     private inventory: InventoryService,
     private identity: IdentityService,
+    private mockInventory: MockInventoryService,
+    private mockIdentity: MockIdentityService,
     private event: EventService,
     private alarm: AlarmService,
     private measurement: MeasurementService,
@@ -72,21 +77,32 @@ export class C8YClient {
       return '';
     }
   }
-
-
-  async upsertDevice(payload: any, externalId: string, externalIdType: string): Promise<IManagedObject> {
-    let deviceId: string = await this.resolveExternalId(externalId, externalIdType);
+ 
+  async upsertDevice(payload: any, externalId: string, externalIdType: string, context: ProcessingContext): Promise<IManagedObject> {
+    let deviceId: string = await this.resolveExternalId(externalId, externalIdType, context);
     let device: Partial<IManagedObject> = {
       ...payload,
       c8y_IsDevice: {},
       c8y_mqttMapping_TestDevice: {},
       com_cumulocity_model_Agent: {}
     }
+
+    let proxyInventory: any;
+    let proxyIdentity: any;
+    if (context.sendPayload){
+      proxyInventory = this.inventory;
+      proxyIdentity = this.identity;
+
+    } else {
+      proxyInventory = this.mockInventory;
+      proxyIdentity = this.mockIdentity;
+    }
+
     if (deviceId) {
-      const response: IResult<IManagedObject> = await this.inventory.update(device);
+      const response: IResult<IManagedObject> = await proxyInventory.update(device);
       return response.data;
     } else {
-      const response: IResult<IManagedObject> = await this.inventory.create(device);
+      const response: IResult<IManagedObject> = await proxyInventory.create(device);
       //create identity for mo
       let identity = {
         type: externalIdType,
@@ -95,18 +111,26 @@ export class C8YClient {
           id: response.data.id
         }
       }
-      const { data, res } = await this.identity.create(identity);
+      const { data, res } = await  proxyIdentity.create(identity);
       return response.data;
     }
   }
 
-  async resolveExternalId(externalId: string, externalIdType: string): Promise<string> {
+  async resolveExternalId(externalId: string, externalIdType: string, context: ProcessingContext): Promise<string> {
     let identity: IExternalIdentity = {
       type: externalIdType,
       externalId: externalId
     };
+
+    let proxyIdentity: any;
+    if (context.sendPayload){
+      proxyIdentity = this.identity;
+    } else {
+      proxyIdentity = this.mockIdentity;
+    }
+
     try {
-      const { data, res } = await this.identity.detail(identity);
+      const { data, res } = await proxyIdentity.detail(identity);
       return data.managedObject.id as string;
     } catch (e) {
       console.log(`External id ${externalId} doesn't exist!`);
