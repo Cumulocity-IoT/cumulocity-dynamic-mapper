@@ -52,8 +52,8 @@ public class ConfigurationConnection implements Cloneable {
     public static boolean isValid (ConfigurationConnection mc){
         return (mc != null) && !StringUtils.isEmpty(mc.mqttHost) &&
         !(mc.mqttPort == 0) &&
-        !StringUtils.isEmpty(mc.user) &&
-        !StringUtils.isEmpty(mc.password) &&
+      //  !StringUtils.isEmpty(mc.user) &&
+      //  !StringUtils.isEmpty(mc.password) &&
         !StringUtils.isEmpty(mc.clientId);
     }
 

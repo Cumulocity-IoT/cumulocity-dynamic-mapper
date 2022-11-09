@@ -60,22 +60,12 @@
               <div class="col-lg-6">
                 <label for="user" translate>User</label>
                 <input formControlName="user" [(ngModel)]="connectionConfiguration.user" type="text"
-                  class="form-control" placeholder="{{ 'user' | translate }}" #userRef required />
-                <c8y-messages>
-                  <c8y-message *ngIf="connectionForm.get('user').touched && !userRef.value" translate>This field is
-                    required.
-                  </c8y-message>
-                </c8y-messages>
+                  class="form-control" placeholder="{{ 'user' | translate }}" #userRef />
               </div>
               <div class="col-lg-6">
                 <label for="password" translate>Password</label>
                 <input formControlName="password" [(ngModel)]="connectionConfiguration.password" type="password"
-                  class="form-control" placeholder="{{ 'password' | translate }}" #passwordRef required />
-                <c8y-messages>
-                  <c8y-message *ngIf="!connectionForm.get('password').untouched && !passwordRef.value" translate>This field
-                    is
-                    required.</c8y-message>
-                </c8y-messages>
+                  class="form-control" placeholder="{{ 'password' | translate }}" #passwordRef/>
               </div>
             </div>
           </c8y-form-group>
