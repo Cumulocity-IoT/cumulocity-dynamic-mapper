@@ -20,7 +20,7 @@ export class FacadeMeasurementService {
       }
       const promise = Promise.resolve({
         data: copyMeasurement,
-        res: null
+        res: {status: 200}
       });
       return promise;
     }

@@ -20,7 +20,7 @@ export class FacadeOperationService {
       }
       const promise = Promise.resolve({
         data: copyOperation,
-        res: null
+        res: {status: 200}
       });
       return promise;
     }

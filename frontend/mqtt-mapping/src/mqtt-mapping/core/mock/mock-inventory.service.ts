@@ -23,7 +23,7 @@ export class MockInventoryService  {
     copyManagedObject.lastUpdated = new Date().toISOString();
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: null
+      res: {status: 200}
     });
     return promise;
   }
@@ -36,7 +36,7 @@ export class MockInventoryService  {
     }
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: null
+      res: {status: 200}
     });
     return promise;
   }

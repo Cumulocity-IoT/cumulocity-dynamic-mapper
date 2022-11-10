@@ -20,7 +20,7 @@ export class FacadeEventService {
       }
       const promise = Promise.resolve({
         data: copyEvent,
-        res: null
+        res: {status: 200}
       });
       return promise;
     }

@@ -20,7 +20,7 @@ export class FacadeAlarmService {
       }
       const promise = Promise.resolve({
         data: copyAlarm,
-        res: null
+        res: {status: 200}
       });
       return promise;
     }
