@@ -1,15 +1,19 @@
 package mqtt.mapping.core;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 
+import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.mock.MockIdentity;
 import mqtt.mapping.processor.ProcessingContext;
 
+@Slf4j
+@Service
 public class IdentityFacade {
 
     @Autowired

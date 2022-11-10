@@ -23,7 +23,6 @@ import { TestingComponent } from './mqtt-testing-devices/grid/testing.component'
 import { TestingModule } from './mqtt-testing-devices/testing.module';
 import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
-import { JsonEditorComponent } from './shared/editor/jsoneditor.component';
 import { OverviewGuard } from './shared/overview.guard';
 import { MappingTabFactory } from './tab.factory';
 
@@ -71,8 +70,7 @@ import { MappingTabFactory } from './tab.factory';
   ],
   entryComponents: [ServiceMappingComponent],
   declarations: [
-    ServiceMappingComponent,
-    JsonEditorComponent
+    ServiceMappingComponent
   ],
   providers: [
     OverviewGuard,

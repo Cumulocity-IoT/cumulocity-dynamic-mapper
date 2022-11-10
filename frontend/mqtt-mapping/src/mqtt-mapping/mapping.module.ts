@@ -13,7 +13,6 @@ import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.ren
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
-import { JsonEditorComponent } from '../shared/editor/jsoneditor.component';
 import { MappingStepperComponent } from './stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
 import { SharedModule } from '../shared/shared.module';
@@ -49,7 +48,6 @@ import { SharedModule } from '../shared/shared.module';
     APIRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
-    JsonEditorComponent,
   ],
   exports: [],
   providers: []
