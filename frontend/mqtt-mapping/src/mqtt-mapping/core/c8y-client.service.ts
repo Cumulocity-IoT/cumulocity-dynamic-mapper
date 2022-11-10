@@ -84,7 +84,7 @@ export class C8YClient {
       }
     } catch (e) {
       let { data, res } = await e;
-      this.alert.danger("Failed to tested mapping: " + data.message);
+      this.alert.danger("Failed to tested mapping: " + data);
       return '';
     }
   }

@@ -24,7 +24,7 @@ export class  MockIdentityService {
         copyExternalIdentity.managedObject = externalId;
         const promise = Promise.resolve({
           data: copyExternalIdentity,
-          res: null
+          res: {status: 200}
         });
         return promise;
       } else {
@@ -56,7 +56,7 @@ export class  MockIdentityService {
     copyExternalIdentity.managedObject = identified;
     const promise = Promise.resolve({
       data: copyExternalIdentity,
-      res: null
+      res: {status: 200}
     });
     return promise;
   }
