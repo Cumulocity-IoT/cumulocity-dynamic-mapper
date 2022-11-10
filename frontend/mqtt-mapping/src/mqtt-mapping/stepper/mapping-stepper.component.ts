@@ -9,11 +9,11 @@ import { debounceTime } from "rxjs/operators";
 import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
-import { MappingService } from '../service/mapping.service';
-import { C8YRequest } from '../testing/prosessor.model';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
+import { C8YRequest } from '../processor/prosessor.model';
+import { MappingService } from '../core/mapping.service';
 
 @Component({
   selector: 'mapping-stepper',

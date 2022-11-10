@@ -1,5 +1,4 @@
-import { SubstituteValue, SubstituteValueType } from "../testing/prosessor.model"
-
+import { SubstituteValue, SubstituteValueType } from "../processor/prosessor.model"
 
 export function getTypedValue(subValue: SubstituteValue): any {
   if (subValue.type == SubstituteValueType.NUMBER) {

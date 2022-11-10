@@ -1,15 +1,14 @@
 import { Mapping, MappingType, RepairStrategy } from "../../shared/mapping.model";
 
 export interface C8YRequest {
-    predecessor: number;
-    method: string;
-    source: any;
-    externalIdType: string;
-    request: any;
-    response: any;
-    targetAPI: string;
-    error: Error;
-    postProcessingCache: Map<string, SubstituteValue[]>;
+    predecessor?: number;
+    method?: string;
+    source?: any;
+    externalIdType?: string;
+    request?: any;
+    response?: any;
+    targetAPI?: string;
+    error?: Error;
 }
 
 export interface ProcessingContext {
@@ -19,7 +18,6 @@ export interface ProcessingContext {
     requests?: C8YRequest[];
     processingType?: ProcessingType;
     cardinality: Map<string, number>;
-    needsRepair: boolean;
     mappingType: MappingType;
     postProcessingCache: Map<string, SubstituteValue[]>;
     sendPayload?: boolean;
