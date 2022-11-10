@@ -37,8 +37,6 @@ public class ProcessingContext<O> {
 
     private Map<String, Integer> cardinality = new HashMap<String, Integer>();
 
-    private boolean needsRepair = false;
-
     private MappingType mappingType;
 
     private Map<String, ArrayList<SubstituteValue>> postProcessingCache = new HashMap<String, ArrayList<SubstituteValue>>();
@@ -68,11 +66,14 @@ public class ProcessingContext<O> {
      */
     public void addCardinality(String pathTarget, Integer card) {
         cardinality.put(pathTarget, card);
-        Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
-        Stream<Entry<String, Integer>> stream1 = entries.stream()
-                .filter(e -> !PayloadProcessor.SOURCE_ID.equals(e.getKey()));
-        Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
-        needsRepair = (collect.size() != 1);
+        // Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
+        // Stream<Entry<String, Integer>> stream1 = entries.stream()
+        //         .filter(e -> !PayloadProcessor.SOURCE_ID.equals(e.getKey()));
+        // Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
+        // needsRepair = (collect.size() != 1);
     }
 
+    public C8YRequest getCurrentRequest() {
+        return requests.get(requests.size()-1);
+    }
 }

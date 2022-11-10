@@ -5,7 +5,7 @@ import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
 import { MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
 import { getTypedValue } from "../shared/util";
-import { C8YClient } from "./c8y-client.service";
+import { C8YClient } from "../core/c8y-client.service";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
 
 @Injectable({ providedIn: 'root' })
@@ -35,7 +35,6 @@ export abstract class PayloadProcessor {
     }
 
     let deviceEntries: SubstituteValue[] = postProcessingCache.get(API[mapping.targetAPI].identifier);
-
 
     let countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
     let toDouble: SubstituteValue = deviceEntries[0];
@@ -75,36 +74,38 @@ export abstract class PayloadProcessor {
 
         if (mapping.targetAPI != (API.INVENTORY.name)) {
           if (pathTarget == API[mapping.targetAPI].identifier) {
-            let sourceId: string = await this.c8yClient.resolveExternalId(substituteValue.value.toString(),
-              mapping.externalIdType, context);
+            let sourceId: string = await this.c8yClient.resolveExternalId(
+              {
+                externalId: substituteValue.value.toString(),
+                type: mapping.externalIdType
+              }, context);
             if (!sourceId && mapping.createNonExistingDevice) {
-              let response: IManagedObject = null;
-
-              let map = {
+              let request = {
                 c8y_IsDevice: {},
                 name: "device_" + mapping.externalIdType + "_" + substituteValue.value,
                 c8y_mqttMapping_Generated_Type: {},
                 c8y_mqttMapping_TestDevice: {},
                 type: MQTT_TEST_DEVICE_TYPE
               }
-//
-                response = await this.c8yClient.upsertDevice(map, substituteValue.value, mapping.externalIdType, context);
+              let newPredecessor = context.requests.push({
+                predecessor: predecessor,
+                method: "PATCH",
+                source: device.value,
+                externalIdType: mapping.externalIdType,
+                request: request,
+                targetAPI: API.INVENTORY.name,
+              })
+              try {
+                let response = await this.c8yClient.upsertDevice({
+                  externalId: substituteValue.value.toString(),
+                  type: mapping.externalIdType
+                }, context);
+                context.requests[newPredecessor - 1].response = response;
                 substituteValue.value = response.id as any;
-//              }
-              context.requests.push(
-                {
-                  predecessor: predecessor,
-                  method: "PATCH",
-                  source: device.value,
-                  externalIdType: mapping.externalIdType,
-                  request: map,
-                  response: response,
-                  targetAPI: API.INVENTORY.name,
-                  error: null,
-                  postProcessingCache: postProcessingCache
-                });
-              predecessor = context.requests.length;
-
+              } catch (e) {
+                context.requests[newPredecessor - 1].error = e;
+              }
+              predecessor = newPredecessor;
             } else if (sourceId == null && context.sendPayload) {
               throw new Error("External id " + substituteValue + " for type "
                 + mapping.externalIdType + " not found!");
@@ -132,51 +133,43 @@ export abstract class PayloadProcessor {
        * step 4 prepare target payload for sending to c8y
        */
       if (mapping.targetAPI == API.INVENTORY.name) {
-        let ex: Error = null;
-        let response = null
-        if (context.sendPayload) {
-          try {
-            response = await this.c8yClient.upsertDevice(payloadTarget, getTypedValue(device), mapping.externalIdType, context);
-          } catch (e) {
-            ex = e;
-          }
-        }
-        context.requests.push(
+        let newPredecessor = context.requests.push(
           {
             predecessor: predecessor,
             method: "PATCH",
             source: device.value,
             externalIdType: mapping.externalIdType,
             request: payloadTarget,
-            response: response,
             targetAPI: API.INVENTORY.name,
-            error: ex,
-            postProcessingCache: postProcessingCache
           });
+        try {
+          let response = await this.c8yClient.upsertDevice(
+            {
+              externalId: getTypedValue(device),
+              type: mapping.externalIdType
+            }, context);
+          context.requests[newPredecessor - 1].response = response;
+        } catch (e) {
+          context.requests[newPredecessor - 1].error = e;
+        }
         predecessor = context.requests.length;
 
       } else if (mapping.targetAPI != API.INVENTORY.name) {
-        let ex: Error = null;
-        let response = null
-        if (context.sendPayload) {
-          try {
-            response = await this.c8yClient.createMEAO(mapping.targetAPI, payloadTarget, mapping);
-          } catch (e) {
-            ex = e;
-          }
-        }
-        context.requests.push(
+        let newPredecessor = context.requests.push(
           {
             predecessor: predecessor,
             method: "POST",
             source: device.value,
             externalIdType: mapping.externalIdType,
             request: payloadTarget,
-            response: response,
             targetAPI: API[mapping.targetAPI].name,
-            error: ex,
-            postProcessingCache: postProcessingCache
           })
+        try {
+          let response = await this.c8yClient.createMEAO(context);
+          context.requests[newPredecessor - 1].response = response;
+        } catch (e) {
+          context.requests[newPredecessor - 1].error = e;
+        }
         predecessor = context.requests.length;
       } else {
         console.warn("Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}");

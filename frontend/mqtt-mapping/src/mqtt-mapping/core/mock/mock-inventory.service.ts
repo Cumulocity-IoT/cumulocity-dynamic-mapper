@@ -5,17 +5,22 @@ import * as _ from 'lodash';
 @Injectable({ providedIn: 'root' })
 export class MockInventoryService  {
   
-  identityCache: Map<string, Map<string,string>>;
+  inventoryCache: Map<string, Map<string,any>>;
   constructor() {
     this.initializeCache();
    }
 
   public initializeCache(): void {
-    this.identityCache = new Map<string, Map<string,string>>();
+    this.inventoryCache = new Map<string, Map<string,IManagedObject>>();
   }
   
   public update(managedObject: Partial<IManagedObject>): Promise<IResult<IManagedObject>>{
     let copyManagedObject: Partial<IManagedObject> = _.clone(managedObject);
+    copyManagedObject = {
+      ...this.inventoryCache.get(managedObject.id),
+      lastUpdated: new Date().toISOString(),
+    }
+    copyManagedObject.lastUpdated = new Date().toISOString();
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
       res: null
@@ -24,9 +29,11 @@ export class MockInventoryService  {
   }
 
   public create(managedObject: Partial<IManagedObject>): Promise<IResult<IManagedObject>> {
-    let copyManagedObject: Partial<IManagedObject> = _.clone(managedObject);
-    let id  = Math.floor(100000 + Math.random() * 900000).toString();
-    copyManagedObject.id = id;
+    let copyManagedObject = {
+      ...managedObject,
+      id: Math.floor(100000 + Math.random() * 900000).toString(),
+      lastUpdated: new Date().toISOString(),
+    }
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
       res: null
