@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -120,7 +121,7 @@ public abstract class PayloadProcessor<O> {
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     if (pathTarget.equals(mapping.targetAPI.identifier)) {
-                        var sourceId = c8yAgent.resolveExternalId(
+                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
                         if (sourceId == null && mapping.createNonExistingDevice) {
                             ManagedObjectRepresentation attocDevice = null;
@@ -135,7 +136,7 @@ public abstract class PayloadProcessor<O> {
                                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
                                                 mapping.externalIdType, requestString, null, API.INVENTORY, null));
                                 attocDevice = c8yAgent.upsertDevice(
-                                        new ID(substituteValue.value.asText(), mapping.externalIdType), context);
+                                        new ID( mapping.externalIdType, substituteValue.value.asText()), context);
                                 var response = objectMapper.writeValueAsString(attocDevice);
                                 context.getCurrentRequest().setResponse(response);
                                 substituteValue.value = new TextNode(attocDevice.getId().getValue());
@@ -149,7 +150,7 @@ public abstract class PayloadProcessor<O> {
                         } else if (sourceId == null) {
                             substituteValue.value = null;
                         } else {
-                            substituteValue.value = new TextNode(sourceId.getExternalId());
+                            substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
                         }
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
@@ -168,7 +169,7 @@ public abstract class PayloadProcessor<O> {
                                 null, API.INVENTORY, null));
                 try {
                     attocDevice = c8yAgent.upsertDevice(
-                            new ID(device.value.asText(), mapping.externalIdType), context);
+                            new ID( mapping.externalIdType, device.value.asText()), context);
                     var response = objectMapper.writeValueAsString(attocDevice);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
