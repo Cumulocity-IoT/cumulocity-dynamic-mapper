@@ -3,15 +3,13 @@ package mqtt.mapping.processor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +22,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class Dispatcher implements MqttCallback {
+public class SynchronousDispatcher implements MqttCallback {
+
+    private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
     @Autowired
     protected C8yAgent c8yAgent;
@@ -38,12 +38,12 @@ public class Dispatcher implements MqttCallback {
     @Autowired
     Map<MappingType, PayloadProcessor<?>> payloadProcessors;
 
-    @Autowired
-    @Qualifier("cachedThreadPool")
-    private ExecutorService cachedThreadPool;
-
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        processMessage(topic, mqttMessage, true);
+        if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
+            // REPORT MAINTENANCE METRIC
+        } else {
+            processMessage(topic, mqttMessage, true);
+        }
     }
 
     public List<ProcessingContext<?>> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
@@ -66,7 +66,7 @@ public class Dispatcher implements MqttCallback {
                 resolveMappings.forEach(mapping -> {
                     MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
 
-                    ProcessingContext  context;
+                    ProcessingContext<?>  context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
                         context = new ProcessingContext<String>();
                     } else {
@@ -79,7 +79,7 @@ public class Dispatcher implements MqttCallback {
                     context.setSendPayload(sendPayload);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    PayloadProcessor <?> processor = payloadProcessors.get(mappingType);
+                    PayloadProcessor processor = payloadProcessors.get(mappingType);
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, mqttMessage);
@@ -106,11 +106,9 @@ public class Dispatcher implements MqttCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
-                                Future<ProcessingContext<?>>  substitute = cachedThreadPool.submit(() -> processor.substituteInTargetAndSend(context));
-                                //processor.substituteInTargetAndSend(context);
-                                ProcessingContext <?> resultContext = substitute.get();
-                                ArrayList<C8YRequest> resultRequests = resultContext.getRequests();
-                                if (resultContext.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                processor.substituteInTargetAndSend(context);
+                                ArrayList<C8YRequest> resultRequests = context.getRequests();
+                                if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }
