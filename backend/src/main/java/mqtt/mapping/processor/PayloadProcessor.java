@@ -68,7 +68,7 @@ public abstract class PayloadProcessor<O> {
 
     public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 
-    public void substituteInTargetAndSend(ProcessingContext<O> context) throws ProcessingException {
+    public ProcessingContext<O> substituteInTargetAndSend(ProcessingContext<O> context) {
         /*
          * step 3 replace target with extract content from incoming payload
          */
@@ -99,7 +99,8 @@ public abstract class PayloadProcessor<O> {
             try {
                 payloadTarget = objectMapper.readTree(mapping.target);
             } catch (JsonProcessingException e) {
-                throw new ProcessingException(e.getMessage());
+                context.setError(new ProcessingException(e.getMessage()));
+                return context;
             }
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
@@ -198,6 +199,7 @@ public abstract class PayloadProcessor<O> {
                     deviceEntries.size());
             i++;
         }
+        return context;
     }
 
     public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
