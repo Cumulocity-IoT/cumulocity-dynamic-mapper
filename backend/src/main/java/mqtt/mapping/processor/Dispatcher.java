@@ -1,15 +1,17 @@
 package mqtt.mapping.processor;
 
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,10 @@ public class Dispatcher implements MqttCallback {
 
     @Autowired
     Map<MappingType, PayloadProcessor<?>> payloadProcessors;
+
+    @Autowired
+    @Qualifier("cachedThreadPool")
+    private ExecutorService cachedThreadPool;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         processMessage(topic, mqttMessage, true);
@@ -100,9 +106,11 @@ public class Dispatcher implements MqttCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
-                                ArrayList<C8YRequest> requests = context.getRequests();
-                                if (context.hasError() || requests.stream().anyMatch(r -> r.hasError())) {
+                                Future<ProcessingContext<?>>  substitute = cachedThreadPool.submit(() -> processor.substituteInTargetAndSend(context));
+                                //processor.substituteInTargetAndSend(context);
+                                ProcessingContext <?> resultContext = substitute.get();
+                                ArrayList<C8YRequest> resultRequests = resultContext.getRequests();
+                                if (resultContext.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }
