@@ -62,7 +62,8 @@ import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
-import mqtt.mapping.processor.Dispatcher;
+import mqtt.mapping.processor.SynchronousDispatcher;
+import mqtt.mapping.processor.AsynchronousDispatcher;
 import mqtt.mapping.processor.ProcessingContext;
 
 @Slf4j
@@ -89,8 +90,11 @@ public class MQTTClient {
     @Autowired
     private C8yAgent c8yAgent;
 
+    // @Autowired
+    // private SynchronousDispatcher dispatcher;
+
     @Autowired
-    private Dispatcher dispatcher;
+    private AsynchronousDispatcher dispatcher;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -565,7 +569,7 @@ public class MQTTClient {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         MqttMessage mqttMessage = new MqttMessage();
         mqttMessage.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(topic, mqttMessage, send);
+        return dispatcher.processMessage(topic, mqttMessage, send).get();
     }
 
     public List<MappingStatus> getMappingStatus() {
