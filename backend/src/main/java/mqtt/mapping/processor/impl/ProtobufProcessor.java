@@ -44,9 +44,9 @@ public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> {
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
         if ( "CustomMeasurement".equals(context.getMapping().getSubstitutions()[0].registeredType)) {
-            CustomMeasurementOuter.CustomMeasurement payloadJsonNode;
+            CustomMeasurementOuter.CustomMeasurement payloadProtobuf;
             try {
-                payloadJsonNode = CustomMeasurementOuter.CustomMeasurement.parseFrom(context.getPayload());
+                payloadProtobuf = CustomMeasurementOuter.CustomMeasurement.parseFrom(context.getPayload());
             } catch (InvalidProtocolBufferException e) {
                 throw new ProcessingException(e.getMessage());
             }
@@ -55,17 +55,19 @@ public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> {
             postProcessingCache
                     .put("time",
                             new ArrayList<SubstituteValue>(Arrays.asList(new SubstituteValue(
-                                    new TextNode(new DateTime(payloadJsonNode.getTimestamp()).toString()), TYPE.TEXTUAL,
+                                    new TextNode(new DateTime(payloadProtobuf.getTimestamp()).toString()), TYPE.TEXTUAL,
                                     RepairStrategy.DEFAULT))));
             postProcessingCache.put("c8y_GenericMeasurement.Module.value", new ArrayList<SubstituteValue>(Arrays.asList(
-                    new SubstituteValue(new FloatNode(payloadJsonNode.getValue()), TYPE.NUMBER, RepairStrategy.DEFAULT))));
+                    new SubstituteValue(new FloatNode(payloadProtobuf.getValue()), TYPE.NUMBER, RepairStrategy.DEFAULT))));
             postProcessingCache
                     .put("type",
                             new ArrayList<SubstituteValue>(
-                                    Arrays.asList(new SubstituteValue(new TextNode(payloadJsonNode.getMeasurementType()),
+                                    Arrays.asList(new SubstituteValue(new TextNode(payloadProtobuf.getMeasurementType()),
                                             TYPE.TEXTUAL, RepairStrategy.DEFAULT))));
             postProcessingCache.put("c8y_GenericMeasurement.Module.unit", new ArrayList<SubstituteValue>(Arrays.asList(
-                    new SubstituteValue(new TextNode(payloadJsonNode.getUnit()), TYPE.TEXTUAL, RepairStrategy.DEFAULT))));
+                    new SubstituteValue(new TextNode(payloadProtobuf.getUnit()), TYPE.TEXTUAL, RepairStrategy.DEFAULT))));
+            postProcessingCache.put(context.getMapping().targetAPI.identifier, new ArrayList<SubstituteValue>(Arrays.asList(
+                        new SubstituteValue(new TextNode(payloadProtobuf.getExternalId()), TYPE.TEXTUAL, RepairStrategy.DEFAULT))));
             // Mapping mapping = new Mapping();
             // mapping.setActive(true);
             // mapping.setTargetAPI(API.MEASUREMENT);

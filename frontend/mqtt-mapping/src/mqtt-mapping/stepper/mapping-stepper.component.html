@@ -230,7 +230,7 @@
                       Templates
                     </div>
                     <div class="col-lg-4 col-lg-offset-1">
-                      <div class="form-group" *ngIf="showEditorSource">
+                      <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                         <label translate>Source</label>
                         <json-editor [options]="editorOptionsSource"
                           (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
@@ -242,7 +242,7 @@
                           </c8y-message>
                         </c8y-messages>
                       </div>
-                      <div class="form-group" *ngIf="!showEditorSource">
+                      <div class="form-group" *ngIf="!stepperConfiguration.showEditorSource">
                         <label translate>Type for {{mapping.mappingType}}</label>
                         <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
                           <select class="form-control" formControlName="rt"
@@ -258,21 +258,21 @@
                       <label translate>Manage Substitutions</label>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
-                          (click)="onNextSubstitution()" translate title="Select substitution" [disabled]="!showEditorSource">
+                          (click)="onNextSubstitution()" translate title="Select substitution" [disabled]="!stepperConfiguration.showEditorSource">
                           <i c8yIcon="skip"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
                           <ng-template #popTemplateSelect>Select defined substitutions in templates.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
-                            placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
+                            placement="right" triggers="focus" type="button" [disabled]="!stepperConfiguration.showEditorSource">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
                       </div>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                          (click)="onAddSubstitution()" translate title="Add new substitution" [disabled]="!showEditorSource">
+                          (click)="onAddSubstitution()" translate title="Add new substitution" [disabled]="!stepperConfiguration.showEditorSource">
                           <i c8yIcon="add-new"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
@@ -281,7 +281,7 @@
                             have to be selected.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                            popoverTitle="Add new substitution" placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
+                            popoverTitle="Add new substitution" placement="right" triggers="focus" type="button" [disabled]="!stepperConfiguration.showEditorSource">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
@@ -289,7 +289,7 @@
                       <div class="p-b-8 d-flex">
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onDeleteSubstitution()" translate title="Delete selected substitution" [disabled]="!showEditorSource">
+                            (click)="onDeleteSubstitution()" translate title="Delete selected substitution" [disabled]="!stepperConfiguration.showEditorSource">
                             <i c8yIcon="negative"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -298,14 +298,14 @@
                                 selected with the "Skip-Button".</span>
                             </ng-template>
                             <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
-                              placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
+                              placement="right" triggers="focus" type="button" [disabled]="!stepperConfiguration.showEditorSource">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
                         </div>
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onDeleteSubstitutions()" translate title="Delete all substitutions" [disabled]="!showEditorSource">
+                            (click)="onDeleteSubstitutions()" translate title="Delete all substitutions" [disabled]="!stepperConfiguration.showEditorSource">
                             <i c8yIcon="negative"></i><i c8yIcon="negative" ></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -321,7 +321,7 @@
                       <div class="p-b-8 d-flex">
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates" [disabled]="!showEditorSource">
+                            (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates" [disabled]="!stepperConfiguration.showEditorSource">
                             <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                               {{mapping.snoopedTemplates.length}}</span>
                             <i c8yIcon="enter-left"></i>
@@ -337,7 +337,7 @@
                         </div>
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onSampleButton()" translate title="Use sample templates" [disabled]="!showEditorSource">
+                            (click)="onSampleButton()" translate title="Use sample templates" [disabled]="!stepperConfiguration.showEditorSource">
                             <i c8yIcon="enter-right"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -400,7 +400,7 @@
                         </mapping-substitution-renderer>
                       </div>
                       <c8y-messages class="text-right">
-                        <c8y-message *ngIf="(countDeviceIdentifers$ |async) != 1"><span class="text-warning">Excactly
+                        <c8y-message *ngIf="(countDeviceIdentifers$ |async) != 1 && !stepperConfiguration.allowNoDefinedIdentifier"><span class="text-warning">Excactly
                             one substitution defining the
                             DeviceIdentifier must be used.</span>
                         </c8y-message>

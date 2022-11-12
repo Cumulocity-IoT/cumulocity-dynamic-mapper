@@ -1,4 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
+import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
 import { API, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
@@ -404,7 +405,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
   return (count > 1);
 }
 
-export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
+export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration: StepperConfiguration): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors = {}
     let defined = false
@@ -414,15 +415,15 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     // }, 0)
 
     let count = countDeviceIdentifiers(mapping);
-    if (count > 1 && !mapping.mappingType && mapping.mappingType != MappingType.PROTOBUF) {
+    if (count > 1 && !stepperConfiguration.allowNoDefinedIdentifier) {
       errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
       defined = true
     }
-    if (count < 1 && !mapping.mappingType && mapping.mappingType != MappingType.PROTOBUF) {
+    if (count < 1 && !stepperConfiguration.allowNoDefinedIdentifier) {
       errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
       defined = true
     }
-    //console.log(mapping.mappingType != MappingType.PROTOBUF , mapping.mappingType,  MappingType.PROTOBUF)
+    console.log(stepperConfiguration, mapping.mappingType,  MappingType.PROTOBUF)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }
