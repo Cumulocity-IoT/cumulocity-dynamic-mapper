@@ -1,17 +1,13 @@
 package mqtt.mapping.rest;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -237,50 +233,47 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/registry/{type}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<String>> getRegisteredTypes(@PathVariable String type) {
-        String javaFolder = null;
-        try {
-            javaFolder = MappingType.valueOf(type).packageName;
+        List<String> result = new ArrayList<String>(Arrays.asList("CustomMeasurement"));
+        // String javaFolder = null;
+        // try {
+        //     javaFolder = MappingType.valueOf(type).packageName;
             
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-        String packageName = BASE_PACKAGE_NAME_TYPES.concat(".").concat(javaFolder);
-        log.info("Finding registered types in: {}", packageName.replaceAll("[.]", "/"));
-        List<String> result = new ArrayList<String>();
-        try {
-            InputStream stream = 
-            //ClassLoader.getPlatformClassLoader().getSystemClassLoader()
+        // } catch (Exception e) {
+        //     return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        // }
+        // String packageName = BASE_PACKAGE_NAME_TYPES.concat(".").concat(javaFolder);
+        // log.info("Finding registered types in: {}", packageName.replaceAll("[.]", "/"));
+        // try {
+        //     InputStream stream = 
+        //     ClassUtils.getDefaultClassLoader()
+        //     .getResourceAsStream(packageName.replaceAll("[.]", "/"));
+        //     BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        //     result = reader.lines()
+        //             .peek(line->log.info("FOUND:" + line))
+        //             .filter(line -> line.endsWith(".class"))
+        //             .map(line -> getClass(line, packageName))
+        //              .filter(cl -> (com.google.protobuf.GeneratedMessageV3.class.isAssignableFrom(cl)
+        //                      | com.google.protobuf.GeneratedMessageLite.class.isAssignableFrom(cl)))
+        //             .map(cl -> cl.getCanonicalName())
+        //             .collect(Collectors.toList());
 
-            Thread.currentThread().getContextClassLoader().getResourceAsStream(packageName.replaceAll("[.]", "/"));
-            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-            result = reader.lines()
-                    .filter(line -> line.endsWith(".class"))
-                    .map(line -> getClass(line, packageName))
-                    // .filter(cl ->
-                    // cl.isAssignableFrom(com.google.protobuf.GeneratedMessageV3.class))
-                    .filter(cl -> (com.google.protobuf.GeneratedMessageV3.class.isAssignableFrom(cl)
-                            | com.google.protobuf.GeneratedMessageLite.class.isAssignableFrom(cl)))
-                    .map(cl -> cl.getCanonicalName())
-                    .collect(Collectors.toList());
-
-            // now remove the package names
-            result = result.stream().map(full -> StringUtils.substringAfterLast(full, packageName + "."))
-                    .collect(Collectors.toList());
-            log.info("Get all registered protobuf types: {}", result);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            log.error("No types registered for: {}", type);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getLocalizedMessage());
-        }
+        //     log.info("Get all registered protobuf types: {}", result);
+        // } catch (Exception ex) {
+        //     ex.printStackTrace();
+        //     log.error("No types registered for: {}", type);
+        //     throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getLocalizedMessage());
+        // }
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    private Class<?> getClass(String className, String packageName) {
+
+
+    private static Class getClass(String className, String packageName) {
         try {
             return Class.forName(packageName + "."
-                    + className.substring(0, className.lastIndexOf('.')));
+              + className.substring(0, className.lastIndexOf('.')));
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            // handle the exception
         }
         return null;
     }

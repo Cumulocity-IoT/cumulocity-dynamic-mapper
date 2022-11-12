@@ -22,8 +22,7 @@ import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.RepairStrategy;
-import mqtt.mapping.processor.protobuf.MeasurementProto;
-import mqtt.mapping.processor.protobuf.MeasurementProto.CustomMeasurement;
+import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
@@ -44,10 +43,10 @@ public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        if ( "MeasurementProto.CustomMeasurement".equals(context.getMapping().getSubstitutions()[0].registeredType)) {
-            MeasurementProto.CustomMeasurement payloadJsonNode;
+        if ( "CustomMeasurement".equals(context.getMapping().getSubstitutions()[0].registeredType)) {
+            CustomMeasurementOuter.CustomMeasurement payloadJsonNode;
             try {
-                payloadJsonNode = CustomMeasurement.parseFrom(context.getPayload());
+                payloadJsonNode = CustomMeasurementOuter.CustomMeasurement.parseFrom(context.getPayload());
             } catch (InvalidProtocolBufferException e) {
                 throw new ProcessingException(e.getMessage());
             }

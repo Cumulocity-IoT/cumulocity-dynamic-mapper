@@ -1,6 +1,6 @@
 
-°
-Measure.protoprocessor.protobuf"Í
+À
+CustomMeasurement.protoprocessor.protobuf"Í
 CustomMeasurement
 	timestamp (R	timestamp
 value (Rvalue
@@ -9,5 +9,5 @@
 
 externalId (	R
 externalId(
-measurementType (	RmeasurementTypeB3
-mqtt.mapping.processor.protobufBMeasurementProtobproto3
+measurementType (	RmeasurementTypeB9
+mqtt.mapping.processor.protobufBCustomMeasurementOuterbproto3

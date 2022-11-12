@@ -247,7 +247,7 @@
                         <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
                           <select class="form-control" formControlName="rt"
                             [(ngModel)]="mapping.substitutions[0].registeredType">
-                            <option *ngFor="let t of registeredTypes | keyvalue" [ngValue]="t">
+                            <option *ngFor="let t of registeredTypes" [ngValue]="t">
                               {{ t }}
                             </option>
                           </select>
@@ -258,21 +258,21 @@
                       <label translate>Manage Substitutions</label>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
-                          (click)="onNextSubstitution()" translate title="Select substitution">
+                          (click)="onNextSubstitution()" translate title="Select substitution" [disabled]="!showEditorSource">
                           <i c8yIcon="skip"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
                           <ng-template #popTemplateSelect>Select defined substitutions in templates.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
-                            placement="right" triggers="focus" type="button">
+                            placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
                       </div>
                       <div class="p-b-8">
                         <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                          (click)="onAddSubstitution()" translate title="Add new substitution">
+                          (click)="onAddSubstitution()" translate title="Add new substitution" [disabled]="!showEditorSource">
                           <i c8yIcon="add-new"></i>
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
@@ -281,7 +281,7 @@
                             have to be selected.
                           </ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                            popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
+                            popoverTitle="Add new substitution" placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
                             <i c8yIcon="question-circle-o"></i>
                           </button>
                         </span>
@@ -289,7 +289,7 @@
                       <div class="p-b-8 d-flex">
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onDeleteSubstitution()" translate title="Delete selected substitution">
+                            (click)="onDeleteSubstitution()" translate title="Delete selected substitution" [disabled]="!showEditorSource">
                             <i c8yIcon="negative"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
@@ -298,15 +298,15 @@
                                 selected with the "Skip-Button".</span>
                             </ng-template>
                             <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
-                              placement="right" triggers="focus" type="button">
+                              placement="right" triggers="focus" type="button" [disabled]="!showEditorSource">
                               <i c8yIcon="question-circle-o"></i>
                             </button>
                           </span>
                         </div>
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onDeleteSubstitutions()" translate title="Delete all substitutions">
-                            <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
+                            (click)="onDeleteSubstitutions()" translate title="Delete all substitutions" [disabled]="!showEditorSource">
+                            <i c8yIcon="negative"></i><i c8yIcon="negative" ></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">
                             <ng-template #popTemplateDeleteAll>Delete all substitutions.
@@ -321,7 +321,7 @@
                       <div class="p-b-8 d-flex">
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates">
+                            (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates" [disabled]="!showEditorSource">
                             <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                               {{mapping.snoopedTemplates.length}}</span>
                             <i c8yIcon="enter-left"></i>
@@ -337,7 +337,7 @@
                         </div>
                         <div>
                           <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                            (click)="onSampleButton()" translate title="Use sample templates">
+                            (click)="onSampleButton()" translate title="Use sample templates" [disabled]="!showEditorSource">
                             <i c8yIcon="enter-right"></i>
                           </button>
                           <span class="hidden-xs hidden-sm p-l-4">

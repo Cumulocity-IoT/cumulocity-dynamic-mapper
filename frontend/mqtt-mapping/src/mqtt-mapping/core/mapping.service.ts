@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity, IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { Mapping } from '../../shared/mapping.model';
@@ -99,7 +99,7 @@ export class MappingService {
   }
 
   async getRegisteredTypes(type: string): Promise<string[]> {
-    const response = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}/${type}`, {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}/${type}`, {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json'
@@ -110,8 +110,8 @@ export class MappingService {
     if (response.status != 200) {
       return undefined;
     }
-
-    return (await response.json()) as string[];
+    //let result =  (await response.json()) as string[];
+    return response.json();
   }
 
 }
