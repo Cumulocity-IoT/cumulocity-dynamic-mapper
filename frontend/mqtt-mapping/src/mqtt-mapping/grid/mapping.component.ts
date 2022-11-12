@@ -174,10 +174,13 @@ export class MappingComponent implements OnInit {
     let l = this.nextId();
 
     let sampleSource = '{}';
+    let sub = [];
     if (this.mappingType == MappingType.FLAT_FILE) {
       sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper)
+    } else if (this.mappingType == MappingType.PROTOBUF) {
+      sub.push({});
     }
 
     let mapping = {
@@ -192,7 +195,7 @@ export class MappingComponent implements OnInit {
       active: false,
       tested: false,
       qos: QOS.AT_LEAST_ONCE,
-      substitutions: [],
+      substitutions: sub,
       mapDeviceIdentifier: false,
       createNonExistingDevice: false,
       mappingType: this.mappingType,

@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { IExternalIdentity, IIdentified, IResult } from "@c8y/client";
+import { IExternalIdentity, IFetchResponse, IIdentified, IResult } from "@c8y/client";
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
@@ -24,7 +24,7 @@ export class  MockIdentityService {
         copyExternalIdentity.managedObject = externalId;
         const promise = Promise.resolve({
           data: copyExternalIdentity,
-          res: {status: 200}
+          res: {status: 200} as IFetchResponse
         });
         return promise;
       } else {
@@ -56,7 +56,7 @@ export class  MockIdentityService {
     copyExternalIdentity.managedObject = identified;
     const promise = Promise.resolve({
       data: copyExternalIdentity,
-      res: {status: 200}
+      res: {status: 200} as IFetchResponse
     });
     return promise;
   }

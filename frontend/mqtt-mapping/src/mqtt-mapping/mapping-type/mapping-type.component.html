@@ -8,11 +8,6 @@
     {{ bodyHeaderText | translate }}
   </p>
   <div class="modal-inner-scroll animated fadeIn">
-    <!-- <label title="{{ 'Mapping Types' }}" *ngFor="let q of MappingType | keyvalue" [ngValue]="q.key" class="c8y-radio">
-        <input type="radio" value="{{ q.value }}" [(ngModel)]="mappingType" ng-class="{ active: mappingType === q}" />
-        <span></span>
-        <span>{{q.value}}</span>
-      </label> -->
     <div class="list-group list-group-links">
       <button class="list-group-item" title="{{ q.value }}" 
         *ngFor="let q of MappingType | keyvalue"

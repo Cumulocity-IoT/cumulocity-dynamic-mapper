@@ -80,6 +80,10 @@ public class MappingSubstitution implements Serializable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public RepairStrategy repairStrategy;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String registeredType;
     
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean definesDeviceIdentifier(API api){
