@@ -12,6 +12,7 @@ import { MappingService } from '../core/mapping.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
 import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
+import { StepperConfiguration } from '../stepper/stepper-model';
 
 @Component({
   selector: 'mapping-grid',
@@ -32,7 +33,10 @@ export class MappingComponent implements OnInit {
 
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
-  editMode: boolean;
+  stepperConfiguration: StepperConfiguration = {
+    showEditorSource: true,
+    allowNoDefinedIdentifier: false
+  };
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -170,7 +174,7 @@ export class MappingComponent implements OnInit {
   }
 
   async addMapping() {
-    this.editMode = false;
+    this.stepperConfiguration.editMode = false;
     let l = this.nextId();
 
     let sampleSource = '{}';
@@ -180,6 +184,8 @@ export class MappingComponent implements OnInit {
         message: '10,temp,1666963367'
       } as PayloadWrapper)
     } else if (this.mappingType == MappingType.PROTOBUF) {
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
       sub.push({
         pathTarget: '',
         pathSource: ''
@@ -219,7 +225,11 @@ export class MappingComponent implements OnInit {
   }
 
   editMapping(mapping: Mapping) {
-    this.editMode = true;
+    this.stepperConfiguration.editMode = true;
+    if (mapping.mappingType == MappingType.PROTOBUF) {
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
+    }
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
     console.log("Editing mapping", this.mappingToUpdate)
@@ -227,7 +237,11 @@ export class MappingComponent implements OnInit {
   }
 
   copyMapping(mapping: Mapping) {
-    this.editMode = true;
+    this.stepperConfiguration.editMode = true;
+    if (mapping.mappingType == MappingType.PROTOBUF) {
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
+    }
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.ident = uuidv4();

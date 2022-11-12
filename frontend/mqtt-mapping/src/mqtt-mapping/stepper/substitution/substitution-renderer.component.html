@@ -1,6 +1,7 @@
 <div class="substitution-list font-smaller">
   <div class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" id="{{'sub-' + id +'-' + i}}"
     [ngStyle]="{'background': ( i == setting.selectedSubstitutionIndex ? setting.color : 'none')}"
-    (click)="onSubstitutionSelected(i)">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-    ' -> ' + sub.pathTarget + ' ]'}}</div>
+    (click)="onSubstitutionSelected(i)"><span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
+    ' -> ' + sub.pathTarget + ' ]'}}</span>
+  </div>
 </div>

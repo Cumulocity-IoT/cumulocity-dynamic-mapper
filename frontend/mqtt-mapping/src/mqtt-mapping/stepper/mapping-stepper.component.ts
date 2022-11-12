@@ -14,6 +14,7 @@ import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/json
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { C8YRequest } from '../processor/prosessor.model';
 import { MappingService } from '../core/mapping.service';
+import { StepperConfiguration } from './stepper-model';
 
 @Component({
   selector: 'mapping-stepper',
@@ -26,7 +27,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
-  @Input() editMode: boolean;
+  @Input() stepperConfiguration: StepperConfiguration;
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
@@ -53,7 +54,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateTestingResponse: any;
   selectedTestingResult: number = -1;
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
-  showEditorSource: boolean;
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
@@ -100,7 +100,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   ) { }
 
   ngOnInit() {
-    console.log("Mapping to be updated:", this.mapping, this.editMode);
+    console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
@@ -180,7 +180,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
-      checkSubstitutionIsValid(this.mapping)
+      checkSubstitutionIsValid(this.mapping, this.stepperConfiguration)
     );
   }
 
@@ -320,7 +320,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      this.showEditorSource = this.mapping.mappingType != MappingType.PROTOBUF;
       this.registeredTypes = await this.mappingService.getRegisteredTypes(this.mapping.mappingType);
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
@@ -370,7 +369,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private enrichTemplates() {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
     this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
-    if (!this.editMode) {
+    if (!this.stepperConfiguration.editMode) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     } else {

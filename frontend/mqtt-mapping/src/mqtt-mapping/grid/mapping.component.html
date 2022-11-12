@@ -44,7 +44,7 @@
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
       <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false" (onCommit)="onCommit($event)"
-        [mapping]="mappingToUpdate" [mappings]="mappings" [editMode]="editMode">
+        [mapping]="mappingToUpdate" [mappings]="mappings" [stepperConfiguration]="stepperConfiguration">
       </mapping-stepper>
     </div>
   </div>
