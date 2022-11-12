@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { IOperation, IResult, OperationService } from "@c8y/client";
+import { IFetchResponse, IOperation, IResult, OperationService } from "@c8y/client";
 import * as _ from 'lodash';
 import { ProcessingContext } from "../processor/prosessor.model";
 
@@ -20,7 +20,7 @@ export class FacadeOperationService {
       }
       const promise = Promise.resolve({
         data: copyOperation,
-        res: {status: 200}
+        res: {status: 200} as IFetchResponse
       });
       return promise;
     }

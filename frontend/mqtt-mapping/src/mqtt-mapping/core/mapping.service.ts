@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { IdentityService, IExternalIdentity, IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { FetchClient, IdentityService, IExternalIdentity, IManagedObject, InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { Mapping } from '../../shared/mapping.model';
-import { MAPPING_FRAGMENT, MAPPING_TYPE } from '../../shared/util';
+import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_TYPE_REGISTRY_ENDPOINT } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
 import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
@@ -13,7 +13,8 @@ export class MappingService {
     private inventory: InventoryService,
     private identity: IdentityService,
     private configurationService: BrokerConfigurationService,
-    private jsonProcessor: JSONProcessor) { }
+    private jsonProcessor: JSONProcessor,
+    private client: FetchClient) { }
 
   private agentId: string;
   private managedObjectMapping: IManagedObject;
@@ -95,6 +96,22 @@ export class MappingService {
       result = expression.evaluate(json) as JSON
     }
     return result;
+  }
+
+  async getRegisteredTypes(type: string): Promise<string[]> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}/${type}`, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json'
+      },
+      method: 'GET',
+    });
+
+    if (response.status != 200) {
+      return undefined;
+    }
+
+    return (await response.json()) as string[];
   }
 
 }

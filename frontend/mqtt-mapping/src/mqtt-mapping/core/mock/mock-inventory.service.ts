@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { IManagedObject, IResult } from "@c8y/client";
+import { IFetchResponse, IManagedObject, IResult } from "@c8y/client";
 import * as _ from 'lodash';
 
 @Injectable({ providedIn: 'root' })
@@ -23,7 +23,7 @@ export class MockInventoryService  {
     copyManagedObject.lastUpdated = new Date().toISOString();
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: {status: 200}
+      res: {status: 200} as IFetchResponse
     });
     return promise;
   }
@@ -36,7 +36,7 @@ export class MockInventoryService  {
     }
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: {status: 200}
+      res: {status: 200} as IFetchResponse
     });
     return promise;
   }

@@ -1,11 +1,17 @@
 package mqtt.mapping.rest;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,6 +34,7 @@ import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceOperation;
@@ -36,6 +43,8 @@ import mqtt.mapping.service.ServiceStatus;
 @Slf4j
 @RestController
 public class MQTTMappingRestController {
+
+    private static final String BASE_PACKAGE_NAME_TYPES = "mqtt.mapping.processor";
 
     @Autowired
     MQTTClient mqttClient;
@@ -62,8 +71,9 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ConfigurationConnection configuration) {
-        
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(
+            @Valid @RequestBody ConfigurationConnection configuration) {
+
         // don't modify original copy
         ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
         configurationClone.setPassword("");
@@ -94,8 +104,9 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/service", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(@Valid @RequestBody ServiceConfiguration configuration) {
-        
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(
+            @Valid @RequestBody ServiceConfiguration configuration) {
+
         // don't modify original copy
         log.info("Post service configuration: {}", configuration.toString());
         try {
@@ -118,7 +129,6 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-
 
     @RequestMapping(value = "/status/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getServiceStatus() {
@@ -210,7 +220,8 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ProcessingContext<?>>> forwardPayload( @PathVariable String method, @RequestParam URI topic,
+    public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
+            @RequestParam URI topic,
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         log.info("Test payload: {}, {}, {}", path, method, payload);
@@ -223,5 +234,54 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }
- 
+
+    @RequestMapping(value = "/registry/{type}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<String>> getRegisteredTypes(@PathVariable String type) {
+        String javaFolder = null;
+        try {
+            javaFolder = MappingType.valueOf(type).packageName;
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        String packageName = BASE_PACKAGE_NAME_TYPES.concat(".").concat(javaFolder);
+        log.info("Finding registered types in: {}", packageName.replaceAll("[.]", "/"));
+        List<String> result = new ArrayList<String>();
+        try {
+            InputStream stream = 
+            //ClassLoader.getPlatformClassLoader().getSystemClassLoader()
+
+            Thread.currentThread().getContextClassLoader().getResourceAsStream(packageName.replaceAll("[.]", "/"));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+            result = reader.lines()
+                    .filter(line -> line.endsWith(".class"))
+                    .map(line -> getClass(line, packageName))
+                    // .filter(cl ->
+                    // cl.isAssignableFrom(com.google.protobuf.GeneratedMessageV3.class))
+                    .filter(cl -> (com.google.protobuf.GeneratedMessageV3.class.isAssignableFrom(cl)
+                            | com.google.protobuf.GeneratedMessageLite.class.isAssignableFrom(cl)))
+                    .map(cl -> cl.getCanonicalName())
+                    .collect(Collectors.toList());
+
+            // now remove the package names
+            result = result.stream().map(full -> StringUtils.substringAfterLast(full, packageName + "."))
+                    .collect(Collectors.toList());
+            log.info("Get all registered protobuf types: {}", result);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            log.error("No types registered for: {}", type);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getLocalizedMessage());
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    private Class<?> getClass(String className, String packageName) {
+        try {
+            return Class.forName(packageName + "."
+                    + className.substring(0, className.lastIndexOf('.')));
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

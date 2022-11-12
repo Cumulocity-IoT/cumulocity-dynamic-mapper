@@ -1,5 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { API, Mapping, MappingSubstitution, ValidationError } from "./mapping.model"
+import { API, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -264,6 +264,7 @@ export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connection';
+export const PATH_TYPE_REGISTRY_ENDPOINT = 'registry';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_MAPPING_TREE_ENDPOINT = 'tree';
 export const PATH_STATUS_ENDPOINT = 'status/service';
@@ -413,18 +414,16 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     // }, 0)
 
     let count = countDeviceIdentifiers(mapping);
-    if (count > 1) {
+    if (count > 1 && mapping.mappingType != MappingType.PROTOBUF) {
       errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
       defined = true
     }
-    if (count < 1) {
+    if (count < 1 && mapping.mappingType != MappingType.PROTOBUF) {
       errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
       defined = true
     }
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
-
-
   }
 
 }

@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { IAlarm, IResult, AlarmService } from "@c8y/client";
+import { IAlarm, IResult, AlarmService, IFetchResponse } from "@c8y/client";
 import * as _ from 'lodash';
 import { ProcessingContext } from "../processor/prosessor.model";
 
@@ -20,7 +20,7 @@ export class FacadeAlarmService {
       }
       const promise = Promise.resolve({
         data: copyAlarm,
-        res: {status: 200}
+        res: {status: 200} as IFetchResponse
       });
       return promise;
     }

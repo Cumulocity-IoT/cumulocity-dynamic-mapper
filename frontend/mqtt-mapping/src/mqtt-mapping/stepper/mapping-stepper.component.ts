@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { API, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -53,6 +53,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateTestingResponse: any;
   selectedTestingResult: number = -1;
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
+  showEditorSource: boolean;
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
@@ -88,6 +89,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
+  registeredTypes: string[];
 
   constructor(
     public bsModalService: BsModalService,
@@ -174,6 +176,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
+      rt: new FormControl(this.currentSubstitution.registeredType),
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
@@ -307,7 +310,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.onCancel.emit();
   }
 
-  public onNextStep(event: { stepper: C8yStepper; step: CdkStep }): void {
+  public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
 
     console.log("OnNextStep", event.step.label, this.mapping)
     this.step = event.step.label;
@@ -317,6 +320,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+      this.showEditorSource = this.mapping.mappingType != MappingType.PROTOBUF;
+      this.registeredTypes = await this.mappingService.getRegisteredTypes(this.mapping.mappingType);
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {

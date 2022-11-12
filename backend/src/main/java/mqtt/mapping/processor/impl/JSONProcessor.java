@@ -174,8 +174,5 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
                     new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));
             postProcessingCache.put(TIME, postProcessingCacheEntry);
         }
-
     }
-
-
 }

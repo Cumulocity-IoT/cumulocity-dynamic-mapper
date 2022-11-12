@@ -21,6 +21,7 @@ export interface MappingSubstitution {
   pathTarget: string;
   repairStrategy: RepairStrategy;
   expandArray: boolean;
+  registeredType?: string;
 }
 
 export interface Mapping {
@@ -45,7 +46,6 @@ export interface Mapping {
   mappingType: MappingType;
   lastUpdate: number;
 }
-
 
 export interface MappingStatus {
   id: number;
@@ -122,6 +122,7 @@ export enum MappingType {
   JSON = "JSON",
   FLAT_FILE = "FLAT_FILE",
   GENERIC_BINARY = "GENERIC_BINARY",
+  PROTOBUF = "PROTOBUF"
 }
 
 export enum RepairStrategy {

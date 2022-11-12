@@ -24,7 +24,7 @@ c8y-data-grid button[title="Reload"] {
   font-size: smaller !important;
 }
 
-json-editor>div {
+json-editor > div {
   max-height: 300px;
   overflow: auto !important;
 }
