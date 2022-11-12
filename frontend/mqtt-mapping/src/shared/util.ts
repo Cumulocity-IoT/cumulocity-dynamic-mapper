@@ -414,14 +414,15 @@ export function checkSubstitutionIsValid(mapping: Mapping): ValidatorFn {
     // }, 0)
 
     let count = countDeviceIdentifiers(mapping);
-    if (count > 1 && mapping.mappingType != MappingType.PROTOBUF) {
+    if (count > 1 && !mapping.mappingType && mapping.mappingType != MappingType.PROTOBUF) {
       errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
       defined = true
     }
-    if (count < 1 && mapping.mappingType != MappingType.PROTOBUF) {
+    if (count < 1 && !mapping.mappingType && mapping.mappingType != MappingType.PROTOBUF) {
       errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
       defined = true
     }
+    //console.log(mapping.mappingType != MappingType.PROTOBUF , mapping.mappingType,  MappingType.PROTOBUF)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }

@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.65</version>
+    <version>1.77</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -35,7 +35,6 @@
         </pluginRepository>
     </pluginRepositories>
     <dependencies>
-
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>

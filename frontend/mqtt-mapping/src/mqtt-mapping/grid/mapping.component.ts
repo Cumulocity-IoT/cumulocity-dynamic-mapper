@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, WizardConfig, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
+import { API, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -174,13 +174,16 @@ export class MappingComponent implements OnInit {
     let l = this.nextId();
 
     let sampleSource = '{}';
-    let sub = [];
+    let sub: MappingSubstitution[] = [];
     if (this.mappingType == MappingType.FLAT_FILE) {
       sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper)
     } else if (this.mappingType == MappingType.PROTOBUF) {
-      sub.push({});
+      sub.push({
+        pathTarget: '',
+        pathSource: ''
+      } as MappingSubstitution);
     }
 
     let mapping = {

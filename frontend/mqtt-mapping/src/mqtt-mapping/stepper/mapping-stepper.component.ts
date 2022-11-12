@@ -262,7 +262,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private getCurrentMapping(patched: boolean): Mapping {
     return {
       ... this.mapping,
-      source: this.reduceSourceTemplate(this.editorSource.get(), patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
+      source: this.reduceSourceTemplate( this.editorSource?  this.editorSource.get(): {} , patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
       target: this.reduceTargetTemplate(this.editorTarget.get(), patched),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       lastUpdate: Date.now(),
     };
@@ -360,7 +360,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
-      this.editorTestingRequest.set(this.editorSource.get());
+      this.editorTestingRequest.set(this.editorSource?  this.editorSource.get(): {} as JSON);
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
@@ -477,7 +477,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected
       this.currentSubstitution = _.clone(this.mapping.substitutions[selected])
-      this.editorSource.setSelectionToPath(this.currentSubstitution.pathSource);
+      this.editorSource?.setSelectionToPath(this.currentSubstitution.pathSource);
       this.editorTarget.setSelectionToPath(this.currentSubstitution.pathTarget);
     }
   }

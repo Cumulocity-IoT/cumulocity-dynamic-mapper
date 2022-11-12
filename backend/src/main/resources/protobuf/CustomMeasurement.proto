@@ -2,7 +2,7 @@ syntax = "proto3";
 package processor.protobuf;
 
 option java_package = "mqtt.mapping.processor.protobuf";
-option java_outer_classname = "MeasurementProto";
+option java_outer_classname = "CustomMeasurementOuter";
 
 message CustomMeasurement {
   int64 timestamp = 1;
