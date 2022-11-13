@@ -257,6 +257,7 @@ export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const PROCESSOR_EXTENSION_TYPE = 'c8y_mqttMapping_Processor_Extension';
 export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
 export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
 export const MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";

@@ -3,6 +3,7 @@
 import { NgModule } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { BokerConfigurationComponent } from './broker-configuration.component';
+import { ProcessorModule } from './extension/processor.module';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
 
 @NgModule({
@@ -12,6 +13,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
   ],
   imports: [
     CoreModule,
+    ProcessorModule
   ],
   entryComponents: [
     TerminateBrokerConnectionModalComponent

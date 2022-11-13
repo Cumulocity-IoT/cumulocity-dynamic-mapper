@@ -1,17 +1,40 @@
 package mqtt.mapping.core;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Scanner;
 import java.util.TimeZone;
+
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 
 import javax.annotation.PreDestroy;
 
+import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
@@ -32,6 +55,7 @@ import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
+import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
@@ -40,10 +64,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationService;
+import mqtt.mapping.ClassLoaderUtil;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.extension.ProcessorExtensions;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
@@ -57,13 +84,19 @@ import mqtt.mapping.service.ServiceStatus;
 
 @Slf4j
 @Service
-public class C8yAgent {
+public class C8yAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
 
     @Autowired
+    private RegisterBeansDynamically registerBeansDynamically;
+
+    @Autowired
     private InventoryFacade inventoryApi;
+
+    @Autowired
+    private BinariesApi binaryApi;
 
     @Autowired
     private IdentityFacade identityApi;
@@ -88,6 +121,9 @@ public class C8yAgent {
 
     @Autowired
     private ConfigurationService configurationService;
+
+    @Autowired
+    private ProcessorExtensions extensions;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -152,6 +188,8 @@ public class C8yAgent {
                 identityApi.create(mor, new ID("c8y_Serial", MappingsRepresentation.MQTT_MAPPING_TYPE), null);
                 log.info("Created new MQTT-Mapping: {}, {}", mor.getId().getValue(), mor.getId());
             }
+
+            loadProcessorExtensions();
         });
 
         try {
@@ -221,7 +259,6 @@ public class C8yAgent {
     public MappingServiceRepresentation getAgentMOR() {
         return mappingServiceRepresentation;
     }
-
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
             DateTime dateTime, HashMap<String, MeasurementValue> mvMap) {
@@ -502,4 +539,67 @@ public class C8yAgent {
             this.inventoryApi.update(updateMor, null);
         });
     }
+
+    private void loadProcessorExtensions() {
+        for (ManagedObjectRepresentation bObj : extensions.get()) {
+            String extName = bObj.getProperty(ProcessorExtensions.PROCESSOR_EXTENSION_TYPE).toString();
+            log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
+            log.debug("Copying extension binary , Id: " + bObj);
+
+            // step 1 download extension for binary repository
+
+            InputStream downloadInputStream = binaryApi.downloadFile(bObj.getId());
+            try {
+
+                // step 2 create temporary file,because classloader needs a url resource
+
+                File tempFile;
+                tempFile = File.createTempFile(extName, "jar");
+                // tempFile.deleteOnExit();
+                String canonicalPath = tempFile.getCanonicalPath();
+                String path = tempFile.getPath();
+                String pathWithProtocol = "file://".concat(tempFile.getPath());
+                log.info("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path, pathWithProtocol);
+                FileOutputStream outputStream = new FileOutputStream(tempFile);
+                IOUtils.copy(downloadInputStream, outputStream);
+
+                // step 3 parse list of extentions
+
+                ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
+                InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
+                BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
+                Properties props = new Properties();
+                try {
+                    if (buffered != null)
+                        props.load(buffered);
+                    log.info("Extensions:" + props.toString());
+                } catch (IOException io) {
+                    io.printStackTrace();
+                }
+                Enumeration extensions = props.propertyNames();
+                while (extensions.hasMoreElements()) {
+                    String key = (String) extensions.nextElement();
+                    Class clazz;
+                    try {
+                        clazz = dynamicLoader.loadClass(props.getProperty(key));
+                        
+                        BeanDefinitionBuilder bean = BeanDefinitionBuilder.rootBeanDefinition(clazz);
+                        // .addPropertyValue("str", "myStringValue");
+                        registerBeansDynamically.registerBean(key, bean.getBeanDefinition());
+                        log.info("Sucessfully registered bean: {} for key: {}",props.getProperty(key), key);
+                        // DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+                        // beanFactory.registerBeanDefinition(key, bean.getBeanDefinition());
+                    } catch (ClassNotFoundException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+
+            } catch (IOException e) {
+                log.error("Exception occured, When loading extension, starting without extensions!", e);
+                e.printStackTrace();
+            }
+        }
+    }
+
 }
