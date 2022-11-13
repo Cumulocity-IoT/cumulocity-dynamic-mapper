@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.77</version>
+    <version>1.79</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -59,7 +59,7 @@
             <artifactId>microservice-autoconfigure</artifactId>
             <version>${c8y.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>com.nsn.cumulocity.model</groupId>
             <artifactId>device-capability-model</artifactId>
@@ -88,6 +88,14 @@
     </dependencies>
 
     <build>
+        <!-- <resources>
+            <resource>
+                <directory>src/main/java/mqtt/mapping/processor/protobuf/</directory>
+                <excludes>
+                    <exclude>**</exclude>
+                </excludes>
+            </resource>
+        </resources> -->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -129,19 +137,19 @@
                 <artifactId>copy-rename-maven-plugin</artifactId>
                 <version>1.0.1</version>
                 <executions>
-                  <execution>
-                    <id>rename-file</id>
-                    <phase>package</phase>
-                    <goals>
-                      <goal>copy</goal>
-                    </goals>
-                    <configuration>
-                      <sourceFile>${project.build.directory}/${c8y-artefact-name}-${project.version}.zip</sourceFile>
-                      <destinationFile>${project.build.directory}/${c8y-artefact-name}.zip</destinationFile>
-                    </configuration>
-                  </execution>
+                    <execution>
+                        <id>rename-file</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <sourceFile>${project.build.directory}/${c8y-artefact-name}-${project.version}.zip</sourceFile>
+                            <destinationFile>${project.build.directory}/${c8y-artefact-name}.zip</destinationFile>
+                        </configuration>
+                    </execution>
                 </executions>
-              </plugin>
+            </plugin>
         </plugins>
     </build>
 </project>

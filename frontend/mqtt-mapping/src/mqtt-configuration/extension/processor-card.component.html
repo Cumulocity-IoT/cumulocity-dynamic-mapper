@@ -1,0 +1,46 @@
+
+<div class="card pointer card--d-col">
+  <div (click)="detail()" class="card-block text-center card-column-40">
+    <div class="card-appicon">
+      <!-- <c8y-app-icon
+        *ngIf="!isPackage && !isFeature && !isMicroservice && !isExternal"
+        [app]="app"
+        [contextPath]="app.contextPath"
+        [name]="app.name"
+      ></c8y-app-icon> -->
+      <c8y-app-icon
+      [app]="app"
+      [contextPath]="app.contextPath"
+      [name]="app.name"
+    ></c8y-app-icon>
+    </div>
+    <p class="e2e-appCardName text-medium" title="{{ app.name }}">
+      {{ app.name}}
+    </p>
+    <small *ngIf="app.manifest?.version && (isPackage || isMicroservice)" class="text-muted">
+      <em>{{ app.manifest.version }}</em>
+    </small>
+  </div>
+  <div (click)="detail()" class="card-block p-0 no-min-height card--d-col card-column-80 flex-grow">
+    <div class="card-block no-min-height p-t-0 p-b-0 card-column-80">
+      <div *ngIf="app.description" class="text-center-grid">
+        <div class="p-b-8 card-hidden-grid"></div>
+        <p class="small l-h-tight p-b-8 p-l-0 p-r-0">{{ app.description | translate }}</p>
+      </div>
+    </div>
+    <div class="card-footer no-min-height p-t-0 p-b-0 card-column-20 text-center-grid">
+      <div class="p-b-16 card-hidden-list"></div>
+      <div class="p-b-32 card-hidden-list"></div>
+    </div>
+  </div>
+
+  <div class="card-block p-2">
+    <button
+    (click)="delete()"
+    class="btn-dot"
+    title="{{ 'Delete'}}"
+  >
+    <i c8yIcon="minus-sign" class="text-danger"></i>
+  </button>
+  </div>
+</div>
