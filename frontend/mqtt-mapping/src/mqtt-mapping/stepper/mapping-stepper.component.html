@@ -242,12 +242,12 @@
                           </c8y-message>
                         </c8y-messages>
                       </div>
-                      <div class="form-group" *ngIf="!stepperConfiguration.showEditorSource">
+                      <div class="form-group" *ngIf="stepperConfiguration.showProcessorExtensions">
                         <label translate>Type for {{mapping.mappingType}}</label>
                         <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
                           <select class="form-control" formControlName="rt"
-                            [(ngModel)]="mapping.substitutions[0].registeredType">
-                            <option *ngFor="let t of registeredTypes" [ngValue]="t">
+                            [(ngModel)]="mapping.processorExtension">
+                            <option *ngFor="let t of processorExtensions" [ngValue]="t">
                               {{ t }}
                             </option>
                           </select>

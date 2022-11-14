@@ -7,10 +7,6 @@ import java.util.Map;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8yAgent;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
@@ -31,13 +28,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> implements ApplicationContextAware {
+public class ProtobufProcessorStatic<O> extends PayloadProcessor<byte[]> {
 
-        //@Autowired
-        //private ApplicationContext applicationContext;
-        private static ApplicationContext applicationContext;
-
-        public ProtobufProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
+        public ProtobufProcessorStatic(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
         }
 
@@ -51,7 +44,7 @@ public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> implements Ap
         @Override
         public void extractFromSource(ProcessingContext<byte[]> context)
                         throws ProcessingException {
-                if ("CustomMeasurement".equals(context.getMapping().getSubstitutions()[0].registeredType)) {
+                if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
                         CustomMeasurementOuter.CustomMeasurement payloadProtobuf;
                         try {
                                 payloadProtobuf = CustomMeasurementOuter.CustomMeasurement
@@ -96,20 +89,7 @@ public class ProtobufProcessor<O> extends PayloadProcessor<byte[]> implements Ap
                                                                         TYPE.TEXTUAL,
                                                                         RepairStrategy.DEFAULT))));
 
-                        Object bean = getContext().getBean("CustomEvent");
-                        log.info("loaded bean:{}", bean.getClass().getName());
-                } else if ("CustomEvent".equals(context.getMapping().getSubstitutions()[0].registeredType)) {
-
                 }
         }
 
-        @Override
-        public void setApplicationContext(ApplicationContext appContext) throws BeansException {
-                log.info("Setting context was called:{}", appContext);
-                applicationContext = appContext;
-        }
-
-        public static ApplicationContext getContext() {
-                return applicationContext;
-            }
 }

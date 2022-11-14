@@ -89,7 +89,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  registeredTypes: string[];
+  processorExtensions: Record<string,string>[];
 
   constructor(
     public bsModalService: BsModalService,
@@ -176,7 +176,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
-      rt: new FormControl(this.currentSubstitution.registeredType),
+      pe: new FormControl(this.mapping.processorExtension),
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
@@ -320,7 +320,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      this.registeredTypes = await this.mappingService.getRegisteredTypes(this.mapping.mappingType);
+      this.processorExtensions = await this.mappingService.getProcessorExtensions();
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {

@@ -1,11 +1,8 @@
 package mqtt.mapping.core;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,13 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.TimeZone;
-
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
 
 import javax.annotation.PreDestroy;
 
@@ -30,11 +21,8 @@ import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
@@ -55,20 +43,19 @@ import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
-import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
+import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.ClassLoaderUtil;
 import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.extension.ProcessorExtensions;
 import mqtt.mapping.model.API;
@@ -132,6 +119,8 @@ public class C8yAgent implements ImportBeanDefinitionRegistrar {
     public String tenant = null;
 
     private MicroserviceCredentials credentials;
+
+    private Properties processorExtensions = new Properties();;
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -568,25 +557,25 @@ public class C8yAgent implements ImportBeanDefinitionRegistrar {
                 ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
                 InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
                 BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
-                Properties props = new Properties();
+  
                 try {
                     if (buffered != null)
-                        props.load(buffered);
-                    log.info("Extensions:" + props.toString());
+                        processorExtensions.load(buffered);
+                    log.info("Extensions:" + processorExtensions.toString());
                 } catch (IOException io) {
                     io.printStackTrace();
                 }
-                Enumeration extensions = props.propertyNames();
+                Enumeration extensions = processorExtensions.propertyNames();
                 while (extensions.hasMoreElements()) {
                     String key = (String) extensions.nextElement();
                     Class clazz;
                     try {
-                        clazz = dynamicLoader.loadClass(props.getProperty(key));
+                        clazz = dynamicLoader.loadClass(processorExtensions.getProperty(key));
                         
                         BeanDefinitionBuilder bean = BeanDefinitionBuilder.rootBeanDefinition(clazz);
                         // .addPropertyValue("str", "myStringValue");
                         registerBeansDynamically.registerBean(key, bean.getBeanDefinition());
-                        log.info("Sucessfully registered bean: {} for key: {}",props.getProperty(key), key);
+                        log.info("Sucessfully registered bean: {} for key: {}",processorExtensions.getProperty(key), key);
                         // DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
                         // beanFactory.registerBeanDefinition(key, bean.getBeanDefinition());
                     } catch (ClassNotFoundException e) {
@@ -600,6 +589,12 @@ public class C8yAgent implements ImportBeanDefinitionRegistrar {
                 e.printStackTrace();
             }
         }
+    }
+
+    public Map<String, String> getProcessorExtensions() {
+        Map step1 = processorExtensions;
+        Map<String, String> step2 = (Map<String, String>) step1;
+        return new HashMap<String, String>(step2);
     }
 
 }
