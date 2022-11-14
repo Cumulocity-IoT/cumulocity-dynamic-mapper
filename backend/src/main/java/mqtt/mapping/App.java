@@ -35,7 +35,7 @@ import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.impl.FlatFileProcessor;
 import mqtt.mapping.processor.impl.GenericBinaryProcessor;
 import mqtt.mapping.processor.impl.JSONProcessor;
-import mqtt.mapping.processor.impl.ProtobufProcessor;
+import mqtt.mapping.processor.impl.ProtobufProcessorStatic;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
@@ -93,7 +93,7 @@ public class App {
             MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.GENERIC_BINARY, new GenericBinaryProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROTOBUF, new ProtobufProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
+            MappingType.PROTOBUF_STATIC, new ProtobufProcessorStatic<JsonNode>(objectMapper, mqttClient, c8yAgent)
             );
     }
 

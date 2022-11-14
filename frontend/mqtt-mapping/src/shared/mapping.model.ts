@@ -21,7 +21,6 @@ export interface MappingSubstitution {
   pathTarget: string;
   repairStrategy: RepairStrategy;
   expandArray: boolean;
-  registeredType?: string;
 }
 
 export interface Mapping {
@@ -41,6 +40,7 @@ export interface Mapping {
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   externalIdType: string;
+  processorExtension?: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
   mappingType: MappingType;
@@ -122,7 +122,8 @@ export enum MappingType {
   JSON = "JSON",
   FLAT_FILE = "FLAT_FILE",
   GENERIC_BINARY = "GENERIC_BINARY",
-  PROTOBUF = "PROTOBUF"
+  PROTOBUF_STATIC = "PROTOBUF_STATIC",
+  PROTOBUF_EXTENSION = "PROTOBUF_EXTENSION"
 }
 
 export enum RepairStrategy {

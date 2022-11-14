@@ -424,7 +424,7 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
       errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
       defined = true
     }
-    console.log(stepperConfiguration, mapping.mappingType,  MappingType.PROTOBUF)
+    console.log(stepperConfiguration, mapping.mappingType)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }

@@ -12,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
+import mqtt.mapping.processor.extension.ProcessingType;
 
 @Data
 @NoArgsConstructor

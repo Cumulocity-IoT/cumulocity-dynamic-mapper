@@ -62,7 +62,7 @@ import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
-import mqtt.mapping.processor.SynchronousDispatcher;
+//import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
 import mqtt.mapping.processor.ProcessingContext;
 
@@ -72,7 +72,7 @@ import mqtt.mapping.processor.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D5";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";

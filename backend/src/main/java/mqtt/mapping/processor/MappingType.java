@@ -1,19 +1,20 @@
 package mqtt.mapping.processor;
 
 public enum MappingType {
-    JSON ("JSON", String.class, null),
-    FLAT_FILE ( "FLAT_FILE", String.class, null),
-    GENERIC_BINARY ( "GENERIC_BINARY", byte[].class, null),
-    PROTOBUF ( "PROTOBUF", byte[].class, "protobuf");
+    JSON ("JSON", String.class),
+    FLAT_FILE ( "FLAT_FILE", String.class),
+    GENERIC_BINARY ( "GENERIC_BINARY", byte[].class),
+    PROTOBUF_STATIC ( "PROTOBUF_STATIC", byte[].class),
+    PROTOBUF_EXTENSION ( "PROTOBUF_EXTENSION", byte[].class);
 
     public final String name;
     public final Class<?> payloadType;
-    public final String packageName;
 
-    private MappingType (String name, Class<?> payloadType, String packageName){
+
+    private MappingType (String name, Class<?> payloadType){
         this.name = name;
         this.payloadType = payloadType;
-        this.packageName = packageName;
+ 
     }
 
     public String getName() {
