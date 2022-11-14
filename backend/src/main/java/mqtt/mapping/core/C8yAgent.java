@@ -548,7 +548,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
                 File tempFile;
                 tempFile = File.createTempFile(extName, "jar");
-                // tempFile.deleteOnExit();
+                tempFile.deleteOnExit();
                 String canonicalPath = tempFile.getCanonicalPath();
                 String path = tempFile.getPath();
                 String pathWithProtocol = "file://".concat(tempFile.getPath());
@@ -576,12 +576,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     try {
                         clazz = dynamicLoader.loadClass(processorExtensions.getProperty(key));
                         springUtil.registerBean(key, clazz);
-                        // BeanDefinitionBuilder bean = BeanDefinitionBuilder.rootBeanDefinition(clazz);
-                        // .addPropertyValue("str", "myStringValue");
-                        // registerBeansDynamically.registerBean(key, bean.getBeanDefinition());
                         log.info("Sucessfully registered bean: {} for key: {}", processorExtensions.getProperty(key), key);
-                        // DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-                        // beanFactory.registerBeanDefinition(key, bean.getBeanDefinition());
                     } catch (ClassNotFoundException e) {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
