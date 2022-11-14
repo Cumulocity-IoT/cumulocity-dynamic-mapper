@@ -228,11 +228,11 @@ export class MappingComponent implements OnInit {
 
   editMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (this.mappingType == MappingType.PROTOBUF_STATIC) {
+    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
       this.stepperConfiguration.showProcessorExtensions = false,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    } if (this.mappingType == MappingType.PROTOBUF_EXTENSION) {
+    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
       this.stepperConfiguration.showProcessorExtensions = true,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
@@ -245,11 +245,11 @@ export class MappingComponent implements OnInit {
 
   copyMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (this.mappingType == MappingType.PROTOBUF_STATIC) {
+    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
       this.stepperConfiguration.showProcessorExtensions = false,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    } if (this.mappingType == MappingType.PROTOBUF_EXTENSION) {
+    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
       this.stepperConfiguration.showProcessorExtensions = true,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
