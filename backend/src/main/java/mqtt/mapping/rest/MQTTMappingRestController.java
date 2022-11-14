@@ -25,7 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
@@ -45,7 +45,7 @@ public class MQTTMappingRestController {
     MQTTClient mqttClient;
 
     @Autowired
-    C8yAgent c8yAgent;
+    C8YAgent c8yAgent;
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {

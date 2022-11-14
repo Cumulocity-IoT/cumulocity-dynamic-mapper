@@ -1,16 +1,14 @@
 package mqtt.mapping.processor.impl;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
+import javax.ws.rs.ProcessingException;
+
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -19,7 +17,6 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.ProcessingContext;
-import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.ProcessorExtension;
 import mqtt.mapping.processor.RepairStrategy;
 import mqtt.mapping.processor.protobuf.CustomEventOuter;
@@ -30,7 +27,7 @@ public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte
         @Override
         public void extractFromSource(ProcessingContext<byte[]> context)
                         throws ProcessingException {
-                if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
+                if (MappingType.PROTOBUF_EXTENSION.equals(context.getMapping().mappingType)) {
                         CustomEventOuter.CustomEvent payloadProtobuf;
                         try {
                                 payloadProtobuf = CustomEventOuter.CustomEvent
@@ -40,15 +37,13 @@ public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte
                         }
                         Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-                        postProcessingCache
-                                        .put("time",
-                                                        new ArrayList<SubstituteValue>(
-                                                                        Arrays.asList(new SubstituteValue(
-                                                                                        new TextNode(new DateTime(
-                                                                                                        payloadProtobuf.getTimestamp())
-                                                                                                        .toString()),
-                                                                                        TYPE.TEXTUAL,
-                                                                                        RepairStrategy.DEFAULT))));
+                        postProcessingCache.put("time", new ArrayList<SubstituteValue>(
+                                        Arrays.asList(new SubstituteValue(
+                                                        new TextNode(new DateTime(
+                                                                        payloadProtobuf.getTimestamp())
+                                                                        .toString()),
+                                                        TYPE.TEXTUAL,
+                                                        RepairStrategy.DEFAULT))));
                         postProcessingCache.put("text",
                                         new ArrayList<SubstituteValue>(Arrays.asList(
                                                         new SubstituteValue(new TextNode(payloadProtobuf.getTxt()),
@@ -69,6 +64,7 @@ public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte
                                                                         new TextNode(payloadProtobuf.getExternalId()),
                                                                         TYPE.TEXTUAL,
                                                                         RepairStrategy.DEFAULT))));
+                        log.info("New event: {}, {}, {}, {}",payloadProtobuf.getTimestamp(), payloadProtobuf.getTxt(),payloadProtobuf.getEventType() , payloadProtobuf.getExternalId() );
 
                 }
         }

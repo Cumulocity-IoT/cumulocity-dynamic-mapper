@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingsRepresentation;
@@ -40,13 +40,13 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public abstract class PayloadProcessor<O> {
 
-    public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
+    public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         this.objectMapper = objectMapper;
         this.mqttClient = mqttClient;
         this.c8yAgent = c8yAgent;
     }
 
-    protected C8yAgent c8yAgent;
+    protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
 
@@ -66,7 +66,7 @@ public abstract class PayloadProcessor<O> {
     public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage)
             throws IOException;
 
-    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+    public abstract void extractFromSource(ProcessingContext<O> context, ProcessorExtension<O> extension) throws ProcessingException;
 
     public ProcessingContext<O> substituteInTargetAndSend(ProcessingContext<O> context) {
         /*
@@ -82,7 +82,7 @@ public abstract class PayloadProcessor<O> {
                 .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
                         .compareTo(e2.getValue()))
                 .get().getKey();
-
+    
         ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
