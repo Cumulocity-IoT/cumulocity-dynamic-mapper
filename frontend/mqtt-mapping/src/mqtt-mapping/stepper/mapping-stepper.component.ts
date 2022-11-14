@@ -89,7 +89,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  processorExtensions: Record<string,string>[];
+  processorExtensions: any[];
 
   constructor(
     public bsModalService: BsModalService,
@@ -320,7 +320,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      this.processorExtensions = await this.mappingService.getProcessorExtensions();
+      let extObject = await this.mappingService.getProcessorExtensions();
+      this.processorExtensions = Object.entries(extObject);
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {

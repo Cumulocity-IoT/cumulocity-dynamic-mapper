@@ -228,7 +228,12 @@ export class MappingComponent implements OnInit {
 
   editMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (mapping.mappingType == MappingType.PROTOBUF_STATIC || mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
+    if (this.mappingType == MappingType.PROTOBUF_STATIC) {
+      this.stepperConfiguration.showProcessorExtensions = false,
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
+    } if (this.mappingType == MappingType.PROTOBUF_EXTENSION) {
+      this.stepperConfiguration.showProcessorExtensions = true,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
     }
