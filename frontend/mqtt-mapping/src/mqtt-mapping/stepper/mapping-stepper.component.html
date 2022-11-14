@@ -247,8 +247,8 @@
                         <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
                           <select class="form-control" formControlName="rt"
                             [(ngModel)]="mapping.processorExtension">
-                            <option *ngFor="let t of processorExtensions" [ngValue]="t">
-                              {{ t }}
+                            <option *ngFor="let t of processorExtensions" [ngValue]="t[1]">
+                              {{ t[0] }}
                             </option>
                           </select>
                         </div>
