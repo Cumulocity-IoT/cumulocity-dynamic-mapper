@@ -314,7 +314,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   onSelectedProcessorExtensions(event){
     let selected = event.target.value.split(":");
     console.log("OnNextStep", event.target.value, this.processorExtensions[selected[0]]);
-    this.mapping.processorExtension = this.processorExtensions[selected[0]].extension;
+    this.mapping.processorExtension = this.processorExtensions[selected[0]].event;
   }
 
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {

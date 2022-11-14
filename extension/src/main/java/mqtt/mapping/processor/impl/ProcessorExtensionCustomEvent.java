@@ -63,11 +63,6 @@ public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte
                                                                                                                         .getEventType()),
                                                                                                         TYPE.TEXTUAL,
                                                                                                         RepairStrategy.DEFAULT))));
-                        postProcessingCache.put("c8y_GenericEvent.Module.unit",
-                                        new ArrayList<SubstituteValue>(Arrays.asList(
-                                                        new SubstituteValue(new TextNode(payloadProtobuf.getUnit()),
-                                                                        TYPE.TEXTUAL,
-                                                                        RepairStrategy.DEFAULT))));
                         postProcessingCache.put(context.getMapping().targetAPI.identifier,
                                         new ArrayList<SubstituteValue>(Arrays.asList(
                                                         new SubstituteValue(
