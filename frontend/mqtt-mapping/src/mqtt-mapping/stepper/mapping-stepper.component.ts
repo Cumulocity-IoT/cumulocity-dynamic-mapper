@@ -89,7 +89,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  processorExtensions: any[];
+  processorExtensions: any[] = [];
 
   constructor(
     public bsModalService: BsModalService,
@@ -310,6 +310,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.onCancel.emit();
   }
 
+
+  onSelectedProcessorExtensions(event){
+    let selected = event.target.value.split(":");
+    console.log("OnNextStep", event.target.value, this.processorExtensions[selected[0]]);
+    this.mapping.processorExtension = this.processorExtensions[selected[0]].extension;
+  }
+
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
 
     console.log("OnNextStep", event.step.label, this.mapping)
@@ -321,7 +328,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
       let extObject = await this.mappingService.getProcessorExtensions();
-      this.processorExtensions = Object.entries(extObject);
+      let arrayMe = Object.entries(extObject);
+      arrayMe.forEach (ext => {
+        this.processorExtensions.push({
+          event: ext[0],
+          extension: ext[1],
+        })
+      })
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {
