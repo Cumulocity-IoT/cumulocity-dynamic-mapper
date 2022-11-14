@@ -11,15 +11,14 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.SpringUtil;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
@@ -29,7 +28,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class AsynchronousDispatcher implements MqttCallback, ApplicationContextAware  {
+public class AsynchronousDispatcher implements MqttCallback {
 
     public static class MappingProcessor implements Callable<List<ProcessingContext<?>>> {
 
@@ -40,18 +39,20 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
         boolean sendPayload;
         MqttMessage mqttMessage;
         ApplicationContext applicationContext;
-        ExtensionPayloadProcessor<?> protobufProcessorExtension;
+        ExtensionPayloadProcessor<?> extensionPayloadProcessor;
+        SpringUtil springUtil;
 
         public MappingProcessor(List<Mapping> mappings, MQTTClient mqttClient, String topic,
-                Map<MappingType, PayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage, ApplicationContext applicationContext, ExtensionPayloadProcessor protobufProcessorExtension) {
+                Map<MappingType, PayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage,
+                ExtensionPayloadProcessor<?> extensionPayloadProcessor, SpringUtil springUtil) {
             this.resolveMappings = mappings;
             this.mqttClient = mqttClient;
             this.topic = topic;
             this.payloadProcessors = payloadProcessors;
             this.sendPayload = sendPayload;
             this.mqttMessage = mqttMessage;
-            this.applicationContext = applicationContext;
-            this.protobufProcessorExtension =protobufProcessorExtension;
+            this.extensionPayloadProcessor = extensionPayloadProcessor;
+            this.springUtil = springUtil;
         }
 
         @Override
@@ -77,13 +78,10 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
                 ProcessorExtension extension = null;
 
                 // try to find processor extension for mapping
-                if (processor == null){
-                    boolean containsBean = applicationContext.containsBean(mapping.processorExtension);
-                    if (containsBean){
-                        extension = (ProcessorExtension) applicationContext.getBean(mapping.processorExtension);
-                        log.info("Sucessfully loaded extension:{}", extension.getClass().getName());
-                        processor = protobufProcessorExtension;
-                    }
+                if (processor == null) {
+                    extension = (ProcessorExtension) springUtil.getBean(mapping.processorExtension);
+                    log.info("Sucessfully loaded extension:{}", extension.getClass().getName());
+                    processor = extensionPayloadProcessor;
                 }
                 if (processor != null || extension != null) {
                     try {
@@ -109,11 +107,7 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
                                 mqttClient.setMappingDirty(mapping);
                             }
                         } else {
-                            if ( extension != null) {
-                                ((ExtensionPayloadProcessor) processor).extractFromSource(context,extension);
-                            } else {
-                                processor.extractFromSource(context);
-                            }
+                            processor.extractFromSource(context, extension);
                             processor.substituteInTargetAndSend(context);
                             // processor.substituteInTargetAndSend(context);
                             ArrayList<C8YRequest> resultRequests = context.getRequests();
@@ -121,8 +115,8 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
                                 mappingStatus.errors++;
                             }
                         }
-                    } catch (Exception e) {
-                        log.warn("Message could NOT be parsed, ignoring this message.");
+                    } catch (Exception e ) {
+                        log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
                         e.printStackTrace();
                         mappingStatus.errors++;
                     }
@@ -139,7 +133,7 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
     @Autowired
-    protected C8yAgent c8yAgent;
+    protected C8YAgent c8yAgent;
 
     @Autowired
     protected MQTTClient mqttClient;
@@ -157,9 +151,8 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
 
-    // @Autowired
-    // private ApplicationContext applicationContext;
-    private static ApplicationContext applicationContext;
+    @Autowired
+    private SpringUtil springUtil;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
@@ -196,7 +189,8 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolveMappings, mqttClient, topic, payloadProcessors, sendPayload, mqttMessage, applicationContext, extensionPayloadProcessor));
+                new MappingProcessor(resolveMappings, mqttClient, topic, payloadProcessors, sendPayload, mqttMessage,
+                        extensionPayloadProcessor, springUtil));
 
         return futureProcessingResult;
 
@@ -211,16 +205,6 @@ public class AsynchronousDispatcher implements MqttCallback, ApplicationContextA
 
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-    }
-
-    @Override
-    public void setApplicationContext(ApplicationContext appContext) throws BeansException {
-            log.info("Setting context was called:{}", appContext);
-            applicationContext = appContext;
-    }
-
-    public static ApplicationContext getContext() {
-            return applicationContext;
     }
 
 }

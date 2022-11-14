@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.InnerNodeSerializer;
 import mqtt.mapping.model.MappingNode;
@@ -46,7 +46,7 @@ import mqtt.mapping.service.RFC3339DateFormat;
 public class App {
 
     @Autowired
-    C8yAgent c8yAgent;
+    C8YAgent c8yAgent;
 
     @Autowired
     MQTTClient mqttClient;
@@ -88,7 +88,7 @@ public class App {
 
     @Bean("payloadProcessors")
     public Map<MappingType, PayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
-            C8yAgent c8yAgent) {
+            C8YAgent c8yAgent) {
         return Map.of(
             MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),

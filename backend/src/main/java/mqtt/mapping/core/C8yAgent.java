@@ -54,6 +54,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.ClassLoaderUtil;
+import mqtt.mapping.SpringUtil;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.ServiceConfiguration;
@@ -71,7 +72,7 @@ import mqtt.mapping.service.ServiceStatus;
 
 @Slf4j
 @Service
-public class C8yAgent implements ImportBeanDefinitionRegistrar {
+public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
@@ -111,6 +112,9 @@ public class C8yAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private ProcessorExtensions extensions;
+
+    @Autowired
+    private SpringUtil springUtil;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -571,11 +575,11 @@ public class C8yAgent implements ImportBeanDefinitionRegistrar {
                     Class clazz;
                     try {
                         clazz = dynamicLoader.loadClass(processorExtensions.getProperty(key));
-                        
-                        BeanDefinitionBuilder bean = BeanDefinitionBuilder.rootBeanDefinition(clazz);
+                        springUtil.registerBean(key, clazz);
+                        // BeanDefinitionBuilder bean = BeanDefinitionBuilder.rootBeanDefinition(clazz);
                         // .addPropertyValue("str", "myStringValue");
-                        registerBeansDynamically.registerBean(key, bean.getBeanDefinition());
-                        log.info("Sucessfully registered bean: {} for key: {}",processorExtensions.getProperty(key), key);
+                        // registerBeansDynamically.registerBean(key, bean.getBeanDefinition());
+                        log.info("Sucessfully registered bean: {} for key: {}", processorExtensions.getProperty(key), key);
                         // DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
                         // beanFactory.registerBeanDefinition(key, bean.getBeanDefinition());
                     } catch (ClassNotFoundException e) {

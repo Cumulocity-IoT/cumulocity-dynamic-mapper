@@ -13,10 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.SpringUtil;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
+import mqtt.mapping.processor.extension.ExtensionPayloadProcessor;
 import mqtt.mapping.processor.handler.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
@@ -27,16 +29,22 @@ public class SynchronousDispatcher implements MqttCallback {
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
     @Autowired
-    protected C8yAgent c8yAgent;
+    protected C8YAgent c8yAgent;
 
     @Autowired
     protected MQTTClient mqttClient;
+    
+    @Autowired
+    ExtensionPayloadProcessor<?> extensionPayloadProcessor;
 
     @Autowired
     SysHandler sysHandler;
 
     @Autowired
     Map<MappingType, PayloadProcessor<?>> payloadProcessors;
+
+    @Autowired
+    private SpringUtil springUtil;
 
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
@@ -66,7 +74,7 @@ public class SynchronousDispatcher implements MqttCallback {
                 resolveMappings.forEach(mapping -> {
                     MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
 
-                    ProcessingContext<?>  context;
+                    ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
                         context = new ProcessingContext<String>();
                     } else {
@@ -80,6 +88,13 @@ public class SynchronousDispatcher implements MqttCallback {
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     PayloadProcessor processor = payloadProcessors.get(mappingType);
+                    ProcessorExtension extension = null;
+                    // try to find processor extension for mapping
+                    if (processor == null) {
+                        extension = (ProcessorExtension) springUtil.getBean(mapping.processorExtension);
+                        log.info("Sucessfully loaded extension:{}", extension.getClass().getName());
+                        processor = extensionPayloadProcessor;
+                    }
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, mqttMessage);
@@ -105,7 +120,7 @@ public class SynchronousDispatcher implements MqttCallback {
 
                                 }
                             } else {
-                                processor.extractFromSource(context);
+                                processor.extractFromSource(context, extension);
                                 processor.substituteInTargetAndSend(context);
                                 ArrayList<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {

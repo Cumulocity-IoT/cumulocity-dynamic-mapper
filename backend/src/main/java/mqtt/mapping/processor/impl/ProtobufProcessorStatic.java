@@ -15,40 +15,41 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.MappingType;
 import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.ProcessorExtension;
 import mqtt.mapping.processor.RepairStrategy;
 import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ProtobufProcessorStatic<O> extends PayloadProcessor<byte[]> {
+public class ProtobufProcessorStatic<T> extends PayloadProcessor<T> {
 
-        public ProtobufProcessorStatic(ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent) {
+        public ProtobufProcessorStatic(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
         }
 
         @Override
-        public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, MqttMessage mqttMessage)
+        public ProcessingContext<T> deserializePayload(ProcessingContext<T> context, MqttMessage mqttMessage)
                         throws IOException {
-                context.setPayload(mqttMessage.getPayload());
+                context.setPayload((T) mqttMessage.getPayload());
                 return context;
         }
 
         @Override
-        public void extractFromSource(ProcessingContext<byte[]> context)
+        public void extractFromSource(ProcessingContext<T> context, ProcessorExtension<T> extension)
                         throws ProcessingException {
                 if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
                         CustomMeasurementOuter.CustomMeasurement payloadProtobuf;
                         try {
                                 payloadProtobuf = CustomMeasurementOuter.CustomMeasurement
-                                                .parseFrom(context.getPayload());
+                                                .parseFrom( (byte[])context.getPayload());
                         } catch (InvalidProtocolBufferException e) {
                                 throw new ProcessingException(e.getMessage());
                         }

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
@@ -17,7 +17,7 @@ import mqtt.mapping.service.MQTTClient;
 public class FlatFileProcessor<O> extends JSONProcessor<JsonNode> {
 
 
-    public FlatFileProcessor( ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent){
+    public FlatFileProcessor( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
