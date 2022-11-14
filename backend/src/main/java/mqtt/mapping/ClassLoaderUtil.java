@@ -15,7 +15,9 @@ public class ClassLoaderUtil {
             //     method.setAccessible(true);
             // }
             method.trySetAccessible();
-            URLClassLoader classLoader = new URLClassLoader(new URL[] {}, ClassLoader.getSystemClassLoader());
+            //URLClassLoader classLoader = new URLClassLoader(new URL[] {}, ClassLoader.getSystemClassLoader());
+            URLClassLoader classLoader = new URLClassLoader(new URL[] {}, mqtt.mapping.App.class.getClassLoader());
+
             method.invoke(classLoader, new URL(url));
             return classLoader;
         } catch (Exception e) {
