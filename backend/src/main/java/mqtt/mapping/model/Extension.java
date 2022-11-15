@@ -25,7 +25,7 @@ public class Extension implements Serializable {
     }
 
     @NotNull
-    public boolean loadedSuccessfully;
+    public boolean loaded;
 
     @NotNull
     public String name;

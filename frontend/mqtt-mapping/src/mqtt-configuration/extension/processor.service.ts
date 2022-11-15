@@ -54,7 +54,7 @@ export class ProcessorService {
     async getProcessorExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
         let extensions = (await this.getExtensions(customFilter)).data;
         extensions.forEach (async ext => {
-            ext.loaded = (await this.configurationService.getProcessorExtension(ext.name)).loadedSuccessfully;
+            ext.loaded = (await this.configurationService.getProcessorExtension(ext.name)).loaded;
         })
         // return (await this.getExtensions(customFilter)).data;
         return extensions;

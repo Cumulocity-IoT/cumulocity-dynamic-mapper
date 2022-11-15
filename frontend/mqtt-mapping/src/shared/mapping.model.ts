@@ -71,7 +71,7 @@ export interface ExtensionEntry {
 }
 
 export interface Extension {
-  loadedSuccessfully: boolean,
+  loaded: boolean,
   name:string;
   extensions: ExtensionEntry[];
 
