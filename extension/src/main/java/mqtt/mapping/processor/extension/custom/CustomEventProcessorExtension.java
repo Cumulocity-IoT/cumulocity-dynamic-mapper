@@ -22,7 +22,7 @@ import mqtt.mapping.processor.model.RepairStrategy;
 
 @Slf4j
 @Component
-public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte[]> {
+public class CustomEventProcessorExtension<O> implements ProcessorExtension<byte[]> {
         @Override
         public void extractFromSource(ProcessingContext<byte[]> context)
                         throws ProcessingException {

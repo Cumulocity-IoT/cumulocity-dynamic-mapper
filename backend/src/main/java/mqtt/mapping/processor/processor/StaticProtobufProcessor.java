@@ -29,9 +29,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ProtobufProcessorStatic<T> extends BasePayloadProcessor<T> {
+public class StaticProtobufProcessor<T> extends BasePayloadProcessor<T> {
 
-        public ProtobufProcessorStatic(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+        public StaticProtobufProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
         }
 

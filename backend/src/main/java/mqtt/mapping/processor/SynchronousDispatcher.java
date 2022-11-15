@@ -18,7 +18,7 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.processor.extension.ExtensionPayloadProcessor;
+import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
@@ -39,7 +39,7 @@ public class SynchronousDispatcher implements MqttCallback {
     protected MQTTClient mqttClient;
     
     @Autowired
-    ExtensionPayloadProcessor<?> extensionPayloadProcessor;
+    ExtensibleProcessor<?> extensionPayloadProcessor;
 
     @Autowired
     SysHandler sysHandler;

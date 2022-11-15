@@ -21,11 +21,12 @@
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
+- [Processing Extensions (Prorobuf)](#processing-extensions-protobuf)
 - [Monitoring](#monitoring)
+- [Mapping Tree](#mapping-tree)
 - [REST API](#rest-api)
 - [Load Test](#load-test)
 - [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
-
 
 
 ## Overview
@@ -399,12 +400,28 @@ In order to use a previously snooped payload click the button
 
 ![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
 
+
+### Processing Extensions (Prorobuf)
+
+![Template Editor](resources/image/Generic_MQTT_ProtobufMessage.png)
+
+
+![Processing payloads](resources/image/Generic_MQTT_Dispatcher.png)
+
+
+![Uploaded Extension payloads](resources/image/Generic_MQTT_ProcessorExtension.png)
+
 ### Monitoring
 
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
 ![Monitoring](resources/image/Generic_MQTT_Monitoring.png)
 
+### Mapping Tree
+
+On the tab ```Mapping Tree``` you can see how the registered mappings are organised in a tree. This can be very helpful in case of tracing any errors.
+
+![Monitoring](resources/image/Generic_MQTT_MappingTree.png)
 
 ### REST API
 
@@ -417,6 +434,9 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 1. ```.../mapping```: retrieve, delete, update mappings
 1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
+1. ```.../extension/```: returns list of all loaded extensions
+1. ```.../extension/{extension-name}```: returns list of specified extensions, if the extension is loaded
+
 
 ### Load Test
 In the resource section you find a test profil [jmeter_test_01.jmx](resources/script/jmeter_test_01.jmx) using jmeter and an extention for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
