@@ -59,6 +59,8 @@ import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.extension.ProcessorExtensions;
 import mqtt.mapping.model.API;
+import mqtt.mapping.model.Extension;
+import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
@@ -75,9 +77,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private EventApi eventApi;
-
-    @Autowired
-    private RegisterBeansDynamically registerBeansDynamically;
 
     @Autowired
     private InventoryFacade inventoryApi;
@@ -123,7 +122,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MicroserviceCredentials credentials;
 
-    private Properties processorExtensions = new Properties();;
+    private Map<String,Extension> processorExtensions = new HashMap<>();
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -535,6 +534,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void loadProcessorExtensions() {
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensions.PROCESSOR_EXTENSION_TYPE).toString();
+            processorExtensions.put(extName, new Extension(extName));
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
 
@@ -561,25 +561,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
                 BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
   
+                Properties newExtensions = new Properties();
+                
                 try {
                     if (buffered != null)
-                        processorExtensions.load(buffered);
-                    log.info("Extensions:" + processorExtensions.toString());
+                    newExtensions.load(buffered);
+                    log.info("Preparing to load extensions:" + newExtensions.toString());
                 } catch (IOException io) {
                     io.printStackTrace();
                 }
-                Enumeration extensions = processorExtensions.propertyNames();
+                Enumeration extensions = newExtensions.propertyNames();
                 while (extensions.hasMoreElements()) {
                     String key = (String) extensions.nextElement();
                     Class clazz;
+                    boolean loadedSuccessfully = true;
                     try {
-                        clazz = dynamicLoader.loadClass(processorExtensions.getProperty(key));
+                        clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
                         springUtil.registerBean(key, clazz);
-                        log.info("Sucessfully registered bean: {} for key: {}", processorExtensions.getProperty(key), key);
-                    } catch (ClassNotFoundException e) {
-                        // TODO Auto-generated catch block
+                        processorExtensions.get(extName).getExtensions().add (new ExtensionEntry(key,newExtensions.getProperty(key)));
+                        log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key), key);
+                    } catch (Exception e) {
+                        log.warn("Could not load extension: {}:{}, ignoring loading!", key,newExtensions.getProperty(key));
                         e.printStackTrace();
+                        loadedSuccessfully = false;
+
                     }
+                    processorExtensions.get(extName).setLoadedSuccessfully(loadedSuccessfully);
                 }
 
             } catch (IOException e) {
@@ -589,10 +596,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public Map<String, String> getProcessorExtensions() {
-        Map step1 = processorExtensions;
-        Map<String, String> step2 = (Map<String, String>) step1;
-        return new HashMap<String, String>(step2);
+    public Map<String,Extension> getAllLoadedProcessorExtensions() {
+        // Map step1 = processorExtensions;
+        // Map<String, String> step2 = (Map<String, String>) step1;
+        return processorExtensions;
+    }
+
+
+    public Extension getLoadedProcessorExtension(String extension) {
+        return processorExtensions.get(extension);
     }
 
 }
