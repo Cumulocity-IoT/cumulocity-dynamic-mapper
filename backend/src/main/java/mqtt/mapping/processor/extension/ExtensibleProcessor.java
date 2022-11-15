@@ -16,9 +16,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ExtensionPayloadProcessor<T> extends BasePayloadProcessor<byte[]> {
+public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
 
-        public ExtensionPayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+        public ExtensibleProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
         }
 

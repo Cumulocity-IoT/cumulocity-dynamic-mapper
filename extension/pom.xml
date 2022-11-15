@@ -18,7 +18,7 @@
 
   <groupId>com.softwareag.c8y.integration.mqtt</groupId>
   <artifactId>mqtt.mapping.extension</artifactId>
-  <version>1.1</version>
+  <version>1.2</version>
 
   <name>mqtt.mapping.extension</name>
 
@@ -36,8 +36,17 @@
     <dependency>
       <groupId>com.softwareag.c8y.integration.mqtt</groupId>
       <artifactId>mqtt.mapping.service</artifactId>
-      <version>1.89</version>
+      <version>1.92</version>
       <scope>provided</scope>
+    </dependency>
+
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <type>pom</type>
+        <version>3.21.9</version>
+        <scope>import</scope>
+        
     </dependency> 
  
   </dependencies>

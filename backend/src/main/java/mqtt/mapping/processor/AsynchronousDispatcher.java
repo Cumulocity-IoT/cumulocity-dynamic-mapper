@@ -22,7 +22,7 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.processor.extension.ExtensionPayloadProcessor;
+import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
@@ -43,12 +43,12 @@ public class AsynchronousDispatcher implements MqttCallback {
         boolean sendPayload;
         MqttMessage mqttMessage;
         ApplicationContext applicationContext;
-        ExtensionPayloadProcessor<?> extensionPayloadProcessor;
+        ExtensibleProcessor<?> extensionPayloadProcessor;
         SpringUtil springUtil;
 
         public MappingProcessor(List<Mapping> mappings, MQTTClient mqttClient, String topic,
                 Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage,
-                ExtensionPayloadProcessor<?> extensionPayloadProcessor, SpringUtil springUtil) {
+                ExtensibleProcessor<?> extensionPayloadProcessor, SpringUtil springUtil) {
             this.resolveMappings = mappings;
             this.mqttClient = mqttClient;
             this.topic = topic;
@@ -143,7 +143,7 @@ public class AsynchronousDispatcher implements MqttCallback {
     protected MQTTClient mqttClient;
 
     @Autowired
-    protected ExtensionPayloadProcessor<?> extensionPayloadProcessor;
+    protected ExtensibleProcessor<?> extensionPayloadProcessor;
 
     @Autowired
     SysHandler sysHandler;
