@@ -574,7 +574,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 while (extensions.hasMoreElements()) {
                     String key = (String) extensions.nextElement();
                     Class clazz;
-                    boolean loadedSuccessfully = true;
+                    boolean loaded = true;
                     try {
                         clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
                         springUtil.registerBean(key, clazz);
@@ -583,10 +583,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     } catch (Exception e) {
                         log.warn("Could not load extension: {}:{}, ignoring loading!", key,newExtensions.getProperty(key));
                         e.printStackTrace();
-                        loadedSuccessfully = false;
+                        loaded = false;
 
                     }
-                    processorExtensions.get(extName).setLoadedSuccessfully(loadedSuccessfully);
+                    processorExtensions.get(extName).setLoaded(loaded);
                 }
 
             } catch (IOException e) {
