@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.handler;
+package mqtt.mapping.processor.system;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.measurement.MeasurementValue;
 
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 
 @Service
 public class SysHandler {
@@ -37,7 +37,7 @@ public class SysHandler {
     private final String SUB_COUNT = "$SYS/broker/subscriptions/count";
 
     @Autowired
-    private C8yAgent c8yAgent;
+    private C8YAgent c8yAgent;
 
     public void handleSysPayload(String topic, MqttMessage mqttMessage) {
         if (topic == null)

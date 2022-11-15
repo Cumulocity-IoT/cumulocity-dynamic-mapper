@@ -1,4 +1,4 @@
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.model;
 
 import org.springframework.web.bind.annotation.RequestMethod;
 

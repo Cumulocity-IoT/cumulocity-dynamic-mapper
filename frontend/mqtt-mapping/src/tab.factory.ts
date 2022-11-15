@@ -45,6 +45,13 @@ export class MappingTabFactory implements TabFactory {
         icon: 'tree-structure',
         orientation: 'horizontal',
       } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/extension',
+        priority: 880,
+        label: 'Processor Extension',
+        icon: 'plugin',
+        orientation: 'horizontal',
+      } as Tab);
     }
 
     return tabs;

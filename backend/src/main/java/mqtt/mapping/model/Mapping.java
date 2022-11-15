@@ -1,17 +1,20 @@
 package mqtt.mapping.model;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-import mqtt.mapping.processor.MappingType;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import mqtt.mapping.processor.model.MappingType;
 
 @Getter
 @Setter
@@ -78,6 +81,10 @@ public class Mapping implements Serializable {
 
   @NotNull
   public MappingType mappingType;
+
+  @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public String processorExtension;
 
   @NotNull
   public long lastUpdate;

@@ -12,6 +12,8 @@ import {
 } from '@c8y/ngx-components';
 import { BokerConfigurationComponent } from './mqtt-configuration/broker-configuration.component';
 import { ConfigurationModule } from './mqtt-configuration/configuration.module';
+import { AddProcessorExtensionComponent } from './mqtt-configuration/extension/add-processor-extension.component';
+import { ProcessorComponent } from './mqtt-configuration/extension/processor.component';
 import { MappingTreeComponent } from './mqtt-mapping-tree/tree.component';
 import { MappingTreeModule } from './mqtt-mapping-tree/tree.module';
 import { MappingComponent } from './mqtt-mapping/grid/mapping.component';
@@ -63,6 +65,11 @@ import { MappingTabFactory } from './tab.factory';
         pathMatch: 'full',
         component: MappingTreeComponent,
       },
+      {
+        path: 'mqtt-mapping/extension',
+        pathMatch: 'plugin',
+        component: ProcessorComponent,
+      },
     ]),
   ],
   exports: [
@@ -99,6 +106,10 @@ import { MappingTabFactory } from './tab.factory';
           path: 'mqtt-mapping/tree',
           component: MappingTreeComponent,
         },
+        {
+          path: 'mqtt-mapping/extension',
+          component: ProcessorComponent,
+        },
       ] as Route[],
       multi: true,
     },
@@ -115,7 +126,17 @@ import { MappingTabFactory } from './tab.factory';
         c8yIcon: 'plus-circle'
       },
       multi: true
-    }
+    },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        wizardId: 'uploadProcessorExtension',
+        component: AddProcessorExtensionComponent,
+        name: 'Upload Processor Extension',
+        c8yIcon: 'upload'
+      },
+      multi: true
+    },
   ],
 })
 export class MQTTMappingModule {
