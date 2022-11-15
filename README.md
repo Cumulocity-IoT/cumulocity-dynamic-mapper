@@ -21,7 +21,7 @@
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
-- [Processing Extensions (Prorobuf)](#processing-extensions-protobuf)
+- [Processing Extensions (Protobuf)](#processing-extensions-protobuf)
 - [Monitoring](#monitoring)
 - [Mapping Tree](#mapping-tree)
 - [REST API](#rest-api)
@@ -401,7 +401,7 @@ In order to use a previously snooped payload click the button
 ![Enable Snooping](resources/image/Generic_MQTT_UseSnoopedPayload.png)
 
 
-### Processing Extensions (Prorobuf)
+### Processing Extensions (Protobuf)
 
 ![Template Editor](resources/image/Generic_MQTT_ProtobufMessage.png)
 
