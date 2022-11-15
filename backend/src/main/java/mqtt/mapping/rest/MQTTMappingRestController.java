@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
@@ -230,39 +231,18 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/registry", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,String>> getProcessorExtensions() {
-        Map <String,String> result = c8yAgent.getProcessorExtensions();
-        //List<String> result = new ArrayList<String>(Arrays.asList("CustomMeasurement"));
-        // String javaFolder = null;
-        // try {
-        //     javaFolder = MappingType.valueOf(type).packageName;
-            
-        // } catch (Exception e) {
-        //     return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        // }
-        // String packageName = BASE_PACKAGE_NAME_TYPES.concat(".").concat(javaFolder);
-        // log.info("Finding registered types in: {}", packageName.replaceAll("[.]", "/"));
-        // try {
-        //     InputStream stream = 
-        //     ClassUtils.getDefaultClassLoader()
-        //     .getResourceAsStream(packageName.replaceAll("[.]", "/"));
-        //     BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        //     result = reader.lines()
-        //             .peek(line->log.info("FOUND:" + line))
-        //             .filter(line -> line.endsWith(".class"))
-        //             .map(line -> getClass(line, packageName))
-        //              .filter(cl -> (com.google.protobuf.GeneratedMessageV3.class.isAssignableFrom(cl)
-        //                      | com.google.protobuf.GeneratedMessageLite.class.isAssignableFrom(cl)))
-        //             .map(cl -> cl.getCanonicalName())
-        //             .collect(Collectors.toList());
+    @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,Extension>> getAllLoadedProcessorExtensions() {
+        Map<String,Extension> result = c8yAgent.getAllLoadedProcessorExtensions();
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
 
-        //     log.info("Get all registered protobuf types: {}", result);
-        // } catch (Exception ex) {
-        //     ex.printStackTrace();
-        //     log.error("No types registered for: {}", type);
-        //     throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getLocalizedMessage());
-        // }
+    @RequestMapping(value = "/extension/{extension}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Extension> getLoadedProcessorExtension(@PathVariable String extension) {
+        Extension result = c8yAgent.getLoadedProcessorExtension(extension);
+        if (result == null)
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Extension with id " + extension + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 

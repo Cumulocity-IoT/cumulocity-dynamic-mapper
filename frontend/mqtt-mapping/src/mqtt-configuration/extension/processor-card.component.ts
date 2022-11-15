@@ -13,17 +13,9 @@ export class ProcessorCardComponent implements OnInit {
   @Input() app: IManagedObject;
   @Output() onAppDeleted: EventEmitter<void> = new EventEmitter();
 
-  isPackage: boolean = false;
-  isMicroservice: boolean = false;
-  isFeature: boolean = true;
-  isExternal: boolean = false;
-  isUnpacked: boolean = false;
-
   constructor(
     private processorService: ProcessorService,
     private alertService: AlertService,
-    private router: Router,
-    private modal: BsModalRef
   ) {}
 
   async ngOnInit() {

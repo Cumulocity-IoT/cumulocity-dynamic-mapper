@@ -19,7 +19,7 @@ export class ProcessorComponent implements OnInit {
 
   extensions$: Observable<IManagedObject> = this.reload$.pipe(
     tap(() => (this.reloading = true)),
-    switchMap(() => this.processorService.getWebExtensions()),
+    switchMap(() => this.processorService.getProcessorExtensions()),
     tap(console.log),
     tap(() => (this.reloading = false)),
     shareReplay()

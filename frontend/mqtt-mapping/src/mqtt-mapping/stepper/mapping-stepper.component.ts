@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { API, ExtensionEntry, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -15,6 +15,7 @@ import { SubstitutionRendererComponent } from './substitution/substitution-rende
 import { C8YRequest } from '../processor/prosessor.model';
 import { MappingService } from '../core/mapping.service';
 import { StepperConfiguration } from './stepper-model';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 
 @Component({
   selector: 'mapping-stepper',
@@ -89,11 +90,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  processorExtensions: any[] = [];
+  processorExtensions: ExtensionEntry[] = [];
 
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
+    public configurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private elementRef: ElementRef,
 
@@ -327,13 +329,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      let extObject = await this.mappingService.getProcessorExtensions();
-      let arrayMe = Object.entries(extObject);
-      arrayMe.forEach (ext => {
-        this.processorExtensions.push({
-          event: ext[0],
-          extension: ext[1],
-        })
+      let extObject = await this.configurationService.getProcessorExtensions();
+      
+      // this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
+      //   return [n, n];
+      // })
+      this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
+        return n;
       })
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);

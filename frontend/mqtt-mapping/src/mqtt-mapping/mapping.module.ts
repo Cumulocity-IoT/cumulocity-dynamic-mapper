@@ -16,6 +16,7 @@ import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { MappingStepperComponent } from './stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
 import { SharedModule } from '../shared/shared.module';
+import { ConfigurationModule } from '../mqtt-configuration/configuration.module';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { SharedModule } from '../shared/shared.module';
     CoreModule,
     SharedModule,
     PopoverModule,
+    ConfigurationModule
   ],
   entryComponents: [
     OverwriteSubstitutionModalComponent,

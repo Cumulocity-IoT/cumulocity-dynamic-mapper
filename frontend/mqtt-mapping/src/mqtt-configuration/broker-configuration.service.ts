@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/util';
-import { ConnectionConfiguration, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
+import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_EXTERNSION_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/util';
+import { ConnectionConfiguration, Extension, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -123,5 +123,38 @@ export class BrokerConfigurationService {
       body: JSON.stringify({ "operation": op }),
       method: 'POST',
     });
+  }
+
+  async getProcessorExtensions(): Promise<Map<string,Extension>> {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}`, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json'
+      },
+      method: 'GET',
+    });
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    //let result =  (await response.json()) as string[];
+    return response.json();
+  }
+
+
+  async getProcessorExtension(name: string): Promise<Extension> {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}/${name}`, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json'
+      },
+      method: 'GET',
+    });
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    //let result =  (await response.json()) as string[];
+    return response.json();
   }
 }

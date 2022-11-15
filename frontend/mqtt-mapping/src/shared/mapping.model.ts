@@ -65,6 +65,18 @@ export interface PayloadWrapper {
   message: string;
 }
 
+export interface ExtensionEntry {
+  event: string;
+  extension: string;
+}
+
+export interface Extension {
+  loadedSuccessfully: boolean,
+  name:string;
+  extensions: ExtensionEntry[];
+
+}
+
 export enum Status {
   CONNECTED = "CONNECTED",
   ENABLED = "ACTIVATED",

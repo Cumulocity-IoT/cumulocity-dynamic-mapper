@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Mapping } from '../../shared/mapping.model';
-import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_TYPE_REGISTRY_ENDPOINT } from '../../shared/util';
+import { Extension, Mapping } from '../../shared/mapping.model';
+import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_EXTERNSION_ENDPOINT } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
 import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
@@ -97,21 +97,5 @@ export class MappingService {
     }
     return result;
   }
-
-  async getProcessorExtensions(): Promise<Record<string,string>[]> {
-    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}`, {
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json'
-      },
-      method: 'GET',
-    });
-
-    if (response.status != 200) {
-      return undefined;
-    }
-    //let result =  (await response.json()) as string[];
-    return response.json();
-  }
-
+  
 }

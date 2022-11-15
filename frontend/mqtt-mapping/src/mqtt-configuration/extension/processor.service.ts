@@ -13,6 +13,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { BehaviorSubject } from 'rxjs';
 import { PROCESSOR_EXTENSION_TYPE } from '../../shared/util';
+import { BrokerConfigurationService } from '../broker-configuration.service';
 
 @Injectable({ providedIn: 'root' })
 export class ProcessorService {
@@ -27,6 +28,7 @@ export class ProcessorService {
         private translateService: TranslateService,
         private inventoryService: InventoryService,
         private inventoryBinaryService: InventoryBinaryService,
+        private configurationService: BrokerConfigurationService,
         private fetchClient: FetchClient
     ) { }
 
@@ -49,8 +51,13 @@ export class ProcessorService {
         }
         return result;
     }
-    async getWebExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
-        return (await this.getExtensions(customFilter)).data;
+    async getProcessorExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
+        let extensions = (await this.getExtensions(customFilter)).data;
+        extensions.forEach (async ext => {
+            ext.loaded = (await this.configurationService.getProcessorExtension(ext.name)).loadedSuccessfully;
+        })
+        // return (await this.getExtensions(customFilter)).data;
+        return extensions;
     }
 
     async deleteExtension(app: IManagedObject): Promise<void> {
