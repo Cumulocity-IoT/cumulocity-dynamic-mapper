@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.handler;
+package mqtt.mapping.processor.system;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

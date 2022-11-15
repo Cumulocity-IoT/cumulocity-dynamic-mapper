@@ -64,9 +64,9 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
-import mqtt.mapping.processor.C8YRequest;
-import mqtt.mapping.processor.ProcessingContext;
 import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceStatus;
 

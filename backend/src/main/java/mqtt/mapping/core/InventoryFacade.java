@@ -11,7 +11,7 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.mock.MockInventory;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Service

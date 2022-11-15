@@ -30,12 +30,12 @@ import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
-import mqtt.mapping.processor.MappingType;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.impl.FlatFileProcessor;
-import mqtt.mapping.processor.impl.GenericBinaryProcessor;
-import mqtt.mapping.processor.impl.JSONProcessor;
-import mqtt.mapping.processor.impl.ProtobufProcessorStatic;
+import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.processor.FlatFileProcessor;
+import mqtt.mapping.processor.processor.GenericBinaryProcessor;
+import mqtt.mapping.processor.processor.JSONProcessor;
+import mqtt.mapping.processor.processor.ProtobufProcessorStatic;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
@@ -87,7 +87,7 @@ public class App {
     }
 
     @Bean("payloadProcessors")
-    public Map<MappingType, PayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
+    public Map<MappingType, BasePayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
             C8YAgent c8yAgent) {
         return Map.of(
             MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),

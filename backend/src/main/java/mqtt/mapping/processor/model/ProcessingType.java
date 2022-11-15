@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.extension;
+package mqtt.mapping.processor.model;
 
 public enum ProcessingType {
     UNDEFINED,

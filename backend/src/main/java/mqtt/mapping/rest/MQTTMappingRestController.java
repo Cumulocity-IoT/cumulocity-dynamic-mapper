@@ -30,7 +30,7 @@ import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceOperation;
 import mqtt.mapping.service.ServiceStatus;

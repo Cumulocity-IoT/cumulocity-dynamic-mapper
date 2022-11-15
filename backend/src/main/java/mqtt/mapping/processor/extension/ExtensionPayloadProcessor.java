@@ -9,15 +9,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.ProcessorExtension;
+import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ExtensionPayloadProcessor<T> extends PayloadProcessor<byte[]> {
+public class ExtensionPayloadProcessor<T> extends BasePayloadProcessor<byte[]> {
 
         public ExtensionPayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
@@ -29,10 +28,8 @@ public class ExtensionPayloadProcessor<T> extends PayloadProcessor<byte[]> {
                 context.setPayload(mqttMessage.getPayload());
                 return context;
         }
-        public void extractFromSource(ProcessingContext<byte[]> context) throws ProcessingException {
-                // bot used
-        }
 
+        @Override
         public void extractFromSource(ProcessingContext<byte[]> context, ProcessorExtension<byte[]> extension) throws ProcessingException {
                 extension.extractFromSource(context);
         }

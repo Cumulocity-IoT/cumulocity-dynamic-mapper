@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.processor;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -10,7 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.PayloadWrapper;
+import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
 @Service
