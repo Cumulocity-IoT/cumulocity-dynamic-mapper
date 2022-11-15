@@ -59,13 +59,13 @@ export const packageProperties: PropertiesListItem[] = [
     key: 'repository',
     transform: (repository: any) => (repository?.url ? repository.url : repository),
     type: 'link',
-    action: (e, link) => window.open(link.value as string, '_blank', 'noopener,noreferrer')
+    action: (e, link) => window.open(link as string, '_blank', 'noopener,noreferrer')
   },
   {
     label: gettext('Homepage'),
     key: 'homepage',
     type: 'link',
-    action: (e, link) => window.open(link.value as string, '_blank', 'noopener,noreferrer')
+    action: (e, link) => window.open(link as string, '_blank', 'noopener,noreferrer')
   },
   {
     label: gettext('Required platform version'),
