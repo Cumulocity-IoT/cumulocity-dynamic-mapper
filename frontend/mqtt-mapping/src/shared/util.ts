@@ -257,6 +257,7 @@ export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
 export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const PROCESSOR_EXTENSION_TYPE = 'c8y_mqttMapping_Processor_Extension';
 export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
 export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
 export const MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
@@ -423,7 +424,7 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
       errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
       defined = true
     }
-    console.log(stepperConfiguration, mapping.mappingType,  MappingType.PROTOBUF)
+    console.log(stepperConfiguration, mapping.mappingType)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }

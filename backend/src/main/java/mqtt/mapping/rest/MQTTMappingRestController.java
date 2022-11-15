@@ -25,13 +25,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.processor.MappingType;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceOperation;
 import mqtt.mapping.service.ServiceStatus;
@@ -46,7 +45,7 @@ public class MQTTMappingRestController {
     MQTTClient mqttClient;
 
     @Autowired
-    C8yAgent c8yAgent;
+    C8YAgent c8yAgent;
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
@@ -231,9 +230,10 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/registry/{type}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<String>> getRegisteredTypes(@PathVariable String type) {
-        List<String> result = new ArrayList<String>(Arrays.asList("CustomMeasurement"));
+    @RequestMapping(value = "/registry", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,String>> getProcessorExtensions() {
+        Map <String,String> result = c8yAgent.getProcessorExtensions();
+        //List<String> result = new ArrayList<String>(Arrays.asList("CustomMeasurement"));
         // String javaFolder = null;
         // try {
         //     javaFolder = MappingType.valueOf(type).packageName;
@@ -266,15 +266,4 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-
-
-    private static Class getClass(String className, String packageName) {
-        try {
-            return Class.forName(packageName + "."
-              + className.substring(0, className.lastIndexOf('.')));
-        } catch (ClassNotFoundException e) {
-            // handle the exception
-        }
-        return null;
-    }
 }

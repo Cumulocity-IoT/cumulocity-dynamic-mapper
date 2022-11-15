@@ -23,19 +23,19 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.InnerNodeSerializer;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
-import mqtt.mapping.processor.MappingType;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.impl.FlatFileProcessor;
-import mqtt.mapping.processor.impl.GenericBinaryProcessor;
-import mqtt.mapping.processor.impl.JSONProcessor;
-import mqtt.mapping.processor.impl.ProtobufProcessor;
+import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.processor.FlatFileProcessor;
+import mqtt.mapping.processor.processor.GenericBinaryProcessor;
+import mqtt.mapping.processor.processor.JSONProcessor;
+import mqtt.mapping.processor.processor.ProtobufProcessorStatic;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 
@@ -46,7 +46,7 @@ import mqtt.mapping.service.RFC3339DateFormat;
 public class App {
 
     @Autowired
-    C8yAgent c8yAgent;
+    C8YAgent c8yAgent;
 
     @Autowired
     MQTTClient mqttClient;
@@ -87,16 +87,15 @@ public class App {
     }
 
     @Bean("payloadProcessors")
-    public Map<MappingType, PayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
-            C8yAgent c8yAgent) {
+    public Map<MappingType, BasePayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
+            C8YAgent c8yAgent) {
         return Map.of(
             MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.GENERIC_BINARY, new GenericBinaryProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROTOBUF, new ProtobufProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
+            MappingType.PROTOBUF_STATIC, new ProtobufProcessorStatic<JsonNode>(objectMapper, mqttClient, c8yAgent)
             );
     }
-
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

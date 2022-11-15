@@ -10,7 +10,7 @@ import com.cumulocity.sdk.client.identity.IdentityApi;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.mock.MockIdentity;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Service

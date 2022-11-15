@@ -35,7 +35,8 @@ export class MappingComponent implements OnInit {
   mappingToUpdate: Mapping;
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
-    allowNoDefinedIdentifier: false
+    allowNoDefinedIdentifier: false,
+    showProcessorExtensions: false,
   };
 
   displayOptions: DisplayOptions = {
@@ -183,13 +184,14 @@ export class MappingComponent implements OnInit {
       sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper)
-    } else if (this.mappingType == MappingType.PROTOBUF) {
+    } else if (this.mappingType == MappingType.PROTOBUF_STATIC) {
+      this.stepperConfiguration.showProcessorExtensions = false,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
-      sub.push({
-        pathTarget: '',
-        pathSource: ''
-      } as MappingSubstitution);
+    } if (this.mappingType == MappingType.PROTOBUF_EXTENSION) {
+      this.stepperConfiguration.showProcessorExtensions = true,
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
     }
 
     let mapping = {
@@ -226,7 +228,12 @@ export class MappingComponent implements OnInit {
 
   editMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (mapping.mappingType == MappingType.PROTOBUF) {
+    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
+      this.stepperConfiguration.showProcessorExtensions = false,
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
+    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
+      this.stepperConfiguration.showProcessorExtensions = true,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
     }
@@ -238,7 +245,12 @@ export class MappingComponent implements OnInit {
 
   copyMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (mapping.mappingType == MappingType.PROTOBUF) {
+    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
+      this.stepperConfiguration.showProcessorExtensions = false,
+      this.stepperConfiguration.showEditorSource = false;
+      this.stepperConfiguration.allowNoDefinedIdentifier = true;
+    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
+      this.stepperConfiguration.showProcessorExtensions = true,
       this.stepperConfiguration.showEditorSource = false;
       this.stepperConfiguration.allowNoDefinedIdentifier = true;
     }

@@ -1,4 +1,4 @@
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.model;
 
 public enum RepairStrategy {
     DEFAULT,

@@ -98,8 +98,8 @@ export class MappingService {
     return result;
   }
 
-  async getRegisteredTypes(type: string): Promise<string[]> {
-    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}/${type}`, {
+  async getProcessorExtensions(): Promise<Record<string,string>[]> {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_TYPE_REGISTRY_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json'

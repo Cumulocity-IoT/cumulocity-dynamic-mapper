@@ -1,10 +1,7 @@
 package mqtt.mapping.service;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -56,7 +53,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
@@ -65,9 +62,9 @@ import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
-import mqtt.mapping.processor.SynchronousDispatcher;
+//import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Configuration
@@ -75,7 +72,7 @@ import mqtt.mapping.processor.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D2";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -91,7 +88,7 @@ public class MQTTClient {
     private MqttClient mqttClient;
 
     @Autowired
-    private C8yAgent c8yAgent;
+    private C8YAgent c8yAgent;
 
     // @Autowired
     // private SynchronousDispatcher dispatcher;

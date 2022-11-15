@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 public class MappingsRepresentationJUnitTest {
@@ -145,7 +145,7 @@ public class MappingsRepresentationJUnitTest {
     ProcessingContext p1 = new ProcessingContext();
     p1.addCardinality("value1",   5);
     p1.addCardinality("value2",   5);
-    p1.addCardinality(PayloadProcessor.SOURCE_ID, 1);
+    p1.addCardinality(BasePayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p1.needsRepair);
     assertEquals(false, p1.isNeedsRepair());
 
@@ -153,7 +153,7 @@ public class MappingsRepresentationJUnitTest {
     ProcessingContext p2 = new ProcessingContext();
     p2.addCardinality("value1",   5);
     p2.addCardinality("value2",   4);
-    p2.addCardinality(PayloadProcessor.SOURCE_ID, 1);
+    p2.addCardinality(BasePayloadProcessor.SOURCE_ID, 1);
     // log.info("My neeRepair1: {}", p2.needsRepair);
     assertEquals(true, p2.isNeedsRepair());
 

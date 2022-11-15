@@ -89,7 +89,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  registeredTypes: string[];
+  processorExtensions: any[] = [];
 
   constructor(
     public bsModalService: BsModalService,
@@ -176,7 +176,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
-      rt: new FormControl(this.currentSubstitution.registeredType),
+      pe: new FormControl(this.mapping.processorExtension),
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
@@ -310,6 +310,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.onCancel.emit();
   }
 
+
+  onSelectedProcessorExtensions(event){
+    let selected = event.target.value.split(":");
+    console.log("OnNextStep", event.target.value, this.processorExtensions[selected[0]]);
+    this.mapping.processorExtension = this.processorExtensions[selected[0]].event;
+  }
+
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
 
     console.log("OnNextStep", event.step.label, this.mapping)
@@ -320,7 +327,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      this.registeredTypes = await this.mappingService.getRegisteredTypes(this.mapping.mappingType);
+      let extObject = await this.mappingService.getProcessorExtensions();
+      let arrayMe = Object.entries(extObject);
+      arrayMe.forEach (ext => {
+        this.processorExtensions.push({
+          event: ext[0],
+          extension: ext[1],
+        })
+      })
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {

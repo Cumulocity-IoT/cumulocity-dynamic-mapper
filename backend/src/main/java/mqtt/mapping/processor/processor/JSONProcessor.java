@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.processor;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,23 +20,24 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8yAgent;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.RepairStrategy;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
+public class JSONProcessor<O> extends BasePayloadProcessor<JsonNode> {
 
-    public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8yAgent c8yAgent){
+    public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
@@ -48,7 +49,7 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context)
+    public void extractFromSource(ProcessingContext<JsonNode> context, ProcessorExtension<JsonNode> extension)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         JsonNode payloadJsonNode = context.getPayload();
@@ -58,16 +59,6 @@ public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
          * is required in the payload for a substitution
          */
-        // try {
-        //     payloadJsonNode = objectMapper.readTree(payload);
-
-        // } catch (JsonProcessingException e) {
-        //     log.error("JsonProcessingException parsing: {}:", payload, e);
-        //     context.setError(
-        //             new ProcessingException("JsonProcessingException parsing: " + payload + " exception:" + e));
-        //     throw new ProcessingException("JsonProcessingException parsing: " + payload +
-        //     " exception:" + e);
-        // }
         ArrayNode topicLevels = objectMapper.createArrayNode();
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
         splitTopicAsList.forEach(s -> topicLevels.add(s));
