@@ -1,18 +1,7 @@
-
 <div class="card pointer card--d-col">
   <div (click)="detail()" class="card-block text-center card-column-40">
     <div class="card-appicon">
-      <!-- <c8y-app-icon
-        *ngIf="!isPackage && !isFeature && !isMicroservice && !isExternal"
-        [app]="app"
-        [contextPath]="app.contextPath"
-        [name]="app.name"
-      ></c8y-app-icon> -->
-      <c8y-app-icon
-      [app]="app"
-      [contextPath]="app.contextPath"
-      [name]="app.name"
-    ></c8y-app-icon>
+      <c8y-app-icon [app]="app" [contextPath]="app.contextPath" [name]="app.name"></c8y-app-icon>
     </div>
     <p class="e2e-appCardName text-medium" title="{{ app.name }}">
       {{ app.name}}
@@ -34,13 +23,20 @@
     </div>
   </div>
 
-  <div class="card-block p-2">
-    <button
-    (click)="delete()"
-    class="btn-dot"
-    title="{{ 'Delete'}}"
-  >
-    <i c8yIcon="minus-sign" class="text-danger"></i>
-  </button>
+  <div class="card-actions m-t-0">
+    <div class="dropdown" dropdown>
+      <button class="dropdown-toggle c8y-dropdown" dropdownToggle title="{{ 'Settings' | translate }}">
+        <i c8yIcon="ellipsis-v"></i>
+      </button>
+      <ul *dropdownMenu class="dropdown-menu dropdown-menu-right">
+        <li>
+          <button (click)="delete()" title="{{ 'Delete' }}">
+            <i c8yIcon="trash" class="m-r-4"></i>
+            {{ 'Delete' | translate }}
+          </button>
+        </li>
+      </ul>
+    </div>
   </div>
+
 </div>

@@ -6,16 +6,18 @@ import { AddProcessorExtensionComponent } from './add-processor-extension.compon
 import { AddExtensionComponent } from './add-processor.component';
 import { ProcessorCardComponent } from './processor-card.component';
 import { ProcessorComponent } from './processor.component';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
   declarations: [
     ProcessorComponent,
     ProcessorCardComponent,
     AddExtensionComponent,
-    AddProcessorExtensionComponent
+    AddProcessorExtensionComponent,
   ],
   imports: [
     CoreModule,
+    BsDropdownModule.forRoot()
   ],
   entryComponents: [
     ProcessorComponent,

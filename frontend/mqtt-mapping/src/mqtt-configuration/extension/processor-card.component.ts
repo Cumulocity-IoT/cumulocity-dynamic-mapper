@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
+import { BsModalRef } from 'ngx-bootstrap/modal';
 import { ProcessorService } from './processor.service';
 
 @Component({
@@ -21,7 +22,8 @@ export class ProcessorCardComponent implements OnInit {
   constructor(
     private processorService: ProcessorService,
     private alertService: AlertService,
-    private router: Router
+    private router: Router,
+    private modal: BsModalRef
   ) {}
 
   async ngOnInit() {
