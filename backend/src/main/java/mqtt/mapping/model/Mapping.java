@@ -14,7 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import mqtt.mapping.processor.MappingType;
+import mqtt.mapping.processor.model.MappingType;
 
 @Getter
 @Setter

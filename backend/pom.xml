@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.integration.mqtt</groupId>
     <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.87</version>
+    <version>1.89</version>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -110,10 +110,14 @@
                 <version>${spring-boot-dependencies.version}</version>
                 <executions>
                     <execution>
+                        <id>repackage</id>
                         <goals>
                             <goal>repackage</goal>
                         </goals>
-                    </execution>
+                        <configuration>
+                            <!-- <classifier>exec</classifier> -->
+                        </configuration>
+                        </execution>
                 </executions>
                 <configuration>
                     <mainClass>${main.class}</mainClass>

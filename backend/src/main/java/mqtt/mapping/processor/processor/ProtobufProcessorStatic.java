@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.processor;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,18 +18,18 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.MappingType;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.ProcessorExtension;
-import mqtt.mapping.processor.RepairStrategy;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ProtobufProcessorStatic<T> extends PayloadProcessor<T> {
+public class ProtobufProcessorStatic<T> extends BasePayloadProcessor<T> {
 
         public ProtobufProcessorStatic(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);

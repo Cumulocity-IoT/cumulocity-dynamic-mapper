@@ -64,7 +64,7 @@ import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
 //import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Configuration

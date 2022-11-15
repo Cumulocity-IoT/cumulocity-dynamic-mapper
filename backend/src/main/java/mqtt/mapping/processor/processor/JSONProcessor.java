@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.processor;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,16 +26,16 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.ProcessingContext;
+import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.ProcessorExtension;
-import mqtt.mapping.processor.RepairStrategy;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor<O> extends PayloadProcessor<JsonNode> {
+public class JSONProcessor<O> extends BasePayloadProcessor<JsonNode> {
 
     public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);

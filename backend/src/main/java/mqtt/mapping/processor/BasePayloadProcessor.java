@@ -33,14 +33,18 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.handler.SysHandler;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
+import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class PayloadProcessor<O> {
+public abstract class BasePayloadProcessor<O> {
 
-    public PayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public BasePayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         this.objectMapper = objectMapper;
         this.mqttClient = mqttClient;
         this.c8yAgent = c8yAgent;

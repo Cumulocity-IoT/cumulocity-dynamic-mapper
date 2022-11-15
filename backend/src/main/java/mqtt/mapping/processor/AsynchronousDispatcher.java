@@ -23,7 +23,11 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.processor.extension.ExtensionPayloadProcessor;
-import mqtt.mapping.processor.handler.SysHandler;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
@@ -35,7 +39,7 @@ public class AsynchronousDispatcher implements MqttCallback {
         List<Mapping> resolveMappings;
         MQTTClient mqttClient;
         String topic;
-        Map<MappingType, PayloadProcessor<?>> payloadProcessors;
+        Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
         boolean sendPayload;
         MqttMessage mqttMessage;
         ApplicationContext applicationContext;
@@ -43,7 +47,7 @@ public class AsynchronousDispatcher implements MqttCallback {
         SpringUtil springUtil;
 
         public MappingProcessor(List<Mapping> mappings, MQTTClient mqttClient, String topic,
-                Map<MappingType, PayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage,
+                Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage,
                 ExtensionPayloadProcessor<?> extensionPayloadProcessor, SpringUtil springUtil) {
             this.resolveMappings = mappings;
             this.mqttClient = mqttClient;
@@ -74,7 +78,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                 context.setSendPayload(sendPayload);
                 // identify the corect processor based on the mapping type
                 MappingType mappingType = context.getMappingType();
-                PayloadProcessor processor = payloadProcessors.get(mappingType);
+                BasePayloadProcessor processor = payloadProcessors.get(mappingType);
                 ProcessorExtension extension = null;
 
                 // try to find processor extension for mapping
@@ -145,7 +149,7 @@ public class AsynchronousDispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, PayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
     @Autowired
     @Qualifier("cachedThreadPool")

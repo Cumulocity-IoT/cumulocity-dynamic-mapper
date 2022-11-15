@@ -19,7 +19,11 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.processor.extension.ExtensionPayloadProcessor;
-import mqtt.mapping.processor.handler.SysHandler;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
@@ -41,7 +45,7 @@ public class SynchronousDispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, PayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
     @Autowired
     private SpringUtil springUtil;
@@ -87,7 +91,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     context.setSendPayload(sendPayload);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    PayloadProcessor processor = payloadProcessors.get(mappingType);
+                    BasePayloadProcessor processor = payloadProcessors.get(mappingType);
                     ProcessorExtension extension = null;
                     // try to find processor extension for mapping
                     if (processor == null) {

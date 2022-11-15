@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

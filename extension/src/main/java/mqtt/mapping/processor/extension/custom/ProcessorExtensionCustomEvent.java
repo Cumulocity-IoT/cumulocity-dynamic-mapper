@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.impl;
+package mqtt.mapping.processor.extension.custom;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,11 +15,10 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.MappingType;
-import mqtt.mapping.processor.ProcessingContext;
-import mqtt.mapping.processor.ProcessorExtension;
-import mqtt.mapping.processor.RepairStrategy;
-import mqtt.mapping.processor.protobuf.CustomEventOuter;
+import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
 
 @Slf4j
 @Component
@@ -64,7 +63,7 @@ public class ProcessorExtensionCustomEvent<O> implements ProcessorExtension<byte
                                                                         new TextNode(payloadProtobuf.getExternalId()),
                                                                         TYPE.TEXTUAL,
                                                                         RepairStrategy.DEFAULT))));
-                        log.info("New event: {}, {}, {}, {}",payloadProtobuf.getTimestamp(), payloadProtobuf.getTxt(),payloadProtobuf.getEventType() , payloadProtobuf.getExternalId() );
+                        log.info("New event over protobuf: {}, {}, {}, {}",payloadProtobuf.getTimestamp(), payloadProtobuf.getTxt(),payloadProtobuf.getEventType() , payloadProtobuf.getExternalId() );
 
                 }
         }
