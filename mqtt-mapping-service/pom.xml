@@ -2,50 +2,64 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.softwareag.c8y.integration.mqtt</groupId>
-    <artifactId>mqtt.mapping.service</artifactId>
-    <version>1.92</version>
+    <artifactId>mqtt-mapping-service</artifactId>
+
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.5.14</version>
+        <groupId>com.softwareag.c8y.mqtt</groupId>
+        <artifactId>mqtt-mapping-solution</artifactId>
+        <version>1.0</version>
     </parent>
 
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <spring-boot-dependencies.version>2.5.14</spring-boot-dependencies.version>
         <main.class>mqtt.mapping.App</main.class>
-        <c8y.version>1014.134.0</c8y.version>
-        <lombok.version>1.18.24</lombok.version>
         <c8y-artefact-name>mqtt-mapping-service</c8y-artefact-name>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>cumulocity</id>
-            <layout>default</layout>
-            <url>https://download.cumulocity.com/maven/repository</url>
-        </repository>
-    </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>public</id>
-            <url>https://download.cumulocity.com/maven/repository</url>
-        </pluginRepository>
-    </pluginRepositories>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.nsn.cumulocity.clients-java</groupId>
+                <artifactId>microservice-dependencies</artifactId>
+                <version>${c8y.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.21.9</version>
+            <groupId>com.nsn.cumulocity.model</groupId>
+            <artifactId>device-capability-model</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-            <version>5.9.0</version>
+            <groupId>com.nsn.cumulocity.clients-java</groupId>
+            <artifactId>microservice-autoconfigure</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-kotlin</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -55,54 +69,26 @@
         </dependency>
 
         <dependency>
-            <groupId>com.nsn.cumulocity.clients-java</groupId>
-            <artifactId>microservice-autoconfigure</artifactId>
-            <version>${c8y.version}</version>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.nsn.cumulocity.model</groupId>
-            <artifactId>device-capability-model</artifactId>
-            <version>${c8y.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.paho</groupId>
-            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-            <version>1.2.5</version>
-        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
+        
         <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-            <version>1.1.0.Final</version>
-        </dependency>
-
-        <!-- <dependency>
-            <groupId>com.softwareag.c8y.integration.mqtt</groupId>
-            <artifactId>mqtt.mapping.extension</artifactId>
-            <version>1.0</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
-        </dependency> -->
+            <version>5.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>
-        <!-- <resources>
-            <resource>
-                <directory>src/main/java/mqtt/mapping/processor/protobuf/</directory>
-                <excludes>
-                    <exclude>**</exclude>
-                </excludes>
-            </resource>
-        </resources> -->
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -117,7 +103,7 @@
                         <configuration>
                             <!-- <classifier>exec</classifier> -->
                         </configuration>
-                        </execution>
+                    </execution>
                 </executions>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
