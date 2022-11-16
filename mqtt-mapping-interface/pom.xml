@@ -19,7 +19,7 @@
   <artifactId>mqtt-mapping-interface</artifactId>
 
   <parent>
-    <groupId>com.softwareag.c8y</groupId>
+    <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-solution</artifactId>
     <version>1.0</version>
   </parent>
