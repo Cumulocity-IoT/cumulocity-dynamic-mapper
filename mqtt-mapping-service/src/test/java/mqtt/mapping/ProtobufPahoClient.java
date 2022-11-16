@@ -6,9 +6,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import mqtt.mapping.processor.extension.custom.CustomEventOuter;
-import mqtt.mapping.processor.extension.custom.CustomEventOuter.CustomEvent;
-
+import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
+import mqtt.mapping.processor.protobuf.CustomMeasurementOuter.CustomMeasurement;
 
 public class ProtobufPahoClient {
 
@@ -17,18 +16,18 @@ public class ProtobufPahoClient {
     public static void main(String[] args) {
 
         ProtobufPahoClient client = new ProtobufPahoClient();
-        client.testSendEvent();
+        client.testSendMeasurement();
+
     }
 
-    private void testSendEvent() {
+    private void testSendMeasurement() {
         int qos = 0;
         String broker = System.getenv("broker");
         String client_id = System.getenv("client_id");
         String broker_username = System.getenv("broker_username");
         String broker_password = System.getenv("broker_password");
-        String topic2 = "protobuf/event";
-
         try {
+            String topic1 = "protobuf/measurement";
             MqttClient sampleClient = new MqttClient(broker, client_id, persistence);
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setUserName(broker_username);
@@ -41,15 +40,17 @@ public class ProtobufPahoClient {
 
             System.out.println("Publishing message: :::");
 
-            CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
+            CustomMeasurementOuter.CustomMeasurement proto = CustomMeasurement.newBuilder()
                     .setExternalIdType("c8y_Serial")
                     .setExternalId("berlin_01")
-                    .setTxt("Dummy Text")
+                    .setUnit("C")
+                    .setMeasurementType("c8y_GenericMeasurement")
+                    .setValue(99.7F)
                     .build();
 
             MqttMessage message = new MqttMessage(proto.toByteArray());
             message.setQos(qos);
-            sampleClient.publish(topic2, message);
+            sampleClient.publish(topic1, message);
 
             System.out.println("Message published");
             sampleClient.disconnect();
