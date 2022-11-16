@@ -3,4 +3,5 @@ export interface StepperConfiguration {
     showProcessorExtensions?: boolean;
     editMode?: boolean;
     allowNoDefinedIdentifier?: boolean;
+    allowTesting?: boolean;
 }

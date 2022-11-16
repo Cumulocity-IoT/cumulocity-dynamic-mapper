@@ -37,6 +37,7 @@ export class MappingComponent implements OnInit {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
     showProcessorExtensions: false,
+    allowTesting: true
   };
 
   displayOptions: DisplayOptions = {
@@ -184,16 +185,8 @@ export class MappingComponent implements OnInit {
       sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
       } as PayloadWrapper)
-    } else if (this.mappingType == MappingType.PROTOBUF_STATIC) {
-      this.stepperConfiguration.showProcessorExtensions = false,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    } if (this.mappingType == MappingType.PROTOBUF_EXTENSION) {
-      this.stepperConfiguration.showProcessorExtensions = true,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
     }
-
+    this.setStepperConfiguration(this.mappingType)
     let mapping = {
       id: l,
       ident: uuidv4(),
@@ -228,15 +221,7 @@ export class MappingComponent implements OnInit {
 
   editMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
-      this.stepperConfiguration.showProcessorExtensions = false,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
-      this.stepperConfiguration.showProcessorExtensions = true,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    }
+    this.setStepperConfiguration(mapping.mappingType);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
     console.log("Editing mapping", this.mappingToUpdate)
@@ -245,15 +230,7 @@ export class MappingComponent implements OnInit {
 
   copyMapping(mapping: Mapping) {
     this.stepperConfiguration.editMode = true;
-    if (mapping.mappingType == MappingType.PROTOBUF_STATIC) {
-      this.stepperConfiguration.showProcessorExtensions = false,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    } if (mapping.mappingType == MappingType.PROTOBUF_EXTENSION) {
-      this.stepperConfiguration.showProcessorExtensions = true,
-      this.stepperConfiguration.showEditorSource = false;
-      this.stepperConfiguration.allowNoDefinedIdentifier = true;
-    }
+    this.setStepperConfiguration(mapping.mappingType)
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.ident = uuidv4();
@@ -334,9 +311,30 @@ export class MappingComponent implements OnInit {
     }
   }
 
+  setStepperConfiguration(mappingType: MappingType) {
+    if (mappingType == MappingType.PROTOBUF_STATIC) {
+      this.stepperConfiguration = {
+        ...this.stepperConfiguration,
+        showProcessorExtensions: false,
+        showEditorSource: false,
+        allowNoDefinedIdentifier: true,
+        allowTesting: false
+      }
+    } if (mappingType == MappingType.PROTOBUF_EXTENSION) {
+      this.stepperConfiguration = {
+        ...this.stepperConfiguration,
+        showProcessorExtensions: true,
+        showEditorSource: false,
+        allowNoDefinedIdentifier: true,
+        allowTesting: false
+      }
+    }
+  }
+
   ngOnDestroy() {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
   }
 
 }
+

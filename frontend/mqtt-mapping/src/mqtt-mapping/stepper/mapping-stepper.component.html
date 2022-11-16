@@ -625,14 +625,14 @@
           </div>
         </div>
         <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
-          <button type="button" class="btn btn-default" (click)="onTestTransformation()">
+          <button type="button" class="btn btn-default" (click)="onTestTransformation()" [disabled]="!stepperConfiguration.allowTesting">
             Transform Test Message
           </button>
           <button type="button" class="btn btn-default" (click)="onNextTestResult()">
-            Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
+            Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" [disabled]="!stepperConfiguration.allowTesting" class="badge badge-success">
               {{templateTestingResults.length}}</span>
           </button>
-          <button type="button" class="btn btn-default" (click)="onSendTest()">
+          <button type="button" class="btn btn-default" [disabled]="!stepperConfiguration.allowTesting" (click)="onSendTest()">
             Send Test Message
           </button>
         </div>
