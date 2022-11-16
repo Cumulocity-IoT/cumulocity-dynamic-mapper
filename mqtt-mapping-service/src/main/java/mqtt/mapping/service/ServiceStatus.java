@@ -5,10 +5,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
+//@NoArgsConstructor
+//@AllArgsConstructor
 public class ServiceStatus {
     private Status status;
+
+    public ServiceStatus(Status status){
+        this.status = status;
+    }
     
     public static ServiceStatus connected() {
         return new ServiceStatus(Status.CONNECTED);

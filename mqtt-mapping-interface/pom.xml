@@ -16,49 +16,112 @@
     mvn install:install-file -Dfile=backend/target/mqtt.mapping.service-1.89.jar.original -DgroupId=com.softwareag.c8y.integration.mqtt -DartifactId=mqtt.mapping.service -Dversion=1.89 -Dpackaging=jar
    -->
 
-  <groupId>com.softwareag.c8y.mqtt</groupId>
   <artifactId>mqtt-mapping-interface</artifactId>
-  <version>1.1</version>
 
   <parent>
     <groupId>com.softwareag.c8y</groupId>
-    <artifactId>mqtt.mapping.solution</artifactId>
+    <artifactId>mqtt-mapping-solution</artifactId>
     <version>1.0</version>
   </parent>
 
-  <name>mqtt-mapping-interface</name>
-  
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.nsn.cumulocity.clients-java</groupId>
+        <artifactId>microservice-dependencies</artifactId>
+        <version>${c8y.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
+    <dependency>
+      <groupId>com.nsn.cumulocity.model</groupId>
+      <artifactId>device-capability-model</artifactId>
+    </dependency>
 
     <dependency>
-      <groupId>com.softwareag.c8y.integration.mqtt</groupId>
-      <artifactId>mqtt.mapping.service</artifactId>
-      <version>1.92</version>
+      <groupId>com.nsn.cumulocity.clients-java</groupId>
+      <artifactId>microservice-autoconfigure</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.module</groupId>
+      <artifactId>jackson-module-kotlin</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
       <scope>provided</scope>
     </dependency>
 
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <type>pom</type>
-        <version>3.21.9</version>
-        <scope>import</scope>
-    </dependency> 
- 
+    <dependency>
+      <groupId>org.eclipse.paho</groupId>
+      <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.ibm.jsonata4java</groupId>
+      <artifactId>JSONata4Java</artifactId>
+      <version>2.2.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
-
-    <resources>
+    <!-- <resources>
       <resource>
-        <directory>../backend/src/main/java</directory>
+        <directory>../mqtt-mapping-service/src/main/java</directory>
       </resource>
-    </resources>
-
+    </resources> -->
+    <sourceDirectory>../mqtt-mapping-service/src/main/java</sourceDirectory>
     <pluginManagement>
       <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
         <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.0.0</version>
+          <executions>
+            <execution>
+              <id>add-source</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>add-source</goal>
+              </goals>
+              <configuration>
+                <sources>
+                  <source>../mqtt-mapping-service/src/main/java</source>
+                </sources>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+
+
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <version>3.1.0</version>
@@ -71,6 +134,14 @@
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
+          <configuration>
+            <includes>
+              <include>mqtt/mapping/model/*.java</include>
+              <include>mqtt/mapping/processor/model/*.java</include>
+              <include>mqtt/mapping/processor/extension/ProcessorExtension.java</include>
+            </includes>
+
+          </configuration>
         </plugin>
 
         <plugin>
