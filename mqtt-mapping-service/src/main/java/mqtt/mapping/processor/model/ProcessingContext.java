@@ -12,7 +12,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
-import mqtt.mapping.processor.BasePayloadProcessor;
 
 @Data
 @NoArgsConstructor
@@ -46,6 +45,8 @@ public class ProcessingContext<O> {
 
     private boolean needsRepair = false;
 
+    public static String SOURCE_ID = "source.id";
+
     public boolean hasError() {
         return error != null;
     }
@@ -71,7 +72,7 @@ public class ProcessingContext<O> {
         cardinality.put(pathTarget, card);
         Set<Map.Entry<String, Integer>> entries = cardinality.entrySet();
         Stream<Entry<String, Integer>> stream1 = entries.stream()
-                .filter(e -> !BasePayloadProcessor.SOURCE_ID.equals(e.getKey()));
+                .filter(e -> !ProcessingContext.SOURCE_ID.equals(e.getKey()));
         Map<Integer, Long> collect = stream1.collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.counting()));
         needsRepair = (collect.size() != 1);
     }

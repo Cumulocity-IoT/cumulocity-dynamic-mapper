@@ -59,7 +59,6 @@ public abstract class BasePayloadProcessor<O> {
     @Autowired
     SysHandler sysHandler;
 
-    public static String SOURCE_ID = "source.id";
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
