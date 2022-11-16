@@ -628,8 +628,8 @@
           <button type="button" class="btn btn-default" (click)="onTestTransformation()" [disabled]="!stepperConfiguration.allowTesting">
             Transform Test Message
           </button>
-          <button type="button" class="btn btn-default" (click)="onNextTestResult()">
-            Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" [disabled]="!stepperConfiguration.allowTesting" class="badge badge-success">
+          <button type="button" class="btn btn-default" (click)="onNextTestResult()" [disabled]="!stepperConfiguration.allowTesting" >
+            Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
               {{templateTestingResults.length}}</span>
           </button>
           <button type="button" class="btn btn-default" [disabled]="!stepperConfiguration.allowTesting" (click)="onSendTest()">
