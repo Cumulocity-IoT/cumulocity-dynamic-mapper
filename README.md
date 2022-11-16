@@ -504,11 +504,11 @@ In the folder [mqtt.mapping.processor.extension](./backend/src/main/java/mqtt/ma
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf)](#processing-extensions-protobuf) for details.
 In order for the mapper backend to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
 ```
-
-A sample ohow to build an extension is contained in the folder [extension](./extension)
 CustomEvent=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent
 CustomOperation=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomOperation
 ```
+A sample how to build an extension is contained in the folder [extension](./extension).
+
 As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
