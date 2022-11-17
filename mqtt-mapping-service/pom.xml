@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.softwareag.c8y.mqtt</groupId>
         <artifactId>mqtt-mapping-solution</artifactId>
-        <version>1.0</version>
+        <version>1.91</version>
     </parent>
 
     <properties>
@@ -16,7 +16,7 @@
     </properties>
 
     <dependencyManagement>
-        <dependencies>
+        <!-- <dependencies>
             <dependency>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-dependencies</artifactId>
@@ -24,7 +24,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        </dependencies>
+        </dependencies> -->
     </dependencyManagement>
 
     <dependencies>

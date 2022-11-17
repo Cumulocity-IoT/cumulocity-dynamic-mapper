@@ -89,8 +89,8 @@ following Mappings are supported:
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
 Due to two different libraries to evaluate JSONata in:
-1. frontend (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
-1. backend (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+1. mqtt-mapping-ui (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+1. mqtt-mapping-service (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
 differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
@@ -153,12 +153,12 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your Computer.
 
 ### Backend - Microservice
-Run `mvn clean package` in folder `backend` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Run `mvn clean package` in folder `mqtt-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frondend - Plugin
-Run `npm run build` in folder `frontend/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
+Run `npm run build` in folder `mqtt-mapping-ui/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration MQTT connection to broker
@@ -500,16 +500,16 @@ A script to create sample MQTT mappings can be found [here]
 <img src="resources/script/createSampleMappings.sh).
 
 ## Enhance and Extensions
-In the folder [mqtt.mapping.processor.extension](./backend/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
+In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf)](#processing-extensions-protobuf) for details.
-In order for the mapper backend to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
+In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
 ```
 CustomEvent=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent
 CustomOperation=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomOperation
 ```
 A sample how to build an extension is contained in the folder [extension](./extension).
 
-As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
+As an example see the [SysHandler](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/system/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.

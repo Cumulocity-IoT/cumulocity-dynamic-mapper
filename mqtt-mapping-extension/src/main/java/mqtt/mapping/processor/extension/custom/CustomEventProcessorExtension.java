@@ -26,7 +26,7 @@ public class CustomEventProcessorExtension<O> implements ProcessorExtension<byte
         @Override
         public void extractFromSource(ProcessingContext<byte[]> context)
                         throws ProcessingException {
-                if (MappingType.PROTOBUF_EXTENSION.equals(context.getMapping().mappingType)) {
+                if (MappingType.PROCESSOR_EXTENSION.equals(context.getMapping().mappingType)) {
                         CustomEventOuter.CustomEvent payloadProtobuf;
                         try {
                                 payloadProtobuf = CustomEventOuter.CustomEvent

@@ -63,7 +63,7 @@ export abstract class PayloadProcessor {
         } else if (postProcessingCache.get(pathTarget).length == 1) {
           // this is an indication that the substitution is the same for all
           // events/alarms/measurements/inventory
-          if (substituteValue.repairStrategy == RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) {
+          if (substituteValue.repairStrategy == RepairStrategy.USE_FIRST_VALUE_OF_ARRAY || substituteValue.repairStrategy == RepairStrategy.DEFAULT) {
             substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
           } else if (substituteValue.repairStrategy == RepairStrategy.USE_LAST_VALUE_OF_ARRAY) {
             let last: number = postProcessingCache.get(pathTarget).length - 1;

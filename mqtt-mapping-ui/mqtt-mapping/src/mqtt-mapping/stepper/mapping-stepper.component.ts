@@ -178,7 +178,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
-      pe: new FormControl(this.mapping.processorExtension),
+      pe: new FormControl(this.mapping.processorExtensionEvent),
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
@@ -316,7 +316,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   onSelectedProcessorExtensions(event){
     let selected = event.target.value.split(":");
     console.log("OnNextStep", event.target.value, this.processorExtensions[selected[0]]);
-    this.mapping.processorExtension = this.processorExtensions[selected[0]].event;
+    this.mapping.processorExtensionEvent = this.processorExtensions[selected[0]].event;
   }
 
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
