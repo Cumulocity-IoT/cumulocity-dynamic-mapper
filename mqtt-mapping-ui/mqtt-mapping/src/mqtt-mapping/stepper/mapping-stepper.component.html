@@ -245,9 +245,9 @@
                       <div class="form-group" *ngIf="stepperConfiguration.showProcessorExtensions">
                         <label translate>Type for {{mapping.mappingType}}</label>
                         <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
-                          <select class="form-control" formControlName="rt" name="processorExtension" #selectProcessorExtension
-                            [(ngModel)]="mapping.processorExtension" (change)="onSelectedProcessorExtensions($event)">
-                            <option *ngFor="let t of processorExtensions" [ngValue]="t.event" [selected]="t.event == mapping.processorExtension">
+                          <select class="form-control" formControlName="rt" name="processorExtensionEvent" #selectProcessorExtension
+                            [(ngModel)]="mapping.processorExtensionEvent" (change)="onSelectedProcessorExtensions($event)">
+                            <option *ngFor="let t of processorExtensions" [ngValue]="t.event" [selected]="t.event == mapping.processorExtensionEvent">
                               {{ t.event }}
                             </option>
                           </select>
