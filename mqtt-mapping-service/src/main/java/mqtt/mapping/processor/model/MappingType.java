@@ -5,7 +5,7 @@ public enum MappingType {
     FLAT_FILE ( "FLAT_FILE", String.class),
     GENERIC_BINARY ( "GENERIC_BINARY", byte[].class),
     PROTOBUF_STATIC ( "PROTOBUF_STATIC", byte[].class),
-    PROTOBUF_EXTENSION ( "PROTOBUF_EXTENSION", byte[].class);
+    PROCESSOR_EXTENSION ( "PROCESSOR_EXTENSION", byte[].class);
 
     public final String name;
     public final Class<?> payloadType;

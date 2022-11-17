@@ -84,7 +84,7 @@ public class Mapping implements Serializable {
 
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)
-  public String processorExtension;
+  public String processorExtensionEvent;
 
   @NotNull
   public long lastUpdate;
