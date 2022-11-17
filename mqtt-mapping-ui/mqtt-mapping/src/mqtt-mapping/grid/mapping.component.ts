@@ -320,7 +320,7 @@ export class MappingComponent implements OnInit {
         allowNoDefinedIdentifier: true,
         allowTesting: false
       }
-    } else if (mappingType == MappingType.PROTOBUF_EXTENSION) {
+    } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
         ...this.stepperConfiguration,
         showProcessorExtensions: true,

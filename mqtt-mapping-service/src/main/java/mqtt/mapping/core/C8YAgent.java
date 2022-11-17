@@ -57,7 +57,7 @@ import mqtt.mapping.SpringUtil;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.extension.ProcessorExtensions;
+import mqtt.mapping.extension.ProcessorExtensionsRepresentation;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
@@ -66,6 +66,8 @@ import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.extension.ExtensibleProcessor;
+import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
@@ -109,7 +111,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ConfigurationService configurationService;
 
     @Autowired
-    private ProcessorExtensions extensions;
+    private ProcessorExtensionsRepresentation extensions;
+
+    @Autowired
+    private ExtensibleProcessor extensibleProcessor;
 
     @Autowired
     private SpringUtil springUtil;
@@ -122,7 +127,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MicroserviceCredentials credentials;
 
-    private Map<String,Extension> processorExtensions = new HashMap<>();
+    private Map<String, Extension> processorExtensions = new HashMap<>();
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -533,7 +538,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private void loadProcessorExtensions() {
         for (ManagedObjectRepresentation bObj : extensions.get()) {
-            String extName = bObj.getProperty(ProcessorExtensions.PROCESSOR_EXTENSION_TYPE).toString();
+            String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
             processorExtensions.put(extName, new Extension(extName));
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
@@ -560,28 +565,42 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
                 InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
                 BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
-  
+
                 Properties newExtensions = new Properties();
-                
+
                 try {
                     if (buffered != null)
-                    newExtensions.load(buffered);
+                        newExtensions.load(buffered);
                     log.info("Preparing to load extensions:" + newExtensions.toString());
                 } catch (IOException io) {
                     io.printStackTrace();
                 }
-                Enumeration extensions = newExtensions.propertyNames();
+                Enumeration<?> extensions = newExtensions.propertyNames();
                 while (extensions.hasMoreElements()) {
                     String key = (String) extensions.nextElement();
-                    Class clazz;
+                    Class<?> clazz;
                     boolean loaded = true;
                     try {
                         clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
-                        springUtil.registerBean(key, clazz);
-                        processorExtensions.get(extName).getExtensions().add (new ExtensionEntry(key,newExtensions.getProperty(key)));
-                        log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key), key);
+                        Object object = clazz.getDeclaredConstructor().newInstance();
+                        if (!(object instanceof ProcessorExtension)) {
+                            log.warn("Extension: {}={} is not instance of ProcessorExtension, ignoring this enty!", key,
+                                    newExtensions.getProperty(key));
+
+                        } else {
+                            ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
+                                    .newInstance();
+                            // springUtil.registerBean(key, clazz);
+                            ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
+                                    extensionImpl);
+                            processorExtensions.get(extName).getExtensions().add(extensionEntry);
+                            log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
+                                    key);
+
+                        }
                     } catch (Exception e) {
-                        log.warn("Could not load extension: {}:{}, ignoring loading!", key,newExtensions.getProperty(key));
+                        log.warn("Could not load extension: {}:{}, ignoring loading!", key,
+                                newExtensions.getProperty(key));
                         e.printStackTrace();
                         loaded = false;
 
@@ -596,12 +615,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public Map<String,Extension> getAllLoadedProcessorExtensions() {
+    public Map<String, Extension> getAllLoadedProcessorExtensions() {
         // Map step1 = processorExtensions;
         // Map<String, String> step2 = (Map<String, String>) step1;
         return processorExtensions;
     }
-
 
     public Extension getLoadedProcessorExtension(String extension) {
         return processorExtensions.get(extension);

@@ -4,10 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import mqtt.mapping.processor.extension.ProcessorExtension;
 
 import java.io.Serializable;
 
 import javax.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Getter
 @NoArgsConstructor
@@ -16,9 +19,12 @@ import javax.validation.constraints.NotNull;
 public class ExtensionEntry implements Serializable {
 
     @NotNull
-    public String event;
+    private String event;
 
     @NotNull
-    public String extension;
+    private String extension;
 
+    @NotNull
+    @JsonIgnore
+    private ProcessorExtension extensionImplementation;
 }

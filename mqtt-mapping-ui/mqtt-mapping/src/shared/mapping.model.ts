@@ -40,7 +40,7 @@ export interface Mapping {
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   externalIdType: string;
-  processorExtension?: string;
+  processorExtensionEvent?: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
   mappingType: MappingType;
@@ -135,7 +135,7 @@ export enum MappingType {
   FLAT_FILE = "FLAT_FILE",
   GENERIC_BINARY = "GENERIC_BINARY",
   PROTOBUF_STATIC = "PROTOBUF_STATIC",
-  PROTOBUF_EXTENSION = "PROTOBUF_EXTENSION"
+  PROCESSOR_EXTENSION = "PROCESSOR_EXTENSION"
 }
 
 export enum RepairStrategy {
