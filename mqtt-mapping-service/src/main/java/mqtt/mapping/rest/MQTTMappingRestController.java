@@ -207,7 +207,7 @@ public class MQTTMappingRestController {
         if (result instanceof InnerNode) {
             innerNode = (InnerNode) result;
         }
-        log.info("Get mapping tree: {}", result, innerNode);
+        log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 

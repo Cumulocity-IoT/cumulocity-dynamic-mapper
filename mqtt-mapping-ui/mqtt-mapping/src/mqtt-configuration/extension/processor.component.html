@@ -2,23 +2,13 @@
 
 <c8y-breadcrumb>
   <c8y-breadcrumb-item [icon]="'c8y-atom'" [label]="'Processor' | translate"></c8y-breadcrumb-item>
-  <c8y-breadcrumb-item
-    [icon]="'c8y-modules'"
-    [label]="'Extensions' | translate"
-    [path]="'processor/extensions'"
-  ></c8y-breadcrumb-item>
-  <c8y-breadcrumb-item
-    [icon]="'c8y-modules'"
-    [label]="'All extensions' | translate"
-  ></c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="'processor/extensions'">
+  </c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'All extensions' | translate"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button
-    (click)="addExtension()"
-    class="btn btn-link"
-    title="{{ 'Add extension' | translate }}"
-  >
+  <button (click)="addExtension()" class="btn btn-link" title="{{ 'Add extension' | translate }}">
     <i c8yIcon="plus-circle"></i>
     {{ 'Add extension' | translate }}
   </button>
@@ -33,10 +23,8 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form hidden-xs">
-  <c8y-list-display-switch
-    (onListClassChange)="listClass = $event"
-    [listLength]="(extensions$ | async)?.length"
-  ></c8y-list-display-switch>
+  <c8y-list-display-switch (onListClassChange)="listClass = $event" [listLength]="(extensions$ | async)?.length">
+  </c8y-list-display-switch>
 </c8y-action-bar-item>
 
 <div *ngIf="(extensions$ | async)?.length === 0" class="c8y-empty-state text-center">
@@ -44,11 +32,7 @@
   <h3 translate>No extension to display.</h3>
   <p translate>Add your first extension by clicking below.</p>
   <p>
-    <button
-      (click)="addExtension()"
-      class="btn btn-primary"
-      title="{{ 'Add extension' | translate }}"
-    >
+    <button (click)="addExtension()" class="btn btn-primary" title="{{ 'Add extension' | translate }}">
       {{ 'Add extension' | translate }}
     </button>
   </p>
@@ -65,11 +49,7 @@
     </div>
   </div>
   <div *ngFor="let app of extensions$ | async" class="col-xs-12 col-sm-4 col-md-3">
-    <c8y-processor-card
-      (onAppDeleted)="loadExtensions()"
-      [app]="app"
-      [loaded]="loaded"
-      class="d-contents"
-    ></c8y-processor-card>
+    <c8y-processor-card (onAppDeleted)="loadExtensions()" [app]="app" [loaded]="loaded" class="d-contents">
+    </c8y-processor-card>
   </div>
 </div>

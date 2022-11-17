@@ -6,6 +6,8 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
 import { ProcessorService } from './processor.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
+import { BrokerConfigurationService } from '../broker-configuration.service';
+import { Operation } from '../../shared/mapping.model';
 
 
 @Component({
@@ -29,7 +31,8 @@ export class ProcessorComponent implements OnInit {
 
   constructor(
     private processorService: ProcessorService,
-    private wizardService: WizardService
+    private wizardService: WizardService,
+    private configurationService: BrokerConfigurationService
   ) { }
 
   ngOnInit() {
@@ -38,6 +41,7 @@ export class ProcessorComponent implements OnInit {
 
   loadExtensions() {
     this.reload$.next();
+    this.configurationService.runOperation(Operation.RELOAD_EXTENSIONS);
   }
 
   addExtension() {
