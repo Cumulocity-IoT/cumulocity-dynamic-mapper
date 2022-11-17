@@ -138,9 +138,9 @@
             <includes>
               <include>mqtt/mapping/model/*.java</include>
               <include>mqtt/mapping/processor/model/*.java</include>
+              <include>mqtt/mapping/processor/model/ProcessingContext.java</include>
               <include>mqtt/mapping/processor/extension/ProcessorExtension.java</include>
             </includes>
-
           </configuration>
         </plugin>
 
