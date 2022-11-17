@@ -157,4 +157,20 @@ export class BrokerConfigurationService {
     //let result =  (await response.json()) as string[];
     return response.json();
   }
+
+  async deleteProcessorExtension(name: string): Promise<string> {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}/${name}`, {
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json'
+      },
+      method: 'DELETE',
+    });
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    //let result =  (await response.json()) as string[];
+    return response.json();
+  }
 }

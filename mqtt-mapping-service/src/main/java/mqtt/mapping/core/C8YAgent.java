@@ -61,6 +61,7 @@ import mqtt.mapping.extension.ProcessorExtensionsRepresentation;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
+import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
@@ -116,9 +117,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     private ExtensibleProcessor extensibleProcessor;
 
-    @Autowired
-    private SpringUtil springUtil;
-
     private MappingServiceRepresentation mappingServiceRepresentation;
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
@@ -127,7 +125,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MicroserviceCredentials credentials;
 
-    private Map<String, Extension> processorExtensions = new HashMap<>();
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -539,7 +536,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void loadProcessorExtensions() {
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
-            processorExtensions.put(extName, new Extension(extName));
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
 
@@ -567,7 +563,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
 
                 Properties newExtensions = new Properties();
-
                 try {
                     if (buffered != null)
                         newExtensions.load(buffered);
@@ -575,38 +570,37 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 } catch (IOException io) {
                     io.printStackTrace();
                 }
+
                 Enumeration<?> extensions = newExtensions.propertyNames();
                 while (extensions.hasMoreElements()) {
                     String key = (String) extensions.nextElement();
                     Class<?> clazz;
-                    boolean loaded = true;
+                    ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
+                    null, true);
+                    extensibleProcessor.addExtension(extName, extensionEntry);
+        
                     try {
                         clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
                         Object object = clazz.getDeclaredConstructor().newInstance();
                         if (!(object instanceof ProcessorExtension)) {
                             log.warn("Extension: {}={} is not instance of ProcessorExtension, ignoring this enty!", key,
                                     newExtensions.getProperty(key));
-
                         } else {
                             ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
                                     .newInstance();
                             // springUtil.registerBean(key, clazz);
-                            ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
-                                    extensionImpl);
-                            processorExtensions.get(extName).getExtensions().add(extensionEntry);
+                            extensionEntry.setExtensionImplementation(extensionImpl);
                             log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
                                     key);
-
                         }
                     } catch (Exception e) {
                         log.warn("Could not load extension: {}:{}, ignoring loading!", key,
                                 newExtensions.getProperty(key));
                         e.printStackTrace();
-                        loaded = false;
-
+                        extensionEntry.setLoaded(false);
                     }
-                    processorExtensions.get(extName).setLoaded(loaded);
                 }
+                extensibleProcessor.updateStatusExtension(extName);
 
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
@@ -615,14 +609,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public Map<String, Extension> getAllLoadedProcessorExtensions() {
-        // Map step1 = processorExtensions;
-        // Map<String, String> step2 = (Map<String, String>) step1;
-        return processorExtensions;
+    public Map<String, Extension> getProcessorExtensions() {
+        return extensibleProcessor.getExtensions();
     }
 
-    public Extension getLoadedProcessorExtension(String extension) {
-        return processorExtensions.get(extension);
+    public Extension getProcessorExtension(String extension) {
+        return extensibleProcessor.getExtension(extension);
     }
 
+    public String deleteProcessorExtension(String extensionName) {
+        for (ManagedObjectRepresentation extensionRepresentation : extensions.get()) {
+            if ( extensionName == extensionRepresentation.getName()) {
+                inventoryApi.delete(extensionRepresentation.getId());
+                log.info("Deleted extension: {} permanently!", extensionName);
+            }
+        }
+        return extensibleProcessor.deleteExtension(extensionName);
+    }
 }

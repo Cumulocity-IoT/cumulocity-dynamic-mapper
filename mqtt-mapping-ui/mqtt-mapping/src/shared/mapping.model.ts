@@ -40,10 +40,10 @@ export interface Mapping {
   createNonExistingDevice: boolean;
   updateExistingDevice: boolean;
   externalIdType: string;
-  processorExtensionEvent?: string;
   snoopStatus: SnoopStatus;
   snoopedTemplates?: string[];
   mappingType: MappingType;
+  extension?: ExtensionEntry;
   lastUpdate: number;
 }
 
@@ -67,14 +67,14 @@ export interface PayloadWrapper {
 
 export interface ExtensionEntry {
   event: string;
-  extension: string;
+  name: string;
+  loaded: boolean;
 }
 
 export interface Extension {
-  loaded: boolean,
   name:string;
-  extensions: ExtensionEntry[];
-
+  extensionEntries: ExtensionEntry[];
+  loaded: boolean,
 }
 
 export enum Status {

@@ -84,7 +84,7 @@ public class Mapping implements Serializable {
 
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)
-  public String processorExtensionEvent;
+  public ExtensionEntry extension;
 
   @NotNull
   public long lastUpdate;
@@ -92,22 +92,6 @@ public class Mapping implements Serializable {
   @Override
   public boolean equals(Object m) {
     return (m instanceof Mapping) && id == ((Mapping) m).id;
-  }
-
-  public void copyFrom(Mapping mapping) {
-    this.subscriptionTopic = mapping.subscriptionTopic;
-    this.templateTopic = mapping.templateTopic;
-    this.targetAPI = mapping.targetAPI;
-    this.source = mapping.source;
-    this.target = mapping.target;
-    this.active = mapping.active;
-    this.tested = mapping.tested;
-    this.qos = mapping.qos;
-    this.substitutions = mapping.substitutions;
-    this.mapDeviceIdentifier = mapping.mapDeviceIdentifier;
-    this.externalIdType = mapping.externalIdType;
-    this.snoopStatus = mapping.snoopStatus;
-    this.snoopedTemplates = mapping.snoopedTemplates;
   }
 
   public void addSnoopedTemplate(String payloadMessage) {
