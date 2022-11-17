@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.ExtensionEntry;
+import mqtt.mapping.model.ExtensionStatus;
+import mqtt.mapping.model.Extension;
 import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -23,7 +25,7 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
 
-        private Map<String, ExtensionEntry> extensions = new HashMap<>();
+        private Map<String, Extension> extensions = new HashMap<>();
 
         public ExtensibleProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
                 super(objectMapper, mqttClient, c8yAgent);
@@ -37,16 +39,76 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
         }
 
         @Override
-        public void extractFromSource(ProcessingContext<byte[]> context, ProcessorExtension<byte[]> extension) throws ProcessingException {
+        public void extractFromSource(ProcessingContext<byte[]> context)
+                        throws ProcessingException {
+                ProcessorExtension extension = null;
+                try {
+                        extension = getProcessorExtension(context.getMapping().extension);
+                        if (extension == null) {
+                                String message = String.format("Extension %s:%s could not be found!",
+                                                context.getMapping().extension.getName(),
+                                                context.getMapping().extension.getEvent());
+                                log.warn("Extension {}:{} could not be found!",
+                                                context.getMapping().extension.getName(),
+                                                context.getMapping().extension.getEvent());
+                                throw new ProcessingException(message);
+                        }
+                } catch (Exception ex) {
+                        String message = String.format("Extension %s:%s could not be found!",
+                                        context.getMapping().extension.getName(),
+                                        context.getMapping().extension.getEvent());
+                        log.warn("Extension {}:{} could not be found!", context.getMapping().extension.getName(),
+                                        context.getMapping().extension.getEvent());
+                        throw new ProcessingException(message);
+                }
                 extension.extractFromSource(context);
         }
 
-        public ProcessorExtension<?> getExtension(String processorExtensionEvent) {
-            return extensions.get(processorExtensionEvent).getExtensionImplementation();
+        public ProcessorExtension<?> getProcessorExtension(ExtensionEntry extension) {
+                String name = extension.getName();
+                String event = extension.getEvent();
+                return extensions.get(name).getExtensionEntries().get(event).getExtensionImplementation();
         }
 
-        public void addExtension(ExtensionEntry entry) {
-                extensions.put(entry.getEvent(), entry);
+        public Extension getExtension(String extensionName) {
+                return extensions.get(extensionName);
+        }
+
+        public Map<String, Extension> getExtensions() {
+                return extensions;
+        }
+
+        public void addExtension(String extensionName, ExtensionEntry entry) {
+                Extension ext = extensions.get(extensionName);
+                if (ext == null) {
+                        ext = new Extension(extensionName);
+                        extensions.put(extensionName, ext);
+                }
+                ext.getExtensionEntries().put(entry.getEvent(), entry);
+        }
+
+        public String deleteExtension(String extensionName) {
+                Extension ext = extensions.remove(extensionName);
+                String result = null;
+                if (ext != null) {
+                        result = ext.getName();
+                }
+                return result;
+        }
+
+        public void updateStatusExtension(String extName) {
+                Extension ext = extensions.get(extName);
+                ext.setLoaded(ExtensionStatus.COMPLETE);
+                long countDefined = ext.getExtensionEntries().size();
+                long countLoaded = ext.getExtensionEntries().entrySet().stream()
+                                .map(entry -> entry.getValue().isLoaded())
+                                .filter(entry -> entry).count();
+                if (countLoaded == 0) {
+                        ext.setLoaded(ExtensionStatus.NOT_LOADED);
+                } else if (countLoaded < countDefined) {
+                        ext.setLoaded(ExtensionStatus.PARTIALLY);
+                }
+
         }
 
 }

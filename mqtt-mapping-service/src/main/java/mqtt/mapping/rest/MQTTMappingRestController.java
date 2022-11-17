@@ -232,17 +232,26 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,Extension>> getAllLoadedProcessorExtensions() {
-        Map<String,Extension> result = c8yAgent.getAllLoadedProcessorExtensions();
+    public ResponseEntity<Map<String,Extension>> getProcessorExtensions() {
+        Map<String,Extension> result = c8yAgent.getProcessorExtensions();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/extension/{extension}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Extension> getLoadedProcessorExtension(@PathVariable String extension) {
-        Extension result = c8yAgent.getLoadedProcessorExtension(extension);
+    public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extension) {
+        Extension result = c8yAgent.getProcessorExtension(extension);
         if (result == null)
         throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Extension with id " + extension + " could not be found.");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @RequestMapping(value = "/extension/{extension}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> deleteProcessorExtension(@PathVariable String extensionName) {
+        String result = c8yAgent.deleteProcessorExtension(extensionName);
+        if (result == null)
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 

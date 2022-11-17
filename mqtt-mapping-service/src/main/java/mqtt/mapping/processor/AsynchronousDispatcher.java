@@ -77,14 +77,6 @@ public class AsynchronousDispatcher implements MqttCallback {
                 BasePayloadProcessor processor = payloadProcessors.get(mappingType);
 
                 if (processor != null) {
-                    ProcessorExtension<?> extension = null;
-    
-                    // try to find processor extension for mapping
-                    if (mapping.mappingType == MappingType.PROCESSOR_EXTENSION) {
-                        extension = ((ExtensibleProcessor<?>) processor).getExtension(mapping.processorExtensionEvent);  
-                        //extension = (ProcessorExtension)springUtil.getBean(mapping.processorExtensionEvent);
-                        log.info("Sucessfully loaded extension:{}", extension.getClass().getName());
-                    }
                     try {
                         processor.deserializePayload(context, mqttMessage);
                         if (mqttClient.getServiceConfiguration().logPayload) {
@@ -108,7 +100,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                                 mqttClient.setMappingDirty(mapping);
                             }
                         } else {
-                            processor.extractFromSource(context, extension);
+                            processor.extractFromSource(context);
                             processor.substituteInTargetAndSend(context);
                             // processor.substituteInTargetAndSend(context);
                             ArrayList<C8YRequest> resultRequests = context.getRequests();

@@ -18,7 +18,7 @@
 
   <groupId>com.softwareag.c8y.mqtt</groupId>
   <artifactId>mqtt-mapping-extension</artifactId>
-  <version>1.91</version>
+  <version>1.95</version>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

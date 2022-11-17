@@ -43,7 +43,7 @@ public class StaticProtobufProcessor<T> extends BasePayloadProcessor<T> {
         }
 
         @Override
-        public void extractFromSource(ProcessingContext<T> context, ProcessorExtension<T> extension)
+        public void extractFromSource(ProcessingContext<T> context)
                         throws ProcessingException {
                 if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
                         CustomMeasurementOuter.CustomMeasurement payloadProtobuf;
