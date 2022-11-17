@@ -1,8 +1,6 @@
 package mqtt.mapping.rest;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +37,6 @@ import mqtt.mapping.service.ServiceStatus;
 @Slf4j
 @RestController
 public class MQTTMappingRestController {
-
-    private static final String BASE_PACKAGE_NAME_TYPES = "mqtt.mapping.processor";
 
     @Autowired
     MQTTClient mqttClient;

@@ -176,25 +176,25 @@ export class MappingComponent implements OnInit {
   }
 
   async addMapping() {
-    this.stepperConfiguration.editMode = false;
+    this.stepperConfiguration = {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      showProcessorExtensions: false,
+      allowTesting: true,
+      editMode: false
+    };
+
     let l = this.nextId();
 
-    let sampleSource = '{}';
     let sub: MappingSubstitution[] = [];
-    if (this.mappingType == MappingType.FLAT_FILE) {
-      sampleSource = JSON.stringify({
-        message: '10,temp,1666963367'
-      } as PayloadWrapper)
-    }
-    this.setStepperConfiguration(this.mappingType)
-    let mapping = {
+    let mapping: Mapping = {
       id: l,
       ident: uuidv4(),
       subscriptionTopic: '',
       templateTopic: '',
       templateTopicSample: '',
       targetAPI: API.MEASUREMENT.name,
-      source: sampleSource,
+      source: '{}',
       target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
       active: false,
       tested: false,
@@ -209,6 +209,22 @@ export class MappingComponent implements OnInit {
       snoopedTemplates: [],
       lastUpdate: Date.now()
     }
+    if (this.mappingType == MappingType.FLAT_FILE) {
+      let sampleSource = JSON.stringify({
+        message: '10,temp,1666963367'
+      } as PayloadWrapper);
+      mapping = {
+        ...mapping,
+        source: sampleSource
+      }
+    } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION) {
+      mapping.extension = {
+        event: undefined,
+        name: undefined
+      }
+    }
+    this.setStepperConfiguration(this.mappingType)
+
     this.mappingToUpdate = mapping;
     console.log("Add mappping", l, this.mappings)
     this.mappingGridComponent.reload();
@@ -220,7 +236,13 @@ export class MappingComponent implements OnInit {
   }
 
   editMapping(mapping: Mapping) {
-    this.stepperConfiguration.editMode = true;
+    this.stepperConfiguration = {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      showProcessorExtensions: false,
+      allowTesting: true,
+      editMode: true
+    };
     this.setStepperConfiguration(mapping.mappingType);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
@@ -229,7 +251,13 @@ export class MappingComponent implements OnInit {
   }
 
   copyMapping(mapping: Mapping) {
-    this.stepperConfiguration.editMode = true;
+    this.stepperConfiguration = {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      showProcessorExtensions: false,
+      allowTesting: true,
+      editMode: true
+    };
     this.setStepperConfiguration(mapping.mappingType)
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
@@ -290,7 +318,7 @@ export class MappingComponent implements OnInit {
   }
 
   private async activateMappings() {
-    const response2 = await this.configurationService.runOperation(Operation.RELOAD);
+    const response2 = await this.configurationService.runOperation(Operation.RELOAD_MAPPINGS);
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings activated successfully'));

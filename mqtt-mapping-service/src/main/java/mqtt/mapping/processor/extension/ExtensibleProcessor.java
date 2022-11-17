@@ -96,6 +96,10 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
                 return result;
         }
 
+        public void deleteExtensions() {
+                extensions = new HashMap<>();
+        }
+
         public void updateStatusExtension(String extName) {
                 Extension ext = extensions.get(extName);
                 ext.setLoaded(ExtensionStatus.COMPLETE);

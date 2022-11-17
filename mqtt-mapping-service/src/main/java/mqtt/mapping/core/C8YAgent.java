@@ -53,7 +53,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import c8y.IsDevice;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.ClassLoaderUtil;
-import mqtt.mapping.SpringUtil;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConfigurationService;
 import mqtt.mapping.configuration.ServiceConfiguration;
@@ -625,5 +624,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         }
         return extensibleProcessor.deleteExtension(extensionName);
+    }
+
+    public void reloadExtensions() {
+        extensibleProcessor.deleteExtensions();
+        loadProcessorExtensions();
     }
 }
