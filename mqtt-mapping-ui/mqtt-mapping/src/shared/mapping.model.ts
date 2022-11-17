@@ -68,13 +68,19 @@ export interface PayloadWrapper {
 export interface ExtensionEntry {
   event: string;
   name: string;
-  loaded: boolean;
+  loaded?: boolean;
 }
 
 export interface Extension {
   name:string;
   extensionEntries: ExtensionEntry[];
   loaded: boolean,
+}
+
+export enum ExtensionStatus {
+  COMPLETE = "COMPLETE",
+  PARTIALLY = "PARTIALLY",
+  NOT_LOADED = "NOT_LOADED",
 }
 
 export enum Status {
@@ -123,11 +129,12 @@ export enum SnoopStatus {
 }
 
 export enum Operation {
-  RELOAD,
+  RELOAD_MAPPINGS,
   CONNECT,
   DISCONNECT,
   RESFRESH_STATUS_MAPPING,
-  RESET_STATUS_MAPPING
+  RESET_STATUS_MAPPING,
+  RELOAD_EXTENSIONS,
 }
 
 export enum MappingType {

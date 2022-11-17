@@ -551,7 +551,7 @@ public class MQTTClient {
     }
 
     public void runOperation(ServiceOperation operation) {
-        if (operation.getOperation().equals(Operation.RELOAD)) {
+        if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
             reloadMappings();
         } else if (operation.getOperation().equals(Operation.CONNECT)) {
             connectToBroker();
@@ -561,6 +561,8 @@ public class MQTTClient {
             sendStatusMapping();
         } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
             resetMappingStatus();
+        } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
+            c8yAgent.reloadExtensions();
         }
     }
 

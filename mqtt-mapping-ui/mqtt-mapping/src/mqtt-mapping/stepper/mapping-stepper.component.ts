@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, ExtensionEntry, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { API, Extension, ExtensionEntry, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -90,8 +90,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   @ViewChild(C8yStepper, { static: false })
   stepper: C8yStepper;
-  processorExtensions: ExtensionEntry[] = [];
-
+  extensions: Map<string, Extension> = new Map();
+  extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
@@ -139,7 +139,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       schema: SCHEMA_PAYLOAD
     };
     this.onExpressionsUpdated();
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));                         
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+
+    this.extensionEvents$.subscribe(events => {
+      console.log("New events from extension", events);
+    })
   }
 
   ngAfterContentChecked(): void {
@@ -178,8 +182,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       pt: new FormControl(this.currentSubstitution.pathTarget),
       rs: new FormControl(this.currentSubstitution.repairStrategy),
       ea: new FormControl(this.currentSubstitution.expandArray),
-      exName: new FormControl(this.mapping?.extension.name),
-      exEvent: new FormControl(this.mapping?.extension.event),
+      exName: new FormControl(this.mapping?.extension?.name),
+      exEvent: new FormControl(this.mapping?.extension?.event),
       sourceExpressionResult: new FormControl(this.sourceExpression.result),
       targetExpressionResult: new FormControl(this.targetExpression.result),
     },
@@ -265,7 +269,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private getCurrentMapping(patched: boolean): Mapping {
     return {
       ... this.mapping,
-      source: this.reduceSourceTemplate( this.editorSource?  this.editorSource.get(): {} , patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
+      source: this.reduceSourceTemplate(this.editorSource ? this.editorSource.get() : {}, patched),   //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
       target: this.reduceTargetTemplate(this.editorTarget.get(), patched),   //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       lastUpdate: Date.now(),
     };
@@ -282,7 +286,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   async onSendTest() {
     this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), true);
-    this.mapping.tested = (! this.templateTestingResults);
+    this.mapping.tested = (!this.templateTestingResults);
     this.onNextTestResult();
 
   }
@@ -292,10 +296,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.selectedTestingResult = -1;
     }
     this.selectedTestingResult++;
-    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length ) {
+    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length) {
       this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
       this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
-      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI),null);
+      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI), null);
       this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
     } else {
       this.templateTestingRequest = JSON.parse("{}");
@@ -313,11 +317,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.onCancel.emit();
   }
 
-  onSelectedExtension(event){
-    let selected = event.target.value.split(":");
-    console.log("OnNextStep", event.target.value, this.processorExtensions[selected[0]]);
-    this.mapping.extension.name = this.processorExtensions[selected[0]].event;
+  onSelectExtension(extension) {
+    console.log("onSelectExtension", extension);
+    this.mapping.extension.name = extension;
+    this.extensionEvents$.next(Object.keys(this.extensions[extension].extensionEntries));
   }
+
 
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
 
@@ -329,14 +334,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      let extObject = await this.configurationService.getProcessorExtensions();
-      
+      this.extensions = await this.configurationService.getProcessorExtensions();
+      if (this.mapping?.extension?.name) {
+        this.extensionEvents$.next(Object.keys(this.extensions[this.mapping?.extension?.name].extensionEntries));
+      }
+
       // this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
       //   return [n, n];
       // })
-      this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
-        return n;
-      })
+      // this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
+      //   return n;
+      // })
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {
@@ -375,7 +383,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
-      this.editorTestingRequest.set(this.editorSource?  this.editorSource.get(): {} as JSON);
+      this.editorTestingRequest.set(this.editorSource ? this.editorSource.get() : {} as JSON);
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
@@ -434,7 +442,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
     console.log("Cleared substitutions!");
   }
-  
+
   public onDeleteSubstitution() {
     console.log("Delete marked substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
