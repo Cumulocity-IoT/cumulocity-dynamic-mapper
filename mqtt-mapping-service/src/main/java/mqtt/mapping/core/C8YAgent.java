@@ -60,15 +60,16 @@ import mqtt.mapping.extension.ProcessorExtensionsRepresentation;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
-import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.MappingsRepresentation;
+import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceStatus;
@@ -114,7 +115,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ProcessorExtensionsRepresentation extensions;
 
     @Autowired
-    private ExtensibleProcessor extensibleProcessor;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+    // @Autowired
+    private ExtensibleProcessor<?> extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -181,6 +184,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.info("Created new MQTT-Mapping: {}, {}", mor.getId().getValue(), mor.getId());
             }
 
+            extensibleProcessor = (ExtensibleProcessor<?>) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
             loadProcessorExtensions();
         });
 
@@ -434,7 +438,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     mor = inventoryApi.create(mor, context);
                     log.info("New device created: {}", mor);
                     devices[0] = mor;
-                    ExternalIDRepresentation externalAgentId = identityApi.create(mor, identity, context);
+                    identityApi.create(mor, identity, context);
                 } else {
                     // Device exists - update needed
                     ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
@@ -533,6 +537,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
+        //ExtensibleProcessor extensibleProcessor = (ExtensibleProcessor) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
             extensibleProcessor.addExtension(bObj.getId().getValue(), extName);
