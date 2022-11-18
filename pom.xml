@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-solution</artifactId>
-    <version>1.98</version>
+    <version>1.99</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -47,19 +47,19 @@
             </dependency>
             <dependency>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
+                <artifactId>microservice-autoconfigure</artifactId>
+                <version>${c8y.version}</version>
+            </dependency>
+            <!-- <dependency>
+                <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-dependencies</artifactId>
                 <version>${c8y.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
+            </dependency> -->
             <dependency>
                 <groupId>com.nsn.cumulocity.model</groupId>
                 <artifactId>device-capability-model</artifactId>
-                <version>${c8y.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.nsn.cumulocity.clients-java</groupId>
-                <artifactId>java-client</artifactId>
                 <version>${c8y.version}</version>
             </dependency>
             <dependency>
@@ -77,6 +77,22 @@
                 <artifactId>validation-api</artifactId>
                 <version>1.1.0.Final</version>
             </dependency>
+            <dependency>
+                <groupId>com.ibm.jsonata4java</groupId>
+                <artifactId>JSONata4Java</artifactId>
+                <version>2.2.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>5.9.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency> 
         </dependencies>
     </dependencyManagement>
 </project>

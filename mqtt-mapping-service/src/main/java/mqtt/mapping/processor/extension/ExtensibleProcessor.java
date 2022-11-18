@@ -80,8 +80,9 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
         Extension ext = extensions.get(extensionName);
         if (ext == null) {
             log.warn("Create new extension first!");
+        } else {
+            ext.getExtensionEntries().put(entry.getEvent(), entry);
         }
-        ext.getExtensionEntries().put(entry.getEvent(), entry);
     }
 
     public void addExtension(String id, String extensionName) {
@@ -90,6 +91,7 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
             log.warn("Extension with this name {} already exits, override existing extension!",
                     extensionName);
         } else {
+            ext = new Extension(id, extensionName);
             extensions.put(extensionName, ext);
         }
     }
@@ -119,7 +121,6 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
         } else if (countLoaded < countDefined) {
             ext.setLoaded(ExtensionStatus.PARTIALLY);
         }
-
     }
 
 }
