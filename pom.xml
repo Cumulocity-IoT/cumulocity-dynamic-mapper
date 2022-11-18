@@ -50,13 +50,13 @@
                 <artifactId>microservice-autoconfigure</artifactId>
                 <version>${c8y.version}</version>
             </dependency>
-            <!-- <dependency>
+            <dependency>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-dependencies</artifactId>
                 <version>${c8y.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency> -->
+            </dependency>
             <dependency>
                 <groupId>com.nsn.cumulocity.model</groupId>
                 <artifactId>device-capability-model</artifactId>
