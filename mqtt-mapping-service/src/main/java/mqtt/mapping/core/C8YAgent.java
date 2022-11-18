@@ -535,6 +535,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void loadProcessorExtensions() {
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
+            extensibleProcessor.addExtension(bObj.getId().getValue(), extName);
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
 
@@ -576,7 +577,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     Class<?> clazz;
                     ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
                     null, true);
-                    extensibleProcessor.addExtension(extName, extensionEntry);
+                    extensibleProcessor.addExtensionEntry(extName, extensionEntry);
         
                     try {
                         clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));

@@ -2,7 +2,8 @@
 
 <c8y-breadcrumb>
   <c8y-breadcrumb-item [icon]="'c8y-atom'" [label]="'Processor' | translate"></c8y-breadcrumb-item>
-  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="'processor/extensions'">
+  <!-- <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="'processor/extensions'"> -->
+  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate">
   </c8y-breadcrumb-item>
   <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'All extensions' | translate"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
@@ -16,7 +17,7 @@
 
 
 <c8y-action-bar-item [placement]="'right'">
-  <button (click)="loadExtensions()" class="btn btn-link" title="{{ 'Reload' | translate }}">
+  <button (click)="reloadExtensions()" class="btn btn-link" title="{{ 'Reload' | translate }}">
     <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
     {{ 'Reload' | translate }}
   </button>

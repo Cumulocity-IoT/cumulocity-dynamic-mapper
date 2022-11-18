@@ -41,6 +41,10 @@ export class ProcessorComponent implements OnInit {
 
   loadExtensions() {
     this.reload$.next();
+  }
+
+  reloadExtensions() {
+    this.reload$.next();
     this.configurationService.runOperation(Operation.RELOAD_EXTENSIONS);
   }
 

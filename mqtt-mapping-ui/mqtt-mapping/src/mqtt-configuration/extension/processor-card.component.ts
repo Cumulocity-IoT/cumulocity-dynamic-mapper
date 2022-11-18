@@ -22,9 +22,6 @@ export class ProcessorCardComponent implements OnInit {
   async ngOnInit() {
   }
 
-  detail() {
-  }
-
   async delete() {
     try {
       await this.processorService.deleteExtension(this.app);
