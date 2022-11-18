@@ -334,7 +334,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
-      this.extensions = await this.configurationService.getProcessorExtensions();
+      this.extensions = await this.configurationService.getProcessorExtensions() as any;
       if (this.mapping?.extension?.name) {
         this.extensionEvents$.next(Object.keys(this.extensions[this.mapping?.extension?.name].extensionEntries));
       }

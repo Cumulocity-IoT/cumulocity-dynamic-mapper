@@ -16,57 +16,55 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.extension.ProcessorExtension;
-import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 
 
 @Slf4j
 @Component
-public class ProcessorExtensionCustomEvent < O > implements ProcessorExtension < byte[] > {
+public class ProcessorExtensionCustomEvent implements ProcessorExtension<byte[]> {
     @Override
-    public void extractFromSource(ProcessingContext < byte[] > context)
-    throws ProcessingException {
+    public void extractFromSource(ProcessingContext<byte[]> context)
+            throws ProcessingException {
         CustomEventOuter.CustomEvent payloadProtobuf;
         try {
             payloadProtobuf = CustomEventOuter.CustomEvent
-                .parseFrom(context.getPayload());
+                    .parseFrom(context.getPayload());
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
-        Map < String, ArrayList < SubstituteValue >> postProcessingCache = context.getPostProcessingCache();
+        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         postProcessingCache.put("time",
-            new ArrayList < SubstituteValue > (
-            Arrays.asList(new SubstituteValue(
-                new TextNode(new DateTime(
-                        payloadProtobuf.getTimestamp())
-                    .toString()),
-                TYPE.TEXTUAL,
-                RepairStrategy.DEFAULT))));
+                new ArrayList<SubstituteValue>(
+                        Arrays.asList(new SubstituteValue(
+                                new TextNode(new DateTime(
+                                        payloadProtobuf.getTimestamp())
+                                        .toString()),
+                                TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
         postProcessingCache.put("text",
-            new ArrayList < SubstituteValue > (Arrays.asList(
-                new SubstituteValue(new TextNode(payloadProtobuf.getTxt()),
-                    TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT))));
+                new ArrayList<SubstituteValue>(Arrays.asList(
+                        new SubstituteValue(new TextNode(payloadProtobuf.getTxt()),
+                                TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
         postProcessingCache.put("type",
-            new ArrayList < SubstituteValue > (
-                Arrays.asList(
-                    new SubstituteValue(
-                        new TextNode(payloadProtobuf
-                            .getEventType()),
-                        TYPE.TEXTUAL,
-                        RepairStrategy.DEFAULT))));
+                new ArrayList<SubstituteValue>(
+                        Arrays.asList(
+                                new SubstituteValue(
+                                        new TextNode(payloadProtobuf
+                                                .getEventType()),
+                                        TYPE.TEXTUAL,
+                                        RepairStrategy.DEFAULT))));
         postProcessingCache.put(context.getMapping().targetAPI.identifier,
-            new ArrayList < SubstituteValue > (Arrays.asList(
-                new SubstituteValue(
-                    new TextNode(payloadProtobuf.getExternalId()),
-                    TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT))));
+                new ArrayList<SubstituteValue>(Arrays.asList(
+                        new SubstituteValue(
+                                new TextNode(payloadProtobuf.getExternalId()),
+                                TYPE.TEXTUAL,
+                                RepairStrategy.DEFAULT))));
         log.info("New event over protobuf: {}, {}, {}, {}", payloadProtobuf.getTimestamp(),
-            payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
-            payloadProtobuf.getExternalId());
-
+                payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
+                payloadProtobuf.getExternalId());
     }
 
 }
