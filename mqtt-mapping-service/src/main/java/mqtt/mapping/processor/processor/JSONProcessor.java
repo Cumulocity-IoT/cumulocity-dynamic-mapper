@@ -49,7 +49,7 @@ public class JSONProcessor<O> extends BasePayloadProcessor<JsonNode> {
     }
 
     @Override
-    public void extractFromSource(ProcessingContext<JsonNode> context, ProcessorExtension<JsonNode> extension)
+    public void extractFromSource(ProcessingContext<JsonNode> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         JsonNode payloadJsonNode = context.getPayload();

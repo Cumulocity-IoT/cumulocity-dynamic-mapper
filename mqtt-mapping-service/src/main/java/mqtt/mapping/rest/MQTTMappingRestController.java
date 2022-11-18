@@ -1,8 +1,6 @@
 package mqtt.mapping.rest;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +37,6 @@ import mqtt.mapping.service.ServiceStatus;
 @Slf4j
 @RestController
 public class MQTTMappingRestController {
-
-    private static final String BASE_PACKAGE_NAME_TYPES = "mqtt.mapping.processor";
 
     @Autowired
     MQTTClient mqttClient;
@@ -211,7 +207,7 @@ public class MQTTMappingRestController {
         if (result instanceof InnerNode) {
             innerNode = (InnerNode) result;
         }
-        log.info("Get mapping tree: {}", result, innerNode);
+        log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -232,17 +228,26 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,Extension>> getAllLoadedProcessorExtensions() {
-        Map<String,Extension> result = c8yAgent.getAllLoadedProcessorExtensions();
+    public ResponseEntity<Map<String,Extension>> getProcessorExtensions() {
+        Map<String,Extension> result = c8yAgent.getProcessorExtensions();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @RequestMapping(value = "/extension/{extension}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Extension> getLoadedProcessorExtension(@PathVariable String extension) {
-        Extension result = c8yAgent.getLoadedProcessorExtension(extension);
+    @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extensionName) {
+        Extension result = c8yAgent.getProcessorExtension(extensionName);
         if (result == null)
         throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Extension with id " + extension + " could not be found.");
+                "Extension with id " + extensionName + " could not be found.");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> deleteProcessorExtension(@PathVariable String extensionName) {
+        String result = c8yAgent.deleteProcessorExtension(extensionName);
+        if (result == null)
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 

@@ -21,7 +21,7 @@
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
-- [Processing Extensions (Protobuf)](#processing-extensions-protobuf)
+- [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf)
 - [Monitoring](#monitoring)
 - [Mapping Tree](#mapping-tree)
 - [REST API](#rest-api)
@@ -89,8 +89,8 @@ following Mappings are supported:
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
 Due to two different libraries to evaluate JSONata in:
-1. frontend (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
-1. backend (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+1. mqtt-mapping-ui (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+1. mqtt-mapping-service (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
 differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
@@ -153,12 +153,12 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your Computer.
 
 ### Backend - Microservice
-Run `mvn clean package` in folder `backend` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Run `mvn clean package` in folder `mqtt-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frondend - Plugin
-Run `npm run build` in folder `frontend/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `frontend/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
+Run `npm run build` in folder `mqtt-mapping-ui/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration MQTT connection to broker
@@ -188,9 +188,6 @@ Once the connection to a MQTT broker is configured and successfully enabled you 
 After every change the mappings are automatically updated in the microservice.
 
 
-<img src="resources/image/Generic_MQTT_MappingTable.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
-<br/>
-
 ### Define mappings from source to target format (Cumulocity REST format)
 
 Mappings are persisted as Managed Objects and can be easily changed, deleted or migrated.
@@ -216,6 +213,17 @@ Further example for JSONata expressions are:
         becomes <code>$sum(Account.Product.(Price * Quantity))</code>
 
 ### Wizzard to define a mapping
+
+Creation of the new mapping starts by pressing ```Add Mapping```. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
+1. ```JSON```: if your payload is in JSON format
+1. ```FLAT_FILE```: if your payload is in a csv format
+1. ```GENERIC_BINARY```: if your payload is in HEX format
+1. ```PROTOBUF_STATIC```: if your payload is a serialized protobuf message
+1. ```PROCESSOR_EXTENSION```: if you want to process the message yourself, by registering a processor extension
+
+
+<img src="resources/image/Generic_MQTT_AddMapping.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
 
 The wizzard to define a mapping consists of the steps:
 
@@ -440,21 +448,21 @@ In order to use a previously snooped payload click the button
 <br/>
 
 
-### Processing Extensions (Protobuf)
+### Processing Extensions
 
-When you choose mapping type ```PROTOBUF_STATIC``` or ```PROTOBUF_EXTENSION``` the wizard for defining your mapping changes. On the second step you not be able to chnage the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
+When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
-<img src="resources/image/Generic_MQTT_ProtobufMessage.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
-<br/>
-
-The following diagram shows how the dispatcher handlesmeassages with different format:
-
-<img src="resources/image/Generic_MQTT_Dispatcher.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<img src="resources/image/Generic_MQTT_ProtobufMessage_annotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
 Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice has to be re-subscribed in order to load the extensions. This does not happen dynamically.
 
 <img src="resources/image/Generic_MQTT_ProcessorExtension.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
+
+The following guide lays out hte steps to create and use a processor extension:
+
+<img src="resources/image/Generic_MQTT_ProcessorExtension_Guide.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
 ### Monitoring
@@ -500,16 +508,20 @@ A script to create sample MQTT mappings can be found [here]
 <img src="resources/script/createSampleMappings.sh).
 
 ## Enhance and Extensions
-In the folder [mqtt.mapping.processor.extension](./backend/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
-This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf)](#processing-extensions-protobuf) for details.
-In order for the mapper backend to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
+In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
+This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
+In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
 ```
 CustomEvent=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent
 CustomOperation=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomOperation
 ```
 A sample how to build an extension is contained in the folder [extension](./extension).
+The following diagram shows how the dispatcher handles meassages with different format:
 
-As an example see the [SysHandler](./backend/src/main/java/mqttagent/callbacks/handler/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
+<img src="resources/image/Generic_MQTT_Dispatcher.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
+
+As an example see the [SysHandler](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/system/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
