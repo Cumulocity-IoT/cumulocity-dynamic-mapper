@@ -7,11 +7,12 @@ import lombok.NoArgsConstructor;
 import javax.validation.constraints.NotNull;
 
 enum Operation {
-    RELOAD,
+    RELOAD_MAPPINGS,
     CONNECT,
     DISCONNECT, 
     RESFRESH_STATUS_MAPPING,
-    RESET_STATUS_MAPPING
+    RESET_STATUS_MAPPING,
+    RELOAD_EXTENSIONS
 }
 
 @Data
@@ -21,10 +22,13 @@ public class ServiceOperation {
     @NotNull
     private Operation operation;
 
-    public static ServiceOperation reload() {
-        return new ServiceOperation(Operation.RELOAD);
+    public static ServiceOperation reloadMappings() {
+        return new ServiceOperation(Operation.RELOAD_MAPPINGS);
     }   
     public static ServiceOperation connect() {
         return new ServiceOperation(Operation.CONNECT);
     }
+    public static ServiceOperation reloadExtensions() {
+        return new ServiceOperation(Operation.RELOAD_EXTENSIONS);
+    } 
 }

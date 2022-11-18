@@ -5,9 +5,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
+import java.util.HashMap;
+import java.util.Map;
 import javax.validation.constraints.NotNull;
 
 @Getter
@@ -16,20 +15,24 @@ import javax.validation.constraints.NotNull;
 public class Extension implements Serializable {
 
     public Extension() {
-        extensions = new ArrayList<ExtensionEntry>();
+        extensionEntries = new HashMap<String, ExtensionEntry>();
     }
     
-    public Extension(String name) {
+    public Extension(String id, String name) {
         this();
         this.name = name;
+        this.id = id;
     }
 
     @NotNull
-    public boolean loaded;
+    public String id;
+
+    @NotNull
+    public ExtensionStatus loaded;
 
     @NotNull
     public String name;
 
     @NotNull
-    public List<ExtensionEntry> extensions;
+    public Map<String, ExtensionEntry> extensionEntries;
 }

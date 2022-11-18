@@ -37,7 +37,7 @@ public class SynchronousDispatcher implements MqttCallback {
 
     @Autowired
     protected MQTTClient mqttClient;
-    
+
     @Autowired
     ExtensibleProcessor<?> extensionPayloadProcessor;
 
@@ -65,9 +65,9 @@ public class SynchronousDispatcher implements MqttCallback {
 
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
-                List<Mapping> resolveMappings = new ArrayList<>();
+                List<Mapping> resolvedMappings = new ArrayList<>();
                 try {
-                    resolveMappings = mqttClient.resolveMappings(topic);
+                    resolvedMappings = mqttClient.resolveMappings(topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!", e);
                     mappingStatusUnspecified.errors++;
@@ -75,7 +75,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     // throw e;
                 }
 
-                resolveMappings.forEach(mapping -> {
+                resolvedMappings.forEach(mapping -> {
                     MappingStatus mappingStatus = mqttClient.getMappingStatus(mapping, false);
 
                     ProcessingContext<?> context;
@@ -92,13 +92,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessor processor = payloadProcessors.get(mappingType);
-                    ProcessorExtension extension = null;
-                    // try to find processor extension for mapping
-                    if (processor == null) {
-                        extension = (ProcessorExtension) springUtil.getBean(mapping.processorExtension);
-                        log.info("Sucessfully loaded extension:{}", extension.getClass().getName());
-                        processor = extensionPayloadProcessor;
-                    }
+
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, mqttMessage);
@@ -124,7 +118,7 @@ public class SynchronousDispatcher implements MqttCallback {
 
                                 }
                             } else {
-                                processor.extractFromSource(context, extension);
+                                processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
                                 ArrayList<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {

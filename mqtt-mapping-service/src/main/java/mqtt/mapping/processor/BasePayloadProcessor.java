@@ -69,7 +69,7 @@ public abstract class BasePayloadProcessor<O> {
     public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage)
             throws IOException;
 
-    public abstract void extractFromSource(ProcessingContext<O> context, ProcessorExtension<O> extension) throws ProcessingException;
+    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 
     public ProcessingContext<O> substituteInTargetAndSend(ProcessingContext<O> context) {
         /*

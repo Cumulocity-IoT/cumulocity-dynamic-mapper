@@ -10,10 +10,10 @@ run_protoc_backend () {
 
 if [ "$1" == "backend" ]
 then
-    ( cd backend ; run_protoc_backend )
+    ( cd mqtt-mapping-service ; run_protoc_backend )
 elif [ "$1" == "extension" ]
 then
-    ( cd extension ; run_protoc_extension )
+    ( cd mqtt-mapping-extension ; run_protoc_extension )
 else
     echo "Use additional parameter backend or extension with command."
 fi

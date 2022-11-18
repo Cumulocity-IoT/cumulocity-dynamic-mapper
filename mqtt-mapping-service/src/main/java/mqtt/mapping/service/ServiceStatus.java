@@ -1,17 +1,19 @@
 package mqtt.mapping.service;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-//@NoArgsConstructor
-//@AllArgsConstructor
+// @NoArgsConstructor
+// @AllArgsConstructor
 public class ServiceStatus {
     private Status status;
 
     public ServiceStatus(Status status){
         this.status = status;
+    }
+
+    public ServiceStatus(){
+        this.status = Status.NOT_READY;
     }
     
     public static ServiceStatus connected() {

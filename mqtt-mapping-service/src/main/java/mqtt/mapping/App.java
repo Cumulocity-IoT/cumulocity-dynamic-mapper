@@ -31,6 +31,7 @@ import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
 import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.processor.FlatFileProcessor;
 import mqtt.mapping.processor.processor.GenericBinaryProcessor;
@@ -93,7 +94,8 @@ public class App {
             MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
             MappingType.GENERIC_BINARY, new GenericBinaryProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
+            MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
+            MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
             );
     }
 
