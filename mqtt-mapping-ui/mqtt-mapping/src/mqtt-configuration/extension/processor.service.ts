@@ -12,6 +12,7 @@ import {
 import { TranslateService } from '@ngx-translate/core';
 
 import { BehaviorSubject } from 'rxjs';
+import { Extension } from '../../shared/mapping.model';
 import { PROCESSOR_EXTENSION_TYPE } from '../../shared/util';
 import { BrokerConfigurationService } from '../broker-configuration.service';
 
@@ -29,9 +30,7 @@ export class ProcessorService {
         private inventoryService: InventoryService,
         private inventoryBinaryService: InventoryBinaryService,
         private configurationService: BrokerConfigurationService,
-        private fetchClient: FetchClient
     ) { }
-
 
     getExtensions(customFilter: any = {}): Promise<IResultList<IManagedObject>> {
         const filter: object = {
@@ -52,12 +51,16 @@ export class ProcessorService {
         return result;
     }
     async getProcessorExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
-        let extensions = (await this.getExtensions(customFilter)).data;
-        extensions.forEach (async ext => {
-            ext.loaded = (await this.configurationService.getProcessorExtension(ext.name)).loaded;
-        })
-        // return (await this.getExtensions(customFilter)).data;
-        return extensions;
+        let listOfExtensionsInventory: Promise<IResultList<IManagedObject>> = this.getExtensions(customFilter);
+        let listOfExtensionsBackend: Promise<Object> = this.configurationService.getProcessorExtensions();
+        let combinedResult = Promise.all([listOfExtensionsInventory,listOfExtensionsBackend]).then (([listOfExtensionsInventory,listOfExtensionsBackend])=> {
+            let extensionsInventory = listOfExtensionsInventory.data;
+            extensionsInventory.forEach ( ext => {
+                     ext.loaded = listOfExtensionsBackend[ext.name].loaded;
+            });
+            return extensionsInventory;
+        });
+        return combinedResult;
     }
 
     async deleteExtension(app: IManagedObject): Promise<void> {
@@ -73,7 +76,9 @@ export class ProcessorService {
             Status.DANGER,
             { ok: gettext('Delete'), cancel: gettext('Cancel') }
         );
-        await this.inventoryBinaryService.delete(app.id);
+        //TODO this needs to be changed: create 
+        //await this.inventoryBinaryService.delete(app.id);
+        await this.configurationService.deleteProcessorExtension(app.name);
         this.alertService.success(gettext('Extension deleted.'));
         this.appDeleted.emit(app);
     }

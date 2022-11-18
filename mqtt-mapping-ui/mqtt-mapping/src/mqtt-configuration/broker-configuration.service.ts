@@ -125,7 +125,7 @@ export class BrokerConfigurationService {
     });
   }
 
-  async getProcessorExtensions(): Promise<Map<string,Extension>> {
+  async getProcessorExtensions(): Promise<Object> {
     const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
@@ -137,7 +137,6 @@ export class BrokerConfigurationService {
     if (response.status != 200) {
       return undefined;
     }
-    //let result =  (await response.json()) as string[];
     return response.json();
   }
 

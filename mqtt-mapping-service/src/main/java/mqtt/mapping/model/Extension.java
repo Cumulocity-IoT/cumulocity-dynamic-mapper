@@ -18,10 +18,14 @@ public class Extension implements Serializable {
         extensionEntries = new HashMap<String, ExtensionEntry>();
     }
     
-    public Extension(String name) {
+    public Extension(String id, String name) {
         this();
         this.name = name;
+        this.id = id;
     }
+
+    @NotNull
+    public String id;
 
     @NotNull
     public ExtensionStatus loaded;
