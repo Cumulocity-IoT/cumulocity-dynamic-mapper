@@ -1,0 +1,37 @@
+<c8y-title>{{ extension?.name }}</c8y-title>
+
+<c8y-breadcrumb>
+  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="'mqtt-mapping/extensions'">
+  </c8y-breadcrumb-item>
+  <c8y-breadcrumb-item [label]="extension?.name"></c8y-breadcrumb-item>
+</c8y-breadcrumb>
+
+<div class="row">
+  <div class="card content-fullpage">
+    <form [formGroup]="extensionsEntryForm" class="d-flex d-col content-fullpage" novalidate>
+      <div *ngIf="!isLoading" class="d-contents">
+        <div class="card-block separator-bottom large-padding flex-no-shrink">
+          <div class= "row">
+            <div class="col-lg-2">
+              <label>Event Name</label>
+            </div>
+            <div class="col-lg-6">
+              <label>Extension Implementation</label>
+            </div>
+          </div>
+          <div *ngFor="let extensionEntryForm of extensionEntries.controls; let i = index">
+            <div class= "row" [formGroup]="extensionEntryForm">
+              <div class="col-lg-2">
+                <input formControlName="event" type="text" class="form-control ng-pristine ng-valid ng-touched" readonly>
+              </div>
+              <div class="col-lg-6">
+                <input formControlName="name" type="text" class="form-control ng-pristine ng-valid ng-touched" readonly>
+              </div>
+                <!-- <span>{{extensionEntryForm.get('name').value}}</span> -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

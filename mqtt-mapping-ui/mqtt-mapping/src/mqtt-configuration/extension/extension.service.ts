@@ -1,23 +1,23 @@
 
 import { EventEmitter, Injectable } from '@angular/core';
 import {
-    FetchClient, IFetchOptions, IManagedObject, IManagedObjectBinary, InventoryBinaryService, InventoryService,
+    IManagedObject, IManagedObjectBinary, InventoryBinaryService, InventoryService,
     IResultList
 } from '@c8y/client';
 
 import {
     AlertService, gettext, ModalService, Status
 } from '@c8y/ngx-components';
+import * as _ from 'lodash';
 
 import { TranslateService } from '@ngx-translate/core';
-
 import { BehaviorSubject } from 'rxjs';
-import { Extension } from '../../shared/mapping.model';
+import { ExtensionStatus } from '../../shared/mapping.model';
 import { PROCESSOR_EXTENSION_TYPE } from '../../shared/util';
 import { BrokerConfigurationService } from '../broker-configuration.service';
 
 @Injectable({ providedIn: 'root' })
-export class ProcessorService {
+export class ExtensionService {
 
     appDeleted = new EventEmitter<IManagedObject>();
     progress: BehaviorSubject<number> = new BehaviorSubject<number>(null);
@@ -32,33 +32,39 @@ export class ProcessorService {
         private configurationService: BrokerConfigurationService,
     ) { }
 
-    getExtensions(customFilter: any = {}): Promise<IResultList<IManagedObject>> {
+    async getExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
         const filter: object = {
             pageSize: 100,
             withTotalPages: true,
             fragmentType: PROCESSOR_EXTENSION_TYPE,
         };
-        Object.assign(filter, customFilter);
         const query: object = {
             //   fragmentType: 'pas_extension',
         };
+        Object.assign(query, customFilter);
         let result;
         if (Object.keys(customFilter).length == 0) {
-            result = this.inventoryService.list(filter);
+            result = (await this.inventoryService.list(filter)).data;
         } else {
-            result = this.inventoryService.listQuery(query, filter);
+            result = (await this.inventoryService.listQuery(query, filter)).data;
         }
+
         return result;
     }
-    async getProcessorExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
-        let listOfExtensionsInventory: Promise<IResultList<IManagedObject>> = this.getExtensions(customFilter);
+    async getExtensionsEnriched(customFilter: any = {}): Promise<IManagedObject[]> {
+        let listOfExtensionsInventory: Promise<IManagedObject[]> = this.getExtensions(customFilter);
         let listOfExtensionsBackend: Promise<Object> = this.configurationService.getProcessorExtensions();
         let combinedResult = Promise.all([listOfExtensionsInventory,listOfExtensionsBackend]).then (([listOfExtensionsInventory,listOfExtensionsBackend])=> {
-            let extensionsInventory = listOfExtensionsInventory.data;
-            extensionsInventory.forEach ( ext => {
-                     ext.loaded = listOfExtensionsBackend[ext.name].loaded;
+             listOfExtensionsInventory.forEach ( ext => {
+                if (listOfExtensionsBackend[ext.name]?.loaded) {
+                    ext.loaded = listOfExtensionsBackend[ext.name].loaded;
+                    let exts = _.values(listOfExtensionsBackend[ext.name].extensionEntries);
+                    ext.extensionEntries = exts;
+                } else {
+                    ext.loaded = ExtensionStatus.UNKNOWN;
+                }
             });
-            return extensionsInventory;
+            return listOfExtensionsInventory;
         });
         return combinedResult;
     }

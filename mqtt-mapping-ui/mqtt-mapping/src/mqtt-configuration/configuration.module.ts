@@ -1,10 +1,9 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { BokerConfigurationComponent } from './broker-configuration.component';
-import { BrokerConfigurationService } from './broker-configuration.service';
-import { ProcessorModule } from './extension/processor.module';
+import { ExtensionModule } from './extension/extension.module';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
 
 @NgModule({
@@ -14,12 +13,23 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
   ],
   imports: [
     CoreModule,
-    ProcessorModule
+    ExtensionModule
   ],
   entryComponents: [
     TerminateBrokerConnectionModalComponent
   ],
   exports: [],
-  providers: []
+  providers: [
+    {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: 'mqtt-mapping/configuration',
+          component: BokerConfigurationComponent,
+        },
+      ] as Route[],
+      multi: true,
+    },
+  ]
 })
 export class ConfigurationModule {}

@@ -74,14 +74,16 @@ export interface ExtensionEntry {
 export interface Extension {
     id?: string;
     name: string;
-    extensionEntries: ExtensionEntry[];
+    extensionEntries: Map<String, ExtensionEntry>;
     loaded: boolean,
 }
+
 
 export enum ExtensionStatus {
     COMPLETE = "COMPLETE",
     PARTIALLY = "PARTIALLY",
     NOT_LOADED = "NOT_LOADED",
+    UNKNOWN = "UNKNOWN"
 }
 
 export enum Status {

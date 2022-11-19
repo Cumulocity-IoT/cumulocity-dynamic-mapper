@@ -2,8 +2,8 @@ import { Component, Input, ViewChild } from '@angular/core';
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
 import { AlertService, DropAreaComponent, WizardComponent } from '@c8y/ngx-components';
 import { BehaviorSubject } from 'rxjs';
-import { ERROR_MESSAGES } from './processor.constants';
-import { ProcessorService } from './processor.service';
+import { ERROR_MESSAGES } from './extension.constants';
+import { ExtensionService } from './extension.service';
 
 @Component({
   selector: 'c8y-add-extension',
@@ -26,14 +26,14 @@ export class AddExtensionComponent {
   private uploadCanceled: boolean = false;
 
   constructor(
-    private processorService: ProcessorService,
+    private extensionService: ExtensionService,
     private alertService: AlertService,
     private applicationService: ApplicationService,
     private wizardComponent: WizardComponent
   ) {}
 
   get progress(): BehaviorSubject<number> {
-    return this.processorService.progress;
+    return this.extensionService.progress;
   }
 
   onFileDroppedEvent(event) {
@@ -51,13 +51,13 @@ export class AddExtensionComponent {
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
-        c8y_mqttMapping_Processor_Extension: n,
+        c8y_mqttMapping_Extension_Extension: n,
         name : n
       }
       await this.uploadExtensionHandler(file, this.createdApp);
       this.isAppCreated = true;
     } catch (ex) {
-      this.processorService.cancelExtensionCreation(this.createdApp);
+      this.extensionService.cancelExtensionCreation(this.createdApp);
       this.createdApp = null;
       this.dropAreaComponent.onDelete();
       this.errorMessage = ERROR_MESSAGES[ex.message];
@@ -88,7 +88,7 @@ export class AddExtensionComponent {
 
   private cancelFileUpload() {
     this.uploadCanceled = true;
-    this.processorService.cancelExtensionCreation(this.createdApp);
+    this.extensionService.cancelExtensionCreation(this.createdApp);
     this.createdApp = null;
   }
 }
