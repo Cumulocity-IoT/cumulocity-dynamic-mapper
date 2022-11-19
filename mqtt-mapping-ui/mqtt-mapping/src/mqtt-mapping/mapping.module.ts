@@ -1,7 +1,7 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule } from '@c8y/ngx-components';
+import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { MappingComponent } from './grid/mapping.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
@@ -52,6 +52,17 @@ import { ConfigurationModule } from '../mqtt-configuration/configuration.module'
     MappingTypeComponent,
   ],
   exports: [],
-  providers: []
+  providers: [
+    {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: 'mqtt-mapping/mappings',
+          component: MappingComponent,
+        },
+      ] as Route[],
+      multi: true,
+    },
+  ]
 })
 export class MappingModule { }

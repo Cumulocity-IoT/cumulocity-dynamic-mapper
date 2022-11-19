@@ -160,7 +160,7 @@ export class MappingComponent implements OnInit {
       bodyHeaderText: 'Select mapping type',
     };
     const initialState = {
-      id: 'addMappingWizard_Id',
+      id: 'addMappingWizard',
       wizardConfig,
     };
 

@@ -1,4 +1,4 @@
-import { ERROR_TYPE } from './processor.model';
+import { ERROR_TYPE } from './extension.model';
 import { gettext, PropertiesListItem } from '@c8y/ngx-components';
 
 export const ERROR_MESSAGES = {

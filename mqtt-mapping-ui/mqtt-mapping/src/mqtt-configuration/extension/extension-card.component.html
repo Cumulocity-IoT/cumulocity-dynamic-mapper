@@ -1,5 +1,5 @@
 <div class="card pointer card--d-col">
-  <div class="card-block text-center card-column-40">
+  <div (click)="detail()" class="card-block text-center card-column-40">
     <div class="card-appicon">
       <!-- <c8y-app-icon [app]="app" [contextPath]="app.contextPath" [name]="app.name"></c8y-app-icon> -->
       <i c8yIcon="plugin"></i>
@@ -13,9 +13,10 @@
   </div>
 
   <div class="card-block no-min-height p-t-0 p-b-32 card-column-20 text-center-grid">
-    <span *ngIf= "app.loaded == ExtensionStatus.COMPLETE" class="label label-success">Loaded</span>
-    <span *ngIf= "app.loaded == ExtensionStatus.NOT_LOADED" class="label label-primary">Not Loaded</span>
-    <span *ngIf= "app.loaded == ExtensionStatus.PARTIALLY" class="label label-primary">Partially</span>
+    <span *ngIf= "app.loaded == ExtensionStatus.COMPLETE" class="label label-success">Loaded ({{app.extensionEntries.length}})</span>
+    <span *ngIf= "app.loaded == ExtensionStatus.NOT_LOADED" class="label label-warning">Not Loaded</span>
+    <span *ngIf= "app.loaded == ExtensionStatus.PARTIALLY" class="label label-primary">Partially ({{app.extensionEntries.length}})</span>
+    <span *ngIf= "app.loaded == ExtensionStatus.UNKNOWN" class="label label-warning">Not Known</span>
   </div>
 
   <div class="card-actions m-t-0">

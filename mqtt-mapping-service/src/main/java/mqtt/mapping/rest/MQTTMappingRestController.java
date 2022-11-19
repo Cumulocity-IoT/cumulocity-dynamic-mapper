@@ -203,10 +203,6 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TreeNode> getActiveTreeNode() {
         TreeNode result = mqttClient.getMappingTree();
-        InnerNode innerNode = null;
-        if (result instanceof InnerNode) {
-            innerNode = (InnerNode) result;
-        }
         log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }

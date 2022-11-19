@@ -18,7 +18,7 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/mapping',
+        path: 'mqtt-mapping/mappings',
         priority: 920,
         label: 'Mapping',
         icon: 'grid-view',
@@ -46,7 +46,7 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/extension',
+        path: 'mqtt-mapping/extensions',
         priority: 880,
         label: 'Processor Extension',
         icon: 'plugin',

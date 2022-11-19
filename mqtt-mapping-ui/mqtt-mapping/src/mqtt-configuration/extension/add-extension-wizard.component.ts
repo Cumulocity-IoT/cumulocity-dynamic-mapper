@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
 import { IManagedObject, IManagedObjectBinary } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components';
-import { ProcessorService } from './processor.service';
+import { ExtensionService } from './extension.service';
 
 @Component({
-    selector: 'c8y-add-processor-extension',
+    selector: 'c8y-add-extension-wizard',
     template: `<c8y-add-extension
       [headerText]="headerText"
       [headerIcon]="'upload'"
@@ -13,16 +13,16 @@ import { ProcessorService } from './processor.service';
       [canGoBack]="true"
     ></c8y-add-extension>`
   })
-  export class AddProcessorExtensionComponent {
-    headerText: string = gettext('Upload processor extension');
+  export class AddExtensionWizardComponent {
+    headerText: string = gettext('Upload extension extension');
     successText: string = gettext('Extension created');
   
-    constructor(private processorService: ProcessorService) {}
+    constructor(private extensionService: ExtensionService) {}
   
     uploadExtensionHandler = (file: File, app: IManagedObject) => this.uploadExtension(file, app );
   
     async uploadExtension(file: File, app: IManagedObject): Promise<IManagedObjectBinary> {
-      return this.processorService.uploadExtension(file, app);
+      return this.extensionService.uploadExtension(file, app);
     }
 
   }
