@@ -4,7 +4,7 @@
 
     <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-solution</artifactId>
-    <version>1.101</version>
+    <version>1.102</version>
     <packaging>pom</packaging>
 
     <modules>

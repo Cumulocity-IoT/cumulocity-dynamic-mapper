@@ -51,7 +51,7 @@ export class AddExtensionComponent {
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
-        c8y_mqttMapping_Extension_Extension: n,
+        c8y_mqttMapping_Extension: n,
         name : n
       }
       await this.uploadExtensionHandler(file, this.createdApp);
