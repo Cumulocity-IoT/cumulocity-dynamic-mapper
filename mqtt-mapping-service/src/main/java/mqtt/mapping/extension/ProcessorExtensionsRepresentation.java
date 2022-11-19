@@ -22,5 +22,5 @@ public class ProcessorExtensionsRepresentation {
 	private InventoryApi inventory;
 
 	/** Fragment name containing the extension details within the managed object for that extension */
-	public static final String PROCESSOR_EXTENSION_TYPE = "c8y_mqttMapping_Processor_Extension";
+	public static final String PROCESSOR_EXTENSION_TYPE = "c8y_mqttMapping_Extension";
 }
