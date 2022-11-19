@@ -8,12 +8,13 @@ import { ExtensionCardComponent } from './extension-card.component';
 import { ExtensionComponent } from './extension.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { ExtensionPropertiesComponent } from './extension-properties.component';
+import { ExtensionGuard } from './extension.guard';
 
 const extensionRoutes: Route[] = [
   {
     path: 'mqtt-mapping/extensions',
     component: ExtensionComponent,
-    pathMatch: "full"
+    pathMatch: "full",
     // children: [
     //   {
     //     // path: 'mqtt-mapping/extensions/properties/50051686',
@@ -21,6 +22,7 @@ const extensionRoutes: Route[] = [
     //     component: ExtensionPropertiesComponent,
     //   }
     // ]
+    canActivate: [ExtensionGuard],
   },
   {
     path: 'mqtt-mapping/extensions/properties/:id',

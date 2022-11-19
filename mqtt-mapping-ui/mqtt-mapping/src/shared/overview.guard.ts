@@ -4,7 +4,7 @@ import { ApplicationService } from '@c8y/client';
 
 @Injectable({ providedIn: 'root' })
 export class OverviewGuard implements CanActivate {
-  private static readonly APPLICATION_MQTT = 'generic-mqtt-agent';
+  private static readonly APPLICATION_MQTT = 'mqtt-mapping-service';
 
   private activateOverviewNavigationPromise: Promise<boolean>;
 
