@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Data
@@ -16,6 +15,7 @@ public class ServiceConfiguration implements Cloneable {
     public ServiceConfiguration () {
         this.logPayload = false;
         this.logSubstitution = false;
+        this.extensionEnabled = true;
     }
 
     @NotNull
@@ -25,4 +25,8 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean logSubstitution;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean extensionEnabled;
 }

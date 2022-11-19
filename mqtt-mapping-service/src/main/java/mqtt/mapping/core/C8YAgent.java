@@ -6,6 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -127,6 +130,29 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MicroserviceCredentials credentials;
 
+    private static final Method ADD_URL_METHOD;
+
+    static {
+        final Method addURL;
+
+        // open the classloader module for java9+ so it wont have a warning
+        try {
+            openUrlClassLoaderModule();
+        } catch (Throwable ignored) {
+            // ignore exception. Java 8 wont have the module, so it wont matter if we ignore
+            // it
+            // cause there will be no warning
+        }
+
+        try {
+            addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+            addURL.setAccessible(true);
+        } catch (NoSuchMethodException exception) {
+            throw new AssertionError(exception);
+        }
+
+        ADD_URL_METHOD = addURL;
+    }
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -537,7 +563,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
-        //ExtensibleProcessor extensibleProcessor = (ExtensibleProcessor) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
+        // ExtensibleProcessor extensibleProcessor = (ExtensibleProcessor)
+        // payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
             extensibleProcessor.addExtension(bObj.getId().getValue(), extName);
@@ -581,9 +608,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     String key = (String) extensions.nextElement();
                     Class<?> clazz;
                     ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
-                    null, true);
+                            null, true);
                     extensibleProcessor.addExtensionEntry(extName, extensionEntry);
-        
+
                     try {
                         clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
                         Object object = clazz.getDeclaredConstructor().newInstance();
@@ -624,7 +651,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public String deleteProcessorExtension(String extensionName) {
         for (ManagedObjectRepresentation extensionRepresentation : extensions.get()) {
-            if ( extensionName.equals(extensionRepresentation.getName())) {
+            if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
                 log.info("Deleted extension: {} permanently!", extensionName);
             }
@@ -635,5 +662,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void reloadExtensions() {
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions();
+    }
+
+    private static void openUrlClassLoaderModule() throws Exception {
+        Class<?> moduleClass = Class.forName("java.lang.Module");
+        Method addOpensMethod = moduleClass.getMethod("addOpens", String.class, moduleClass);
+
+        Method getModuleMethod = Class.class.getMethod("getModule");
+        Object urlClassLoaderModule = getModuleMethod.invoke(URLClassLoader.class);
+
+        Object thisModule = getModuleMethod.invoke(C8YAgent.class);
+        Module thisTypedModule = (Module) thisModule;
+        log.info("This module: {}, {}", thisModule.getClass(), thisTypedModule.getName());
+
+        addOpensMethod.invoke(urlClassLoaderModule, URLClassLoader.class.getPackage().getName(), thisModule);
     }
 }
