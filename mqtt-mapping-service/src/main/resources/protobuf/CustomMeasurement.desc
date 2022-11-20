@@ -1,13 +1,0 @@
-
-À
-CustomMeasurement.protoprocessor.protobuf"Í
-CustomMeasurement
-	timestamp (R	timestamp
-value (Rvalue
-unit (	Runit&
-externalIdType (	RexternalIdType
-
-externalId (	R
-externalId(
-measurementType (	RmeasurementTypeB9
-mqtt.mapping.processor.protobufBCustomMeasurementOuterbproto3

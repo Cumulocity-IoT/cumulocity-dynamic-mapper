@@ -15,7 +15,7 @@ public class ServiceConfiguration implements Cloneable {
     public ServiceConfiguration () {
         this.logPayload = false;
         this.logSubstitution = false;
-        this.extensionEnabled = true;
+        this.externalExtensionEnabled = true;
     }
 
     @NotNull
@@ -28,5 +28,5 @@ public class ServiceConfiguration implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean extensionEnabled;
+    public boolean externalExtensionEnabled;
 }

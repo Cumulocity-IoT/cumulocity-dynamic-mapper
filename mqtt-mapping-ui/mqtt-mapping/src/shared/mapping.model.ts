@@ -14,7 +14,7 @@ export interface ConnectionConfiguration {
 export interface ServiceConfiguration {
     logPayload: boolean;
     logSubstitution: boolean;
-    extensionEnabled?: boolean;
+    externalExtensionEnabled?: boolean;
 }
 
 export interface MappingSubstitution {

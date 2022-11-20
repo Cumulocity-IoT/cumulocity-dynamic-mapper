@@ -4,7 +4,8 @@ run_protoc_extension () {
     protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/CustomEvent.desc CustomEvent.proto
 }
 run_protoc_backend () {
-    protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/CustomMeasurement.desc CustomMeasurement.proto
+    protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/StaticCustomMeasurement.desc StaticCustomMeasurement.proto
+    protoc --proto_path=src/main/resources/protobuf --java_out=src/main/java --descriptor_set_out=src/main/resources/protobuf/InternalCustomAlarm.desc InternalCustomAlarm.proto
 }
 
 

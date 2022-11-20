@@ -6,8 +6,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
-import mqtt.mapping.processor.protobuf.CustomMeasurementOuter.CustomMeasurement;
+import mqtt.mapping.processor.processor.fixed.StaticCustomMeasurementOuter;
+import mqtt.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.StaticCustomMeasurement;
 
 public class ProtobufPahoClient {
 
@@ -40,7 +40,7 @@ public class ProtobufPahoClient {
 
             System.out.println("Publishing message: :::");
 
-            CustomMeasurementOuter.CustomMeasurement proto = CustomMeasurement.newBuilder()
+            StaticCustomMeasurementOuter.StaticCustomMeasurement proto = StaticCustomMeasurement.newBuilder()
                     .setExternalIdType("c8y_Serial")
                     .setExternalId("berlin_01")
                     .setUnit("C")
