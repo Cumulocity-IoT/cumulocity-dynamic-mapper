@@ -18,13 +18,13 @@
 
     <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-extension</artifactId>
-    <version>1.105</version>
+    <version>1.107</version>
     <packaging>jar</packaging>
 
     <parent>
         <groupId>com.softwareag.c8y.mqtt</groupId>
         <artifactId>mqtt-mapping-solution</artifactId>
-        <version>1.105</version>
+        <version>1.107</version>
     </parent>
 
     <properties>
@@ -43,7 +43,7 @@
             <groupId>com.softwareag.c8y.mqtt</groupId>
             <artifactId>mqtt-mapping-interface</artifactId>
             <scope>compile</scope>
-            <version>1.105</version> 
+            <version>1.107</version> 
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>

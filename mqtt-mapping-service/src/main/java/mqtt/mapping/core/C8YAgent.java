@@ -173,6 +173,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         ManagedObjectRepresentation[] mappingServiceRepresentations = { new ManagedObjectRepresentation() };
+        ServiceConfiguration[] serviceConfigurations = { null };
         // register agent
         subscriptionsService.runForTenant(tenant, () -> {
             ExternalIDRepresentation mappingServiceIdRepresentation = null;
@@ -204,10 +205,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
             extensibleProcessor = (ExtensibleProcessor<?>) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
-            serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
-            loadProcessorExtensions();
-
+            serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
+            
         });
+        serviceConfiguration = serviceConfigurations[0];
+        loadProcessorExtensions();
         mappingServiceRepresentation = objectMapper.convertValue(mappingServiceRepresentations[0],
                 MappingServiceRepresentation.class);
         mappingStatusComponent.setMappingServiceRepresentation(mappingServiceRepresentation);

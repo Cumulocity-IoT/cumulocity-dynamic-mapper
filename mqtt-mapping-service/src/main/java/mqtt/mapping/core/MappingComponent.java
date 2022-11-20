@@ -146,9 +146,9 @@ public class MappingComponent {
     }
 
     public Mapping getMapping(String id) {
-        Mapping result = null ;
+        Mapping result = null;
         ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
-        if ( mo != null) {
+        if (mo != null) {
             MappingRepresentation mappingsRepresentation = objectMapper.convertValue(mo, MappingRepresentation.class);
             result = mappingsRepresentation.getC8yMQTTMapping();
         }
@@ -164,16 +164,21 @@ public class MappingComponent {
 
     public List<Mapping> getMappings() {
         InventoryFilter inventoryFilter = new InventoryFilter();
-		inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
+        inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
         ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
-        List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), false).map( mo -> 
-            (objectMapper.convertValue(mo, MappingRepresentation.class)).getC8yMQTTMapping()).collect(Collectors.toList());
+        List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), false)
+                .map(mo -> (objectMapper.convertValue(mo, MappingRepresentation.class)))
+                .peek(m -> {
+                    m.getC8yMQTTMapping().id = m.getId().getValue();
+                })
+                .map( mo -> mo.getC8yMQTTMapping())
+                .collect(Collectors.toList());
         log.debug("Found Mappings {}", result);
         return result;
     }
 
-    public Mapping updateMapping(Mapping mapping)  {
-        List<Mapping> mappings =  getMappings(); 
+    public Mapping updateMapping(Mapping mapping) {
+        List<Mapping> mappings = getMappings();
         MappingRepresentation mr = new MappingRepresentation();
         Mapping result = null;
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
@@ -181,7 +186,7 @@ public class MappingComponent {
             mapping.lastUpdate = System.currentTimeMillis();
             mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
-            mr.setId( GId.asGId(mapping.id));
+            mr.setId(GId.asGId(mapping.id));
             inventoryApi.update(mr);
             result = mapping;
         } else {
@@ -193,14 +198,14 @@ public class MappingComponent {
     }
 
     public Mapping createMapping(Mapping mapping) {
-        List<Mapping> mappings =  getMappings(); 
+        List<Mapping> mappings = getMappings();
         MappingRepresentation mr = new MappingRepresentation();
         Mapping result = null;
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();
             mr.setC8yMQTTMapping(mapping);
-            mr.setId( GId.asGId(mapping.id));
+            mr.setId(GId.asGId(mapping.id));
             ManagedObjectRepresentation mor = inventoryApi.create(mr);
             result = mapping;
             result.id = mor.getId().getValue();
