@@ -1,4 +1,4 @@
-package mqtt.mapping.service;
+package mqtt.mapping.core;
 
 import lombok.Data;
 

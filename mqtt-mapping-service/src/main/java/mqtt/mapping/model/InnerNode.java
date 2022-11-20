@@ -51,8 +51,8 @@ public class InnerNode extends TreeNode {
                     results.addAll(node.resolveTopicPath(levels));
                 }
             }
-            if (childNodes.containsKey(MappingsRepresentation.TOPIC_WILDCARD_SINGLE)) {
-                List<TreeNode> revolvedNodes = childNodes.get(MappingsRepresentation.TOPIC_WILDCARD_SINGLE);
+            if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_SINGLE)) {
+                List<TreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_SINGLE);
                 for (TreeNode node : revolvedNodes) {
                     results.addAll(node.resolveTopicPath(levels));
                 }

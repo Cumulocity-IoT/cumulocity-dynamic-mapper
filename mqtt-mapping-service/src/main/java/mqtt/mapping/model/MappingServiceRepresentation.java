@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import mqtt.mapping.service.ServiceStatus;
+import mqtt.mapping.core.ServiceStatus;
 
 @Data
 @NoArgsConstructor

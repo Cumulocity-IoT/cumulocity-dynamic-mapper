@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingsRepresentation;
+import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.extension.ProcessorExtension;
@@ -132,7 +132,7 @@ public abstract class BasePayloadProcessor<O> {
                             Map<String, Object> request = new HashMap<String, Object>();
                             request.put("name",
                                     "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                            request.put(MappingsRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
+                            request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
                             request.put("c8y_IsDevice", null);
                             try {
                                 var requestString = objectMapper.writeValueAsString(request);

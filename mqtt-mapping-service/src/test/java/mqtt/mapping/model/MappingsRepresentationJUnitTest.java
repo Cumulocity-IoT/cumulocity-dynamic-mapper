@@ -19,11 +19,11 @@ public class MappingsRepresentationJUnitTest {
   void testRegexpNormalizeTopic() {
 
     String topic1 = "/rom/hamburg/madrid/#/";
-    String nt1 = topic1.replaceAll(MappingsRepresentation.REGEXP_REMOVE_TRAILING_SLASHES, "#");
+    String nt1 = topic1.replaceAll(MappingRepresentation.REGEXP_REMOVE_TRAILING_SLASHES, "#");
     assertEquals(nt1, "/rom/hamburg/madrid/#");
 
     String topic2 = "////rom/hamburg/madrid/#/////";
-    String nt2 = topic2.replaceAll(MappingsRepresentation.REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
+    String nt2 = topic2.replaceAll(MappingRepresentation.REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
     assertEquals(nt2, "/rom/hamburg/madrid/#/");
 
   }
@@ -32,10 +32,10 @@ public class MappingsRepresentationJUnitTest {
   void testNormalizeTopic() {
 
     String topic1 = "/rom/hamburg/madrid/#/";
-    assertEquals(MappingsRepresentation.normalizeTopic(topic1), "/rom/hamburg/madrid/#");
+    assertEquals(MappingRepresentation.normalizeTopic(topic1), "/rom/hamburg/madrid/#");
 
     String topic2 = "///rom/hamburg/madrid/+//";
-    assertEquals(MappingsRepresentation.normalizeTopic(topic2), "/rom/hamburg/madrid/+/");
+    assertEquals(MappingRepresentation.normalizeTopic(topic2), "/rom/hamburg/madrid/+/");
 
   }
 
@@ -45,18 +45,18 @@ public class MappingsRepresentationJUnitTest {
     Mapping m1 = new Mapping();
     m1.setTemplateTopic("/device/+/east/");
     m1.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingsRepresentation.isTemplateTopicSubscriptionTopicValid(m1));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m1));
 
     Mapping m2 = new Mapping();
     m2.setTemplateTopic("/device");
     m2.setSubscriptionTopic("/device/#");
     ValidationError[] l2 = { ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic };
-    assertEquals(Arrays.asList(l2), MappingsRepresentation.isTemplateTopicSubscriptionTopicValid(m2));
+    assertEquals(Arrays.asList(l2), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m2));
 
     Mapping m3 = new Mapping();
     m3.setTemplateTopic("/device/");
     m3.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingsRepresentation.isTemplateTopicSubscriptionTopicValid(m3));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m3));
   }
 
   @Test
@@ -87,21 +87,21 @@ public class MappingsRepresentationJUnitTest {
     Mapping m1 = new Mapping();
     m1.templateTopic = "/plant1/+/machine1";
     m1.templateTopicSample = "/plant1/line1/machine1";
-    assertEquals(0, MappingsRepresentation
+    assertEquals(0, MappingRepresentation
         .isTemplateTopicTemplateAndTopicSampleValid(m1.templateTopic, m1.templateTopicSample).size() == 0);
 
     Mapping m2 = new Mapping();
     m2.templateTopic = "/plant2/+/machine1";
     m2.templateTopicSample = "/plant1/line1/machine1";
     assertEquals(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-        MappingsRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m2.templateTopic, m2.templateTopicSample)
+        MappingRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m2.templateTopic, m2.templateTopicSample)
             .get(0));
 
     Mapping m3 = new Mapping();
     m3.templateTopic = "/plant1/+/machine1/modul1";
     m3.templateTopicSample = "/plant1/line1/machine1";
     assertEquals(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-        MappingsRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m3.templateTopic, m3.templateTopicSample)
+        MappingRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m3.templateTopic, m3.templateTopicSample)
             .get(0));
 
   }

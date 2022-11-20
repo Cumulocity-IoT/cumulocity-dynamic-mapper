@@ -256,14 +256,14 @@ export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
-export const MAPPING_TYPE = 'c8y_mqttMapping';
+export const MQTT_MAPPING_TYPE = 'c8y_mqttMapping';
 export const PROCESSOR_EXTENSION_TYPE = 'c8y_mqttMapping_Extension';
 export const MQTT_TEST_DEVICE_TYPE = 'c8y_mqttMapping_TestDevice';
 export const MQTT_TEST_DEVICE_FRAGMENT = 'c8y_mqttMapping_TestDevice';
 export const MQTT_MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
 export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
 export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
-export const MAPPING_FRAGMENT = 'c8y_mqttMapping';
+export const MQTT_MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connection';
 export const PATH_EXTERNSION_ENDPOINT = 'extension';

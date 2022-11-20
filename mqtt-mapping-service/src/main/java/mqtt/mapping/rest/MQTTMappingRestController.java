@@ -22,8 +22,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
@@ -32,7 +36,6 @@ import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.ServiceOperation;
-import mqtt.mapping.service.ServiceStatus;
 
 @Slf4j
 @RestController
@@ -44,11 +47,21 @@ public class MQTTMappingRestController {
     @Autowired
     C8YAgent c8yAgent;
 
+    // @Autowired
+    // private ConnectionConfigurationComponent connectionConfigurationComponent;
+
+    // @Autowired
+    // private ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Autowired
+    private MappingComponent mappingStatusComponent;
+
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            final ConfigurationConnection configuration = mqttClient.loadConnectionConfiguration();
+            final ConfigurationConnection configuration = c8yAgent
+                    .loadConnectionConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
             }
@@ -71,7 +84,7 @@ public class MQTTMappingRestController {
         configurationClone.setPassword("");
         log.info("Post MQTT broker configuration: {}", configurationClone.toString());
         try {
-            mqttClient.saveConnectionConfiguration(configuration);
+            c8yAgent.saveConnectionConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -83,7 +96,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         log.info("Get connection details");
         try {
-            final ServiceConfiguration configuration = mqttClient.loadServiceConfiguration();
+            final ServiceConfiguration configuration = c8yAgent.loadServiceConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }
@@ -131,7 +144,7 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MappingStatus>> getMappingStatus() {
-        List<MappingStatus> ms = mqttClient.getMappingStatus();
+        List<MappingStatus> ms = mappingStatusComponent.getMappingStatus();
         log.info("Get mapping status: {}", ms);
         return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
     }
@@ -144,7 +157,7 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Mapping> getMapping(@PathVariable Long id) {
+    public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         log.info("Get mapping: {}", id);
         Mapping result = c8yAgent.getMapping(id);
         if (result == null) {
@@ -154,25 +167,23 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> deleteMapping(@PathVariable Long id) {
+    public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         log.info("Delete mapping: {}", id);
-        Long result;
-        try {
-            result = mqttClient.deleteMapping(id);
-            if (result == -1)
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Mapping with id " + id + " could not be found.");
-            return ResponseEntity.status(HttpStatus.OK).body(result);
-        } catch (JsonProcessingException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
-        }
+        String result = null;
+
+        result = c8yAgent.deleteMapping(id);
+        if (result == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Mapping with id " + id + " could not be found.");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> addMapping(@Valid @RequestBody Mapping mapping) {
+    public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping: {}", mapping);
-            Long result = mqttClient.addMapping(mapping);
+            Mapping result = c8yAgent.createMapping(mapping);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
@@ -184,11 +195,11 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> updateMapping(@PathVariable Long id, @Valid @RequestBody Mapping mapping) {
+    @RequestMapping(value = "/mapping/{ident}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            Long result = mqttClient.updateMapping(id, mapping, false);
+            Mapping result = c8yAgent.updateMapping(mapping, id);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
@@ -224,8 +235,8 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,Extension>> getProcessorExtensions() {
-        Map<String,Extension> result = c8yAgent.getProcessorExtensions();
+    public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
+        Map<String, Extension> result = c8yAgent.getProcessorExtensions();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -233,8 +244,8 @@ public class MQTTMappingRestController {
     public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extensionName) {
         Extension result = c8yAgent.getProcessorExtension(extensionName);
         if (result == null)
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Extension with id " + extensionName + " could not be found.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -242,8 +253,8 @@ public class MQTTMappingRestController {
     public ResponseEntity<String> deleteProcessorExtension(@PathVariable String extensionName) {
         String result = c8yAgent.deleteProcessorExtension(extensionName);
         if (result == null)
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Extension with id " + extensionName + " could not be found.");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
