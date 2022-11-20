@@ -13,17 +13,13 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -61,11 +57,8 @@ import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.model.ValidationError;
 //import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -76,7 +69,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D5";
+    private static final String ADDITION_TEST_DUMMY = "_D1";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";

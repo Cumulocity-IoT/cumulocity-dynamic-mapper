@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, EventEmitter, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, WizardConfig, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
@@ -23,9 +23,7 @@ import { StepperConfiguration } from '../stepper/stepper-model';
 
 export class MappingComponent implements OnInit {
 
-  isSubstitutionValid: boolean;
-
-  @ViewChild(DataGridComponent) mappingGridComponent: DataGridComponent
+  isSubstitutionValid: boolean
 
   showConfigMapping: boolean = false;
 
@@ -54,7 +52,6 @@ export class MappingComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '3%',
       visible: false
     },
     {
@@ -62,14 +59,14 @@ export class MappingComponent implements OnInit {
       name: 'subscriptionTopic',
       path: 'subscriptionTopic',
       filterable: true,
-      gridTrackSize: '10%'
+      gridTrackSize: '15%'
     },
     {
       header: 'Template Topic',
       name: 'templateTopic',
       path: 'templateTopic',
       filterable: true,
-      gridTrackSize: '10%'
+      gridTrackSize: '15%'
     },
     {
       name: 'targetAPI',
@@ -87,7 +84,7 @@ export class MappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '22.5%'
+      gridTrackSize: '22%'
     },
     {
       header: 'Target',
@@ -95,7 +92,7 @@ export class MappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '22.5%'
+      gridTrackSize: '22%'
     },
     {
       header: 'Active-Tested-Snooping',
@@ -105,7 +102,7 @@ export class MappingComponent implements OnInit {
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: 'text-align-center',
-      gridTrackSize: '12.5%'
+      gridTrackSize: '10%'
     },
     {
       header: 'QOS',
@@ -121,6 +118,7 @@ export class MappingComponent implements OnInit {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
+  refresh: EventEmitter<any> = new EventEmitter();
 
   pagination: Pagination = {
     pageSize: 3,
@@ -227,7 +225,7 @@ export class MappingComponent implements OnInit {
 
     this.mappingToUpdate = mapping;
     console.log("Add mappping", this.mappings)
-    this.mappingGridComponent.reload();
+    this.refresh.emit();
     this.showConfigMapping = true;
   }
 
@@ -242,7 +240,7 @@ export class MappingComponent implements OnInit {
     this.setStepperConfiguration(mapping.mappingType);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
-    console.log("Editing mapping", this.mappingToUpdate)
+    console.log("Editing mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
@@ -259,26 +257,28 @@ export class MappingComponent implements OnInit {
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.ident = uuidv4();
     this.mappingToUpdate.id = this.mappingToUpdate.ident
-    console.log("Copying mapping", this.mappingToUpdate)
+    console.log("Copying mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
-  deleteMapping(mapping: Mapping) {
+  async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
     // let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
     // console.log("Trying to delete mapping, index", i)
     // this.mappings.splice(i, 1) // remove it from array
     // console.log("Deleting mapping, remaining maps", this.mappings)
-    this.mappingService.deleteMapping(mapping);
+    await this.mappingService.deleteMapping(mapping);
     this.alertService.success(gettext('Mapping deleted successfully'));
     this.isConnectionToMQTTEstablished = true;
-    this.mappingGridComponent.reload();
+    this.loadMappings();
+    this.refresh.emit();
     this.activateMappings();
   }
 
 
   async loadMappings(): Promise<void> {
     this.mappings = await this.mappingService.loadMappings();
+    console.log("Updated mappings", this.mappings);
   }
 
   async onCommit(mapping: Mapping) {
@@ -293,15 +293,16 @@ export class MappingComponent implements OnInit {
         // new mapping
         console.log("Push new mapping:", mapping);
         //this.mappings.push(mapping)
-        this.mappingService.createMapping(mapping);
+        await this.mappingService.createMapping(mapping);
         this.alertService.success(gettext('Mapping created successfully'));
       } else {
         console.log("Update existing mapping:", mapping);
         //this.mappings[i] = mapping;
-        this.mappingService.updateMapping(mapping);
+        await this.mappingService.updateMapping(mapping);
         this.alertService.success(gettext('Mapping updated successfully'));
       }
-      this.mappingGridComponent.reload();
+      this.loadMappings();
+      this.refresh.emit();
       this.alertService.success(gettext('Mapping deleted successfully'));
       this.isConnectionToMQTTEstablished = true;
       this.activateMappings();

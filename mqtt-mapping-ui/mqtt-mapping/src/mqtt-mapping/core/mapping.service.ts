@@ -35,8 +35,10 @@ export class MappingService {
     };
     let data = (await this.inventory.list(filter)).data;
 
-    data.forEach(m => result.push(m[MQTT_MAPPING_FRAGMENT]))
-    // return empty mapping
+    data.forEach(m => result.push({
+     ...m[MQTT_MAPPING_FRAGMENT],
+     id: m.id
+    }))
     return result;
   }
 

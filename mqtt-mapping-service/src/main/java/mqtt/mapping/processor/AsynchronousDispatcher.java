@@ -42,18 +42,18 @@ public class AsynchronousDispatcher implements MqttCallback {
         boolean sendPayload;
         MqttMessage mqttMessage;
         MappingComponent mappingStatusComponent;
-        ApplicationContext applicationContext;
         ExtensibleProcessor<?> extensionPayloadProcessor;
         C8YAgent c8yAgent;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent, String topic,
                 Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage) {
             this.resolvedMappings = mappings;
+            this.mappingStatusComponent = mappingStatusComponent;
+            this.c8yAgent = c8yAgent;
             this.topic = topic;
             this.payloadProcessors = payloadProcessors;
             this.sendPayload = sendPayload;
             this.mqttMessage = mqttMessage;
-            this.mappingStatusComponent = mappingStatusComponent;
         }
 
         @Override
