@@ -72,7 +72,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D3";
+    private static final String ADDITION_TEST_DUMMY = "_D4";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -193,6 +193,12 @@ public class MQTTClient {
                                 + connectionConfiguration.mqttPort;
                         // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
                         // MemoryPersistence());
+
+                        // before we create a new mqttClient, test if there already exists on and try to close it
+                        if (mqttClient != null) {
+                            mqttClient.close(true);
+                        }
+
                         mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
                                 new MemoryPersistence());
                         mqttClient.setCallback(dispatcher);
