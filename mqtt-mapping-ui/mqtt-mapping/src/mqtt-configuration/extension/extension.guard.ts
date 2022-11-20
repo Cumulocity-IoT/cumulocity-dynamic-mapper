@@ -16,7 +16,7 @@ export class ExtensionGuard implements CanActivate {
         return conf.externalExtensionEnabled
       }
       )
-      return this.activateExtensionNavigationPromise;
     }
+    return this.activateExtensionNavigationPromise;
   }
 }

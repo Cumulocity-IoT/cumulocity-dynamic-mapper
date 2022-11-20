@@ -18,12 +18,12 @@
     <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-interface</artifactId>
     <packaging>jar</packaging>
-    <version>1.104</version>
+    <version>1.105</version>
 
     <parent>
         <groupId>com.softwareag.c8y.mqtt</groupId>
         <artifactId>mqtt-mapping-solution</artifactId>
-        <version>1.104</version>
+        <version>1.105</version>
     </parent>
 
     <dependencyManagement>

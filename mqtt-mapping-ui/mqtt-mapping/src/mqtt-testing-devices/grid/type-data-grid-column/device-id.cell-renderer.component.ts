@@ -19,7 +19,5 @@ export class DeviceIdCellRendererComponent {
   constructor(
     public context: CellRendererContext,
     @Inject(TestingDeviceService) public service: TestingDeviceService
-  ) {
-    console.log("HHHH", context.item)
-  }
+  ) {}
 }

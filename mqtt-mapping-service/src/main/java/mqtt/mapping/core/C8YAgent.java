@@ -569,33 +569,36 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
-        if (serviceConfiguration.isExternalExtensionEnabled()){
+        if (serviceConfiguration.isExternalExtensionEnabled()) {
             loadExternalProcessorExtensions();
-        } else  {
+        } else {
             loadInternalProcessorExtensions();
         }
     }
 
     private void loadInternalProcessorExtensions() {
         ClassLoader dynamicLoader = C8YAgent.class.getClassLoader();
-        registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader, true);
+        try {
+            registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader, true);
+        } catch (IOException e) {
+            log.error("Exception occured, When loading extension, starting without extensions!", e);
+            e.printStackTrace();
+        }
     }
 
     private void loadExternalProcessorExtensions() {
-        // ExtensibleProcessor extensibleProcessor = (ExtensibleProcessor)
-        // payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
-            
+
             // step 1 download extension for binary repository
-            
+
             InputStream downloadInputStream = binaryApi.downloadFile(bObj.getId());
             try {
-                
+
                 // step 2 create temporary file,because classloader needs a url resource
-                
+
                 File tempFile;
                 tempFile = File.createTempFile(extName, "jar");
                 tempFile.deleteOnExit();
@@ -605,33 +608,40 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.info("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path, pathWithProtocol);
                 FileOutputStream outputStream = new FileOutputStream(tempFile);
                 IOUtils.copy(downloadInputStream, outputStream);
-                
+
                 // step 3 parse list of extentions
-                
+
                 ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
-                
+
                 registerExtensionInProcessor(bObj.getId().getValue(), extName, dynamicLoader, false);
 
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }
     }
 
-    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean internal) {
+    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean internal)
+            throws IOException {
         extensibleProcessor.addExtension(id, extName);
-        InputStream resourceAsStream = dynamicLoader.getResourceAsStream( internal? EXTENSION_INTERNAL: EXTENSION_EXTERNAL);
-        BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
-        
-        Properties newExtensions = new Properties();
+        String resource = internal ? EXTENSION_INTERNAL : EXTENSION_EXTERNAL;
+        InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
+        InputStreamReader in = null;
         try {
-            if (buffered != null)
-                newExtensions.load(buffered);
-            log.info("Preparing to load extensions:" + newExtensions.toString());
-        } catch (IOException io) {
-            io.printStackTrace();
+            in = new InputStreamReader(resourceAsStream);
+        } catch (Exception e) {
+            log.error("Registration file: {} missing, ignoring to load extensions from: {}", resource,
+                    (internal ? "INTERNAL" : "EXTERNAL"));
+            throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
+                    + (internal ? "INTERNAL" : "EXTERNAL"));
         }
+        BufferedReader buffered = new BufferedReader(in);
+        Properties newExtensions = new Properties();
+   
+        if (buffered != null)
+            newExtensions.load(buffered);
+        log.info("Preparing to load extensions:" + newExtensions.toString());
 
         Enumeration<?> extensions = newExtensions.propertyNames();
         while (extensions.hasMoreElements()) {
