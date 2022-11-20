@@ -45,6 +45,8 @@ public class ProtobufPahoClient {
                     .setExternalIdType("c8y_Serial")
                     .setExternalId("berlin_01")
                     .setTxt("Dummy Text")
+                    .setEventType("c8y_ProtobufEventType")
+                    .setTimestamp(System.currentTimeMillis())
                     .build();
 
             MqttMessage message = new MqttMessage(proto.toByteArray());
@@ -61,4 +63,5 @@ public class ProtobufPahoClient {
             me.printStackTrace();
         }
     }
+
 }

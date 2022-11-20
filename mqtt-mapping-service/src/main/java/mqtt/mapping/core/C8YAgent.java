@@ -130,7 +130,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MicroserviceCredentials credentials;
 
+    private ServiceConfiguration serviceConfiguration;
+
     private static final Method ADD_URL_METHOD;
+
+    private static final String EXTENSION_INTERNAL = "extension-internal.properties";
+    private static final String EXTENSION_EXTERNAL = "extension-external.properties";
 
     static {
         final Method addURL;
@@ -211,6 +216,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
 
             extensibleProcessor = (ExtensibleProcessor<?>) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
+            serviceConfiguration = loadServiceConfiguration();
             loadProcessorExtensions();
         });
 
@@ -563,17 +569,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
-        if (mqttClient.getServiceConfiguration().isExternalExtensionEnabled()){
+        if (serviceConfiguration.isExternalExtensionEnabled()){
             loadExternalProcessorExtensions();
-        } {
+        } else  {
             loadInternalProcessorExtensions();
         }
-
     }
 
     private void loadInternalProcessorExtensions() {
         ClassLoader dynamicLoader = C8YAgent.class.getClassLoader();
-        registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader);
+        registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader, true);
     }
 
     private void loadExternalProcessorExtensions() {
@@ -605,7 +610,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 
                 ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
                 
-                registerExtensionInProcessor(bObj.getId().getValue(), extName, dynamicLoader);
+                registerExtensionInProcessor(bObj.getId().getValue(), extName, dynamicLoader, false);
 
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
@@ -614,9 +619,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader) {
+    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean internal) {
         extensibleProcessor.addExtension(id, extName);
-        InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
+        InputStream resourceAsStream = dynamicLoader.getResourceAsStream( internal? EXTENSION_INTERNAL: EXTENSION_EXTERNAL);
         BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
         
         Properties newExtensions = new Properties();
