@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { FetchClient, IdentityService, IManagedObject, InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
+import { map } from 'rxjs/operators';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Extension, Mapping } from '../../shared/mapping.model';
-import { BASE_URL, MAPPING_FRAGMENT, MAPPING_TYPE, PATH_EXTERNSION_ENDPOINT } from '../../shared/util';
+import { Mapping } from '../../shared/mapping.model';
+import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
 import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
@@ -21,48 +22,52 @@ export class MappingService {
   protected JSONATA = require("jsonata");
 
   public async loadMappings(): Promise<Mapping[]> {
+    let result: Mapping[] = [];
     if (!this.agentId) {
       this.agentId = await this.configurationService.initializeMQTTAgent();
     }
     console.log("MappingService: Found MQTTAgent!", this.agentId);
 
-    let identity: IExternalIdentity = {
-      type: 'c8y_Serial',
-      externalId: MAPPING_TYPE
+    const filter: object = {
+      pageSize: 100,
+      withTotalPages: true,
+      type: MQTT_MAPPING_TYPE,
     };
-    try {
-      const { data, res } = await this.identity.detail(identity);
-      const response: IResult<IManagedObject> = await this.inventory.detail(data.managedObject.id);
-      this.managedObjectMapping = response.data;
-      return response.data[MAPPING_FRAGMENT] as Mapping[];
-    } catch (e) {
-      console.log("So far no mqttMapping generated!")
-      // create new mapping mo
-      const response: IResult<IManagedObject> = await this.inventory.create({
-        c8y_mqttMapping: [],
-        name: "MQTT-Mapping",
-        type: MAPPING_TYPE
-      });
+    let data = (await this.inventory.list(filter)).data;
 
-      //create identity for mo
-      identity = {
-        ...identity,
-        managedObject: {
-          id: response.data.id
-        }
-      }
-      const { data, res } = await this.identity.create(identity);
-      this.managedObjectMapping = response.data;
-      // return empty mapping
-      return [];
-    }
+    data.forEach(m => result.push(m[MQTT_MAPPING_FRAGMENT]))
+    // return empty mapping
+    return result;
   }
 
-  async saveMappings(mappings: Mapping[]): Promise<IResult<IManagedObject>> {
-    return this.inventory.update({
-      c8y_mqttMapping: mappings,
-      id: this.managedObjectMapping.id,
+  async saveMappings(mappings: Mapping[]): Promise<void> {
+    mappings.forEach(m => {
+      this.inventory.update({
+        c8y_mqttMapping: m,
+        id: m.id,
+      })
+    })
+  }
+
+  async updateMapping(mapping: Mapping): Promise<Mapping> {
+    const { data, res } = await this.inventory.update({
+      c8y_mqttMapping: mapping,
+      id: mapping.id,
+    })
+    return mapping;
+  }
+
+  async deleteMapping(mapping: Mapping): Promise<IResult<null>> {
+    let result = this.inventory.delete(mapping.id)
+    return result
+  }
+
+  async createMapping(mapping: Mapping): Promise<Mapping> {
+    const { data, res } = await this.inventory.create({
+      c8y_mqttMapping: mapping,
     });
+    mapping.id = data.id;
+    return mapping;
   }
 
   private initializeContext(mapping: Mapping, sendPayload: boolean): ProcessingContext {
@@ -97,5 +102,5 @@ export class MappingService {
     }
     return result;
   }
-  
+
 }

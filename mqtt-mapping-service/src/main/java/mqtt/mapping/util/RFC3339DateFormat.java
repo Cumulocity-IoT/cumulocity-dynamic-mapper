@@ -1,4 +1,4 @@
-package mqtt.mapping.service;
+package mqtt.mapping.util;
 
 import com.fasterxml.jackson.databind.util.StdDateFormat;
 

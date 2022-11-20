@@ -54,7 +54,8 @@ export class MappingComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '3%'
+      gridTrackSize: '3%',
+      visible: false
     },
     {
       header: 'Subscription Topic',
@@ -184,12 +185,11 @@ export class MappingComponent implements OnInit {
       editMode: false
     };
 
-    let l = this.nextId();
-
+    let ident = uuidv4();
     let sub: MappingSubstitution[] = [];
     let mapping: Mapping = {
-      id: l,
-      ident: uuidv4(),
+      id: ident,
+      ident: ident,
       subscriptionTopic: '',
       templateTopic: '',
       templateTopicSample: '',
@@ -226,13 +226,9 @@ export class MappingComponent implements OnInit {
     this.setStepperConfiguration(this.mappingType)
 
     this.mappingToUpdate = mapping;
-    console.log("Add mappping", l, this.mappings)
+    console.log("Add mappping", this.mappings)
     this.mappingGridComponent.reload();
     this.showConfigMapping = true;
-  }
-
-  private nextId() {
-    return (this.mappings.length == 0 ? 0 : Math.max(...this.mappings.map(item => item.id))) + 1;
   }
 
   editMapping(mapping: Mapping) {
@@ -262,19 +258,21 @@ export class MappingComponent implements OnInit {
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.ident = uuidv4();
-    this.mappingToUpdate.id = this.nextId();
+    this.mappingToUpdate.id = this.mappingToUpdate.ident
     console.log("Copying mapping", this.mappingToUpdate)
     this.showConfigMapping = true;
   }
 
   deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
-    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
-    console.log("Trying to delete mapping, index", i)
-    this.mappings.splice(i, 1) // remove it from array
-    console.log("Deleting mapping, remaining maps", this.mappings)
+    // let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
+    // console.log("Trying to delete mapping, index", i)
+    // this.mappings.splice(i, 1) // remove it from array
+    // console.log("Deleting mapping, remaining maps", this.mappings)
+    this.mappingService.deleteMapping(mapping);
+    this.alertService.success(gettext('Mapping deleted successfully'));
+    this.isConnectionToMQTTEstablished = true;
     this.mappingGridComponent.reload();
-    this.saveMappings();
     this.activateMappings();
   }
 
@@ -287,20 +285,25 @@ export class MappingComponent implements OnInit {
     // test if new/updated mapping was commited or if cancel
     // if (mapping) {
     mapping.lastUpdate = Date.now();
-    let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
-    console.log("Changed mapping:", mapping, i);
+    //let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
+    console.log("Changed mapping:", mapping);
 
     if (isTemplateTopicUnique(mapping, this.mappings)) {
-      if (i == -1) {
+      if (!this.stepperConfiguration.editMode) {
         // new mapping
-        console.log("Push new mapping:", mapping, i);
-        this.mappings.push(mapping)
+        console.log("Push new mapping:", mapping);
+        //this.mappings.push(mapping)
+        this.mappingService.createMapping(mapping);
+        this.alertService.success(gettext('Mapping created successfully'));
       } else {
-        console.log("Update existing mapping:", this.mappings[i], mapping, i);
-        this.mappings[i] = mapping;
+        console.log("Update existing mapping:", mapping);
+        //this.mappings[i] = mapping;
+        this.mappingService.updateMapping(mapping);
+        this.alertService.success(gettext('Mapping updated successfully'));
       }
       this.mappingGridComponent.reload();
-      this.saveMappings();
+      this.alertService.success(gettext('Mapping deleted successfully'));
+      this.isConnectionToMQTTEstablished = true;
       this.activateMappings();
     } else {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
@@ -329,14 +332,14 @@ export class MappingComponent implements OnInit {
   }
 
   private async saveMappings() {
-    const response1 = await this.mappingService.saveMappings(this.mappings);
-    console.log("Saved mppings response:", response1.res, this.mappings)
-    if (response1.res.ok) {
-      this.alertService.success(gettext('Mappings saved successfully'));
-      this.isConnectionToMQTTEstablished = true;
-    } else {
-      this.alertService.danger(gettext('Failed to save mappings'));
-    }
+    await this.mappingService.saveMappings(this.mappings);
+    console.log("Saved mppings:", this.mappings)
+    this.alertService.success(gettext('Mappings saved successfully'));
+    this.isConnectionToMQTTEstablished = true;
+    // if (response1.res.ok) {
+    // } else {
+    //   this.alertService.danger(gettext('Failed to save mappings'));
+    // }
   }
 
   setStepperConfiguration(mappingType: MappingType) {
