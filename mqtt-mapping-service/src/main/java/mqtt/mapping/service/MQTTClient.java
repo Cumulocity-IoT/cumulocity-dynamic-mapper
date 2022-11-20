@@ -53,6 +53,8 @@ import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.Operation;
+import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
