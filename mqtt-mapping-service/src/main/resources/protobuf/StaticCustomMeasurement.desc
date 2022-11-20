@@ -1,0 +1,13 @@
+
+Ù
+StaticCustomMeasurement.protoprocessor.protobuf"Ó
+StaticCustomMeasurement
+	timestamp (R	timestamp
+value (Rvalue
+unit (	Runit&
+externalIdType (	RexternalIdType
+
+externalId (	R
+externalId(
+measurementType (	RmeasurementTypeBF
+&mqtt.mapping.processor.processor.fixedBStaticCustomMeasurementOuterbproto3

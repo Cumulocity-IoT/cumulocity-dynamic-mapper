@@ -36,7 +36,7 @@ import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.processor.FlatFileProcessor;
 import mqtt.mapping.processor.processor.GenericBinaryProcessor;
 import mqtt.mapping.processor.processor.JSONProcessor;
-import mqtt.mapping.processor.processor.StaticProtobufProcessor;
+import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.service.RFC3339DateFormat;
 

@@ -563,21 +563,34 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
+        if (mqttClient.getServiceConfiguration().isExternalExtensionEnabled()){
+            loadExternalProcessorExtensions();
+        } {
+            loadInternalProcessorExtensions();
+        }
+
+    }
+
+    private void loadInternalProcessorExtensions() {
+        ClassLoader dynamicLoader = C8YAgent.class.getClassLoader();
+        registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader);
+    }
+
+    private void loadExternalProcessorExtensions() {
         // ExtensibleProcessor extensibleProcessor = (ExtensibleProcessor)
         // payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
         for (ManagedObjectRepresentation bObj : extensions.get()) {
             String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
-            extensibleProcessor.addExtension(bObj.getId().getValue(), extName);
             log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
             log.debug("Copying extension binary , Id: " + bObj);
-
+            
             // step 1 download extension for binary repository
-
+            
             InputStream downloadInputStream = binaryApi.downloadFile(bObj.getId());
             try {
-
+                
                 // step 2 create temporary file,because classloader needs a url resource
-
+                
                 File tempFile;
                 tempFile = File.createTempFile(extName, "jar");
                 tempFile.deleteOnExit();
@@ -587,58 +600,64 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.info("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path, pathWithProtocol);
                 FileOutputStream outputStream = new FileOutputStream(tempFile);
                 IOUtils.copy(downloadInputStream, outputStream);
-
+                
                 // step 3 parse list of extentions
-
+                
                 ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
-                InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
-                BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
-
-                Properties newExtensions = new Properties();
-                try {
-                    if (buffered != null)
-                        newExtensions.load(buffered);
-                    log.info("Preparing to load extensions:" + newExtensions.toString());
-                } catch (IOException io) {
-                    io.printStackTrace();
-                }
-
-                Enumeration<?> extensions = newExtensions.propertyNames();
-                while (extensions.hasMoreElements()) {
-                    String key = (String) extensions.nextElement();
-                    Class<?> clazz;
-                    ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
-                            null, true);
-                    extensibleProcessor.addExtensionEntry(extName, extensionEntry);
-
-                    try {
-                        clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
-                        Object object = clazz.getDeclaredConstructor().newInstance();
-                        if (!(object instanceof ProcessorExtension)) {
-                            log.warn("Extension: {}={} is not instance of ProcessorExtension, ignoring this enty!", key,
-                                    newExtensions.getProperty(key));
-                        } else {
-                            ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
-                                    .newInstance();
-                            // springUtil.registerBean(key, clazz);
-                            extensionEntry.setExtensionImplementation(extensionImpl);
-                            log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
-                                    key);
-                        }
-                    } catch (Exception e) {
-                        log.warn("Could not load extension: {}:{}, ignoring loading!", key,
-                                newExtensions.getProperty(key));
-                        e.printStackTrace();
-                        extensionEntry.setLoaded(false);
-                    }
-                }
-                extensibleProcessor.updateStatusExtension(extName);
+                
+                registerExtensionInProcessor(bObj.getId().getValue(), extName, dynamicLoader);
 
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
                 e.printStackTrace();
             }
         }
+    }
+
+    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader) {
+        extensibleProcessor.addExtension(id, extName);
+        InputStream resourceAsStream = dynamicLoader.getResourceAsStream("extension.properties");
+        BufferedReader buffered = new BufferedReader(new InputStreamReader(resourceAsStream));
+        
+        Properties newExtensions = new Properties();
+        try {
+            if (buffered != null)
+                newExtensions.load(buffered);
+            log.info("Preparing to load extensions:" + newExtensions.toString());
+        } catch (IOException io) {
+            io.printStackTrace();
+        }
+
+        Enumeration<?> extensions = newExtensions.propertyNames();
+        while (extensions.hasMoreElements()) {
+            String key = (String) extensions.nextElement();
+            Class<?> clazz;
+            ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
+                    null, true);
+            extensibleProcessor.addExtensionEntry(extName, extensionEntry);
+
+            try {
+                clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
+                Object object = clazz.getDeclaredConstructor().newInstance();
+                if (!(object instanceof ProcessorExtension)) {
+                    log.warn("Extension: {}={} is not instance of ProcessorExtension, ignoring this enty!", key,
+                            newExtensions.getProperty(key));
+                } else {
+                    ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
+                            .newInstance();
+                    // springUtil.registerBean(key, clazz);
+                    extensionEntry.setExtensionImplementation(extensionImpl);
+                    log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
+                            key);
+                }
+            } catch (Exception e) {
+                log.warn("Could not load extension: {}:{}, ignoring loading!", key,
+                        newExtensions.getProperty(key));
+                e.printStackTrace();
+                extensionEntry.setLoaded(false);
+            }
+        }
+        extensibleProcessor.updateStatusExtension(extName);
     }
 
     public Map<String, Extension> getProcessorExtensions() {

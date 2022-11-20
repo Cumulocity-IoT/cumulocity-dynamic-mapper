@@ -1,4 +1,4 @@
-package mqtt.mapping.processor.processor;
+package mqtt.mapping.processor.processor.fixed;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,11 +20,9 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.processor.protobuf.CustomMeasurementOuter;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
@@ -46,9 +44,9 @@ public class StaticProtobufProcessor<T> extends BasePayloadProcessor<T> {
         public void extractFromSource(ProcessingContext<T> context)
                         throws ProcessingException {
                 if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
-                        CustomMeasurementOuter.CustomMeasurement payloadProtobuf;
+                        StaticCustomMeasurementOuter.StaticCustomMeasurement payloadProtobuf;
                         try {
-                                payloadProtobuf = CustomMeasurementOuter.CustomMeasurement
+                                payloadProtobuf = StaticCustomMeasurementOuter.StaticCustomMeasurement
                                                 .parseFrom( (byte[])context.getPayload());
                         } catch (InvalidProtocolBufferException e) {
                                 throw new ProcessingException(e.getMessage());

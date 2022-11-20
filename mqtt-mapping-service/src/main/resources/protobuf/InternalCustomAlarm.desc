@@ -1,0 +1,14 @@
+
+Ò
+InternalCustomAlarm.protoprocessor.protobuf"Û
+InternalCustomAlarm
+	timestamp (R	timestamp
+txt (	Rtxt
+unit (	Runit&
+externalIdType (	RexternalIdType
+
+externalId (	R
+externalId
+	alarmType (	R	alarmType
+severity (	RseverityB;
+mqtt.mapping.extension.internalBInternalCustomAlarmOuterbproto3

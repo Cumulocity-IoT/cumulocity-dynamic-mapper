@@ -12,7 +12,7 @@ export class ExtensionGuard implements CanActivate {
     if (!this.activateExtensionNavigationPromise) {
       this.activateExtensionNavigationPromise = 
       this.configurationService.getServiceConfiguration().then (conf => 
-        conf.extensionEnabled
+        conf.externalExtensionEnabled
       )
       return this.activateExtensionNavigationPromise;
     }
