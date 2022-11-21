@@ -1,5 +1,5 @@
 import { Component, EventEmitter, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, WizardConfig, WizardService } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
@@ -52,21 +52,21 @@ export class MappingComponent implements OnInit {
       path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      visible: false
+      visible: true
     },
     {
       header: 'Subscription Topic',
       name: 'subscriptionTopic',
       path: 'subscriptionTopic',
       filterable: true,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: 'Template Topic',
       name: 'templateTopic',
       path: 'templateTopic',
       filterable: true,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       name: 'targetAPI',
@@ -150,6 +150,11 @@ export class MappingComponent implements OnInit {
         type: BuiltInActionType.Delete,
         callback: this.deleteMapping.bind(this)
       });
+  }
+
+  onRowClick(mapping: Row) {
+    console.log('Row clicked:');
+    this.editMapping (mapping as Mapping);
   }
 
   onAddMapping() {
