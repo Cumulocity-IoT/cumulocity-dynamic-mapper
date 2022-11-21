@@ -26,7 +26,7 @@
       </button>
       <ul *dropdownMenu class="dropdown-menu dropdown-menu-right">
         <li>
-          <button (click)="delete()" title="{{ 'Delete' }}">
+          <button (click)="delete()" title="{{ 'Delete' }}" [disabled]="!externalExtensionEnabled">
             <i c8yIcon="trash" class="m-r-4"></i>
             {{ 'Delete' | translate }}
           </button>

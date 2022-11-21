@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MappingsRepresentation extends ManagedObjectRepresentation implements Serializable {
+public class MappingRepresentation extends ManagedObjectRepresentation implements Serializable {
 
   public static final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
   public static final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
@@ -43,8 +44,8 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
   // @JsonProperty(value = "description")
   // private String description;
 
-  @JsonProperty(value = "c8y_mqttMapping")
-  private ArrayList<Mapping> c8yMQTTMapping;
+  @JsonProperty(value = MQTT_MAPPING_FRAGMENT)
+  private Mapping c8yMQTTMapping;
 
   static public boolean isWildcardTopic(String topic) {
     var result = topic.contains(TOPIC_WILDCARD_MULTI) || topic.contains(TOPIC_WILDCARD_SINGLE);
@@ -94,8 +95,8 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
     return result;
   }
 
-  static public ArrayList<ValidationError> isTemplateTopicSubscriptionTopicValid(Mapping mapping) {
-    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+  static public List<ValidationError> isTemplateTopicSubscriptionTopicValid(Mapping mapping) {
+    List<ValidationError> result = new ArrayList<ValidationError>();
 
     // does the template topic is covered by the subscriptionTopic
     BiFunction<String, String, Boolean> topicMatcher = (st,
@@ -107,7 +108,7 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
     return result;
   }
 
-  static public ArrayList<ValidationError> isTemplateTopicUnique(ArrayList<Mapping> mappings, Mapping mapping) {
+  static public List<ValidationError> isTemplateTopicUnique(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     var templateTopic = mapping.templateTopic;
     mappings.forEach(m -> {
@@ -119,7 +120,7 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
     return result;
   }
 
-  static public ArrayList<ValidationError> isMappingValid(ArrayList<Mapping> mappings, Mapping mapping) {
+  static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     result.addAll(isSubstituionValid(mapping));
     result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
@@ -134,7 +135,7 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
    * test if mapping.templateTopic and mapping.templateTopicSample have the same
    * structure and same number of levels
    */
-  public static ArrayList<ValidationError> isTemplateTopicTemplateAndTopicSampleValid(String templateTopic,
+  public static List<ValidationError> isTemplateTopicTemplateAndTopicSampleValid(String templateTopic,
       String templateTopicSample) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     String[] splitTT = Mapping.splitTopicIncludingSeparatorAsArray(templateTopic);
@@ -189,11 +190,11 @@ public class MappingsRepresentation extends ManagedObjectRepresentation implemen
     return nt;
   }
 
-  static public Long nextId(ArrayList<Mapping> mappings) {
-    Long max = mappings
-        .stream()
-        .mapToLong(v -> v.id)
-        .max().orElseThrow(NoSuchElementException::new);
-    return max + 1L;
-  }
+  // static public Long nextId(ArrayList<Mapping> mappings) {
+  //   Long max = mappings
+  //       .stream()
+  //       .mapToLong(v -> v.id)
+  //       .max().orElseThrow(NoSuchElementException::new);
+  //   return max + 1L;
+  // }
 }

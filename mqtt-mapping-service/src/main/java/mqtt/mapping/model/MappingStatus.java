@@ -17,7 +17,7 @@ import javax.validation.constraints.NotNull;
 public class MappingStatus implements Serializable {
 
   @NotNull
-  public long id;
+  public String id;
 
   @NotNull
   public String ident;

@@ -22,7 +22,7 @@ const extensionRoutes: Route[] = [
     //     component: ExtensionPropertiesComponent,
     //   }
     // ]
-    canActivate: [ExtensionGuard],
+    //canActivate: [ExtensionGuard],
   },
   {
     path: 'mqtt-mapping/extensions/properties/:id',

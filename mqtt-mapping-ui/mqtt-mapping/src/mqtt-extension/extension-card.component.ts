@@ -2,7 +2,8 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { ExtensionStatus } from '../../shared/mapping.model';
+import { BrokerConfigurationService } from '../mqtt-configuration/broker-configuration.service';
+import { ExtensionStatus } from '../shared/mapping.model';
 import { ExtensionService } from './extension.service';
 
 @Component({
@@ -14,15 +15,19 @@ export class ExtensionCardComponent implements OnInit {
   @Output() onAppDeleted: EventEmitter<void> = new EventEmitter();
 
   ExtensionStatus = ExtensionStatus;
+  externalExtensionEnabled: boolean = true;
 
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private router: Router,
     private activatedRoute: ActivatedRoute,
+    private configurationService: BrokerConfigurationService
   ) {}
 
   async ngOnInit() {
+    this.externalExtensionEnabled = (await this.configurationService.getServiceConfiguration()).externalExtensionEnabled;
+ 
   }
 
   async detail() {
