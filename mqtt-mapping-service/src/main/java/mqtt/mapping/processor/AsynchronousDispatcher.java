@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -14,6 +15,9 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
@@ -43,9 +47,12 @@ public class AsynchronousDispatcher implements MqttCallback {
         MappingComponent mappingStatusComponent;
         ExtensibleProcessor<?> extensionPayloadProcessor;
         C8YAgent c8yAgent;
+        ObjectMapper objectMapper;
 
-        public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent, String topic,
-                Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload, MqttMessage mqttMessage) {
+        public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
+                String topic,
+                Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload,
+                MqttMessage mqttMessage, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
@@ -53,6 +60,7 @@ public class AsynchronousDispatcher implements MqttCallback {
             this.payloadProcessors = payloadProcessors;
             this.sendPayload = sendPayload;
             this.mqttMessage = mqttMessage;
+            this.objectMapper = objectMapper;
         }
 
         @Override
@@ -88,17 +96,31 @@ public class AsynchronousDispatcher implements MqttCallback {
                         mappingStatus.messagesReceived++;
                         if (mapping.snoopStatus == SnoopStatus.ENABLED
                                 || mapping.snoopStatus == SnoopStatus.STARTED) {
-                            if (context.getPayload() instanceof String) {
-                                String payload = (String) context.getPayload();
+                            String serializedPayload = null;
+                            if (context.getPayload() instanceof JsonNode) {
+                                serializedPayload = objectMapper.writeValueAsString((JsonNode) context.getPayload());
+                            } else if (context.getPayload() instanceof String) {
+                                serializedPayload = (String) context.getPayload();
+                            }
+                            if (context.getPayload() instanceof byte[]) {
+                                serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
+                            }
+
+                            if (serializedPayload != null) {
                                 mappingStatus.snoopedTemplatesActive++;
                                 mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                                mapping.addSnoopedTemplate(payload);
+                                mapping.addSnoopedTemplate(serializedPayload);
 
                                 log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                         mapping.snoopedTemplates.size(),
                                         mapping.snoopStatus);
-                                        mappingStatusComponent.setMappingDirty(mapping);
                                 mappingStatusComponent.setMappingDirty(mapping);
+                                mappingStatusComponent.setMappingDirty(mapping);
+
+                            } else {
+                                log.warn(
+                                        "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                        context.getPayload().getClass());
                             }
                         } else {
                             processor.extractFromSource(context);
@@ -109,7 +131,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                                 mappingStatus.errors++;
                             }
                         }
-                    } catch (Exception e ) {
+                    } catch (Exception e) {
                         log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
                         e.printStackTrace();
                         mappingStatus.errors++;
@@ -133,6 +155,12 @@ public class AsynchronousDispatcher implements MqttCallback {
     protected MQTTClient mqttClient;
 
     @Autowired
+    protected ObjectMapper objectMapper;
+
+    @Autowired
+    ExtensibleProcessor<?> extensionPayloadProcessor;
+
+    @Autowired
     SysHandler sysHandler;
 
     @Autowired
@@ -141,7 +169,7 @@ public class AsynchronousDispatcher implements MqttCallback {
     @Autowired
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
-    
+
     @Autowired
     MappingComponent mappingStatusComponent;
 
@@ -181,7 +209,8 @@ public class AsynchronousDispatcher implements MqttCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessors, sendPayload, mqttMessage));
+                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessors,
+                        sendPayload, mqttMessage, objectMapper));
 
         return futureProcessingResult;
 
