@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -11,6 +12,9 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
@@ -39,9 +43,9 @@ public class SynchronousDispatcher implements MqttCallback {
 
     @Autowired
     protected MQTTClient mqttClient;
-
+    
     @Autowired
-    ExtensibleProcessor<?> extensionPayloadProcessor;
+    protected ObjectMapper objectMapper;
 
     @Autowired
     SysHandler sysHandler;
@@ -49,7 +53,6 @@ public class SynchronousDispatcher implements MqttCallback {
     @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
-    
     @Autowired
     MappingComponent mappingStatusComponent;
 
@@ -111,16 +114,32 @@ public class SynchronousDispatcher implements MqttCallback {
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
                                     || mapping.snoopStatus == SnoopStatus.STARTED) {
-                                if (context.getPayload() instanceof String) {
-                                    String payload = (String) context.getPayload();
+                                String serializedPayload = null;
+                                if (context.getPayload() instanceof JsonNode) {
+                                    serializedPayload = objectMapper
+                                            .writeValueAsString((JsonNode) context.getPayload());
+                                } else if (context.getPayload() instanceof String) {
+                                    serializedPayload = (String) context.getPayload();
+                                }
+                                if (context.getPayload() instanceof byte[]) {
+                                    serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
+                                }
+
+                                if (serializedPayload != null) {
                                     mappingStatus.snoopedTemplatesActive++;
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                                    mapping.addSnoopedTemplate(payload);
+                                    mapping.addSnoopedTemplate(serializedPayload);
 
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
                                     mappingStatusComponent.setMappingDirty(mapping);
+                                    mappingStatusComponent.setMappingDirty(mapping);
+
+                                } else {
+                                    log.warn(
+                                            "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            context.getPayload().getClass());
                                 }
                             } else {
                                 processor.extractFromSource(context);

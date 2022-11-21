@@ -29,6 +29,8 @@ public class ProcessingContext<O> {
 
     private O payload;
 
+    private byte[] payloadRaw;
+
     private ArrayList<C8YRequest> requests = new ArrayList<C8YRequest>();
 
     private Exception error;

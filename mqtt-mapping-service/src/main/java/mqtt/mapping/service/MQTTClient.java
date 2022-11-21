@@ -71,7 +71,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "";
+    private static final String ADDITION_TEST_DUMMY = "_D2";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -418,7 +418,7 @@ public class MQTTClient {
                 log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
                         statusInitializeTask, isConnected());
             }
-            cleanDirtyMappings();
+            c8yAgent.cleanDirtyMappings();
             c8yAgent.sendStatusMapping();
             c8yAgent.sendStatusService(getServiceStatus());
         } catch (Exception ex) {
@@ -438,18 +438,6 @@ public class MQTTClient {
             serviceStatus = ServiceStatus.notReady();
         }
         return serviceStatus;
-    }
-
-    private void cleanDirtyMappings() throws JsonProcessingException {
-        // test if for this tenant dirty mappings exist
-        log.debug("Testing for dirty maps");
-        for (Mapping mapping : mappingStatusComponent.getMappingDirty()) {
-            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
-            // no reload required
-            c8yAgent.updateMapping(mapping, mapping.id);
-        }
-        // reset dirtySet
-        mappingStatusComponent.resetMappingDirty();
     }
 
     public TreeNode getMappingTree() {

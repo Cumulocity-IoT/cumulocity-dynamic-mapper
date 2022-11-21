@@ -9,6 +9,7 @@ import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
+import org.apache.tomcat.util.net.SendfileKeepAliveState;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -59,10 +60,10 @@ public class MappingRepresentation extends ManagedObjectRepresentation implement
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     long count = Arrays.asList(mapping.substitutions).stream()
         .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
-    if (count > 1) {
+    if (count > 1 && mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED ) {
       result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
     }
-    if (count < 1) {
+    if (count < 1  && mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED ) {
       result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
     }
     return result;

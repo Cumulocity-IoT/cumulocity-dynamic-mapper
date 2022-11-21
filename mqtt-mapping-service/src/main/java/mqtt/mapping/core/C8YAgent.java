@@ -650,4 +650,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             mappingStatusComponent.sendStatusService(serviceStatus);
         });
     }
+
+    public void cleanDirtyMappings() throws JsonProcessingException {
+        // test if for this tenant dirty mappings exist
+        log.debug("Testing for dirty maps");
+        for (Mapping mapping : mappingStatusComponent.getMappingDirty()) {
+            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
+            // no reload required
+            updateMapping(mapping, mapping.id);
+        }
+        // reset dirtySet
+        mappingStatusComponent.resetMappingDirty();
+    }
 }

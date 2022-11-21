@@ -15,6 +15,7 @@ export interface ProcessingContext {
     mapping: Mapping;
     topic: string;
     payload?: JSON;
+    payloadRaw?: any;
     requests?: C8YRequest[];
     processingType?: ProcessingType;
     cardinality: Map<string, number>;
