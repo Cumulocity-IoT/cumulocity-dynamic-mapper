@@ -9,6 +9,7 @@ import { ExtensionComponent } from './extension.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { ExtensionPropertiesComponent } from './extension-properties.component';
 import { ExtensionGuard } from './extension.guard';
+import { RouterModule } from '@angular/router';
 
 const extensionRoutes: Route[] = [
   {
@@ -41,7 +42,7 @@ const extensionRoutes: Route[] = [
   ],
   imports: [
     CoreModule,
-    BsDropdownModule.forRoot()
+    BsDropdownModule.forRoot(),
   ],
   entryComponents: [
     ExtensionComponent,

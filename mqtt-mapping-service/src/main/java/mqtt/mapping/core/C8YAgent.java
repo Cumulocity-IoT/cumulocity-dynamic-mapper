@@ -60,7 +60,7 @@ import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.extension.ProcessorExtensionsRepresentation;
+import mqtt.mapping.extension.ExtensionsComponent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
@@ -120,7 +120,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private MappingComponent mappingStatusComponent;
 
     @Autowired
-    private ProcessorExtensionsRepresentation extensions;
+    private ExtensionsComponent extensions;
 
     @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
@@ -217,15 +217,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 //internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_TYPE,
                 //        new HashMap());
                 Map<String, ?> props = Map.of("name",
-                        ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                        ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                         "external", false);
-                internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE,
+                internalExtensions[0].setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
                         props);
-                internalExtensions[0].setName(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME);
+                internalExtensions[0].setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
                 internalExtensions[0] = inventoryApi.create(internalExtensions[0], null);
             }
             log.info("Internal extension: {} registered: {}",
-                    ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                    ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
 
         });
@@ -496,7 +496,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private void loadProcessorExtensions() {
         for (ManagedObjectRepresentation extension : extensions.get()) {
-            Map<?, ?> props = (Map<?, ?>) (extension.get(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE));
+            Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
             log.info("Trying to load extension id: {}, name: {}, ", extension.getId().getValue(), extName);

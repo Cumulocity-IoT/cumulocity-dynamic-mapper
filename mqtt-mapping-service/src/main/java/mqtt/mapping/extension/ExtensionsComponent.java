@@ -17,7 +17,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 @Component
-public class ProcessorExtensionsRepresentation {
+public class ExtensionsComponent {
 	/** Get all extensions. */
 	public Iterable<ManagedObjectRepresentation> get() {
 		ManagedObjectCollection mo = inventory.getManagedObjectsByFilter(new InventoryFilter().byFragmentType(PROCESSOR_EXTENSION_TYPE));
