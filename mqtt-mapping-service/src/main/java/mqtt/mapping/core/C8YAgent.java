@@ -233,7 +233,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         loadProcessorExtensions();
         mappingServiceRepresentation = objectMapper.convertValue(mappingServiceRepresentations[0],
                 MappingServiceRepresentation.class);
-        mappingStatusComponent.setMappingServiceRepresentation(mappingServiceRepresentation);
+        mappingStatusComponent.initializeMappingComponent(mappingServiceRepresentation);
 
         try {
             mqttClient.submitInitialize();

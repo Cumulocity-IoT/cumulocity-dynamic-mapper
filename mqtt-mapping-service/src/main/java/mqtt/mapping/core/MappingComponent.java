@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +43,6 @@ public class MappingComponent {
     private InventoryApi inventoryApi;
 
     @Getter
-    @Setter
     private MappingServiceRepresentation mappingServiceRepresentation;
 
     public void removeStatusMapping(String ident) {
@@ -58,7 +56,7 @@ public class MappingComponent {
 
     }
 
-    public void initializeMappingStatus(MappingServiceRepresentation mappingServiceRepresentation) {
+    public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
         this.mappingServiceRepresentation = mappingServiceRepresentation;
         initializeMappingStatus();
     }
@@ -96,7 +94,7 @@ public class MappingComponent {
 
     public MappingStatus getMappingStatus(Mapping m, boolean unspecified) {
         String topic = "#";
-        String key = "";
+        String key = "UNSPECIFIED";
         String ident = "#";
         if (!unspecified) {
             topic = m.subscriptionTopic;
@@ -158,6 +156,7 @@ public class MappingComponent {
 
     public String deleteMapping(String id) {
         inventoryApi.delete(GId.asGId(id));
+        deleteMappingStatus(id);
         log.info("Deleted Mapping: {}", id);
         return id;
     }
@@ -216,4 +215,8 @@ public class MappingComponent {
         }
         return result;
     }
+
+	private void deleteMappingStatus(String id) {
+        statusMapping.remove(id);
+	}
 }
