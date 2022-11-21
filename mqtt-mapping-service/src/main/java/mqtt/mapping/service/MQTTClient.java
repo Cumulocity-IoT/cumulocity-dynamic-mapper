@@ -71,7 +71,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D1";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -149,14 +149,18 @@ public class MQTTClient {
                     log.error("Error initializing MQTT client: ", e);
                 }
             }
-            connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+            reloadConfiguration();
             if (connectionConfiguration.useSelfSignedCertificate) {
                 cert = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate);
             }
-            serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
         }
         return true;
+    }
+    
+    public void reloadConfiguration() {
+        serviceConfiguration = c8yAgent.loadServiceConfiguration();
+        connectionConfiguration = c8yAgent.loadConnectionConfiguration();
     }
 
     public void submitConnect() {
@@ -170,6 +174,7 @@ public class MQTTClient {
     }
 
     private boolean connect() throws Exception {
+        reloadConfiguration();
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
         if (isConnected()) {
