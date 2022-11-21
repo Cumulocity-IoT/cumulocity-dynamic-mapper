@@ -510,7 +510,7 @@ A script to create sample MQTT mappings can be found [here]
 ## Enhance and Extensions
 In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
-In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension.properties```. The content could be as follows:
+In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
 ```
 CustomEvent=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent
 CustomOperation=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomOperation
