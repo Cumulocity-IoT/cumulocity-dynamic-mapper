@@ -13,7 +13,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -99,6 +98,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                                         mapping.snoopedTemplates.size(),
                                         mapping.snoopStatus);
                                         mappingStatusComponent.setMappingDirty(mapping);
+                                mappingStatusComponent.setMappingDirty(mapping);
                             }
                         } else {
                             processor.extractFromSource(context);
