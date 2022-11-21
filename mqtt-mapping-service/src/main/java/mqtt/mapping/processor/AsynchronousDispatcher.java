@@ -192,8 +192,6 @@ public class AsynchronousDispatcher implements MqttCallback {
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!", e);
                     mappingStatusUnspecified.errors++;
-                    // TODO review if exception has to be thrown
-                    // throw e;
                 }
             } else {
                 return futureProcessingResult;
