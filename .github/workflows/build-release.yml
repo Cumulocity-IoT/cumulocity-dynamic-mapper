@@ -28,7 +28,6 @@ jobs:
         with:
           java-version: 11
       - name: Build Backend
-        working-directory: backend
         run: mvn -B package --file pom.xml
       - name: deploy
         uses: actions/setup-node@v2
