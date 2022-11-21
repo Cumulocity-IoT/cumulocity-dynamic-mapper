@@ -5,13 +5,12 @@ import { RouterModule } from '@angular/router';
 import {
   CoreModule,
   HOOK_NAVIGATOR_NODES,
-  HOOK_ROUTE,
   HOOK_TABS,
   HOOK_WIZARD,
-  Route
 } from '@c8y/ngx-components';
 import { ConfigurationModule } from './mqtt-configuration/configuration.module';
-import { AddExtensionWizardComponent } from './mqtt-configuration/extension/add-extension-wizard.component';
+import { AddExtensionWizardComponent } from './mqtt-extension/add-extension-wizard.component';
+import { ExtensionModule } from './mqtt-extension/extension.module';
 import { MappingTreeModule } from './mqtt-mapping-tree/tree.module';
 import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.component';
 import { MappingModule } from './mqtt-mapping/mapping.module';
@@ -31,6 +30,7 @@ import { MappingTabFactory } from './tab.factory';
     MappingTreeModule,
     MonitoringModule,
     ConfigurationModule,
+    ExtensionModule,
     FormsModule,
     ReactiveFormsModule,
     RouterModule,

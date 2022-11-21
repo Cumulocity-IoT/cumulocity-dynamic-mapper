@@ -6,8 +6,8 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
 import { ExtensionService } from './extension.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
-import { BrokerConfigurationService } from '../broker-configuration.service';
-import { Operation } from '../../shared/mapping.model';
+import { BrokerConfigurationService } from '../mqtt-configuration/broker-configuration.service';
+import { Operation } from '../shared/mapping.model';
 
 
 @Component({
@@ -18,6 +18,7 @@ import { Operation } from '../../shared/mapping.model';
 export class ExtensionComponent implements OnInit {
   reloading: boolean = false;
   reload$: BehaviorSubject<void> = new BehaviorSubject(null);
+  externalExtensionEnabled: boolean = true;
 
   extensions$: Observable<IResultList<IManagedObject>> = this.reload$.pipe(
     tap(() => (this.reloading = true)),
@@ -35,11 +36,12 @@ export class ExtensionComponent implements OnInit {
     private configurationService: BrokerConfigurationService
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.loadExtensions();
     this.extensions$.subscribe( exts => {
       console.log("New extenions:", exts);
     })
+    this.externalExtensionEnabled = (await this.configurationService.getServiceConfiguration()).externalExtensionEnabled;
   }
 
   loadExtensions() {

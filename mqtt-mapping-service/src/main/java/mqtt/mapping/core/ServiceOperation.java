@@ -1,19 +1,10 @@
-package mqtt.mapping.service;
+package mqtt.mapping.core;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotNull;
-
-enum Operation {
-    RELOAD_MAPPINGS,
-    CONNECT,
-    DISCONNECT, 
-    RESFRESH_STATUS_MAPPING,
-    RESET_STATUS_MAPPING,
-    RELOAD_EXTENSIONS
-}
 
 @Data
 @NoArgsConstructor

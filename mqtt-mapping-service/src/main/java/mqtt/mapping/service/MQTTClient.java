@@ -13,17 +13,13 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -52,16 +48,19 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.Operation;
+import mqtt.mapping.core.ServiceOperation;
+import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.MappingsRepresentation;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.model.ValidationError;
 //import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -72,18 +71,25 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_D4";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
-    private static final String STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
-    private static final String STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 
     private ConfigurationConnection connectionConfiguration;
     private Certificate cert;
 
     @Getter
     private ServiceConfiguration serviceConfiguration;
+
+    @Autowired
+    private ConnectionConfigurationComponent connectionConfigurationComponent;
+
+    @Autowired
+    private ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Autowired
+    private MappingComponent mappingStatusComponent;
 
     private MqttClient mqttClient;
 
@@ -110,9 +116,6 @@ public class MQTTClient {
     private List<Mapping> activeMapping = new ArrayList<Mapping>();
 
     private TreeNode mappingTree = InnerNode.initTree();;
-    private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
-
-    private Map<String, MappingStatus> statusMapping = new HashMap<String, MappingStatus>();
 
     private Instant start = Instant.now();
 
@@ -135,7 +138,7 @@ public class MQTTClient {
         var firstRun = true;
         // initialize entry to record errors that can't be assigned to any map, i.e.
         // UNSPECIFIED
-        getMappingStatus(null, true);
+        mappingStatusComponent.getMappingStatus(null, true);
         while (!canConnect()) {
             if (!firstRun) {
                 try {
@@ -146,14 +149,18 @@ public class MQTTClient {
                     log.error("Error initializing MQTT client: ", e);
                 }
             }
-            connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+            reloadConfiguration();
             if (connectionConfiguration.useSelfSignedCertificate) {
                 cert = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate);
             }
-            serviceConfiguration = c8yAgent.loadServiceConfiguration();
             firstRun = false;
         }
         return true;
+    }
+    
+    public void reloadConfiguration() {
+        serviceConfiguration = c8yAgent.loadServiceConfiguration();
+        connectionConfiguration = c8yAgent.loadConnectionConfiguration();
     }
 
     public void submitConnect() {
@@ -167,6 +174,7 @@ public class MQTTClient {
     }
 
     private boolean connect() throws Exception {
+        reloadConfiguration();
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
         if (isConnected()) {
@@ -309,29 +317,17 @@ public class MQTTClient {
     }
 
     public void disconnectFromBroker() {
-        connectionConfiguration = c8yAgent.enableConnection(false);
+        connectionConfiguration = connectionConfigurationComponent.enableConnection(false);
         disconnect();
-        sendStatusService();
+        c8yAgent.sendStatusService(getServiceStatus());
     }
 
     public void connectToBroker() {
-        connectionConfiguration = c8yAgent.enableConnection(true);
+        connectionConfiguration = connectionConfigurationComponent.enableConnection(true);
         submitConnect();
-        sendStatusService();
+        c8yAgent.sendStatusService(getServiceStatus());
     }
 
-    public ConfigurationConnection loadConnectionConfiguration() {
-        return c8yAgent.loadConnectionConfiguration();
-    }
-
-    public void saveConnectionConfiguration(ConfigurationConnection configuration) {
-        c8yAgent.saveConnectionConfiguration(configuration);
-        disconnect();
-        // invalidate broker client
-        connectionConfiguration = null;
-        submitInitialize();
-        submitConnect();
-    }
 
     public void reloadMappings() {
         List<Mapping> updatedMapping = c8yAgent.getMappings();
@@ -349,7 +345,7 @@ public class MQTTClient {
         // remove monitorings for deleted maps
         removedMapping.forEach(ident -> {
             log.info("Removing monitoring not used: {}", ident);
-            statusMapping.remove(ident);
+            mappingStatusComponent.removeStatusMapping(ident);
         });
 
         // unsubscribe topics not used
@@ -423,21 +419,11 @@ public class MQTTClient {
                         statusInitializeTask, isConnected());
             }
             cleanDirtyMappings();
-            sendStatusMapping();
-            sendStatusService();
+            c8yAgent.sendStatusMapping();
+            c8yAgent.sendStatusService(getServiceStatus());
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
-    }
-
-    private void sendStatusMapping() {
-        c8yAgent.sendStatusMapping(STATUS_MAPPING_EVENT_TYPE, statusMapping);
-    }
-
-    private void sendStatusService() {
-        ServiceStatus statusService;
-        statusService = getServiceStatus();
-        c8yAgent.sendStatusService(STATUS_SERVICE_EVENT_TYPE, statusService);
     }
 
     public ServiceStatus getServiceStatus() {
@@ -457,103 +443,17 @@ public class MQTTClient {
     private void cleanDirtyMappings() throws JsonProcessingException {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
-        for (Mapping mqttMapping : dirtyMappings) {
-            log.info("Found mapping to be saved: {}, {}", mqttMapping.id, mqttMapping.snoopStatus);
+        for (Mapping mapping : mappingStatusComponent.getMappingDirty()) {
+            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
-            updateMapping(mqttMapping.id, mqttMapping, false);
+            c8yAgent.updateMapping(mapping, mapping.id);
         }
         // reset dirtySet
-        dirtyMappings = new HashSet<Mapping>();
+        mappingStatusComponent.resetMappingDirty();
     }
 
     public TreeNode getMappingTree() {
         return mappingTree;
-    }
-
-    public void setMappingDirty(Mapping mapping) {
-        log.debug("Setting dirty: {}", mapping);
-        dirtyMappings.add(mapping);
-    }
-
-    public MappingStatus getMappingStatus(Mapping m, boolean unspecified) {
-        String topic = "#";
-        long key = -1;
-        String ident = "#";
-        if (!unspecified) {
-            topic = m.subscriptionTopic;
-            key = m.id;
-            ident = m.ident;
-        }
-        MappingStatus ms = statusMapping.get(ident);
-        if (ms == null) {
-            log.info("Adding: {}", key);
-            ms = new MappingStatus(key, ident, topic, 0, 0, 0, 0);
-            statusMapping.put(ident, ms);
-        }
-        return ms;
-    }
-
-    public void initializeMappingStatus(MappingStatus ms) {
-        statusMapping.put(ms.ident, ms);
-    }
-
-    public Long deleteMapping(Long id) throws JsonProcessingException {
-        List<Mapping> mappings = c8yAgent.getMappings();
-        Predicate<Mapping> isMapping = m -> m.id == id;
-        boolean removed = mappings.removeIf(isMapping);
-        if (removed) {
-            c8yAgent.saveMappings(mappings);
-            reloadMappings();
-        }
-        return (removed ? id : -1);
-    }
-
-    public Long addMapping(Mapping mapping) throws JsonProcessingException {
-        Long result = null;
-        ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        ArrayList<ValidationError> errors = MappingsRepresentation.isMappingValid(mappings, mapping);
-
-        if (errors.size() == 0) {
-            mapping.lastUpdate = System.currentTimeMillis();
-            mapping.ident = UUID.randomUUID().toString();
-            mapping.id = MappingsRepresentation.nextId(mappings);
-            mappings.add(mapping);
-            result = mapping.id;
-        } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("",
-                    (res, error) -> res + "[ " + error + " ]");
-            throw new RuntimeException("Validation errors:" + errorList);
-        }
-
-        c8yAgent.saveMappings(mappings);
-        reloadMappings();
-        return result;
-    }
-
-    public Long updateMapping(Long id, Mapping mapping, boolean reload) throws JsonProcessingException {
-        int updateMapping = -1;
-        ArrayList<Mapping> mappings = c8yAgent.getMappings();
-        ArrayList<ValidationError> errors = MappingsRepresentation.isMappingValid(mappings, mapping);
-        if (errors.size() == 0) {
-            updateMapping = IntStream.range(0, mappings.size())
-                    .filter(i -> id.equals(mappings.get(i).id)).findFirst().orElse(-1);
-            if (updateMapping != -1) {
-                log.info("Update mapping with id: {}", mappings.get(updateMapping).id);
-                mapping.lastUpdate = System.currentTimeMillis();
-                mapping.ident = mappings.get(updateMapping).ident;
-                mappings.set(updateMapping, mapping);
-                c8yAgent.saveMappings(mappings);
-                if (reload)
-                    reloadMappings();
-            } else {
-                log.error("Something went wrong when updating mapping: {}", id);
-            }
-        } else {
-            String errorList = errors.stream().map(e -> e.toString()).reduce("",
-                    (res, error) -> res + "[ " + error + " ]");
-            throw new RuntimeException("Validation errors:" + errorList);
-        }
-        return (long) updateMapping;
     }
 
     public void runOperation(ServiceOperation operation) {
@@ -564,9 +464,9 @@ public class MQTTClient {
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
         } else if (operation.getOperation().equals(Operation.RESFRESH_STATUS_MAPPING)) {
-            sendStatusMapping();
+            c8yAgent.sendStatusMapping();
         } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
-            resetMappingStatus();
+            mappingStatusComponent.resetMappingStatus();
         } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
             c8yAgent.reloadExtensions();
         }
@@ -580,23 +480,10 @@ public class MQTTClient {
         return dispatcher.processMessage(topic, mqttMessage, send).get();
     }
 
-    public List<MappingStatus> getMappingStatus() {
-        return new ArrayList<MappingStatus>(statusMapping.values());
-    }
 
-    public List<MappingStatus> resetMappingStatus() {
-        ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
-        msl.forEach(ms -> ms.reset());
-        return msl;
-    }
-
-    public void saveServiceConfiguration(ServiceConfiguration configuration) {
+    public void saveServiceConfiguration(ServiceConfiguration configuration) throws JsonProcessingException {
         serviceConfiguration = configuration;
-        c8yAgent.saveServiceConfiguration(configuration);
-    }
-
-    public ServiceConfiguration loadServiceConfiguration() {
-        return c8yAgent.loadServiceConfiguration();
+        serviceConfigurationComponent.saveServiceConfiguration(configuration);
     }
 
     public List<Mapping> resolveMappings(String topic) throws ResolveException {
@@ -604,5 +491,13 @@ public class MQTTClient {
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
                 .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
+    }
+
+    public void reconnect() {
+        disconnect();
+        // invalidate broker client
+        connectionConfiguration = null;
+        submitInitialize();
+        submitConnect();
     }
 }

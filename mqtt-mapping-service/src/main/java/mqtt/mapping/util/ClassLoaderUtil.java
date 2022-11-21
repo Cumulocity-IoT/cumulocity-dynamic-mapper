@@ -1,6 +1,8 @@
-package mqtt.mapping;
+package mqtt.mapping.util;
 
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.App;
+
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;

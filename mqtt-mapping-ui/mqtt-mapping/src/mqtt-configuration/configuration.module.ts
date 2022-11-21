@@ -3,7 +3,7 @@
 import { NgModule } from '@angular/core';
 import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { BokerConfigurationComponent } from './broker-configuration.component';
-import { ExtensionModule } from './extension/extension.module';
+import { ExtensionModule } from '../mqtt-extension/extension.module';
 import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-connection-modal.component';
 
 @NgModule({
@@ -12,8 +12,7 @@ import { TerminateBrokerConnectionModalComponent } from './terminate/terminate-c
     TerminateBrokerConnectionModalComponent,
   ],
   imports: [
-    CoreModule,
-    ExtensionModule
+    CoreModule
   ],
   entryComponents: [
     TerminateBrokerConnectionModalComponent
