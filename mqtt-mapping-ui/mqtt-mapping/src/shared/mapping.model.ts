@@ -70,6 +70,7 @@ export interface ExtensionEntry {
     event: string;
     name: string;
     loaded?: boolean;
+    message: string
 }
 
 export interface Extension {
@@ -77,6 +78,7 @@ export interface Extension {
     name: string;
     extensionEntries: Map<String, ExtensionEntry>;
     loaded: boolean,
+    external: boolean
 }
 
 

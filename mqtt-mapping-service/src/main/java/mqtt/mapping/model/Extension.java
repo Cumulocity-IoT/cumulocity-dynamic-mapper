@@ -24,6 +24,11 @@ public class Extension implements Serializable {
         this.id = id;
     }
 
+    public Extension(String id, String name, boolean external) {
+        this(id, name);
+        this.external = external;
+    }
+
     @NotNull
     public String id;
 
@@ -32,6 +37,9 @@ public class Extension implements Serializable {
 
     @NotNull
     public String name;
+
+    @NotNull
+    public boolean external;
 
     @NotNull
     public Map<String, ExtensionEntry> extensionEntries;

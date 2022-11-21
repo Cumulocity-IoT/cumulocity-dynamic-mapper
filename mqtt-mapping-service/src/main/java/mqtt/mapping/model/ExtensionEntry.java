@@ -32,4 +32,7 @@ public class ExtensionEntry implements Serializable {
 
     @NotNull
     public boolean loaded;
+
+    @NotNull
+    public String message;
 }

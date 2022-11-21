@@ -30,7 +30,7 @@ export class AddExtensionComponent {
     private alertService: AlertService,
     private applicationService: ApplicationService,
     private wizardComponent: WizardComponent
-  ) {}
+  ) { }
 
   get progress(): BehaviorSubject<number> {
     return this.extensionService.progress;
@@ -47,12 +47,16 @@ export class AddExtensionComponent {
     this.isLoading = true;
     this.errorMessage = null;
     this.progress.next(0);
-    const n = file.name.split('.').slice(0, -1).join('.')
+    const nameUpload = file.name.split('.').slice(0, -1).join('.')
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
-        c8y_mqttMapping_Extension: n,
-        name : n
+        c8y_mqttMapping_Extension:
+        {
+          name: nameUpload,
+          external: true
+        },
+        name: nameUpload,
       }
       await this.uploadExtensionHandler(file, this.createdApp);
       this.isAppCreated = true;

@@ -85,13 +85,13 @@ public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
         }
     }
 
-    public void addExtension(String id, String extensionName) {
+    public void addExtension(String id, String extensionName, boolean external) {
         Extension ext = extensions.get(extensionName);
         if (ext != null) {
             log.warn("Extension with this name {} already exits, override existing extension!",
                     extensionName);
         } else {
-            ext = new Extension(id, extensionName);
+            ext = new Extension(id, extensionName, external);
             extensions.put(extensionName, ext);
         }
     }

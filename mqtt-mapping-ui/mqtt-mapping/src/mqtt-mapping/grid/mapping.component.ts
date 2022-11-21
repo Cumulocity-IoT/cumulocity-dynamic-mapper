@@ -223,7 +223,8 @@ export class MappingComponent implements OnInit {
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION) {
       mapping.extension = {
         event: undefined,
-        name: undefined
+        name: undefined,
+        message:undefined
       }
     }
     this.setStepperConfiguration(this.mappingType)

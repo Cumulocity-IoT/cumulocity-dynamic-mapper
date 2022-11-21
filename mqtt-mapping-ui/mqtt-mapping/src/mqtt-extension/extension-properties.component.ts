@@ -54,8 +54,9 @@ export class ExtensionPropertiesComponent implements OnInit {
 
     this.extension.extensionEntries.forEach(entry => {
       const extensionEntriesForm = this.formBuilder.group({
-        name: [entry.name, Validators.required],
-        event: [entry.event, Validators.required]
+        name: [entry.name],
+        event: [entry.event],
+        message:[entry.message]
       });
       this.extensionEntries.push(extensionEntriesForm);
     })
