@@ -26,7 +26,6 @@ import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -45,7 +44,6 @@ public class AsynchronousDispatcher implements MqttCallback {
         boolean sendPayload;
         MqttMessage mqttMessage;
         MappingComponent mappingStatusComponent;
-        ExtensibleProcessor<?> extensionPayloadProcessor;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
 
@@ -156,9 +154,6 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     @Autowired
     protected ObjectMapper objectMapper;
-
-    @Autowired
-    ExtensibleProcessor<?> extensionPayloadProcessor;
 
     @Autowired
     SysHandler sysHandler;

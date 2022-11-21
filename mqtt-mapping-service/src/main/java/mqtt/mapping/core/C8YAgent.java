@@ -124,7 +124,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
-    // @Autowired
+
     private ExtensibleProcessor<?> extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
@@ -141,8 +141,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private static final Method ADD_URL_METHOD;
 
-    private static final String EXTENSION_INTERNAL = "extension-internal.properties";
-    private static final String EXTENSION_EXTERNAL = "extension-external.properties";
+    private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
+    private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
     static {
         final Method addURL;
@@ -176,8 +176,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ServiceConfiguration[] serviceConfigurations = { null };
         // register agent
         subscriptionsService.runForTenant(tenant, () -> {
-            ExternalIDRepresentation mappingServiceIdRepresentation = null;
 
+            ExternalIDRepresentation mappingServiceIdRepresentation = null;
             try {
                 mappingServiceIdRepresentation = resolveExternalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
                         null);
@@ -206,7 +206,28 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
             extensibleProcessor = (ExtensibleProcessor<?>) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
-            
+
+            // if managedObject for internal mapping extension exists
+            ManagedObjectRepresentation[] internalExtensions = { null };
+            extensions.getInternal().forEach(m -> {
+                internalExtensions[0] = m;
+            });
+            if (internalExtensions[0] == null) {
+                internalExtensions[0] = new ManagedObjectRepresentation();
+                //internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_TYPE,
+                //        new HashMap());
+                Map<String, ?> props = Map.of("name",
+                        ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                        "external", false);
+                internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE,
+                        props);
+                internalExtensions[0].setName(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME);
+                internalExtensions[0] = inventoryApi.create(internalExtensions[0], null);
+            }
+            log.info("Internal extension: {} registered: {}",
+                    ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                    internalExtensions[0].getId().getValue(), internalExtensions[0]);
+
         });
         serviceConfiguration = serviceConfigurations[0];
         loadProcessorExtensions();
@@ -474,51 +495,40 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
-        if (serviceConfiguration.isExternalExtensionEnabled()) {
-            loadExternalProcessorExtensions();
-        } else {
-            loadInternalProcessorExtensions();
-        }
-    }
+        for (ManagedObjectRepresentation extension : extensions.get()) {
+            Map<?, ?> props = (Map<?, ?>) (extension.get(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE));
+            String extName = props.get("name").toString();
+            boolean external = (Boolean) props.get("external");
+            log.info("Trying to load extension id: {}, name: {}, ", extension.getId().getValue(), extName);
 
-    private void loadInternalProcessorExtensions() {
-        ClassLoader dynamicLoader = C8YAgent.class.getClassLoader();
-        try {
-            registerExtensionInProcessor("0815", "mqtt-mapping-internal", dynamicLoader, true);
-        } catch (IOException e) {
-            log.error("Exception occured, When loading extension, starting without extensions!", e);
-            e.printStackTrace();
-        }
-    }
-
-    private void loadExternalProcessorExtensions() {
-        for (ManagedObjectRepresentation bObj : extensions.get()) {
-            String extName = bObj.getProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_TYPE).toString();
-            log.info("Copying extension binary , Id: " + bObj.getId().getValue() + ", name: " + extName);
-            log.debug("Copying extension binary , Id: " + bObj);
-
-            // step 1 download extension for binary repository
-
-            InputStream downloadInputStream = binaryApi.downloadFile(bObj.getId());
             try {
+                ClassLoader dynamicLoader = null;
 
-                // step 2 create temporary file,because classloader needs a url resource
+                if (external) {
+                    // step 1 download extension for binary repository
 
-                File tempFile;
-                tempFile = File.createTempFile(extName, "jar");
-                tempFile.deleteOnExit();
-                String canonicalPath = tempFile.getCanonicalPath();
-                String path = tempFile.getPath();
-                String pathWithProtocol = "file://".concat(tempFile.getPath());
-                log.info("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path, pathWithProtocol);
-                FileOutputStream outputStream = new FileOutputStream(tempFile);
-                IOUtils.copy(downloadInputStream, outputStream);
+                    InputStream downloadInputStream = binaryApi.downloadFile(extension.getId());
+                    // step 2 create temporary file,because classloader needs a url resource
 
-                // step 3 parse list of extentions
+                    File tempFile;
+                    tempFile = File.createTempFile(extName, "jar");
+                    tempFile.deleteOnExit();
+                    String canonicalPath = tempFile.getCanonicalPath();
+                    String path = tempFile.getPath();
+                    String pathWithProtocol = "file://".concat(tempFile.getPath());
+                    log.info("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path,
+                            pathWithProtocol);
+                    FileOutputStream outputStream = new FileOutputStream(tempFile);
+                    IOUtils.copy(downloadInputStream, outputStream);
 
-                ClassLoader dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
+                    // step 3 parse list of extentions
 
-                registerExtensionInProcessor(bObj.getId().getValue(), extName, dynamicLoader, false);
+                    dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
+                } else {
+                    dynamicLoader = C8YAgent.class.getClassLoader();
+                }
+
+                registerExtensionInProcessor(extension.getId().getValue(), extName, dynamicLoader, external);
 
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
@@ -527,19 +537,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean internal)
+    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean external)
             throws IOException {
-        extensibleProcessor.addExtension(id, extName);
-        String resource = internal ? EXTENSION_INTERNAL : EXTENSION_EXTERNAL;
+        extensibleProcessor.addExtension(id, extName, external);
+        String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
         InputStreamReader in = null;
         try {
             in = new InputStreamReader(resourceAsStream);
         } catch (Exception e) {
             log.error("Registration file: {} missing, ignoring to load extensions from: {}", resource,
-                    (internal ? "INTERNAL" : "EXTERNAL"));
+                    (external ? "EXTERNAL" : "INTERNAL"));
             throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
-                    + (internal ? "INTERNAL" : "EXTERNAL"));
+                    + (external ? "EXTERNAL" : "INTERNAL"));
         }
         BufferedReader buffered = new BufferedReader(in);
         Properties newExtensions = new Properties();
@@ -553,26 +563,36 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             String key = (String) extensions.nextElement();
             Class<?> clazz;
             ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
-                    null, true);
+                    null, true, "OK");
             extensibleProcessor.addExtensionEntry(extName, extensionEntry);
 
             try {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
-                Object object = clazz.getDeclaredConstructor().newInstance();
-                if (!(object instanceof ProcessorExtension)) {
-                    log.warn("Extension: {}={} is not instance of ProcessorExtension, ignoring this enty!", key,
-                            newExtensions.getProperty(key));
+                if (external && !clazz.getPackageName().startsWith("mqtt.mapping.processor.extension.custom")) {
+                    extensionEntry.setMessage(
+                            "Implementation must be in package: 'mqtt.mapping.processor.extension.custom' instead of: "
+                                    + clazz.getPackageName());
                 } else {
-                    ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
-                            .newInstance();
-                    // springUtil.registerBean(key, clazz);
-                    extensionEntry.setExtensionImplementation(extensionImpl);
-                    log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
-                            key);
+                    Object object = clazz.getDeclaredConstructor().newInstance();
+                    if (!(object instanceof ProcessorExtension)) {
+                        String msg = String.format(
+                                "Extension: %s=%s is not instance of ProcessorExtension, ignoring this entry!", key,
+                                newExtensions.getProperty(key));
+                        log.warn(msg);
+                        extensionEntry.setLoaded(false);
+                    } else {
+                        ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
+                                .newInstance();
+                        // springUtil.registerBean(key, clazz);
+                        extensionEntry.setExtensionImplementation(extensionImpl);
+                        log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
+                                key);
+                    }
                 }
             } catch (Exception e) {
-                log.warn("Could not load extension: {}:{}, ignoring loading!", key,
+                String msg = String.format("Could not load extension: %s:%s, ignoring loading!", key,
                         newExtensions.getProperty(key));
+                log.warn(msg);
                 e.printStackTrace();
                 extensionEntry.setLoaded(false);
             }
