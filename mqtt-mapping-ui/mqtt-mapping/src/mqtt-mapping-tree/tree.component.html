@@ -11,12 +11,15 @@
       {{ 'Mapping Tree' | translate }}
     </h4>
   </div>
+
   <div class="card-block">
+    <div class="col-md-6 col-lg-8 ">
       <label translate>Source</label>
-      <json-editor [options]="editorOptionsTree" [data]="templateTree" #editorTree id="editorTree"></json-editor>
+      <mapping-json-editor [options]="editorOptionsTree" [data]="templateTree" #editorTree id="editorTree"></mapping-json-editor>
       <c8y-messages class="text-left">
         <c8y-message *ngIf="false"><span class="text-warning">Dummy message!</span>
         </c8y-message>
       </c8y-messages>
+    </div>
   </div>
 </div>

@@ -5,11 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
-import org.apache.tomcat.util.net.SendfileKeepAliveState;
 import org.json.JSONException;
 import org.json.JSONObject;
 

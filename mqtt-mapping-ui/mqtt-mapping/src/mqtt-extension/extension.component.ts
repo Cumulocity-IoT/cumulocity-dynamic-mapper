@@ -11,7 +11,7 @@ import { Operation } from '../shared/mapping.model';
 
 
 @Component({
-  selector: 'app-extension',
+  selector: 'mapping-extension',
   templateUrl: './extension.component.html',
   styleUrls: ['./extension.component.css']
 })

@@ -165,7 +165,7 @@ public class MappingComponent {
         InventoryFilter inventoryFilter = new InventoryFilter();
         inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
         ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
-        List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), false)
+        List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                 .map(mo -> (objectMapper.convertValue(mo, MappingRepresentation.class)))
                 .peek(m -> {
                     m.getC8yMQTTMapping().id = m.getId().getValue();

@@ -14,21 +14,18 @@ import { RouterModule } from '@angular/router';
 const extensionRoutes: Route[] = [
   {
     path: 'mqtt-mapping/extensions',
-    component: ExtensionComponent,
-    pathMatch: "full",
-    // children: [
-    //   {
-    //     // path: 'mqtt-mapping/extensions/properties/50051686',
-    //     path: 'properties/:id',
-    //     component: ExtensionPropertiesComponent,
-    //   }
-    // ]
-    //canActivate: [ExtensionGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: "full",
+        component: ExtensionComponent,
+      },
+      {
+        path: 'properties/:id',
+        component: ExtensionPropertiesComponent,
+      }
+    ]
   },
-  {
-    path: 'mqtt-mapping/extensions/properties/:id',
-    component: ExtensionPropertiesComponent,
-  }
 ];
 
 @NgModule({

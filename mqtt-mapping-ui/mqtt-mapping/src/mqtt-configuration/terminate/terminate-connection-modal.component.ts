@@ -10,7 +10,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 
 @Component({
-  selector: 'terminate-connection-modal',
+  selector: 'mapping-terminate-connection',
   templateUrl: 'terminate-connection-modal.component.html',
 })
 export class TerminateBrokerConnectionModalComponent implements OnInit {

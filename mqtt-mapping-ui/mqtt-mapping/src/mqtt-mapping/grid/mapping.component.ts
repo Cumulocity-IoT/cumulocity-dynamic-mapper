@@ -15,7 +15,7 @@ import { Subject } from 'rxjs';
 import { StepperConfiguration } from '../stepper/stepper-model';
 
 @Component({
-  selector: 'mapping-grid',
+  selector: 'mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,

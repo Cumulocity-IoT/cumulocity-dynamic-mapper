@@ -228,8 +228,8 @@
                 <div class="col-lg-4 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <label translate>Source</label>
-                    <json-editor [options]="editorOptionsSource" (onPathChanged)="onSelectedSourcePathChanged($event)"
-                      [data]="templateSource" #editorSource id="editorSource"></json-editor>
+                    <mapping-json-editor [options]="editorOptionsSource" (onPathChanged)="onSelectedSourcePathChanged($event)"
+                      [data]="templateSource" #editorSource id="editorSource"></mapping-json-editor>
                     <c8y-messages class="text-left">
                       <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
                           class="text-warning">Select source node to
@@ -387,9 +387,9 @@
                         </button>
                       </span>
                     </div>
-                    <json-editor [options]="editorOptionsTarget" (onPathChanged)="onSelectedTargetPathChanged($event)"
+                    <mapping-json-editor [options]="editorOptionsTarget" (onPathChanged)="onSelectedTargetPathChanged($event)"
                       [data]="templateTarget" #editorTarget>
-                    </json-editor>
+                    </mapping-json-editor>
                     <c8y-messages class="text-right">
                       <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
                           class="text-warning">Select target node to
@@ -619,8 +619,8 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" class="" translate>Testing - Cumulocity Request</label>
-                  <json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest" #editorTestingRequest>
-                  </json-editor>
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest" #editorTestingRequest>
+                  </mapping-json-editor>
                   <c8y-messages>
                     <c8y-message *ngIf="templateTestingErrorMsg" translate><span
                         class="text-warning">{{templateTestingErrorMsg}}</span>
@@ -633,8 +633,8 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" class="" translate>Testing - Cumulocity Response</label>
-                  <json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse" #editorTestingResponse>
-                  </json-editor>
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse" #editorTestingResponse>
+                  </mapping-json-editor>
                 </div>
               </div>
             </div>

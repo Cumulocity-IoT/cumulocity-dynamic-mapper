@@ -4,14 +4,14 @@ import { gettext } from '@c8y/ngx-components';
 import { ExtensionService } from './extension.service';
 
 @Component({
-    selector: 'c8y-add-extension-wizard',
-    template: `<c8y-add-extension
+    selector: 'mapping-add-extension-wizard',
+    template: `<mapping-add-extension
       [headerText]="headerText"
       [headerIcon]="'upload'"
       [successText]="successText"
       [uploadExtensionHandler]="uploadExtensionHandler"
       [canGoBack]="true"
-    ></c8y-add-extension>`
+    ></mapping-add-extension>`
   })
   export class AddExtensionWizardComponent {
     headerText: string = gettext('Upload extension extension');

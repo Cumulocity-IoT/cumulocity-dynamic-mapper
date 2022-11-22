@@ -8,7 +8,7 @@ import { JsonEditorOptions, JsonEditorMode, JsonEditorTreeNode, IError } from '.
 import { COLOR_HIGHLIGHTED } from '../util';
 
 @Component({
-  selector: 'json-editor',
+  selector: 'mapping-json-editor',
   template: `<div [id]="id" #jsonEditorContainer></div>`,
   providers: [
     {
