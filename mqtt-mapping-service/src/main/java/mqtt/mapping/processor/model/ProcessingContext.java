@@ -82,4 +82,5 @@ public class ProcessingContext<O> {
     public C8YRequest getCurrentRequest() {
         return requests.get(requests.size()-1);
     }
+
 }

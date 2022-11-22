@@ -15,7 +15,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
 @Service
-public class GenericBinaryProcessor<O> extends JSONProcessor<JsonNode> {
+public class GenericBinaryProcessor extends JSONProcessor {
 
     public GenericBinaryProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);

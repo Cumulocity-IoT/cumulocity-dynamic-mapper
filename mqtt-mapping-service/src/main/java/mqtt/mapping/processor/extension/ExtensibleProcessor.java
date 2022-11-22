@@ -21,7 +21,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class ExtensibleProcessor<T> extends BasePayloadProcessor<byte[]> {
+public class ExtensibleProcessor extends BasePayloadProcessor<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 

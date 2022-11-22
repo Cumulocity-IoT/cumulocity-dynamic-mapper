@@ -36,11 +36,11 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public class AsynchronousDispatcher implements MqttCallback {
 
-    public static class MappingProcessor implements Callable<List<ProcessingContext<?>>> {
+    public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
-        Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+        Map<MappingType, BasePayloadProcessor<T>> payloadProcessors;
         boolean sendPayload;
         MqttMessage mqttMessage;
         MappingComponent mappingStatusComponent;
@@ -49,7 +49,7 @@ public class AsynchronousDispatcher implements MqttCallback {
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 String topic,
-                Map<MappingType, BasePayloadProcessor<?>> payloadProcessors, boolean sendPayload,
+                Map<MappingType, BasePayloadProcessor<T>> payloadProcessors, boolean sendPayload,
                 MqttMessage mqttMessage, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
@@ -63,7 +63,7 @@ public class AsynchronousDispatcher implements MqttCallback {
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
-            List<ProcessingContext<?>> processingResult = new ArrayList<ProcessingContext<?>>();
+            List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(null, true);
             resolvedMappings.forEach(mapping -> {
                 MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping, false);
@@ -142,6 +142,8 @@ public class AsynchronousDispatcher implements MqttCallback {
             });
             return processingResult;
         }
+
+
     }
 
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";

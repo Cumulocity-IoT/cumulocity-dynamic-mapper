@@ -15,7 +15,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
 @Service
-public class FlatFileProcessor<O> extends JSONProcessor<JsonNode> {
+public class FlatFileProcessor extends JSONProcessor {
 
 
     public FlatFileProcessor( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
