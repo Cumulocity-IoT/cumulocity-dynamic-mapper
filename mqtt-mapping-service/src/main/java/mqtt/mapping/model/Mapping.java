@@ -26,6 +26,9 @@ public class Mapping implements Serializable {
   public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
 
   @NotNull
+  public String name;
+
+  @NotNull
   public String id;
 
   @NotNull

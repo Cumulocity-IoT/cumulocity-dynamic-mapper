@@ -159,6 +159,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
+      name: new FormControl(this.mapping.name, Validators.required),
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),

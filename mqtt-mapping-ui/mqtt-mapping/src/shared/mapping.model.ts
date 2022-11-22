@@ -25,6 +25,7 @@ export interface MappingSubstitution {
 }
 
 export interface Mapping {
+    name: string;
     id: string;
     ident: string;
     subscriptionTopic: string;

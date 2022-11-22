@@ -21,7 +21,12 @@
           <div [formGroup]="propertyForm">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
               <div class="form-group">
-                <label for="subscriptionTopic" class="" translate>Subscription Topic</label>
+                <label  translate>Mapping Name</label>
+                <input formControlName="name" [(ngModel)]="mapping.name" type="text"
+                  class="form-control" placeholder="e.g. Mapping - 1234" #nameRef required/>
+              </div>
+              <div class="form-group">
+                <label for="subscriptionTopic" translate>Subscription Topic</label>
                 <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text"
                   class="form-control" placeholder="e.g. device/110" #topicRef required
                   (change)="onSubscriptionTopicChanged($event)" />
@@ -104,7 +109,7 @@
               </div>
               <div class="row">
                 <div class="col-md-6 form-group">
-                  <label for="targetAPI" class="" translate>Target API</label>
+                  <label for="targetAPI" translate>Target API</label>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
                       (change)="onTargetAPIChanged($event)" #targetAPIRef>
@@ -115,7 +120,7 @@
                   </div>
                 </div>
                 <div class="col-md-6 form-group">
-                  <label class="" translate>QOS</label>
+                  <label translate>QOS</label>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="qos" [(ngModel)]="mapping.qos" #qosRef>
                       <option *ngFor="let q of QOS | keyvalue" [ngValue]="q.key">
@@ -167,7 +172,7 @@
                 </label>
               </div>
               <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
-                <label for="externalIdType" class="" translate>External Id Type</label>
+                <label for="externalIdType" translate>External Id Type</label>
                 <div>
                   <input formControlName="externalIdType" [(ngModel)]="mapping.externalIdType" type="text"
                     class="form-control" placeholder="e.g. c8y_Serial" #externalIdTypeRef />
@@ -618,7 +623,7 @@
             <div class="row">
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  <label for="testResult" class="" translate>Testing - Cumulocity Request</label>
+                  <label for="testResult" translate>Testing - Cumulocity Request</label>
                   <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest" #editorTestingRequest>
                   </mapping-json-editor>
                   <c8y-messages>
@@ -632,7 +637,7 @@
             <div class="row">
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  <label for="testResult" class="" translate>Testing - Cumulocity Response</label>
+                  <label for="testResult" translate>Testing - Cumulocity Response</label>
                   <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse" #editorTestingResponse>
                   </mapping-json-editor>
                 </div>

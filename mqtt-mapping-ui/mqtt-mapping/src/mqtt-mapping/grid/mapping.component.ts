@@ -191,6 +191,7 @@ export class MappingComponent implements OnInit {
     let ident = uuidv4();
     let sub: MappingSubstitution[] = [];
     let mapping: Mapping = {
+      name: "Mapping - " + ident.substring(0, 7),
       id: ident,
       ident: ident,
       subscriptionTopic: '',
