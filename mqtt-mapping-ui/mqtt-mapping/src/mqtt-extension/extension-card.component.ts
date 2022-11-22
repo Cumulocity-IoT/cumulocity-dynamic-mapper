@@ -7,13 +7,14 @@ import { ExtensionStatus } from '../shared/mapping.model';
 import { ExtensionService } from './extension.service';
 
 @Component({
-  selector: 'c8y-extension-card',
+  selector: 'mapping-extension-card',
   templateUrl: './extension-card.component.html'
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;
   @Output() onAppDeleted: EventEmitter<void> = new EventEmitter();
 
+  @Input() loaded: any = true;
   ExtensionStatus = ExtensionStatus;
   externalExtensionEnabled: boolean = true;
 

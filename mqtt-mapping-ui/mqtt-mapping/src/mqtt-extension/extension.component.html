@@ -55,7 +55,7 @@
     </div>
   </div>
   <div *ngFor="let app of extensions$ | async" class="col-xs-12 col-sm-4 col-md-3">
-    <c8y-extension-card (onAppDeleted)="loadExtensions()" [app]="app" [loaded]="loaded" class="d-contents">
-    </c8y-extension-card>
+    <mapping-extension-card (onAppDeleted)="loadExtensions()" [app]="app" [loaded]="loaded" class="d-contents">
+    </mapping-extension-card>
   </div>
 </div>

@@ -11,7 +11,7 @@ import {
 import { ExtensionService } from './extension.service';
 
 @Component({
-  selector: 'c8y-extension-properties',
+  selector: 'mapping-extension-properties',
   templateUrl: './extension-properties.component.html'
 })
 export class ExtensionPropertiesComponent implements OnInit {
@@ -26,7 +26,9 @@ export class ExtensionPropertiesComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private formBuilder: FormBuilder,
     private extensionService: ExtensionService,
-  ) { }
+  ) { 
+    console.log("Props loaded---------");
+  }
 
   async ngOnInit() {
     await this.refresh();

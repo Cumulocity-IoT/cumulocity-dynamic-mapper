@@ -7,7 +7,7 @@ import { IdRendererComponent } from '../renderer/id-cell.renderer.component';
 import { MonitoringService } from '../shared/monitoring.service';
 
 @Component({
-  selector: 'monitoring-grid',
+  selector: 'mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../mqtt-mapping/shared/mapping.style.css',],
   encapsulation: ViewEncapsulation.None,

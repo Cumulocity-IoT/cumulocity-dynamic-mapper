@@ -11,7 +11,7 @@ import { ConnectionConfiguration as ConnectionConfiguration, Operation, ServiceC
 import packageJson from '../../package.json';
 
 @Component({
-  selector: 'broker-configuration',
+  selector: 'mapping-broker-configuration',
   templateUrl: 'broker-configuration.component.html',
 })
 export class BokerConfigurationComponent implements OnInit {

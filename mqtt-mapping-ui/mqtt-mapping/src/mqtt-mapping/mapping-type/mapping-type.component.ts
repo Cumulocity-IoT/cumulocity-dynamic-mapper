@@ -3,7 +3,7 @@ import { WizardComponent } from '@c8y/ngx-components';
 import { MappingType } from '../../shared/mapping.model';
 
 @Component({
-  selector: 'app-mapping-type',
+  selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
 })
 export class MappingTypeComponent implements OnInit {

@@ -3,7 +3,7 @@ import { JsonEditorComponent, JsonEditorOptions } from '../shared/editor/jsonedi
 import { MappingTreeService } from './tree.service';
 
 @Component({
-  selector: 'tree-grid',
+  selector: 'mapping-tree-grid',
   templateUrl: 'tree.component.html',
   styleUrls: ['./tree.style.css'],
 

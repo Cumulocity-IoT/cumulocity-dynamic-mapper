@@ -3,7 +3,7 @@ import { ActionControl, BulkActionControl, Column, DataGridComponent, DataSource
 import { TestingDeviceService } from './testing.service';
 
 @Component({
-  selector: 'testing-grid',
+  selector: 'mapping-testing-grid',
   templateUrl: 'testing.component.html',
   styleUrls: ['../../mqtt-mapping/shared/mapping.style.css'],
 })

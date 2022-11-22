@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
+import { Route, RouterModule as NgRouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import {
   CoreModule,
   HOOK_NAVIGATOR_NODES,
   HOOK_TABS,
   HOOK_WIZARD,
+  RouterModule
 } from '@c8y/ngx-components';
 import { ConfigurationModule } from './mqtt-configuration/configuration.module';
 import { AddExtensionWizardComponent } from './mqtt-extension/add-extension-wizard.component';
@@ -20,6 +21,29 @@ import { MappingNavigationFactory } from './navigation.factory';
 import { ServiceMappingComponent } from './service-mapping.component';
 import { OverviewGuard } from './shared/overview.guard';
 import { MappingTabFactory } from './tab.factory';
+import { ExtensionComponent } from './mqtt-extension/extension.component';
+import { ExtensionPropertiesComponent } from './mqtt-extension/extension-properties.component';
+
+const extensionRoutes: Route[] = [
+  {
+    path: 'mqtt-mapping/extensions',
+    component: ExtensionComponent,
+    pathMatch: "full",
+    children: [
+      {
+        // path: 'mqtt-mapping/extensions/properties/50051686',
+        path: 'properties/:id',
+        component: ExtensionPropertiesComponent,
+      }
+    ]
+    //canActivate: [ExtensionGuard],
+  },
+  // {
+  //   path: 'mqtt-mapping/extensions/properties/:id',
+  //   component: ExtensionPropertiesComponent,
+  // }
+];
+
 
 @NgModule({
   imports: [
@@ -33,7 +57,6 @@ import { MappingTabFactory } from './tab.factory';
     ExtensionModule,
     FormsModule,
     ReactiveFormsModule,
-    RouterModule,
   ],
   exports: [
     ServiceMappingComponent,

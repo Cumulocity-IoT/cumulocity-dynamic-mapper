@@ -3,11 +3,10 @@
   "version": "1.0.39",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.",
   "scripts": {
-    "start": "c8ycli server -u ${url}",
-    "start:admin": "npm start -- --shell administration --env.extraWebpackConfig=./extra-webpack.config.js",
+    "start": "c8ycli server --env.extraWebpackConfig=./extra-webpack.config.js",
+    "start:admin": "npm start -- --shell administration",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
-    "deploy": "c8ycli deploy -u ${url} --password ${password} --user ${user}",
-    "deploy-ci": "c8ycli deploy -u $url  --password $password --user $user",
+    "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
   },
   "keywords": [],

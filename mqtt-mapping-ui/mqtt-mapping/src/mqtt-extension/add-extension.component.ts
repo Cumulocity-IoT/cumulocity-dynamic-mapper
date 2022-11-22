@@ -6,7 +6,7 @@ import { ERROR_MESSAGES } from './extension.constants';
 import { ExtensionService } from './extension.service';
 
 @Component({
-  selector: 'c8y-add-extension',
+  selector: 'mapping-add-extension',
   templateUrl: './add-extension.component.html'
 })
 export class AddExtensionComponent {
