@@ -32,24 +32,32 @@ def main(argv):
         'Accept': 'application/json'
     }
 
-    sampleMappings = []
+    mappings = []
     with open(file, 'r') as f:
-        sampleMappings = json.load(f)
+        mappings = json.load(f)
     # Closing file
     f.close()
     
-    print("Reading " + str(len(sampleMappings)) + " from file: " + file)   
+    print("Reading " + str(len(mappings)) + " from file: " + file)   
         
-    for index, mapping in enumerate(sampleMappings):
+    for index, mapping in enumerate(mappings):
+        # step 1: create new mapping
         managed_object_mapping = {
-            "name": f"MQTT Mapping - {index}",
-            "type": "c8y_mqttMapping_dummy",
+            "name": f"Mapping - {index + 1}",
+            "type": "c8y_mqttMapping",
             "c8y_mqttMapping": mapping}
-        payload_create_mo = json.dumps(managed_object_mapping)
+        managed_object_mapping_dump = json.dumps(managed_object_mapping)
         #print ("About to upload:" + payload_create_mo)
-        response = requests.request("POST", url, headers=headers, data=payload_create_mo)
-        response_json = response.json()
+        response_post = requests.request("POST", url, headers=headers, data=managed_object_mapping_dump)
+
+        # step 2: update mapping with id
+        response_json = response_post.json()
+        managed_object_mapping['c8y_mqttMapping']['id'] = response_json['id']
+        managed_object_mapping_dump = json.dumps(managed_object_mapping)
+        url_put = f"{url}/{response_json['id']}"
+        response_put = requests.request("PUT", url_put, headers=headers, data=managed_object_mapping_dump)
         print ("Created mapping:" + str(response_json['id']))
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

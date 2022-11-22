@@ -34,22 +34,21 @@ def main(argv):
 
     response = requests.request("GET", url, headers=headers)
     jsonResponse = response.json()
-    sampleMappings = []
+    mappings = []
 
-    for managedObject in jsonResponse['managedObjects']:
+    for index, mapping in enumerate(jsonResponse['managedObjects']):
         #print ("Original:" + str(managedObject['c8y_mqttMapping']['id']) + "/" + str(managedObject['id']))
-        managedObject['c8y_mqttMapping']['id'] = managedObject['id']
+        mapping['c8y_mqttMapping']['id'] = mapping['id']
+        mapping['c8y_mqttMapping']['name'] = 'Mapping - ' + str(index + 1)
         #print ("Changed:" + str(managedObject['c8y_mqttMapping']['id']))
-        sampleMappings.append(managedObject['c8y_mqttMapping'])
+        mappings.append(mapping['c8y_mqttMapping'])
 
-    #print(json.dumps(sampleMappings, indent=4))
+    #print(json.dumps(mappings, indent=4))
 
-    #sampleFilename = 'resources/script/sampleMapping/sampleMappings_01.json'
-
-    print("Writing " + str(len(sampleMappings)) + " to file: " + file)
+    print("Writing " + str(len(mappings)) + " to file: " + file)
 
     with open(file, 'w') as f:
-        f.write(json.dumps(sampleMappings, indent=4))
+        f.write(json.dumps(mappings, indent=4))
 
 
 if __name__ == "__main__":
