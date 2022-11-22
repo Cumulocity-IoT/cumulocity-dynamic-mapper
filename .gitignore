@@ -38,3 +38,4 @@ bin/
 .vscode/settings.json
 .vscode/settings.json
 resources/script/createSampleMappings_private.sh
+resources/script/attic/createSampleMappings_private.sh
