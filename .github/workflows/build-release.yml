@@ -38,12 +38,12 @@ jobs:
       - run: npm run build --if-present
         working-directory: ./mqtt-mapping-ui/mqtt-mapping
       - name: Zip Frontend
-        working-directory: ./mqtt-mapping-ui/mqtt-mapping
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         run: |
-          cd dist/apps/mqtt-mapping
-          zip -r -q ../../../mqtt-mapping-ui.zip *
+          cd mqtt-mapping-ui/mqtt-mapping/dist/apps/mqtt-mapping
+          zip -r -q ../../../../mqtt-mapping-ui.zip *
       - name: Create Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -54,6 +54,7 @@ jobs:
           draft: false
           prerelease: false
       - name: Upload Release Asset Frontend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         id: upload-release-asset-frontend
         uses: actions/upload-release-asset@v1
         env:
@@ -64,13 +65,14 @@ jobs:
           asset_name: mqtt-mapping-ui.zip
           asset_content_type: application/zip
       - name: Upload Release Asset Backend
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./backend/target/mqtt-mapping-service.zip
+          asset_path: ./mqtt-mapping-service/target/mqtt-mapping-service.zip
           asset_name: mqtt-mapping-service.zip
           asset_content_type: application/zip
 
