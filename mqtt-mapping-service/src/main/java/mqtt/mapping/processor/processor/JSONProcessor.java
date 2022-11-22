@@ -28,21 +28,21 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor<O> extends BasePayloadProcessor<JsonNode> {
+public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
 
     public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException {
+    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
+            MqttMessage mqttMessage) throws IOException {
         JsonNode jsonNode = objectMapper.readTree(mqttMessage.getPayload());
         context.setPayload(jsonNode);
         return context;
@@ -166,4 +166,5 @@ public class JSONProcessor<O> extends BasePayloadProcessor<JsonNode> {
             postProcessingCache.put(TIME, postProcessingCacheEntry);
         }
     }
+
 }

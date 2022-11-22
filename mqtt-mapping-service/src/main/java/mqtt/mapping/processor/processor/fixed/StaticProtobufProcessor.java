@@ -27,68 +27,68 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class StaticProtobufProcessor<T> extends BasePayloadProcessor<T> {
+public class StaticProtobufProcessor extends BasePayloadProcessor<byte[]> {
 
-        public StaticProtobufProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
-                super(objectMapper, mqttClient, c8yAgent);
+    public StaticProtobufProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+        super(objectMapper, mqttClient, c8yAgent);
+    }
+
+    @Override
+    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, MqttMessage mqttMessage)
+            throws IOException {
+        context.setPayload(mqttMessage.getPayload());
+        return context;
+    }
+
+    @Override
+    public void extractFromSource(ProcessingContext<byte[]> context)
+            throws ProcessingException {
+        if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
+            StaticCustomMeasurementOuter.StaticCustomMeasurement payloadProtobuf;
+            try {
+                payloadProtobuf = StaticCustomMeasurementOuter.StaticCustomMeasurement
+                        .parseFrom((byte[]) context.getPayload());
+            } catch (InvalidProtocolBufferException e) {
+                throw new ProcessingException(e.getMessage());
+            }
+            Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+
+            postProcessingCache
+                    .put("time",
+                            new ArrayList<SubstituteValue>(
+                                    Arrays.asList(new SubstituteValue(
+                                            new TextNode(new DateTime(
+                                                    payloadProtobuf.getTimestamp())
+                                                    .toString()),
+                                            TYPE.TEXTUAL,
+                                            RepairStrategy.DEFAULT))));
+            postProcessingCache.put("c8y_GenericMeasurement.Module.value",
+                    new ArrayList<SubstituteValue>(Arrays.asList(
+                            new SubstituteValue(new FloatNode(payloadProtobuf.getValue()),
+                                    TYPE.NUMBER,
+                                    RepairStrategy.DEFAULT))));
+            postProcessingCache
+                    .put("type",
+                            new ArrayList<SubstituteValue>(
+                                    Arrays.asList(
+                                            new SubstituteValue(
+                                                    new TextNode(payloadProtobuf
+                                                            .getMeasurementType()),
+                                                    TYPE.TEXTUAL,
+                                                    RepairStrategy.DEFAULT))));
+            postProcessingCache.put("c8y_GenericMeasurement.Module.unit",
+                    new ArrayList<SubstituteValue>(Arrays.asList(
+                            new SubstituteValue(new TextNode(payloadProtobuf.getUnit()),
+                                    TYPE.TEXTUAL,
+                                    RepairStrategy.DEFAULT))));
+            postProcessingCache.put(context.getMapping().targetAPI.identifier,
+                    new ArrayList<SubstituteValue>(Arrays.asList(
+                            new SubstituteValue(
+                                    new TextNode(payloadProtobuf.getExternalId()),
+                                    TYPE.TEXTUAL,
+                                    RepairStrategy.DEFAULT))));
+
         }
-
-        @Override
-        public ProcessingContext<T> deserializePayload(ProcessingContext<T> context, MqttMessage mqttMessage)
-                        throws IOException {
-                context.setPayload((T) mqttMessage.getPayload());
-                return context;
-        }
-
-        @Override
-        public void extractFromSource(ProcessingContext<T> context)
-                        throws ProcessingException {
-                if (MappingType.PROTOBUF_STATIC.equals(context.getMapping().mappingType)) {
-                        StaticCustomMeasurementOuter.StaticCustomMeasurement payloadProtobuf;
-                        try {
-                                payloadProtobuf = StaticCustomMeasurementOuter.StaticCustomMeasurement
-                                                .parseFrom( (byte[])context.getPayload());
-                        } catch (InvalidProtocolBufferException e) {
-                                throw new ProcessingException(e.getMessage());
-                        }
-                        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-
-                        postProcessingCache
-                                        .put("time",
-                                                        new ArrayList<SubstituteValue>(
-                                                                        Arrays.asList(new SubstituteValue(
-                                                                                        new TextNode(new DateTime(
-                                                                                                        payloadProtobuf.getTimestamp())
-                                                                                                        .toString()),
-                                                                                        TYPE.TEXTUAL,
-                                                                                        RepairStrategy.DEFAULT))));
-                        postProcessingCache.put("c8y_GenericMeasurement.Module.value",
-                                        new ArrayList<SubstituteValue>(Arrays.asList(
-                                                        new SubstituteValue(new FloatNode(payloadProtobuf.getValue()),
-                                                                        TYPE.NUMBER,
-                                                                        RepairStrategy.DEFAULT))));
-                        postProcessingCache
-                                        .put("type",
-                                                        new ArrayList<SubstituteValue>(
-                                                                        Arrays.asList(
-                                                                                        new SubstituteValue(
-                                                                                                        new TextNode(payloadProtobuf
-                                                                                                                        .getMeasurementType()),
-                                                                                                        TYPE.TEXTUAL,
-                                                                                                        RepairStrategy.DEFAULT))));
-                        postProcessingCache.put("c8y_GenericMeasurement.Module.unit",
-                                        new ArrayList<SubstituteValue>(Arrays.asList(
-                                                        new SubstituteValue(new TextNode(payloadProtobuf.getUnit()),
-                                                                        TYPE.TEXTUAL,
-                                                                        RepairStrategy.DEFAULT))));
-                        postProcessingCache.put(context.getMapping().targetAPI.identifier,
-                                        new ArrayList<SubstituteValue>(Arrays.asList(
-                                                        new SubstituteValue(
-                                                                        new TextNode(payloadProtobuf.getExternalId()),
-                                                                        TYPE.TEXTUAL,
-                                                                        RepairStrategy.DEFAULT))));
-
-                }
-        }
+    }
 
 }

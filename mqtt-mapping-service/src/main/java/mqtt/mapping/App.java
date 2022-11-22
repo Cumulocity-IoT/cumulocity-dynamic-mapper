@@ -91,11 +91,11 @@ public class App {
     public Map<MappingType, BasePayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
             C8YAgent c8yAgent) {
         return Map.of(
-            MappingType.JSON, new JSONProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.FLAT_FILE, new FlatFileProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.GENERIC_BINARY, new GenericBinaryProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessor<JsonNode>(objectMapper, mqttClient, c8yAgent)
+            MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
+            MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, mqttClient, c8yAgent),
+            MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, mqttClient, c8yAgent),
+            MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, mqttClient, c8yAgent),
+            MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessor(objectMapper, mqttClient, c8yAgent)
             );
     }
 

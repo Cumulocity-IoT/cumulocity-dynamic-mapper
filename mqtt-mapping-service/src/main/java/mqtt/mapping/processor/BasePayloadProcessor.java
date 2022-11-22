@@ -33,7 +33,6 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.extension.ProcessorExtension;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
@@ -42,7 +41,7 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class BasePayloadProcessor<O> {
+public abstract class BasePayloadProcessor<T> {
 
     public BasePayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         this.objectMapper = objectMapper;
@@ -66,12 +65,12 @@ public abstract class BasePayloadProcessor<O> {
 
     public static final String TIME = "time";
 
-    public abstract ProcessingContext<O> deserializePayload(ProcessingContext<O> contect, MqttMessage mqttMessage)
+    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, MqttMessage mqttMessage)
             throws IOException;
 
-    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+    public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
 
-    public ProcessingContext<O> substituteInTargetAndSend(ProcessingContext<O> context) {
+    public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
         /*
          * step 3 replace target with extract content from incoming payload
          */

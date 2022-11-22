@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.softwareag.c8y.mqtt</groupId>
         <artifactId>mqtt-mapping-solution</artifactId>
-        <version>1.111</version>
+        <version>1.112</version>
     </parent>
 
     <dependencyManagement>

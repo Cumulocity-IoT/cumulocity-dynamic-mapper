@@ -125,7 +125,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
-    private ExtensibleProcessor<?> extensibleProcessor;
+    private ExtensibleProcessor extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -204,7 +204,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessor<?>) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessor) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
