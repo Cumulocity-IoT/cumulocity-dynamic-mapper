@@ -12,13 +12,10 @@ import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '
 export class MappingService {
   constructor(
     private inventory: InventoryService,
-    private identity: IdentityService,
     private configurationService: BrokerConfigurationService,
-    private jsonProcessor: JSONProcessor,
-    private client: FetchClient) { }
+    private jsonProcessor: JSONProcessor) { }
 
   private agentId: string;
-  private managedObjectMapping: IManagedObject;
   protected JSONATA = require("jsonata");
 
   public async loadMappings(): Promise<Mapping[]> {
@@ -36,8 +33,8 @@ export class MappingService {
     let data = (await this.inventory.list(filter)).data;
 
     data.forEach(m => result.push({
-     ...m[MQTT_MAPPING_FRAGMENT],
-     id: m.id
+      ...m[MQTT_MAPPING_FRAGMENT],
+      id: m.id
     }))
     return result;
   }
@@ -65,10 +62,19 @@ export class MappingService {
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
-    const { data, res } = await this.inventory.create({
-      c8y_mqttMapping: mapping,
-    });
-    mapping.id = data.id;
+    {
+      const { data, res } = await this.inventory.create({
+        c8y_mqttMapping: mapping,
+        type: MQTT_MAPPING_TYPE,
+      });
+      mapping.id = data.id;
+    }
+    {
+      const { data, res } = await this.inventory.update({
+        c8y_mqttMapping: mapping,
+        id: mapping.id,
+      })
+    }
     return mapping;
   }
 

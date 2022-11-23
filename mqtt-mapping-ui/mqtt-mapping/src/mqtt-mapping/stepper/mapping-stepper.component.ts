@@ -394,7 +394,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private enrichTemplates() {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
     this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
-    if (!this.stepperConfiguration.editMode) {
+    if (!this.stepperConfiguration.updateMode) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     } else {
