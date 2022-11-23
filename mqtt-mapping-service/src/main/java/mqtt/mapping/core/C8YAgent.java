@@ -117,7 +117,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ServiceConfigurationComponent serviceConfigurationComponent;
 
     @Autowired
-    private MappingComponent mappingStatusComponent;
+    private MappingComponent mappingComponent;
 
     @Autowired
     private ExtensionsComponent extensions;
@@ -139,7 +139,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Setter
     private ServiceConfiguration serviceConfiguration;
 
-    private static final Method ADD_URL_METHOD;
+   private static final Method ADD_URL_METHOD;
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
@@ -233,7 +233,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         loadProcessorExtensions();
         mappingServiceRepresentation = objectMapper.convertValue(mappingServiceRepresentations[0],
                 MappingServiceRepresentation.class);
-        mappingStatusComponent.initializeMappingComponent(mappingServiceRepresentation);
+        mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
 
         try {
             mqttClient.submitInitialize();
@@ -347,7 +347,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public ArrayList<Mapping> getMappings() {
         ArrayList<Mapping> result = new ArrayList<Mapping>();
         subscriptionsService.runForTenant(tenant, () -> {
-            result.addAll(mappingStatusComponent.getMappings());
+            result.addAll(mappingComponent.getMappings());
             log.info("Found mappings: {}", result.size());
         });
         return result;
@@ -355,14 +355,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public void saveMappings(List<Mapping> mappings) {
         subscriptionsService.runForTenant(tenant, () -> {
-            mappingStatusComponent.saveMappings(mappings);
+            mappingComponent.saveMappings(mappings);
         });
     }
 
     public Mapping createMapping(Mapping mapping) {
         Mapping[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mappingStatusComponent.createMapping(mapping);
+            mr[0] = mappingComponent.createMapping(mapping);
         });
         return mr[0];
     }
@@ -370,7 +370,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public Mapping getMapping(String ident) {
         Mapping[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingStatusComponent.getMapping(ident);
+            mr[0] = mappingComponent.getMapping(ident);
         });
         return mr[0];
     }
@@ -378,7 +378,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public String deleteMapping(String id) {
         String[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingStatusComponent.deleteMapping(id);
+            mr[0] = mappingComponent.deleteMapping(id);
         });
         return mr[0];
     }
@@ -386,7 +386,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public Mapping updateMapping(Mapping mapping, String id) {
         Mapping[] mr = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingStatusComponent.updateMapping(mapping);
+            mr[0] = mappingComponent.updateMapping(mapping);
             log.info("Update Mapping {}", mr[0]);
         });
         return mr[0];
@@ -661,25 +661,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public void sendStatusMapping() {
         subscriptionsService.runForTenant(tenant, () -> {
-            mappingStatusComponent.sendStatusMapping();
+            mappingComponent.sendStatusMapping();
         });
     }
 
     public void sendStatusService(ServiceStatus serviceStatus) {
         subscriptionsService.runForTenant(tenant, () -> {
-            mappingStatusComponent.sendStatusService(serviceStatus);
+            mappingComponent.sendStatusService(serviceStatus);
         });
     }
 
     public void cleanDirtyMappings() throws JsonProcessingException {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
-        for (Mapping mapping : mappingStatusComponent.getMappingDirty()) {
+        for (Mapping mapping : mappingComponent.getMappingDirty()) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
             updateMapping(mapping, mapping.id);
         }
         // reset dirtySet
-        mappingStatusComponent.resetMappingDirty();
+        mappingComponent.resetMappingDirty();
     }
 }

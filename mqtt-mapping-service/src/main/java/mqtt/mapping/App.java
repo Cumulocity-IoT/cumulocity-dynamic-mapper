@@ -16,7 +16,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;

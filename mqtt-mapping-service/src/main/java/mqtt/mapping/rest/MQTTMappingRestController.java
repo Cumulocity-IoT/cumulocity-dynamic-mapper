@@ -192,7 +192,7 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/mapping/{ident}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
