@@ -2,6 +2,7 @@ package mqtt.mapping.processor.extension.internal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import javax.ws.rs.ProcessingException;
@@ -33,7 +34,7 @@ public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtension
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
-        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         postProcessingCache.put("time",
                 new ArrayList<SubstituteValue>(

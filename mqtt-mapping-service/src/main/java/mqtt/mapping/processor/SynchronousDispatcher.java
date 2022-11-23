@@ -141,7 +141,7 @@ public class SynchronousDispatcher implements MqttCallback {
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
-                                ArrayList<C8YRequest> resultRequests = context.getRequests();
+                                List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }

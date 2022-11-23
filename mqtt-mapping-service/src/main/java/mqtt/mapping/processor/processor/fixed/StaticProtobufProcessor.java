@@ -3,6 +3,7 @@ package mqtt.mapping.processor.processor.fixed;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -51,7 +52,7 @@ public class StaticProtobufProcessor extends BasePayloadProcessor<byte[]> {
             } catch (InvalidProtocolBufferException e) {
                 throw new ProcessingException(e.getMessage());
             }
-            Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+            Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
             postProcessingCache
                     .put("time",

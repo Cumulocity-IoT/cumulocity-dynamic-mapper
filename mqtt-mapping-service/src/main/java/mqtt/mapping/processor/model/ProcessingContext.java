@@ -1,6 +1,7 @@
 package mqtt.mapping.processor.model;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,6 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
+import mqtt.mapping.processor.ProcessingException;
 
 @Data
 @NoArgsConstructor
@@ -31,9 +33,9 @@ public class ProcessingContext<O> {
 
     private byte[] payloadRaw;
 
-    private ArrayList<C8YRequest> requests = new ArrayList<C8YRequest>();
+    private List<C8YRequest> requests = new ArrayList<C8YRequest>();
 
-    private Exception error;
+    private List<Exception> errors  = new ArrayList<Exception>();
 
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 
@@ -41,7 +43,7 @@ public class ProcessingContext<O> {
 
     private MappingType mappingType;
 
-    private Map<String, ArrayList<SubstituteValue>> postProcessingCache = new HashMap<String, ArrayList<SubstituteValue>>();
+    private Map<String, List<SubstituteValue>> postProcessingCache = new HashMap<String, List<SubstituteValue>>();
     
     private boolean sendPayload = false;
 
@@ -50,7 +52,7 @@ public class ProcessingContext<O> {
     public static String SOURCE_ID = "source.id";
 
     public boolean hasError() {
-        return error != null;
+        return errors != null && errors.size() > 0;
     }
 
     public int addRequest(C8YRequest c8yRequest) {
@@ -81,6 +83,10 @@ public class ProcessingContext<O> {
 
     public C8YRequest getCurrentRequest() {
         return requests.get(requests.size()-1);
+    }
+
+    public void addError(ProcessingException processingException) {
+        errors.add(processingException);
     }
 
 }

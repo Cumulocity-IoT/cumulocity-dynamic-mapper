@@ -75,16 +75,18 @@ export class C8YClient {
       let { data, res } = await result;
       //console.log ("My data:", data );
       if ((res.status == 200 || res.status == 201)) {
-        this.alert.success("Successfully tested mapping!");
+        //this.alert.success("Successfully tested mapping!");
         return data;
       } else {
         let e = await res.text();
         this.alert.danger("Failed to tested mapping: " + e);
+        context.requests[context.requests.length-1].error = e;
         return '';
       }
     } catch (e) {
       let { data, res } = await e;
       this.alert.danger("Failed to tested mapping: " + data);
+      context.requests[context.requests.length-1].error = e;
       return '';
     }
   }

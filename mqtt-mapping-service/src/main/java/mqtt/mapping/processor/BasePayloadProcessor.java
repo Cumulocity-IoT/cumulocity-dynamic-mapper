@@ -5,6 +5,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -77,7 +78,7 @@ public abstract class BasePayloadProcessor<T> {
         Mapping mapping = context.getMapping();
 
         // if there are to little device idenfified then we replicate the first device
-        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         String maxEntry = postProcessingCache.entrySet()
                 .stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
@@ -85,7 +86,7 @@ public abstract class BasePayloadProcessor<T> {
                         .compareTo(e2.getValue()))
                 .get().getKey();
     
-        ArrayList<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
+        List<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -101,7 +102,7 @@ public abstract class BasePayloadProcessor<T> {
             try {
                 payloadTarget = objectMapper.readTree(mapping.target);
             } catch (JsonProcessingException e) {
-                context.setError(new ProcessingException(e.getMessage()));
+                context.addError(new ProcessingException(e.getMessage()));
                 return context;
             }
             for (String pathTarget : pathTargets) {
