@@ -324,7 +324,7 @@ export class MappingComponent implements OnInit {
     const response2 = await this.configurationService.runOperation(Operation.RELOAD_MAPPINGS);
     console.log("Activate mapping response:", response2)
     if (response2.status < 300) {
-      this.alertService.success(gettext('Mappings activated successfully'));
+      //this.alertService.success(gettext('Mappings activated successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));
