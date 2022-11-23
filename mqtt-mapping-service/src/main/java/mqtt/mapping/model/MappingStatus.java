@@ -9,12 +9,19 @@ import java.io.Serializable;
 
 import javax.validation.constraints.NotNull;
 
-
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = {})
 public class MappingStatus implements Serializable {
+
+  public static MappingStatus UNSPECIFIED_MAPPING_STATUS;
+  public static String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
+
+  static {
+    UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING, "#", 0, 0, 0,
+        0);
+  }
 
   @NotNull
   public String id;
@@ -36,16 +43,16 @@ public class MappingStatus implements Serializable {
 
   @NotNull
   public long snoopedTemplatesTotal;
-  
+
   @Override
   public boolean equals(Object m) {
     return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
   }
 
-public void reset() {
-  messagesReceived = 0;
-  errors = 0;
-  snoopedTemplatesActive = 0;
-  snoopedTemplatesTotal = 0;
-}
+  public void reset() {
+    messagesReceived = 0;
+    errors = 0;
+    snoopedTemplatesActive = 0;
+    snoopedTemplatesTotal = 0;
+  }
 }
