@@ -6,8 +6,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import mqtt.mapping.model.extension.internal.InternalCustomAlarmOuter;
-import mqtt.mapping.model.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
+import mqtt.mapping.processor.extension.internal.InternalCustomAlarmOuter;
+import mqtt.mapping.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
 import mqtt.mapping.processor.processor.fixed.StaticCustomMeasurementOuter;
 import mqtt.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.StaticCustomMeasurement;
 
