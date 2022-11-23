@@ -1,4 +1,4 @@
-package mqtt.mapping.extension;
+package mqtt.mapping.model.extension;
 
 
 /** Utility for managing the extensions. */
