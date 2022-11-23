@@ -44,7 +44,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "/plant1/#",
-        "id": "50086727"
+        "id": "50086727",
+        "name": "Mapping - 1"
     },
     {
         "snoopStatus": "NONE",
@@ -85,7 +86,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "devices/#",
-        "id": "50088617"
+        "id": "50088617",
+        "name": "Mapping - 2"
     },
     {
         "snoopStatus": "NONE",
@@ -132,7 +134,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "subscriptionTopic": "device/#",
-        "id": "50087720"
+        "id": "50087720",
+        "name": "Mapping - 3"
     },
     {
         "snoopStatus": "NONE",
@@ -179,7 +182,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "event/#",
-        "id": "50086750"
+        "id": "50086750",
+        "name": "Mapping - 4"
     },
     {
         "snoopStatus": "NONE",
@@ -226,7 +230,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "measurement/#",
-        "id": "50086751"
+        "id": "50086751",
+        "name": "Mapping - 5"
     },
     {
         "snoopStatus": "NONE",
@@ -267,7 +272,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "subscriptionTopic": "multiarray/devices",
-        "id": "50090058"
+        "id": "50090058",
+        "name": "Mapping - 6"
     },
     {
         "snoopStatus": "NONE",
@@ -308,7 +314,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "arrayType/devices",
-        "id": "50087726"
+        "id": "50087726",
+        "name": "Mapping - 7"
     },
     {
         "snoopStatus": "NONE",
@@ -361,7 +368,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "eventObject/#",
-        "id": "50086756"
+        "id": "50086756",
+        "name": "Mapping - 8"
     },
     {
         "snoopStatus": "NONE",
@@ -414,7 +422,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "measurementObject/#",
-        "id": "50089267"
+        "id": "50089267",
+        "name": "Mapping - 9"
     },
     {
         "snoopStatus": "STOPPED",
@@ -506,7 +515,8 @@
         ],
         "createNonExistingDevice": true,
         "subscriptionTopic": "uc1",
-        "id": "50088634"
+        "id": "50088634",
+        "name": "Mapping - 10"
     },
     {
         "snoopStatus": "NONE",
@@ -601,7 +611,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "uc4",
-        "id": "50088635"
+        "id": "50088635",
+        "name": "Mapping - 11"
     },
     {
         "snoopStatus": "NONE",
@@ -648,7 +659,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "subscriptionTopic": "uc1",
-        "id": "50090066"
+        "id": "50090066",
+        "name": "Mapping - 12"
     },
     {
         "snoopStatus": "STARTED",
@@ -675,7 +687,8 @@
         ],
         "createNonExistingDevice": false,
         "subscriptionTopic": "binary/+",
-        "id": "50087738"
+        "id": "50087738",
+        "name": "Mapping - 13"
     },
     {
         "snoopStatus": "NONE",
@@ -708,7 +721,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": true,
         "id": "50089275",
-        "subscriptionTopic": "operation/+"
+        "subscriptionTopic": "operation/+",
+        "name": "Mapping - 14"
     },
     {
         "snoopStatus": "STOPPED",
@@ -751,7 +765,8 @@
         ],
         "createNonExistingDevice": false,
         "subscriptionTopic": "binaryEvent/+",
-        "id": "50089277"
+        "id": "50089277",
+        "name": "Mapping - 15"
     },
     {
         "snoopStatus": "NONE",
@@ -786,7 +801,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "id": "50090074",
-        "subscriptionTopic": "simple/#"
+        "subscriptionTopic": "simple/#",
+        "name": "Mapping - 16"
     },
     {
         "snoopStatus": "NONE",
@@ -821,7 +837,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "id": "50088645",
-        "subscriptionTopic": "device/update/+"
+        "subscriptionTopic": "device/update/+",
+        "name": "Mapping - 17"
     },
     {
         "snoopStatus": "NONE",
@@ -843,7 +860,8 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "id": "50089283",
-        "subscriptionTopic": "protobuf/measurement"
+        "subscriptionTopic": "protobuf/measurement",
+        "name": "Mapping - 18"
     },
     {
         "snoopStatus": "NONE",
@@ -869,6 +887,7 @@
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "id": "50089285",
-        "subscriptionTopic": "protobuf/event"
+        "subscriptionTopic": "protobuf/event",
+        "name": "Mapping - 19"
     }
 ]
