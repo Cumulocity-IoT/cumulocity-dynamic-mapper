@@ -64,9 +64,9 @@ public class AsynchronousDispatcher implements MqttCallback {
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(null, true);
+            MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
-                MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping, false);
+                MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
 
                 ProcessingContext<?> context;
                 if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -183,7 +183,7 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     public Future<List<ProcessingContext<?>>> processMessage(String topic, MqttMessage mqttMessage,
             boolean sendPayload) throws Exception {
-        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(null, true);
+        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 

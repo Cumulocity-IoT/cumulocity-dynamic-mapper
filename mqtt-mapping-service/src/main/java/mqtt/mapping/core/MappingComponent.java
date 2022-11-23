@@ -52,7 +52,9 @@ public class MappingComponent {
         mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
             statusMapping.put(ms.ident, ms);
         });
-
+        if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
+            statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
+        }
     }
 
     public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
@@ -91,20 +93,12 @@ public class MappingComponent {
         }
     }
 
-    public MappingStatus getMappingStatus(Mapping m, boolean unspecified) {
-        String topic = "#";
-        String key = "UNSPECIFIED";
-        String ident = "#";
-        if (!unspecified) {
-            topic = m.subscriptionTopic;
-            key = m.id;
-            ident = m.ident;
-        }
-        MappingStatus ms = statusMapping.get(ident);
+    public MappingStatus getMappingStatus(Mapping m) {
+        MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
-            log.info("Adding: {}", key);
-            ms = new MappingStatus(key, ident, topic, 0, 0, 0, 0);
-            statusMapping.put(ident, ms);
+            log.info("Adding: {}", m.ident);
+            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic, 0, 0, 0, 0);
+            statusMapping.put(m.ident, ms);
         }
         return ms;
     }
@@ -165,12 +159,11 @@ public class MappingComponent {
         inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
         ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
         List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), true)
-                .map( mo -> toMappingObject(mo).getC8yMQTTMapping())
+                .map(mo -> toMappingObject(mo).getC8yMQTTMapping())
                 .collect(Collectors.toList());
         log.debug("Found Mappings {}", result);
         return result;
     }
-
 
     public Mapping updateMapping(Mapping mapping) {
         List<Mapping> mappings = getMappings();
@@ -200,13 +193,13 @@ public class MappingComponent {
         Mapping result = null;
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() == 0) {
-            //1. step create managed object
+            // 1. step create managed object
             mapping.lastUpdate = System.currentTimeMillis();
             mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
             ManagedObjectRepresentation mor = toManagedObject(mr);
             mor = inventoryApi.create(mor);
-            //2. step update mapping.id with if from previously created managedObject 
+            // 2. step update mapping.id with if from previously created managedObject
             mapping.id = mor.getId().getValue();
             mr.getC8yMQTTMapping().setId(mapping.id);
             mor = toManagedObject(mr);
@@ -231,7 +224,7 @@ public class MappingComponent {
         return objectMapper.convertValue(mor, MappingRepresentation.class);
     }
 
-	private void deleteMappingStatus(String id) {
+    private void deleteMappingStatus(String id) {
         statusMapping.remove(id);
-	}
+    }
 }

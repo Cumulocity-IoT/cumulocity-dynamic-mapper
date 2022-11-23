@@ -66,7 +66,7 @@ public class SynchronousDispatcher implements MqttCallback {
 
     public List<ProcessingContext<?>> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
             throws Exception {
-        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(null, true);
+        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         List<ProcessingContext<?>> processingResult = new ArrayList<ProcessingContext<?>>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
@@ -82,7 +82,7 @@ public class SynchronousDispatcher implements MqttCallback {
                 }
 
                 resolvedMappings.forEach(mapping -> {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping, false);
+                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {

@@ -71,7 +71,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "";
+    private static final String ADDITION_TEST_DUMMY = "_D1";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -136,9 +136,6 @@ public class MQTTClient {
 
     private boolean initialize() {
         var firstRun = true;
-        // initialize entry to record errors that can't be assigned to any map, i.e.
-        // UNSPECIFIED
-        mappingStatusComponent.getMappingStatus(null, true);
         while (!canConnect()) {
             if (!firstRun) {
                 try {

@@ -24,6 +24,13 @@ public class Mapping implements Serializable {
 
   public static int SNOOP_TEMPLATES_MAX = 5;
   public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
+  public static Mapping UNSPECIFIED_MAPPING;
+
+  static {
+    UNSPECIFIED_MAPPING = new Mapping();
+    UNSPECIFIED_MAPPING.setId(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
+    UNSPECIFIED_MAPPING.setIdent(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
+  }
 
   @NotNull
   public String name;
