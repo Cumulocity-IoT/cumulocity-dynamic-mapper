@@ -1,4 +1,4 @@
-package mqtt.mapping.model.extension.internal;
+package mqtt.mapping.processor.extension.internal;
 
 import java.util.ArrayList;
 import java.util.Arrays;

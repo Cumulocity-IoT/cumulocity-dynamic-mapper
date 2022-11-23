@@ -139,32 +139,32 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Setter
     private ServiceConfiguration serviceConfiguration;
 
-   private static final Method ADD_URL_METHOD;
+//    private static final Method ADD_URL_METHOD;
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
-    static {
-        final Method addURL;
+    // static {
+    //     final Method addURL;
 
-        // open the classloader module for java9+ so it wont have a warning
-        try {
-            openUrlClassLoaderModule();
-        } catch (Throwable ignored) {
-            // ignore exception. Java 8 wont have the module, so it wont matter if we ignore
-            // it
-            // cause there will be no warning
-        }
+    //     // open the classloader module for java9+ so it wont have a warning
+    //     try {
+    //         openUrlClassLoaderModule();
+    //     } catch (Throwable ignored) {
+    //         // ignore exception. Java 8 wont have the module, so it wont matter if we ignore
+    //         // it
+    //         // cause there will be no warning
+    //     }
 
-        try {
-            addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            addURL.setAccessible(true);
-        } catch (NoSuchMethodException exception) {
-            throw new AssertionError(exception);
-        }
+    //     try {
+    //         addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+    //         addURL.setAccessible(true);
+    //     } catch (NoSuchMethodException exception) {
+    //         throw new AssertionError(exception);
+    //     }
 
-        ADD_URL_METHOD = addURL;
-    }
+    //     ADD_URL_METHOD = addURL;
+    // }
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -523,7 +523,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
                     // step 3 parse list of extentions
 
-                    dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
+                    //dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
+                    dynamicLoader = ClassLoaderUtil.getClassLoader(tempFile, extName);
                 } else {
                     dynamicLoader = C8YAgent.class.getClassLoader();
                 }
@@ -623,19 +624,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         loadProcessorExtensions();
     }
 
-    private static void openUrlClassLoaderModule() throws Exception {
-        Class<?> moduleClass = Class.forName("java.lang.Module");
-        Method addOpensMethod = moduleClass.getMethod("addOpens", String.class, moduleClass);
+    // private static void openUrlClassLoaderModule() throws Exception {
+    //     Class<?> moduleClass = Class.forName("java.lang.Module");
+    //     Method addOpensMethod = moduleClass.getMethod("addOpens", String.class, moduleClass);
 
-        Method getModuleMethod = Class.class.getMethod("getModule");
-        Object urlClassLoaderModule = getModuleMethod.invoke(URLClassLoader.class);
+    //     Method getModuleMethod = Class.class.getMethod("getModule");
+    //     Object urlClassLoaderModule = getModuleMethod.invoke(URLClassLoader.class);
 
-        Object thisModule = getModuleMethod.invoke(C8YAgent.class);
-        Module thisTypedModule = (Module) thisModule;
-        log.info("This module: {}, {}", thisModule.getClass(), thisTypedModule.getName());
+    //     Object thisModule = getModuleMethod.invoke(C8YAgent.class);
+    //     Module thisTypedModule = (Module) thisModule;
+    //     log.info("This module: {}, {}", thisModule.getClass(), thisTypedModule.getName());
 
-        addOpensMethod.invoke(urlClassLoaderModule, URLClassLoader.class.getPackage().getName(), thisModule);
-    }
+    //     addOpensMethod.invoke(urlClassLoaderModule, URLClassLoader.class.getPackage().getName(), thisModule);
+    // }
 
     public ServiceConfiguration loadServiceConfiguration() {
         ServiceConfiguration[] results = { new ServiceConfiguration() };

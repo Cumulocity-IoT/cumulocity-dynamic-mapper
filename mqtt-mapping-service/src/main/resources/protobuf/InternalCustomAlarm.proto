@@ -1,7 +1,7 @@
 syntax = "proto3";
 package processor.protobuf;
 
-option java_package = "mqtt.mapping.extension.internal";
+option java_package = "mqtt.mapping.processor.extension.internal";
 option java_outer_classname = "InternalCustomAlarmOuter";
 
 message InternalCustomAlarm {
