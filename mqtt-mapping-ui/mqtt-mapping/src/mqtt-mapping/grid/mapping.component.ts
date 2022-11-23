@@ -185,7 +185,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      editMode: false
+      updateMode: false
     };
 
     let ident = uuidv4();
@@ -242,7 +242,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      editMode: true
+      updateMode: true
     };
     this.setStepperConfiguration(mapping.mappingType);
     // create deep copy of existing mapping, in case user cancels changes
@@ -257,11 +257,12 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      editMode: true
+      updateMode: false
     };
     this.setStepperConfiguration(mapping.mappingType)
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
+    this.mappingToUpdate.name =  this.mappingToUpdate.name + " - Copy";
     this.mappingToUpdate.ident = uuidv4();
     this.mappingToUpdate.id = this.mappingToUpdate.ident
     console.log("Copying mapping", this.mappingToUpdate);
@@ -270,10 +271,6 @@ export class MappingComponent implements OnInit {
 
   async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
-    // let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id) // find index of your object
-    // console.log("Trying to delete mapping, index", i)
-    // this.mappings.splice(i, 1) // remove it from array
-    // console.log("Deleting mapping, remaining maps", this.mappings)
     await this.mappingService.deleteMapping(mapping);
     this.alertService.success(gettext('Mapping deleted successfully'));
     this.isConnectionToMQTTEstablished = true;
@@ -290,33 +287,28 @@ export class MappingComponent implements OnInit {
 
   async onCommit(mapping: Mapping) {
     // test if new/updated mapping was commited or if cancel
-    // if (mapping) {
     mapping.lastUpdate = Date.now();
-    //let i = this.mappings.map(item => item.id).findIndex(m => m == mapping.id)
+
     console.log("Changed mapping:", mapping);
 
     if (isTemplateTopicUnique(mapping, this.mappings)) {
-      if (!this.stepperConfiguration.editMode) {
-        // new mapping
-        console.log("Push new mapping:", mapping);
-        //this.mappings.push(mapping)
-        await this.mappingService.createMapping(mapping);
-        this.alertService.success(gettext('Mapping created successfully'));
-      } else {
+      if (this.stepperConfiguration.updateMode) {
         console.log("Update existing mapping:", mapping);
-        //this.mappings[i] = mapping;
         await this.mappingService.updateMapping(mapping);
         this.alertService.success(gettext('Mapping updated successfully'));
+      } else {
+        // new mapping
+        console.log("Push new mapping:", mapping);
+        await this.mappingService.createMapping(mapping);
+        this.alertService.success(gettext('Mapping created successfully'));
       }
       this.loadMappings();
       this.refresh.emit();
-      this.alertService.success(gettext('Mapping deleted successfully'));
       this.isConnectionToMQTTEstablished = true;
       this.activateMappings();
     } else {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
     }
-    //}
     this.showConfigMapping = false;
   }
 
