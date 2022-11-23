@@ -20,7 +20,6 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
@@ -135,10 +134,11 @@ public class MappingComponent {
 
     public void saveMappings(List<Mapping> mappings) {
         mappings.forEach(m -> {
-            MappingRepresentation mpr = new MappingRepresentation();
-            mpr.setId(GId.asGId(m.id));
-            mpr.setC8yMQTTMapping(m);
-            inventoryApi.update(mpr);
+            MappingRepresentation mr = new MappingRepresentation();
+            mr.setC8yMQTTMapping(m);
+            ManagedObjectRepresentation mor = toManagedObject(mr);
+            mor.setId(GId.asGId(m.id));
+            inventoryApi.update(mor);
         });
         log.debug("Saved mappings!");
     }
@@ -147,8 +147,7 @@ public class MappingComponent {
         Mapping result = null;
         ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
         if (mo != null) {
-            MappingRepresentation mappingsRepresentation = objectMapper.convertValue(mo, MappingRepresentation.class);
-            result = mappingsRepresentation.getC8yMQTTMapping();
+            result = toMappingObject(mo).getC8yMQTTMapping();
         }
         log.info("Found Mapping: {}", result.id);
         return result;
@@ -166,15 +165,12 @@ public class MappingComponent {
         inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
         ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
         List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), true)
-                .map(mo -> (objectMapper.convertValue(mo, MappingRepresentation.class)))
-                .peek(m -> {
-                    m.getC8yMQTTMapping().id = m.getId().getValue();
-                })
-                .map( mo -> mo.getC8yMQTTMapping())
+                .map( mo -> toMappingObject(mo).getC8yMQTTMapping())
                 .collect(Collectors.toList());
         log.debug("Found Mappings {}", result);
         return result;
     }
+
 
     public Mapping updateMapping(Mapping mapping) {
         List<Mapping> mappings = getMappings();
@@ -185,8 +181,10 @@ public class MappingComponent {
             mapping.lastUpdate = System.currentTimeMillis();
             mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
-            mr.setId(GId.asGId(mapping.id));
-            inventoryApi.update(mr);
+            mr.setId(mapping.id);
+            ManagedObjectRepresentation mor = toManagedObject(mr);
+            mor.setId(GId.asGId(mapping.id));
+            inventoryApi.update(mor);
             result = mapping;
         } else {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
@@ -202,18 +200,35 @@ public class MappingComponent {
         Mapping result = null;
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() == 0) {
+            //1. step create managed object
             mapping.lastUpdate = System.currentTimeMillis();
+            mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
-            mr.setId(GId.asGId(mapping.id));
-            ManagedObjectRepresentation mor = inventoryApi.create(mr);
+            ManagedObjectRepresentation mor = toManagedObject(mr);
+            mor = inventoryApi.create(mor);
+            //2. step update mapping.id with if from previously created managedObject 
+            mapping.id = mor.getId().getValue();
+            mr.getC8yMQTTMapping().setId(mapping.id);
+            mor = toManagedObject(mr);
+            mor.setId(GId.asGId(mapping.id));
+
+            inventoryApi.update(mor);
+            log.info("Created mapping: {}", mor);
             result = mapping;
-            result.id = mor.getId().getValue();
         } else {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
         return result;
+    }
+
+    private ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
+        return objectMapper.convertValue(mr, ManagedObjectRepresentation.class);
+    }
+
+    private MappingRepresentation toMappingObject(ManagedObjectRepresentation mor) {
+        return objectMapper.convertValue(mor, MappingRepresentation.class);
     }
 
 	private void deleteMappingStatus(String id) {

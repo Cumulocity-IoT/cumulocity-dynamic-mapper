@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -21,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MappingRepresentation extends ManagedObjectRepresentation implements Serializable {
+public class MappingRepresentation implements Serializable {
 
   public static final String MQTT_MAPPING_TYPE = "c8y_mqttMapping";
   public static final String MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
@@ -31,17 +30,17 @@ public class MappingRepresentation extends ManagedObjectRepresentation implement
   static String TOPIC_WILDCARD_MULTI = "#";
   static String TOPIC_WILDCARD_SINGLE = "+";
 
-  // @JsonProperty("id")
-  // private String id;
+  @JsonProperty("id")
+  private String id;
 
-  // @JsonProperty("type")
-  // private String type;
+  @JsonProperty("type")
+  private String type;
 
-  // @JsonProperty(value = "name")
-  // private String name;
+  @JsonProperty(value = "name")
+  private String name;
 
-  // @JsonProperty(value = "description")
-  // private String description;
+  @JsonProperty(value = "description")
+  private String description;
 
   @JsonProperty(value = MQTT_MAPPING_FRAGMENT)
   private Mapping c8yMQTTMapping;
