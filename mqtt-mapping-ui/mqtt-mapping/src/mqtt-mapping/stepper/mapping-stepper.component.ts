@@ -281,15 +281,27 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTestTransformation() {
-    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), false);
+    let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), false);
+    this.templateTestingResults = testProcessingContext.requests;
+    if (testProcessingContext.errors.length > 0) {
+      this.alertService.warning("Test tranformation was not successfull!");
+      testProcessingContext.errors.forEach(msg => {
+        this.alertService.danger(msg);
+      })
+    }
     this.onNextTestResult();
   }
 
   async onSendTest() {
-    this.templateTestingResults = await this.mappingService.testResult(this.getCurrentMapping(true), true);
-    this.mapping.tested = (!this.templateTestingResults);
+    let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), true);
+    this.templateTestingResults = testProcessingContext.requests;
+    if (testProcessingContext.errors.length > 0) {
+      this.alertService.warning("Test tranformation was not successfull!");
+      testProcessingContext.errors.forEach(msg => {
+        this.alertService.danger(msg);
+      })
+    }
     this.onNextTestResult();
-
   }
 
   public onNextTestResult() {
@@ -301,7 +313,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
       this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
       this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI), null);
-      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error?.message;
+      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error
     } else {
       this.templateTestingRequest = JSON.parse("{}");
       this.templateTestingResponse = JSON.parse("{}");
@@ -339,13 +351,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       if (this.mapping?.extension?.name) {
         this.extensionEvents$.next(Object.keys(this.extensions[this.mapping?.extension?.name].extensionEntries));
       }
-
-      // this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
-      //   return [n, n];
-      // })
-      // this.processorExtensions =  _.flatMap(Object.keys(extObject).map(ext => extObject[ext].extensions), function duplicate(n) {
-      //   return n;
-      // })
 
       let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
       const initialState = {

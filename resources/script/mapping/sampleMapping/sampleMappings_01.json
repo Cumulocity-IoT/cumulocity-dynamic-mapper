@@ -26,7 +26,7 @@
                 "expandArray": false
             },
             {
-                "pathSource": "$now() + 1000",
+                "pathSource": "$now()",
                 "pathTarget": "time",
                 "repairStrategy": "DEFAULT",
                 "expandArray": false

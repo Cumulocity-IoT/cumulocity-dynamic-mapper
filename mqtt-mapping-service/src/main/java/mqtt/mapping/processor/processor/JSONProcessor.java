@@ -53,7 +53,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
             throws ProcessingException {
         Mapping mapping = context.getMapping();
         JsonNode payloadJsonNode = context.getPayload();
-        Map<String, ArrayList<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         /*
          * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
@@ -94,7 +94,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
             /*
              * step 2 analyse exctracted content: textual, array
              */
-            ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
+            List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
                     new ArrayList<SubstituteValue>());
             if (extractedSourceContent == null) {
                 log.error("No substitution for: {}, {}", substitution.pathSource,
@@ -159,7 +159,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY) {
-            ArrayList<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
+            List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
                     new ArrayList<SubstituteValue>());
             postProcessingCacheEntry.add(
                     new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));

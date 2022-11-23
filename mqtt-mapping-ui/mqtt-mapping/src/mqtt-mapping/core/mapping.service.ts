@@ -84,6 +84,7 @@ export class MappingService {
       topic: mapping.templateTopicSample,
       processingType: ProcessingType.UNDEFINED,
       cardinality: new Map<string, number>(),
+      errors: [],
       mappingType: mapping.mappingType,
       postProcessingCache: new Map<string, SubstituteValue[]>(),
       sendPayload: sendPayload,
@@ -92,14 +93,14 @@ export class MappingService {
     return ctx;
   }
 
-  async testResult(mapping: Mapping, sendPayload: boolean): Promise<C8YRequest[]> {
+  async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
     this.jsonProcessor.deserializePayload(context, mapping);
     this.jsonProcessor.extractFromSource(context);
     await this.jsonProcessor.substituteInTargetAndSend(context);
 
     // The producing code (this may take some time)
-    return context.requests;
+    return context;
   }
 
   public evaluateExpression(json: JSON, path: string): JSON {

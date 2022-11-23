@@ -124,7 +124,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                             processor.extractFromSource(context);
                             processor.substituteInTargetAndSend(context);
                             // processor.substituteInTargetAndSend(context);
-                            ArrayList<C8YRequest> resultRequests = context.getRequests();
+                            List<C8YRequest> resultRequests = context.getRequests();
                             if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                 mappingStatus.errors++;
                             }

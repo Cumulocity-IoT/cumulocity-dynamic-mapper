@@ -8,7 +8,7 @@ export interface C8YRequest {
     request?: any;
     response?: any;
     targetAPI?: string;
-    error?: Error;
+    error?: string;
 }
 
 export interface ProcessingContext {
@@ -17,6 +17,7 @@ export interface ProcessingContext {
     payload?: JSON;
     payloadRaw?: any;
     requests?: C8YRequest[];
+    errors?: string [];
     processingType?: ProcessingType;
     cardinality: Map<string, number>;
     mappingType: MappingType;

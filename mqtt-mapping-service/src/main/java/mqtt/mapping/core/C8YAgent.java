@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -74,7 +73,6 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
-import mqtt.mapping.util.ClassLoaderUtil;
 
 @Slf4j
 @Service
@@ -139,32 +137,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Setter
     private ServiceConfiguration serviceConfiguration;
 
-//    private static final Method ADD_URL_METHOD;
+    // private static final Method ADD_URL_METHOD;
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
-
-    // static {
-    //     final Method addURL;
-
-    //     // open the classloader module for java9+ so it wont have a warning
-    //     try {
-    //         openUrlClassLoaderModule();
-    //     } catch (Throwable ignored) {
-    //         // ignore exception. Java 8 wont have the module, so it wont matter if we ignore
-    //         // it
-    //         // cause there will be no warning
-    //     }
-
-    //     try {
-    //         addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-    //         addURL.setAccessible(true);
-    //     } catch (NoSuchMethodException exception) {
-    //         throw new AssertionError(exception);
-    //     }
-
-    //     ADD_URL_METHOD = addURL;
-    // }
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
@@ -214,8 +190,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             });
             if (internalExtensions[0] == null) {
                 internalExtensions[0] = new ManagedObjectRepresentation();
-                //internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_TYPE,
-                //        new HashMap());
+                // internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_TYPE,
+                // new HashMap());
                 Map<String, ?> props = Map.of("name",
                         ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                         "external", false);
@@ -495,6 +471,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     private void loadProcessorExtensions() {
+        ClassLoader inernalClassloader = C8YAgent.class.getClassLoader();
+        ClassLoader externalClassLoader = null;
+
         for (ManagedObjectRepresentation extension : extensions.get()) {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
@@ -502,14 +481,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Trying to load extension id: {}, name: {}, ", extension.getId().getValue(), extName);
 
             try {
-                ClassLoader dynamicLoader = null;
-
                 if (external) {
                     // step 1 download extension for binary repository
-
                     InputStream downloadInputStream = binaryApi.downloadFile(extension.getId());
-                    // step 2 create temporary file,because classloader needs a url resource
 
+                    // step 2 create temporary file,because classloader needs a url resource
                     File tempFile;
                     tempFile = File.createTempFile(extName, "jar");
                     tempFile.deleteOnExit();
@@ -522,15 +498,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     IOUtils.copy(downloadInputStream, outputStream);
 
                     // step 3 parse list of extentions
-
-                    //dynamicLoader = ClassLoaderUtil.getClassLoader(pathWithProtocol, extName);
-                    dynamicLoader = ClassLoaderUtil.getClassLoader(tempFile, extName);
+                    URL[] urls = { tempFile.toURI().toURL() };
+                    externalClassLoader = new URLClassLoader(urls, mqtt.mapping.App.class.getClassLoader());
+                    registerExtensionInProcessor(extension.getId().getValue(), extName, externalClassLoader, external);
                 } else {
-                    dynamicLoader = C8YAgent.class.getClassLoader();
+                    registerExtensionInProcessor(extension.getId().getValue(), extName, inernalClassloader, external);
                 }
-
-                registerExtensionInProcessor(extension.getId().getValue(), extName, dynamicLoader, external);
-
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
                 // e.printStackTrace();
@@ -624,26 +597,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         loadProcessorExtensions();
     }
 
-    // private static void openUrlClassLoaderModule() throws Exception {
-    //     Class<?> moduleClass = Class.forName("java.lang.Module");
-    //     Method addOpensMethod = moduleClass.getMethod("addOpens", String.class, moduleClass);
-
-    //     Method getModuleMethod = Class.class.getMethod("getModule");
-    //     Object urlClassLoaderModule = getModuleMethod.invoke(URLClassLoader.class);
-
-    //     Object thisModule = getModuleMethod.invoke(C8YAgent.class);
-    //     Module thisTypedModule = (Module) thisModule;
-    //     log.info("This module: {}, {}", thisModule.getClass(), thisTypedModule.getName());
-
-    //     addOpensMethod.invoke(urlClassLoaderModule, URLClassLoader.class.getPackage().getName(), thisModule);
-    // }
-
     public ServiceConfiguration loadServiceConfiguration() {
         ServiceConfiguration[] results = { new ServiceConfiguration() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = serviceConfigurationComponent.loadServiceConfiguration();
-            // COMMENT OUT ONLY DEBUG
-            // results[0].active = true;
             log.info("Found service configuration: {}", results[0]);
         });
         return results[0];
@@ -653,8 +610,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ConfigurationConnection[] results = { new ConfigurationConnection() };
         subscriptionsService.runForTenant(tenant, () -> {
             results[0] = connectionConfigurationComponent.loadConnectionConfiguration();
-            // COMMENT OUT ONLY DEBUG
-            // results[0].active = true;
             log.info("Found connection configuration: {}", results[0]);
         });
         return results[0];
