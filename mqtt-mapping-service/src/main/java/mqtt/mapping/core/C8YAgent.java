@@ -99,6 +99,8 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
+    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "mqtt.mapping.processor.extension.external";
+
     @Autowired
     private EventApi eventApi;
 
@@ -563,10 +565,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
             try {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
-                if (external && !clazz.getPackageName().startsWith("mqtt.mapping.processor.extension.custom")) {
+                if (external && !clazz.getPackageName().startsWith(PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL)) {
                     extensionEntry.setMessage(
-                            "Implementation must be in package: 'mqtt.mapping.processor.extension.custom' instead of: "
+                            "Implementation must be in package: 'mqtt.mapping.processor.extension.external' instead of: "
                                     + clazz.getPackageName());
+                    extensionEntry.setLoaded(false);
                 } else {
                     Object object = clazz.getDeclaredConstructor().newInstance();
                     if (!(object instanceof ProcessorExtension)) {
