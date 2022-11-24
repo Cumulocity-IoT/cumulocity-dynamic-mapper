@@ -74,7 +74,7 @@ export class ExtensionPropertiesComponent implements OnInit {
     this.extension = result[0];
     this.extensionsEntryForm.patchValue({ ...this.extension.extensionEntries });
 
-    this.extension.extensionEntries.forEach(entry => {
+    this.extension.extensionEntries?.forEach(entry => {
       const extensionEntriesForm = this.formBuilder.group({
         name: [entry.name],
         event: [entry.event],
