@@ -31,9 +31,9 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.processor.extension.custom.CustomEventOuter;
-import mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent;
-import mqtt.mapping.processor.extension.custom.CustomEventOuter.CustomEvent;
+import mqtt.mapping.processor.extension.external.CustomEventOuter;
+import mqtt.mapping.processor.extension.external.ProcessorExtensionCustomEvent;
+import mqtt.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
