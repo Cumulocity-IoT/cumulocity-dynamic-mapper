@@ -262,9 +262,9 @@ $parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
 ```
 
 
-2. Define the properties of the topic and API to be used
-3. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
-4. Test the mapping by applying the transformation and send the result to a test device.
+1. Define the properties of the topic and API to be used
+1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+1. Test the mapping by applying the transformation and send the result to a test device.
 
 #### Define MQTT topic properties
 
@@ -487,19 +487,19 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
 1. ```.../configuration/connection```: retrieve and change the connection details to the MQTT broker
 1. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
-1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic
+1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic, reload extensions
 1. ```.../status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
 1. ```.../status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
-1. ```.../mapping```: retrieve, delete, update mappings
+1. ```.../mapping```: retrieve, create, delete, update mappings
 1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
-1. ```.../extension/```: returns list of all loaded extensions
-1. ```.../extension/{extension-name}```: returns list of specified extensions, if the extension is loaded
+1. ```.../extension/```: endpoint to retieve a list of all extensions
+1. ```.../extension/{extension-name}```: endpoint to retieve/delete a specific extension
 
 
 ### Load Test
 In the resource section you find a test profil [jmeter_test_01.jmx]
-<img src="resources/script/jmeter_test_01.jmx) using jmeter and an extention for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
+<img src="resources/script/performance/jmeter_test_01.jmx) using jmeter and an extension for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
 This was used to run simple loadtest.
 
 ## Setup Sample MQTT mappings
@@ -524,7 +524,7 @@ The steps required for a external extension are as follows:
 2. be registered in the properties file <code>/mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
 3. be developed/packed in the maven module <code>/mqtt-mapping-extension</code>. NOT in this maven module.
 4. be uploaded throught he Web UI.
- 
+
 A sample how to build an extension is contained in the folder [extension](./extension).
 The following diagram shows how the dispatcher handles meassages with different format:
 
