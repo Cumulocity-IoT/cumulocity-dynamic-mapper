@@ -6,8 +6,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import mqtt.mapping.processor.extension.custom.CustomEventOuter;
-import mqtt.mapping.processor.extension.custom.CustomEventOuter.CustomEvent;
+import mqtt.mapping.processor.extension.external.CustomEventOuter;
+import mqtt.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 
 
 public class ProtobufPahoClient {

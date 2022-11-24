@@ -515,9 +515,16 @@ In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
 In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
 ```
-CustomEvent=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomEvent
-CustomOperation=mqtt.mapping.processor.extension.custom.ProcessorExtensionCustomOperation
+CustomEvent=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomEvent
+CustomOperation=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomOperation
 ```
+
+The steps required for a external extension are as follows:
+1. implement the inteface <code>ProcessorExtension<O></code> 
+2. be registered in the properties file <code>/mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
+3. be developed/packed in the maven module <code>/mqtt-mapping-extension</code>. NOT in this maven module.
+4. be uploaded throught he Web UI.
+ 
 A sample how to build an extension is contained in the folder [extension](./extension).
 The following diagram shows how the dispatcher handles meassages with different format:
 
