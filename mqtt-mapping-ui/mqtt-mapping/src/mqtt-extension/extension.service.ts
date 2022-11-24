@@ -77,6 +77,7 @@ export class ExtensionService {
              listOfExtensionsInventory.forEach ( ext => {
                 if (listOfExtensionsBackend[ext.name]?.loaded) {
                     ext.loaded = listOfExtensionsBackend[ext.name].loaded;
+                    ext.external = listOfExtensionsBackend[ext.name].external;
                     let exts = _.values(listOfExtensionsBackend[ext.name].extensionEntries);
                     ext.extensionEntries = exts;
                 } else {
