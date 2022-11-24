@@ -268,8 +268,8 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> deleteProcessorExtension(@PathVariable String extensionName) {
-        String result = c8yAgent.deleteProcessorExtension(extensionName);
+    public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
+        Extension result = c8yAgent.deleteProcessorExtension(extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");

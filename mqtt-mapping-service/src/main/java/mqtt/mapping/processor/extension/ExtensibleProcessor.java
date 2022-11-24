@@ -117,12 +117,8 @@ public class ExtensibleProcessor extends BasePayloadProcessor<byte[]> {
         }
     }
 
-    public String deleteExtension(String extensionName) {
-        Extension ext = extensions.remove(extensionName);
-        String result = null;
-        if (ext != null) {
-            result = ext.getName();
-        }
+    public Extension deleteExtension(String extensionName) {
+        Extension result = extensions.remove(extensionName);
         return result;
     }
 

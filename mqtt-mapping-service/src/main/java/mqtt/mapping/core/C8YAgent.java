@@ -606,7 +606,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return extensibleProcessor.getExtension(extension);
     }
 
-    public String deleteProcessorExtension(String extensionName) {
+    public Extension deleteProcessorExtension(String extensionName) {
         for (ManagedObjectRepresentation extensionRepresentation : extensions.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
