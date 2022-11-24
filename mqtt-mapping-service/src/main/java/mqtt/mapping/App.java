@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+ * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack, Stefan Witschel
+ */
+
 package mqtt.mapping;
 
 import java.util.Map;
@@ -88,14 +109,14 @@ public class App {
 
     @Bean("payloadProcessors")
     public Map<MappingType, BasePayloadProcessor<?>> payloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient,
-            C8YAgent c8yAgent) {
+                                                                      C8YAgent c8yAgent) {
         return Map.of(
-            MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
-            MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, mqttClient, c8yAgent),
-            MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, mqttClient, c8yAgent),
-            MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessor(objectMapper, mqttClient, c8yAgent)
-            );
+                MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
+                MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, mqttClient, c8yAgent),
+                MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, mqttClient, c8yAgent),
+                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, mqttClient, c8yAgent),
+                MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessor(objectMapper, mqttClient, c8yAgent)
+        );
     }
 
     public static void main(String[] args) {
