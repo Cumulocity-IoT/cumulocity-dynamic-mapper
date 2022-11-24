@@ -36,19 +36,17 @@ export class ExtensionCardComponent implements OnInit {
 
   @Input() loaded: any = true;
   ExtensionStatus = ExtensionStatus;
-  externalExtensionEnabled: boolean = true;
+  external: boolean = true;
 
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private router: Router,
     private activatedRoute: ActivatedRoute,
-    private configurationService: BrokerConfigurationService
   ) {}
 
   async ngOnInit() {
-    this.externalExtensionEnabled = (await this.configurationService.getServiceConfiguration()).externalExtensionEnabled;
- 
+    this.external = this.app?.external;
   }
 
   async detail() {

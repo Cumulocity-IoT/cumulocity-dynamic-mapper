@@ -21,8 +21,7 @@
 
 import { EventEmitter, Injectable } from '@angular/core';
 import {
-    IManagedObject, IManagedObjectBinary, InventoryBinaryService, InventoryService,
-    IResultList
+    IManagedObject, IManagedObjectBinary, InventoryBinaryService, InventoryService
 } from '@c8y/client';
 
 import {
