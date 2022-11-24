@@ -507,8 +507,10 @@ This was used to run simple loadtest.
 A script to create sample MQTT mappings can be found [here](./resources/script/mapping/import_mappings_01.py).
 You have to start it as follows:
 ```
-#python3 resources/script/mapping/import_mappings_01.py -p <YOUR_PASSWORD> -U <YOUR_TENANT> -u <YOUR_USER> -f resources/script/mapping/sampleMapping/sampleMappings_01.json
+#python3 resources/script/mapping/import_mappings_01.py -p <YOUR_PASSWORD> -U <YOUR_TENANT> -u <YOUR_USER> -f resources/script/mapping/sampleMapping/sampleMappings_02.json
 ```
+
+The mappings with inputs and substitutions are explained in the [sample document](./resources/script/mapping/sampleMapping/sampleMappings_02.html).
 
 ## Enhance and Extensions
 In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtension<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
