@@ -19,7 +19,6 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.extension.custom;
 package mqtt.mapping.processor.extension.external;
 
 import java.util.ArrayList;
