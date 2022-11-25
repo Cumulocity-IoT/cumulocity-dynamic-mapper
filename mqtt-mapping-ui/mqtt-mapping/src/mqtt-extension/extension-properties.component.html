@@ -46,7 +46,8 @@
               </div>
 
               <div class="list-item-body">
-                <span>{{entry.name}}</span>
+                <span>{{entry.name}} </span>
+                <span class="label label-primary m-l-8">{{extension.external ? 'external' : 'internal' }}</span>
               </div>
               <div [collapse]="isCollapsed[entry.name]" [isAnimated]="true" class="collapse">
                 <dl>
@@ -59,6 +60,12 @@
                 </dl>
               </div>
             </div>
+            <c8y-ui-empty-state
+            *ngIf="!extension.extensionEntries || extension.extensionEntries.length == 0"
+            [icon]="'plugin'"
+            [title]="'No entries for this extension, try to reload extensions.'"
+            [horizontal]="true"
+          ></c8y-ui-empty-state>
           </div>
         </div>
       </div>
