@@ -29,32 +29,35 @@
 
 <div class="row">
   <div class="card content-fullpage">
-    <form [formGroup]="extensionsEntryForm" class="d-flex d-col content-fullpage" novalidate>
+    <form class="d-flex d-col content-fullpage" novalidate>
       <div *ngIf="!isLoading" class="d-contents">
         <div class="card-block separator-bottom large-padding flex-no-shrink">
-          <div class= "row">
-            <div class="col-lg-2">
-              <label>Event Name</label>
-            </div>
-            <div class="col-lg-4">
-              <label>Extension Implementation</label>
-            </div>
-            <div class="col-lg-4">
-              <label>Message</label>
-            </div>
-          </div>
-          <div *ngFor="let extensionEntryForm of extensionEntries.controls; let i = index">
-            <div class= "row" [formGroup]="extensionEntryForm">
-              <div class="col-lg-2">
-                <input formControlName="event" type="text" class="form-control ng-pristine ng-valid ng-touched" readonly>
+          <div class="list-group">
+            <div class="list-group-item collapsible flex-row" [ngClass]="{ expanded: isCollapsed[entry.name]}"
+              *ngFor="let entry of extension.extensionEntries; let i = index">
+              <div class="list-item-actions">
+                <button type="button" title="{{ 'Expand' | translate }}" class="collapse-btn"
+                  (click)="isCollapsed[entry.name] = !isCollapsed[entry.name]" [attr.aria-expanded]="!isCollapsed">
+                  <i c8yIcon="chevron-down"></i>
+                </button>
               </div>
-              <div class="col-lg-4">
-                <input formControlName="name" type="text" class="form-control ng-pristine ng-valid ng-touched" readonly>
+              <div class="list-item-icon">
+                <i c8yIcon="plugin"></i>
               </div>
-              <div class="col-lg-4">
-                <input formControlName="message" type="text" class="form-control ng-pristine ng-valid ng-touched" readonly>
+
+              <div class="list-item-body">
+                <span>{{entry.name}}</span>
               </div>
-                <!-- <span>{{extensionEntryForm.get('name').value}}</span> -->
+              <div [collapse]="isCollapsed[entry.name]" [isAnimated]="true" class="collapse">
+                <dl>
+                  <dt><label class="small" translate>Event Name</label></dt>
+                  <dd><span class="m-l-16 small">{{entry.event}}</span></dd>
+                  <dt><label class="small" translate>Event Implementation</label></dt>
+                  <dd><span class="m-l-16 small">{{entry.name}}</span></dd>
+                  <dt><label class="small" translate>Message</label></dt>
+                  <dd><span class="m-l-16 small">{{entry.message}}</span></dd>
+                </dl>
+              </div>
             </div>
           </div>
         </div>
