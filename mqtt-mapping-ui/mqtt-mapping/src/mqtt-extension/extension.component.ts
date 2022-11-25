@@ -68,8 +68,8 @@ export class ExtensionComponent implements OnInit {
     this.reload$.next();
   }
 
-  reloadExtensions() {
-    this.configurationService.runOperation(Operation.RELOAD_EXTENSIONS);
+  async reloadExtensions() {
+    await this.configurationService.runOperation(Operation.RELOAD_EXTENSIONS);
     this.reload$.next();
   }
 
