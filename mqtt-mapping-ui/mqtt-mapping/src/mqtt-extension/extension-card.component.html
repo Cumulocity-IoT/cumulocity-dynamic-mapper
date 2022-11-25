@@ -33,11 +33,15 @@
     </small>
   </div>
 
-  <div class="card-block no-min-height p-t-0 p-b-32 card-column-20 text-center-grid">
+  <div class="card-block no-min-height p-t-0 p-b-8 card-column-20 text-center-grid">
     <span *ngIf= "app.loaded == ExtensionStatus.COMPLETE" class="label label-success">Loaded ({{app.extensionEntries.length}})</span>
     <span *ngIf= "app.loaded == ExtensionStatus.NOT_LOADED" class="label label-warning">Not Loaded</span>
     <span *ngIf= "app.loaded == ExtensionStatus.PARTIALLY" class="label label-primary">Partially ({{app.extensionEntries.length}})</span>
     <span *ngIf= "app.loaded == ExtensionStatus.UNKNOWN" class="label label-warning">Not Known</span>
+  </div>
+
+  <div class="card-block no-min-height p-t-0 p-b-16 card-column-20 text-center-grid">
+    <span class="label label-primary">{{(external ? "External" : "Internal")}}</span>
   </div>
 
   <div class="card-actions m-t-0">
