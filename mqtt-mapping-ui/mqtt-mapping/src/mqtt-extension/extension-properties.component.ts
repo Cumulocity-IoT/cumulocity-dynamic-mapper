@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, OnInit } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import {
   IManagedObject,
@@ -39,16 +39,14 @@ export class ExtensionPropertiesComponent implements OnInit {
   extension: IManagedObject;
 
   isLoading: boolean = true;
+  isCollapsed: any = {};
 
   breadcrumbConfig: { icon: string; label: string; path: string };
 
   constructor(
     private activatedRoute: ActivatedRoute,
-    private formBuilder: FormBuilder,
     private extensionService: ExtensionService,
-  ) { 
-    console.log("Props loaded---------");
-  }
+  ) { }
 
   async ngOnInit() {
     await this.refresh();
@@ -61,7 +59,6 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   async load() {
     this.isLoading = true;
-    this.initForm();
     await this.loadExtension();
     this.isLoading = false;
   }
@@ -70,30 +67,17 @@ export class ExtensionPropertiesComponent implements OnInit {
     const { id } = this.activatedRoute.snapshot.params;
     let filter = { id: id }
     let result = await this.extensionService.getExtensionsEnriched(filter);
-    let ext = result[0];
     this.extension = result[0];
-    this.extensionsEntryForm.patchValue({ ...this.extension.extensionEntries });
-
+    // let copy = {
+    //   name: this.extension.extensionEntries[0].name + "copy",
+    //   event: this.extension.extensionEntries[0].event + "copy",
+    //   message: this.extension.extensionEntries[0].message + "copy"
+    // };
+    // this.extension.extensionEntries.push(copy);
     this.extension.extensionEntries?.forEach(entry => {
-      const extensionEntriesForm = this.formBuilder.group({
-        name: [entry.name],
-        event: [entry.event],
-        message:[entry.message]
-      });
-      this.extensionEntries.push(extensionEntriesForm);
-    })
-
-  }
-
-  private initForm(): void {
-    this.extensionsEntryForm = this.formBuilder.group({
-      extensionEntries: this.formBuilder.array([])
+      this.isCollapsed[entry.name] = true;
     });
 
-  }
-
-  get extensionEntries() {
-    return this.extensionsEntryForm.controls["extensionEntries"] as FormArray;
   }
 
   private setBreadcrumbConfig() {

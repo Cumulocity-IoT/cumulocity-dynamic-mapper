@@ -27,6 +27,7 @@ import { AddExtensionWizardComponent } from './add-extension-wizard.component';
 import { ExtensionCardComponent } from './extension-card.component';
 import { ExtensionComponent } from './extension.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { ExtensionPropertiesComponent } from './extension-properties.component';
 
 
@@ -59,6 +60,7 @@ const extensionRoutes: Route[] = [
   imports: [
     CoreModule,
     BsDropdownModule.forRoot(),
+    CollapseModule.forRoot(),
   ],
   entryComponents: [
     ExtensionComponent,
