@@ -28,7 +28,7 @@ import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { ActiveRendererComponent } from '../renderer/avtive.renderer.component';
+import { ActiveRendererComponent } from '../renderer/active.renderer.component';
 import { MappingService } from '../core/mapping.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
 import { takeUntil } from 'rxjs/operators';

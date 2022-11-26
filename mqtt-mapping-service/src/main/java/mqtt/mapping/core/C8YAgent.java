@@ -666,11 +666,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void setActivationMapping(Map<String, String> parameter) {
         // step 1. update activation for mapping
         String id = parameter.get("id");
-        String status = parameter.get("status");
-        Boolean statusBoolean = Boolean.parseBoolean(status);
-        log.info("Setting status: {} got mapping: {}", id, status);
+        String active = parameter.get("active");
+        Boolean activeBoolean = Boolean.parseBoolean(active);
+        log.info("Setting active: {} got mapping: {}, {}", id, active, activeBoolean);
         Mapping mapping = mappingComponent.getMapping(id);
-        mapping.setActive(statusBoolean);
+        mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
         mqttClient.getActiveMapping().forEach(m -> {
             if (m.id == id) {

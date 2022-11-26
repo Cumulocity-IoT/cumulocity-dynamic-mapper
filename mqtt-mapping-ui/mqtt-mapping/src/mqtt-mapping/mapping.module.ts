@@ -31,7 +31,7 @@ import { APIRendererComponent } from './renderer/api.renderer.component';
 import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
 import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
-import { ActiveRendererComponent } from './renderer/avtive.renderer.component';
+import { ActiveRendererComponent } from './renderer/active.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { MappingStepperComponent } from './stepper/mapping-stepper.component';
