@@ -19,35 +19,36 @@
  * @authors Christof Strack
  */
 import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared/mapping.model';
+import { AlertService, CellRendererContext } from '@c8y/ngx-components';
+import { MappingService } from '../core/mapping.service';
 
 @Component({
   template: `
-    <!-- <div class="c8y-realtime" title="Active">
-      <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.active,
-      inactive: !context.item.active
-    }"></span>
-    </div>
- -->
-<div class="c8y-realtime" title="Tested">
-  <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.tested,
-      inactive: !context.item.tested
-    }" ></span>
-</div>
-<div class="c8y-realtime" title="Snooping">
-  <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.snoopStatus == 'ENABLED' || context.item.snoopStatus == 'STARTED',
-      inactive: context.item.snoopStatus == 'NONE' || context.item.snoopStatus == 'STOPPED'
-    }"></span>
-</div>
-`
+  <div>
+    <label class="c8y-switch c8y-switch--inline">
+          <input type="checkbox" [(ngModel)]="active" (change)="onActivate($event)"/> 
+          <span></span>
+    </label>
+  </div>
+    `
 })
-export class StatusRendererComponent {
+export class ActiveRendererComponent {
   constructor(
     public context: CellRendererContext,
-  ) { }
-  SnoopStatus: SnoopStatus;
+    public mappingService: MappingService,
+    public alertService: AlertService
+  ) {
+    console.log("Active renderer:", context.item.active)
+    this.active = context.item.active;
+  }
+
+  active: boolean;
+
+  async onActivate( event ) {
+    let action = this.active ? "Activate" : "Deactivate";
+    this.alertService.success( action + " mapping: " + this.context.item.id + "!");
+    let parameter = { id: this.context.item.id, active: this.active };
+    await this.mappingService.changeActivationMapping(parameter);
+    this.mappingService.loadMappings();
+  }
 }

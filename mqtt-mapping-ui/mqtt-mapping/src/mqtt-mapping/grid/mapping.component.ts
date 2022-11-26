@@ -28,11 +28,12 @@ import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+import { ActiveRendererComponent } from '../renderer/avtive.renderer.component';
 import { MappingService } from '../core/mapping.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
 import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
-import { StepperConfiguration } from '../stepper/stepper-model';
+import { EditorMode, StepperConfiguration } from '../stepper/stepper-model';
 
 @Component({
   selector: 'mapping-mapping-grid',
@@ -55,7 +56,8 @@ export class MappingComponent implements OnInit {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
     showProcessorExtensions: false,
-    allowTesting: true
+    allowTesting: true,
+    editorMode: EditorMode.UPDATE
   };
 
   displayOptions: DisplayOptions = {
@@ -104,7 +106,7 @@ export class MappingComponent implements OnInit {
       path: 'source',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '22%'
+      gridTrackSize: '20%'
     },
     {
       header: 'Target',
@@ -112,12 +114,12 @@ export class MappingComponent implements OnInit {
       path: 'target',
       filterable: true,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: '22%'
+      gridTrackSize: '20%'
     },
     {
-      header: 'Active-Tested-Snooping',
-      name: 'active',
-      path: 'active',
+      header: 'Tested-Snooping',
+      name: 'tested',
+      path: 'tested',
       filterable: false,
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
@@ -131,6 +133,15 @@ export class MappingComponent implements OnInit {
       filterable: true,
       sortable: false,
       cellRendererComponent: QOSRendererComponent,
+      gridTrackSize: '5%'
+    },
+    {
+      header: 'Active',
+      name: 'active',
+      path: 'active',
+      filterable: false,
+      sortable: false,
+      cellRendererComponent: ActiveRendererComponent,
       gridTrackSize: '5%'
     },
   ]
@@ -158,7 +169,7 @@ export class MappingComponent implements OnInit {
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
-        callback: this.editMapping.bind(this)
+        callback: this.updateMapping.bind(this)
       },
       {
         text: 'Copy',
@@ -170,11 +181,15 @@ export class MappingComponent implements OnInit {
         type: BuiltInActionType.Delete,
         callback: this.deleteMapping.bind(this)
       });
+
+    this.mappingService.listToReload().subscribe(() => {
+      this.loadMappings();
+    })
   }
 
   onRowClick(mapping: Row) {
     console.log('Row clicked:');
-    this.editMapping (mapping as Mapping);
+    this.updateMapping(mapping as Mapping);
   }
 
   onAddMapping() {
@@ -205,7 +220,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      updateMode: false
+      editorMode: EditorMode.CREATE
     };
 
     let ident = uuidv4();
@@ -245,7 +260,7 @@ export class MappingComponent implements OnInit {
       mapping.extension = {
         event: undefined,
         name: undefined,
-        message:undefined
+        message: undefined
       }
     }
     this.setStepperConfiguration(this.mappingType)
@@ -256,14 +271,17 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
-  editMapping(mapping: Mapping) {
+  updateMapping(mapping: Mapping) {
     this.stepperConfiguration = {
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      updateMode: true
+      editorMode: EditorMode.UPDATE
     };
+    if (mapping.active) {
+      this.stepperConfiguration.editorMode = EditorMode.READ_ONLY;
+    }
     this.setStepperConfiguration(mapping.mappingType);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
@@ -277,12 +295,12 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      updateMode: false
+      editorMode: EditorMode.CREATE
     };
     this.setStepperConfiguration(mapping.mappingType)
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
-    this.mappingToUpdate.name =  this.mappingToUpdate.name + " - Copy";
+    this.mappingToUpdate.name = this.mappingToUpdate.name + " - Copy";
     this.mappingToUpdate.ident = uuidv4();
     this.mappingToUpdate.id = this.mappingToUpdate.ident
     console.log("Copying mapping", this.mappingToUpdate);
@@ -299,7 +317,6 @@ export class MappingComponent implements OnInit {
     this.activateMappings();
   }
 
-
   async loadMappings(): Promise<void> {
     this.mappings = await this.mappingService.loadMappings();
     console.log("Updated mappings", this.mappings);
@@ -312,20 +329,24 @@ export class MappingComponent implements OnInit {
     console.log("Changed mapping:", mapping);
 
     if (isTemplateTopicUnique(mapping, this.mappings)) {
-      if (this.stepperConfiguration.updateMode) {
+      if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
         await this.mappingService.updateMapping(mapping);
         this.alertService.success(gettext('Mapping updated successfully'));
-      } else {
+        this.loadMappings();
+        this.refresh.emit();
+        this.activateMappings();
+      } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
         // new mapping
         console.log("Push new mapping:", mapping);
         await this.mappingService.createMapping(mapping);
         this.alertService.success(gettext('Mapping created successfully'));
+        this.loadMappings();
+        this.refresh.emit();
+        this.activateMappings();
       }
-      this.loadMappings();
-      this.refresh.emit();
       this.isConnectionToMQTTEstablished = true;
-      this.activateMappings();
+
     } else {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
     }

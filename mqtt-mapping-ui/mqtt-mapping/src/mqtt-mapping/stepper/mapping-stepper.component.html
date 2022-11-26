@@ -42,15 +42,17 @@
           <div [formGroup]="propertyForm">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
               <div class="form-group">
-                <label  translate>Mapping Name</label>
-                <input formControlName="name" [(ngModel)]="mapping.name" type="text"
-                  class="form-control" placeholder="e.g. Mapping - 1234" #nameRef required/>
+                <label translate>Mapping Name</label>
+                <input formControlName="name" [(ngModel)]="mapping.name" type="text" class="form-control"
+                  placeholder="e.g. Mapping - 1234" #nameRef
+                  [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
               </div>
               <div class="form-group">
                 <label for="subscriptionTopic" translate>Subscription Topic</label>
                 <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text"
                   class="form-control" placeholder="e.g. device/110" #topicRef required
-                  (change)="onSubscriptionTopicChanged($event)" />
+                  (change)="onSubscriptionTopicChanged($event)"
+                  [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                 <c8y-messages>
                   <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
                     <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
@@ -74,7 +76,8 @@
                 </div>
                 <input formControlName="templateTopic" [(ngModel)]="mapping.templateTopic" type="text"
                   class="form-control" placeholder="e.g. device/110" #templateTopic id="templateTopic"
-                  (change)="onTemplateTopicChanged($event)" required />
+                  (change)="onTemplateTopicChanged($event)" required
+                  [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
               </div>
               <div class="form-group">
                 <div class="input-group">
@@ -92,7 +95,8 @@
                 </div>
                 <div>
                   <input formControlName="templateTopicSample" [(ngModel)]="mapping.templateTopicSample" type="text"
-                    class="form-control" placeholder="e.g. device/110" #topicRef required />
+                    class="form-control" placeholder="e.g. device/110" #topicRef required
+                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                   <c8y-messages>
                     <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
                       <span class="text-warning">This TemplateTopic must be unique across other
@@ -134,7 +138,8 @@
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
                       (change)="onTargetAPIChanged($event)" #targetAPIRef>
-                      <option *ngFor="let api of keys(API)" [ngValue]="api">
+                      <option *ngFor="let api of keys(API)" [ngValue]="api"
+                        [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         {{ api }}
                       </option>
                     </select>
@@ -144,7 +149,8 @@
                   <label translate>QOS</label>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="qos" [(ngModel)]="mapping.qos" #qosRef>
-                      <option *ngFor="let q of QOS | keyvalue" [ngValue]="q.key">
+                      <option *ngFor="let q of QOS | keyvalue" [ngValue]="q.key"
+                        [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         {{ q.value }}
                       </option>
                     </select>
@@ -152,7 +158,7 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6">
+                <!-- <div class="col-md-6">
                   <label class="c8y-switch" title="{{ 'Active' | translate }}">
                     <input type="checkbox" formControlName="active" [(ngModel)]="mapping.active" />
                     <span></span>
@@ -160,11 +166,12 @@
                       {{ 'Active' | translate }}
                     </span>
                   </label>
-                </div>
+                </div> -->
                 <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name">
                   <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                     <input type="checkbox" formControlName="createNonExistingDevice"
-                      [(ngModel)]="mapping.createNonExistingDevice" />
+                      [(ngModel)]="mapping.createNonExistingDevice"
+                      [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                     <span></span>
                     <span>
                       {{ 'Create Non Existing Device' | translate }}
@@ -174,7 +181,8 @@
                 <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY.name">
                   <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
                     <input type="checkbox" formControlName="updateExistingDevice"
-                      [(ngModel)]="mapping.updateExistingDevice" />
+                      [(ngModel)]="mapping.updateExistingDevice"
+                      [attr.disabled]="isDisabled(ststepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                     <span></span>
                     <span>
                       {{ 'Update Existing Device' | translate }}
@@ -184,8 +192,8 @@
               </div>
               <div class="form-group">
                 <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                  <input formControlName="mapDeviceIdentifier" [(ngModel)]="mapping.mapDeviceIdentifier"
-                    type="checkbox" />
+                  <input type="checkbox" formControlName="mapDeviceIdentifier" [(ngModel)]="mapping.mapDeviceIdentifier"
+                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                   <span></span>
                   <span>
                     {{ 'Map Device Idenfifier' | translate }}
@@ -196,7 +204,8 @@
                 <label for="externalIdType" translate>External Id Type</label>
                 <div>
                   <input formControlName="externalIdType" [(ngModel)]="mapping.externalIdType" type="text"
-                    class="form-control" placeholder="e.g. c8y_Serial" #externalIdTypeRef />
+                    class="form-control" placeholder="e.g. c8y_Serial" #externalIdTypeRef
+                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                 </div>
               </div>
               <div class="form-group">
@@ -217,7 +226,7 @@
                   <select class="form-control" formControlName="snoopStatus" [(ngModel)]="mapping.snoopStatus"
                     #snoopStatusRef>
                     <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
-                      [disabled]="q != 'ENABLED' && q != 'NONE'">
+                      [attr.disabled]="isDisabled((q != 'ENABLED' && q != 'NONE') || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                       {{ SnoopStatus[q] }}
                     </option>
                   </select>
@@ -254,8 +263,9 @@
                 <div class="col-lg-4 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <label translate>Source</label>
-                    <mapping-json-editor [options]="editorOptionsSource" (onPathChanged)="onSelectedSourcePathChanged($event)"
-                      [data]="templateSource" #editorSource id="editorSource"></mapping-json-editor>
+                    <mapping-json-editor [options]="editorOptionsSource"
+                      (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
+                      id="editorSource"></mapping-json-editor>
                     <c8y-messages class="text-left">
                       <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
                           class="text-warning">Select source node to
@@ -271,7 +281,8 @@
                         required>
                         <option [ngValue]="null" disabled>Select an extension</option>
                         <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
-                          [selected]="ex.key == mapping.extension?.name">
+                          [selected]="ex.key == mapping.extension?.name"
+                          [attr.disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                           {{ ex.key }}
                         </option>
                       </select>
@@ -284,7 +295,8 @@
                         [(ngModel)]="mapping.extension.event" required>
                         <option [ngValue]="null" disabled>Select an event</option>
                         <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
-                          [selected]="ev == mapping.extension?.event">
+                          [selected]="ev == mapping.extension?.event"
+                          [attr.disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                           {{ ev }}
                         </option>
                       </select>
@@ -303,8 +315,7 @@
                       <ng-template #popTemplateSelect>Select defined substitutions in templates.
                       </ng-template>
                       <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
-                        placement="right" triggers="focus" type="button"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        placement="right" triggers="focus" type="button">
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
@@ -312,7 +323,7 @@
                   <div class="p-b-8">
                     <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                       (click)="onAddSubstitution()" translate title="Add new substitution"
-                      [disabled]="!stepperConfiguration.showEditorSource">
+                      [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                       <i c8yIcon="add-new"></i>
                     </button>
                     <span class="hidden-xs hidden-sm p-l-4">
@@ -321,8 +332,7 @@
                         have to be selected.
                       </ng-template>
                       <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                        popoverTitle="Add new substitution" placement="right" triggers="focus" type="button"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
@@ -331,17 +341,16 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onDeleteSubstitution()" translate title="Delete selected substitution"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         <i c8yIcon="negative"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popTemplateDelete><span class="text-warning">Delete selected substitution.
+                        <ng-template #popTemplateDelete><span>Delete selected substitution.
                             Before substitution has to be
                             selected with the "Skip-Button".</span>
                         </ng-template>
                         <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
-                          placement="right" triggers="focus" type="button"
-                          [disabled]="!stepperConfiguration.showEditorSource">
+                          placement="right" triggers="focus" type="button">
                           <i c8yIcon="question-circle-o"></i>
                         </button>
                       </span>
@@ -349,7 +358,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onDeleteSubstitutions()" translate title="Delete all substitutions"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
@@ -366,7 +375,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                           {{mapping.snoopedTemplates.length}}</span>
                         <i c8yIcon="enter-left"></i>
@@ -383,7 +392,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onSampleButton()" translate title="Use sample templates"
-                        [disabled]="!stepperConfiguration.showEditorSource">
+                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                         <i c8yIcon="enter-right"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
@@ -413,8 +422,8 @@
                         </button>
                       </span>
                     </div>
-                    <mapping-json-editor [options]="editorOptionsTarget" (onPathChanged)="onSelectedTargetPathChanged($event)"
-                      [data]="templateTarget" #editorTarget>
+                    <mapping-json-editor [options]="editorOptionsTarget"
+                      (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
                     </mapping-json-editor>
                     <c8y-messages class="text-right">
                       <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
@@ -466,7 +475,8 @@
                       <br>
                       <div class="input-group">
                         <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
-                          <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray" />
+                          <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray"
+                            [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                           <span></span>
                           <span>
                             {{ 'Expand Array' | translate }}
@@ -511,7 +521,8 @@
                       <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
                         #repairStrategyRef>
                         <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q"
-                          [disabled]="!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')">
+                          [disabled]="(!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
+                          stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                           {{ RepairStrategy[q] }}
                         </option>
                       </select>
@@ -645,7 +656,8 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - Cumulocity Request</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest" #editorTestingRequest>
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest"
+                    #editorTestingRequest>
                   </mapping-json-editor>
                   <c8y-messages>
                     <c8y-message *ngIf="templateTestingErrorMsg" translate><span
@@ -659,7 +671,8 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - Cumulocity Response</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse" #editorTestingResponse>
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse"
+                    #editorTestingResponse>
                   </mapping-json-editor>
                 </div>
               </div>

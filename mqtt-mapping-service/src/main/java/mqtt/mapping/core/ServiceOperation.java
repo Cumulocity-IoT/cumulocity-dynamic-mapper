@@ -25,6 +25,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 import javax.validation.constraints.NotNull;
 
 @Data
@@ -33,14 +35,16 @@ import javax.validation.constraints.NotNull;
 public class ServiceOperation {
     @NotNull
     private Operation operation;
+    @NotNull
+    private Map<String, String> parameter;
 
     public static ServiceOperation reloadMappings() {
-        return new ServiceOperation(Operation.RELOAD_MAPPINGS);
+        return new ServiceOperation(Operation.RELOAD_MAPPINGS, null);
     }   
     public static ServiceOperation connect() {
-        return new ServiceOperation(Operation.CONNECT);
+        return new ServiceOperation(Operation.CONNECT, null);
     }
     public static ServiceOperation reloadExtensions() {
-        return new ServiceOperation(Operation.RELOAD_EXTENSIONS);
+        return new ServiceOperation(Operation.RELOAD_EXTENSIONS, null);
     } 
 }

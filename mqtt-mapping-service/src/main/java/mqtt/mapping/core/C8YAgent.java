@@ -662,4 +662,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         // reset dirtySet
         mappingComponent.resetMappingDirty();
     }
+
+    public void setActivationMapping(Map<String, String> parameter) {
+        // step 1. update activation for mapping
+        String id = parameter.get("id");
+        String status = parameter.get("status");
+        Boolean statusBoolean = Boolean.parseBoolean(status);
+        log.info("Setting status: {} got mapping: {}", id, status);
+        Mapping mapping = mappingComponent.getMapping(id);
+        mapping.setActive(statusBoolean);
+        // step 2. retrieve collected snoopedTemplates
+        mqttClient.getActiveMapping().forEach(m -> {
+            if (m.id == id) {
+                mapping.setSnoopedTemplates(m.getSnoopedTemplates());
+            }
+        });
+        // step 3. update mapping in inventory
+        updateMapping(mapping, id);
+        // step 4 delete mapping from update cache
+        mappingComponent.removeMappingFormDirtyMappings(mapping);
+    }
 }
