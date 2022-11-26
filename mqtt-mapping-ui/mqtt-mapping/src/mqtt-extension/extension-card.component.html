@@ -33,12 +33,14 @@
     </small>
   </div>
 
-  <div class="card-block no-min-height p-t-0 p-b-4 card-column-20 text-center-grid">
-    <span *ngIf= "app.loaded == ExtensionStatus.COMPLETE" class="label label-success">Loaded ({{app.extensionEntries.length}})</span>
-    <span *ngIf= "app.loaded == ExtensionStatus.NOT_LOADED" class="label label-warning">Not Loaded</span>
-    <span *ngIf= "app.loaded == ExtensionStatus.PARTIALLY" class="label label-primary">Partially ({{app.extensionEntries.length}})</span>
-    <span *ngIf= "app.loaded == ExtensionStatus.UNKNOWN" class="label label-warning">Not Known</span>
-  </div>
+  <!-- <div class="card-block no-min-height p-t-0 p-b-4 card-column-20 text-center-grid">
+    <span *ngIf="app.loaded == ExtensionStatus.COMPLETE" class="label label-success">Loaded
+      ({{app.extensionEntries.length}})</span>
+    <span *ngIf="app.loaded == ExtensionStatus.NOT_LOADED" class="label label-warning">Not Loaded</span>
+    <span *ngIf="app.loaded == ExtensionStatus.PARTIALLY" class="label label-primary">Partially
+      ({{app.extensionEntries.length}})</span>
+    <span *ngIf="app.loaded == ExtensionStatus.UNKNOWN" class="label label-warning">Not Known</span>
+  </div> -->
 
   <div class="card-block no-min-height p-t-0 p-b-16 card-column-20 text-center-grid">
     <span class="label label-primary">{{(external ? "External" : "Internal")}}</span>
@@ -58,6 +60,16 @@
         </li>
       </ul>
     </div>
+  </div>
+  <div class="card-footer separator card-column-30">
+    <div *ngIf="app.loaded == ExtensionStatus.COMPLETE">Loaded&nbsp;<span class="badge badge-success">
+        {{app.extensionEntries.length}}</span></div>
+    <div *ngIf="app.loaded == ExtensionStatus.NOT_LOADED">Not Loaded</div>
+    <div *ngIf="app.loaded == ExtensionStatus.PARTIALLY">Partially&nbsp;
+      <span class="badge badge-success">
+        {{app.extensionEntries.length}}</span>
+    </div>
+    <div *ngIf="app.loaded == ExtensionStatus.UNKNOWN">Not Known</div>
   </div>
 
 </div>
