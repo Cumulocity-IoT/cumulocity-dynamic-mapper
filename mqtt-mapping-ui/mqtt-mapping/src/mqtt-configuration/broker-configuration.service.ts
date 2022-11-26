@@ -135,12 +135,15 @@ export class BrokerConfigurationService {
     //console.log("New monitoring event", status);
   }
 
-  runOperation(op: Operation): Promise<IFetchResponse> {
+  runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
     return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ "operation": op }),
+      body: JSON.stringify({
+        "operation": op,
+        "parameter": parameter
+      }),
       method: 'POST',
     });
   }

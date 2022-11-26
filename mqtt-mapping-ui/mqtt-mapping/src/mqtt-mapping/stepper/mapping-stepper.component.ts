@@ -26,7 +26,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Extension, ExtensionEntry, Mapping, MappingSubstitution, MappingType, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { API, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -34,8 +34,9 @@ import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/json
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { C8YRequest } from '../processor/prosessor.model';
 import { MappingService } from '../core/mapping.service';
-import { StepperConfiguration } from './stepper-model';
+import { EditorMode, StepperConfiguration } from './stepper-model';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { isDisabled } from './util';
 
 @Component({
   selector: 'mapping-stepper',
@@ -61,8 +62,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   values = Object.values;
   isWildcardTopic = isWildcardTopic;
   definesDeviceIdentifier = definesDeviceIdentifier;
-  SAMPLE_TEMPLATES = SAMPLE_TEMPLATES_C8Y;
+  isDisabled = isDisabled;
+  SAMPLE_TEMPLATES_C8Y = SAMPLE_TEMPLATES_C8Y;
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
+  EditorMode = EditorMode;
 
   propertyForm: FormGroup;
   templateForm: FormGroup;
@@ -123,6 +126,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   ngOnInit() {
     console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
+    console.log("StepperConfiguration:", this.stepperConfiguration.editorMode == EditorMode.CREATE, this.stepperConfiguration.editorMode == EditorMode.UPDATE, this.stepperConfiguration.editorMode == EditorMode.READ_ONLY);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
@@ -419,7 +423,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   private enrichTemplates() {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
     this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
-    if (!this.stepperConfiguration.updateMode) {
+    if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
     } else {

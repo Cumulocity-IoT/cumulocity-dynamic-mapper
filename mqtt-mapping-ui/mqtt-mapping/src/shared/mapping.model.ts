@@ -156,12 +156,13 @@ export enum SnoopStatus {
 }
 
 export enum Operation {
-    RELOAD_MAPPINGS,
+    ACTIVATE_MAPPING,
     CONNECT,
     DISCONNECT,
-    RESFRESH_STATUS_MAPPING,
-    RESET_STATUS_MAPPING,
+    REFRESH_STATUS_MAPPING,
     RELOAD_EXTENSIONS,
+    RELOAD_MAPPINGS,
+    RESET_STATUS_MAPPING,
 }
 
 export enum MappingType {

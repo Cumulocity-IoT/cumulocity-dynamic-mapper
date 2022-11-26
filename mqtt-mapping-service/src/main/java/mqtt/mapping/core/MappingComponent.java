@@ -139,6 +139,15 @@ public class MappingComponent {
         dirtyMappings.add(mapping);
     }
 
+    public void removeMappingFormDirtyMappings(Mapping mapping) {
+        for (Mapping m : dirtyMappings) {
+            if (m.id.equals(mapping.id)) {
+                log.info("Removed mapping form dirty mappings dirty: {} for id: {}", m, mapping.id);
+                dirtyMappings.remove(m);
+            }
+        }
+    }
+
     public Set<Mapping> getMappingDirty() {
         return dirtyMappings;
     }

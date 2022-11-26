@@ -18,10 +18,17 @@
  *
  * @authors Christof Strack
  */
+
+export enum EditorMode {
+    CREATE = 'CREATE',
+    UPDATE = 'UPDATE',
+    READ_ONLY = 'READ_ONLY'
+}
+
 export interface StepperConfiguration {
     showEditorSource?: boolean;
     showProcessorExtensions?: boolean;
-    updateMode?: boolean;
+    editorMode: EditorMode;
     allowNoDefinedIdentifier?: boolean;
     allowTesting?: boolean;
 }

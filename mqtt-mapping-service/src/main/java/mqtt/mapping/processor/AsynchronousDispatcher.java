@@ -134,7 +134,6 @@ public class AsynchronousDispatcher implements MqttCallback {
                                         mapping.snoopedTemplates.size(),
                                         mapping.snoopStatus);
                                 mappingStatusComponent.setMappingDirty(mapping);
-                                mappingStatusComponent.setMappingDirty(mapping);
 
                             } else {
                                 log.warn(

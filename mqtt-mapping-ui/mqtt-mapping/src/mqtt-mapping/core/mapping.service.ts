@@ -19,11 +19,12 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
+import { BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Mapping } from '../../shared/mapping.model';
+import { Mapping, Operation } from '../../shared/mapping.model';
 import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
 import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
@@ -37,7 +38,11 @@ export class MappingService {
 
   private agentId: string;
   protected JSONATA = require("jsonata");
+  private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
+  public async changeActivationMapping(parameter: any) {
+    await this.configurationService.runOperation(Operation.ACTIVATE_MAPPING, parameter);
+  }
   public async loadMappings(): Promise<Mapping[]> {
     let result: Mapping[] = [];
     if (!this.agentId) {
@@ -57,6 +62,14 @@ export class MappingService {
       id: m.id
     }))
     return result;
+  }
+
+  reloadMappings() {
+    this.reload$.next();
+  }
+  
+  listToReload(): BehaviorSubject<void> {
+    return this.reload$;
   }
 
   async saveMappings(mappings: Mapping[]): Promise<void> {

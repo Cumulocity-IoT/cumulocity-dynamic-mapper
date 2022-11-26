@@ -134,6 +134,8 @@ public class MQTTClient {
     private Future<Boolean> initializeTask;
 
     private Set<String> activeSubscriptionTopic = new HashSet<String>();
+
+    @Getter
     private List<Mapping> activeMapping = new ArrayList<Mapping>();
 
     private TreeNode mappingTree = InnerNode.initTree();;
@@ -469,12 +471,14 @@ public class MQTTClient {
             connectToBroker();
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
             disconnectFromBroker();
-        } else if (operation.getOperation().equals(Operation.RESFRESH_STATUS_MAPPING)) {
+        } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
             c8yAgent.sendStatusMapping();
         } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
             mappingStatusComponent.resetMappingStatus();
         } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
             c8yAgent.reloadExtensions();
+        } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
+            c8yAgent.setActivationMapping(operation.getParameter());
         }
     }
 
