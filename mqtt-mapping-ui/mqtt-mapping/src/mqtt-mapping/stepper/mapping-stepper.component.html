@@ -194,7 +194,7 @@
                   <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
                     <input type="checkbox" formControlName="updateExistingDevice"
                       [(ngModel)]="mapping.updateExistingDevice"
-                      [attr.disabled]="isDisabled(ststepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
+                      [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                     <span></span>
                     <span>
                       {{ 'Update Existing Device' | translate }}

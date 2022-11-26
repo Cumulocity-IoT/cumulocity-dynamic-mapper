@@ -49,6 +49,6 @@ export class ActiveRendererComponent {
     this.alertService.success( action + " mapping: " + this.context.item.id + "!");
     let parameter = { id: this.context.item.id, active: this.active };
     await this.mappingService.changeActivationMapping(parameter);
-    this.mappingService.loadMappings();
+    this.mappingService.reloadMappings();
   }
 }
