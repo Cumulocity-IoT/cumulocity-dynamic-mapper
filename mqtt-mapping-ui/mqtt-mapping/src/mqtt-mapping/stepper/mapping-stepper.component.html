@@ -605,7 +605,7 @@
                     <div class="form-group">
                       <div class="input-group">
                         <label translate>Expression - result -&nbsp;</label>
-                        <span>{{sourceExpression.resultType}}</span>
+                        <span class="text-muted">{{sourceExpression.resultType}}</span>
                       </div>
                       <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                         formControlName="sourceExpressionResult" [ngModel]="sourceExpression.result" readonly
@@ -618,7 +618,7 @@
                     <div class="form-group">
                       <div class="input-group">
                         <label translate>Expression - result -&nbsp;</label>
-                        <span>{{targetExpression.resultType}}</span>
+                        <span class="text-muted">{{targetExpression.resultType}}</span>
                       </div>
                       <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                         formControlName="targetExpressionResult" [ngModel]="targetExpression.result" readonly
