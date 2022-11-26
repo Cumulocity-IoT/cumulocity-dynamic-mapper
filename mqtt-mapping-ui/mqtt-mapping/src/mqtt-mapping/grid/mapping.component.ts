@@ -94,8 +94,8 @@ export class MappingComponent implements OnInit {
       name: 'targetAPI',
       header: 'API',
       path: 'targetAPI',
-      filterable: false,
-      sortable: false,
+      filterable: true,
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
       gridTrackSize: '5%'
@@ -117,14 +117,14 @@ export class MappingComponent implements OnInit {
       gridTrackSize: '20%'
     },
     {
-      header: 'Tested-Snooping',
+      header: 'Test/Snoop',
       name: 'tested',
       path: 'tested',
       filterable: false,
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: 'text-align-center',
-      gridTrackSize: '10%'
+      gridTrackSize: '8%'
     },
     {
       header: 'QOS',
@@ -139,10 +139,10 @@ export class MappingComponent implements OnInit {
       header: 'Active',
       name: 'active',
       path: 'active',
-      filterable: false,
-      sortable: false,
+      filterable: true,
+      sortable: true,
       cellRendererComponent: ActiveRendererComponent,
-      gridTrackSize: '5%'
+      gridTrackSize: '7%'
     },
   ]
 
