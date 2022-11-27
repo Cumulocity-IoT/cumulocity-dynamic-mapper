@@ -160,8 +160,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Setter
     private ServiceConfiguration serviceConfiguration;
 
-    // private static final Method ADD_URL_METHOD;
-
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
@@ -374,20 +372,36 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return mr[0];
     }
 
-    public String deleteMapping(String id) {
+    public String deleteMapping(String id) throws Exception {
         String[] mr = { null };
+        Exception[] exceptions = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingComponent.deleteMapping(id);
+            try {
+                mr[0] = mappingComponent.deleteMapping(id);
+            } catch (Exception e) {
+                exceptions[0] = e;
+            }
         });
+        if (exceptions[0] != (null)) {
+            throw exceptions[0];
+        }
         return mr[0];
     }
 
-    public Mapping updateMapping(Mapping mapping, String id) {
+    public Mapping updateMapping(Mapping mapping, String id, boolean allowUpdateWhenActive) throws Exception {
         Mapping[] mr = { null };
+        Exception[] exceptions = { null };
         subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingComponent.updateMapping(mapping);
-            log.info("Update Mapping {}", mr[0]);
+            try {
+                mr[0] = mappingComponent.updateMapping(mapping, allowUpdateWhenActive);
+                log.info("Update Mapping {}", mr[0]);
+            } catch (Exception e) {
+                exceptions[0] = e;
+            }
         });
+        if (exceptions[0] != (null)) {
+            throw exceptions[0];
+        }
         return mr[0];
     }
 
@@ -651,19 +665,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public void cleanDirtyMappings() throws JsonProcessingException {
+    public void cleanDirtyMappings() throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
         for (Mapping mapping : mappingComponent.getMappingDirty()) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
-            updateMapping(mapping, mapping.id);
+            updateMapping(mapping, mapping.id, true);
         }
         // reset dirtySet
         mappingComponent.resetMappingDirty();
     }
 
-    public void setActivationMapping(Map<String, String> parameter) {
+    public void setActivationMapping(Map<String, String> parameter) throws Exception {
         // step 1. update activation for mapping
         String id = parameter.get("id");
         String active = parameter.get("active");
@@ -678,7 +692,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         });
         // step 3. update mapping in inventory
-        updateMapping(mapping, id);
+        updateMapping(mapping, id, true);
         // step 4 delete mapping from update cache
         mappingComponent.removeMappingFormDirtyMappings(mapping);
     }
