@@ -118,8 +118,10 @@ the binaries from the latest release and upload them to your Cumulocity IoT Tena
 
 In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
 
-<img src="resources/image/Generic_MQTT_UploadMicroservice.png"  style="display: block;margin-left: auto; margin-right: auto; width: 40%;" />
-<br/>.
+<p align="center">
+<img src="resources/image/Generic_MQTT_UploadMicroservice.png"  style="width: 40%;" />
+<br/>
+</p>
 
 Select the "mqtt.mapping.service.zip".
 Make sure that you subscribe the microservice to your tenant when prompted
