@@ -182,7 +182,7 @@ public class MappingComponent {
         ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
         MappingRepresentation m = toMappingObject(mo);
         if (m.getC8yMQTTMapping().isActive()) {
-            throw new IllegalArgumentException("Mapping ist still active, deactivate mapping before deleting!");
+            throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
         } 
         // mapping is deactivated and we can delete it
         inventoryApi.delete(GId.asGId(id));
@@ -211,7 +211,7 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(mapping.id));
             MappingRepresentation m = toMappingObject(mo);
             if (mapping.isActive()) {
-                throw new IllegalArgumentException("Mapping ist still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
             } 
         }
         // mapping is deactivated and we can delete it
