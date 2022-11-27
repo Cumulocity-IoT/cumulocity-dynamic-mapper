@@ -10,7 +10,7 @@
   * [Web App Plugin](#web-app-plugin)
   * [Build, Deploy, Run](#build-deploy-run)
 - [Configuration MQTT connection to broker](#configuration-mqtt-connection-to-broker)
-- [Definition and Deployment of MQTT mappings](#definition-and-deployment-of-mqtt-mappings)
+- [Definition and Activation  of MQTT mappings](#definition-and-activation-of-mqtt-mappings)
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
   * [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format-cumulocity-rest-format)
     + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
