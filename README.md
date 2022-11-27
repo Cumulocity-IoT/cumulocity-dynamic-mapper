@@ -534,13 +534,13 @@ CustomEvent=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomEv
 CustomOperation=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomOperation
 ```
 
-The steps required for a external extension are as follows:
-1. implement the inteface <code>ProcessorExtension<O></code> 
-2. be registered in the properties file <code>/mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
-3. be developed/packed in the maven module <code>/mqtt-mapping-extension</code>. NOT in this maven module.
-4. be uploaded throught he Web UI.
+The steps required for a external extension are as follows. The extension:
+1. has to implement the inteface <code>ProcessorExtension<O></code> 
+2. be registered in the properties file <code>mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
+3. be developed/packed in the maven module <code>mqtt-mapping-extension</code>. **Not** in the maven module <code>mqtt-mapping-service</code>. This is reserved for internal extensions.
+4. be uploaded through the Web UI.
 
-A sample how to build an extension is contained in the folder [extension](./extension).
+A sample how to build an extension is contained in the maven module [mqtt-mapping-extension](./mqtt-mapping-extension).
 The following diagram shows how the dispatcher handles meassages with different format:
 
 <img src="resources/image/Generic_MQTT_Dispatcher.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
