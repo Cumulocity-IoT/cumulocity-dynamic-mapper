@@ -178,6 +178,13 @@ public class MappingComponent {
     }
 
     public String deleteMapping(String id) {
+        // test id the mapping is active, we don't delete or modify active mappings
+        ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
+        MappingRepresentation m = toMappingObject(mo);
+        if (m.getC8yMQTTMapping().isActive()) {
+            throw new IllegalArgumentException("Mapping ist still active, deactivate mapping before deleting!");
+        } 
+        // mapping is deactivated and we can delete it
         inventoryApi.delete(GId.asGId(id));
         deleteMappingStatus(id);
         log.info("Deleted Mapping: {}", id);
@@ -195,10 +202,21 @@ public class MappingComponent {
         return result;
     }
 
-    public Mapping updateMapping(Mapping mapping) {
+    public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive) {
+        // test id the mapping is active, we don't delete or modify active mappings
+        Mapping result = null;
+        // when we do housekeeping tasks we need to update active mapping, e.g. add snooped messages
+        // this is an exception
+        if (!allowUpdateWhenActive){
+            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(mapping.id));
+            MappingRepresentation m = toMappingObject(mo);
+            if (mapping.isActive()) {
+                throw new IllegalArgumentException("Mapping ist still active, deactivate mapping before deleting!");
+            } 
+        }
+        // mapping is deactivated and we can delete it
         List<Mapping> mappings = getMappings();
         MappingRepresentation mr = new MappingRepresentation();
-        Mapping result = null;
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() == 0) {
             mapping.lastUpdate = System.currentTimeMillis();

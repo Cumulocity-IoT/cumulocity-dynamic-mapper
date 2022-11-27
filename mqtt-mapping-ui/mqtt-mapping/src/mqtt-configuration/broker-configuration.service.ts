@@ -136,14 +136,20 @@ export class BrokerConfigurationService {
   }
 
   runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
+    let body: any = {
+      "operation": op,
+    };
+    if (parameter) {
+      body = {
+        ...body,
+        parameter: parameter
+      }
+    }
     return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        "operation": op,
-        "parameter": parameter
-      }),
+      body: JSON.stringify(body),
       method: 'POST',
     });
   }

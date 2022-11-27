@@ -464,7 +464,7 @@ public class MQTTClient {
         return mappingTree;
     }
 
-    public void runOperation(ServiceOperation operation) {
+    public void runOperation(ServiceOperation operation) throws Exception {
         if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
             reloadMappings();
         } else if (operation.getOperation().equals(Operation.CONNECT)) {

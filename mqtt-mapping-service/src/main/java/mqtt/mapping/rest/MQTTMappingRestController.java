@@ -65,12 +65,6 @@ public class MQTTMappingRestController {
     @Autowired
     C8YAgent c8yAgent;
 
-    // @Autowired
-    // private ConnectionConfigurationComponent connectionConfigurationComponent;
-
-    // @Autowired
-    // private ServiceConfigurationComponent serviceConfigurationComponent;
-
     @Autowired
     private MappingComponent mappingStatusComponent;
 
@@ -189,7 +183,12 @@ public class MQTTMappingRestController {
         log.info("Delete mapping: {}", id);
         String result = null;
 
-        result = c8yAgent.deleteMapping(id);
+        try {
+            result = c8yAgent.deleteMapping(id);
+        } catch (Exception ex) {
+            log.error("Deleting active mappings is not allowed {}", ex);
+            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
+        }
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Mapping with id " + id + " could not be found.");
@@ -217,10 +216,14 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            Mapping result = c8yAgent.updateMapping(mapping, id);
+            Mapping result = c8yAgent.updateMapping(mapping, id, false);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
-            if (ex instanceof RuntimeException)
+            if (ex instanceof IllegalArgumentException) {
+                log.error("Updating active mappings is not allowed {}", ex);
+                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
+            }
+            else if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
             else if (ex instanceof JsonProcessingException)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
