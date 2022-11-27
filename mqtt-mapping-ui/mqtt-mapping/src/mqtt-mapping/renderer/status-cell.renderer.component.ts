@@ -48,6 +48,8 @@ import { SnoopStatus } from '../../shared/mapping.model';
 export class StatusRendererComponent {
   constructor(
     public context: CellRendererContext,
-  ) { }
+  ) { 
+    console.log("New status: testing", context.item)
+  }
   SnoopStatus: SnoopStatus;
 }
