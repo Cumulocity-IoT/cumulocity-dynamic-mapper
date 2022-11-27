@@ -376,12 +376,7 @@ To define a new substitution the following steps have to be performed:
   * ```single-device-multi-value```\
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
 4. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
-
-<p align="center">
-<img src="resources/image/Generic_MQTT_MappingType.png"  style="width: 70%;" />
-</p>
 <br/>
-
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
@@ -427,7 +422,7 @@ When you define an expression or a path in the source payload for a substitution
 This is illustrated on the following diagram:
 
 <p align="center">
-<img src="resources/image/Generic_MQTT_DifferentSubstitutions.png"  style="width: 70%;" />
+<img src="resources/image/Generic_MQTT_SubstitutionType.png"  style="width: 70%;" />
 </p>
 <br/>
 
