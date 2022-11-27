@@ -62,21 +62,20 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 > In upcoming releases a *Generic MQTT Broker* will be part of Cumulocity IoT. If necessary we will adapt this component
 > to work with it seamlessly!
 
-The following diagram describes what happens in the microservice if a new MQTT mapping is added.
+Before messages can be be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
 
 <img src="resources/image/Generic_MQTT_Diagram_Map.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
-The following diagram describes what happens in the microservice if a new messages arrives and how the payload is transformed.
-img src="resources/image/Generic_MQTT_Diagram_Transform1.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+Once all mappings are added to the cache we are ready to process incoming messages transmitted by tbe MQTT broker.
+The following diagram describes how a new message is processed.
+
+<img src="resources/image/Generic_MQTT_Diagram_Transform1.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 
 <img src="resources/image/Generic_MQTT_Diagram_Transform2.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
 ### Known Limitation and Disclaimer
-
-Currently this project is focussing on JSON Payload only. Any other payload sent via MQTT must be mapped programmatically.
-See chapter [Enhance](#enhance) for more details.
 
 As we already have a very good C8Y API coverage for mapping not all complex cases might be supported. Currently the 
 following Mappings are supported:
@@ -90,8 +89,8 @@ following Mappings are supported:
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
 Due to two different libraries to evaluate JSONata in:
-1. mqtt-mapping-ui (nodejs): [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
-1. mqtt-mapping-service (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+1. ```mqtt-mapping-ui```: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+1. ```mqtt-mapping-service``` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
 differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
@@ -109,8 +108,8 @@ Make sure to use an user with admin privileges in your Tenant.
 
 You need to install two components to your Cumulocity IoT Tenant:
 
-* Microservice
-* WebApp Plugin
+1. Microservice - (Java)
+1. WebApp Plugin - (Angular/Cumulocity WebSDK)
 
 Both are provided as binaries in [Releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Take 
 the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
@@ -118,7 +117,6 @@ the binaries from the latest release and upload them to your Cumulocity IoT Tena
 ### Microservice
 
 In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
-
 
 <img src="resources/image/Generic_MQTT_UploadMicroservice.png"  style="display: block;margin-left: auto; margin-right: auto; width: 40%;" />
 <br/>.
@@ -163,7 +161,7 @@ Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Fron
 The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration MQTT connection to broker
-The MQTT broker configuration is persisted in the tenant options of a Cumulocity IoT Tenant and can be configured by the following UI.\
+The MQTT broker configuration is persisted in the tenant options of a Cumulocity Tenant and can be configured by the following UI.\
 Furthermore, connections to the MQTT broker can be enabled or disabled.
 
 <!-- <br/>
@@ -177,7 +175,7 @@ Furthermore, connections to the MQTT broker can be enabled or disabled.
 <img src="resources/image/Generic_MQTT_Connection.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
-## Definition and Deployment of MQTT mappings
+## Definition and Activation of MQTT mappings
 
 ### Table of MQTT mappings
 
@@ -186,7 +184,7 @@ Once the connection to a MQTT broker is configured and successfully enabled you 
 1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
 1. Deleting exsiting MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
-After every change the mappings are automatically updated in the microservice.
+After every change the mappings is automatically updated in the mapping cache of the microservice.
 
 
 ### Define mappings from source to target format (Cumulocity REST format)
@@ -229,16 +227,15 @@ Creation of the new mapping starts by pressing ```Add Mapping```. On the next mo
 The wizzard to define a mapping consists of the steps:
 
 1. Select the type of mapping:
-  *  JSON
-  *  FLAT_FILE
-  *  GENERIC_BINARY
-
-
-<img src="resources/image/Generic_MQTT_MappingType.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
-<br/>
-
+* ```JSON```
+* ```FLAT_FILE```
+* ```GENERIC_BINARY```
+* ```PROTOBUF_STATIC```
+* ```PROCESSOR_EXTENSION```
+___
+  **NOTE:**
 Payload for ```FLAT_FILE``` and ```GENERIC_BINARY``` are wrapped.
-For flat file messages:
+For example for a flat file messages:
 
 ```
 {
@@ -261,7 +258,7 @@ Using appropriate JSONata expression you can parse the payload:
 ```
 $parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
 ```
-
+___
 
 1. Define the properties of the topic and API to be used
 1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
@@ -303,9 +300,9 @@ The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown
 
 #### Snooping payloads on source topic
 
-Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - snooping- to messages on a topic.
+Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - **snooping** - messages on a topic.
 
-In order to record JSON payloads on the defined topic a subscrition records the payloads and saves them for later use in a source template.
+In order to record JSON payloads on the defined topic a subscription records the payloads and saves them for later use in a source template.
 
 The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
 
@@ -321,14 +318,14 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 #### Map Device Idenfifier
 
-Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be mapped to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Ids. When a payload from this device arrives at runtime the external id is translated to the internal Cumulocity id.
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id tpye.
 
 
 #### Define templates and substitutions for source and target payload
 
 In the second wizzard step, shown on the screenshot below the mapping is furher defined:
-1. Editing the source template directly or use a snooped template by pressing button ```Snooped templates```
-2. Editing the target template directly or use a sample template by pressing button ```Sample target template```
+1. Editing the source template directly or use a snooped template by pressing button ```<-```, arrow left
+2. Editing the target template directly or use a sample template by pressing button ```->```, arrow right
 3. Adding substitutions
 
 
@@ -341,7 +338,6 @@ In order to define a substitution ( substitute values in the target payload with
 1. Delete mapping (button wiht one "-" sign), the selected substitution is deleted
 1. Delete all mappings (button wiht two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, eithe "+"- singel level or "#" - multi level
 
-
 <img src="resources/image/Generic_MQTT_MappingTemplate_annnotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
@@ -349,11 +345,15 @@ To define a new substitution the following steps have to be performed:
 1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
 1. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
 1. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
-  * **multi-device-single-value**
-  * **multi-device-multi-value**
-  * **single-device-multi-value**\
-  Otherwise an extracted array is treated as a single valie, see [Different type of substitutions](#different-type-of-substitutions).
-4. Press the add button with the ```+``` sign, to add the substitution to the list.
+  * ```multi-device-single-value```
+  * ```multi-device-multi-value```
+  * ```single-device-multi-value```\
+  Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
+4. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
+
+<img src="resources/image/Generic_MQTT_MappingType.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
+
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
