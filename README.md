@@ -21,7 +21,8 @@
   * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
-- [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf)
+  * [Update existing Mapping](#update-existing-mapping)
+- [Processing Extensions (Protobuf, ...)](#processing-extensions)
 - [Monitoring](#monitoring)
 - [Mapping Tree](#mapping-tree)
 - [REST API](#rest-api)
@@ -447,6 +448,18 @@ In order to use a previously snooped payload click the button
 <img src="resources/image/Generic_MQTT_UseSnoopedPayload.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
 <br/>
 
+### Update existing Mapping
+
+To avoid inconsistencies when updating the properties of a mapping, active mapping are locked - ```READ_ONLY``` - and can't be updated. All properties of the mapping are protected from changes.
+This can be seen on the follwing screenshot:
+
+<img src="resources/image/Generic_MQTT_TopicDefinition_ReadOnly.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
+
+To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
+
+<img src="resources/image/Generic_MQTT_MappingTable_annotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<br/>
 
 ### Processing Extensions
 
