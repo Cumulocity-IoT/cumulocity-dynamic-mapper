@@ -47,7 +47,9 @@ the Cumulocity IoT Domain Model in a graphical way.
 ### Architecture
 The architecture of the components consists of the following components:
 
-<img src="resources/image/Generic_MQTT_Architecture.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Architecture.png"  style="width: 70%;" />
+</p>
 <br/>
 The grey components are part of this project which are:
 
@@ -64,15 +66,21 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 
 Before messages can be be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
 
-<img src="resources/image/Generic_MQTT_Diagram_Map.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Diagram_Map.png"  style="width: 70%;" />
+</p>
 <br/>
 
 Once all mappings are added to the cache we are ready to process incoming messages transmitted by tbe MQTT broker.
 The following diagram describes how a new message is processed.
 
-<img src="resources/image/Generic_MQTT_Diagram_Transform1.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Diagram_Transform1.png"  style="width: 70%;" />
+</p>
 
-<img src="resources/image/Generic_MQTT_Diagram_Transform2.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Diagram_Transform2.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Known Limitation and Disclaimer
@@ -119,9 +127,9 @@ the binaries from the latest release and upload them to your Cumulocity IoT Tena
 In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
 
 <p align="center">
-<img src="resources/image/Generic_MQTT_UploadMicroservice.png"  style="width: 40%;" />
-<br/>
+<img src="resources/image/Generic_MQTT_UploadMicroservice.png"  style="width: 40%;"/>
 </p>
+<br/>
 
 Select the "mqtt.mapping.service.zip".
 Make sure that you subscribe the microservice to your tenant when prompted
@@ -141,13 +149,17 @@ After succesful upload go to "All Applications" and click on "Add Application". 
 and afterwards "Administration".
 
 
-<img src="resources/image/Generic_MQTT_DuplicateApp.png"  style="display: block;margin-left: auto; margin-right: auto; width: 40%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_DuplicateApp.png" style="width: 40%;" />
+</p>
 <br/>.
 
 Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "MQTT configuration plugin"
 
 
-<img src="resources/image/Generic_MQTT_PluginInstalled.png"  style="display: block;margin-left: auto; margin-right: auto; width: 50%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_PluginInstalled.png" style="width: 50%;" />
+</p>
 <br/>
 
 ## Build, Deploy, Run
@@ -174,7 +186,9 @@ Furthermore, connections to the MQTT broker can be enabled or disabled.
 </p>
 <br/> -->
 
-<img src="resources/image/Generic_MQTT_Connection.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Connection.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ## Definition and Activation of MQTT mappings
@@ -223,7 +237,9 @@ Creation of the new mapping starts by pressing ```Add Mapping```. On the next mo
 1. ```PROCESSOR_EXTENSION```: if you want to process the message yourself, by registering a processor extension
 
 
-<img src="resources/image/Generic_MQTT_AddMapping.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
+</p>
 <br/>
 
 The wizzard to define a mapping consists of the steps:
@@ -271,7 +287,9 @@ ___
 In the first wizzard step properties for the topic are defined.
 
 
-<img src="resources/image/Generic_MQTT_TopicDefinition.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_TopicDefinition.png"  style="width: 70%;" />
+</p>
 <br/>
 
 For the mappings we differentiate between a **subscription topic** and a **template topic**:
@@ -315,7 +333,9 @@ If a payload is found the status moves to **STARTED**. This is indicated in the 
 To enable snooping select ```ENABLED``` in the drop down as shown in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic and records the received payloads.
 
 
-<img src="resources/image/Generic_MQTT_EnableSnooping.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_EnableSnooping.png"  style="width: 70%;" />
+</p>
 <br/>
 
 #### Map Device Idenfifier
@@ -331,7 +351,9 @@ In the second wizzard step, shown on the screenshot below the mapping is furher 
 3. Adding substitutions
 
 
-<img src="resources/image/Generic_MQTT_MappingTemplate.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTemplate.png"  style="width: 70%;" />
+</p>
 <br/>
 
 In order to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
@@ -340,7 +362,9 @@ In order to define a substitution ( substitute values in the target payload with
 1. Delete mapping (button wiht one "-" sign), the selected substitution is deleted
 1. Delete all mappings (button wiht two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, eithe "+"- singel level or "#" - multi level
 
-<img src="resources/image/Generic_MQTT_MappingTemplate_annnotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTemplate_annnotated.png"  style="width: 70%;" />
+</p>
 <br/>
 
 To define a new substitution the following steps have to be performed:
@@ -353,7 +377,9 @@ To define a new substitution the following steps have to be performed:
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
 4. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
 
-<img src="resources/image/Generic_MQTT_MappingType.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingType.png"  style="width: 70%;" />
+</p>
 <br/>
 
 
@@ -367,7 +393,9 @@ To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined
 In the sample below, e.g. a warning is shown since the required property ```c8y_IsDevice``` is  missing in the payload.
 
 
-<img src="resources/image/Generic_MQTT_SchemaValidation.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_SchemaValidation.png"  style="width: 70%;" />
+</p>
 <br/>
 
 #### Different type of substitutions
@@ -398,7 +426,9 @@ When you define an expression or a path in the source payload for a substitution
 
 This is illustrated on the following diagram:
 
-<img src="resources/image/Generic_MQTT_DifferentSubstitutions.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_DifferentSubstitutions.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ___
@@ -422,14 +452,18 @@ To iterate and show all results press the button ```Show Next Test Result```.
 
 
 
-<img src="resources/image/Generic_MQTT_TestTransformation.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_TestTransformation.png"  style="width: 70%;" />
+</p>
 <br/>
 
 When the transformation is tested and the resulting request are sent to Cumulocity, this result respective test devices are generated. These can be viewed on the tab ```Testing```. Generated devices can be deleted.
 All generated test devices have a fragment ```c8y_mqttMapping_TestDevice```.
 
 
-<img src="resources/image/Generic_MQTT_TestDevices.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_TestDevices.png"  style="width: 70%;" />
+</p>
 <br/>
 
 
@@ -438,7 +472,9 @@ All generated test devices have a fragment ```c8y_mqttMapping_TestDevice```.
 To send the a transformed payload to a test device, press the button ```Send test message```. If an error occurs this is shown in the UI.
 
 
-<img src="resources/image/Generic_MQTT_SendTestMessageToCumulocity.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_SendTestMessageToCumulocity.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Use snooped payloads in source templates
@@ -447,7 +483,9 @@ In order to use a previously snooped payload click the button
 ```Snooped templates```. Multiples activation of this button iterates over all the recorded templates.
 
 
-<img src="resources/image/Generic_MQTT_UseSnoopedPayload.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_UseSnoopedPayload.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Update existing Mapping
@@ -455,29 +493,39 @@ In order to use a previously snooped payload click the button
 To avoid inconsistencies when updating the properties of a mapping, active mapping are locked - ```READ_ONLY``` - and can't be updated. All properties of the mapping are protected from changes.
 This can be seen on the follwing screenshot:
 
-<img src="resources/image/Generic_MQTT_TopicDefinition_ReadOnly.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_TopicDefinition_ReadOnly.png"  style="width: 70%;" />
+</p>
 <br/>
 
 To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
 
-<img src="resources/image/Generic_MQTT_MappingTable_annotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTable_annotated.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Processing Extensions
 
 When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
-<img src="resources/image/Generic_MQTT_ProtobufMessage_annotated.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_ProtobufMessage_annotated.png"  style="width: 70%;" />
+</p>
 <br/>
 
 Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice has to be re-subscribed in order to load the extensions. This does not happen dynamically.
 
-<img src="resources/image/Generic_MQTT_ProcessorExtension.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_ProcessorExtension.png"  style="width: 70%;" />
+</p>
 <br/>
 
 The following guide lays out hte steps to create and use a processor extension:
 
-<img src="resources/image/Generic_MQTT_ProcessorExtension_Guide.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_ProcessorExtension_Guide.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Monitoring
@@ -485,7 +533,9 @@ The following guide lays out hte steps to create and use a processor extension:
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
 
-<img src="resources/image/Generic_MQTT_Monitoring.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Monitoring.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### Mapping Tree
@@ -494,7 +544,9 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 
 
 
-<img src="resources/image/Generic_MQTT_MappingTree.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTree.png"  style="width: 70%;" />
+</p>
 <br/>
 
 ### REST API
@@ -513,8 +565,7 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 
 
 ### Load Test
-In the resource section you find a test profil [jmeter_test_01.jmx]
-<img src="resources/script/performance/jmeter_test_01.jmx) using jmeter and an extension for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
+In the resource section you find a test profil [jmeter_test_01.jmx](./resources/script/performance/jmeter_test_01.jmx) using the performance tool ```jmeter``` and an extension for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
 This was used to run simple loadtest.
 
 ## Setup Sample MQTT mappings
@@ -545,7 +596,9 @@ The steps required for a external extension are as follows. The extension:
 A sample how to build an extension is contained in the maven module [mqtt-mapping-extension](./mqtt-mapping-extension).
 The following diagram shows how the dispatcher handles meassages with different format:
 
-<img src="resources/image/Generic_MQTT_Dispatcher.png"  style="display: block;margin-left: auto; margin-right: auto; width: 70%;" />
+<p align="center">
+<img src="resources/image/Generic_MQTT_Dispatcher.png"  style="width: 70%;" />
+</p>
 <br/>
 
 As an example see the [SysHandler](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/system/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
