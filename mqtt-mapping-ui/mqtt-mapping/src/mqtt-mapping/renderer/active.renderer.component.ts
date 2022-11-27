@@ -38,7 +38,7 @@ export class ActiveRendererComponent {
     public mappingService: MappingService,
     public alertService: AlertService
   ) {
-    console.log("Active renderer:", context.item.active)
+    //console.log("Active renderer:", context.item.active)
     this.active = context.item.active;
   }
 
