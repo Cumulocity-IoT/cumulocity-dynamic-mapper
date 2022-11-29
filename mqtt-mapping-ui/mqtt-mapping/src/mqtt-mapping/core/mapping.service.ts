@@ -19,13 +19,12 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { InventoryService, IResult } from '@c8y/client';
+import { FetchClient, IFetchResponse, InventoryService, IResult } from '@c8y/client';
 import * as _ from 'lodash';
 import { BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { Mapping, Operation } from '../../shared/mapping.model';
-import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE } from '../../shared/util';
+import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_MAPPING_ENDPOINT } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
 import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
@@ -34,7 +33,8 @@ export class MappingService {
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
-    private jsonProcessor: JSONProcessor) { }
+    private jsonProcessor: JSONProcessor,
+    private client: FetchClient) { }
 
   private agentId: string;
   protected JSONATA = require("jsonata");
@@ -82,33 +82,41 @@ export class MappingService {
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
-    const { data, res } = await this.inventory.update({
-      c8y_mqttMapping: mapping,
-      id: mapping.id,
-    })
-    return mapping;
+    let response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(mapping),
+      method: 'PUT',
+    });
+    let data = await response;
+    let m = await data.json();
+    return m;
   }
 
-  async deleteMapping(mapping: Mapping): Promise<IResult<null>> {
-    let result = this.inventory.delete(mapping.id)
-    return result
+  async deleteMapping(mapping: Mapping): Promise<string> {
+    //let result = this.inventory.delete(mapping.id)
+    let response = await this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      method: 'DELETE',
+    });
+    let result = await response.text();
+    return result;
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
-    {
-      const { data, res } = await this.inventory.create({
-        c8y_mqttMapping: mapping,
-        type: MQTT_MAPPING_TYPE,
-      });
-      mapping.id = data.id;
-    }
-    {
-      const { data, res } = await this.inventory.update({
-        c8y_mqttMapping: mapping,
-        id: mapping.id,
-      })
-    }
-    return mapping;
+    let response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(mapping),
+      method: 'POST',
+    });
+    let data =await response;
+    let m = await data.json();
+    return m;
   }
 
   private initializeContext(mapping: Mapping, sendPayload: boolean): ProcessingContext {

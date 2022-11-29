@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_EXTERNSION_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_SERVICE_ENDPOINT } from '../shared/util';
+import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_EXTENSION_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_SERVICE_ENDPOINT } from '../shared/util';
 import { ConnectionConfiguration, Extension, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
@@ -155,7 +155,7 @@ export class BrokerConfigurationService {
   }
 
   async getProcessorExtensions(): Promise<Object> {
-    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}`, {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`, {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json'
@@ -171,7 +171,7 @@ export class BrokerConfigurationService {
 
 
   async getProcessorExtension(name: string): Promise<Extension> {
-    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}/${name}`, {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`, {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json'
@@ -187,7 +187,7 @@ export class BrokerConfigurationService {
   }
 
   async deleteProcessorExtension(name: string): Promise<string> {
-    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTERNSION_ENDPOINT}/${name}`, {
+    const response: IFetchResponse = await this.client.fetch(`${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`, {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json'

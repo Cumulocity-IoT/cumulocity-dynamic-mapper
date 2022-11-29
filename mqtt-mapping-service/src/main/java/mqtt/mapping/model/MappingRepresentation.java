@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -192,7 +194,7 @@ public class MappingRepresentation implements Serializable {
   private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     try {
-      new JSONObject(mapping.source);
+        Object json = new JSONTokener(mapping.source).nextValue();
     } catch (JSONException e) {
       result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
     }
