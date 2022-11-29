@@ -173,7 +173,7 @@ public class InnerNode extends TreeNode {
                 if (tn instanceof MappingNode) {
                     if (((MappingNode) tn).getMapping().id.equals(mapping.id)) {
                         log.info(
-                            "Deleting mappingNode: currentLevel: {}, remainingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
+                            "Deleting mappingNode    : currentLevel: {}, remainingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
                             currentLevel, remainingLevels,  getLevel(), getAbsolutePath(),  mapping.id);
                         return true;
                     } else
@@ -184,7 +184,7 @@ public class InnerNode extends TreeNode {
             return false;
         } else if (remainingLevels.size() > 1 && specificChildren != null) {
             remainingLevels.remove(0);
-            log.info("Deleting (?) innerNode : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
+            log.info("Deleting (?) innerNode  : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
             currentLevel, remainingLevels, getLevel(), getAbsolutePath());
             MutableBoolean stopDeleting = new MutableBoolean(false);
             InnerNode child;
@@ -207,7 +207,7 @@ public class InnerNode extends TreeNode {
                 if (!stopDeleting.getValue()) {
                     specificChildren.removeIf(tn -> {
                         if (((InnerNode) tn).getChildNodes().size() <= 1) {
-                            log.info("Deleting innerNode : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
+                            log.info("Deleting innerNode      : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
                             currentLevel, remainingLevels, getLevel(), getAbsolutePath());
                             return true;
                         } else {
