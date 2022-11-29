@@ -32,7 +32,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString()
-public class MappingNode extends TreeNode{
+public class MappingNode extends TreeNode {
+    public static MappingNode createMappingNode(InnerNode parent, Mapping mapping, String level) {
+        MappingNode node = new MappingNode();
+        node.setParentNode(parent);
+        node.setMapping(mapping);
+        node.setLevel(level);
+        node.setAbsolutePath(parent.getAbsolutePath() + level);
+        node.setDepthIndex(parent.getDepthIndex() + 1);
+        return node;
+    }
+
     @Setter
     @Getter
     private Mapping mapping;
@@ -43,15 +53,16 @@ public class MappingNode extends TreeNode{
 
     public boolean isMappingNode() {
         return true;
-    }  
+    }
 
     public List<TreeNode> resolveTopicPath(List<String> tp) throws ResolveException {
         log.debug("Resolved mapping: {}, tp.size(): {}", mapping, tp.size());
-         if (tp.size() == 0){
-            return new ArrayList<TreeNode> (Arrays.asList(this));
+        if (tp.size() == 0) {
+            return new ArrayList<TreeNode>(Arrays.asList(this));
         } else {
             String remaining = String.join("/", tp);
-            throw new ResolveException("No mapping registered for this path: " + this.getAbsolutePath() + remaining + "!");
+            throw new ResolveException(
+                    "No mapping registered for this path: " + this.getAbsolutePath() + remaining + "!");
         }
     }
 }

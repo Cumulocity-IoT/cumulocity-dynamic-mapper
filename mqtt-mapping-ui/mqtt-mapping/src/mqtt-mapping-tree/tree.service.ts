@@ -49,7 +49,7 @@ export class MappingTreeService {
         if (tree?.['childNodes']) {
             tree = tree?.['childNodes']
         }
-        this.clean(tree, ['level', 'depthIndex', 'preTreeNode']);
+        this.clean(tree, ['level', 'depthIndex', 'parentNode']);
         return tree;
     }
 

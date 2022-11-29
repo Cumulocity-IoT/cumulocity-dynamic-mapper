@@ -361,6 +361,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         subscriptionsService.runForTenant(tenant, () -> {
             mr[0] = mappingComponent.createMapping(mapping);
         });
+        mqttClient.upsertInMappingCache(mr[0]);
         return mr[0];
     }
 
@@ -382,9 +383,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 exceptions[0] = e;
             }
         });
-        if (exceptions[0] != (null)) {
+        if (exceptions[0] != null ) {
             throw exceptions[0];
         }
+        mqttClient.deleteFromMappingCache(id);
         return mr[0];
     }
 
@@ -402,6 +404,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (exceptions[0] != (null)) {
             throw exceptions[0];
         }
+        mqttClient.upsertInMappingCache(mr[0]);
         return mr[0];
     }
 
@@ -686,7 +689,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveMapping().forEach(m -> {
+        mqttClient.getActiveMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }

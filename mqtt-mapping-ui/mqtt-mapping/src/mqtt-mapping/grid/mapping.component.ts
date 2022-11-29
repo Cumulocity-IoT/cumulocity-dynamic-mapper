@@ -314,7 +314,7 @@ export class MappingComponent implements OnInit {
     this.isConnectionToMQTTEstablished = true;
     this.loadMappings();
     this.refresh.emit();
-    this.activateMappings();
+    //this.activateMappings();
   }
 
   async loadMappings(): Promise<void> {
@@ -335,7 +335,7 @@ export class MappingComponent implements OnInit {
         this.alertService.success(gettext('Mapping updated successfully'));
         this.loadMappings();
         this.refresh.emit();
-        this.activateMappings();
+        //this.activateMappings();
       } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
         // new mapping
         console.log("Push new mapping:", mapping);
@@ -343,7 +343,7 @@ export class MappingComponent implements OnInit {
         this.alertService.success(gettext('Mapping created successfully'));
         this.loadMappings();
         this.refresh.emit();
-        this.activateMappings();
+        //this.activateMappings();
       }
       this.isConnectionToMQTTEstablished = true;
 

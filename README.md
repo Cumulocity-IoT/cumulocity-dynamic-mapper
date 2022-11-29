@@ -550,10 +550,11 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 1. ```.../configuration/connection```: retrieve and change the connection details to the MQTT broker
 1. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
 1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic, reload extensions
-1. ```.../status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
-1. ```.../status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
+1. ```.../monitoring/status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
+1. ```.../monitoring/status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
+1. ```.../monitoring/tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
+1. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
 1. ```.../mapping```: retrieve, create, delete, update mappings
-1. ```.../tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
 1. ```.../extension/```: endpoint to retieve a list of all extensions
 1. ```.../extension/{extension-name}```: endpoint to retieve/delete a specific extension
