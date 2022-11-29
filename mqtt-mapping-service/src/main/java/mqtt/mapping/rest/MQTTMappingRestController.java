@@ -147,18 +147,32 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/status/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/monitoring/status/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getServiceStatus() {
         ServiceStatus st = mqttClient.getServiceStatus();
         log.info("Get status: {}", st);
         return new ResponseEntity<>(st, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/monitoring/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MappingStatus>> getMappingStatus() {
         List<MappingStatus> ms = mappingStatusComponent.getMappingStatus();
         log.info("Get mapping status: {}", ms);
         return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TreeNode> getActiveMappingTree() {
+        TreeNode result = mqttClient.getActiveMappingTree();
+        log.info("Get mapping tree!");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    @RequestMapping(value = "/monitoring/subscription", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions() {
+        Map<String, Integer> result = mqttClient.getActiveSubscriptions();
+        log.info("Get active subscriptions!");
+        return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -232,12 +246,7 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getActiveTreeNode() {
-        TreeNode result = mqttClient.getMappingTree();
-        log.info("Get mapping tree!");
-        return ResponseEntity.status(HttpStatus.OK).body(result);
-    }
+
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,

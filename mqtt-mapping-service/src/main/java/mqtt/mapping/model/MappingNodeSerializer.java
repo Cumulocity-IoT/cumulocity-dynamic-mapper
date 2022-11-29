@@ -48,7 +48,7 @@ public class MappingNodeSerializer extends StdSerializer<MappingNode> {
         jgen.writeStartObject();
         jgen.writeNumberField("depthIndex", value.getDepthIndex());
         jgen.writeStringField("level", value.getLevel());
-        jgen.writeStringField("preTreeNode", (value.getPreTreeNode() != null ? value.getPreTreeNode().getAbsolutePath():"null"));
+        jgen.writeStringField("parentNode", (value.getParentNode() != null ? value.getParentNode().getAbsolutePath():"null"));
         jgen.writeStringField("absolutePath", value.getAbsolutePath());
         provider.defaultSerializeField("mapping", value.getMapping(), jgen);
         jgen.writeEndObject();

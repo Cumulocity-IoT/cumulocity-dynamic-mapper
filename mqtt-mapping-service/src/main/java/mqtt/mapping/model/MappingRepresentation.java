@@ -37,6 +37,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import mqtt.mapping.processor.model.MappingType;
 
 @Data
 @NoArgsConstructor
@@ -78,11 +79,17 @@ public class MappingRepresentation implements Serializable {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     long count = Arrays.asList(mapping.substitutions).stream()
         .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
-    if (count > 1 && mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED ) {
-      result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
-    }
-    if (count < 1  && mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED ) {
-      result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+
+    if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
+        && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
+        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
+      if (count > 1) {
+        result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
+      }
+      if (count < 1) {
+        result.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+      }
+
     }
     return result;
   }
@@ -185,16 +192,20 @@ public class MappingRepresentation implements Serializable {
   private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     try {
-      new JSONObject(mapping.target);
-    } catch (JSONException e) {
-      result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
-    }
-
-    try {
       new JSONObject(mapping.source);
     } catch (JSONException e) {
       result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
     }
+
+    if (!mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
+        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
+      try {
+        new JSONObject(mapping.target);
+      } catch (JSONException e) {
+        result.add(ValidationError.Target_Template_Must_Be_Valid_JSON);
+      }
+    }
+
     return result;
   }
 
@@ -210,10 +221,10 @@ public class MappingRepresentation implements Serializable {
   }
 
   // static public Long nextId(ArrayList<Mapping> mappings) {
-  //   Long max = mappings
-  //       .stream()
-  //       .mapToLong(v -> v.id)
-  //       .max().orElseThrow(NoSuchElementException::new);
-  //   return max + 1L;
+  // Long max = mappings
+  // .stream()
+  // .mapToLong(v -> v.id)
+  // .max().orElseThrow(NoSuchElementException::new);
+  // return max + 1L;
   // }
 }

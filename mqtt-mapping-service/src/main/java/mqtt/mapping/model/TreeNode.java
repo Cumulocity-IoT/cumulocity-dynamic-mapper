@@ -37,7 +37,7 @@ public abstract class TreeNode implements Serializable {
     
     @Setter
     @Getter
-    private TreeNode preTreeNode;
+    private TreeNode parentNode;
 
     @Setter
     @Getter

@@ -286,11 +286,11 @@ export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MQTT_MAPPING_FRAGMENT = 'c8y_mqttMapping';
 export const PATH_OPERATION_ENDPOINT = 'operation';
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connection';
-export const PATH_EXTERNSION_ENDPOINT = 'extension';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
-export const PATH_MAPPING_TREE_ENDPOINT = 'tree';
-export const PATH_STATUS_ENDPOINT = 'status/service';
-export const PATH_MONITORING_ENDPOINT = 'monitor-websocket';
+export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
+export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
+export const PATH_STATUS_SERVICE_ENDPOINT = 'monitoring/status/service';
+export const PATH_EXTERNSION_ENDPOINT = 'extension';
 export const BASE_URL = 'service/mqtt-mapping-service';
 export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
@@ -436,13 +436,18 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
     // }, 0)
 
     let count = countDeviceIdentifiers(mapping);
-    if (count > 1 && !stepperConfiguration.allowNoDefinedIdentifier) {
-      errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
-      defined = true
-    }
-    if (count < 1 && !stepperConfiguration.allowNoDefinedIdentifier) {
-      errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
-      defined = true
+
+    if (!stepperConfiguration.allowNoDefinedIdentifier) {
+      if (count > 1) {
+        errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
+        defined = true
+      }
+      if (count < 1) {
+        errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
+        defined = true
+      }
+    } else {
+
     }
     console.log(stepperConfiguration, mapping.mappingType)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));

@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity, IFetchResponse, Realtime } from '@c8y/client';
-import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_EXTERNSION_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_ENDPOINT } from '../shared/util';
+import { AGENT_ID, BASE_URL, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_CONFIGURATION_SERVICE_ENDPOINT, PATH_EXTERNSION_ENDPOINT, PATH_OPERATION_ENDPOINT, PATH_STATUS_SERVICE_ENDPOINT } from '../shared/util';
 import { ConnectionConfiguration, Extension, Operation, ServiceConfiguration, ServiceStatus, Status } from '../shared/mapping.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 
@@ -104,7 +104,7 @@ export class BrokerConfigurationService {
   }
 
   async getConnectionStatus(): Promise<ServiceStatus> {
-    const response = await this.client.fetch(`${BASE_URL}/${PATH_STATUS_ENDPOINT}`, {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_STATUS_SERVICE_ENDPOINT}`, {
       method: 'GET',
     });
     const result = await response.json();
