@@ -181,7 +181,7 @@ public class InnerNode extends TreeNode {
                 } else
                     return false;
             });
-            return true;
+            return false;
         } else if (remainingLevels.size() > 1 && specificChildren != null) {
             remainingLevels.remove(0);
             log.info("Deleting (?) innerNode : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
