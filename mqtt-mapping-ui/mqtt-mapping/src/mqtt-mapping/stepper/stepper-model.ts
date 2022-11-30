@@ -20,9 +20,10 @@
  */
 
 export enum EditorMode {
-    CREATE = 'CREATE',
-    UPDATE = 'UPDATE',
-    READ_ONLY = 'READ_ONLY'
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  READ_ONLY = 'READ_ONLY',
+  COPY = "COPY"
 }
 
 export interface StepperConfiguration {

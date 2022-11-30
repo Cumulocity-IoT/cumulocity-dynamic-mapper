@@ -295,7 +295,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      editorMode: EditorMode.CREATE
+      editorMode: EditorMode.COPY
     };
     this.setStepperConfiguration(mapping.mappingType)
     // create deep copy of existing mapping, in case user cancels changes
@@ -336,7 +336,8 @@ export class MappingComponent implements OnInit {
         this.loadMappings();
         this.refresh.emit();
         //this.activateMappings();
-      } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
+      } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE 
+        || this.stepperConfiguration.editorMode == EditorMode.COPY) {
         // new mapping
         console.log("Push new mapping:", mapping);
         await this.mappingService.createMapping(mapping);
