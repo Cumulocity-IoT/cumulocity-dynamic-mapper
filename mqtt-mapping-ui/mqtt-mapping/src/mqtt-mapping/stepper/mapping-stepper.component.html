@@ -151,7 +151,7 @@
                     <select class="form-control" formControlName="targetAPI" [(ngModel)]="mapping.targetAPI"
                       (change)="onTargetAPIChanged($event)" #targetAPIRef>
                       <option *ngFor="let api of keys(API)" [ngValue]="api"
-                        [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         {{ api }}
                       </option>
                     </select>
@@ -162,7 +162,7 @@
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="qos" [(ngModel)]="mapping.qos" #qosRef>
                       <option *ngFor="let q of QOS | keyvalue" [ngValue]="q.key"
-                        [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         {{ q.value }}
                       </option>
                     </select>
@@ -294,7 +294,7 @@
                         <option [ngValue]="null" disabled>Select an extension</option>
                         <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
                           [selected]="ex.key == mapping.extension?.name"
-                          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                           {{ ex.key }}
                         </option>
                       </select>
@@ -308,7 +308,7 @@
                         <option [ngValue]="null" disabled>Select an event</option>
                         <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
                           [selected]="ev == mapping.extension?.event"
-                          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                           {{ ev }}
                         </option>
                       </select>
@@ -532,8 +532,8 @@
                     <div class="c8y-select-wrapper">
                       <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
                         #repairStrategyRef>
-                        <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [disabled]="(!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
-                          stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
+                          stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                           {{ RepairStrategy[q] }}
                         </option>
                       </select>

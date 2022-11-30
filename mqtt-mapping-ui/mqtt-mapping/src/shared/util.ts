@@ -450,7 +450,7 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
     } else {
 
     }
-    console.log(stepperConfiguration, mapping.mappingType)
+    //console.log(stepperConfiguration, mapping.mappingType)
     //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
     return defined ? errors : null;
   }
