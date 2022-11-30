@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.bouncycastle.est.jcajce.ChannelBindingProvider;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +42,6 @@ public class InnerNode extends TreeNode {
     @Setter
     @Getter
     private Map<String, List<TreeNode>> childNodes;
-
     static public InnerNode createRootNode() {
         InnerNode in = new InnerNode();
         in.setDepthIndex(0);
@@ -162,6 +162,7 @@ public class InnerNode extends TreeNode {
     }
 
     private Boolean deleteMapping(Mapping mapping, List<String> remainingLevels) throws ResolveException {
+        MutableBoolean stopDeleting = new MutableBoolean(false);
         var currentLevel = remainingLevels.get(0);
         List<TreeNode> specificChildren = getChildNodes().get(currentLevel);
         if (remainingLevels.size() == 1 && specificChildren != null) {
@@ -174,19 +175,20 @@ public class InnerNode extends TreeNode {
                     if (((MappingNode) tn).getMapping().id.equals(mapping.id)) {
                         log.info(
                             "Deleting mappingNode    : currentLevel: {}, remainingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
-                            currentLevel, remainingLevels,  getLevel(), getAbsolutePath(),  mapping.id);
+                            remainingLevels.get(0), remainingLevels,  tn.getLevel(), tn.getAbsolutePath(),  mapping.id);
                         return true;
                     } else
                         return false;
                 } else
-                    return false;
+                    return true;
             });
-            return false;
+            stopDeleting.setFalse();
         } else if (remainingLevels.size() > 1 && specificChildren != null) {
             remainingLevels.remove(0);
+            // currentLevel = remainingLevels.get(0);
+            // specificChildren = getChildNodes().get(currentLevel);
             log.info("Deleting (?) innerNode  : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
             currentLevel, remainingLevels, getLevel(), getAbsolutePath());
-            MutableBoolean stopDeleting = new MutableBoolean(false);
             InnerNode child;
             if (getChildNodes().containsKey(currentLevel)) {
                 if (specificChildren.size() == 1) {
@@ -208,19 +210,29 @@ public class InnerNode extends TreeNode {
                     specificChildren.removeIf(tn -> {
                         if (((InnerNode) tn).getChildNodes().size() <= 1) {
                             log.info("Deleting innerNode      : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-                            currentLevel, remainingLevels, getLevel(), getAbsolutePath());
+                            currentLevel, remainingLevels, tn.getLevel(), tn.getAbsolutePath());
                             return true;
                         } else {
                             stopDeleting.setValue(true);
                             return false;
                         }
                     });
+                log.debug("Current children: {}", specificChildren.size());
+
                 }
             }
-            ;
-            return stopDeleting.getValue();
         } else {
-            throw new ResolveException("Could not delete mapping from tree: " + mapping.toString());
+            //throw new ResolveException("Could not delete mapping from tree: " + mapping.toString());
+            log.warn("Could not delete mapping from tree: subscriptionTopic{}, id: {}", mapping.subscriptionTopic, mapping.id);
+            stopDeleting.setFalse();
         }
+        // test if we are in the root node, then delete the last level
+        if (getDepthIndex() == 0 && !stopDeleting.getValue()) {
+            log.info("Deleting innerNode      : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
+            currentLevel, remainingLevels, getLevel(), getAbsolutePath());
+            getChildNodes().remove(currentLevel);
+        }
+    
+        return stopDeleting.getValue();
     }
 }

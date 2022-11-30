@@ -95,7 +95,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
 
-    private static final String ADDITION_TEST_DUMMY = "_DL1";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -493,6 +493,7 @@ public class MQTTClient {
             }
         }
         deleteFromMappingTree(mapping);
+        activeMappings.remove(id);
     }
 
     public void upsertInMappingCache(Mapping mapping) {
@@ -548,6 +549,7 @@ public class MQTTClient {
 
         deleteFromMappingTree(mapping);
         addToMappingTree(mapping);
+        activeMappings.put(mapping.id, mapping);
 
     }
 
