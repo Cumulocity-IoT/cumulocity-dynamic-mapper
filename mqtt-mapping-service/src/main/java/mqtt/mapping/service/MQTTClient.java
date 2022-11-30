@@ -294,10 +294,12 @@ public class MQTTClient {
                 activeSubscriptionCache = new HashMap<String, MutableInt>();
                 activeMappings = new HashMap<String, Mapping>();
                 rebuildMappingCache();
+                successful = true;
             } catch (MqttException e) {
                 log.error("Error on reconnect, retrying ... ", e);
+                successful = false;
+
             }
-            successful = true;
 
         }
         return true;
@@ -518,13 +520,11 @@ public class MQTTClient {
         // consider unsubscribing from previous subscription topic if it has changed
         if (create) {
             updatedMappingSubs.add(1);
-            if (!activeSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
-                try {
-                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (MqttException e1) {
-                    log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
-                }
+            log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
+            try {
+                subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+            } catch (MqttException e1) {
+                log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
             }
         } else if (subscriptionTopicChanged) {
             MutableInt activeMappingSubs = activeSubscriptionCache.get(activeMapping.subscriptionTopic);
