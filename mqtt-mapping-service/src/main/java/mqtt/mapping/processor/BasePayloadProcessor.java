@@ -134,7 +134,8 @@ public abstract class BasePayloadProcessor<T> {
                 } else if (postProcessingCache.get(pathTarget).size() == 1) {
                     // this is an indication that the substitution is the same for all
                     // events/alarms/measurements/inventory
-                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY)) {
+                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
+                    substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
                         substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
                     } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
                         int last = postProcessingCache.get(pathTarget).size() - 1;
