@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
-import org.bouncycastle.est.jcajce.ChannelBindingProvider;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -68,29 +67,29 @@ public class InnerNode extends TreeNode {
         return false;
     }
 
-    public List<TreeNode> resolveTopicPath(List<String> levels) throws ResolveException {
+    public List<TreeNode> resolveTopicPath(List<String> remainingLevels) throws ResolveException {
         Set<String> set = childNodes.keySet();
         String joinedSet = String.join(",", set);
-        String joinedPath = String.join("", levels);
+        String joinedPath = String.join("", remainingLevels);
         log.debug("Trying to resolve: '{}' in [{}]", joinedPath, joinedSet);
         List<TreeNode> results = new ArrayList<TreeNode>();
-        if (levels.size() >= 1) {
-            String currentLevel = levels.get(0);
-            levels.remove(0);
+        if (remainingLevels.size() >= 1) {
+            String currentLevel = remainingLevels.get(0);
+            remainingLevels.remove(0);
             if (childNodes.containsKey(currentLevel)) {
                 List<TreeNode> revolvedNodes = childNodes.get(currentLevel);
                 for (TreeNode node : revolvedNodes) {
-                    results.addAll(node.resolveTopicPath(levels));
+                    results.addAll(node.resolveTopicPath(remainingLevels));
                 }
             }
             if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_SINGLE)) {
                 List<TreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_SINGLE);
                 for (TreeNode node : revolvedNodes) {
-                    results.addAll(node.resolveTopicPath(levels));
+                    results.addAll(node.resolveTopicPath(remainingLevels));
                 }
                 // test if single level wildcard "+" match exists for this level
             }
-        } else if (levels.size() == 0)
+        } else if (remainingLevels.size() == 0)
             throw new ResolveException(
                     "Path could not be resolved, since it is end in an InnerNodes instead of a mappingNode!");
 

@@ -294,7 +294,7 @@
                         <option [ngValue]="null" disabled>Select an extension</option>
                         <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
                           [selected]="ex.key == mapping.extension?.name"
-                          [attr.disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                           {{ ex.key }}
                         </option>
                       </select>
@@ -308,7 +308,7 @@
                         <option [ngValue]="null" disabled>Select an event</option>
                         <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
                           [selected]="ev == mapping.extension?.event"
-                          [attr.disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY">
                           {{ ev }}
                         </option>
                       </select>
