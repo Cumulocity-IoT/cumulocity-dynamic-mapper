@@ -320,7 +320,7 @@
                   <div class="p-b-8">
                     <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
                       (click)="onNextSubstitution()" translate title="Select substitution"
-                      [disabled]="!stepperConfiguration.showEditorSource">
+                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource)">
                       <i c8yIcon="skip"></i>
                     </button>
                     <span class="hidden-xs hidden-sm p-l-4">
@@ -335,7 +335,7 @@
                   <div class="p-b-8">
                     <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                       (click)="onAddSubstitution()" translate title="Add new substitution"
-                      [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                       <i c8yIcon="add-new"></i>
                     </button>
                     <span class="hidden-xs hidden-sm p-l-4">
@@ -353,7 +353,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onDeleteSubstitution()" translate title="Delete selected substitution"
-                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="negative"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
@@ -370,7 +370,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onDeleteSubstitutions()" translate title="Delete all substitutions"
-                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
@@ -387,7 +387,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
-                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                           {{mapping.snoopedTemplates.length}}</span>
                         <i c8yIcon="enter-left"></i>
@@ -404,7 +404,7 @@
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                         (click)="onSampleButton()" translate title="Use sample templates"
-                        [disabled]="!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY">
+                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="enter-right"></i>
                       </button>
                       <span class="hidden-xs hidden-sm p-l-4">
@@ -694,15 +694,15 @@
     </div>
     <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3 text-center">
       <button type="button" class="btn btn-default" (click)="onTestTransformation()"
-        [disabled]="!stepperConfiguration.allowTesting">
+        [attr.disabled]="isDisabled(!stepperConfiguration.allowTesting)">
         Transform Test Message
       </button>
       <button type="button" class="btn btn-default" (click)="onNextTestResult()"
-        [disabled]="!stepperConfiguration.allowTesting">
+        [attr.disabled]="isDisabled(!stepperConfiguration.allowTesting)">
         Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
           {{templateTestingResults.length}}</span>
       </button>
-      <button type="button" class="btn btn-default" [disabled]="!stepperConfiguration.allowTesting"
+      <button type="button" class="btn btn-default" [attr.disabled]="isDisabled(!stepperConfiguration.allowTesting)"
         (click)="onSendTest()">
         Send Test Message
       </button>
