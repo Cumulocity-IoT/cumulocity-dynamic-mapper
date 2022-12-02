@@ -269,9 +269,9 @@
           <div class="container">
             <div [formGroup]="templateForm">
               <div class="row">
-                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                <!-- <div class="legend form-block col-lg-10 col-lg-offset-1">
                   Templates
-                </div>
+                </div> -->
                 <div class="col-lg-4 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <label translate>Source</label>
@@ -316,7 +316,9 @@
                   </div>
                 </div>
                 <div class="col-lg-2 d-flex d-col a-i-center">
-                  <label translate>Manage Substitutions</label>
+                  <br>
+                  <br>
+                  <!-- <label translate>Manage Substitutions</label>
                   <div class="p-b-8">
                     <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
                       (click)="onNextSubstitution()" translate title="Select substitution"
@@ -331,8 +333,8 @@
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
-                  </div>
-                  <div class="p-b-8">
+                  </div> -->
+                  <!-- <div class="p-b-8">
                     <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
                       (click)="onAddSubstitution()" translate title="Add new substitution"
                       [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
@@ -348,7 +350,7 @@
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
-                  </div>
+                  </div> -->
                   <!-- <div class="p-b-8 d-flex">
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
@@ -401,20 +403,24 @@
                         </button>
                       </span>
                     </div>
+                  </div>
+                  <div class="p-b-8 d-flex">
                     <div>
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onSampleButton()" translate title="Use sample templates"
-                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        <i c8yIcon="enter-right"></i>
-                      </button>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popSampleTemplates>Use sample templates in the target template.
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popSampleTemplates"
-                          popoverTitle="Use sample templates" placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
+                      <div>
+                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                          (click)="onSampleButton()" translate title="Use sample templates"
+                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                          <i c8yIcon="enter-right"></i>
                         </button>
-                      </span>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popSampleTemplates>Use sample templates in the target template.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popSampleTemplates"
+                            popoverTitle="Use sample templates" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -447,8 +453,19 @@
                 </div>
               </div>
               <div class="row">
+                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                  Substitutions
+                  <span class="hidden-xs hidden-sm m-l-4">
+                    <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
+                      "*".</ng-template>
+                    <button class="btn-clean text-primary" [popover]="popTemplateSub"
+                      popoverTitle="Defined substitutions" placement="right" triggers="focus" type="button">
+                      <i c8yIcon="question-circle-o"></i>
+                    </button>
+                  </span>
+                </div>
                 <div class="col-lg-10 col-lg-offset-1">
-                  <label>
+                  <!-- <label>
                     Defined substitutions
                     <span class="hidden-xs hidden-sm m-l-4">
                       <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
@@ -458,7 +475,7 @@
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
-                  </label>
+                  </label> -->
                   <div style="min-height: 32px;">
                     <mapping-substitution-renderer [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
@@ -480,9 +497,9 @@
               <div>
                 <div class="row">
                   <div class="legend form-block col-lg-10 col-lg-offset-1">
-                    Substitution
+                    New Substitution
                   </div>
-                  <div class="col-lg-5 col-lg-offset-1">
+                  <div class="col-lg-4 col-lg-offset-1">
                     <div class="form-group">
                       <br>
                       <div class="input-group">
@@ -515,7 +532,27 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-lg-5">
+                  <div class="col-lg-2 d-flex d-col a-i-center">
+                    <br>
+                    <div class="p-b-8">
+                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                        (click)="onAddSubstitution()" translate title="Add new substitution"
+                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                        <i c8yIcon="add-new"></i>
+                      </button>
+                      <span class="hidden-xs hidden-sm p-l-4">
+                        <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
+                          templates
+                          have to be selected.
+                        </ng-template>
+                        <button class="btn-clean text-primary" [popover]="popTemplateAdd"
+                          popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-lg-4">
                     <div class="input-group">
                       <label class="m-r-4" translate>Repair strategy</label>
                       <span class="hidden-xs hidden-sm">
