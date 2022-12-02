@@ -465,18 +465,29 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  public onDeleteSubstitutions() {
+  public onDeleteAllSubstitution() {
     this.mapping.substitutions = [];
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
 
     console.log("Cleared substitutions!");
   }
 
-  public onDeleteSubstitution() {
-    console.log("Delete marked substitution", this.selectedSubstitution);
+  public onDeleteSelectedSubstitution() {
+    console.log("Delete selected substitution", this.selectedSubstitution);
     if (this.selectedSubstitution < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(this.selectedSubstitution, 1);
       this.selectedSubstitution = -1;
+    }
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    console.log("Deleted substitution", this.mapping.substitutions.length);
+
+  }
+
+  public onDeleteSubstitution(selected: number){
+    console.log("Delete selected substitution", selected);
+    if (selected < this.mapping.substitutions.length) {
+      this.mapping.substitutions.splice(selected, 1);
+      selected = -1;
     }
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
     console.log("Deleted substitution", this.mapping.substitutions.length);

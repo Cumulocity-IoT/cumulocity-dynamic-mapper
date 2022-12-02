@@ -54,7 +54,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: 'mqtt-mapping/testing',
         priority: 900,
-        label: 'Testing Devices',
+        label: 'Test Devices',
         icon: 'reflector-bulb',
         orientation: 'horizontal',
       } as Tab);
