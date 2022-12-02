@@ -45,7 +45,7 @@
     <parent>
         <groupId>com.softwareag.c8y.mqtt</groupId>
         <artifactId>mqtt-mapping-solution</artifactId>
-        <version>1.135</version>
+        <version>1.138</version>
     </parent>
 
     <properties>
