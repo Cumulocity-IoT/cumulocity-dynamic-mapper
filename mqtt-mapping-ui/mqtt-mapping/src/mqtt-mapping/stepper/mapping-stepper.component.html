@@ -274,7 +274,7 @@
                 </div> -->
                 <div class="col-lg-4 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
-                    <label translate>Source</label>
+                    <label translate>Template Source</label>
                     <mapping-json-editor [options]="editorOptionsSource"
                       (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
                       id="editorSource"></mapping-json-editor>
@@ -428,7 +428,7 @@
                 <div class="col-lg-4 vcenter">
                   <div class="form-group">
                     <div class="input-group">
-                      <label>Target</label>
+                      <label>Template Target</label>
                       <span class="hidden-xs hidden-sm m-l-4">
                         <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
                           map

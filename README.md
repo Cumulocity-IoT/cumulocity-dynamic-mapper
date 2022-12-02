@@ -152,7 +152,7 @@ and afterwards "Administration".
 <p align="center">
 <img src="resources/image/Generic_MQTT_DuplicateApp.png" style="width: 40%;" />
 </p>
-<br/>.
+<br/>
 
 Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "MQTT configuration plugin"
 
@@ -389,7 +389,7 @@ In the sample below, e.g. a warning is shown since the required property ```c8y_
 
 
 <p align="center">
-<img src="resources/image/Generic_MQTT_SchemaValidation.png"  style="width: 70%;" />
+<img src="resources/image/Generic_MQTT_MappingTemplate_SchemaValidation_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -479,7 +479,7 @@ In order to use a previously snooped payload click the button
 
 
 <p align="center">
-<img src="resources/image/Generic_MQTT_UseSnoopedPayload.png"  style="width: 70%;" />
+<img src="resources/image/Generic_MQTT_MappingTemplate_Snooping_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -505,7 +505,7 @@ To allow updating an activated mapping it has to be deactivated in the list of a
 When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Generic_MQTT_ProtobufMessage_annotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_MQTT_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
