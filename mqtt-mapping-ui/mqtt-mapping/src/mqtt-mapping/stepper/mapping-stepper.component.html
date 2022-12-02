@@ -352,7 +352,7 @@
                   <div class="p-b-8 d-flex">
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onDeleteSubstitution()" translate title="Delete selected substitution"
+                        (click)="onDeleteSelectedSubstitution()" translate title="Delete selected substitution"
                         [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="negative"></i>
                       </button>
@@ -369,7 +369,7 @@
                     </div>
                     <div>
                       <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onDeleteSubstitutions()" translate title="Delete all substitutions"
+                        (click)="onDeleteAllSubstitution()" translate title="Delete all substitutions"
                         [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
                       </button>
@@ -463,7 +463,7 @@
                     <mapping-substitution-renderer [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
                       [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}"
-                      (onSelect)="onSelectSubstitution($event)">
+                      (onSelect)="onSelectSubstitution($event)" (onDelete)="onDeleteSubstitution($event)">
                     </mapping-substitution-renderer>
                   </div>
                   <c8y-messages class="text-right">

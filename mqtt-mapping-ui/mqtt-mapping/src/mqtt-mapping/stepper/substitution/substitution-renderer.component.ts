@@ -41,6 +41,7 @@ export class SubstitutionRendererComponent implements OnInit {
   setting: any;
 
   @Output() onSelect = new EventEmitter<number>();
+  @Output() onDelete = new EventEmitter<number>();
 
   public id =  Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
@@ -51,7 +52,7 @@ export class SubstitutionRendererComponent implements OnInit {
     console.log ("Setting for renderer:", this.setting)
   }
 
-  onSubstitutionSelected (index: number) {
+  onSubstitutionSelect(index: number) {
     console.log("Selected substitution:", index);
     this.setting.selectedSubstitutionIndex = index;
     this.onSelect.emit(index);
@@ -64,5 +65,11 @@ export class SubstitutionRendererComponent implements OnInit {
     }
     console.log ("Scroll to:", i);
     this.elementRef.nativeElement.querySelector(`#sub-${this.id}-${i}` ).scrollIntoView();
+  }
+
+  public onSubstitutionDelete( index: number) {
+    console.log("Delete substitution:", index);
+    this.setting.selectedSubstitutionIndex = index;
+    this.onDelete.emit(index);
   }
 }
