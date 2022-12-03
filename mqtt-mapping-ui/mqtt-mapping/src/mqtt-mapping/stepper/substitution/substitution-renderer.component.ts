@@ -20,7 +20,9 @@
  */
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { definesDeviceIdentifier } from '../../../shared/util';
-import { Mapping, MappingSubstitution } from '../../../shared/mapping.model';
+import { MappingSubstitution } from '../../../shared/mapping.model';
+import { isDisabled } from '../util';
+import { EditorMode } from '../stepper-model';
 
 
 @Component({
@@ -38,23 +40,25 @@ export class SubstitutionRendererComponent implements OnInit {
   @Input()
   targetAPI: string;
   @Input()
-  setting: any;
+  settings: any;
 
   @Output() onSelect = new EventEmitter<number>();
   @Output() onDelete = new EventEmitter<number>();
 
   public id =  Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
+  isDisabled = isDisabled;
+  EditorMode = EditorMode;
 
   constructor(  private elementRef: ElementRef,) { }
 
   ngOnInit() {
-    console.log ("Setting for renderer:", this.setting)
+    //console.log ("Setting for renderer:", this.setting)
   }
 
   onSubstitutionSelect(index: number) {
     console.log("Selected substitution:", index);
-    this.setting.selectedSubstitutionIndex = index;
+    this.settings.selectedSubstitutionIndex = index;
     this.onSelect.emit(index);
   }
 
@@ -69,7 +73,7 @@ export class SubstitutionRendererComponent implements OnInit {
 
   public onSubstitutionDelete( index: number) {
     console.log("Delete substitution:", index);
-    this.setting.selectedSubstitutionIndex = index;
+    this.settings.selectedSubstitutionIndex = index;
     this.onDelete.emit(index);
   }
 }
