@@ -272,9 +272,28 @@
                 <!-- <div class="legend form-block col-lg-10 col-lg-offset-1">
                   Templates
                 </div> -->
-                <div class="col-lg-4 col-lg-offset-1">
+                <div class="col-lg-5 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
-                    <label translate>Template Source</label>
+                    <div class="d-flex j-c-between">
+                      <label translate>Template Source</label>
+                      <div>
+                        <button type="button" name="sample" class="btn btn-default btn-xs" 
+                          (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
+                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                          <i c8yIcon="enter-left"></i>Snooped Templates
+                          <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
+                            {{mapping.snoopedTemplates.length}}</span>
+                        </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popSnoopedTemplates>Use snooped templates in the source template.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popSnoopedTemplates"
+                            popoverTitle="Use snooped templates" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                    </div>
                     <mapping-json-editor [options]="editorOptionsSource"
                       (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
                       id="editorSource"></mapping-json-editor>
@@ -315,102 +334,27 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-lg-2 d-flex d-col a-i-center">
-                  <br>
-                  <br>
-                  <!-- <label translate>Manage Substitutions</label>
-                  <div class="p-b-8">
-                    <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px"
-                      (click)="onNextSubstitution()" translate title="Select substitution"
-                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource)">
-                      <i c8yIcon="skip"></i>
-                    </button>
-                    <span class="hidden-xs hidden-sm p-l-4">
-                      <ng-template #popTemplateSelect>Select defined substitutions in templates.
-                      </ng-template>
-                      <button class="btn-clean text-primary" [popover]="popTemplateSelect" popoverTitle="Select"
-                        placement="right" triggers="focus" type="button">
-                        <i c8yIcon="question-circle-o"></i>
-                      </button>
-                    </span>
-                  </div> -->
-                  <!-- <div class="p-b-8">
-                    <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                      (click)="onAddSubstitution()" translate title="Add new substitution"
-                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                      <i c8yIcon="add-new"></i>
-                    </button>
-                    <span class="hidden-xs hidden-sm p-l-4">
-                      <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
-                        templates
-                        have to be selected.
-                      </ng-template>
-                      <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                        popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
-                        <i c8yIcon="question-circle-o"></i>
-                      </button>
-                    </span>
-                  </div> -->
-                  <!-- <div class="p-b-8 d-flex">
-                    <div>
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onDeleteSelectedSubstitution()" translate title="Delete selected substitution"
-                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        <i c8yIcon="negative"></i>
-                      </button>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popTemplateDelete><span>Delete selected substitution.
-                            Before substitution has to be
-                            selected with the "Skip-Button".</span>
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popTemplateDelete" popoverTitle="Delete"
-                          placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div> 
-                    <div>
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onDeleteAllSubstitution()" translate title="Delete all substitutions"
-                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        <i c8yIcon="negative"></i><i c8yIcon="negative"></i>
-                      </button>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popTemplateDeleteAll>Delete all substitutions.
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popTemplateDeleteAll"
-                          popoverTitle="Delete All" placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                  </div> -->
-                  <div class="p-b-8 d-flex">
-                    <div>
-                      <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
-                        (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
-                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
-                          {{mapping.snoopedTemplates.length}}</span>
-                        <i c8yIcon="enter-left"></i>
-                      </button>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popSnoopedTemplates>Use snooped templates in the source template.
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popSnoopedTemplates"
-                          popoverTitle="Use snooped templates" placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-b-8 d-flex">
-                    <div>
+                <div class="col-lg-5 vcenter">
+                  <div class="form-group">
+                    <div class="d-flex j-c-between">
+                      <div class="d-flex">
+                        <label>Template Target</label>
+                        <span class="hidden-xs hidden-sm m-l-4">
+                          <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
+                            map
+                            device identifiers.</ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateTarget"
+                            popoverTitle='Use dummy field "_DEVICE_IDENT_"' placement="right" triggers="focus"
+                            type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
                       <div>
-                        <button type="button" name="sample" class="btn btn-primary" style="min-width: 65px;"
+                        <button type="button" name="sample" class="btn btn-default btn-xs" style="min-width: 65px;"
                           (click)="onSampleButton()" translate title="Use sample templates"
                           [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                          <i c8yIcon="enter-right"></i>
+                          <i c8yIcon="enter-right"></i>Cumulocity Templates
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
                           <ng-template #popSampleTemplates>Use sample templates in the target template.
@@ -421,24 +365,6 @@
                           </button>
                         </span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-lg-4 vcenter">
-                  <div class="form-group">
-                    <div class="input-group">
-                      <label>Template Target</label>
-                      <span class="hidden-xs hidden-sm m-l-4">
-                        <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
-                          map
-                          device identifiers.</ng-template>
-                        <button class="btn-clean text-primary" [popover]="popTemplateTarget"
-                          popoverTitle='Use dummy field "_DEVICE_IDENT_"' placement="right" triggers="focus"
-                          type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
                     </div>
                     <mapping-json-editor [options]="editorOptionsTarget"
                       (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
@@ -465,17 +391,6 @@
                   </span>
                 </div>
                 <div class="col-lg-10 col-lg-offset-1">
-                  <!-- <label>
-                    Defined substitutions
-                    <span class="hidden-xs hidden-sm m-l-4">
-                      <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
-                        "*".</ng-template>
-                      <button class="btn-clean text-primary" [popover]="popTemplateSub"
-                        popoverTitle="Defined substitutions" placement="right" triggers="focus" type="button">
-                        <i c8yIcon="question-circle-o"></i>
-                      </button>
-                    </span>
-                  </label> -->
                   <div style="min-height: 32px;">
                     <mapping-substitution-renderer [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
@@ -502,7 +417,7 @@
                   <div class="col-lg-3  col-lg-offset-1">
                     <br>
                     <div class="p-b-8">
-                      <button type="button" name="sample" class="btn btn-primary" (click)="onAddSubstitution()"
+                      <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitution()"
                         translate title="Add new substitution"
                         [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         <i c8yIcon="add-new"></i> Add Substitution
