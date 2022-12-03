@@ -41,8 +41,8 @@
     <div class="d-flex">
       <div class="flex-grow text-truncate">
         <div class="text-truncate">
-          <span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-            ' -> ' + sub.pathTarget + ' ]'}}</span>
+          <span *ngIf="!sub.registeredType" class="text-12">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
+            ' -> ' + sub.pathTarget + ' ]'}} </span>
         </div>
       </div>
 
