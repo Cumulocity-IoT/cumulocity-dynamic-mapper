@@ -454,7 +454,7 @@
               </div>
               <div class="row">
                 <div class="legend form-block col-lg-10 col-lg-offset-1">
-                  Substitutions
+                  Defined Substitutions
                   <span class="hidden-xs hidden-sm m-l-4">
                     <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
                       "*".</ng-template>
@@ -479,7 +479,7 @@
                   <div style="min-height: 32px;">
                     <mapping-substitution-renderer [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
-                      [setting]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution}"
+                      [settings]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution, editorMode: stepperConfiguration.editorMode}"
                       (onSelect)="onSelectSubstitution($event)" (onDelete)="onDeleteSubstitution($event)">
                     </mapping-substitution-renderer>
                   </div>
