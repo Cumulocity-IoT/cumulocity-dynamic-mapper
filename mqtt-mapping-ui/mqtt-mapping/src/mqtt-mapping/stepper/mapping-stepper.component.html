@@ -277,7 +277,7 @@
                     <div class="d-flex j-c-between">
                       <label translate>Template Source</label>
                       <div>
-                        <button type="button" name="sample" class="btn btn-default btn-xs" 
+                        <button type="button" name="sample" class="btn btn-default btn-xs"
                           (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
                           [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                           <i c8yIcon="enter-left"></i>Snooped Templates
@@ -334,7 +334,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-lg-5 vcenter">
+                <div class="col-lg-5">
                   <div class="form-group">
                     <div class="d-flex j-c-between">
                       <div class="d-flex">
@@ -409,82 +409,58 @@
                 </div>
               </div>
 
-              <div>
-                <div class="row">
-                  <div class="legend form-block col-lg-10 col-lg-offset-1">
-                    Add New Substitution
-                  </div>
-                  <div class="col-lg-3  col-lg-offset-1">
-                    <br>
-                    <div class="p-b-8">
-                      <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitution()"
-                        translate title="Add new substitution"
-                        [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        <i c8yIcon="add-new"></i> Add Substitution
-                      </button>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
-                          templates
-                          have to be selected.
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                          popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-                  <div class="col-lg-2">
-                    <div class="form-group">
-                      <br>
-                      <div class="input-group">
-                        <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
-                          <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray"
-                            [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
-                          <span></span>
-                          <span>
-                            {{ 'Expand Array' | translate }}
-                          </span>
-                        </label>
-                        <span class="hidden-xs hidden-sm">
-                          <ng-template #popExpandArray>Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
-                            substitutions.</ng-template>
-                          <button class="btn-clean text-primary" [popover]="popExpandArray" popoverTitle="Expand Array"
-                            placement="top" triggers="focus" type="button">
-                            <i c8yIcon="question-circle-o"></i>
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-lg-5">
-                    <div class="input-group">
-                      <label class="m-r-4" translate>Repair strategy</label>
-                      <span class="hidden-xs hidden-sm">
-                        <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays
-                          in
-                          different expressions do not have the same size. How are missing values handled?
-                        </ng-template>
-                        <button class="btn-clean text-primary" [popover]="popRepairStrategy"
-                          popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                    <div class="c8y-select-wrapper">
-                      <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
-                        #repairStrategyRef>
-                        <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
-                          stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                          {{ RepairStrategy[q] }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <c8y-messages>
+                    <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
+                        class="text-warning">{{sourceExpression.errorMsg}}</span>
+                    </c8y-message>
+                    <c8y-message *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
+                      translate><span class="text-warning">Current expression extracts an array. Consider to
+                        use the option <code>Expand Array</code> if you want to create multiple
+                        measurements,
+                        alarms, events or devices, i.e. <code>multi-device</code> or
+                        <code>multi-value</code></span>
+                    </c8y-message>
+                  </c8y-messages>
                 </div>
-                <div class="row">
-                  <div class="col-lg-5 col-lg-offset-1">
-                    <div class="form-group">
+                <div class="col-lg-5">
+                  <c8y-messages>
+                    <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
+                        class="text-warning">{{targetExpression.errorMsg}}</span>
+                    </c8y-message>
+                    <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate>
+                      <span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
+                        is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
+                        previous step.</span>
+                    </c8y-message>
+                  </c8y-messages>
+                </div>
+              </div>
+              <c8y-messages>
+                <c8y-message
+                  *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
+                  translate><span class="text-warning">Only one substitution defining the
+                    DeviceIdentifier can be used.</span>
+                </c8y-message>
+                <c8y-message
+                  *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
+                  translate><span class="text-warning">Excactly one substitution defining the
+                    DeviceIdentifier must be used.</span>
+                </c8y-message>
+              </c8y-messages>
+              <div class="row">
+              </div>
+
+              <div class="row p-b-4">
+                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                  New substitution
+                </div>
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="d-flex">
+                    <c8y-li-icon icon="replace"></c8y-li-icon>
+                    <!-- <div style="width:56px"></div> -->
+                    <div class="flex-grow">
                       <div class="input-group">
                         <label translate>Evaluate Expression on Source
                         </label>
@@ -514,65 +490,260 @@
                       </div>
                       <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
                         formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
-                        placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
-                      <c8y-messages>
-                        <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
-                            class="text-warning">{{sourceExpressionErrorMsg}}</span>
-                        </c8y-message>
-                        <c8y-message *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
-                          translate><span class="text-warning">Current expression extracts an array. Consider to
-                            use the option <code>Expand Array</code> if you want to create multiple
-                            measurements,
-                            alarms, events or devices, i.e. <code>multi-device</code> or
-                            <code>multi-value</code></span>
-                        </c8y-message>
-                      </c8y-messages>
-                    </div>
-                  </div>
-                  <div class="col-lg-0">
-                  </div>
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <label translate>Substitute in Target</label>
-                      <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                        formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
-                      <c8y-messages>
-                        <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
-                            class="text-warning">{{targetExpressionErrorMsg}}</span>
-                        </c8y-message>
-                        <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate>
-                          <span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
-                            is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
-                            previous step.</span>
-                        </c8y-message>
-                      </c8y-messages>
+                        placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10"
+                        title="Use JSONata">
                     </div>
                   </div>
                 </div>
-                <div class="row">
-                  <div class="col-lg-5 col-lg-offset-1">
-                    <div class="form-group">
-                      <div class="input-group">
-                        <label translate>Expression - result -&nbsp;</label>
-                        <span class="text-muted">{{sourceExpression.resultType}}</span>
-                      </div>
+                <div class="col-lg-5 d-flex">
+                  <div class="flex-grow">
+                    <label translate>Substitute in Target</label>
+                    <input #pathTargetRef type="text" class="text-monospace form-control font-smaller"
+                      formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
+                  </div>
+                  <!-- <div style="width:50px"></div> -->
+                  <div class="p-t-24 p-r-16">
+                    <button title="{{ 'Add' | translate }}" class="btn btn-icon btn-clean" (click)="onAddSubstitution()"
+                      [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                      <i c8yIcon="plus-circle" class="text-success"></i>
+                      <span class="sr-only" translate>Add</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="d-flex">
+
+                    <div class="flex-grow">
                       <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                         formControlName="sourceExpressionResult" [ngModel]="sourceExpression.result" readonly
                         disabled="true" />
                     </div>
                   </div>
-                  <div class="col-lg-0">
+                </div>
+                <div class="col-lg-5 d-flex">
+                  <div class="flex-grow">
+                    <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                      style="padding-right: 15px" formControlName="targetExpressionResult"
+                      [ngModel]="targetExpression.result" readonly disabled="true" />
                   </div>
-                  <div class="col-lg-5">
-                    <div class="form-group">
-                      <div class="input-group">
-                        <label translate>Expression - result -&nbsp;</label>
-                        <span class="text-muted">{{targetExpression.resultType}}</span>
-                      </div>
-                      <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                        formControlName="targetExpressionResult" [ngModel]="targetExpression.result" readonly
-                        disabled="true" />
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <!-- <div class="form-group" style="margin-left: 44px"> -->
+                  <div class="form-group">
+                    <br>
+                    <div class="input-group">
+                      <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
+                        <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray"
+                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
+                        <span></span>
+                        <span>
+                          {{ 'Expand Array' | translate }}
+                        </span>
+                      </label>
+                      <span class="hidden-xs hidden-sm">
+                        <ng-template #popExpandArray>Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+                          substitutions.</ng-template>
+                        <button class="btn-clean text-primary" [popover]="popExpandArray" popoverTitle="Expand Array"
+                          placement="top" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
                     </div>
+                  </div>
+                </div>
+                <div class="col-lg-5">
+                  <div class="input-group">
+                    <label class="m-r-4" translate>Repair strategy</label>
+                    <span class="hidden-xs hidden-sm">
+                      <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays
+                        in
+                        different expressions do not have the same size. How are missing values handled?
+                      </ng-template>
+                      <button class="btn-clean text-primary" [popover]="popRepairStrategy"
+                        popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
+                        <i c8yIcon="question-circle-o"></i>
+                      </button>
+                    </span>
+                  </div>
+                  <div class="c8y-select-wrapper" style="">
+                    <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
+                      #repairStrategyRef>
+                      <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
+                          stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                        {{ RepairStrategy[q] }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- <div class="row">
+                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                  Add New Substitution
+                </div>
+                <div class="col-lg-3  col-lg-offset-1">
+                  <br>
+                  <div class="p-b-8">
+                    <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitution()" translate
+                      title="Add new substitution"
+                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                      <i c8yIcon="add-new"></i>Add Substitution
+                    </button>
+                    <span class="hidden-xs hidden-sm p-l-4">
+                      <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
+                        templates
+                        have to be selected.
+                      </ng-template>
+                      <button class="btn-clean text-primary" [popover]="popTemplateAdd"
+                        popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
+                        <i c8yIcon="question-circle-o"></i>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+                <div class="col-lg-2">
+                  <div class="form-group">
+                    <br>
+                    <div class="input-group">
+                      <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
+                        <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray"
+                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
+                        <span></span>
+                        <span>
+                          {{ 'Expand Array' | translate }}
+                        </span>
+                      </label>
+                      <span class="hidden-xs hidden-sm">
+                        <ng-template #popExpandArray>Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+                          substitutions.</ng-template>
+                        <button class="btn-clean text-primary" [popover]="popExpandArray" popoverTitle="Expand Array"
+                          placement="top" triggers="focus" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-5">
+                  <div class="input-group">
+                    <label class="m-r-4" translate>Repair strategy</label>
+                    <span class="hidden-xs hidden-sm">
+                      <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays
+                        in
+                        different expressions do not have the same size. How are missing values handled?
+                      </ng-template>
+                      <button class="btn-clean text-primary" [popover]="popRepairStrategy"
+                        popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
+                        <i c8yIcon="question-circle-o"></i>
+                      </button>
+                    </span>
+                  </div>
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
+                      #repairStrategyRef>
+                      <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
+                          stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                        {{ RepairStrategy[q] }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="form-group">
+                    <div class="input-group">
+                      <label translate>Evaluate Expression on Source
+                      </label>
+                      <span class="hidden-xs hidden-sm p-l-4">
+                        <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+                          in your expressions:
+                          <ol>
+                            <li>to convert a UNIX timestamp to ISO date format use:
+                              <code>$fromMillis($number(deviceTimestamp))</code>
+                            </li>
+                            <li>to join substring starting at position 5 of property <code>txt</code> with
+                              device
+                              identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                            <li>escape properties with special characters with <code>`</code>. The property
+                              <code>customer-1</code> becomes <code>`customer-1`</code>
+                            </li>
+                            <li>function chaining using <code>~></code> is not supported, instead use function
+                              notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+                          </ol>
+                        </ng-template>
+                        <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
+                          popoverTitle="JSONata" placement="right" type="button">
+                          <i c8yIcon="question-circle-o"></i>
+                        </button>
+                      </span>
+                    </div>
+                    <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
+                      formControlName="ps" [(ngModel)]="currentSubstitution.pathSource"
+                      placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
+                    <c8y-messages>
+                      <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
+                          class="text-warning">{{sourceExpressionErrorMsg}}</span>
+                      </c8y-message>
+                      <c8y-message *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
+                        translate><span class="text-warning">Current expression extracts an array. Consider to
+                          use the option <code>Expand Array</code> if you want to create multiple
+                          measurements,
+                          alarms, events or devices, i.e. <code>multi-device</code> or
+                          <code>multi-value</code></span>
+                      </c8y-message>
+                    </c8y-messages>
+                  </div>
+                </div>
+                <div class="col-lg-0">
+                </div>
+                <div class="col-lg-5">
+                  <div class="form-group">
+                    <label translate>Substitute in Target</label>
+                    <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
+                      formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
+                    <c8y-messages>
+                      <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
+                          class="text-warning">{{targetExpressionErrorMsg}}</span>
+                      </c8y-message>
+                      <c8y-message *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution)" translate>
+                        <span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
+                          is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
+                          previous step.</span>
+                      </c8y-message>
+                    </c8y-messages>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="form-group">
+                    <div class="input-group">
+                      <label translate>Expression - result -&nbsp;</label>
+                      <span class="text-muted">{{sourceExpression.resultType}}</span>
+                    </div>
+                    <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                      formControlName="sourceExpressionResult" [ngModel]="sourceExpression.result" readonly
+                      disabled="true" />
+                  </div>
+                </div>
+                <div class="col-lg-0">
+                </div>
+                <div class="col-lg-5">
+                  <div class="form-group">
+                    <div class="input-group">
+                      <label translate>Expression - result -&nbsp;</label>
+                      <span class="text-muted">{{targetExpression.resultType}}</span>
+                    </div>
+                    <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
+                      formControlName="targetExpressionResult" [ngModel]="targetExpression.result" readonly
+                      disabled="true" />
                   </div>
                 </div>
               </div>
@@ -588,7 +759,7 @@
                   translate><span class="text-warning">Excactly one substitution defining the
                     DeviceIdentifier must be used.</span>
                 </c8y-message>
-              </c8y-messages>
+              </c8y-messages> -->
             </div>
           </div>
         </div>
