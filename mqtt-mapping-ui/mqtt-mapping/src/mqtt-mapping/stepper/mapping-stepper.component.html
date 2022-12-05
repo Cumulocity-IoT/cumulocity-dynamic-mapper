@@ -452,6 +452,7 @@
               <div class="row">
               </div>
 
+
               <div class="row p-b-4">
                 <div class="legend form-block col-lg-10 col-lg-offset-1">
                   New substitution
@@ -459,11 +460,11 @@
                 <div class="col-lg-5 col-lg-offset-1">
                   <div class="d-flex">
                     <c8y-li-icon icon="replace"></c8y-li-icon>
-                    <!-- <div style="width:56px"></div> -->
                     <div class="flex-grow">
                       <div class="input-group">
-                        <label translate>Evaluate Expression on Source
+                        <label translate>Evaluate Expression on Source -&nbsp;
                         </label>
+                        <span class="text-muted">{{sourceExpression.resultType}}</span>
                         <span class="hidden-xs hidden-sm p-l-4">
                           <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
                             in your expressions:
@@ -497,11 +498,11 @@
                 </div>
                 <div class="col-lg-5 d-flex">
                   <div class="flex-grow">
-                    <label translate>Substitute in Target</label>
+                    <label translate>Substitute in Target -&nbsp;</label>
+                    <span class="text-muted">{{targetExpression.resultType}}</span>
                     <input #pathTargetRef type="text" class="text-monospace form-control font-smaller"
                       formControlName="pt" [(ngModel)]="currentSubstitution.pathTarget" />
                   </div>
-                  <!-- <div style="width:50px"></div> -->
                   <div class="p-t-24 p-r-16">
                     <button title="{{ 'Add' | translate }}" class="btn btn-icon btn-clean" (click)="onAddSubstitution()"
                       [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
