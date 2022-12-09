@@ -151,7 +151,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                         }
                     } catch (Exception e) {
                         log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
-                        e.printStackTrace();
+                        log.debug("Message Stacktrace:", e);
                         mappingStatus.errors++;
                     }
                 } else {
@@ -212,7 +212,8 @@ public class AsynchronousDispatcher implements MqttCallback {
                 try {
                     resolvedMappings = mqttClient.resolveMappings(topic);
                 } catch (Exception e) {
-                    log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!", e);
+                    log.warn("Error resolving appropriate map for topic \""+topic+"\". Could NOT be parsed. Ignoring this message!");
+                    log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
             } else {
@@ -233,7 +234,8 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     @Override
     public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT broker: ", throwable);
+        log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
+        log.debug("Stacktrace: ", throwable);
         c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
         mqttClient.submitConnect();
     }

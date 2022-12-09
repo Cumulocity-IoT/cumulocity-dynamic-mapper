@@ -214,7 +214,8 @@ public class MQTTClient {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
-                        log.error("Error on reconnect: ", e);
+                        log.error("Error on reconnect: {}", e.getMessage());
+                        log.debug("Stacktrace:", e);
                     }
                 }
                 try {
@@ -266,7 +267,7 @@ public class MQTTClient {
                                 connOpts.setSocketFactory(sslSocketFactory);
                             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                                     | KeyManagementException e) {
-                                log.error("Exception when configuraing socketFactory for TLS!", e);
+                                log.error("Exception when configuring socketFactory for TLS!", e);
                                 throw new Exception(e);
                             }
                         }
@@ -278,7 +279,8 @@ public class MQTTClient {
 
                     }
                 } catch (MqttException e) {
-                    log.error("Error on reconnect: ", e);
+                    log.error("Error on reconnect: {}", e.getMessage());
+                    log.debug("Stacktrace:", e);
                 }
                 firstRun = false;
             }
@@ -296,7 +298,8 @@ public class MQTTClient {
                 rebuildMappingCache();
                 successful = true;
             } catch (MqttException e) {
-                log.error("Error on reconnect, retrying ... ", e);
+                log.error("Error on reconnect, retrying ... {]", e.getMessage());
+                log.debug("Stacktrace:", e);
                 successful = false;
 
             }

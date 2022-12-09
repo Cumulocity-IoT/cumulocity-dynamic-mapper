@@ -25,7 +25,7 @@
 
     <groupId>com.softwareag.c8y.mqtt</groupId>
     <artifactId>mqtt-mapping-solution</artifactId>
-    <version>1.138</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -36,14 +36,11 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <revision>.139</revision>
         <c8y.version>1014.134.0</c8y.version>
         <lombok.version>1.18.24</lombok.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <interface.version>1.138</interface.version>
-        <service.version>1.138</service.version>
-        <extension.version>1.138</extension.version>
-        <solution.version>1.138</solution.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot-dependencies.version>2.5.14</spring-boot-dependencies.version>
     </properties>
