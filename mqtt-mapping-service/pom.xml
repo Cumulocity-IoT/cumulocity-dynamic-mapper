@@ -48,7 +48,7 @@
             <dependency>
                 <groupId>com.softwareag.c8y.mqtt</groupId>
                 <artifactId>mqtt-mapping-interface</artifactId>
-                <version>${interface.version}</version>
+                <version>${revision}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
