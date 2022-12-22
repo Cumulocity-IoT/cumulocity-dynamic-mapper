@@ -51,43 +51,4 @@ json-editor > div {
 
 .column-left-border {
   border-left: 1px solid; border-color: var(--legend-color, var(--component-legend-color, var(--root-component-legend-color, var(--gray-5, #677680))));
-}
-
-/* 
-.c8y-list__item {
-  display: block;
-  background: var(--component-background, var(--root-component-background, white));
-  color: var(--component-color, var(--root-component-color, var(--gray-text, #333333)));
-  fill: var(--component-color, var(--root-component-color, var(--gray-text, #333333)));
-  --hr-border: var(--component-border, var(--root-component-border, rgba(0, 0, 0, 0.05)));
-  --label-text-color: var(--component-label-color, var(--root-component-label-color, var(--gray-text, #333333)));
-  --legend-text-color: var(--component-legend-color, var(--root-component-legend-color, var(--gray-5, #677680)));
-  --link-color: var(--component-link-color, var(--root-component-link-color, var(--link-color, var(--brand-primary, #1776BF))));
-  --link-color-hover: var(--component-link-color-hover, var(--root-component-link-color-hover, var(--link-color-hover, var(--brand-primary, #1776BF))));
-  transition: padding 0.25s ease;
-  box-shadow: inset 0 -1px 0 0 var(--component-border, var(--root-component-border, rgba(0, 0, 0, 0.05)));
-}
-
-.c8y-list__item__block {
-  display: flex;
-  flex-flow: row nowrap;
-  align-items: flex-start;
-}
-
-.c8y-list__item__icon, .c8y-list__item__check, .c8y-list__item__appicon, .c8y-list__item__radio, .c8y-list__item__colorpicker {
-  padding: 7px calc(var(--component-padding, var(--root-component-padding, 16)) * 1px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 40px;
-}
-
-.c8y-list__item__body:last-child {
-  padding-right: calc(var(--component-padding, var(--root-component-padding, 16)) * 1px);
-}
-
-.text-truncate-wrap {
-  display: block;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-} */
+} 
