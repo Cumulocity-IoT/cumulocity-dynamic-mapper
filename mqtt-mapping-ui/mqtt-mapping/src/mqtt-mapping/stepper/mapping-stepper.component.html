@@ -472,7 +472,7 @@
               </div>
               <div class="row">
                 <div class="legend form-block col-lg-10 col-lg-offset-1">
-                  Add New or Details of current Substitution
+                  Add new or show details of current substitution
                 </div>
               </div>
               <div class="row">
@@ -546,18 +546,23 @@
                 </div>
                 <div class="col-lg-1"></div>
               </div>
-              <c8y-messages>
-                <c8y-message
-                  *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
-                  translate><span class="text-warning">Only one substitution defining the
-                    DeviceIdentifier can be used.</span>
-                </c8y-message>
-                <c8y-message
-                  *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
-                  translate><span class="text-warning">Excactly one substitution defining the
-                    DeviceIdentifier must be used.</span>
-                </c8y-message>
-              </c8y-messages>
+              <div class="row">
+
+                <div class="col-lg-offset-1">
+                  <c8y-messages>
+                    <c8y-message
+                      *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
+                      translate><span class="text-warning">Only one substitution defining the
+                        DeviceIdentifier can be used.</span>
+                    </c8y-message>
+                    <c8y-message
+                      *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
+                      translate><span class="text-warning">Excactly one substitution defining the
+                        DeviceIdentifier must be used.</span>
+                    </c8y-message>
+                  </c8y-messages>
+                </div>
+              </div>
 
               <div class="row">
                 <div class="legend form-block col-lg-10 col-lg-offset-1">
