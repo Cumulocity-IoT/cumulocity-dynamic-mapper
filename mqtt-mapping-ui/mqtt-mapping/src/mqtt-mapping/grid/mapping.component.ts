@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardService } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardModalService, WizardService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
@@ -161,7 +161,7 @@ export class MappingComponent implements OnInit {
     public mappingService: MappingService,
     public configurationService: BrokerConfigurationService,
     public alertService: AlertService,
-    private wizardService: WizardService,
+    private wizardModalService: WizardModalService,
   ) { }
 
   ngOnInit() {
@@ -204,7 +204,7 @@ export class MappingComponent implements OnInit {
     };
 
     const modalOptions: ModalOptions = { initialState } as any;
-    const modalRef = this.wizardService.show(modalOptions);
+    const modalRef = this.wizardModalService.show(modalOptions);
     modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
       console.log("Was selected:", result);
       this.mappingType = result;

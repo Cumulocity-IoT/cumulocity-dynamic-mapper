@@ -21,7 +21,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { IManagedObject, IResultList } from '@c8y/client';
-import { WizardService, WizardConfig } from '@c8y/ngx-components';
+import { WizardService, WizardConfig, WizardModalService } from '@c8y/ngx-components';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
 import { ExtensionService } from './extension.service';
@@ -51,7 +51,7 @@ export class ExtensionComponent implements OnInit {
   listClass: string;
 
   constructor(
-    private wizardService: WizardService,
+    private wizardModalService: WizardModalService,
     private extensionService: ExtensionService,
     private configurationService: BrokerConfigurationService
   ) { }
@@ -86,7 +86,7 @@ export class ExtensionComponent implements OnInit {
 
     const modalOptions: ModalOptions = { initialState };
 
-    const modalRef = this.wizardService.show(modalOptions);
+    const modalRef = this.wizardModalService.show(modalOptions);
     modalRef.content.onClose.subscribe(() => {
       this.loadExtensions();
     });
