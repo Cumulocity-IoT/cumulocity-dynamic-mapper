@@ -1,5 +1,5 @@
 {
-  "apiVersion":"1",
+  "apiVersion":"v2",
   "version":"@project.version@",
   "provider": {
     "name":"Software AG"
