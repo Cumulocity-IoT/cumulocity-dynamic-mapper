@@ -36,8 +36,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <revision>1.140</revision>
-        <c8y.version>1014.134.0</c8y.version>
+        <revision>2.1.0</revision>
+        <c8y.version>1015.0.218</c8y.version>
         <lombok.version>1.18.24</lombok.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
