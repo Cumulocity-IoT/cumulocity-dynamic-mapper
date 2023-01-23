@@ -25,19 +25,33 @@
 </c8y-wizard-header>
 
 <c8y-wizard-body>
-  <p class="p-16 text-medium text-center bg-white separator-bottom sticky-top">
-    {{ bodyHeaderText | translate }}
-  </p>
-  <div class="modal-inner-scroll animated fadeIn">
-    <div class="list-group list-group-links">
-      <button class="list-group-item" title="{{ q.value }}" 
-        *ngFor="let q of MappingType | keyvalue"
-        (click)="onSelect(q.value)">
-        <i [c8yIcon]="'rules m-r-4'"></i>
-        <span>{{q.value}}</span>
-      </button>
-    </div>
-  </div>
+  <c8y-stepper>
+    <cdk-step [stepControl]="formGroupStepOne" label="Direction">
+      <div class="modal-inner-scroll animated fadeIn">
+        <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
+          <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of Direction | keyvalue"
+            (click)="onSelectDirection(q.value)">
+            <i [c8yIcon]="'rules m-r-4'"></i>
+            <span>{{q.value}}</span>
+          </button>
+        </div>
+      </div>
+    </cdk-step>
+    <cdk-step [stepControl]="formGroupStepTwo" label="Mapping Type">
+      <!-- <p class="p-16 text-medium text-center bg-white separator-bottom sticky-top">
+    {{ 'Select mapping type' | translate }}
+  </p> -->
+      <div class="modal-inner-scroll animated fadeIn">
+        <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
+          <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of MappingType | keyvalue"
+            (click)="onSelectMappingType(q.value)">
+            <i [c8yIcon]="'rules m-r-4'"></i>
+            <span>{{q.value}}</span>
+          </button>
+        </div>
+      </div>
+    </cdk-step>
+  </c8y-stepper>
 </c8y-wizard-body>
 <c8y-wizard-footer>
   <button (click)="cancel()" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate type="button">

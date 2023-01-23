@@ -66,6 +66,7 @@ export interface Mapping {
     snoopedTemplates?: string[];
     mappingType: MappingType;
     extension?: ExtensionEntry;
+    direction?: Direction;
     lastUpdate: number;
 }
 
@@ -115,6 +116,11 @@ export enum Status {
     ENABLED = "ACTIVATED",
     CONFIGURED = "CONFIGURED",
     NOT_READY = "NOT_READY"
+}
+
+export enum Direction {
+    INCOMING = "INCOMING",
+    OUTGOING = "OUTGOING"
 }
 
 export const API = {

@@ -26,7 +26,7 @@ import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
-import { API, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
 import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
@@ -125,6 +125,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   ) { }
 
   ngOnInit() {
+    // set value for backward compatiblility
+    if (!this.mapping.direction) this.mapping.direction = Direction.INCOMING;
     console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
@@ -139,8 +141,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       statusBar: false,
       navigationBar: false,
       enableSort: false,
-      enableTransform: false,
-      schema: SCHEMA_PAYLOAD
+      enableTransform: false
     };
 
     this.editorOptionsTarget = {
@@ -158,8 +159,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       statusBar: false,
       navigationBar: false,
       enableSort: false,
-      enableTransform: false,
-      schema: SCHEMA_PAYLOAD
+      enableTransform: false
     };
     this.onExpressionsUpdated();
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
@@ -335,7 +335,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length) {
       this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
       this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
-      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI), null);
+      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI, this.mapping.direction, true), null);
       this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error
     } else {
       this.templateTestingRequest = JSON.parse("{}");
@@ -369,7 +369,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
-      this.editorTarget.setSchema(getSchema(this.mapping.targetAPI), null);
+      // set schema for editors
+      this.editorTarget.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
+      this.editorSource.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, false), null);
+      this.editorTestingRequest.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
+      this.editorTestingResponse.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
       this.extensions = await this.configurationService.getProcessorExtensions() as any;
       if (this.mapping?.extension?.name) {
         this.extensionEvents$.next(Object.keys(this.extensions[this.mapping?.extension?.name].extensionEntries));
@@ -424,7 +428,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
     if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
       this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-      console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI));
+      console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI, this.mapping.direction, true));
     } else {
       this.templateTarget = JSON.parse(this.mapping.target);
     }

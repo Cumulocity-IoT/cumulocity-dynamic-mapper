@@ -18,15 +18,21 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { WizardComponent } from '@c8y/ngx-components';
-import { MappingType } from '../../shared/mapping.model';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { C8yStepper, WizardComponent } from '@c8y/ngx-components';
+import { Direction, MappingType } from '../../shared/mapping.model';
 
 @Component({
   selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
 })
 export class MappingTypeComponent implements OnInit {
+  formGroupStepOne: FormGroup;
+  formGroupStepTwo: FormGroup;
+
+  @ViewChild(C8yStepper, { static: true })
+  stepper: C8yStepper;
 
   headerText: string;
   headerIcon: string;
@@ -35,25 +41,43 @@ export class MappingTypeComponent implements OnInit {
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
-  mappingType: MappingType;
+  Direction = Direction;
+  result = {  
+    mappingType: MappingType.JSON,
+    direction: Direction.INCOMING
+  }
 
-  constructor(
-    private wizardComponent: WizardComponent
-  ) {}
+  constructor (private wizardComponent: WizardComponent, private fb: FormBuilder) {}
 
   ngOnInit(): void {
     this.headerText = this.wizardComponent.wizardConfig.headerText;
     this.headerIcon = this.wizardComponent.wizardConfig.headerIcon;
-    this.bodyHeaderText = this.wizardComponent.wizardConfig.bodyHeaderText;
+    this.formGroupStepOne = this.fb.group({
+      direction: ['', Validators.required]
+    });
+    this.formGroupStepTwo = this.fb.group({
+      mappingType: ['', Validators.required]
+    });
+
   }
+  back() {
+    this.wizardComponent.reset();
+  }
+
   cancel() {
     this.wizardComponent.close();
   }
+
   done() {
-    this.wizardComponent.close(this.mappingType);
+    this.wizardComponent.close(this.result);
   }
-  onSelect(t){
-    this.mappingType = t;
-    this.wizardComponent.close(this.mappingType);
+
+  onSelectDirection(t){
+    this.result.direction = t;
+  }
+
+  onSelectMappingType(t){
+    this.result.mappingType = t;
+    this.wizardComponent.close(this.result);
   }
 }
