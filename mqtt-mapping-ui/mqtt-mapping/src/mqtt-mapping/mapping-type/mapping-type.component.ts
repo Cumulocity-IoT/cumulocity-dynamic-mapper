@@ -47,9 +47,12 @@ export class MappingTypeComponent implements OnInit {
     direction: Direction.INCOMING
   }
 
-  constructor (private wizardComponent: WizardComponent, private fb: FormBuilder) {}
+  // wizardComponent: WizardComponent;
+  constructor (public wizardComponent: WizardComponent, private fb: FormBuilder) {}
+  // constructor ( private fb: FormBuilder) {}
 
   ngOnInit(): void {
+
     this.headerText = this.wizardComponent.wizardConfig.headerText;
     this.headerIcon = this.wizardComponent.wizardConfig.headerIcon;
     this.formGroupStepOne = this.fb.group({

@@ -1,3 +1,5 @@
+<p>Hello</p>
+
 <!--
   ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
   ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -23,85 +25,48 @@
   <h1 [c8yIcon]="headerIcon"></h1>
   <h4>{{ headerText | translate }}</h4>
 </c8y-wizard-header>
-
-<div class="modal-inner-scroll animated fadeIn">
-  <div class="modal-body">
-    <c8y-form-group
-      *ngIf="!isAppCreated; else appCreated"
-      [hasError]="errorMessage"
-      class="m-auto"
-      style="max-width: 285px"
-    >
-      <c8y-drop-area
-        (dropped)="onFileDroppedEvent($event)"
-        [accept]="'.jar'"
-        [loading]="isLoading"
-        [maxAllowedFiles]="1"
-        [message]="'Upload a *.jar file' | translate"
-        [progress]="progress | async"
-        class="drop-area"
-      >
-      </c8y-drop-area>
-      <c8y-messages>
-        <c8y-message *ngIf="errorMessage">
-          {{ errorMessage | translate }}
-        </c8y-message>
-      </c8y-messages>
-    </c8y-form-group>
-    <ng-template #appCreated>
-      <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
-        <c8y-operation-result
-          text="{{ successText | translate }}"
-          [vertical]="true"
-          [size]="84"
-          class="lead"
-          type="success"
-        >
-        </c8y-operation-result>
-      </div>
-    </ng-template>
+<!-- 
+<c8y-wizard-body>
+  <div class="modal-inner-scroll animated fadeIn">
+    <div class="modal-body">
+      <c8y-form-group *ngIf="!isAppCreated; else appCreated" [hasError]="errorMessage" class="m-auto"
+        style="max-width: 285px">
+        <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.jar'" [loading]="isLoading"
+          [maxAllowedFiles]="1" [message]="'Upload a *.jar file' | translate" [progress]="progress | async"
+          class="drop-area">
+        </c8y-drop-area>
+        <c8y-messages>
+          <c8y-message *ngIf="errorMessage">
+            {{ errorMessage | translate }}
+          </c8y-message>
+        </c8y-messages>
+      </c8y-form-group>
+      <ng-template #appCreated>
+        <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
+          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
+            type="success">
+          </c8y-operation-result>
+        </div>
+      </ng-template>
+    </div>
   </div>
-</div>
-<c8y-wizard-footer>
-  <button
-    (click)="back()"
-    *ngIf="!isAppCreated && canGoBack"
-    class="btn btn-default"
-    title="{{ 'Back' | translate }}"
-    translate
-    type="button"
-  >
+</c8y-wizard-body> -->
+<!-- <c8y-wizard-footer>
+  <button (click)="back()" *ngIf="!isAppCreated && canGoBack" class="btn btn-default" title="{{ 'Back' | translate }}"
+    translate type="button">
     Back
   </button>
-  <button
-    (click)="cancel()"
-    *ngIf="!isAppCreated"
-    class="btn btn-default"
-    title="{{ 'Cancel' | translate }}"
-    translate
-    type="button"
-  >
+  <button (click)="cancel()" *ngIf="!isAppCreated" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate
+    type="button">
     Cancel
   </button>
-  <button
-    (click)="done()"
-    *ngIf="isAppCreated"
-    class="btn btn-default"
-    title="{{ 'Done' | translate }}"
-    translate
-    type="button"
-  >
+  <button (click)="done()" *ngIf="isAppCreated" class="btn btn-default" title="{{ 'Done' | translate }}" translate
+    type="button">
     Done
   </button>
-  <a
-    (click)="$event.stopPropagation()"
-    *ngIf="isAppCreated && canOpenInBrowser"
-    [href]="getHref(createdApp)"
-    target="_blank"
-    class="btn btn-primary"
-    title="{{ 'Open' | translate }}"
-  >
+  <a (click)="$event.stopPropagation()" *ngIf="isAppCreated && canOpenInBrowser" [href]="getHref(createdApp)"
+    target="_blank" class="btn btn-primary" title="{{ 'Open' | translate }}">
     <i c8yIcon="external-link" class="m-r-4"></i>
     {{ 'Open' | translate }}
   </a>
-</c8y-wizard-footer>
+</c8y-wizard-footer> -->

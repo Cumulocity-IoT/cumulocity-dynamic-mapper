@@ -72,6 +72,13 @@ export class MappingTabFactory implements TabFactory {
         icon: 'plugin',
         orientation: 'horizontal',
       } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/wizard',
+        priority: 880,
+        label: 'Processor Wizard',
+        icon: 'plugin',
+        orientation: 'horizontal',
+      } as Tab);
     }
 
     return tabs;
