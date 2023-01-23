@@ -18,11 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DataGridComponent, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardModalService, WizardService } from '@c8y/ngx-components';
+import { Component, EventEmitter, OnInit, ViewEncapsulation } from '@angular/core';
+import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardModalService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
+import { API, Direction, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -148,6 +148,7 @@ export class MappingComponent implements OnInit {
 
   value: string;
   mappingType: MappingType;
+  direction: Direction;
   destroy$: Subject<boolean> = new Subject<boolean>();
   refresh: EventEmitter<any> = new EventEmitter();
 
@@ -196,7 +197,6 @@ export class MappingComponent implements OnInit {
     const wizardConfig: WizardConfig = {
       headerText: 'Add Mapping',
       headerIcon: 'plus-circle',
-      bodyHeaderText: 'Select mapping type',
     };
     const initialState = {
       id: 'addMappingWizard',
@@ -207,7 +207,8 @@ export class MappingComponent implements OnInit {
     const modalRef = this.wizardModalService.show(modalOptions);
     modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
       console.log("Was selected:", result);
-      this.mappingType = result;
+      this.mappingType = result.mappingType;
+      this.direction = result.direction;
       if (result) {
         this.addMapping();
       }
@@ -246,6 +247,7 @@ export class MappingComponent implements OnInit {
       externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
+      direction: this.direction,
       lastUpdate: Date.now()
     }
     if (this.mappingType == MappingType.FLAT_FILE) {
@@ -263,7 +265,7 @@ export class MappingComponent implements OnInit {
         message: undefined
       }
     }
-    this.setStepperConfiguration(this.mappingType)
+    this.setStepperConfiguration(this.mappingType, this.direction)
 
     this.mappingToUpdate = mapping;
     console.log("Add mappping", this.mappings)
@@ -282,7 +284,7 @@ export class MappingComponent implements OnInit {
     if (mapping.active) {
       this.stepperConfiguration.editorMode = EditorMode.READ_ONLY;
     }
-    this.setStepperConfiguration(mapping.mappingType);
+    this.setStepperConfiguration(mapping.mappingType, mapping.direction);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
     console.log("Editing mapping", this.mappingToUpdate);
@@ -297,7 +299,7 @@ export class MappingComponent implements OnInit {
       allowTesting: true,
       editorMode: EditorMode.COPY
     };
-    this.setStepperConfiguration(mapping.mappingType)
+    this.setStepperConfiguration(mapping.mappingType, mapping.direction)
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.name = this.mappingToUpdate.name + " - Copy";
@@ -384,7 +386,7 @@ export class MappingComponent implements OnInit {
     // }
   }
 
-  setStepperConfiguration(mappingType: MappingType) {
+  setStepperConfiguration(mappingType: MappingType, direction: Direction) {
     if (mappingType == MappingType.PROTOBUF_STATIC) {
       this.stepperConfiguration = {
         ...this.stepperConfiguration,

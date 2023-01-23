@@ -20,7 +20,7 @@
  */
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
-import { API, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
+import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -297,17 +297,22 @@ export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
-export function getSchema(targetAPI: string): any {
-  if (targetAPI == API.ALARM.name) {
-    return SCHEMA_ALARM;
-  } else if (targetAPI == API.EVENT.name) {
-    return SCHEMA_EVENT;
-  } else if (targetAPI == API.MEASUREMENT.name) {
-    return SCHEMA_MEASUREMENT;
-  } else if ((targetAPI == API.INVENTORY.name)) {
-    return SCHEMA_INVENTORY;
+export function getSchema(targetAPI: string, direction: Direction, target: boolean): any {
+  if ((target && ( !direction || direction == Direction.INCOMING )) ||
+     (!target && ( direction == Direction.OUTGOING )) ) {
+    if (targetAPI == API.ALARM.name) {
+      return SCHEMA_ALARM;
+    } else if (targetAPI == API.EVENT.name) {
+      return SCHEMA_EVENT;
+    } else if (targetAPI == API.MEASUREMENT.name) {
+      return SCHEMA_MEASUREMENT;
+    } else if ((targetAPI == API.INVENTORY.name)) {
+      return SCHEMA_INVENTORY;
+    } else {
+      return SCHEMA_OPERATION;
+    }
   } else {
-    return SCHEMA_OPERATION;
+    SCHEMA_PAYLOAD;
   }
 }
 

@@ -118,6 +118,10 @@ public class Mapping implements Serializable {
   public ExtensionEntry extension;
 
   @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public Direction direction;
+
+  @NotNull
   public long lastUpdate;
 
   @Override
