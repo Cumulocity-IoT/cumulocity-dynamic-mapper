@@ -27,9 +27,10 @@ import { MQTTMappingModule } from './src/service-mapping.module';
 
 
 @NgModule({
+  declarations: [],
   imports: [
     BrowserAnimationsModule,
-    ngRouterModule.forRoot([], { enableTracing: true, useHash: true }),
+    ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
     CoreModule.forRoot(),
     MQTTMappingModule

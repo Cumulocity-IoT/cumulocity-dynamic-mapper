@@ -21,7 +21,7 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
+import { CoreModule, HOOK_ROUTE, HOOK_WIZARD, Route } from '@c8y/ngx-components';
 import { AddExtensionComponent } from './add-extension.component';
 import { AddExtensionWizardComponent } from './add-extension-wizard.component';
 import { ExtensionCardComponent } from './extension-card.component';
@@ -63,6 +63,7 @@ const extensionRoutes: Route[] = [
     CollapseModule.forRoot(),
   ],
   entryComponents: [
+    AddExtensionComponent,
     ExtensionComponent,
     ExtensionCardComponent,
     ExtensionPropertiesComponent
@@ -72,6 +73,17 @@ const extensionRoutes: Route[] = [
     {
       provide: HOOK_ROUTE,
       useValue: extensionRoutes,
+      multi: true
+    },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        wizardId: 'uploadExtensionWizard',
+        //component: AddExtensionWizardComponent,
+        component: AddExtensionComponent,
+        name: 'Upload Extension',
+        c8yIcon: 'upload'
+      },
       multi: true
     },
   ]

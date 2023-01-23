@@ -1,0 +1,51 @@
+<c8y-title>Wizard minimal setup example</c8y-title>
+<div class="card">
+  <div class="card-header separator">
+    <h4 class="card-title">Example with only one menu entry.</h4>
+  </div>
+  <div class="card-block">
+    In this example the wizard currently has only one menu entry, which means that the id of the
+    wizard is unique. If the wizard contains only one entry without a path, the list will be skipped.
+    <br />
+
+    <b>Note:</b> If no additional buttons are added, the wizard will automatically add the cancel
+    button.
+  </div>
+  <div class="card-footer">
+    <button (click)="showOneEntryExample()" type="button" class="btn btn-primary" title="wizard">
+      Wizard
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header separator">
+    <h4 class="card-title">Example with multiple menu entries.</h4>
+  </div>
+  <div class="card-block">
+    In this example the wizard will have multiple menu entries, which means that every menu entry
+    will share the same 'wizardId'.
+  </div>
+  <div class="card-footer">
+    <button
+      (click)="showMultipleEntriesExample()"
+      type="button"
+      class="btn btn-primary"
+      title="wizard"
+    >
+      Wizard
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header separator">
+    <h4 class="card-title">Example with stepper.</h4>
+  </div>
+  <div class="card-block">In this example the wizard will be used with a stepper.</div>
+  <div class="card-footer">
+    <button (click)="showStepperExample()" type="button" class="btn btn-primary" title="wizard">
+      Wizard
+    </button>
+  </div>
+</div>

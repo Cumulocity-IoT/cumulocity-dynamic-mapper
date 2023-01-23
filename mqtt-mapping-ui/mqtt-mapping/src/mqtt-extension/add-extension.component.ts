@@ -44,7 +44,7 @@ export class AddExtensionComponent {
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   private uploadCanceled: boolean = false;
-
+  
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
@@ -99,15 +99,15 @@ export class AddExtensionComponent {
 
   cancel() {
     this.cancelFileUpload();
-    this.wizardComponent.close();
+    // this.wizardComponent.close();
   }
 
   done() {
-    this.wizardComponent.close();
+    // this.wizardComponent.close();
   }
 
   back() {
-    this.wizardComponent.reset();
+    // this.wizardComponent.reset();
   }
 
   private cancelFileUpload() {
