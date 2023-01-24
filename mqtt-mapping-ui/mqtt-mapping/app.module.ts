@@ -21,9 +21,11 @@
 import { NgModule } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
-import { BootstrapComponent, CoreModule, RouterModule } from '@c8y/ngx-components';
-import { BsModalRef } from 'ngx-bootstrap/modal';
+import { BootstrapComponent, CoreModule, HOOK_WIZARD, RouterModule } from '@c8y/ngx-components';
 import { MQTTMappingModule } from './src/service-mapping.module';
+import { AddExtensionComponent } from './src/mqtt-extension/add-extension.component';
+import { AddExtensionWizardComponent } from './src/mqtt-extension/add-extension-wizard.component';
+import { MappingTypeComponent } from './src/mqtt-mapping/mapping-type/mapping-type.component';
 
 
 @NgModule({
@@ -33,9 +35,33 @@ import { MQTTMappingModule } from './src/service-mapping.module';
     ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
     CoreModule.forRoot(),
-    MQTTMappingModule
+    MQTTMappingModule,
   ],
-  providers: [BsModalRef,
+  providers: [
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        wizardId: 'uploadExtensionWizard',
+        component: AddExtensionWizardComponent,
+        name: 'Upload Extension',
+        c8yIcon: 'upload'
+      },
+      multi: true
+    },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        // The id of a wizard to which the entry should be hooked.
+        wizardId: 'addMappingWizard',
+        // The container component is responsible for handling subsequent steps in the wizard.
+        component: MappingTypeComponent,
+        // Menu entry name
+        name: 'App mapping',
+        // Menu entry icon
+        c8yIcon: 'plus-circle'
+      },
+      multi: true
+    },
   ],
   bootstrap: [BootstrapComponent]
 })

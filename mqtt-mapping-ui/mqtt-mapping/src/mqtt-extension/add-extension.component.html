@@ -1,5 +1,3 @@
-<p>Hello</p>
-
 <!--
   ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
   ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -25,7 +23,7 @@
   <h1 [c8yIcon]="headerIcon"></h1>
   <h4>{{ headerText | translate }}</h4>
 </c8y-wizard-header>
-<!-- 
+
 <c8y-wizard-body>
   <div class="modal-inner-scroll animated fadeIn">
     <div class="modal-body">
@@ -50,12 +48,8 @@
       </ng-template>
     </div>
   </div>
-</c8y-wizard-body> -->
-<!-- <c8y-wizard-footer>
-  <button (click)="back()" *ngIf="!isAppCreated && canGoBack" class="btn btn-default" title="{{ 'Back' | translate }}"
-    translate type="button">
-    Back
-  </button>
+</c8y-wizard-body>
+<c8y-wizard-footer>
   <button (click)="cancel()" *ngIf="!isAppCreated" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate
     type="button">
     Cancel
@@ -69,4 +63,4 @@
     <i c8yIcon="external-link" class="m-r-4"></i>
     {{ 'Open' | translate }}
   </a>
-</c8y-wizard-footer> -->
+</c8y-wizard-footer>

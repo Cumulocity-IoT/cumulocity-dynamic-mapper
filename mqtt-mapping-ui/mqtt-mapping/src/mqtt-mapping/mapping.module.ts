@@ -87,20 +87,20 @@ import { ConfigurationModule } from '../mqtt-configuration/configuration.module'
       ] as Route[],
       multi: true,
     },
-    {
-      provide: HOOK_WIZARD,
-      useValue: {
-        // The id of a wizard to which the entry should be hooked.
-        wizardId: 'addMappingWizard',
-        // The container component is responsible for handling subsequent steps in the wizard.
-        component: MappingTypeComponent,
-        // Menu entry name
-        name: 'App mapping',
-        // Menu entry icon
-        c8yIcon: 'plus-circle'
-      },
-      multi: true
-    },
+    // {
+    //   provide: HOOK_WIZARD,
+    //   useValue: {
+    //     // The id of a wizard to which the entry should be hooked.
+    //     wizardId: 'addMappingWizard',
+    //     // The container component is responsible for handling subsequent steps in the wizard.
+    //     component: MappingTypeComponent,
+    //     // Menu entry name
+    //     name: 'App mapping',
+    //     // Menu entry icon
+    //     c8yIcon: 'plus-circle'
+    //   },
+    //   multi: true
+    // },
   ]
 })
 export class MappingModule { }

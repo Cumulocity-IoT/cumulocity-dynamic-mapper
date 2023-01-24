@@ -99,15 +99,11 @@ export class AddExtensionComponent {
 
   cancel() {
     this.cancelFileUpload();
-    // this.wizardComponent.close();
+    this.wizardComponent.close();
   }
 
   done() {
-    // this.wizardComponent.close();
-  }
-
-  back() {
-    // this.wizardComponent.reset();
+    this.wizardComponent.close();
   }
 
   private cancelFileUpload() {
