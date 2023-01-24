@@ -47,9 +47,7 @@ export class MappingTypeComponent implements OnInit {
     direction: Direction.INCOMING
   }
 
-  // wizardComponent: WizardComponent;
   constructor (public wizardComponent: WizardComponent, private fb: FormBuilder) {}
-  // constructor ( private fb: FormBuilder) {}
 
   ngOnInit(): void {
 
@@ -77,6 +75,7 @@ export class MappingTypeComponent implements OnInit {
 
   onSelectDirection(t){
     this.result.direction = t;
+    this.stepper.next();
   }
 
   onSelectMappingType(t){

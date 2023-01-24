@@ -75,17 +75,6 @@ const extensionRoutes: Route[] = [
       useValue: extensionRoutes,
       multi: true
     },
-    {
-      provide: HOOK_WIZARD,
-      useValue: {
-        wizardId: 'uploadExtensionWizard',
-        //component: AddExtensionWizardComponent,
-        component: AddExtensionComponent,
-        name: 'Upload Extension',
-        c8yIcon: 'upload'
-      },
-      multi: true
-    },
   ]
 })
 export class ExtensionModule { }

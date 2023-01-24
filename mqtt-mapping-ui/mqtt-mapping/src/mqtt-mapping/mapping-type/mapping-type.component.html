@@ -25,8 +25,11 @@
 </c8y-wizard-header>
 
 <c8y-wizard-body>
-  <c8y-stepper>
+  <c8y-stepper [customClasses]="['hidden']">
     <cdk-step [stepControl]="formGroupStepOne" label="Direction">
+      <p class="p-16 text-center text-medium separator-bottom sticky-top bg-white">
+        {{ 'Select direction' | translate }}
+      </p>
       <div class="modal-inner-scroll animated fadeIn">
         <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
           <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of Direction | keyvalue"
@@ -38,9 +41,9 @@
       </div>
     </cdk-step>
     <cdk-step [stepControl]="formGroupStepTwo" label="Mapping Type">
-      <!-- <p class="p-16 text-medium text-center bg-white separator-bottom sticky-top">
-    {{ 'Select mapping type' | translate }}
-  </p> -->
+      <p class="p-16 text-center text-medium separator-bottom sticky-top bg-white">
+        {{ 'Select mapping type for target' | translate }}
+      </p>
       <div class="modal-inner-scroll animated fadeIn">
         <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
           <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of MappingType | keyvalue"
