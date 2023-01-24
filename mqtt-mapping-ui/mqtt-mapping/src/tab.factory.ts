@@ -38,10 +38,17 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/mappings',
+        path: 'mqtt-mapping/mappings/incoming',
         priority: 920,
-        label: 'Mapping',
-        icon: 'grid-view',
+        label: 'Mapping Incoming',
+        icon: 'swipe-right',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/mappings/outgoing',
+        priority: 920,
+        label: 'Mapping Outgoing',
+        icon: 'swipe-left',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
