@@ -19,14 +19,14 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { FetchClient, IFetchResponse, InventoryService, IResult } from '@c8y/client';
+import { FetchClient, InventoryService, QueriesUtil } from '@c8y/client';
 import * as _ from 'lodash';
 import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Mapping, Operation } from '../../shared/mapping.model';
-import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_MAPPING_ENDPOINT } from '../../shared/util';
+import { Direction, Mapping, Operation } from '../../shared/mapping.model';
+import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT } from '../../shared/util';
 import { JSONProcessor } from '../processor/impl/json-processor.service';
-import { C8YRequest, ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
+import { ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -34,28 +34,38 @@ export class MappingService {
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
     private jsonProcessor: JSONProcessor,
-    private client: FetchClient) { }
+    private client: FetchClient) {
+    this.queriesUtil = new QueriesUtil();
+  }
 
-  private agentId: string;
+  queriesUtil: QueriesUtil;
   protected JSONATA = require("jsonata");
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
   public async changeActivationMapping(parameter: any) {
     await this.configurationService.runOperation(Operation.ACTIVATE_MAPPING, parameter);
   }
-  public async loadMappings(): Promise<Mapping[]> {
+
+  public async loadMappings(direction: Direction): Promise<Mapping[]> {
     let result: Mapping[] = [];
-    if (!this.agentId) {
-      this.agentId = await this.configurationService.initializeMQTTAgent();
-    }
-    console.log("MappingService: Found MQTTAgent!", this.agentId);
 
     const filter: object = {
       pageSize: 100,
       withTotalPages: true,
       type: MQTT_MAPPING_TYPE,
     };
-    let data = (await this.inventory.list(filter)).data;
+    let query: any = { 'c8y_mqttMapping.direction': direction };
+
+    if (direction == Direction.INCOMING) {
+      query = this.queriesUtil.addOrFilter(query, { __not: { __has: 'c8y_mqttMapping.direction' } },);
+    }
+    query = this.queriesUtil.addAndFilter(query, { type: { __has: 'c8y_mqttMapping' } });
+
+    let data = (await this.inventory.listQuery(query, filter)).data;
+    // const query = {
+    //       'c8y_mqttMapping.snoopStatus': direction
+    // }
+    //let data = (await this.inventory.list(filter)).data;
 
     data.forEach(m => result.push({
       ...m[MQTT_MAPPING_FRAGMENT],
@@ -67,7 +77,7 @@ export class MappingService {
   reloadMappings() {
     this.reload$.next();
   }
-  
+
   listToReload(): BehaviorSubject<void> {
     return this.reload$;
   }
@@ -114,7 +124,7 @@ export class MappingService {
       body: JSON.stringify(mapping),
       method: 'POST',
     });
-    let data =await response;
+    let data = await response;
     let m = await data.json();
     return m;
   }

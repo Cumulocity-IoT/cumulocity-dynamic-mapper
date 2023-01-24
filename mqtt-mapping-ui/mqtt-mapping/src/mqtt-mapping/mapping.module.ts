@@ -81,7 +81,17 @@ import { ConfigurationModule } from '../mqtt-configuration/configuration.module'
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/mappings',
+          path: 'mqtt-mapping/mappings/incoming',
+          component: MappingComponent,
+        },
+      ] as Route[],
+      multi: true,
+    },
+    {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: 'mqtt-mapping/mappings/outgoing',
           component: MappingComponent,
         },
       ] as Route[],

@@ -34,6 +34,7 @@ import { ModalOptions } from 'ngx-bootstrap/modal';
 import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { EditorMode, StepperConfiguration } from '../stepper/stepper-model';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 
 @Component({
   selector: 'mapping-mapping-grid',
@@ -49,6 +50,9 @@ export class MappingComponent implements OnInit {
   showConfigMapping: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
+
+  direction: Direction = Direction.INCOMING;
+  title: string = `Mapping List ${this.direction}`;
 
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
@@ -148,7 +152,6 @@ export class MappingComponent implements OnInit {
 
   value: string;
   mappingType: MappingType;
-  direction: Direction;
   destroy$: Subject<boolean> = new Subject<boolean>();
   refresh: EventEmitter<any> = new EventEmitter();
 
@@ -163,9 +166,18 @@ export class MappingComponent implements OnInit {
     public configurationService: BrokerConfigurationService,
     public alertService: AlertService,
     private wizardModalService: WizardModalService,
-  ) { }
+    private activatedRoute: ActivatedRoute,
+    private router: Router
+  ) { 
+  }
 
   ngOnInit() {
+
+    const href = this.router.url;
+    href.match
+    this.direction = href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING;
+    this.title = `Mapping List ${this.direction}`;
+
     this.loadMappings();
     this.actionControls.push(
       {
@@ -186,6 +198,7 @@ export class MappingComponent implements OnInit {
     this.mappingService.listToReload().subscribe(() => {
       this.loadMappings();
     })
+
   }
 
   onRowClick(mapping: Row) {
@@ -320,7 +333,7 @@ export class MappingComponent implements OnInit {
   }
 
   async loadMappings(): Promise<void> {
-    this.mappings = await this.mappingService.loadMappings();
+    this.mappings = await this.mappingService.loadMappings(this.direction);
     console.log("Updated mappings", this.mappings);
   }
 
