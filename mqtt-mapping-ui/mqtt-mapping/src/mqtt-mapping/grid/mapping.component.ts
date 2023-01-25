@@ -174,8 +174,7 @@ export class MappingComponent implements OnInit {
   ngOnInit() {
 
     const href = this.router.url;
-    href.match
-    this.direction = href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING;
+    this.direction = (href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING);
     this.title = `Mapping List ${this.direction}`;
 
     this.loadMappings();
@@ -221,7 +220,7 @@ export class MappingComponent implements OnInit {
     modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
       console.log("Was selected:", result);
       this.mappingType = result.mappingType;
-      this.direction = result.direction;
+      //this.direction = result.direction;
       if (result) {
         this.addMapping();
       }
