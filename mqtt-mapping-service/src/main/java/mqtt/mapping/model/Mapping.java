@@ -66,6 +66,9 @@ public class Mapping implements Serializable {
   public String subscriptionTopic;
 
   @NotNull
+  public String publishTopic;
+
+  @NotNull
   public String templateTopic;
 
   @NotNull

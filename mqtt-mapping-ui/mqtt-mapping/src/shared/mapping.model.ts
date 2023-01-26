@@ -48,7 +48,8 @@ export interface Mapping {
     name: string;
     id: string;
     ident: string;
-    subscriptionTopic: string;
+    subscriptionTopic?: string;
+    publishTopic?: string;
     templateTopic: string;
     templateTopicSample: string;
     targetAPI: string;

@@ -52,21 +52,20 @@ export class MappingComponent implements OnInit {
   
   isConnectionToMQTTEstablished: boolean;
   
-  direction: Direction = Direction.INCOMING;
-  title: string = `Mapping List ${this.direction}`;
-  
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
   deviceList: string[];
   Direction = Direction;
-
+  
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
     showProcessorExtensions: false,
     allowTesting: true,
-    editorMode: EditorMode.UPDATE
+    editorMode: EditorMode.UPDATE,
+    direction: Direction.INCOMING
   };
+  title: string = `Mapping List ${this.stepperConfiguration.direction}`;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -170,7 +169,6 @@ export class MappingComponent implements OnInit {
     public configurationService: BrokerConfigurationService,
     public alertService: AlertService,
     private wizardModalService: WizardModalService,
-    private activatedRoute: ActivatedRoute,
     private router: Router
   ) { 
   }
@@ -178,8 +176,8 @@ export class MappingComponent implements OnInit {
   ngOnInit() {
 
     const href = this.router.url;
-    this.direction = (href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING);
-    this.title = `Mapping List ${this.direction}`;
+    this.stepperConfiguration.direction = (href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING);
+    this.title = `Mapping List ${this.stepperConfiguration.direction}`;
 
     this.loadMappings();
     this.actionControls.push(
@@ -216,6 +214,7 @@ export class MappingComponent implements OnInit {
     };
     const initialState = {
       id: 'addMappingWizard',
+      direction: this.stepperConfiguration.direction,
       wizardConfig,
     };
 
@@ -237,11 +236,12 @@ export class MappingComponent implements OnInit {
 
   async addMapping() {
     this.stepperConfiguration = {
+      ... this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTesting: true,
-      editorMode: EditorMode.CREATE
+      editorMode: EditorMode.CREATE,
     };
 
     let ident = uuidv4();
@@ -267,7 +267,7 @@ export class MappingComponent implements OnInit {
       externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
-      direction: this.direction,
+      direction: this.stepperConfiguration.direction,
       lastUpdate: Date.now()
     }
     if (this.mappingType == MappingType.FLAT_FILE) {
@@ -285,7 +285,7 @@ export class MappingComponent implements OnInit {
         message: undefined
       }
     }
-    this.setStepperConfiguration(this.mappingType, this.direction)
+    this.setStepperConfiguration(this.mappingType, this.stepperConfiguration.direction)
 
     this.mappingToUpdate = mapping;
     console.log("Add mappping", this.mappings)
@@ -294,7 +294,9 @@ export class MappingComponent implements OnInit {
   }
 
   updateMapping(mapping: Mapping) {
+    if (!mapping.direction) this.stepperConfiguration.direction = Direction.INCOMING;
     this.stepperConfiguration = {
+      ...this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
@@ -307,12 +309,16 @@ export class MappingComponent implements OnInit {
     this.setStepperConfiguration(mapping.mappingType, mapping.direction);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
+
+    // for backward compatability set direction of mapping to INCOMING 
+    if (!this.mappingToUpdate.direction) this.mappingToUpdate.direction = Direction.INCOMING;
     console.log("Editing mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
   copyMapping(mapping: Mapping) {
     this.stepperConfiguration = {
+      ...this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
@@ -340,7 +346,7 @@ export class MappingComponent implements OnInit {
   }
 
   async loadMappings(): Promise<void> {
-    this.mappings = await this.mappingService.loadMappings(this.direction);
+    this.mappings = await this.mappingService.loadMappings(this.stepperConfiguration.direction);
     console.log("Updated mappings", this.mappings);
   }
 

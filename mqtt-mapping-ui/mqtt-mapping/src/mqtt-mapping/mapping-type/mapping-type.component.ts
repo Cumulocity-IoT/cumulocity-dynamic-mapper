@@ -22,29 +22,31 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper, WizardComponent } from '@c8y/ngx-components';
 import { Direction, MappingType } from '../../shared/mapping.model';
+import { isDisabled } from '../stepper/util';
 
 @Component({
   selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
 })
 export class MappingTypeComponent implements OnInit {
-  formGroupStepOne: FormGroup;
-  formGroupStepTwo: FormGroup;
-
+  isDisabled = isDisabled;
+  formGroupStep: FormGroup;
+  
   @ViewChild(C8yStepper, { static: true })
   stepper: C8yStepper;
-
+  
   headerText: string;
   headerIcon: string;
-  bodyHeaderText: string;
+  
+  direction: Direction;
 
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
+
   result = {  
     mappingType: MappingType.JSON,
-    direction: Direction.INCOMING
   }
 
   constructor (public wizardComponent: WizardComponent, private fb: FormBuilder) {}
@@ -53,10 +55,8 @@ export class MappingTypeComponent implements OnInit {
 
     this.headerText = this.wizardComponent.wizardConfig.headerText;
     this.headerIcon = this.wizardComponent.wizardConfig.headerIcon;
-    this.formGroupStepOne = this.fb.group({
-      direction: ['', Validators.required]
-    });
-    this.formGroupStepTwo = this.fb.group({
+    this.direction = this.wizardComponent['direction'];
+    this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });
 
@@ -71,11 +71,6 @@ export class MappingTypeComponent implements OnInit {
 
   done() {
     this.wizardComponent.close(this.result);
-  }
-
-  onSelectDirection(t){
-    this.result.direction = t;
-    this.stepper.next();
   }
 
   onSelectMappingType(t){

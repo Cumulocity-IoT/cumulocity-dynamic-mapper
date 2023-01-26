@@ -26,31 +26,19 @@
 
 <c8y-wizard-body>
   <c8y-stepper [customClasses]="['hidden']">
-    <!-- <cdk-step [stepControl]="formGroupStepOne" label="Direction">
-      <p class="p-16 text-center text-medium separator-bottom sticky-top bg-white">
-        {{ 'Select direction' | translate }}
-      </p>
-      <div class="modal-inner-scroll animated fadeIn">
-        <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
-          <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of Direction | keyvalue"
-            (click)="onSelectDirection(q.value)">
-            <i [c8yIcon]="'rules m-r-4'"></i>
-            <span>{{q.value}}</span>
-          </button>
-        </div>
-      </div>
-    </cdk-step> -->
-    <cdk-step [stepControl]="formGroupStepTwo" label="Mapping Type">
+    <cdk-step [stepControl]="formGroupStep" label="Mapping Type">
       <p class="p-16 text-center text-medium separator-bottom sticky-top bg-white">
         {{ 'Select mapping type for target' | translate }}
       </p>
       <div class="modal-inner-scroll animated fadeIn">
-        <div class="list-group list-group-links" [formGroup]="formGroupStepTwo">
-          <button class="list-group-item" title="{{ q.value }}" *ngFor="let q of MappingType | keyvalue"
-            (click)="onSelectMappingType(q.value)">
-            <i [c8yIcon]="'rules m-r-4'"></i>
-            <span>{{q.value}}</span>
-          </button>
+        <div class="list-group list-group-links" [formGroup]="formGroupStep">
+          <ng-container *ngFor="let q of MappingType | keyvalue">
+            <button *ngIf="direction != Direction.OUTGOING || q.value == 'JSON'" class="list-group-item" title="{{ q.value }}" 
+              (click)="onSelectMappingType(q.value)">
+                <i [c8yIcon]="'rules m-r-4'"></i>
+                <span>{{q.value}}</span>
+            </button>
+          </ng-container>
         </div>
       </div>
     </cdk-step>
