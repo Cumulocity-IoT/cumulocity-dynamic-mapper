@@ -122,6 +122,10 @@ public class Mapping implements Serializable {
   public Direction direction;
 
   @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public String filterOutgoing;
+
+  @NotNull
   public long lastUpdate;
 
   @Override
