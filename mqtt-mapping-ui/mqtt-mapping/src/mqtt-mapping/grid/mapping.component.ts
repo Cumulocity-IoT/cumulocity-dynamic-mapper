@@ -48,14 +48,18 @@ export class MappingComponent implements OnInit {
   isSubstitutionValid: boolean
 
   showConfigMapping: boolean = false;
-
+  showConfigSubscription: boolean = false;
+  
   isConnectionToMQTTEstablished: boolean;
-
+  
   direction: Direction = Direction.INCOMING;
   title: string = `Mapping List ${this.direction}`;
-
+  
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
+  deviceList: string[];
+  Direction = Direction;
+
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
@@ -227,6 +231,10 @@ export class MappingComponent implements OnInit {
     });
   }
 
+  onDefineSubscription() {
+    this.showConfigSubscription = !this.showConfigSubscription;
+  }
+
   async addMapping() {
     this.stepperConfiguration = {
       showEditorSource: true,
@@ -336,7 +344,7 @@ export class MappingComponent implements OnInit {
     console.log("Updated mappings", this.mappings);
   }
 
-  async onCommit(mapping: Mapping) {
+  async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was commited or if cancel
     mapping.lastUpdate = Date.now();
 
@@ -366,6 +374,13 @@ export class MappingComponent implements OnInit {
       this.alertService.danger(gettext('Topic is already used: ' + mapping.subscriptionTopic + ". Please use a different topic."));
     }
     this.showConfigMapping = false;
+  }
+
+
+  async onCommitSubscription(deviceList: string[]) {
+    this.deviceList = deviceList;
+    console.log("Changed devicelist:", deviceList);
+    this.showConfigSubscription = false;
   }
 
   async onSaveClicked() {

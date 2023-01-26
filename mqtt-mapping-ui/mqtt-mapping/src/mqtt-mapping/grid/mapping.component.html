@@ -36,6 +36,10 @@
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Activate mappings' | translate }}
   </button>
+  <button *ngIf="direction == Direction.OUTGOING" class="btn btn-link" title="{{ 'Define subscriptions' | translate }}" (click)="onDefineSubscription()">
+    <i c8yIcon="subscription"></i>
+    {{ 'Define subscription' | translate }}
+  </button>
 </c8y-action-bar-item>
 <div class="card">
   <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
@@ -60,9 +64,17 @@
 
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
-      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false" (onCommit)="onCommit($event)"
+      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false" (onCommit)="onCommitMapping($event)"
         [mapping]="mappingToUpdate" [mappings]="mappings" [stepperConfiguration]="stepperConfiguration">
       </mapping-stepper>
+    </div>
+  </div>
+
+  <div [ngClass]="{ drawerOpen: showConfigSubscription }">
+    <div class="bottom-drawer">
+      <mapping-subscription *ngIf="showConfigSubscription" (onCancel)="showConfigSubscription = false" (onCommit)="onCommitSubscription($event)"
+        [deviceList]="devicelist" >
+      </mapping-subscription>
     </div>
   </div>
 
