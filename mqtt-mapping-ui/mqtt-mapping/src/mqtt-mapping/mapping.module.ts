@@ -38,11 +38,14 @@ import { MappingStepperComponent } from './stepper/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
 import { SharedModule } from '../shared/shared.module';
 import { ConfigurationModule } from '../mqtt-configuration/configuration.module';
+import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
+import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
+    MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
     StatusRendererComponent,
@@ -57,6 +60,7 @@ import { ConfigurationModule } from '../mqtt-configuration/configuration.module'
   ],
   imports: [
     CoreModule,
+    AssetSelectorModule,
     SharedModule,
     PopoverModule,
     ConfigurationModule
