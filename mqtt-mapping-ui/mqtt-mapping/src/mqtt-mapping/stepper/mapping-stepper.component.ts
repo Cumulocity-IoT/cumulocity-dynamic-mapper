@@ -58,6 +58,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   RepairStrategy = RepairStrategy;
   QOS = QOS;
   SnoopStatus = SnoopStatus;
+  Direction = Direction;
   keys = Object.keys;
   values = Object.values;
   isWildcardTopic = isWildcardTopic;
@@ -78,6 +79,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateTestingResponse: any;
   selectedTestingResult: number = -1;
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
+  sourceSystem: string;
+  targetSystem: string;
 
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
@@ -127,6 +130,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   ngOnInit() {
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INCOMING;
+    this.targetSystem = this.mapping.direction == Direction.INCOMING ? 'Cumulocity' : 'MQTT Broker';
+    this.sourceSystem = this.mapping.direction == Direction.OUTGOING ? 'Cumulocity' : 'MQTT Broker';
     console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
@@ -185,7 +190,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       name: new FormControl(this.mapping.name, Validators.required),
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.required),
+      subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.nullValidator),
+      publishTopic: new FormControl(this.mapping.publishTopic, Validators.nullValidator),
       templateTopic: new FormControl(this.mapping.templateTopic, Validators.required),
       templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
       active: new FormControl(this.mapping.active),
@@ -196,7 +202,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),
     },
-      checkPropertiesAreValid(this.mappings)
+      checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
     );
   }
 
@@ -254,19 +260,36 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   onTopicUpdated(): void {
-    this.propertyForm.get('subscriptionTopic').valueChanges.pipe(debounceTime(500))
-      // distinctUntilChanged()
-      .subscribe(val => {
-        let touched = this.propertyForm.get('subscriptionTopic').dirty;
-        console.log(`Topic changed is ${val}.`, touched);
-        if (touched) {
-          this.mapping.templateTopic = val as string;
-        }
-      });
+    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+      this.propertyForm.get('subscriptionTopic').valueChanges.pipe(debounceTime(500))
+        // distinctUntilChanged()
+        .subscribe(val => {
+          let touched = this.propertyForm.get('subscriptionTopic').dirty;
+          console.log(`subscriptionTopic changed is ${val}.`, touched);
+          if (touched) {
+            this.mapping.templateTopic = val as string;
+          }
+        });
+    } else {
+      this.propertyForm.get('publishTopic').valueChanges.pipe(debounceTime(500))
+        // distinctUntilChanged()
+        .subscribe(val => {
+          let touched = this.propertyForm.get('publishTopic').dirty;
+          console.log(`publishTopic changed is ${val}.`, touched);
+          if (touched) {
+            this.mapping.templateTopic = val as string;
+          }
+        });
+    }
   }
 
   onSubscriptionTopicChanged(event): void {
     this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
+    this.mapping.templateTopicSample = this.mapping.templateTopic;
+  }
+
+  onPublishTopicChanged(event): void {
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.publishTopic);
     this.mapping.templateTopicSample = this.mapping.templateTopic;
   }
 
@@ -487,7 +510,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   }
 
-  public onDeleteSubstitution(selected: number){
+  public onDeleteSubstitution(selected: number) {
     console.log("Delete selected substitution", selected);
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);

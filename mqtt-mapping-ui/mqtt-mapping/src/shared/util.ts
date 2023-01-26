@@ -466,7 +466,7 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
   return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).length
 }
 
-export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
+export function checkPropertiesAreValid(mappings: Mapping[], direction: Direction): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const errors = {}
     let error: boolean = false;
@@ -475,6 +475,7 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     let templateTopic = control.get('templateTopic').value;
     let templateTopicSample = control.get('templateTopicSample').value;
     let subscriptionTopic = control.get('subscriptionTopic').value;
+    let publishTopic = control.get('publishTopic').value;
     let id = control.get('id').value;
     let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
 
@@ -490,39 +491,42 @@ export function checkPropertiesAreValid(mappings: Mapping[]): ValidatorFn {
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-    error = !f(subscriptionTopic, templateTopic);
-    if (error) {
-      errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
-      defined = true
+    if ( direction == Direction.INCOMING) {
+      let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+      error = !f(subscriptionTopic, templateTopic);
+      if (error) {
+        errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
+        defined = true
+      }
+  
+      // count number of "#" in subscriptionTopic
+      let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
+      if (count_multi > 1) {
+        errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+        defined = true
+      }
+  
+      // count number of "+" in subscriptionTopic
+      let count_single = (subscriptionTopic.match(/\+/g) || []).length;
+      if (count_single > 1) {
+        errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+        defined = true
+      }
+  
+      // wildcard "#" can only appear at the end in subscriptionTopic
+      if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
+        errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+        defined = true
+      }
+
+      // count number of "#" in templateTopic
+      count_multi = (templateTopic.match(/\#/g) || []).length;
+      if (count_multi >= 1) {
+        errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+        defined = true
+      }
     }
 
-    // count number of "#" in subscriptionTopic
-    let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
-    if (count_multi > 1) {
-      errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
-      defined = true
-    }
-
-    // count number of "+" in subscriptionTopic
-    let count_single = (subscriptionTopic.match(/\+/g) || []).length;
-    if (count_single > 1) {
-      errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
-      defined = true
-    }
-
-    // wildcard "#" can only appear at the end in subscriptionTopic
-    if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
-      errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
-      defined = true
-    }
-
-    // count number of "#" in templateTopic
-    count_multi = (templateTopic.match(/\#/g) || []).length;
-    if (count_multi >= 1) {
-      errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
-      defined = true
-    }
 
     let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
     let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);

@@ -59,11 +59,27 @@
                   placeholder="e.g. Mapping - 1234" #nameRef
                   [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
               </div>
-              <div class="form-group">
+              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.INCOMING">
                 <label for="subscriptionTopic" translate>Subscription Topic</label>
                 <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text"
-                  class="form-control" placeholder="e.g. device/110" #topicRef required
+                  class="form-control" placeholder="e.g. device/110" #subscriptionTopicRef required
                   (change)="onSubscriptionTopicChanged($event)"
+                  [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
+                <c8y-messages>
+                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
+                    <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
+                  </c8y-message>
+                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
+                    translate><span class="text-warning">MultiLevel wildcard "#" can only appear at the end.</span>
+                  </c8y-message>
+                </c8y-messages>
+              </div>
+
+              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTGOING">
+                <label for="publishTopic" translate>Publish Topic</label>
+                <input formControlName="publishTopic" [(ngModel)]="mapping.publishTopic" type="text"
+                  class="form-control" placeholder="e.g. device/110" #publishTopicRef required
+                  (change)="onPublishTopicChanged($event)"
                   [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                 <c8y-messages>
                   <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
@@ -107,7 +123,7 @@
                 </div>
                 <div>
                   <input formControlName="templateTopicSample" [(ngModel)]="mapping.templateTopicSample" type="text"
-                    class="form-control" placeholder="e.g. device/110" #topicRef required
+                    class="form-control" placeholder="e.g. device/110" #templateTopicRef required
                     [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                   <c8y-messages>
                     <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
@@ -179,7 +195,7 @@
                     </span>
                   </label>
                 </div> -->
-                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name">
+                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction == Direction.INCOMING">
                   <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                     <input type="checkbox" formControlName="createNonExistingDevice"
                       [(ngModel)]="mapping.createNonExistingDevice"
@@ -275,12 +291,12 @@
                 <div class="col-lg-5 col-lg-offset-1">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <div class="d-flex j-c-between">
-                      <label translate>Template Source</label>
+                      <label translate>Template Source - {{sourceSystem}}</label>
                       <div>
                         <button type="button" name="sample" class="btn btn-default btn-xs"
                           (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
                           [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                          <i c8yIcon="enter-left"></i>Snooped Templates
+                          <i c8yIcon="enter-left"></i>Use Source Templates
                           <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                             {{mapping.snoopedTemplates.length}}</span>
                         </button>
@@ -338,7 +354,7 @@
                   <div class="form-group">
                     <div class="d-flex j-c-between">
                       <div class="d-flex">
-                        <label>Template Target</label>
+                        <label>Template Target - {{targetSystem}}</label>
                         <span class="hidden-xs hidden-sm m-l-4">
                           <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
                             map
@@ -354,7 +370,7 @@
                         <button type="button" name="sample" class="btn btn-default btn-xs" style="min-width: 65px;"
                           (click)="onSampleButton()" translate title="Use sample templates"
                           [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                          <i c8yIcon="enter-right"></i>Cumulocity Templates
+                          <i c8yIcon="enter-right"></i>Use Target Templates
                         </button>
                         <span class="hidden-xs hidden-sm p-l-4">
                           <ng-template #popSampleTemplates>Use sample templates in the target template.
