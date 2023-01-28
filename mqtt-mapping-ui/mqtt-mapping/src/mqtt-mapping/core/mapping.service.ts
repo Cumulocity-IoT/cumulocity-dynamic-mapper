@@ -148,15 +148,15 @@ export class MappingService {
 
   async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
-    if (mapping.direction == Direction.INCOMING) {
+    // if (mapping.direction == Direction.INCOMING) {
       this.jsonProcessorIncoming.deserializePayload(context, mapping);
       this.jsonProcessorIncoming.extractFromSource(context);
       await this.jsonProcessorIncoming.substituteInTargetAndSend(context);
-    } else {
-      this.jsonProcessorOuting.deserializePayload(context, mapping);
-      this.jsonProcessorOuting.extractFromSource(context);
-      await this.jsonProcessorOuting.substituteInTargetAndSend(context);
-    }
+    // } else {
+    //   this.jsonProcessorOuting.deserializePayload(context, mapping);
+    //   this.jsonProcessorOuting.extractFromSource(context);
+    //   await this.jsonProcessorOuting.substituteInTargetAndSend(context);
+    // }
 
     // The producing code (this may take some time)
     return context;

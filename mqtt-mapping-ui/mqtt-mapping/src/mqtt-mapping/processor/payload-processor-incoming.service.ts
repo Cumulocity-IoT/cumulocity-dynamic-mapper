@@ -22,7 +22,7 @@ import { Injectable } from "@angular/core";
 import { AlertService } from "@c8y/ngx-components";
 import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
-import { MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
+import { findDeviceIdentifier, MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
 import { getTypedValue } from "../shared/util";
 import { C8YClient } from "../core/c8y-client.service";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
@@ -44,14 +44,14 @@ export abstract class PayloadProcessorIncoming {
     let mapping = context.mapping;
 
     let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
-    let maxEntry: string = API[mapping.targetAPI].identifier;
+    let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
     for (let entry of postProcessingCache.entries()) {
       if (postProcessingCache.get(maxEntry).length < entry[1].length) {
         maxEntry = entry[0];
       }
     }
 
-    let deviceEntries: SubstituteValue[] = postProcessingCache.get(API[mapping.targetAPI].identifier);
+    let deviceEntries: SubstituteValue[] = postProcessingCache.get(findDeviceIdentifier(context.mapping).pathTarget);
 
     let countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
     let toDouble: SubstituteValue = deviceEntries[0];

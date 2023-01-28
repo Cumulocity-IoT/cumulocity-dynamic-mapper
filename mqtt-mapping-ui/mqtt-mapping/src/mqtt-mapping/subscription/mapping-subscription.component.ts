@@ -18,22 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { CdkStep } from '@angular/cdk/stepper';
-import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import * as _ from 'lodash';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject } from 'rxjs';
-import { debounceTime } from "rxjs/operators";
-import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
-import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
-import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
-import { C8YRequest } from '../processor/prosessor.model';
-import { MappingService } from '../core/mapping.service';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { Component, EventEmitter, Input, OnInit, Output, ViewEncapsulation } from '@angular/core';
 import { IIdentified } from '@c8y/client';
 
 @Component({
