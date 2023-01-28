@@ -104,10 +104,10 @@ public class MappingSubstitution implements Serializable {
     
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean definesDeviceIdentifier(API api, Direction direction){
-        if ( direction.equals(Direction.INCOMING)) {
-            return api.identifier.equals(pathTarget);
-        } else {
+        if ( Direction.OUTGOING.equals(direction)) {
             return api.identifier.equals(pathSource);
+        } else {
+            return api.identifier.equals(pathTarget);
         }
     }
     
