@@ -103,10 +103,14 @@ public class MappingSubstitution implements Serializable {
     public RepairStrategy repairStrategy;
     
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesDeviceIdentifier(API api){
-        return api.identifier.equals(pathTarget);
+    public boolean definesDeviceIdentifier(API api, Direction direction){
+        if ( direction.equals(Direction.INCOMING)) {
+            return api.identifier.equals(pathTarget);
+        } else {
+            return api.identifier.equals(pathSource);
+        }
     }
-
+    
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
 }

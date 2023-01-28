@@ -80,7 +80,7 @@ public class MappingRepresentation implements Serializable {
   static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     long count = Arrays.asList(mapping.substitutions).stream()
-        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
+        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).count();
 
     if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
         && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
@@ -194,7 +194,7 @@ public class MappingRepresentation implements Serializable {
   private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     try {
-        Object json = new JSONTokener(mapping.source).nextValue();
+      Object json = new JSONTokener(mapping.source).nextValue();
     } catch (JSONException e) {
       result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
     }
@@ -220,6 +220,16 @@ public class MappingRepresentation implements Serializable {
     // https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
     nt = nt.replaceAll(REGEXP_REMOVE_TRAILING_SLASHES, "#");
     return nt;
+  }
+
+  static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
+    Object[] mp = Arrays.stream(mapping.substitutions)
+        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).toArray();
+    if (mp.length > 0) {
+      return (MappingSubstitution) mp[0];
+    } else {
+      return null;
+    }
   }
 
   // static public Long nextId(ArrayList<Mapping> mappings) {
