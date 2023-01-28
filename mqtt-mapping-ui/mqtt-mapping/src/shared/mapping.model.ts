@@ -72,6 +72,8 @@ export interface Mapping {
     lastUpdate: number;
 }
 
+
+
 export interface MappingStatus {
     id: number;
     ident: string;

@@ -27,7 +27,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject } from 'rxjs';
 import { debounceTime } from "rxjs/operators";
 import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, SCHEMA_PAYLOAD, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers } from "../../shared/util";
+import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers, SAMPLE_TEMPLATES_EXTERNAL } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
@@ -65,6 +65,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   definesDeviceIdentifier = definesDeviceIdentifier;
   isDisabled = isDisabled;
   SAMPLE_TEMPLATES_C8Y = SAMPLE_TEMPLATES_C8Y;
+  SAMPLE_TEMPLATES_EXTERNAL = SAMPLE_TEMPLATES_EXTERNAL;
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
 
@@ -367,8 +368,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  async onSampleButton() {
-    this.templateTarget = this.expandTargetTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
+  async onSampleTargetTemplatesButton() {
+    if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+      this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
+    } else {
+      let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
+      this.templateTarget = this.expandExternalTemplate(JSON.parse(SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]), levels);
+    }
     this.editorTarget.set(this.templateTarget);
   }
 
@@ -427,8 +433,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             if (numberSnooped > 0) {
               this.templateSource = JSON.parse(this.mapping.snoopedTemplates[0]);
               let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
-              this.templateSource = this.expandSourceTemplate(this.templateSource, levels);
-              this.onSampleButton();
+              if (this.stepperConfiguration.direction == Direction.INCOMING) {
+                this.templateSource = this.expandExternalTemplate(this.templateSource, levels);
+              } else {
+                this.templateSource = this.expandC8YTemplate(this.templateSource);
+              }
+              this.onSampleTargetTemplatesButton();
             }
             event.stepper.next();
           } else {
@@ -448,14 +458,26 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private enrichTemplates() {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
-    this.templateSource = this.expandSourceTemplate(JSON.parse(this.mapping.source), levels);
+
     if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
-      this.templateTarget = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
+      if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+        this.templateSource = this.expandExternalTemplate(JSON.parse(SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]), levels);
+        this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
+      } else {
+        this.templateSource = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
+        this.templateTarget = this.expandExternalTemplate(JSON.parse(SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]), levels);
+
+      }
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI, this.mapping.direction, true));
     } else {
-      this.templateTarget = JSON.parse(this.mapping.target);
+      if (this.stepperConfiguration.direction == Direction.INCOMING) {
+        this.templateSource = this.expandExternalTemplate(JSON.parse(this.mapping.source), levels);
+        this.templateTarget = this.expandC8YTemplate(JSON.parse(this.mapping.target));
+      } else {
+        this.templateSource = this.expandC8YTemplate(JSON.parse(this.mapping.source));
+        this.templateTarget = this.expandExternalTemplate(this.templateTarget, levels);
+      }
     }
-    this.templateTarget = this.expandTargetTemplate(this.templateTarget);
   }
 
   async onSnoopedSourceTemplates() {
@@ -468,13 +490,21 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateSource = { message: this.mapping.snoopedTemplates[this.snoopedTemplateCounter] };
       console.warn("The payload was not in JSON format, now wrap it:", this.templateSource)
     }
-    this.templateSource = this.expandSourceTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+      this.templateSource = this.expandExternalTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
+    } else {
+      this.templateSource = this.expandC8YTemplate(this.templateSource);
+    }
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
   }
 
   async onTargetAPIChanged(evt) {
-    this.mapping.target = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
+    if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+      this.templateTarget = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
+    } else {
+      this.templateTarget = (SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]);
+    }
   }
 
   public onAddSubstitution() {
@@ -533,7 +563,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (existingSubstitution != -1) {
       const initialState = {
         substitution: this.mapping.substitutions[existingSubstitution],
-        targetAPI: this.mapping.targetAPI
+        targetAPI: this.mapping.targetAPI,
+        direction: this.mapping.direction
       }
       const modalRef: BsModalRef = this.bsModalService.show(OverwriteSubstitutionModalComponent, { initialState });
       modalRef.content.closeSubject.subscribe(
@@ -572,7 +603,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  private expandSourceTemplate(t: object, levels: String[]): object {
+  private expandExternalTemplate(t: object, levels: String[]): object {
     if (Array.isArray(t)) {
       return t
     } else {
@@ -583,7 +614,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  private expandTargetTemplate(t: object): object {
+  private expandC8YTemplate(t: object): object {
     if (this.mapping.targetAPI == API.INVENTORY.name) {
       return {
         ...t,

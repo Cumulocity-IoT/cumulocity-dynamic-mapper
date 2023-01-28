@@ -19,14 +19,14 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { PayloadProcessor } from "../payload-processor.service";
+import { PayloadProcessorOutgoing } from "../payload-processor-outgoing.service";
 import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import { splitTopicExcludingSeparator, TOKEN_TOPIC_LEVEL, isNumeric, whatIsIt, TIME } from "../../../shared/util";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "../prosessor.model";
 import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
-export class JSONProcessor extends PayloadProcessor {
+export class JSONProcessorOutgoing extends PayloadProcessorOutgoing {
 
   public deserializePayload(context: ProcessingContext, mapping: Mapping): ProcessingContext {
     context.payload = JSON.parse(mapping.source);
