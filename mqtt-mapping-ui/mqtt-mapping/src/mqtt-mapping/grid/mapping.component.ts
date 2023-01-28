@@ -61,7 +61,8 @@ export class MappingComponent implements OnInit {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
     showProcessorExtensions: false,
-    allowTesting: true,
+    allowTestTransformation: true,
+    allowTestSending: true,
     editorMode: EditorMode.UPDATE,
     direction: Direction.INCOMING
   };
@@ -240,7 +241,8 @@ export class MappingComponent implements OnInit {
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
-      allowTesting: true,
+      allowTestTransformation: true,
+      allowTestSending: false,
       editorMode: EditorMode.CREATE,
     };
 
@@ -300,7 +302,8 @@ export class MappingComponent implements OnInit {
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
-      allowTesting: true,
+      allowTestTransformation: true,
+      allowTestSending: false,
       editorMode: EditorMode.UPDATE
     };
     if (mapping.active) {
@@ -322,7 +325,8 @@ export class MappingComponent implements OnInit {
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
-      allowTesting: true,
+      allowTestTransformation: true,
+      allowTestSending: false,
       editorMode: EditorMode.COPY
     };
     this.setStepperConfiguration(mapping.mappingType, mapping.direction)
@@ -426,7 +430,8 @@ export class MappingComponent implements OnInit {
         showProcessorExtensions: false,
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
-        allowTesting: false
+        allowTestTransformation: false,
+        allowTestSending: false,
       }
     } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
@@ -434,9 +439,11 @@ export class MappingComponent implements OnInit {
         showProcessorExtensions: true,
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
-        allowTesting: false
+        allowTestTransformation: false,
+        allowTestSending: false,
       }
     }
+    if (direction == Direction.OUTGOING) this.stepperConfiguration.allowTestSending = false;
   }
 
   ngOnDestroy() {

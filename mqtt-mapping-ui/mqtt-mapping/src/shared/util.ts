@@ -20,7 +20,7 @@
  */
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
-import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
+import { API, Direction, Mapping, MappingSubstitution, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -54,6 +54,40 @@ export const SAMPLE_TEMPLATES_C8Y = {
  }`,
   INVENTORY: `{ 
     \"c8y_IsDevice\": {},
+    \"name\": \"Vibration Sensor\",
+    \"type\": \"maker_Vibration_Sensor\"
+ }`,
+  OPERATION: `{ 
+   \"deviceId\": \"909090\",
+   \"decription\": \"New camera operation!\",
+   \"type\": \"maker_Vibration_Sensor\"
+}`
+}
+
+
+export const SAMPLE_TEMPLATES_EXTERNAL = {
+  MEASUREMENT: `{                                               
+    \"Temperature\": {
+        \"value\": 110,
+        \"unit\": \"C\" },
+      \"time\":\"2022-08-05T00:14:49.389+02:00\",
+      \"deviceId\":\"909090\"
+  }`,
+  ALARM: `{                                            
+    \"deviceId\":\"909090\",
+    \"alarmType\": \"TestAlarm\",
+    \"description\": \"This is a new test alarm!\",
+    \"severity\": \"MAJOR\",
+    \"status\": \"ACTIVE\",
+    \"time\": \"2022-08-05T00:14:49.389+02:00\"
+  }`,
+  EVENT: `{ 
+    \"deviceId\":\"909090\",
+    \"description\": \"This is a new test event.\",
+    \"time\": \"2022-08-05T00:14:49.389+02:00\",
+    \"eventType\": \"TestEvent\"
+ }`,
+  INVENTORY: `{ 
     \"name\": \"Vibration Sensor\",
     \"type\": \"maker_Vibration_Sensor\"
  }`,
@@ -426,7 +460,7 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+  let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
   return (count > 1);
@@ -463,7 +497,7 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
 }
 
 export function countDeviceIdentifiers(mapping: Mapping): number {
-  return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).length
+  return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).length
 }
 
 export function checkPropertiesAreValid(mappings: Mapping[], direction: Direction): ValidatorFn {
@@ -614,6 +648,19 @@ export function whatIsIt(object) {
 
 export const isNumeric = (num: any) => (typeof (num) === 'number' || typeof (num) === "string" && num.trim() !== '') && !isNaN(num as number);
 
-export function definesDeviceIdentifier(api: string, sub: MappingSubstitution): boolean {
-  return sub.pathTarget == API[api].identifier
+export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, direction: Direction): boolean {
+  if ( direction == Direction.INCOMING) {
+    return sub.pathTarget == API[api].identifier
+  } else {
+    return sub.pathSource == API[api].identifier
+  }
+}
+
+export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
+  const mp = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction))
+  if ( mp  && mp.length>0) {
+    return mp[0]
+  } else {
+    return null
+  }
 }

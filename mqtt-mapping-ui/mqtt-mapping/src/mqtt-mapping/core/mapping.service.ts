@@ -25,7 +25,8 @@ import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { Direction, Mapping, Operation } from '../../shared/mapping.model';
 import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT } from '../../shared/util';
-import { JSONProcessor } from '../processor/impl/json-processor.service';
+import { JSONProcessorIncoming } from '../processor/impl/json-processor-incoming.service';
+import { JSONProcessorOutgoing } from '../processor/impl/json-processor-outgoing.service';
 import { ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
@@ -33,7 +34,8 @@ export class MappingService {
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
-    private jsonProcessor: JSONProcessor,
+    private jsonProcessorIncoming: JSONProcessorIncoming,
+    private jsonProcessorOuting: JSONProcessorOutgoing,
     private client: FetchClient) {
     this.queriesUtil = new QueriesUtil();
   }
@@ -146,9 +148,15 @@ export class MappingService {
 
   async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
-    this.jsonProcessor.deserializePayload(context, mapping);
-    this.jsonProcessor.extractFromSource(context);
-    await this.jsonProcessor.substituteInTargetAndSend(context);
+    if (mapping.direction == Direction.INCOMING) {
+      this.jsonProcessorIncoming.deserializePayload(context, mapping);
+      this.jsonProcessorIncoming.extractFromSource(context);
+      await this.jsonProcessorIncoming.substituteInTargetAndSend(context);
+    } else {
+      this.jsonProcessorOuting.deserializePayload(context, mapping);
+      this.jsonProcessorOuting.extractFromSource(context);
+      await this.jsonProcessorOuting.substituteInTargetAndSend(context);
+    }
 
     // The producing code (this may take some time)
     return context;

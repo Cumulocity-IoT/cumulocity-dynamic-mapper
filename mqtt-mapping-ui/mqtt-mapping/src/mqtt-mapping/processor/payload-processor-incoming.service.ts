@@ -19,7 +19,6 @@
  * @authors Christof Strack
  */
 import { Injectable } from "@angular/core";
-import { IManagedObject } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
 import * as _ from 'lodash';
 import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
@@ -29,7 +28,7 @@ import { C8YClient } from "../core/c8y-client.service";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
 
 @Injectable({ providedIn: 'root' })
-export abstract class PayloadProcessor {
+export abstract class PayloadProcessorIncoming {
   constructor(
     private alert: AlertService,
     private c8yClient: C8YClient) { }
@@ -40,11 +39,9 @@ export abstract class PayloadProcessor {
 
   protected JSONATA = require("jsonata");
 
-
   public async substituteInTargetAndSend(context: ProcessingContext) {
     //step 3 replace target with extract content from incoming payload
     let mapping = context.mapping;
-
 
     let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
     let maxEntry: string = API[mapping.targetAPI].identifier;
