@@ -64,12 +64,17 @@ public class SpringWebSocketListener implements WebSocketListener {
     }
 
     @Override
-    public void afterSessionStarted(WebSocketSession session) throws URISyntaxException {
+    public void afterSessionStarted(WebSocketSession session) {
         this.started = true;
         this.session = session;
         Map attr = session.getAttributes();
         log.info("OnOpen: " + ", attributes: " + attr.keySet());
-        URI ur = new URI("wss", session.getRemoteAddress().getHostName(), null);
+        URI ur = null;
+        try {
+            ur = new URI("wss", session.getRemoteAddress().getHostName(), null);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
         this.callback.onOpen(ur);
         executorService.scheduleAtFixedRate(() -> {
             try {

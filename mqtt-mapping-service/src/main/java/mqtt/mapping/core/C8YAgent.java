@@ -40,6 +40,7 @@ import java.util.TimeZone;
 
 import javax.annotation.PreDestroy;
 
+import mqtt.mapping.notification.OperationSubscriber;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -146,6 +147,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
+    @Autowired
+    OperationSubscriber operationSubscriber;
+
     private ExtensibleProcessor extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
@@ -224,6 +228,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
+
+            operationSubscriber.subscribeTenant(tenant);
+            operationSubscriber.subscribeAllDevices();
+
 
         });
         serviceConfiguration = serviceConfigurations[0];
