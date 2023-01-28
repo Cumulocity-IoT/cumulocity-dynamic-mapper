@@ -106,8 +106,11 @@ public abstract class BasePayloadProcessor<T> {
                 .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
                         .compareTo(e2.getValue()))
                 .get().getKey();
-    
-        List<SubstituteValue> deviceEntries = postProcessingCache.get(mapping.targetAPI.identifier);
+
+        // List<SubstituteValue> deviceEntries =
+        // postProcessingCache.get(mapping.targetAPI.identifier);
+        List<SubstituteValue> deviceEntries = postProcessingCache
+                .get(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -135,7 +138,7 @@ public abstract class BasePayloadProcessor<T> {
                     // this is an indication that the substitution is the same for all
                     // events/alarms/measurements/inventory
                     if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                    substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
+                            substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
                         substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
                     } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
                         int last = postProcessingCache.get(pathTarget).size() - 1;
@@ -146,7 +149,8 @@ public abstract class BasePayloadProcessor<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (pathTarget.equals(mapping.targetAPI.identifier)) {
+                    // if (pathTarget.equals(mapping.targetAPI.identifier)) {
+                    if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
                         ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
                         if (sourceId == null && mapping.createNonExistingDevice) {
@@ -162,7 +166,7 @@ public abstract class BasePayloadProcessor<T> {
                                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
                                                 mapping.externalIdType, requestString, null, API.INVENTORY, null));
                                 attocDevice = c8yAgent.upsertDevice(
-                                        new ID( mapping.externalIdType, substituteValue.value.asText()), context);
+                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context);
                                 var response = objectMapper.writeValueAsString(attocDevice);
                                 context.getCurrentRequest().setResponse(response);
                                 substituteValue.value = new TextNode(attocDevice.getId().getValue());
@@ -180,7 +184,8 @@ public abstract class BasePayloadProcessor<T> {
                         }
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
+                    // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
+                } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
             }
@@ -195,7 +200,7 @@ public abstract class BasePayloadProcessor<T> {
                                 null, API.INVENTORY, null));
                 try {
                     attocDevice = c8yAgent.upsertDevice(
-                            new ID( mapping.externalIdType, device.value.asText()), context);
+                            new ID(mapping.externalIdType, device.value.asText()), context);
                     var response = objectMapper.writeValueAsString(attocDevice);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
