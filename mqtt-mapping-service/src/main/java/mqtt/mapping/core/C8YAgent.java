@@ -55,6 +55,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
@@ -297,6 +298,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         });
         return externalIDRepresentations[0];
+    }
+
+    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+        if (idType == null) {
+            idType = "c8y_Serial";
+        }
+        final String idt = idType;
+        ExternalIDRepresentation[] result = { null };
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                result[0] = identityApi.findExternalId(gid, idt, context);
+            } catch (SDKException e) {
+                log.warn("External ID type {} for {} not found", idt, gid.getValue());
+            }
+        });
+        return result[0];
     }
 
     public MappingServiceRepresentation getAgentMOR() {
