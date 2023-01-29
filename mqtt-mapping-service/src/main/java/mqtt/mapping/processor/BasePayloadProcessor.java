@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -51,6 +52,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
+import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -151,36 +153,49 @@ public abstract class BasePayloadProcessor<T> {
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     // if (pathTarget.equals(mapping.targetAPI.identifier)) {
                     if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
-                                new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
-                        if (sourceId == null && mapping.createNonExistingDevice) {
-                            ManagedObjectRepresentation attocDevice = null;
-                            Map<String, Object> request = new HashMap<String, Object>();
-                            request.put("name",
-                                    "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                            request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
-                            request.put("c8y_IsDevice", null);
-                            try {
-                                var requestString = objectMapper.writeValueAsString(request);
-                                var newPredecessor = context.addRequest(
-                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
-                                                mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                                attocDevice = c8yAgent.upsertDevice(
-                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context);
-                                var response = objectMapper.writeValueAsString(attocDevice);
-                                context.getCurrentRequest().setResponse(response);
-                                substituteValue.value = new TextNode(attocDevice.getId().getValue());
-                                predecessor = newPredecessor;
-                            } catch (ProcessingException | JsonProcessingException e) {
-                                context.getCurrentRequest().setError(e);
+                        if (Direction.OUTGOING.equals(mapping.direction)) {
+                            ExternalIDRepresentation externalId = c8yAgent.findExternalId(
+                                    new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
+                            if (externalId == null && context.isSendPayload()) {
+                                throw new RuntimeException("External id " + substituteValue + " for type "
+                                        + mapping.externalIdType + " not found!");
+                            } else if (externalId == null) {
+                                substituteValue.value = null;
+                            } else {
+                                substituteValue.value = new TextNode(externalId.getExternalId());
                             }
-                        } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + substituteValue + " for type "
-                                    + mapping.externalIdType + " not found!");
-                        } else if (sourceId == null) {
-                            substituteValue.value = null;
                         } else {
-                            substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
+                            ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
+                                    new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
+                            if (sourceId == null && mapping.createNonExistingDevice) {
+                                ManagedObjectRepresentation attocDevice = null;
+                                Map<String, Object> request = new HashMap<String, Object>();
+                                request.put("name",
+                                        "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                                request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
+                                request.put("c8y_IsDevice", null);
+                                try {
+                                    var requestString = objectMapper.writeValueAsString(request);
+                                    var newPredecessor = context.addRequest(
+                                            new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                                    mapping.externalIdType, requestString, null, API.INVENTORY, null));
+                                    attocDevice = c8yAgent.upsertDevice(
+                                            new ID(mapping.externalIdType, substituteValue.value.asText()), context);
+                                    var response = objectMapper.writeValueAsString(attocDevice);
+                                    context.getCurrentRequest().setResponse(response);
+                                    substituteValue.value = new TextNode(attocDevice.getId().getValue());
+                                    predecessor = newPredecessor;
+                                } catch (ProcessingException | JsonProcessingException e) {
+                                    context.getCurrentRequest().setError(e);
+                                }
+                            } else if (sourceId == null && context.isSendPayload()) {
+                                throw new RuntimeException("External id " + substituteValue + " for type "
+                                        + mapping.externalIdType + " not found!");
+                            } else if (sourceId == null) {
+                                substituteValue.value = null;
+                            } else {
+                                substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
+                            }
                         }
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);

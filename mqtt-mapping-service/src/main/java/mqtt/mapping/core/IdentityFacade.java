@@ -25,8 +25,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,8 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Slf4j
 @Service
 public class IdentityFacade {
+
+    public static final int PAGE_SIZE = 100;
 
     @Autowired
     private MockIdentity identityMock;
@@ -60,6 +64,22 @@ public class IdentityFacade {
             return identityApi.getExternalId(externalID);
         } else {
             return identityMock.getExternalId(externalID);
+        }
+    }
+
+    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+        if (context == null || context.isSendPayload()) {
+            ExternalIDRepresentation[] result = { null };
+            ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
+            for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
+                if (externalId.getType().equals(idType)) {
+                    result[0] = externalId;
+                    break;
+                }
+            }
+            return result[0];
+        } else {
+            return identityMock.getExternalIdsOfGlobalId(gid);
         }
     }
 
