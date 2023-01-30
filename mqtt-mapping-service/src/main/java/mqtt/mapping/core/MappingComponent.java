@@ -177,7 +177,7 @@ public class MappingComponent {
         return result;
     }
 
-    public String deleteMapping(String id) {
+    public Mapping deleteMapping(String id) {
         // test id the mapping is active, we don't delete or modify active mappings
         ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
         MappingRepresentation m = toMappingObject(mo);
@@ -188,7 +188,7 @@ public class MappingComponent {
         inventoryApi.delete(GId.asGId(id));
         deleteMappingStatus(id);
         log.info("Deleted Mapping: {}", id);
-        return id;
+        return m.getC8yMQTTMapping();
     }
 
     public List<Mapping> getMappings() {

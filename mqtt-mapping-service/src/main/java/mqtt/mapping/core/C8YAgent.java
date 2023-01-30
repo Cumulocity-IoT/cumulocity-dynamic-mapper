@@ -399,7 +399,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public String deleteMapping(String id) throws Exception {
-        String[] mr = { null };
+        Mapping[] mr = { null };
         Exception[] exceptions = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
@@ -411,8 +411,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (exceptions[0] != null ) {
             throw exceptions[0];
         }
-        mqttClient.deleteFromMappingCache(id);
-        return mr[0];
+        mqttClient.deleteFromMappingCache(mr[0]);
+        return mr[0].id;
     }
 
     public Mapping updateMapping(Mapping mapping, String id, boolean allowUpdateWhenActive) throws Exception {
@@ -714,7 +714,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveMappings().values().forEach(m -> {
+        mqttClient.getActiveIncomingMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }
