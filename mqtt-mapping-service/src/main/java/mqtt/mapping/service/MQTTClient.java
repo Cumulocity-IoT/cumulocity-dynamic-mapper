@@ -64,6 +64,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -670,6 +671,10 @@ public class MQTTClient {
         return activeSubscriptionCache.entrySet().stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    }
+
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) {
+        return null;
     }
 
 }
