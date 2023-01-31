@@ -486,30 +486,40 @@ public class MQTTClient {
         submitConnect();
     }
 
-    public void deleteFromMappingCache(Mapping mr) {
-        if (Direction.OUTGOING.equals(mr.direction)) {
+    public void deleteFromMappingCache(Mapping mapping) {
+        if (Direction.OUTGOING.equals(mapping.direction)) {
             // TODO update activeOutgoingMapping
+            Optional<Mapping> activeOutgoingMapping = activeOutgoingMappings.values().stream()
+                    .filter(m -> m.id.equals(mapping.id))
+                    .findFirst();
+            if (!activeOutgoingMapping.isPresent()) {
+                return;
+            }
+
+            activeOutgoingMappings.remove(mapping);
+
         } else {
             // find mapping for given id to work with the subscriptionTopic of the mapping
             Optional<Mapping> activeIncomingMapping = activeIncomingMappings.values().stream()
-                    .filter(m -> m.id.equals(mr.id)).findFirst();
+                    .filter(m -> m.id.equals(mapping.id)).findFirst();
             if (!activeIncomingMapping.isPresent()) {
                 return;
             }
-            Mapping mapping = activeIncomingMapping.get();
-            if (activeSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                MutableInt activeSubs = activeSubscriptionCache.get(mapping.subscriptionTopic);
+            Mapping existingMapping = activeIncomingMapping.get();
+            if (activeSubscriptionCache.containsKey(existingMapping.subscriptionTopic)) {
+                MutableInt activeSubs = activeSubscriptionCache.get(existingMapping.subscriptionTopic);
                 activeSubs.subtract(1);
                 if (activeSubs.intValue() <= 0) {
                     try {
-                        mqttClient.unsubscribe(mapping.subscriptionTopic);
+                        mqttClient.unsubscribe(existingMapping.subscriptionTopic);
                     } catch (MqttException e) {
-                        log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
+                        log.error("Exception when unsubscribing from topic: {}, {}", existingMapping.subscriptionTopic,
+                                e);
                     }
                 }
             }
-            deleteFromMappingTree(mapping);
-            activeIncomingMappings.remove(mr);
+            deleteFromMappingTree(existingMapping);
+            activeIncomingMappings.remove(mapping);
         }
     }
 
@@ -517,10 +527,22 @@ public class MQTTClient {
         // test if subsctiptionTopic has changed
         Mapping activeMapping = null;
         Boolean create = true;
-        Boolean subscriptionTopicChanged = false;
+
         if (Direction.OUTGOING.equals(mapping.direction)) {
-            // TODO update activeOutgoingMapping
+            // TODO update activeOutgoingMapping and build specific cache oraganiesed by the
+            // filterOutgoing fragment
+            Optional<Mapping> activeMappingOptional = activeOutgoingMappings.values().stream()
+                    .filter(m -> m.id.equals(mapping.id))
+                    .findFirst();
+
+            if (activeMappingOptional.isPresent()) {
+                create = false;
+                activeMapping = activeMappingOptional.get();
+            }
+
+            activeOutgoingMappings.put(mapping.id, mapping);
         } else {
+            Boolean subscriptionTopicChanged = false;
             Optional<Mapping> activeMappingOptional = activeIncomingMappings.values().stream()
                     .filter(m -> m.id.equals(mapping.id))
                     .findFirst();
@@ -589,12 +611,20 @@ public class MQTTClient {
     }
 
     public void rebuildOutgoingMappingCache() {
-        //TODO add implementation
-        activeOutgoingMappings = new HashMap<String, Mapping>();
+        // TODO review how to organize the cache efficiently to identify a mapping depending on the payload
+        // only add incoming mappings to the cache
+        List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
+                .filter(m -> Direction.OUTGOING.equals(m.direction))
+                .collect(Collectors.toList());
+        activeOutgoingMappings = updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getId, Function.identity()));
     }
 
     public void rebuildIncomingMappingCache() {
-        List<Mapping> updatedMappings = c8yAgent.getMappings();
+        // only add incoming mappings to the cache
+        List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
+                .filter(m -> !Direction.OUTGOING.equals(m.direction))
+                .collect(Collectors.toList());
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
