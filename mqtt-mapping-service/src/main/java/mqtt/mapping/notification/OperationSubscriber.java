@@ -265,9 +265,12 @@ public class OperationSubscriber {
         public void onNotification(Notification notification) {
             logger.info("Operation Notification received: <{}>", notification.getMessage());
             logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
+
             OperationRepresentation op = JSONBase.getJSONParser().parse(OperationRepresentation.class, notification.getMessage());
             logger.info("Operation received for Device {}", op.getDeviceId());
-
+            //TODO Call MQTTPayloadProcessor to find mapping for fragments
+            //TODO substitute properties from Operation to target MQTT format
+            //TODO send target MQTT format to MQTT broker
         }
 
         @Override
