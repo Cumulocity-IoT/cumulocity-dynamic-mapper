@@ -22,16 +22,20 @@
 package mqtt.mapping.notification;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationTokenRequestRepresentation;
+import com.cumulocity.sdk.client.cep.notification.ManagedObjectNotification;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
+import com.cumulocity.sdk.client.rest.providers.CumulocityJSONMessageBodyReader;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
@@ -44,6 +48,8 @@ import org.springframework.integration.websocket.WebSocketListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.svenson.JSONParser;
+import org.svenson.JSONProperty;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -84,35 +90,38 @@ public class OperationSubscriber {
         InventoryFilter filter = new InventoryFilter();
         filter.byFragmentType("c8y_IsDevice");
         Iterator<ManagedObjectRepresentation> deviceIt = inventoryApi.getManagedObjectsByFilter(filter).get().allPages().iterator();
-
+        NotificationSubscriptionRepresentation notRep = null;
         while (deviceIt.hasNext()) {
             ManagedObjectRepresentation mor = deviceIt.next();
             logger.info("Found device " + mor.getName());
-            subscribeDevice(mor);
+            notRep = subscribeDevice(mor);
+        }
+        if (notRep != null) {
+            String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+
+            try {
+                connect(deviceToken, operationCallback);
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public void subscribeDevice(ManagedObjectRepresentation mor) {
+    public NotificationSubscriptionRepresentation subscribeDevice(ManagedObjectRepresentation mor) {
         /* Connect to all devices */
         String deviceName = mor.getName();
         logger.info("Creating new Subscription for Device "+deviceName);
         NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor);
-        String deviceToken = createToken(notification.getSubscription(), DEVICE_SUBSCRIPTION);
-
-        try {
-            connect(deviceToken);
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+        return notification;
     }
 
     public void subscribeTenant(String tenant) {
         logger.info("Creating new Subscription for Tenant "+tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
-        String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIPTION);
+        String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIBER);
 
         try {
-            connect(tenantToken);
+            connect(tenantToken, tenantCallback);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -120,47 +129,51 @@ public class OperationSubscriber {
     }
 
     public NotificationSubscriptionRepresentation createTenantSubscription() {;
-        final String subscriptionName = TENANT_SUBSCRIBER;
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName)).get().allPages().iterator();
+        final String subscriptionName = TENANT_SUBSCRIPTION;
+         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
+            logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
             return notification;
         }
         if (notification == null) {
             logger.info("Subscription does not exist. Creating ...");
             notification = new NotificationSubscriptionRepresentation();
+            final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+            filterRepresentation.setApis(List.of("managedobjects"));
+            notification.setContext("tenant");
+            notification.setSubscription(subscriptionName);
+            notification.setSubscriptionFilter(filterRepresentation);
+            notification = subscriptionApi.subscribe(notification);
         }
-        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        filterRepresentation.setApis(List.of("managedobjects"));
-        notification.setContext("tenant");
-        notification.setSubscription(subscriptionName);
-        notification.setSubscriptionFilter(filterRepresentation);
-        return subscriptionApi.subscribe(notification);
+        return notification;
     }
 
     public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor) {
         final GId sourceId = GId.asGId(mor.getId());
-        final String subscriptionName = DEVICE_SUBSCRIBER;
-        logger.info("Base URL "+ baseUrl);
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName)).get().allPages().iterator();
+        final String subscriptionName = DEVICE_SUBSCRIPTION;
+
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId())).get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
-            if (notification.getSource().getId().equals(mor.getId()))
-                return notification;
+            logger.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(), notification.getSource().getId().getValue());
+            return notification;
         }
+
         if (notification == null) {
             logger.info("Subscription does not exist. Creating ...");
             notification = new NotificationSubscriptionRepresentation();
+            notification.setSource(mor);
+            final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+            filterRepresentation.setApis(List.of("operations"));
+            notification.setContext("mo");
+            notification.setSubscription(subscriptionName);
+            notification.setSubscriptionFilter(filterRepresentation);
+            notification = subscriptionApi.subscribe(notification);
         }
-        notification.setSource(mor);
-        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        filterRepresentation.setApis(List.of("operations"));
-        notification.setContext("mo");
-        notification.setSubscription(subscriptionName);
-        notification.setSubscriptionFilter(filterRepresentation);
-        return subscriptionApi.subscribe(notification);
+        return notification;
     }
 
     public String createToken(String subscription, String subscriber) {
@@ -194,34 +207,12 @@ public class OperationSubscriber {
         wsClientList = new ArrayList<>();
     }
 
-    public void connect(String token) throws URISyntaxException {
+    public void connect(String token, NotificationCallback callback) throws URISyntaxException {
         baseUrl = baseUrl.replace("http", "ws");
 
         URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
         logger.info("Trying to connect to "+webSocketUrl);
-        final NotificationCallback callback = new NotificationCallback() {
 
-            @Override
-            public void onOpen(URI uri) {
-                logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
-            }
-
-            @Override
-            public void onNotification(Notification notification) {
-                logger.info("Notification received: <{}>", notification.getMessage());
-                logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                logger.error("We got an exception: " + t);
-            }
-
-            @Override
-            public void onClose() {
-                logger.info("Connection was closed.");
-            }
-        };
         final WebSocketClient webSocketClient = new StandardWebSocketClient();
         ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
         WebSocketListener messageListener = new SpringWebSocketListener(callback);
@@ -231,4 +222,62 @@ public class OperationSubscriber {
         wsClientList.add(container);
 
     }
+
+    final NotificationCallback tenantCallback = new NotificationCallback() {
+
+        @Override
+        public void onOpen(URI uri) {
+            logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
+        }
+
+        @Override
+        public void onNotification(Notification notification) {
+            logger.info("Tenant Notification received: <{}>", notification.getMessage());
+            logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
+
+            ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
+            logger.info("New Device created with {} and id {}", mor.getName(), mor.getId().getValue());
+            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                subscribeDevice(mor);
+            });
+
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            logger.error("We got an exception: " + t);
+        }
+
+        @Override
+        public void onClose() {
+            logger.info("Connection was closed.");
+        }
+    };
+
+    final NotificationCallback operationCallback = new NotificationCallback() {
+
+        @Override
+        public void onOpen(URI uri) {
+            logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
+        }
+
+        @Override
+        public void onNotification(Notification notification) {
+            logger.info("Operation Notification received: <{}>", notification.getMessage());
+            logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
+            OperationRepresentation op = JSONBase.getJSONParser().parse(OperationRepresentation.class, notification.getMessage());
+            logger.info("Operation received for Device {}", op.getDeviceId());
+
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            logger.error("We got an exception: " + t);
+        }
+
+        @Override
+        public void onClose() {
+            logger.info("Connection was closed.");
+        }
+    };
 }
