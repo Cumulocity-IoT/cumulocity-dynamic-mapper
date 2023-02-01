@@ -25,20 +25,19 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationTokenRequestRepresentation;
-import com.cumulocity.sdk.client.cep.notification.ManagedObjectNotification;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
-import com.cumulocity.sdk.client.rest.providers.CumulocityJSONMessageBodyReader;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
+import mqtt.mapping.processor.AsynchronousDispatcherOutgoing;
+import mqtt.mapping.service.MQTTClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,8 +47,6 @@ import org.springframework.integration.websocket.WebSocketListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.svenson.JSONParser;
-import org.svenson.JSONProperty;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -73,6 +70,12 @@ public class OperationSubscriber {
 
     @Autowired
     private InventoryApi inventoryApi;
+
+    @Autowired
+    private MQTTClient mqttClient;
+
+    @Autowired
+    private AsynchronousDispatcherOutgoing dispatcherOutgoing;
 
     @Value("${C8Y.BASEURL}")
     private String baseUrl;
@@ -100,7 +103,7 @@ public class OperationSubscriber {
             String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
 
             try {
-                connect(deviceToken, operationCallback);
+                connect(deviceToken, dispatcherOutgoing);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -254,33 +257,4 @@ public class OperationSubscriber {
         }
     };
 
-    final NotificationCallback operationCallback = new NotificationCallback() {
-
-        @Override
-        public void onOpen(URI uri) {
-            logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
-        }
-
-        @Override
-        public void onNotification(Notification notification) {
-            logger.info("Operation Notification received: <{}>", notification.getMessage());
-            logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
-            OperationRepresentation op = JSONBase.getJSONParser().parse(OperationRepresentation.class, notification.getMessage());
-            logger.info("Operation received for Device {}", op.getDeviceId());
-            //TODO Call MQTTPayloadProcessor to find mapping for fragments
-            //TODO substitute properties from Operation to target MQTT format
-            //TODO send target MQTT format to MQTT broker
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            logger.error("We got an exception: " + t);
-        }
-
-        @Override
-        public void onClose() {
-            logger.info("Connection was closed.");
-        }
-    };
 }

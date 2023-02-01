@@ -21,6 +21,7 @@
 
 package mqtt.mapping.processor;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import mqtt.mapping.notification.websocket.Notification;
+import mqtt.mapping.notification.websocket.NotificationCallback;
 import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -55,7 +60,43 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class AsynchronousDispatcherOutgoing implements MqttCallback {
+public class AsynchronousDispatcherOutgoing implements NotificationCallback {
+
+    @Override
+    public void onOpen(URI serverUri) {
+        log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
+    }
+
+    @Override
+    public void onNotification(Notification notification) {
+        log.info("Operation Notification received: <{}>", notification.getMessage());
+        log.info("Notification headers: <{}>", notification.getNotificationHeaders());
+
+        OperationRepresentation op = JSONBase.getJSONParser().parse(OperationRepresentation.class, notification.getMessage());
+        log.info("Operation received for Device {}", op.getDeviceId());
+        //FIXME byte[] payload ???
+        List<Mapping> mappingList = mqttClient.resolveOutgoingMappings(null);
+        for (Mapping m : mappingList) {
+            String key = m.getFilterOutgoing();
+            if (op.hasProperty(key)) {
+                log.info("Found mapping key fragment {} in operation {}", key, op.getId().getValue());
+                //TODO Execute Mapping
+            }
+        }
+
+        //TODO substitute properties from Operation to target MQTT format
+        //TODO send target MQTT format to MQTT broker
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        log.error("We got an exception: " + t);
+    }
+
+    @Override
+    public void onClose() {
+        log.info("Connection was closed.");
+    }
 
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
@@ -230,18 +271,6 @@ public class AsynchronousDispatcherOutgoing implements MqttCallback {
 
         return futureProcessingResult;
 
-    }
-
-    @Override
-    public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
-        log.debug("Stacktrace: ", throwable);
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
-        mqttClient.submitConnect();
-    }
-
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
     }
 
 }
