@@ -684,6 +684,8 @@ public class MQTTClient {
     }
 
     public List<Mapping> resolveOutgoingMappings(byte[] payload) {
+        // use mappingCacheOutgoing and the key filterOutgoing to identify the matching mappings.
+        // the need to be returend in a list
         return null;
     }
 
