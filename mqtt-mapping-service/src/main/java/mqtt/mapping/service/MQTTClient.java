@@ -145,6 +145,8 @@ public class MQTTClient {
 
     @Getter
     private Map<String, Mapping> activeOutgoingMappings = new HashMap<String, Mapping>();
+    
+    private Map<String, Mapping> mappingCacheOutgoing = new HashMap<String, Mapping>();
 
     private TreeNode mappingTree = InnerNode.createRootNode();;
 
@@ -498,6 +500,7 @@ public class MQTTClient {
             }
 
             activeOutgoingMappings.remove(mapping);
+            mappingCacheOutgoing.remove(mapping.filterOutgoing);
 
         } else {
             // find mapping for given id to work with the subscriptionTopic of the mapping
@@ -520,7 +523,7 @@ public class MQTTClient {
                 }
             }
             deleteFromMappingTree(existingMapping);
-            activeIncomingMappings.remove(mapping);
+            rebuildOutgoingMappingCache();
         }
     }
 
@@ -542,6 +545,7 @@ public class MQTTClient {
             }
 
             activeOutgoingMappings.put(mapping.id, mapping);
+            rebuildOutgoingMappingCache();
         } else {
             Boolean subscriptionTopicChanged = false;
             Optional<Mapping> activeMappingOptional = activeIncomingMappings.values().stream()
@@ -619,6 +623,8 @@ public class MQTTClient {
                 .collect(Collectors.toList());
         activeOutgoingMappings = updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity()));
+        mappingCacheOutgoing = updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getFilterOutgoing, Function.identity()));                  
     }
 
     public void rebuildIncomingMappingCache() {
@@ -674,6 +680,10 @@ public class MQTTClient {
     }
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) {
+        return null;
+    }
+
+    public List<Mapping> resolveOutgoingMappings(byte[] payload) {
         return null;
     }
 
