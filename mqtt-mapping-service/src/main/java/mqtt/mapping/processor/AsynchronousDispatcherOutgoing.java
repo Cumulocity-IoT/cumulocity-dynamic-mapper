@@ -76,11 +76,15 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
         log.info("Operation received for Device {}", op.getDeviceId());
         //FIXME byte[] payload ???
         List<Mapping> mappingList = mqttClient.resolveOutgoingMappings(null);
-        for (Mapping m : mappingList) {
-            String key = m.getFilterOutgoing();
-            if (op.hasProperty(key)) {
-                log.info("Found mapping key fragment {} in operation {}", key, op.getId().getValue());
-                //TODO Execute Mapping
+        if (mappingList != null) {
+            for (Mapping m : mappingList) {
+                String key = m.getFilterOutgoing();
+                if (op.hasProperty(key)) {
+                    log.info("Found mapping key fragment {} in operation {}", key, op.getId().getValue());
+                    //TODO Execute Mapping
+                    //TODO Set Operation to executed
+                    //
+                }
             }
         }
 

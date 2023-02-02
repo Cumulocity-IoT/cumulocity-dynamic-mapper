@@ -44,6 +44,7 @@ import mqtt.mapping.notification.OperationSubscriber;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.info.ProjectInfoProperties;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -723,5 +724,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         updateMapping(mapping, id, true);
         // step 4 delete mapping from update cache
         mappingComponent.removeMappingFormDirtyMappings(mapping);
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
+        ManagedObjectRepresentation mor = null;
+        GId id = new GId();
+        id.setValue(deviceId);
+        try {
+            mor = inventoryApi.get(id);
+        } catch (SDKException exception) {
+            log.info("Device with id {} not found!", deviceId);
+        }
+        return mor;
     }
 }
