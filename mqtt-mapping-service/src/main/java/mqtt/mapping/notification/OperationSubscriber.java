@@ -33,6 +33,7 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
@@ -73,6 +74,9 @@ public class OperationSubscriber {
 
     @Autowired
     private MQTTClient mqttClient;
+
+    @Autowired
+    private C8YAgent c8YAgent;
 
     @Autowired
     private AsynchronousDispatcherOutgoing dispatcherOutgoing;
@@ -203,6 +207,15 @@ public class OperationSubscriber {
         }
     }
 
+    public void unsubscribeDevice(ManagedObjectRepresentation mor) {
+        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
+        NotificationSubscriptionRepresentation notification = null;
+        while (deviceSubIt.hasNext()) {
+            notification = deviceSubIt.next();
+            subscriptionApi.delete(notification);
+        }
+    }
+
     public void disconnect() {
         for (ClientWebSocketContainer client : wsClientList) {
             client.stop();
@@ -233,17 +246,37 @@ public class OperationSubscriber {
             logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
         }
 
+        @Autowired
+        MicroserviceSubscriptionsService subscriptionsService;
+
         @Override
         public void onNotification(Notification notification) {
-            logger.info("Tenant Notification received: <{}>", notification.getMessage());
-            logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
+            try {
+                logger.info("Tenant Notification received: <{}>", notification.getMessage());
+                logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
 
-            ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
-            logger.info("New Device created with {} and id {}", mor.getName(), mor.getId().getValue());
-            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                subscribeDevice(mor);
-            });
+                ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
+                if (notification.getNotificationHeaders().contains("CREATE")) {
+                    logger.info("New Device created with name {} and id {}", mor.getName(), mor.getId().getValue());
+                    final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                    if (morRetrieved != null) {
+                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            subscribeDevice(morRetrieved);
+                        });
+                    }
+                } else if (notification.getNotificationHeaders().contains("DELETE")) {
+                    logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
+                    final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                    if (morRetrieved != null) {
+                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            unsubscribeDevice(morRetrieved);
+                        });
+                    }
 
+                }
+            } catch (Exception e) {
+                logger.error("Error on processing Tenant Notification {}: {}", notification, e.getLocalizedMessage());
+            }
         }
 
         @Override
