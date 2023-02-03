@@ -31,6 +31,7 @@ import java.util.concurrent.Future;
 
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import mqtt.mapping.notification.OperationSubscriber;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import org.apache.commons.codec.binary.Hex;
@@ -62,9 +63,13 @@ import mqtt.mapping.service.MQTTClient;
 @Service
 public class AsynchronousDispatcherOutgoing implements NotificationCallback {
 
+    @Autowired
+    OperationSubscriber operationSubscriber;
+
     @Override
     public void onOpen(URI serverUri) {
         log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
+        operationSubscriber.setDeviceConnectionStatus(true);
     }
 
     @Override
@@ -100,6 +105,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     @Override
     public void onClose() {
         log.info("Connection was closed.");
+        operationSubscriber.setDeviceConnectionStatus(false);
     }
 
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {

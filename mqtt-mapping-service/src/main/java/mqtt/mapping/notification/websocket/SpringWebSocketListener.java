@@ -59,7 +59,7 @@ public class SpringWebSocketListener implements WebSocketListener {
             }
 
         } else {
-            log.warn("Received not text message" + message.toString());
+            //log.warn("Received not text message" + message.toString());
         }
     }
 
