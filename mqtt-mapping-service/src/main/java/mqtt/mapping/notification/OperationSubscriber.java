@@ -28,6 +28,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationTokenRequestRepresentation;
+import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
@@ -39,6 +40,7 @@ import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
 import mqtt.mapping.processor.AsynchronousDispatcherOutgoing;
 import mqtt.mapping.service.MQTTClient;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,11 +56,18 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 
 @Service
 public class OperationSubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
     private static final Logger logger = LoggerFactory.getLogger(OperationSubscriber.class);
+
+    public static boolean DEVICE_NOTIFICATION_CONNECTED = FALSE;
 
     @Autowired
     private TokenApi tokenApi;
@@ -87,11 +96,28 @@ public class OperationSubscriber {
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
-    private final String TENANT_SUBSCRIPTION= "MQTTOutboundMapperTenantSubscription";
+    private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
 
     List<ClientWebSocketContainer> wsClientList = new ArrayList<>();
     List<NotificationSubscriptionRepresentation> subscriptionList = new ArrayList<>();
 
+
+    public void init() {
+       // Subscribe on Tenant do get informed when devices get deleted/added
+        logger.info("Initializing Operation Subscriptions...");
+       subscribeTenant(subscriptionsService.getTenant());
+       List<NotificationSubscriptionRepresentation> deviceSubList = getDeviceSubscriptions();
+       // When one subscription exsits, connect
+       if (deviceSubList.size() > 0) {
+           String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+           try {
+               connect(token, dispatcherOutgoing);
+           } catch (URISyntaxException e) {
+               logger.error("Error connecting device subscription: {}", e.getLocalizedMessage());
+           }
+
+       }
+    }
 
     public void subscribeAllDevices() {
         InventoryFilter filter = new InventoryFilter();
@@ -101,7 +127,13 @@ public class OperationSubscriber {
         while (deviceIt.hasNext()) {
             ManagedObjectRepresentation mor = deviceIt.next();
             logger.info("Found device " + mor.getName());
-            notRep = subscribeDevice(mor);
+            try {
+                notRep = subscribeDevice(mor).get();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
         }
         if (notRep != null) {
             String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
@@ -114,20 +146,95 @@ public class OperationSubscriber {
         }
     }
 
-    public NotificationSubscriptionRepresentation subscribeDevice(ManagedObjectRepresentation mor) {
+    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String deviceName = mor.getName();
-        logger.info("Creating new Subscription for Device "+deviceName);
-        NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor);
-        return notification;
+        logger.info("Creating new Subscription for Device " + deviceName);
+        CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor);
+            notificationFut.complete(notification);
+            if (!DEVICE_NOTIFICATION_CONNECTED) {
+                logger.info("Device Subscription not connected yet. Will connect...");
+                String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+                try {
+                    connect(token, dispatcherOutgoing);
+                } catch (URISyntaxException e) {
+                    logger.error("Error on connecting to Notification Service: {}", e.getLocalizedMessage());
+                    throw new RuntimeException(e);
+                }
+                DEVICE_NOTIFICATION_CONNECTED = true;
+            }
+        });
+        return notificationFut;
+    }
+
+    public List<NotificationSubscriptionRepresentation> getDeviceSubscriptions() {
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).byContext("mo")).get().allPages().iterator();
+        NotificationSubscriptionRepresentation notification = null;
+        List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
+        while (subIt.hasNext()) {
+            notification = subIt.next();
+            if (!"tenant".equals(notification.getContext())) {
+                logger.info("Subscription with ID {} retrieved", notification.getId().getValue());
+                deviceSubList.add(notification);
+            }
+        }
+        return deviceSubList;
     }
 
     public void subscribeTenant(String tenant) {
-        logger.info("Creating new Subscription for Tenant "+tenant);
+        logger.info("Creating new Subscription for Tenant " + tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
         String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIBER);
 
         try {
+            NotificationCallback tenantCallback = new NotificationCallback() {
+
+                @Override
+                public void onOpen(URI uri) {
+                    logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
+                }
+
+                @Override
+                public void onNotification(Notification notification) {
+                    try {
+                        logger.info("Tenant Notification received: <{}>", notification.getMessage());
+                        logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
+
+                        ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
+                        /*
+                        if (notification.getNotificationHeaders().contains("CREATE")) {
+                            logger.info("New Device created with name {} and id {}", mor.getName(), mor.getId().getValue());
+                            final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                            if (morRetrieved != null) {
+                                subscribeDevice(morRetrieved);
+                            }
+                        }
+                         */
+                        if (notification.getNotificationHeaders().contains("DELETE")) {
+
+                            logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
+                            final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                            if (morRetrieved != null) {
+                                unsubscribeDevice(morRetrieved);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error on processing Tenant Notification {}: {}", notification, e.getLocalizedMessage());
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    logger.error("We got an exception: " + t);
+                }
+
+                @Override
+                public void onClose() {
+                    logger.info("Connection was closed.");
+                }
+            };
             connect(tenantToken, tenantCallback);
         } catch (URISyntaxException e) {
             e.printStackTrace();
@@ -135,9 +242,10 @@ public class OperationSubscriber {
 
     }
 
-    public NotificationSubscriptionRepresentation createTenantSubscription() {;
+    public NotificationSubscriptionRepresentation createTenantSubscription() {
+
         final String subscriptionName = TENANT_SUBSCRIPTION;
-         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
@@ -194,26 +302,35 @@ public class OperationSubscriber {
 
     public void unsubscribe() {
         Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator();
-        NotificationSubscriptionRepresentation notification = null;
         while (deviceSubIt.hasNext()) {
-            notification = deviceSubIt.next();
-            subscriptionApi.delete(notification);
+            NotificationSubscriptionRepresentation notification = deviceSubIt.next();
+            logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
+            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                subscriptionApi.delete(notification);
+            });
+
         }
         Iterator<NotificationSubscriptionRepresentation> tenantSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(TENANT_SUBSCRIPTION)).get().allPages().iterator();
-        notification = null;
         while (tenantSubIt.hasNext()) {
-            notification = tenantSubIt.next();
-            subscriptionApi.delete(notification);
+            NotificationSubscriptionRepresentation notification = tenantSubIt.next();
+            logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
+            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                subscriptionApi.delete(notification);
+            });
         }
     }
 
-    public void unsubscribeDevice(ManagedObjectRepresentation mor) {
+    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException{
         Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
-        NotificationSubscriptionRepresentation notification = null;
         while (deviceSubIt.hasNext()) {
-            notification = deviceSubIt.next();
-            subscriptionApi.delete(notification);
+            NotificationSubscriptionRepresentation notification = deviceSubIt.next();
+
+            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                subscriptionApi.delete(notification);
+            });
+            return true;
         }
+        return false;
     }
 
     public void disconnect() {
@@ -223,12 +340,19 @@ public class OperationSubscriber {
         wsClientList = new ArrayList<>();
     }
 
+    public boolean getDeviceConnectionStatus() {
+        return DEVICE_NOTIFICATION_CONNECTED;
+    }
+
+    public boolean setDeviceConnectionStatus(boolean status) {
+        DEVICE_NOTIFICATION_CONNECTED = status;
+        return DEVICE_NOTIFICATION_CONNECTED;
+    }
+
     public void connect(String token, NotificationCallback callback) throws URISyntaxException {
         baseUrl = baseUrl.replace("http", "ws");
 
         URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-        logger.info("Trying to connect to "+webSocketUrl);
-
         final WebSocketClient webSocketClient = new StandardWebSocketClient();
         ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
         WebSocketListener messageListener = new SpringWebSocketListener(callback);
@@ -238,56 +362,5 @@ public class OperationSubscriber {
         wsClientList.add(container);
 
     }
-
-    final NotificationCallback tenantCallback = new NotificationCallback() {
-
-        @Override
-        public void onOpen(URI uri) {
-            logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
-        }
-
-        @Autowired
-        MicroserviceSubscriptionsService subscriptionsService;
-
-        @Override
-        public void onNotification(Notification notification) {
-            try {
-                logger.info("Tenant Notification received: <{}>", notification.getMessage());
-                logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
-                ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
-                if (notification.getNotificationHeaders().contains("CREATE")) {
-                    logger.info("New Device created with name {} and id {}", mor.getName(), mor.getId().getValue());
-                    final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
-                    if (morRetrieved != null) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            subscribeDevice(morRetrieved);
-                        });
-                    }
-                } else if (notification.getNotificationHeaders().contains("DELETE")) {
-                    logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
-                    final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
-                    if (morRetrieved != null) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            unsubscribeDevice(morRetrieved);
-                        });
-                    }
-
-                }
-            } catch (Exception e) {
-                logger.error("Error on processing Tenant Notification {}: {}", notification, e.getLocalizedMessage());
-            }
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            logger.error("We got an exception: " + t);
-        }
-
-        @Override
-        public void onClose() {
-            logger.info("Connection was closed.");
-        }
-    };
 
 }

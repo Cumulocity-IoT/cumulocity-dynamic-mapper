@@ -230,9 +230,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
-
-            operationSubscriber.subscribeTenant(tenant);
-            operationSubscriber.subscribeAllDevices();
+            operationSubscriber.init();
+            //operationSubscriber.subscribeTenant(tenant);
+            //operationSubscriber.subscribeAllDevices();
 
 
         });
@@ -727,14 +727,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
-        ManagedObjectRepresentation mor = null;
-        GId id = new GId();
-        id.setValue(deviceId);
-        try {
-            mor = inventoryApi.get(id);
-        } catch (SDKException exception) {
-            log.info("Device with id {} not found!", deviceId);
-        }
-        return mor;
+        ManagedObjectRepresentation[] devices = { null };
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            GId id = new GId();
+            id.setValue(deviceId);
+            try {
+                ManagedObjectRepresentation mor = inventoryApi.get(id);
+                devices[0] = mor;
+            } catch (SDKException exception) {
+                log.info("Device with id {} not found!", deviceId);
+            }
+        });
+
+        return devices[0];
     }
 }

@@ -2,11 +2,8 @@ package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Device;
-import mqtt.mapping.model.DeviceList;
-import mqtt.mapping.model.Mapping;
 import mqtt.mapping.notification.OperationSubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,11 +29,34 @@ public class MQTTOutgoingMappingRestController {
     OperationSubscriber operationSubscriber;
 
     @RequestMapping(value = "/registerDevicesForOperations", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> registerDevice(@Valid @RequestBody DeviceList devices) {
+    public ResponseEntity<?> registerDevice(@Valid @RequestBody List<Device> devices) {
         try {
-            for (Device device : devices.getDeviceList()) {
+
+            for (Device device : devices) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
-                operationSubscriber.subscribeDevice(mor);
+                if (mor != null) {
+                    operationSubscriber.subscribeDevice(mor);
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
+                }
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @RequestMapping(value = "/unregisterDevicesForOperations", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> unregisterDevice(@Valid @RequestBody List<Device> devices) {
+        try {
+
+            for (Device device : devices) {
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
+                if (mor != null) {
+                    operationSubscriber.unsubscribeDevice(mor);
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
+                }
             }
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
