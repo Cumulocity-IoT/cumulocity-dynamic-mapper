@@ -3,8 +3,9 @@ package mqtt.mapping.rest;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
-import mqtt.mapping.notification.OperationSubscriber;
+import mqtt.mapping.notification.C8YAPISubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,16 +27,15 @@ public class MQTTOutgoingMappingRestController {
     C8YAgent c8yAgent;
 
     @Autowired
-    OperationSubscriber operationSubscriber;
+    C8YAPISubscriber operationSubscriber;
 
-    @RequestMapping(value = "/registerDevicesForOperations", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> registerDevice(@Valid @RequestBody List<Device> devices) {
+    @RequestMapping(value = "/subscription/create", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
         try {
-
-            for (Device device : devices) {
+            for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
                 if (mor != null) {
-                    operationSubscriber.subscribeDevice(mor);
+                    operationSubscriber.subscribeDevice(mor, subscription.getApi());
                 } else {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
                 }
@@ -46,14 +46,13 @@ public class MQTTOutgoingMappingRestController {
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(value = "/unregisterDevicesForOperations", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> unregisterDevice(@Valid @RequestBody List<Device> devices) {
+    @RequestMapping(value = "/subscription/delete", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> subscriptionDelete(@Valid @RequestBody C8YAPISubscription subscription) {
         try {
-
-            for (Device device : devices) {
+            for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
                 if (mor != null) {
-                    operationSubscriber.unsubscribeDevice(mor);
+                    operationSubscriber.unsubscribeDevice(mor, subscription.getApi());
                 } else {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
                 }
