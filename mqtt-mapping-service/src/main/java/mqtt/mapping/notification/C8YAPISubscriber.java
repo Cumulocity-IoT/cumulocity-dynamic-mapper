@@ -35,12 +35,11 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.model.API;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
 import mqtt.mapping.processor.AsynchronousDispatcherOutgoing;
-import mqtt.mapping.service.MQTTClient;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,12 +59,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static java.lang.Boolean.FALSE;
-import static java.lang.Boolean.TRUE;
 
 @Service
-public class OperationSubscriber {
+public class C8YAPISubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
-    private static final Logger logger = LoggerFactory.getLogger(OperationSubscriber.class);
+    private static final Logger logger = LoggerFactory.getLogger(C8YAPISubscriber.class);
 
     public static boolean DEVICE_NOTIFICATION_CONNECTED = FALSE;
 
@@ -80,9 +78,6 @@ public class OperationSubscriber {
 
     @Autowired
     private InventoryApi inventoryApi;
-
-    @Autowired
-    private MQTTClient mqttClient;
 
     @Autowired
     private C8YAgent c8YAgent;
@@ -128,7 +123,7 @@ public class OperationSubscriber {
             ManagedObjectRepresentation mor = deviceIt.next();
             logger.info("Found device " + mor.getName());
             try {
-                notRep = subscribeDevice(mor).get();
+                notRep = subscribeDevice(mor, API.OPERATION).get();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } catch (ExecutionException e) {
@@ -146,13 +141,13 @@ public class OperationSubscriber {
         }
     }
 
-    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor) throws ExecutionException, InterruptedException {
+    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor, API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String deviceName = mor.getName();
         logger.info("Creating new Subscription for Device " + deviceName);
         CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor);
+            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
             notificationFut.complete(notification);
             if (!DEVICE_NOTIFICATION_CONNECTED) {
                 logger.info("Device Subscription not connected yet. Will connect...");
@@ -217,7 +212,7 @@ public class OperationSubscriber {
                             logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
                             final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
                             if (morRetrieved != null) {
-                                unsubscribeDevice(morRetrieved);
+                                unsubscribeDevice(morRetrieved, API.OPERATION);
                             }
                         }
                     } catch (Exception e) {
@@ -265,7 +260,7 @@ public class OperationSubscriber {
         return notification;
     }
 
-    public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor) {
+    public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
         final GId sourceId = GId.asGId(mor.getId());
         final String subscriptionName = DEVICE_SUBSCRIPTION;
 
@@ -282,7 +277,8 @@ public class OperationSubscriber {
             notification = new NotificationSubscriptionRepresentation();
             notification.setSource(mor);
             final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-            filterRepresentation.setApis(List.of("operations"));
+            //filterRepresentation.setApis(List.of("operations"));
+            filterRepresentation.setApis(List.of(api.notificationFilter));
             notification.setContext("mo");
             notification.setSubscription(subscriptionName);
             notification.setSubscriptionFilter(filterRepresentation);
@@ -320,7 +316,7 @@ public class OperationSubscriber {
         }
     }
 
-    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException{
+    public boolean unsubscribeDevice(ManagedObjectRepresentation mor, API api) throws SDKException{
         Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();

@@ -60,10 +60,10 @@ public class SysHandler {
     @Autowired
     private C8YAgent c8yAgent;
 
-    public void handleSysPayload(String topic, MqttMessage mqttMessage) {
+    public void handleSysPayload(String topic, byte[] payload) {
         if (topic == null)
             return;
-        byte[] payload = mqttMessage.getPayload();
+        //byte[] payload = mqttMessage.getPayload();
         HashMap<String, MeasurementValue> mvMap = new HashMap<>();
         if (BYTES_RECEIVED.equals(topic)) {
             MeasurementValue mv = new MeasurementValue();

@@ -22,17 +22,20 @@
 package mqtt.mapping.model;
 
 public enum API {
-    ALARM ( "ALARM",  "source.id" ),
-    EVENT ( "EVENT",  "source.id" ),
-    MEASUREMENT ( "MEASUREMENT",  "source.id" ),
-    INVENTORY ( "INVENTORY",  "_DEVICE_IDENT_" ),
-    OPERATION ( "OPERATION",  "deviceId" );
+    ALARM ( "ALARM",  "source.id", "alarms" ),
+    EVENT ( "EVENT",  "source.id",  "events" ),
+    MEASUREMENT ( "MEASUREMENT",  "source.id", "measurements" ),
+    INVENTORY ( "INVENTORY",  "_DEVICE_IDENT_", "managedObjects"  ),
+    OPERATION ( "OPERATION",  "deviceId",  "operations" ),
+    EMPTY ( "NN",  "nn",  "nn" );
 
     public final String name;
     public final String identifier;
+    public final String notificationFilter;
 
-    private API (String name, String identifier){
+    private API (String name, String identifier, String notificationFilter){
         this.name = name;
         this.identifier = identifier;
+        this.notificationFilter = notificationFilter;
     }
 }
