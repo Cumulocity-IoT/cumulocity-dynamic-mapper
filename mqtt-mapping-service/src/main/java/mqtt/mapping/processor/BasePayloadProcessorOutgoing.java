@@ -192,6 +192,7 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                                 null, mapping.targetAPI, null));
                 try {
                     attocRequest = mqttClient.createMEAO(context);
+
                     var response = objectMapper.writeValueAsString(attocRequest);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
