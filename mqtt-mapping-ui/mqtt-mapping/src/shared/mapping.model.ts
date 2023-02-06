@@ -69,6 +69,7 @@ export interface Mapping {
     extension?: ExtensionEntry;
     direction?: Direction;
     filterOutgoing?: string;
+    autoAckOperation?: boolean;
     lastUpdate: number;
 }
 

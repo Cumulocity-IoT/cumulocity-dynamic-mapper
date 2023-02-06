@@ -30,13 +30,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.processor.ProcessingException;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
@@ -49,6 +51,8 @@ public class ProcessingContext<O> {
     private Mapping mapping;
 
     private String topic;
+
+    private String resolvedPublishTopic;
 
     private O payload;
 

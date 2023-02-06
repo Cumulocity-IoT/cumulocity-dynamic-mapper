@@ -356,7 +356,6 @@ public class C8YAPISubscriber {
         container.setConnectionTimeout(30);
         container.start();
         wsClientList.add(container);
-
     }
 
 }

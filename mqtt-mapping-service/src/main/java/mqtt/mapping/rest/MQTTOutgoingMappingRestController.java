@@ -27,7 +27,7 @@ public class MQTTOutgoingMappingRestController {
     C8YAgent c8yAgent;
 
     @Autowired
-    C8YAPISubscriber operationSubscriber;
+    C8YAPISubscriber c8yApiSubscriber;
 
     @RequestMapping(value = "/subscription/create", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
@@ -35,7 +35,7 @@ public class MQTTOutgoingMappingRestController {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
                 if (mor != null) {
-                    operationSubscriber.subscribeDevice(mor, subscription.getApi());
+                    c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
                 } else {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
                 }
@@ -52,7 +52,7 @@ public class MQTTOutgoingMappingRestController {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
                 if (mor != null) {
-                    operationSubscriber.unsubscribeDevice(mor, subscription.getApi());
+                    c8yApiSubscriber.unsubscribeDevice(mor, subscription.getApi());
                 } else {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
                 }
