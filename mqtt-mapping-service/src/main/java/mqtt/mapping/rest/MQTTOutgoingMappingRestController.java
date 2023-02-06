@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
@@ -29,7 +26,7 @@ public class MQTTOutgoingMappingRestController {
     @Autowired
     C8YAPISubscriber c8yApiSubscriber;
 
-    @RequestMapping(value = "/subscription/create", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
         try {
             for (Device device : subscription.getDevices()) {
@@ -37,7 +34,8 @@ public class MQTTOutgoingMappingRestController {
                 if (mor != null) {
                     c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
                 } else {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
+                    log.warn("Could not subscribe device with id "+device.getId()+ ". Device does not exists!" );
+                    //throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
                 }
             }
         } catch (Exception e) {
@@ -46,17 +44,15 @@ public class MQTTOutgoingMappingRestController {
         return ResponseEntity.ok().build();
     }
 
-    @RequestMapping(value = "/subscription/delete", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> subscriptionDelete(@Valid @RequestBody C8YAPISubscription subscription) {
+    @RequestMapping(value = "/subscription/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
         try {
-            for (Device device : subscription.getDevices()) {
-                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(deviceId);
                 if (mor != null) {
-                    c8yApiSubscriber.unsubscribeDevice(mor, subscription.getApi());
+                    c8yApiSubscriber.unsubscribeDevice(mor, null);
                 } else {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not delete subscription for device with id "+deviceId+ ". Device not found" );
                 }
-            }
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
