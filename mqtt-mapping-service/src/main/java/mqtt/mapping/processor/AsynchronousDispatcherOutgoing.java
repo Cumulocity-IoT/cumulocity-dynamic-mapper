@@ -132,7 +132,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
                 } else {
                     context = new ProcessingContext<byte[]>();
                 }
-                context.setTopic(topic);
+                context.setTopic(mapping.publishTopic);
                 context.setMappingType(mapping.mappingType);
                 context.setMapping(mapping);
                 context.setSendPayload(sendPayload);
