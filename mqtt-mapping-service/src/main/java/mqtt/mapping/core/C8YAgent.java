@@ -40,7 +40,7 @@ import java.util.TimeZone;
 
 import javax.annotation.PreDestroy;
 
-import mqtt.mapping.notification.OperationSubscriber;
+import mqtt.mapping.notification.C8YAPISubscriber;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -150,7 +150,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
 
     @Autowired
-    OperationSubscriber operationSubscriber;
+    C8YAPISubscriber operationSubscriber;
 
     private ExtensibleProcessor extensibleProcessor;
 

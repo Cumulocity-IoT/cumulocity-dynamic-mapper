@@ -220,7 +220,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                 return futureProcessingResult;
             }
         } else {
-            sysHandler.handleSysPayload(topic, mqttMessage);
+            sysHandler.handleSysPayload(topic, mqttMessage.getPayload());
             return futureProcessingResult;
         }
 

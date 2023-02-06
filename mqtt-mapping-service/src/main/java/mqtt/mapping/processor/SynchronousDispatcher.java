@@ -180,7 +180,7 @@ public class SynchronousDispatcher implements MqttCallback {
                 });
             }
         } else {
-            sysHandler.handleSysPayload(topic, mqttMessage);
+            sysHandler.handleSysPayload(topic, mqttMessage.getPayload());
         }
 
         return processingResult;
