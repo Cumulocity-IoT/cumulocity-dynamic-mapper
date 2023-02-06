@@ -34,6 +34,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,7 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,8 +66,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.cumulocity.model.sms.TextMessage;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -81,6 +85,7 @@ import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.Operation;
 import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.model.API;
 import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
@@ -89,6 +94,7 @@ import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 //import mqtt.mapping.processor.SynchronousDispatcher;
 import mqtt.mapping.processor.AsynchronousDispatcher;
+import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
@@ -145,7 +151,7 @@ public class MQTTClient {
 
     @Getter
     private Map<String, Mapping> activeOutgoingMappings = new HashMap<String, Mapping>();
-    
+
     private Map<String, Mapping> mappingCacheOutgoing = new HashMap<String, Mapping>();
 
     private TreeNode mappingTree = InnerNode.createRootNode();;
@@ -616,7 +622,8 @@ public class MQTTClient {
     }
 
     public void rebuildOutgoingMappingCache() {
-        // TODO review how to organize the cache efficiently to identify a mapping depending on the payload
+        // TODO review how to organize the cache efficiently to identify a mapping
+        // depending on the payload
         // only add incoming mappings to the cache
         List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
                 .filter(m -> Direction.OUTGOING.equals(m.direction))
@@ -624,7 +631,7 @@ public class MQTTClient {
         activeOutgoingMappings = updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity()));
         mappingCacheOutgoing = updatedMappings.stream()
-                .collect(Collectors.toMap(Mapping::getFilterOutgoing, Function.identity()));                  
+                .collect(Collectors.toMap(Mapping::getFilterOutgoing, Function.identity()));
     }
 
     public void rebuildIncomingMappingCache() {
@@ -679,14 +686,29 @@ public class MQTTClient {
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) {
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) throws MqttPersistenceException, MqttException {
+        MqttMessage mqttMessage = new MqttMessage();
+        C8YRequest currentRequest = context.getCurrentRequest();
+        String payload = currentRequest.getRequest();
+        mqttMessage.setPayload(payload.getBytes());
+        mqttClient.publish(context.getMapping().publishTopic, mqttMessage);
         return null;
     }
 
-    public List<Mapping> resolveOutgoingMappings(byte[] payload) {
-        // use mappingCacheOutgoing and the key filterOutgoing to identify the matching mappings.
+    public List<Mapping> resolveOutgoingMappings(JsonNode message, API api) {
+        // use mappingCacheOutgoing and the key filterOutgoing to identify the matching
+        // mappings.
         // the need to be returend in a list
-        return null;
+        List<Mapping> result = new ArrayList<>();
+
+        for (Mapping m : activeOutgoingMappings.values()) {
+            String key = m.getFilterOutgoing();
+            if (message.has(key) && m.targetAPI.equals(api)) {
+                log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
+                result.add(m);
+            }
+        }
+        return result;
     }
 
 }

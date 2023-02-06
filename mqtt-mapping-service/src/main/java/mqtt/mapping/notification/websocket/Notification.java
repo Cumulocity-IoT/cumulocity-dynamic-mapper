@@ -3,6 +3,7 @@ package mqtt.mapping.notification.websocket;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import mqtt.mapping.model.API;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +15,7 @@ public class Notification {
     private final String ackHeader;
     private final List<String> notificationHeaders;
     private final String message;
+    private final API api;
 
     public static Notification parse(String message) {
         ArrayList<String> headers = new ArrayList<>(8);
@@ -30,9 +32,30 @@ public class Notification {
             headers.add(header);
         }
         if (headers.isEmpty()) {
-            return new Notification(null, Collections.emptyList(), message);
+            return new Notification(null, Collections.emptyList(), message, API.EMPTY);
         }
-        return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())), message);
+        String apiString = headers.get(1).split("/")[1];
+        API api = API.EMPTY;
+        switch (apiString) {
+            case "alarms":
+                api = API.ALARM;
+                break;
+            case "events":
+                api = API.EVENT;
+                break;
+            case "measurements":
+                api = API.MEASUREMENT;
+                break;
+            case "managedObjects":
+                api = API.INVENTORY;
+                break;
+            case "operations":
+                api = API.OPERATION;
+                break;
+            default:
+                break;
+        }
+        return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())), message, api);
     }
 
 }
