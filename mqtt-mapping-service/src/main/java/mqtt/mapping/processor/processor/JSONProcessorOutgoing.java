@@ -76,18 +76,6 @@ public class JSONProcessorOutgoing extends BasePayloadProcessorOutgoing<JsonNode
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-        /*
-         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-         * is required in the payload for a substitution
-         */
-        ArrayNode topicLevels = objectMapper.createArrayNode();
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        splitTopicAsList.forEach(s -> topicLevels.add(s));
-        if (payloadJsonNode instanceof ObjectNode) {
-            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
-        } else {
-            log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
-        }
         String payload = payloadJsonNode.toPrettyString();
         log.info("Patched payload: {}", payload);
 
