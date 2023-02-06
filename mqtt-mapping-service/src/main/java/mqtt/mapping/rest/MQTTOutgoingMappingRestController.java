@@ -1,6 +1,7 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -42,6 +44,16 @@ public class MQTTOutgoingMappingRestController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
         return ResponseEntity.ok().build();
+    }
+
+    @RequestMapping(value = "/subscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<NotificationSubscriptionRepresentation>> subscriptionsGet(@RequestParam(required = false) String deviceId, @RequestParam(required = false) String subscriptionName) {
+        try {
+            List<NotificationSubscriptionRepresentation> list = c8yApiSubscriber.getDeviceSubscriptions(deviceId, subscriptionName).get();
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
     }
 
     @RequestMapping(value = "/subscription/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)

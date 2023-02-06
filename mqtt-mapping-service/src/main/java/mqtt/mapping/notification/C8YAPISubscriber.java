@@ -101,8 +101,15 @@ public class C8YAPISubscriber {
        // Subscribe on Tenant do get informed when devices get deleted/added
         logger.info("Initializing Operation Subscriptions...");
        subscribeTenant(subscriptionsService.getTenant());
-       List<NotificationSubscriptionRepresentation> deviceSubList = getDeviceSubscriptions();
-       // When one subscription exsits, connect
+        List<NotificationSubscriptionRepresentation> deviceSubList = null;
+        try {
+            deviceSubList = getDeviceSubscriptions(null, DEVICE_SUBSCRIPTION).get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        // When one subscription exsits, connect
        if (deviceSubList.size() > 0) {
            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
            try {
@@ -164,18 +171,36 @@ public class C8YAPISubscriber {
         return notificationFut;
     }
 
-    public List<NotificationSubscriptionRepresentation> getDeviceSubscriptions() {
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).byContext("mo")).get().allPages().iterator();
-        NotificationSubscriptionRepresentation notification = null;
-        List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
-        while (subIt.hasNext()) {
-            notification = subIt.next();
-            if (!"tenant".equals(notification.getContext())) {
-                logger.info("Subscription with ID {} retrieved", notification.getId().getValue());
-                deviceSubList.add(notification);
-            }
+    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getDeviceSubscriptions(String deviceId, String deviceSubscription) {
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
+        if (deviceSubscription != null)
+            filter = filter.bySubscription(deviceSubscription);
+        else
+            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
+
+        if (deviceId != null) {
+            GId id = new GId();
+            id.setValue(deviceId);
+            filter = filter.bySource(id);
         }
-        return deviceSubList;
+        filter = filter.byContext("mo");
+        NotificationSubscriptionFilter finalFilter = filter;
+        CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            NotificationSubscriptionRepresentation notification = null;
+            while (subIt.hasNext()) {
+                notification = subIt.next();
+                if (!"tenant".equals(notification.getContext())) {
+                    logger.info("Subscription with ID {} retrieved", notification.getId().getValue());
+                    deviceSubList.add(notification);
+                }
+            }
+            deviceSubListFut.complete(subscriptionList);
+        });
+
+        return deviceSubListFut;
     }
 
     public void subscribeTenant(String tenant) {

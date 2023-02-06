@@ -76,12 +76,16 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
 
     @Override
     public void onNotification(Notification notification) {
-        log.info("Notification received: <{}>", notification.getMessage());
-        log.info("Notification headers: <{}>", notification.getNotificationHeaders());
-        C8YMessage message = new C8YMessage();
-        message.setPayload(notification.getMessage());
-        message.setApi(notification.getApi());
-        processMessage(message, true);
+        //We don't care about UPDATES nor DELETES
+        if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
+            log.info("Notification received: <{}>", notification.getMessage());
+            log.info("Notification headers: <{}>", notification.getNotificationHeaders());
+
+            C8YMessage message = new C8YMessage();
+            message.setPayload(notification.getMessage());
+            message.setApi(notification.getApi());
+            processMessage(message, true);
+        }
     }
 
     @Override
