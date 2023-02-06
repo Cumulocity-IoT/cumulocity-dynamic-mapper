@@ -22,7 +22,7 @@ import { Component, EventEmitter, OnInit, ViewEncapsulation } from '@angular/cor
 import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardModalService } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { API, Direction, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
+import { API, C8YAPISubscription, Direction, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
 import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
@@ -35,6 +35,7 @@ import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { EditorMode, StepperConfiguration } from '../stepper/stepper-model';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { IIdentified } from '@c8y/client';
 
 @Component({
   selector: 'mapping-mapping-grid',
@@ -54,7 +55,7 @@ export class MappingComponent implements OnInit {
   
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
-  deviceList: string[];
+  deviceList: IIdentified;
   Direction = Direction;
   
   stepperConfiguration: StepperConfiguration = {
@@ -388,9 +389,13 @@ export class MappingComponent implements OnInit {
   }
 
 
-  async onCommitSubscription(deviceList: string[]) {
+  async onCommitSubscription(deviceList: IIdentified) {
     this.deviceList = deviceList;
-    console.log("Changed devicelist:", deviceList);
+    const sub : C8YAPISubscription = {
+      api: API.OPERATION.name,
+      devices: deviceList
+    }
+    console.log("Changed devicelist:", sub);
     this.showConfigSubscription = false;
   }
 
