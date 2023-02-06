@@ -23,15 +23,14 @@ package mqtt.mapping.processor;
 
 import java.io.IOException;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,6 +43,7 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -125,6 +125,18 @@ public abstract class BasePayloadProcessorOutgoing<T> {
             JsonNode payloadTarget = null;
             try {
                 payloadTarget = objectMapper.readTree(mapping.target);
+                /*
+                 * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+                 * is required in the payload for a substitution
+                 */
+                ArrayNode topicLevels = objectMapper.createArrayNode();
+                List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+                splitTopicAsList.forEach(s -> topicLevels.add(s));
+                if (payloadTarget instanceof ObjectNode) {
+                    ((ObjectNode) payloadTarget).set(TOKEN_TOPIC_LEVEL, topicLevels);
+                } else {
+                    log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+                }
             } catch (JsonProcessingException e) {
                 context.addError(new ProcessingException(e.getMessage()));
                 return context;
@@ -182,9 +194,30 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                 }
             }
             /*
-             * step 4 prepare target payload for sending to c8y
+             * step 4 prepare target payload for sending to mqttBroker
              */
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                JsonNode topicLevelsJsonNode = payloadTarget.get(TOKEN_TOPIC_LEVEL);
+                if (topicLevelsJsonNode.isArray()) {
+                    // now merge the replaced topic levels
+                    MutableInt c = new MutableInt(0);
+                    String[] splitTopicAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+                    ArrayNode topicLevels = (ArrayNode) topicLevelsJsonNode;
+                    topicLevels.forEach(tl -> {
+                        while (c.intValue() < splitTopicAsList.length && ("/".equals(splitTopicAsList[c.intValue()]))) {
+                            c.increment();
+                        }
+                        splitTopicAsList[c.intValue()] = tl.asText();
+                    });
+
+                    StringBuffer resolvedPublishTopic = new StringBuffer();
+                    for (int d = 0; d < splitTopicAsList.length; d++) {
+                        resolvedPublishTopic.append(splitTopicAsList[d]);
+                    }
+                    context.setResolvedPublishTopic(resolvedPublishTopic.toString());
+                } else {
+                    context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
+                }
                 AbstractExtensibleRepresentation attocRequest = null;
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,

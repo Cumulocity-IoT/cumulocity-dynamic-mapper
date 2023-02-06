@@ -90,7 +90,7 @@
                   </c8y-message>
                 </c8y-messages>
               </div>
-              <div class="form-group">
+              <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTGOING">
                 <div class="input-group">
                   <label for="templateTopic">Template Topic</label>
                   <span class="hidden-xs hidden-sm m-l-4">
