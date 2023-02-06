@@ -26,9 +26,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.operation.OperationStatus;
+import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import mqtt.mapping.model.API;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
@@ -60,6 +65,9 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     @Autowired
     C8YAPISubscriber operationSubscriber;
 
+    @Autowired
+    C8YAgent c8YAgent;
+
     @Override
     public void onOpen(URI serverUri) {
         log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
@@ -70,10 +78,6 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     public void onNotification(Notification notification) {
         log.info("Notification received: <{}>", notification.getMessage());
         log.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
-        // OperationRepresentation op =
-        // JSONBase.getJSONParser().parse(OperationRepresentation.class,
-        // notification.getMessage());
         C8YMessage message = new C8YMessage();
         message.setPayload(notification.getMessage());
         message.setApi(notification.getApi());
@@ -231,6 +235,13 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
+        //Handle C8Y Operation Status
+        //TODO Add OperationAutoAck Status to activate/deactive
+        OperationRepresentation op = null;
+        if (c8yMessage.getApi().equals(API.OPERATION)) {
+            op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
+            c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
+        }
         if (c8yMessage.getPayload() != null) {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
@@ -238,6 +249,8 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
             } catch (Exception e) {
                 log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
                 log.debug(e.getMessage(), e);
+                if (op != null)
+                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
@@ -248,6 +261,17 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
                 new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, payloadProcessors,
                         sendPayload, c8yMessage, objectMapper));
 
+        if (op != null) {
+            //Blocking for Operations to receive the processing result to update operation status
+            try {
+                futureProcessingResult.get();
+                c8yAgent.updateOperationStatus(op, OperationStatus.SUCCESSFUL, null);
+            } catch (InterruptedException e) {
+                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+            } catch (ExecutionException e) {
+                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+            }
+        }
         return futureProcessingResult;
 
     }
