@@ -355,6 +355,19 @@ public class C8YAPISubscriber {
         container.setMessageListener(messageListener);
         container.setConnectionTimeout(30);
         container.start();
+        /*
+        CompletableFuture.runAsync( () -> {
+
+           while (!container.isRunning()) {
+               try {
+                   Thread.sleep(30000);
+               } catch (InterruptedException e) {
+                   throw new RuntimeException(e);
+               }
+               container.start();
+           }
+        });
+         */
         wsClientList.add(container);
     }
 
