@@ -129,6 +129,10 @@ public class Mapping implements Serializable {
   public String filterOutgoing;
 
   @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public Boolean autoAckOperation;
+
+  @NotNull
   public long lastUpdate;
 
   @Override

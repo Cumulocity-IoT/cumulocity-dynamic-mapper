@@ -228,6 +228,16 @@
                   </span>
                 </label>
               </div>
+              <div class="form-group" *ngIf="propertyForm.get('targetAPI').value == API.OPERATION.name">
+                <label class="c8y-switch" title="{{ 'Auto acknowledge outgoing operation' | translate }}">
+                  <input type="checkbox" formControlName="autoAckOperation" [(ngModel)]="mapping.autoAckOperation"
+                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.INCOMING || (stepperConfiguration.direction == Direction.OUTGOING && mapping.targetAPI != API.OPERATION.name))" />
+                  <span></span>
+                  <span>
+                    {{ 'Auto acknowledge outgoing operation' | translate }}
+                  </span>
+                </label>
+              </div>
               <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                 <label for="externalIdType" translate>External Id Type</label>
                 <div>

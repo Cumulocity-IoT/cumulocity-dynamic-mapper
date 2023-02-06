@@ -270,6 +270,7 @@ export class MappingComponent implements OnInit {
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
       direction: this.stepperConfiguration.direction,
+      autoAckOperation: true,
       lastUpdate: Date.now()
     }
     if (this.mappingType == MappingType.FLAT_FILE) {

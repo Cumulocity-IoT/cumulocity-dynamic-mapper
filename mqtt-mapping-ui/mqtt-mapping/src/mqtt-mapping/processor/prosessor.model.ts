@@ -34,6 +34,7 @@ export interface C8YRequest {
 export interface ProcessingContext {
     mapping: Mapping;
     topic: string;
+    resolvedPublishTopic?:string;
     payload?: JSON;
     payloadRaw?: any;
     requests?: C8YRequest[];
