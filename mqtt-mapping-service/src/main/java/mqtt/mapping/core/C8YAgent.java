@@ -40,6 +40,7 @@ import java.util.TimeZone;
 
 import javax.annotation.PreDestroy;
 
+import com.cumulocity.model.operation.OperationStatus;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
@@ -735,10 +736,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ManagedObjectRepresentation mor = inventoryApi.get(id);
                 devices[0] = mor;
             } catch (SDKException exception) {
-                log.info("Device with id {} not found!", deviceId);
+                log.warn("Device with id {} not found!", deviceId);
             }
         });
 
         return devices[0];
+    }
+
+    public void updateOperationStatus(OperationRepresentation op, OperationStatus status, String failureReason) {
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            try {
+                op.setStatus(status.toString());
+                if (failureReason != null)
+                    op.setFailureReason(failureReason);
+                deviceControlApi.update(op);
+            } catch (SDKException exception) {
+                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(), exception.getLocalizedMessage());
+            }
+        });
     }
 }
