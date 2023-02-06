@@ -23,9 +23,7 @@ package mqtt.mapping.processor;
 
 import java.io.IOException;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -201,22 +199,22 @@ public abstract class BasePayloadProcessorOutgoing<T> {
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 JsonNode topicLevelsJsonNode = payloadTarget.get(TOKEN_TOPIC_LEVEL);
                 if (topicLevelsJsonNode.isArray()) {
-                    // now merge the replaced topic levels 
+                    // now merge the replaced topic levels
                     MutableInt c = new MutableInt(0);
                     String[] splitTopicAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                     ArrayNode topicLevels = (ArrayNode) topicLevelsJsonNode;
                     topicLevels.forEach(tl -> {
-                        while (c.intValue() < splitTopicAsList.length && ("/".equals(splitTopicAsList[c.intValue()] ))) {
+                        while (c.intValue() < splitTopicAsList.length && ("/".equals(splitTopicAsList[c.intValue()]))) {
                             c.increment();
                         }
                         splitTopicAsList[c.intValue()] = tl.asText();
                     });
 
                     StringBuffer resolvedPublishTopic = new StringBuffer();
-                    for(int d = 0; d < splitTopicAsList.length; d++) {
+                    for (int d = 0; d < splitTopicAsList.length; d++) {
                         resolvedPublishTopic.append(splitTopicAsList[d]);
                     }
-                  context.setResolvedPublishTopic(resolvedPublishTopic.toString());
+                    context.setResolvedPublishTopic(resolvedPublishTopic.toString());
                 } else {
                     context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
                 }
