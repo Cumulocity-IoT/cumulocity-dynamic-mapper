@@ -36,10 +36,13 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
+import mqtt.mapping.model.C8YAPISubscription;
+import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
 import mqtt.mapping.processor.AsynchronousDispatcherOutgoing;
+import org.apache.commons.collections.ArrayStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,7 +88,7 @@ public class C8YAPISubscriber {
     @Autowired
     private AsynchronousDispatcherOutgoing dispatcherOutgoing;
 
-    @Value("${C8Y.BASEURL}")
+    @Value("${C8Y.baseURL}")
     private String baseUrl;
 
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
@@ -103,7 +106,7 @@ public class C8YAPISubscriber {
        subscribeTenant(subscriptionsService.getTenant());
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
         try {
-            deviceSubList = getDeviceSubscriptions(null, DEVICE_SUBSCRIPTION).get();
+            deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (ExecutionException e) {
@@ -171,7 +174,51 @@ public class C8YAPISubscriber {
         return notificationFut;
     }
 
-    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getDeviceSubscriptions(String deviceId, String deviceSubscription) {
+    public C8YAPISubscription getDeviceSubscriptions(String deviceId, String deviceSubscription) {
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
+        if (deviceSubscription != null)
+            filter = filter.bySubscription(deviceSubscription);
+        else
+            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
+
+        if (deviceId != null) {
+            GId id = new GId();
+            id.setValue(deviceId);
+            filter = filter.bySource(id);
+        }
+        filter = filter.byContext("mo");
+        NotificationSubscriptionFilter finalFilter = filter;
+        List<C8YAPISubscription> deviceSubList = new ArrayList<>();
+        C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            NotificationSubscriptionRepresentation notification = null;
+            List<Device> devices = new ArrayStack();
+            while (subIt.hasNext()) {
+                notification = subIt.next();
+                if (!"tenant".equals(notification.getContext())) {
+                    logger.info("Subscription with ID {} retrieved", notification.getId().getValue());
+                    Device device = new Device();
+                    device.setId(notification.getSource().getId().getValue());
+                    ManagedObjectRepresentation mor = c8YAgent.getManagedObjectForId(notification.getSource().getId().getValue());
+                    if(mor != null)
+                        device.setName(mor.getName());
+                    else
+                        logger.warn("Device with ID {} does not exists!",notification.getSource().getId().getValue());
+                    devices.add(device);
+                    if (notification.getSubscriptionFilter().getApis().size() > 0) {
+                        API api = API.fromString(notification.getSubscriptionFilter().getApis().get(0));
+                        c8YAPISubscription.setApi(api);
+                    }
+                    c8YAPISubscription.setDevices(devices);
+                }
+            }
+        });
+
+        return c8YAPISubscription;
+    }
+
+    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId, String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -237,7 +284,7 @@ public class C8YAPISubscriber {
                             logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
                             final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
                             if (morRetrieved != null) {
-                                unsubscribeDevice(morRetrieved, API.OPERATION);
+                                unsubscribeDevice(morRetrieved);
                             }
                         }
                     } catch (Exception e) {
@@ -341,7 +388,7 @@ public class C8YAPISubscriber {
         }
     }
 
-    public boolean unsubscribeDevice(ManagedObjectRepresentation mor, API api) throws SDKException{
+    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException{
         Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
