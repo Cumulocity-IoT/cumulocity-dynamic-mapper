@@ -405,7 +405,7 @@ export class MappingComponent implements OnInit {
 
   async onCommitSubscription(deviceList: IIdentified) {
     this.subscription = {
-      api: API.OPERATION.name,
+      api: API.ALL.name,
       devices: deviceList
     }
     console.log("Changed deviceList:", this.subscription.devices);
