@@ -314,8 +314,8 @@ public class C8YAPISubscriber {
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
+            notification = subIt.next();
             if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
-                notification = subIt.next();
                 logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
                 return notification;
             }
