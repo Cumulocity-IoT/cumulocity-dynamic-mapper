@@ -242,7 +242,7 @@ public class C8YAPISubscriber {
                     deviceSubList.add(notification);
                 }
             }
-            deviceSubListFut.complete(subscriptionList);
+            deviceSubListFut.complete(deviceSubList);
         });
 
         return deviceSubListFut;
