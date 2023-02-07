@@ -23,14 +23,15 @@ import { FetchClient, InventoryService, QueriesUtil } from '@c8y/client';
 import * as _ from 'lodash';
 import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Direction, Mapping, Operation } from '../../shared/mapping.model';
-import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT } from '../../shared/util';
+import { C8YAPISubscription, Direction, Mapping, Operation } from '../../shared/mapping.model';
+import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT, PATH_SUBSCRIPTIONS_ENDPOINT, PATH_SUBSCRIPTION_ENDPOINT } from '../../shared/util';
 import { JSONProcessorIncoming } from '../processor/impl/json-processor-incoming.service';
 import { JSONProcessorOutgoing } from '../processor/impl/json-processor-outgoing.service';
 import { ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
+
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
@@ -82,6 +83,32 @@ export class MappingService {
 
   listToReload(): BehaviorSubject<void> {
     return this.reload$;
+  }
+
+  async updateSubscriptions(sub: C8YAPISubscription): Promise<any> {
+    let response = this.client.fetch(`${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(sub),
+      method: 'PUT',
+    });
+    let data = await response;
+    let m = await data.json();
+    return m;
+  }
+
+
+  async getSubscriptions(): Promise<C8YAPISubscription> {
+    let response = this.client.fetch(`${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`, {
+      headers: {
+        'content-type': 'application/json',
+      },
+      method: 'GET',
+    });
+    let data = await response;
+    let sub = await data.json();
+    return sub;
   }
 
   async saveMappings(mappings: Mapping[]): Promise<void> {
