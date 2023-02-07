@@ -314,9 +314,11 @@ public class C8YAPISubscriber {
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
-            notification = subIt.next();
-            logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
-            return notification;
+            if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
+                notification = subIt.next();
+                logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
+                return notification;
+            }
         }
         if (notification == null) {
             logger.info("Subscription does not exist. Creating ...");
@@ -339,8 +341,10 @@ public class C8YAPISubscriber {
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
-            logger.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(), notification.getSource().getId().getValue());
-            return notification;
+            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
+                logger.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(), notification.getSource().getId().getValue());
+                return notification;
+            }
         }
 
         if (notification == null) {
@@ -372,9 +376,12 @@ public class C8YAPISubscriber {
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
             logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
-            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                subscriptionApi.delete(notification);
-            });
+            //FIXME Issues bySubscription Filter does not work yet
+            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
+                subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                    subscriptionApi.delete(notification);
+                });
+            }
 
         }
         Iterator<NotificationSubscriptionRepresentation> tenantSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(TENANT_SUBSCRIPTION)).get().allPages().iterator();
@@ -391,11 +398,13 @@ public class C8YAPISubscriber {
         Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
-
-            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                subscriptionApi.delete(notification);
-            });
-            return true;
+            //FIXME Issues bySubscription Filter does not work yet
+            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
+                subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                    subscriptionApi.delete(notification);
+                });
+                return true;
+            }
         }
         return false;
     }
