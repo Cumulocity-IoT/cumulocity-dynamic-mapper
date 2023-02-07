@@ -188,7 +188,6 @@ public class C8YAPISubscriber {
         }
         filter = filter.byContext("mo");
         NotificationSubscriptionFilter finalFilter = filter;
-        List<C8YAPISubscription> deviceSubList = new ArrayList<>();
         C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
