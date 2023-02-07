@@ -189,10 +189,10 @@ public class C8YAPISubscriber {
         filter = filter.byContext("mo");
         NotificationSubscriptionFilter finalFilter = filter;
         C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
+        List<Device> devices = new ArrayStack();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
-            List<Device> devices = new ArrayStack();
             while (subIt.hasNext()) {
                 notification = subIt.next();
                 if (!"tenant".equals(notification.getContext())) {
@@ -209,11 +209,10 @@ public class C8YAPISubscriber {
                         API api = API.fromString(notification.getSubscriptionFilter().getApis().get(0));
                         c8YAPISubscription.setApi(api);
                     }
-                    c8YAPISubscription.setDevices(devices);
                 }
             }
         });
-
+        c8YAPISubscription.setDevices(devices);
         return c8YAPISubscription;
     }
 
