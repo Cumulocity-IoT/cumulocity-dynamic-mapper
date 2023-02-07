@@ -131,11 +131,12 @@ export enum Direction {
 }
 
 export const API = {
-    ALARM: { name: "ALARM", identifier: "source.id" },
-    EVENT: { name: "EVENT", identifier: "source.id" },
-    MEASUREMENT: { name: "MEASUREMENT", identifier: "source.id" },
-    INVENTORY: { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
-    OPERATION: { name: "OPERATION", identifier: "deviceId" },
+    ALARM: { name: "ALARM", identifier: "source.id", notificationFilter: "alarms" },
+    EVENT: { name: "EVENT", identifier: "source.id", notificationFilter: "events" },
+    MEASUREMENT: { name: "MEASUREMENT", identifier: "source.id", notificationFilter: "measurements" },
+    INVENTORY: { name: "INVENTORY", identifier: "_DEVICE_IDENT_", notificationFilter: "managedObjects" },
+    OPERATION: { name: "OPERATION", identifier: "deviceId", notificationFilter: "operations" },
+    ALL: { name: "ALL", identifier: "*", notificationFilter: "*" },
 }
 
 export enum ValidationError {
