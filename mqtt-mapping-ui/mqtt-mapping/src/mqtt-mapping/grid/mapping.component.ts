@@ -34,7 +34,7 @@ import { ModalOptions } from 'ngx-bootstrap/modal';
 import { takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { EditorMode, StepperConfiguration } from '../stepper/stepper-model';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 
 @Component({
@@ -50,14 +50,14 @@ export class MappingComponent implements OnInit {
 
   showConfigMapping: boolean = false;
   showConfigSubscription: boolean = false;
-  
+
   isConnectionToMQTTEstablished: boolean;
-  
+
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
-  deviceList: IIdentified;
+  subscription: C8YAPISubscription;
   Direction = Direction;
-  
+
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
@@ -172,10 +172,24 @@ export class MappingComponent implements OnInit {
     public alertService: AlertService,
     private wizardModalService: WizardModalService,
     private router: Router
-  ) { 
+  ) {
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    // this.deviceList = [{
+    //   "id": "30869898",
+    //   "name": "MiroElevatorButton",
+    //   "api": ["ALL"]
+
+    // },
+    // {
+    //   "id": "45761281",
+    //   "name": "HCM-400",
+    //   "api": ["ALL"]
+    // }
+    // ]
+
+    this.subscription = await this.mappingService.getSubscriptions();
 
     const href = this.router.url;
     this.stepperConfiguration.direction = (href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING);
@@ -370,7 +384,7 @@ export class MappingComponent implements OnInit {
         this.loadMappings();
         this.refresh.emit();
         //this.activateMappings();
-      } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE 
+      } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE
         || this.stepperConfiguration.editorMode == EditorMode.COPY) {
         // new mapping
         console.log("Push new mapping:", mapping);
@@ -390,12 +404,12 @@ export class MappingComponent implements OnInit {
 
 
   async onCommitSubscription(deviceList: IIdentified) {
-    this.deviceList = deviceList;
-    const sub : C8YAPISubscription = {
+    this.subscription = {
       api: API.OPERATION.name,
       devices: deviceList
     }
-    console.log("Changed devicelist:", sub);
+    console.log("Changed deviceList:", this.subscription.devices);
+    await this.mappingService.updateSubscriptions(this.subscription);
     this.showConfigSubscription = false;
   }
 

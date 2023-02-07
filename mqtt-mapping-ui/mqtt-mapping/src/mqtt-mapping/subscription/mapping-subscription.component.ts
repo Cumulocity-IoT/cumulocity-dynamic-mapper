@@ -35,7 +35,7 @@ export class MappingSubscriptionComponent implements OnInit {
   @Output() onCommit = new EventEmitter<IIdentified>();
   
   ngOnInit(): void {
-    
+    console.log("MappingSubscription:", this.deviceList);
   }
 
   selectionChanged(e) {
