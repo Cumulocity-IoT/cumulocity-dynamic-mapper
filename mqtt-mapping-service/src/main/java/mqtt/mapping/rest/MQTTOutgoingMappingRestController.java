@@ -1,12 +1,14 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -60,8 +62,9 @@ public class MQTTOutgoingMappingRestController {
             c8ySubscription.getDevices().forEach(device -> toBeRemovedSub.add(device));
             subscription.getDevices().forEach(device -> toBeCreatedSub.add(device));
 
-            c8ySubscription.getDevices().forEach(entity -> toBeCreatedSub.removeIf(x -> x.equals(entity)));
-            subscription.getDevices().forEach(device -> toBeRemovedSub.removeIf(x -> x.equals(device)));
+
+            subscription.getDevices().forEach(device -> toBeRemovedSub.removeIf(x -> x.getId().equals(device.getId())));
+            c8ySubscription.getDevices().forEach(entity -> toBeCreatedSub.removeIf(x -> x.getId().equals(entity.getId())));
 
             for (Device device : toBeCreatedSub) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
