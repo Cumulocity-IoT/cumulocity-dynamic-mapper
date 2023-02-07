@@ -73,7 +73,7 @@
   <div [ngClass]="{ drawerOpen: showConfigSubscription }">
     <div class="bottom-drawer">
       <mapping-subscription *ngIf="showConfigSubscription" (onCancel)="showConfigSubscription = false" (onCommit)="onCommitSubscription($event)"
-        [deviceList]="devicelist" >
+        [deviceList]="subscription.devices" >
       </mapping-subscription>
     </div>
   </div>
