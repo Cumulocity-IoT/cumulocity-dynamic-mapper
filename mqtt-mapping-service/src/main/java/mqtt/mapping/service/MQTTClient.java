@@ -66,7 +66,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.cumulocity.model.sms.TextMessage;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -102,7 +101,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @EnableScheduling
 @Service
 public class MQTTClient {
-
+    // TDOD remove value from ADDITION_TEST_DUMMY
     private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;

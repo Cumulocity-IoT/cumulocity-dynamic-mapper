@@ -60,7 +60,7 @@ public enum API {
     }
 
     static public API fromString(String value) {
-        API api = ALIAS_MAP.get(value.toUpperCase());
+        API api = ALIAS_MAP.get(value);
         if (api == null)
             throw new IllegalArgumentException("Not an alias: " + value);
         return api;
