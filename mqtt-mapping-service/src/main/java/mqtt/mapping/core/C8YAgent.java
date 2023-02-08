@@ -729,7 +729,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
         ManagedObjectRepresentation[] devices = { null };
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+        subscriptionsService.runForTenant(tenant, () -> {
             GId id = new GId();
             id.setValue(deviceId);
             try {
@@ -744,7 +744,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void updateOperationStatus(OperationRepresentation op, OperationStatus status, String failureReason) {
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+        subscriptionsService.runForTenant(tenant, () -> {
             try {
                 op.setStatus(status.toString());
                 if (failureReason != null)
