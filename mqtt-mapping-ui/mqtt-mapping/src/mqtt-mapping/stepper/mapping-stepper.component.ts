@@ -192,8 +192,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.nullValidator),
-      publishTopic: new FormControl(this.mapping.publishTopic, Validators.nullValidator),
-      templateTopic: new FormControl(this.mapping.templateTopic, Validators.required),
+      publishTopic: new FormControl(this.mapping.publishTopic, (this.stepperConfiguration.direction != Direction.OUTGOING ? Validators.nullValidator : Validators.required)),
+      templateTopic: new FormControl(this.mapping.templateTopic, (this.stepperConfiguration.direction == Direction.OUTGOING ? Validators.nullValidator : Validators.required)),
       templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
@@ -370,7 +370,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onSampleTargetTemplatesButton() {
-    if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INCOMING) {
       this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
     } else {
       let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
@@ -461,7 +461,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
 
     if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
-      if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+      if (this.stepperConfiguration.direction == Direction.INCOMING) {
         this.templateSource = this.expandExternalTemplate(JSON.parse(SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]), levels);
         this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
       } else {
@@ -501,7 +501,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTargetAPIChanged(evt) {
-    if ( this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INCOMING) {
       this.templateTarget = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
     } else {
       this.templateTarget = (SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]);
