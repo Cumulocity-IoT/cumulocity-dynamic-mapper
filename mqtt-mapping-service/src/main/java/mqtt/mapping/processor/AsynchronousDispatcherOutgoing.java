@@ -242,6 +242,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
         //Handle C8Y Operation Status
         //TODO Add OperationAutoAck Status to activate/deactive
         OperationRepresentation op = null;
+        // 
         if (c8yMessage.getApi().equals(API.OPERATION)) {
             op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
             c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);

@@ -176,19 +176,6 @@ export class MappingComponent implements OnInit {
   }
 
   async ngOnInit() {
-    // this.deviceList = [{
-    //   "id": "30869898",
-    //   "name": "MiroElevatorButton",
-    //   "api": ["ALL"]
-
-    // },
-    // {
-    //   "id": "45761281",
-    //   "name": "HCM-400",
-    //   "api": ["ALL"]
-    // }
-    // ]
-
     this.subscription = await this.mappingService.getSubscriptions();
 
     const href = this.router.url;

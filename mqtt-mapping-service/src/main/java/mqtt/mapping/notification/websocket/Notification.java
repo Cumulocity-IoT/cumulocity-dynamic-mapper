@@ -34,7 +34,7 @@ public class Notification {
         if (headers.isEmpty()) {
             return new Notification(null, Collections.emptyList(), message, API.EMPTY);
         }
-        String apiString = headers.get(1).split("/")[1];
+        String apiString = headers.get(1).split("/")[2];
         API api = API.EMPTY;
         switch (apiString) {
             case "alarms":
