@@ -19,11 +19,11 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.processor;
+package mqtt.mapping.processor.incoming;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
-import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.stereotype.Service;
 
@@ -36,16 +36,21 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
 @Service
-public class GenericBinaryProcessor extends JSONProcessor {
+public class FlatFileProcessor extends JSONProcessor {
 
-    public GenericBinaryProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
+
+    public FlatFileProcessor( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
         super(objectMapper, mqttClient, c8yAgent);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException{
-        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(Hex.encodeHexString(mqttMessage.getPayload())));
+    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException {
+        String payloadMessage  = (mqttMessage.getPayload() != null
+                    ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
+                    : "");
+        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
         context.setPayload(payloadJsonNode);
         return context;
     }
+
 }

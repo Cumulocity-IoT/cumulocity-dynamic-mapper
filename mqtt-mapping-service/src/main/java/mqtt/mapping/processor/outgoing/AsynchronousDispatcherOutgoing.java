@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.outgoing;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -52,6 +52,7 @@ import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
+import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;

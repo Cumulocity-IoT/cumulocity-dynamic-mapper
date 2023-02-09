@@ -35,8 +35,8 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.model.Extension;
-import mqtt.mapping.processor.BasePayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.incoming.BasePayloadProcessor;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
