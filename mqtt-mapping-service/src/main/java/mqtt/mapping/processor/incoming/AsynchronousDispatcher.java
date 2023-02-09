@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.incoming;
 
 import java.util.ArrayList;
 import java.util.List;

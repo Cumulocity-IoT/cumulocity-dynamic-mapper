@@ -19,14 +19,13 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.processor;
+package mqtt.mapping.processor.outgoing;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
@@ -47,7 +46,7 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
@@ -55,16 +54,16 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
+public class JSONProcessorOutgoing extends BasePayloadProcessorOutgoing<JsonNode> {
 
-    public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
+    public JSONProcessorOutgoing(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         super(objectMapper, mqttClient, c8yAgent);
     }
 
     @Override
     public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
-            MqttMessage mqttMessage) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(mqttMessage.getPayload());
+            C8YMessage c8yMessage) throws IOException {
+        JsonNode jsonNode = objectMapper.readTree(c8yMessage.getPayload());
         context.setPayload(jsonNode);
         return context;
     }
@@ -76,20 +75,8 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-        /*
-         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-         * is required in the payload for a substitution
-         */
-        ArrayNode topicLevels = objectMapper.createArrayNode();
-        List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        splitTopicAsList.forEach(s -> topicLevels.add(s));
-        if (payloadJsonNode instanceof ObjectNode) {
-            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
-        } else {
-            log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
-        }
-        String  payload = payloadJsonNode.toPrettyString();
-        log.info("Patched payload: {}", payload);
+        String payload = payloadJsonNode.toPrettyString();
+        //log.info("Patched payload: {}", payload);
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -98,11 +85,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
              * step 1 extract content from incoming payload
              */
             try {
-                // have to escape _DEVICE_IDENT_ , _TOPIC_LEVEL_ with BACKQUOTE "`" since
-                // JSONata4Java does work for tokens with starting "_"
-                var p = substitution.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
-                p = p.replace(TOKEN_TOPIC_LEVEL, TOKEN_TOPIC_LEVEL_BACKQUOTE);
-                log.debug("Patched sub.pathSource: {}, {}", substitution.pathSource, p);
+                var p = substitution.pathSource;
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
@@ -143,10 +126,12 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
                         context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     } else {
-                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE substitution
+                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
+                        // substitution
                         context.addCardinality(substitution.pathTarget, 1);
                         postProcessingCacheEntry
-                                .add(new SubstituteValue(extractedSourceContent, TYPE.ARRAY, substitution.repairStrategy));
+                                .add(new SubstituteValue(extractedSourceContent, TYPE.ARRAY,
+                                        substitution.repairStrategy));
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
@@ -178,14 +163,6 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
             }
         }
 
-        // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY) {
-            List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
-                    new ArrayList<SubstituteValue>());
-            postProcessingCacheEntry.add(
-                    new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));
-            postProcessingCache.put(TIME, postProcessingCacheEntry);
-        }
     }
 
 }

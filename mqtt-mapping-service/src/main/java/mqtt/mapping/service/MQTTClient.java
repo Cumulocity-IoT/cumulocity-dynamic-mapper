@@ -91,8 +91,7 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
-//import mqtt.mapping.processor.SynchronousDispatcher;
-import mqtt.mapping.processor.AsynchronousDispatcher;
+import mqtt.mapping.processor.incoming.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 

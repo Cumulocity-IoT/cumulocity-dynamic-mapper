@@ -41,7 +41,8 @@ import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
-import mqtt.mapping.processor.AsynchronousDispatcherOutgoing;
+import mqtt.mapping.processor.outgoing.AsynchronousDispatcherOutgoing;
+
 import org.apache.commons.collections.ArrayStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

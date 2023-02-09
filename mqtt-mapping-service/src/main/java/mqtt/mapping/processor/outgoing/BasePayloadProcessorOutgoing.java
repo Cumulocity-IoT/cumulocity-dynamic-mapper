@@ -19,19 +19,18 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor;
+package mqtt.mapping.processor.outgoing;
 
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,12 +40,16 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.ReadContext;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
@@ -56,6 +59,8 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import mqtt.mapping.processor.C8YMessage;
+import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
@@ -64,9 +69,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class BasePayloadProcessor<T> {
+public abstract class BasePayloadProcessorOutgoing<T> {
 
-    public BasePayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public BasePayloadProcessorOutgoing(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         this.objectMapper = objectMapper;
         this.mqttClient = mqttClient;
         this.c8yAgent = c8yAgent;
@@ -88,7 +93,7 @@ public abstract class BasePayloadProcessor<T> {
 
     public static final String TIME = "time";
 
-    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, MqttMessage mqttMessage)
+    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
@@ -123,13 +128,25 @@ public abstract class BasePayloadProcessor<T> {
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
-            JsonNode payloadTarget = null;
-            try {
-                payloadTarget = objectMapper.readTree(mapping.target);
-            } catch (JsonProcessingException e) {
-                context.addError(new ProcessingException(e.getMessage()));
-                return context;
-            }
+            DocumentContext payloadTarget = null;
+            // try {
+                //payloadTarget = objectMapper.readTree(mapping.target);
+                payloadTarget = JsonPath.parse(mapping.target);
+                /*
+                 * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+                 * is required in the payload for a substitution
+                 */
+                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+                payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+                // if (payloadTarget instanceof ObjectNode) {
+                //     ((ObjectNode) payloadTarget).set(TOKEN_TOPIC_LEVEL, topicLevels);
+                // } else {
+                //     log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+                // }
+            // } catch (JsonProcessingException e) {
+            //     context.addError(new ProcessingException(e.getMessage()));
+            //     return context;
+            // }
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -150,74 +167,57 @@ public abstract class BasePayloadProcessor<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    // if (pathTarget.equals(mapping.targetAPI.identifier)) {
                     if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-
-                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
-                                new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
-                        if (sourceId == null && mapping.createNonExistingDevice) {
-                            ManagedObjectRepresentation attocDevice = null;
-                            Map<String, Object> request = new HashMap<String, Object>();
-                            request.put("name",
-                                    "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                            request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
-                            request.put("c8y_IsDevice", null);
-                            try {
-                                var requestString = objectMapper.writeValueAsString(request);
-                                var newPredecessor = context.addRequest(
-                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
-                                                mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                                attocDevice = c8yAgent.upsertDevice(
-                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context);
-                                var response = objectMapper.writeValueAsString(attocDevice);
-                                context.getCurrentRequest().setResponse(response);
-                                substituteValue.value = new TextNode(attocDevice.getId().getValue());
-                                predecessor = newPredecessor;
-                            } catch (ProcessingException | JsonProcessingException e) {
-                                context.getCurrentRequest().setError(e);
-                            }
-                        } else if (sourceId == null && context.isSendPayload()) {
+                        ExternalIDRepresentation externalId = c8yAgent.findExternalId(
+                                new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
+                        if (externalId == null && context.isSendPayload()) {
                             throw new RuntimeException("External id " + substituteValue + " for type "
                                     + mapping.externalIdType + " not found!");
-                        } else if (sourceId == null) {
+                        } else if (externalId == null) {
                             substituteValue.value = null;
                         } else {
-                            substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
+                            substituteValue.value = new TextNode(externalId.getExternalId());
                         }
-
                     }
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
                     // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
                 } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
                 }
             }
             /*
-             * step 4 prepare target payload for sending to c8y
+             * step 4 prepare target payload for sending to mqttBroker
              */
-            if (mapping.targetAPI.equals(API.INVENTORY)) {
-                ManagedObjectRepresentation attocDevice = null;
-                var newPredecessor = context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.toString(),
-                                null, API.INVENTORY, null));
-                try {
-                    attocDevice = c8yAgent.upsertDevice(
-                            new ID(mapping.externalIdType, device.value.asText()), context);
-                    var response = objectMapper.writeValueAsString(attocDevice);
-                    context.getCurrentRequest().setResponse(response);
-                } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
+            if (!mapping.targetAPI.equals(API.INVENTORY)) {
+                List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
+                if (topicLevels != null && topicLevels.size() > 0 ) {
+                    // now merge the replaced topic levels
+                    MutableInt c = new MutableInt(0);
+                    String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+                    topicLevels.forEach(tl -> {
+                        while (c.intValue() < splitTopicInAsList.length && ("/".equals(splitTopicInAsList[c.intValue()]))) {
+                            c.increment();
+                        }
+                        splitTopicInAsList[c.intValue()] = tl;
+                        c.increment();
+                    });
+
+                    StringBuffer resolvedPublishTopic = new StringBuffer();
+                    for (int d = 0; d < splitTopicInAsList.length; d++) {
+                        resolvedPublishTopic.append(splitTopicInAsList[d]);
+                    }
+                    context.setResolvedPublishTopic(resolvedPublishTopic.toString());
+                } else {
+                    context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
                 }
-                predecessor = newPredecessor;
-            } else if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 AbstractExtensibleRepresentation attocRequest = null;
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.toString(),
+                                payloadTarget.read("$").toString(),
                                 null, mapping.targetAPI, null));
                 try {
-                    attocRequest = c8yAgent.createMEAO(context);
+                    attocRequest = mqttClient.createMEAO(context);
+
                     var response = objectMapper.writeValueAsString(attocRequest);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
@@ -233,49 +233,17 @@ public abstract class BasePayloadProcessor<T> {
             i++;
         }
         return context;
+
     }
 
-    public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
-        String[] splitKeys = keys.split(Pattern.quote("."));
+    public void substituteValueInObject(ProcessingContext context, SubstituteValue sub, DocumentContext jsonObject, String keys) throws JSONException {
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
         if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
-            removeValueFromObect(jsonObject, splitKeys);
+            jsonObject.delete(keys);
         } else {
-            if (splitKeys == null) {
-                splitKeys = new String[] { keys };
-            }
-            substituteValueInObject(sub, jsonObject, splitKeys);
+            String jsonOut = jsonObject.set(keys, sub.typedValue()).read("$").toString();
+            // log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
         }
-    }
-
-    public JsonNode removeValueFromObect(JsonNode jsonObject, String[] keys) throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).remove(currentKey);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + "is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
-    }
-
-    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys)
-            throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).set(currentKey, sub.value);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + " is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
-        return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
     }
 
 }
