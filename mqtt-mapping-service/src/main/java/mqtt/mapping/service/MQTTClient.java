@@ -91,7 +91,7 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.processor.incoming.AsynchronousDispatcher;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 
@@ -145,12 +145,12 @@ public class MQTTClient {
     private Map<String, MutableInt> activeSubscriptionCache = new HashMap<String, MutableInt>();
 
     @Getter
-    private Map<String, Mapping> activeIncomingMappings = new HashMap<String, Mapping>();
+    private Map<String, Mapping> activeInboundMappings = new HashMap<String, Mapping>();
 
     @Getter
-    private Map<String, Mapping> activeOutgoingMappings = new HashMap<String, Mapping>();
+    private Map<String, Mapping> activeOutboundMappings = new HashMap<String, Mapping>();
 
-    private Map<String, Mapping> mappingCacheOutgoing = new HashMap<String, Mapping>();
+    private Map<String, Mapping> mappingCacheOutbound = new HashMap<String, Mapping>();
 
     private TreeNode mappingTree = InnerNode.createRootNode();;
 
@@ -305,10 +305,10 @@ public class MQTTClient {
             try {
                 subscribe("$SYS/#", 0);
                 activeSubscriptionCache = new HashMap<String, MutableInt>();
-                activeIncomingMappings = new HashMap<String, Mapping>();
-                activeOutgoingMappings = new HashMap<String, Mapping>();
-                rebuildIncomingMappingCache();
-                rebuildOutgoingMappingCache();
+                activeInboundMappings = new HashMap<String, Mapping>();
+                activeOutboundMappings = new HashMap<String, Mapping>();
+                rebuildInboundMappingCache();
+                rebuildOutboundMappingCache();
                 successful = true;
             } catch (MqttException e) {
                 log.error("Error on reconnect, retrying ... {]", e.getMessage());
@@ -448,8 +448,8 @@ public class MQTTClient {
 
     public void runOperation(ServiceOperation operation) throws Exception {
         if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
-            rebuildIncomingMappingCache();
-            rebuildOutgoingMappingCache();
+            rebuildInboundMappingCache();
+            rebuildOutboundMappingCache();
         } else if (operation.getOperation().equals(Operation.CONNECT)) {
             connectToBroker();
         } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
@@ -494,26 +494,26 @@ public class MQTTClient {
     }
 
     public void deleteFromMappingCache(Mapping mapping) {
-        if (Direction.OUTGOING.equals(mapping.direction)) {
-            // TODO update activeOutgoingMapping
-            Optional<Mapping> activeOutgoingMapping = activeOutgoingMappings.values().stream()
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            // TODO update activeOutboundMapping
+            Optional<Mapping> activeOutboundMapping = activeOutboundMappings.values().stream()
                     .filter(m -> m.id.equals(mapping.id))
                     .findFirst();
-            if (!activeOutgoingMapping.isPresent()) {
+            if (!activeOutboundMapping.isPresent()) {
                 return;
             }
 
-            activeOutgoingMappings.remove(mapping);
-            mappingCacheOutgoing.remove(mapping.filterOutgoing);
+            activeOutboundMappings.remove(mapping);
+            mappingCacheOutbound.remove(mapping.filterOutbound);
 
         } else {
             // find mapping for given id to work with the subscriptionTopic of the mapping
-            Optional<Mapping> activeIncomingMapping = activeIncomingMappings.values().stream()
+            Optional<Mapping> activeInboundMapping = activeInboundMappings.values().stream()
                     .filter(m -> m.id.equals(mapping.id)).findFirst();
-            if (!activeIncomingMapping.isPresent()) {
+            if (!activeInboundMapping.isPresent()) {
                 return;
             }
-            Mapping existingMapping = activeIncomingMapping.get();
+            Mapping existingMapping = activeInboundMapping.get();
             if (activeSubscriptionCache.containsKey(existingMapping.subscriptionTopic)) {
                 MutableInt activeSubs = activeSubscriptionCache.get(existingMapping.subscriptionTopic);
                 activeSubs.subtract(1);
@@ -527,7 +527,7 @@ public class MQTTClient {
                 }
             }
             deleteFromMappingTree(existingMapping);
-            rebuildOutgoingMappingCache();
+            rebuildOutboundMappingCache();
         }
     }
 
@@ -536,10 +536,10 @@ public class MQTTClient {
         Mapping activeMapping = null;
         Boolean create = true;
 
-        if (Direction.OUTGOING.equals(mapping.direction)) {
-            // TODO update activeOutgoingMapping and build specific cache oraganiesed by the
-            // filterOutgoing fragment
-            Optional<Mapping> activeMappingOptional = activeOutgoingMappings.values().stream()
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            // TODO update activeOutboundMapping and build specific cache oraganiesed by the
+            // filterOutbound fragment
+            Optional<Mapping> activeMappingOptional = activeOutboundMappings.values().stream()
                     .filter(m -> m.id.equals(mapping.id))
                     .findFirst();
 
@@ -548,11 +548,11 @@ public class MQTTClient {
                 activeMapping = activeMappingOptional.get();
             }
 
-            activeOutgoingMappings.put(mapping.id, mapping);
-            rebuildOutgoingMappingCache();
+            activeOutboundMappings.put(mapping.id, mapping);
+            rebuildOutboundMappingCache();
         } else {
             Boolean subscriptionTopicChanged = false;
-            Optional<Mapping> activeMappingOptional = activeIncomingMappings.values().stream()
+            Optional<Mapping> activeMappingOptional = activeInboundMappings.values().stream()
                     .filter(m -> m.id.equals(mapping.id))
                     .findFirst();
 
@@ -599,7 +599,7 @@ public class MQTTClient {
 
             deleteFromMappingTree(mapping);
             addToMappingTree(mapping);
-            activeIncomingMappings.put(mapping.id, mapping);
+            activeInboundMappings.put(mapping.id, mapping);
         }
     }
 
@@ -619,23 +619,23 @@ public class MQTTClient {
         }
     }
 
-    public void rebuildOutgoingMappingCache() {
+    public void rebuildOutboundMappingCache() {
         // TODO review how to organize the cache efficiently to identify a mapping
         // depending on the payload
-        // only add incoming mappings to the cache
+        // only add outbound mappings to the cache
         List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
-                .filter(m -> Direction.OUTGOING.equals(m.direction))
+                .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        activeOutgoingMappings = updatedMappings.stream()
+        activeOutboundMappings = updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity()));
-        mappingCacheOutgoing = updatedMappings.stream()
-                .collect(Collectors.toMap(Mapping::getFilterOutgoing, Function.identity()));
+        mappingCacheOutbound = updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity()));
     }
 
-    public void rebuildIncomingMappingCache() {
-        // only add incoming mappings to the cache
+    public void rebuildInboundMappingCache() {
+        // only add inbound mappings to the cache
         List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
-                .filter(m -> !Direction.OUTGOING.equals(m.direction))
+                .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
@@ -672,7 +672,7 @@ public class MQTTClient {
             }
         });
         activeSubscriptionCache = updatedSubscriptionCache;
-        activeIncomingMappings = updatedMappings.stream()
+        activeInboundMappings = updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity()));
         // update mappings tree
         mappingTree = rebuildMappingTree(updatedMappings);
@@ -693,14 +693,14 @@ public class MQTTClient {
         return null;
     }
 
-    public List<Mapping> resolveOutgoingMappings(JsonNode message, API api) {
-        // use mappingCacheOutgoing and the key filterOutgoing to identify the matching
+    public List<Mapping> resolveOutboundMappings(JsonNode message, API api) {
+        // use mappingCacheOutbound and the key filterOutbound to identify the matching
         // mappings.
         // the need to be returend in a list
         List<Mapping> result = new ArrayList<>();
 
-        for (Mapping m : activeOutgoingMappings.values()) {
-            String key = m.getFilterOutgoing();
+        for (Mapping m : activeOutboundMappings.values()) {
+            String key = m.getFilterOutbound();
             if (message.has(key) && m.targetAPI.equals(api)) {
                 log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
                 result.add(m);

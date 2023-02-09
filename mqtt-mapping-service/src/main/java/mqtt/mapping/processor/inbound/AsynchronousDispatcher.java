@@ -19,25 +19,20 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.outgoing;
+package mqtt.mapping.processor.inbound;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import com.cumulocity.model.JSONBase;
-import com.cumulocity.model.operation.OperationStatus;
-import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import mqtt.mapping.model.API;
-import mqtt.mapping.notification.C8YAPISubscriber;
-import mqtt.mapping.notification.websocket.Notification;
-import mqtt.mapping.notification.websocket.NotificationCallback;
 import org.apache.commons.codec.binary.Hex;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -49,10 +44,10 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -61,73 +56,37 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public class AsynchronousDispatcherOutgoing implements NotificationCallback {
-
-    @Autowired
-    C8YAPISubscriber operationSubscriber;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Override
-    public void onOpen(URI serverUri) {
-        log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
-        operationSubscriber.setDeviceConnectionStatus(true);
-    }
-
-    @Override
-    public void onNotification(Notification notification) {
-        //We don't care about UPDATES nor DELETES
-        if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
-            log.info("Notification received: <{}>", notification.getMessage());
-            log.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
-            C8YMessage message = new C8YMessage();
-            message.setPayload(notification.getMessage());
-            message.setApi(notification.getApi());
-            processMessage(message, true);
-        }
-    }
-
-    @Override
-    public void onError(Throwable t) {
-        log.error("We got an exception: " + t);
-    }
-
-    @Override
-    public void onClose() {
-        log.info("Connection was closed.");
-        operationSubscriber.setDeviceConnectionStatus(false);
-    }
+public class AsynchronousDispatcher implements MqttCallback {
 
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
-        Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessorsOutgoing;
+        Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound;
         boolean sendPayload;
-        C8YMessage c8yMessage;
+        MqttMessage mqttMessage;
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
-                Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessorsOutgoing, boolean sendPayload,
-                C8YMessage c8yMessage, ObjectMapper objectMapper) {
+                String topic,
+                Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound, boolean sendPayload,
+                MqttMessage mqttMessage, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
-            this.payloadProcessorsOutgoing = payloadProcessorsOutgoing;
+            this.topic = topic;
+            this.payloadProcessorsInbound = payloadProcessorsInbound;
             this.sendPayload = sendPayload;
-            this.c8yMessage = c8yMessage;
+            this.mqttMessage = mqttMessage;
             this.objectMapper = objectMapper;
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingStatusComponent
-                    .getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+            MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
 
@@ -137,17 +96,17 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
                 } else {
                     context = new ProcessingContext<byte[]>();
                 }
-                context.setTopic(mapping.publishTopic);
+                context.setTopic(topic);
                 context.setMappingType(mapping.mappingType);
                 context.setMapping(mapping);
                 context.setSendPayload(sendPayload);
                 // identify the corect processor based on the mapping type
                 MappingType mappingType = context.getMappingType();
-                BasePayloadProcessorOutgoing processor = payloadProcessorsOutgoing.get(mappingType);
+                BasePayloadProcessor processor = payloadProcessorsInbound.get(mappingType);
 
                 if (processor != null) {
                     try {
-                        processor.deserializePayload(context, c8yMessage);
+                        processor.deserializePayload(context, mqttMessage);
                         if (c8yAgent.getServiceConfiguration().logPayload) {
                             log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
                                     context.getPayload().toString());
@@ -205,6 +164,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
             return processingResult;
         }
 
+
     }
 
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
@@ -222,7 +182,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessorOutgoing<?>> payloadProcessorsOutgoing;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -234,52 +194,55 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage,
-            boolean sendPayload) {
+    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+        if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
+            // REPORT MAINTENANCE METRIC
+        } else {
+            processMessage(topic, mqttMessage, true);
+        }
+    }
+
+    public Future<List<ProcessingContext<?>>> processMessage(String topic, MqttMessage mqttMessage,
+            boolean sendPayload) throws Exception {
         MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
-        //Handle C8Y Operation Status
-        //TODO Add OperationAutoAck Status to activate/deactive
-        OperationRepresentation op = null;
-        // 
-        if (c8yMessage.getApi().equals(API.OPERATION)) {
-            op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
-            c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
-        }
-        if (c8yMessage.getPayload() != null) {
-            try {
-                JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
-                resolvedMappings = mqttClient.resolveOutgoingMappings(message, c8yMessage.getApi());
-            } catch (Exception e) {
-                log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
-                log.debug(e.getMessage(), e);
-                if (op != null)
-                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
-                mappingStatusUnspecified.errors++;
+        if (topic != null && !topic.startsWith("$SYS")) {
+            if (mqttMessage.getPayload() != null) {
+                try {
+                    resolvedMappings = mqttClient.resolveMappings(topic);
+                } catch (Exception e) {
+                    log.warn("Error resolving appropriate map for topic \""+topic+"\". Could NOT be parsed. Ignoring this message!");
+                    log.debug(e.getMessage(), e);
+                    mappingStatusUnspecified.errors++;
+                }
+            } else {
+                return futureProcessingResult;
             }
         } else {
+            sysHandler.handleSysPayload(topic, mqttMessage.getPayload());
             return futureProcessingResult;
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, payloadProcessorsOutgoing,
-                        sendPayload, c8yMessage, objectMapper));
+                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessorsInbound,
+                        sendPayload, mqttMessage, objectMapper));
 
-        if (op != null) {
-            //Blocking for Operations to receive the processing result to update operation status
-            try {
-                futureProcessingResult.get();
-                c8yAgent.updateOperationStatus(op, OperationStatus.SUCCESSFUL, null);
-            } catch (InterruptedException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
-            } catch (ExecutionException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
-            }
-        }
         return futureProcessingResult;
 
+    }
+
+    @Override
+    public void connectionLost(Throwable throwable) {
+        log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
+        log.debug("Stacktrace: ", throwable);
+        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
+        mqttClient.submitConnect();
+    }
+
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
     }
 
 }

@@ -1,14 +1,12 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +19,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-public class MQTTOutgoingMappingRestController {
+public class MQTTOutboundMappingRestController {
 
     @Autowired
     C8YAgent c8yAgent;

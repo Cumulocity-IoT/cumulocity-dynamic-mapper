@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.incoming;
+package mqtt.mapping.processor.inbound;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

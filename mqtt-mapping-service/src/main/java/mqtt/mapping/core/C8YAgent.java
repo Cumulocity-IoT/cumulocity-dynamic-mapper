@@ -93,7 +93,7 @@ import mqtt.mapping.model.extension.ExtensionsComponent;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
-import mqtt.mapping.processor.incoming.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -148,7 +148,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ExtensionsComponent extensions;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsIncoming;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
     @Autowired
     C8YAPISubscriber operationSubscriber;
@@ -208,7 +208,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessor) payloadProcessorsIncoming.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessor) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
@@ -716,7 +716,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveIncomingMappings().values().forEach(m -> {
+        mqttClient.getActiveInboundMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }

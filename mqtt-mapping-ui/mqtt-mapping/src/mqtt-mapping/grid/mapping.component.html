@@ -36,7 +36,7 @@
     <i c8yIcon="c8y-connector-out"></i>
     {{ 'Activate mappings' | translate }}
   </button>
-  <button *ngIf="stepperConfiguration.direction == Direction.OUTGOING" class="btn btn-link" title="{{ 'Define subscriptions' | translate }}" (click)="onDefineSubscription()">
+  <button *ngIf="stepperConfiguration.direction == Direction.OUTBOUND" class="btn btn-link" title="{{ 'Define subscriptions' | translate }}" (click)="onDefineSubscription()">
     <i c8yIcon="subscription"></i>
     {{ 'Define subscription' | translate }}
   </button>

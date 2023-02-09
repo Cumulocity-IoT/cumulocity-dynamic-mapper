@@ -65,7 +65,7 @@ export class MappingComponent implements OnInit {
     allowTestTransformation: true,
     allowTestSending: true,
     editorMode: EditorMode.UPDATE,
-    direction: Direction.INCOMING
+    direction: Direction.INBOUND
   };
   title: string = `Mapping List ${this.stepperConfiguration.direction}`;
 
@@ -179,7 +179,7 @@ export class MappingComponent implements OnInit {
     this.subscription = await this.mappingService.getSubscriptions();
 
     const href = this.router.url;
-    this.stepperConfiguration.direction = (href.match(/mqtt-mapping\/mappings\/incoming/g) ? Direction.INCOMING : Direction.OUTGOING);
+    this.stepperConfiguration.direction = (href.match(/mqtt-mapping\/mappings\/inbound/g) ? Direction.INBOUND : Direction.OUTBOUND);
     this.title = `Mapping List ${this.stepperConfiguration.direction}`;
 
     this.loadMappings();
@@ -299,7 +299,7 @@ export class MappingComponent implements OnInit {
   }
 
   updateMapping(mapping: Mapping) {
-    if (!mapping.direction) this.stepperConfiguration.direction = Direction.INCOMING;
+    if (!mapping.direction) this.stepperConfiguration.direction = Direction.INBOUND;
     this.stepperConfiguration = {
       ...this.stepperConfiguration,
       showEditorSource: true,
@@ -316,8 +316,8 @@ export class MappingComponent implements OnInit {
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
-    // for backward compatability set direction of mapping to INCOMING 
-    if (!this.mappingToUpdate.direction) this.mappingToUpdate.direction = Direction.INCOMING;
+    // for backward compatability set direction of mapping to inbound
+    if (!this.mappingToUpdate.direction) this.mappingToUpdate.direction = Direction.INBOUND;
     console.log("Editing mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
   }
@@ -450,7 +450,7 @@ export class MappingComponent implements OnInit {
         allowTestSending: false,
       }
     }
-    if (direction == Direction.OUTGOING) this.stepperConfiguration.allowTestSending = false;
+    if (direction == Direction.OUTBOUND) this.stepperConfiguration.allowTestSending = false;
   }
 
   ngOnDestroy() {

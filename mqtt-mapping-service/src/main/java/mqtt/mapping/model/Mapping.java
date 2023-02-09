@@ -126,7 +126,7 @@ public class Mapping implements Serializable {
 
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)
-  public String filterOutgoing;
+  public String filterOutbound;
 
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)

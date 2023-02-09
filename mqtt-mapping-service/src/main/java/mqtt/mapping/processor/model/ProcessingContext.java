@@ -45,7 +45,7 @@ import mqtt.mapping.processor.ProcessingException;
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
  * <code>requests</code>, <code>error</code>, <code>processingType</code>,
  * <code>cardinality</code>, <code>needsRepair</code>
- * when a <code>mapping</code> is applied to an incoming <code>payload</code>
+ * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
     private Mapping mapping;

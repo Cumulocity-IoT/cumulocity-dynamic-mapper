@@ -334,8 +334,8 @@ export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
 export function getSchema(targetAPI: string, direction: Direction, target: boolean): any {
-  if ((target && ( !direction || direction == Direction.INCOMING )) ||
-     (!target && ( direction == Direction.OUTGOING )) ) {
+  if ((target && ( !direction || direction == Direction.INBOUND )) ||
+     (!target && ( direction == Direction.OUTBOUND )) ) {
     if (targetAPI == API.ALARM.name) {
       return SCHEMA_ALARM;
     } else if (targetAPI == API.EVENT.name) {
@@ -527,7 +527,7 @@ export function checkPropertiesAreValid(mappings: Mapping[], direction: Directio
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    if ( direction == Direction.INCOMING) {
+    if ( direction == Direction.INBOUND) {
       let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
       error = !f(subscriptionTopic, templateTopic);
       if (error) {
@@ -651,7 +651,7 @@ export function whatIsIt(object) {
 export const isNumeric = (num: any) => (typeof (num) === 'number' || typeof (num) === "string" && num.trim() !== '') && !isNaN(num as number);
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, direction: Direction): boolean {
-  if ( direction == Direction.INCOMING) {
+  if ( direction == Direction.INBOUND) {
     return sub.pathTarget == API[api].identifier
   } else {
     return sub.pathSource == API[api].identifier

@@ -51,13 +51,13 @@ import mqtt.mapping.model.MappingNodeSerializer;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.TreeNodeSerializer;
 import mqtt.mapping.processor.extension.ExtensibleProcessor;
-import mqtt.mapping.processor.incoming.BasePayloadProcessor;
-import mqtt.mapping.processor.incoming.FlatFileProcessor;
-import mqtt.mapping.processor.incoming.GenericBinaryProcessor;
-import mqtt.mapping.processor.incoming.JSONProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.FlatFileProcessor;
+import mqtt.mapping.processor.inbound.GenericBinaryProcessor;
+import mqtt.mapping.processor.inbound.JSONProcessor;
 import mqtt.mapping.processor.model.MappingType;
-import mqtt.mapping.processor.outgoing.BasePayloadProcessorOutgoing;
-import mqtt.mapping.processor.outgoing.JSONProcessorOutgoing;
+import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
+import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
 import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import mqtt.mapping.service.MQTTClient;
 import mqtt.mapping.util.RFC3339DateFormat;
@@ -109,8 +109,8 @@ public class App {
         return objectMapper;
     }
 
-    @Bean("payloadProcessorsIncoming")
-    public Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsIncoming(ObjectMapper objectMapper, MQTTClient mqttClient,
+    @Bean("payloadProcessorsInbound")
+    public Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound(ObjectMapper objectMapper, MQTTClient mqttClient,
                                                                       C8YAgent c8yAgent) {
         return Map.of(
                 MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
@@ -121,11 +121,11 @@ public class App {
         );
     }
 
-    @Bean("payloadProcessorsOutgoing")
-    public Map<MappingType, BasePayloadProcessorOutgoing<?>> payloadProcessorsOutgoing(ObjectMapper objectMapper, MQTTClient mqttClient,
+    @Bean("payloadProcessorsOutbound")
+    public Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound(ObjectMapper objectMapper, MQTTClient mqttClient,
                                                                       C8YAgent c8yAgent) {
         return Map.of(
-                MappingType.JSON, new JSONProcessorOutgoing(objectMapper, mqttClient, c8yAgent)
+                MappingType.JSON, new JSONProcessorOutbound(objectMapper, mqttClient, c8yAgent)
         );
     }
 

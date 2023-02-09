@@ -71,7 +71,7 @@ Before messages can be be processed, the mappings have to be loaded into the map
 </p>
 <br/>
 
-Once all mappings are added to the cache we are ready to process incoming messages transmitted by tbe MQTT broker.
+Once all mappings are added to the cache we are ready to process inbound messages transmitted by tbe MQTT broker.
 The following diagram describes how a new message is processed.
 
 <p align="center">
@@ -502,7 +502,7 @@ To allow updating an activated mapping it has to be deactivated in the list of a
 
 ### Processing Extensions
 
-When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
+When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />

@@ -23,10 +23,10 @@ import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import { splitTopicExcludingSeparator, TOKEN_TOPIC_LEVEL, isNumeric, whatIsIt, TIME } from "../../../shared/util";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "../prosessor.model";
 import { Injectable } from '@angular/core';
-import { PayloadProcessorIncoming } from '../payload-processor-incoming.service';
+import { PayloadProcessorInbound } from '../payload-processor-inbound.service';
 
 @Injectable({ providedIn: 'root' })
-export class JSONProcessorIncoming extends PayloadProcessorIncoming {
+export class JSONProcessorInbound extends PayloadProcessorInbound {
 
   public deserializePayload(context: ProcessingContext, mapping: Mapping): ProcessingContext {
     context.payload = JSON.parse(mapping.source);
@@ -46,7 +46,7 @@ export class JSONProcessorIncoming extends PayloadProcessorIncoming {
     mapping.substitutions.forEach(substitution => {
       let extractedSourceContent: JSON;
       try {
-        // step 1 extract content from incoming payload
+        // step 1 extract content from inbound payload
         extractedSourceContent = this.evaluateExpression(JSON.parse(mapping.source), substitution.pathSource);
 
         //step 2 analyse exctracted content: textual, array
