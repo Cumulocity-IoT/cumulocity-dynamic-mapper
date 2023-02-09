@@ -63,6 +63,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <version>2.6.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>java-client</artifactId>
                 <version>${c8y.version}</version>
@@ -115,11 +120,7 @@
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
             </dependency>
-            <!-- <dependency>
-                <groupId>com.jayway.jsonpath</groupId>
-                <artifactId>json-path</artifactId>
-                <version>2.6.0</version>
-            </dependency> -->
+
         </dependencies>
     </dependencyManagement>
 </project>
