@@ -22,6 +22,6 @@
 package mqtt.mapping.model;
 
 public enum Direction {
-  INCOMING,
-  OUTGOING
+  INBOUND,
+  OUTBOUND
 }

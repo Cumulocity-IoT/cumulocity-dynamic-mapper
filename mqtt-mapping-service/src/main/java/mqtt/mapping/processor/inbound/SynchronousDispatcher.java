@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.incoming;
+package mqtt.mapping.processor.inbound;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +69,7 @@ public class SynchronousDispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsIncoming;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
     @Autowired
     MappingComponent mappingStatusComponent;
@@ -118,7 +118,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     context.setSendPayload(sendPayload);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    BasePayloadProcessor processor = payloadProcessorsIncoming.get(mappingType);
+                    BasePayloadProcessor processor = payloadProcessorsInbound.get(mappingType);
 
                     if (processor != null) {
                         try {

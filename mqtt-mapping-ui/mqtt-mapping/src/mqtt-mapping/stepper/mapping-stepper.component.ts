@@ -130,9 +130,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   ngOnInit() {
     // set value for backward compatiblility
-    if (!this.mapping.direction) this.mapping.direction = Direction.INCOMING;
-    this.targetSystem = this.mapping.direction == Direction.INCOMING ? 'Cumulocity' : 'MQTT Broker';
-    this.sourceSystem = this.mapping.direction == Direction.OUTGOING ? 'Cumulocity' : 'MQTT Broker';
+    if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
+    this.targetSystem = this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'MQTT Broker';
+    this.sourceSystem = this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'MQTT Broker';
     console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
@@ -192,8 +192,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       id: new FormControl(this.mapping.id, Validators.required),
       targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
       subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.nullValidator),
-      publishTopic: new FormControl(this.mapping.publishTopic, (this.stepperConfiguration.direction != Direction.OUTGOING ? Validators.nullValidator : Validators.required)),
-      templateTopic: new FormControl(this.mapping.templateTopic, (this.stepperConfiguration.direction == Direction.OUTGOING ? Validators.nullValidator : Validators.required)),
+      publishTopic: new FormControl(this.mapping.publishTopic, (this.stepperConfiguration.direction != Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
+      templateTopic: new FormControl(this.mapping.templateTopic, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
       templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
       active: new FormControl(this.mapping.active),
       qos: new FormControl(this.mapping.qos, Validators.required),
@@ -202,7 +202,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),
-      filterOutgoing: new FormControl(this.mapping.filterOutgoing, (this.stepperConfiguration.direction == Direction.OUTGOING ? Validators.nullValidator : Validators.required)),
+      filterOutbound: new FormControl(this.mapping.filterOutbound, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
       autoAckOperation: new FormControl(this.mapping.autoAckOperation),
     },
       checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
@@ -263,7 +263,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   onTopicUpdated(): void {
-    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.propertyForm.get('subscriptionTopic').valueChanges.pipe(debounceTime(500))
         // distinctUntilChanged()
         .subscribe(val => {
@@ -371,7 +371,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onSampleTargetTemplatesButton() {
-    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
     } else {
       let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
@@ -435,7 +435,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             if (numberSnooped > 0) {
               this.templateSource = JSON.parse(this.mapping.snoopedTemplates[0]);
               let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
-              if (this.stepperConfiguration.direction == Direction.INCOMING) {
+              if (this.stepperConfiguration.direction == Direction.INBOUND) {
                 this.templateSource = this.expandExternalTemplate(this.templateSource, levels);
               } else {
                 this.templateSource = this.expandC8YTemplate(this.templateSource);
@@ -462,7 +462,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     let levels: String[] = splitTopicExcludingSeparator(this.mapping.templateTopicSample);
 
     if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
-      if (this.stepperConfiguration.direction == Direction.INCOMING) {
+      if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.templateSource = this.expandExternalTemplate(JSON.parse(SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]), levels);
         this.templateTarget = this.expandC8YTemplate(JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]));
       } else {
@@ -472,7 +472,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       }
       console.log("Sample template", this.templateTarget, getSchema(this.mapping.targetAPI, this.mapping.direction, true));
     } else {
-      if (this.stepperConfiguration.direction == Direction.INCOMING) {
+      if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.templateSource = this.expandExternalTemplate(JSON.parse(this.mapping.source), levels);
         this.templateTarget = this.expandC8YTemplate(JSON.parse(this.mapping.target));
       } else {
@@ -492,7 +492,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateSource = { message: this.mapping.snoopedTemplates[this.snoopedTemplateCounter] };
       console.warn("The payload was not in JSON format, now wrap it:", this.templateSource)
     }
-    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.templateSource = this.expandExternalTemplate(this.templateSource, splitTopicExcludingSeparator(this.mapping.templateTopicSample));
     } else {
       this.templateSource = this.expandC8YTemplate(this.templateSource);
@@ -502,7 +502,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   async onTargetAPIChanged(evt) {
-    if (this.stepperConfiguration.direction == Direction.INCOMING) {
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.templateTarget = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
     } else {
       this.templateTarget = (SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]);

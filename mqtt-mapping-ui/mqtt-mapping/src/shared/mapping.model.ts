@@ -70,7 +70,7 @@ export interface Mapping {
     mappingType: MappingType;
     extension?: ExtensionEntry;
     direction?: Direction;
-    filterOutgoing?: string;
+    filterOutbound?: string;
     autoAckOperation?: boolean;
     lastUpdate: number;
 }
@@ -126,8 +126,8 @@ export enum Status {
 }
 
 export enum Direction {
-    INCOMING = "INCOMING",
-    OUTGOING = "OUTGOING"
+    INBOUND = "INBOUND",
+    OUTBOUND = "OUTBOUND"
 }
 
 export const API = {

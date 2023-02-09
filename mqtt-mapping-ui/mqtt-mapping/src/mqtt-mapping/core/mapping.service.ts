@@ -25,8 +25,8 @@ import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { C8YAPISubscription, Direction, Mapping, Operation } from '../../shared/mapping.model';
 import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT, PATH_SUBSCRIPTIONS_ENDPOINT, PATH_SUBSCRIPTION_ENDPOINT } from '../../shared/util';
-import { JSONProcessorIncoming } from '../processor/impl/json-processor-incoming.service';
-import { JSONProcessorOutgoing } from '../processor/impl/json-processor-outgoing.service';
+import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
+import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
 import { ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
@@ -35,8 +35,8 @@ export class MappingService {
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
-    private jsonProcessorIncoming: JSONProcessorIncoming,
-    private jsonProcessorOuting: JSONProcessorOutgoing,
+    private jsonProcessorInbound: JSONProcessorInbound,
+    private jsonProcessorOutbound: JSONProcessorOutbound,
     private client: FetchClient) {
     this.queriesUtil = new QueriesUtil();
   }
@@ -59,7 +59,7 @@ export class MappingService {
     };
     let query: any = { 'c8y_mqttMapping.direction': direction };
 
-    if (direction == Direction.INCOMING) {
+    if (direction == Direction.INBOUND) {
       query = this.queriesUtil.addOrFilter(query, { __not: { __has: 'c8y_mqttMapping.direction' } },);
     }
     query = this.queriesUtil.addAndFilter(query, { type: { __has: 'c8y_mqttMapping' } });
@@ -175,10 +175,10 @@ export class MappingService {
 
   async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
-    // if (mapping.direction == Direction.INCOMING) {
-      this.jsonProcessorIncoming.deserializePayload(context, mapping);
-      this.jsonProcessorIncoming.extractFromSource(context);
-      await this.jsonProcessorIncoming.substituteInTargetAndSend(context);
+    // if (mapping.direction == Direction.INBOUND) {
+      this.jsonProcessorInbound.deserializePayload(context, mapping);
+      this.jsonProcessorInbound.extractFromSource(context);
+      await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     // } else {
     //   this.jsonProcessorOuting.deserializePayload(context, mapping);
     //   this.jsonProcessorOuting.extractFromSource(context);

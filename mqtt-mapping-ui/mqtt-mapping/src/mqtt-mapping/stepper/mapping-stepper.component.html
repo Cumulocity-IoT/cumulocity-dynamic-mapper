@@ -59,7 +59,7 @@
                   placeholder="e.g. Mapping - 1234" #nameRef
                   [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
               </div>
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.INCOMING">
+              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.INBOUND">
                 <label for="subscriptionTopic" translate>Subscription Topic</label>
                 <input formControlName="subscriptionTopic" [(ngModel)]="mapping.subscriptionTopic" type="text"
                   class="form-control" placeholder="e.g. device/110" #subscriptionTopicRef required
@@ -75,7 +75,7 @@
                 </c8y-messages>
               </div>
 
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTGOING">
+              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
                 <label for="publishTopic" translate>Publish Topic</label>
                 <input formControlName="publishTopic" [(ngModel)]="mapping.publishTopic" type="text"
                   class="form-control" placeholder="e.g. device/110" #publishTopicRef required
@@ -90,7 +90,7 @@
                   </c8y-message>
                 </c8y-messages>
               </div>
-              <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTGOING">
+              <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTBOUND">
                 <div class="input-group">
                   <label for="templateTopic">Template Topic</label>
                   <span class="hidden-xs hidden-sm m-l-4">
@@ -186,11 +186,11 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction == Direction.INCOMING">
+                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction == Direction.INBOUND">
                   <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                     <input type="checkbox" formControlName="createNonExistingDevice"
                       [(ngModel)]="mapping.createNonExistingDevice"
-                      [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.OUTGOING)" />
+                      [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.OUTBOUND)" />
                     <span></span>
                     <span>
                       {{ 'Create Non Existing Device' | translate }}
@@ -198,20 +198,20 @@
                   </label>
                 </div>
 
-                <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTGOING">
+                <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTBOUND">
                   <div class="input-group">
-                    <label for="filterOutgoing">FilterOutgoing</label>
+                    <label for="filterOutbound">FilterOutbound</label>
                     <span class="hidden-xs hidden-sm m-l-4">
-                      <ng-template #popFilterOutgoing>The FilterOutgoing can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapinf is applied.
+                      <ng-template #popFilterOutbound>The FilterOutbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapinf is applied.
                       </ng-template>
-                      <button class="btn-clean text-primary" [popover]="popFilterOutgoing"
-                        popoverTitle="Filter outgoing" placement="right" triggers="focus" type="button">
+                      <button class="btn-clean text-primary" [popover]="popFilterOutbound"
+                        popoverTitle="Filter outbound" placement="right" triggers="focus" type="button">
                         <i c8yIcon="question-circle-o"></i>
                       </button>
                     </span>
                   </div>
-                  <input formControlName="filterOutgoing" [(ngModel)]="mapping.filterOutgoing" type="text"
-                    class="form-control" placeholder="e.g. type or c8y_operationName" #filterOutgoing id="filterOutgoing"
+                  <input formControlName="filterOutbound" [(ngModel)]="mapping.filterOutbound" type="text"
+                    class="form-control" placeholder="e.g. type or c8y_operationName" #filterOutbound id="filterOutbound"
                      required
                     [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY)" />
                 </div>
@@ -239,12 +239,12 @@
                 </label>
               </div>
               <div class="form-group" *ngIf="propertyForm.get('targetAPI').value == API.OPERATION.name">
-                <label class="c8y-switch" title="{{ 'Auto acknowledge outgoing operation' | translate }}">
+                <label class="c8y-switch" title="{{ 'Auto acknowledge outbound operation' | translate }}">
                   <input type="checkbox" formControlName="autoAckOperation" [(ngModel)]="mapping.autoAckOperation"
-                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.INCOMING || (stepperConfiguration.direction == Direction.OUTGOING && mapping.targetAPI != API.OPERATION.name))" />
+                    [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.INBOUND || (stepperConfiguration.direction == Direction.OUTBOUND && mapping.targetAPI != API.OPERATION.name))" />
                   <span></span>
                   <span>
-                    {{ 'Auto acknowledge outgoing operation' | translate }}
+                    {{ 'Auto acknowledge outbound operation' | translate }}
                   </span>
                 </label>
               </div>
@@ -509,7 +509,7 @@
                     <div class="input-group">
                       <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
                         <input type="checkbox" formControlName="ea" [(ngModel)]="currentSubstitution.expandArray"
-                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.OUTGOING)" />
+                          [attr.disabled]="isDisabled(stepperConfiguration.editorMode == EditorMode.READ_ONLY || stepperConfiguration.direction == Direction.OUTBOUND)" />
                         <span></span>
                         <span>
                           {{ 'Expand Array' | translate }}
@@ -542,7 +542,7 @@
                   </div>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="rs" [(ngModel)]="currentSubstitution.repairStrategy"
-                      #repairStrategyRef [attr.disabled]="isDisabled(stepperConfiguration.direction == Direction.OUTGOING)">
+                      #repairStrategyRef [attr.disabled]="isDisabled(stepperConfiguration.direction == Direction.OUTBOUND)">
                       <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
                           stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         {{ RepairStrategy[q] }}
@@ -659,7 +659,7 @@
                 </div>
               </div>
             </div>
-            <div class="row" [hidden]="mapping.direction == Direction.OUTGOING">
+            <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - {{targetSystem}} Response</label>

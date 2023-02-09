@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.outgoing;
+package mqtt.mapping.processor.outbound;
 
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -69,9 +69,9 @@ import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
-public abstract class BasePayloadProcessorOutgoing<T> {
+public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutgoing(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         this.objectMapper = objectMapper;
         this.mqttClient = mqttClient;
         this.c8yAgent = c8yAgent;
@@ -100,7 +100,7 @@ public abstract class BasePayloadProcessorOutgoing<T> {
 
     public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
         /*
-         * step 3 replace target with extract content from incoming payload
+         * step 3 replace target with extract content from outbound payload
          */
         Mapping mapping = context.getMapping();
 
@@ -128,25 +128,14 @@ public abstract class BasePayloadProcessorOutgoing<T> {
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
-            DocumentContext payloadTarget = null;
-            // try {
-                //payloadTarget = objectMapper.readTree(mapping.target);
-                payloadTarget = JsonPath.parse(mapping.target);
-                /*
-                 * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-                 * is required in the payload for a substitution
-                 */
-                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-                payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
-                // if (payloadTarget instanceof ObjectNode) {
-                //     ((ObjectNode) payloadTarget).set(TOKEN_TOPIC_LEVEL, topicLevels);
-                // } else {
-                //     log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
-                // }
-            // } catch (JsonProcessingException e) {
-            //     context.addError(new ProcessingException(e.getMessage()));
-            //     return context;
-            // }
+            DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+            /*
+             * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+             * is required in the payload for a substitution
+             */
+            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+            payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -179,10 +168,9 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                             substituteValue.value = new TextNode(externalId.getExternalId());
                         }
                     }
-                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
-                    // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
             }
             /*
@@ -190,12 +178,13 @@ public abstract class BasePayloadProcessorOutgoing<T> {
              */
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
-                if (topicLevels != null && topicLevels.size() > 0 ) {
+                if (topicLevels != null && topicLevels.size() > 0) {
                     // now merge the replaced topic levels
                     MutableInt c = new MutableInt(0);
                     String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                     topicLevels.forEach(tl -> {
-                        while (c.intValue() < splitTopicInAsList.length && ("/".equals(splitTopicInAsList[c.intValue()]))) {
+                        while (c.intValue() < splitTopicInAsList.length
+                                && ("/".equals(splitTopicInAsList[c.intValue()]))) {
                             c.increment();
                         }
                         splitTopicInAsList[c.intValue()] = tl;
@@ -238,13 +227,13 @@ public abstract class BasePayloadProcessorOutgoing<T> {
 
     }
 
-    public void substituteValueInObject(ProcessingContext context, SubstituteValue sub, DocumentContext jsonObject, String keys) throws JSONException {
+    public void substituteValueInObject(SubstituteValue sub, DocumentContext jsonObject, String keys)
+            throws JSONException {
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
         if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
             jsonObject.delete(keys);
         } else {
-            String jsonOut = jsonObject.set(keys, sub.typedValue()).read("$").toString();
-            // log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
+            jsonObject.set(keys, sub.typedValue());
         }
     }
 

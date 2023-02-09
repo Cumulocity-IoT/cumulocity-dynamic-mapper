@@ -28,7 +28,7 @@ import { C8YClient } from "../core/c8y-client.service";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "./prosessor.model";
 
 @Injectable({ providedIn: 'root' })
-export abstract class PayloadProcessorOutgoing {
+export abstract class PayloadProcessorInbound {
   constructor(
     private alert: AlertService,
     private c8yClient: C8YClient) { }
@@ -40,12 +40,24 @@ export abstract class PayloadProcessorOutgoing {
   protected JSONATA = require("jsonata");
 
   public async substituteInTargetAndSend(context: ProcessingContext) {
-    //step 3 replace target with extract content from incoming payload
+    //step 3 replace target with extract content from inbound payload
     let mapping = context.mapping;
 
     let postProcessingCache: Map<string, SubstituteValue[]> = context.postProcessingCache;
+    let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
+    for (let entry of postProcessingCache.entries()) {
+      if (postProcessingCache.get(maxEntry).length < entry[1].length) {
+        maxEntry = entry[0];
+      }
+    }
 
     let deviceEntries: SubstituteValue[] = postProcessingCache.get(findDeviceIdentifier(context.mapping).pathTarget);
+
+    let countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
+    let toDouble: SubstituteValue = deviceEntries[0];
+    while (deviceEntries.length < countMaxlistEntries) {
+      deviceEntries.push(toDouble);
+    }
 
     let i: number = 0;
     for (let device of deviceEntries) {

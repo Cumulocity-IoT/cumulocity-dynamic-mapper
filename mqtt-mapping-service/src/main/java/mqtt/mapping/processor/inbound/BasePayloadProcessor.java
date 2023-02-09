@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.processor.incoming;
+package mqtt.mapping.processor.inbound;
 
 import java.io.IOException;
 import java.util.AbstractMap;
@@ -46,6 +46,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
@@ -95,7 +97,7 @@ public abstract class BasePayloadProcessor<T> {
 
     public ProcessingContext<T> substituteInTargetAndSend(ProcessingContext<T> context) {
         /*
-         * step 3 replace target with extract content from incoming payload
+         * step 3 replace target with extract content from inbound payload
          */
         Mapping mapping = context.getMapping();
 
@@ -123,13 +125,7 @@ public abstract class BasePayloadProcessor<T> {
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
-            JsonNode payloadTarget = null;
-            try {
-                payloadTarget = objectMapper.readTree(mapping.target);
-            } catch (JsonProcessingException e) {
-                context.addError(new ProcessingException(e.getMessage()));
-                return context;
-            }
+            DocumentContext payloadTarget = JsonPath.parse(mapping.target);
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -187,7 +183,6 @@ public abstract class BasePayloadProcessor<T> {
 
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                    // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
                 } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
@@ -214,7 +209,7 @@ public abstract class BasePayloadProcessor<T> {
                 AbstractExtensibleRepresentation attocRequest = null;
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.toString(),
+                                payloadTarget.jsonString(),
                                 null, mapping.targetAPI, null));
                 try {
                     attocRequest = c8yAgent.createMEAO(context);
@@ -235,47 +230,14 @@ public abstract class BasePayloadProcessor<T> {
         return context;
     }
 
-    public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
-        String[] splitKeys = keys.split(Pattern.quote("."));
+    public void substituteValueInObject(SubstituteValue sub, DocumentContext jsonObject, String keys)
+            throws JSONException {
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
         if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
-            removeValueFromObect(jsonObject, splitKeys);
+            jsonObject.delete(keys);
         } else {
-            if (splitKeys == null) {
-                splitKeys = new String[] { keys };
-            }
-            substituteValueInObject(sub, jsonObject, splitKeys);
+            jsonObject.set(keys, sub.typedValue());
         }
-    }
-
-    public JsonNode removeValueFromObect(JsonNode jsonObject, String[] keys) throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).remove(currentKey);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + "is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
-    }
-
-    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys)
-            throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).set(currentKey, sub.value);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + " is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
-        return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
     }
 
 }

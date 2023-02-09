@@ -19,14 +19,14 @@
  * @authors Christof Strack
  */
 import * as _ from 'lodash';
-import { PayloadProcessorOutgoing } from "../payload-processor-outgoing.service";
+import { PayloadProcessorOutbound } from "../payload-processor-outbound.service";
 import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import { splitTopicExcludingSeparator, TOKEN_TOPIC_LEVEL, isNumeric, whatIsIt, TIME } from "../../../shared/util";
 import { ProcessingContext, SubstituteValue, SubstituteValueType } from "../prosessor.model";
 import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
-export class JSONProcessorOutgoing extends PayloadProcessorOutgoing {
+export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
   public deserializePayload(context: ProcessingContext, mapping: Mapping): ProcessingContext {
     context.payload = JSON.parse(mapping.source);
@@ -46,7 +46,7 @@ export class JSONProcessorOutgoing extends PayloadProcessorOutgoing {
     mapping.substitutions.forEach(substitution => {
       let extractedSourceContent: JSON;
       try {
-        // step 1 extract content from incoming payload
+        // step 1 extract content from inbound payload
         extractedSourceContent = this.evaluateExpression(JSON.parse(mapping.source), substitution.pathSource);
 
         //step 2 analyse exctracted content: textual, array

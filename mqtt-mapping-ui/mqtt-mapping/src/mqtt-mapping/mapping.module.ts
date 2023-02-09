@@ -85,7 +85,7 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/mappings/incoming',
+          path: 'mqtt-mapping/mappings/inbound',
           component: MappingComponent,
         },
       ] as Route[],
@@ -95,7 +95,7 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/mappings/outgoing',
+          path: 'mqtt-mapping/mappings/outbound',
           component: MappingComponent,
         },
       ] as Route[],

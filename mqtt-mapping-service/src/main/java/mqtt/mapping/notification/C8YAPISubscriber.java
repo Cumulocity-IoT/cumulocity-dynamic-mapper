@@ -41,7 +41,7 @@ import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
-import mqtt.mapping.processor.outgoing.AsynchronousDispatcherOutgoing;
+import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 
 import org.apache.commons.collections.ArrayStack;
 import org.slf4j.Logger;
@@ -87,7 +87,7 @@ public class C8YAPISubscriber {
     private C8YAgent c8YAgent;
 
     @Autowired
-    private AsynchronousDispatcherOutgoing dispatcherOutgoing;
+    private AsynchronousDispatcherOutbound dispatcherOutbound;
 
     @Value("${C8Y.baseURL}")
     private String baseUrl;
@@ -117,7 +117,7 @@ public class C8YAPISubscriber {
        if (deviceSubList.size() > 0) {
            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
            try {
-               connect(token, dispatcherOutgoing);
+               connect(token, dispatcherOutbound);
            } catch (URISyntaxException e) {
                logger.error("Error connecting device subscription: {}", e.getLocalizedMessage());
            }
@@ -145,7 +145,7 @@ public class C8YAPISubscriber {
             String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
 
             try {
-                connect(deviceToken, dispatcherOutgoing);
+                connect(deviceToken, dispatcherOutbound);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -164,7 +164,7 @@ public class C8YAPISubscriber {
                 logger.info("Device Subscription not connected yet. Will connect...");
                 String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
                 try {
-                    connect(token, dispatcherOutgoing);
+                    connect(token, dispatcherOutbound);
                 } catch (URISyntaxException e) {
                     logger.error("Error on connecting to Notification Service: {}", e.getLocalizedMessage());
                     throw new RuntimeException(e);

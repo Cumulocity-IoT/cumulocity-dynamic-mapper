@@ -36,7 +36,7 @@ import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.incoming.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 
