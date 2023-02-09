@@ -245,9 +245,7 @@ public abstract class BasePayloadProcessorOutgoing<T> {
             }
             // substituteValueInObject(sub, jsonObject, splitKeys);
             String jsonIn = jsonObject.toString();
-            DocumentContext jsonOutContext = JsonPath.parse(jsonIn).set(keys, sub.value);
-            String jsonOut = "";
-            // ERROR String jsonOut = jsonOutContext.jsonString();
+            String jsonOut = JsonPath.parse(jsonIn).set(keys, sub.typedValue()).read("$").toString();
             try {
                 jsonObject = objectMapper.readTree(jsonOut);
             } catch (JsonMappingException e) {
