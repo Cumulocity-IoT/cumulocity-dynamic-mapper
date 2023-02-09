@@ -213,7 +213,7 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                 AbstractExtensibleRepresentation attocRequest = null;
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.read("$").toString(),
+                                payloadTarget.jsonString(),
                                 null, mapping.targetAPI, null));
                 try {
                     attocRequest = mqttClient.createMEAO(context);
