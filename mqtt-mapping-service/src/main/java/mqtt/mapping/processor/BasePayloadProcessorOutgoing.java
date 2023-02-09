@@ -41,11 +41,15 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.ReadContext;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
@@ -161,36 +165,22 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    // if (pathTarget.equals(mapping.targetAPI.identifier)) {
                     if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                        if (Direction.OUTGOING.equals(mapping.direction)) {
-                            ExternalIDRepresentation externalId = c8yAgent.findExternalId(
-                                    new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
-                            if (externalId == null && context.isSendPayload()) {
-                                throw new RuntimeException("External id " + substituteValue + " for type "
-                                        + mapping.externalIdType + " not found!");
-                            } else if (externalId == null) {
-                                substituteValue.value = null;
-                            } else {
-                                substituteValue.value = new TextNode(externalId.getExternalId());
-                            }
+                        ExternalIDRepresentation externalId = c8yAgent.findExternalId(
+                                new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
+                        if (externalId == null && context.isSendPayload()) {
+                            throw new RuntimeException("External id " + substituteValue + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        } else if (externalId == null) {
+                            substituteValue.value = null;
                         } else {
-                            ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
-                                    new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
-                            if (sourceId == null && context.isSendPayload()) {
-                                throw new RuntimeException("External id " + substituteValue + " for type "
-                                        + mapping.externalIdType + " not found!");
-                            } else if (sourceId == null) {
-                                substituteValue.value = null;
-                            } else {
-                                substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
-                            }
+                            substituteValue.value = new TextNode(externalId.getExternalId());
                         }
                     }
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
                     // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {
                 } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(context, substituteValue, payloadTarget, pathTarget);
                 }
             }
             /*
@@ -241,9 +231,10 @@ public abstract class BasePayloadProcessorOutgoing<T> {
             i++;
         }
         return context;
+
     }
 
-    public void substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
+    public void substituteValueInObject(ProcessingContext context, SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
         String[] splitKeys = keys.split(Pattern.quote("."));
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
         if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
@@ -252,7 +243,20 @@ public abstract class BasePayloadProcessorOutgoing<T> {
             if (splitKeys == null) {
                 splitKeys = new String[] { keys };
             }
-            substituteValueInObject(sub, jsonObject, splitKeys);
+            // substituteValueInObject(sub, jsonObject, splitKeys);
+            String jsonIn = jsonObject.toString();
+            DocumentContext jsonOutContext = JsonPath.parse(jsonIn).set(keys, sub.value);
+            String jsonOut = "";
+            // ERROR String jsonOut = jsonOutContext.jsonString();
+            try {
+                jsonObject = objectMapper.readTree(jsonOut);
+            } catch (JsonMappingException e) {
+                context.addError(new ProcessingException(e.getMessage()));
+                log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
+            } catch (JsonProcessingException e) {
+                context.addError(new ProcessingException(e.getMessage()));
+                log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
+            }
         }
     }
 

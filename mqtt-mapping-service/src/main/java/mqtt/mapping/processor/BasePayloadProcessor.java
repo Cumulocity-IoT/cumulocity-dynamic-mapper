@@ -23,7 +23,6 @@ package mqtt.mapping.processor;
 
 import java.io.IOException;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -153,50 +152,39 @@ public abstract class BasePayloadProcessor<T> {
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     // if (pathTarget.equals(mapping.targetAPI.identifier)) {
                     if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                        if (Direction.OUTGOING.equals(mapping.direction)) {
-                            ExternalIDRepresentation externalId = c8yAgent.findExternalId(
-                                    new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
-                            if (externalId == null && context.isSendPayload()) {
-                                throw new RuntimeException("External id " + substituteValue + " for type "
-                                        + mapping.externalIdType + " not found!");
-                            } else if (externalId == null) {
-                                substituteValue.value = null;
-                            } else {
-                                substituteValue.value = new TextNode(externalId.getExternalId());
+
+                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
+                                new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
+                        if (sourceId == null && mapping.createNonExistingDevice) {
+                            ManagedObjectRepresentation attocDevice = null;
+                            Map<String, Object> request = new HashMap<String, Object>();
+                            request.put("name",
+                                    "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
+                            request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
+                            request.put("c8y_IsDevice", null);
+                            try {
+                                var requestString = objectMapper.writeValueAsString(request);
+                                var newPredecessor = context.addRequest(
+                                        new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
+                                                mapping.externalIdType, requestString, null, API.INVENTORY, null));
+                                attocDevice = c8yAgent.upsertDevice(
+                                        new ID(mapping.externalIdType, substituteValue.value.asText()), context);
+                                var response = objectMapper.writeValueAsString(attocDevice);
+                                context.getCurrentRequest().setResponse(response);
+                                substituteValue.value = new TextNode(attocDevice.getId().getValue());
+                                predecessor = newPredecessor;
+                            } catch (ProcessingException | JsonProcessingException e) {
+                                context.getCurrentRequest().setError(e);
                             }
+                        } else if (sourceId == null && context.isSendPayload()) {
+                            throw new RuntimeException("External id " + substituteValue + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        } else if (sourceId == null) {
+                            substituteValue.value = null;
                         } else {
-                            ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
-                                    new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
-                            if (sourceId == null && mapping.createNonExistingDevice) {
-                                ManagedObjectRepresentation attocDevice = null;
-                                Map<String, Object> request = new HashMap<String, Object>();
-                                request.put("name",
-                                        "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                                request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
-                                request.put("c8y_IsDevice", null);
-                                try {
-                                    var requestString = objectMapper.writeValueAsString(request);
-                                    var newPredecessor = context.addRequest(
-                                            new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
-                                                    mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                                    attocDevice = c8yAgent.upsertDevice(
-                                            new ID(mapping.externalIdType, substituteValue.value.asText()), context);
-                                    var response = objectMapper.writeValueAsString(attocDevice);
-                                    context.getCurrentRequest().setResponse(response);
-                                    substituteValue.value = new TextNode(attocDevice.getId().getValue());
-                                    predecessor = newPredecessor;
-                                } catch (ProcessingException | JsonProcessingException e) {
-                                    context.getCurrentRequest().setError(e);
-                                }
-                            } else if (sourceId == null && context.isSendPayload()) {
-                                throw new RuntimeException("External id " + substituteValue + " for type "
-                                        + mapping.externalIdType + " not found!");
-                            } else if (sourceId == null) {
-                                substituteValue.value = null;
-                            } else {
-                                substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
-                            }
+                            substituteValue.value = new TextNode(sourceId.getManagedObject().getId().getValue());
                         }
+
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                     // } else if (!pathTarget.equals(mapping.targetAPI.identifier)) {

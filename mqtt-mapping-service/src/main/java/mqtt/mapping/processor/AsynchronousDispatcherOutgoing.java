@@ -103,7 +103,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
 
         List<Mapping> resolvedMappings;
         String topic;
-        Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessors;
+        Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessorsOutgoing;
         boolean sendPayload;
         C8YMessage c8yMessage;
         MappingComponent mappingStatusComponent;
@@ -111,12 +111,12 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
         ObjectMapper objectMapper;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
-                Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessors, boolean sendPayload,
+                Map<MappingType, BasePayloadProcessorOutgoing<T>> payloadProcessorsOutgoing, boolean sendPayload,
                 C8YMessage c8yMessage, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
-            this.payloadProcessors = payloadProcessors;
+            this.payloadProcessorsOutgoing = payloadProcessorsOutgoing;
             this.sendPayload = sendPayload;
             this.c8yMessage = c8yMessage;
             this.objectMapper = objectMapper;
@@ -142,7 +142,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
                 context.setSendPayload(sendPayload);
                 // identify the corect processor based on the mapping type
                 MappingType mappingType = context.getMappingType();
-                BasePayloadProcessorOutgoing processor = payloadProcessors.get(mappingType);
+                BasePayloadProcessorOutgoing processor = payloadProcessorsOutgoing.get(mappingType);
 
                 if (processor != null) {
                     try {
@@ -221,7 +221,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessorOutgoing<?>> payloadProcessorsOutgoing;
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -263,7 +263,7 @@ public class AsynchronousDispatcherOutgoing implements NotificationCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, payloadProcessors,
+                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, payloadProcessorsOutgoing,
                         sendPayload, c8yMessage, objectMapper));
 
         if (op != null) {
