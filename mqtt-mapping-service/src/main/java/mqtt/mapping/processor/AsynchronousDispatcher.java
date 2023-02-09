@@ -44,6 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
@@ -61,7 +62,7 @@ public class AsynchronousDispatcher implements MqttCallback {
 
         List<Mapping> resolvedMappings;
         String topic;
-        Map<MappingType, BasePayloadProcessor<T>> payloadProcessors;
+        Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsIncoming;
         boolean sendPayload;
         MqttMessage mqttMessage;
         MappingComponent mappingStatusComponent;
@@ -70,13 +71,13 @@ public class AsynchronousDispatcher implements MqttCallback {
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 String topic,
-                Map<MappingType, BasePayloadProcessor<T>> payloadProcessors, boolean sendPayload,
+                Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsIncoming, boolean sendPayload,
                 MqttMessage mqttMessage, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
             this.topic = topic;
-            this.payloadProcessors = payloadProcessors;
+            this.payloadProcessorsIncoming = payloadProcessorsIncoming;
             this.sendPayload = sendPayload;
             this.mqttMessage = mqttMessage;
             this.objectMapper = objectMapper;
@@ -101,7 +102,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                 context.setSendPayload(sendPayload);
                 // identify the corect processor based on the mapping type
                 MappingType mappingType = context.getMappingType();
-                BasePayloadProcessor processor = payloadProcessors.get(mappingType);
+                BasePayloadProcessor processor = payloadProcessorsIncoming.get(mappingType);
 
                 if (processor != null) {
                     try {
@@ -181,7 +182,7 @@ public class AsynchronousDispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsIncoming;
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -225,7 +226,7 @@ public class AsynchronousDispatcher implements MqttCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessors,
+                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessorsIncoming,
                         sendPayload, mqttMessage, objectMapper));
 
         return futureProcessingResult;

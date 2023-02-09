@@ -69,7 +69,7 @@ public class SynchronousDispatcher implements MqttCallback {
     SysHandler sysHandler;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsIncoming;
 
     @Autowired
     MappingComponent mappingStatusComponent;
@@ -118,7 +118,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     context.setSendPayload(sendPayload);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    BasePayloadProcessor processor = payloadProcessors.get(mappingType);
+                    BasePayloadProcessor processor = payloadProcessorsIncoming.get(mappingType);
 
                     if (processor != null) {
                         try {

@@ -690,7 +690,6 @@ public class MQTTClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         mqttMessage.setPayload(payload.getBytes());
-        //mqttClient.publish(context.getMapping().publishTopic, mqttMessage);
         mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
         return null;
     }

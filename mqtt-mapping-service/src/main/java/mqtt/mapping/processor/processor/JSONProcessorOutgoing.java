@@ -77,7 +77,7 @@ public class JSONProcessorOutgoing extends BasePayloadProcessorOutgoing<JsonNode
         Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         String payload = payloadJsonNode.toPrettyString();
-        log.info("Patched payload: {}", payload);
+        //log.info("Patched payload: {}", payload);
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -86,11 +86,7 @@ public class JSONProcessorOutgoing extends BasePayloadProcessorOutgoing<JsonNode
              * step 1 extract content from incoming payload
              */
             try {
-                // have to escape _DEVICE_IDENT_ , _TOPIC_LEVEL_ with BACKQUOTE "`" since
-                // JSONata4Java does work for tokens with starting "_"
-                var p = substitution.pathSource.replace(TOKEN_DEVICE_TOPIC, TOKEN_DEVICE_TOPIC_BACKQUOTE);
-                p = p.replace(TOKEN_TOPIC_LEVEL, TOKEN_TOPIC_LEVEL_BACKQUOTE);
-                log.debug("Patched sub.pathSource: {}, {}", substitution.pathSource, p);
+                var p = substitution.pathSource;
                 Expressions expr = Expressions.parse(p);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
