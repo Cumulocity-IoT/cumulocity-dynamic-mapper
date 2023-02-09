@@ -211,6 +211,8 @@ public abstract class BasePayloadProcessorOutgoing<T> {
                     context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
                 }
                 AbstractExtensibleRepresentation attocRequest = null;
+                // remove TOPIC_LEVEL
+                payloadTarget.delete(TOKEN_TOPIC_LEVEL);
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
                                 payloadTarget.jsonString(),
