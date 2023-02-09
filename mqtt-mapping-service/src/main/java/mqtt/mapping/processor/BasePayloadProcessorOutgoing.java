@@ -126,25 +126,25 @@ public abstract class BasePayloadProcessorOutgoing<T> {
         for (SubstituteValue device : deviceEntries) {
 
             int predecessor = -1;
-            JsonNode payloadTarget = null;
-            try {
-                payloadTarget = objectMapper.readTree(mapping.target);
+            DocumentContext payloadTarget = null;
+            // try {
+                //payloadTarget = objectMapper.readTree(mapping.target);
+                payloadTarget = JsonPath.parse(mapping.target);
                 /*
                  * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
                  * is required in the payload for a substitution
                  */
-                ArrayNode topicLevels = objectMapper.createArrayNode();
-                List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-                splitTopicAsList.forEach(s -> topicLevels.add(s));
-                if (payloadTarget instanceof ObjectNode) {
-                    ((ObjectNode) payloadTarget).set(TOKEN_TOPIC_LEVEL, topicLevels);
-                } else {
-                    log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
-                }
-            } catch (JsonProcessingException e) {
-                context.addError(new ProcessingException(e.getMessage()));
-                return context;
-            }
+                List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+                payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+                // if (payloadTarget instanceof ObjectNode) {
+                //     ((ObjectNode) payloadTarget).set(TOKEN_TOPIC_LEVEL, topicLevels);
+                // } else {
+                //     log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+                // }
+            // } catch (JsonProcessingException e) {
+            //     context.addError(new ProcessingException(e.getMessage()));
+            //     return context;
+            // }
             for (String pathTarget : pathTargets) {
                 SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
@@ -187,22 +187,22 @@ public abstract class BasePayloadProcessorOutgoing<T> {
              * step 4 prepare target payload for sending to mqttBroker
              */
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                JsonNode topicLevelsJsonNode = payloadTarget.get(TOKEN_TOPIC_LEVEL);
-                if (topicLevelsJsonNode.isArray()) {
+                List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
+                if (topicLevels != null && topicLevels.size() > 0 ) {
                     // now merge the replaced topic levels
                     MutableInt c = new MutableInt(0);
-                    String[] splitTopicAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                    ArrayNode topicLevels = (ArrayNode) topicLevelsJsonNode;
+                    String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
                     topicLevels.forEach(tl -> {
-                        while (c.intValue() < splitTopicAsList.length && ("/".equals(splitTopicAsList[c.intValue()]))) {
+                        while (c.intValue() < splitTopicInAsList.length && ("/".equals(splitTopicInAsList[c.intValue()]))) {
                             c.increment();
                         }
-                        splitTopicAsList[c.intValue()] = tl.asText();
+                        splitTopicInAsList[c.intValue()] = tl;
+                        c.increment();
                     });
 
                     StringBuffer resolvedPublishTopic = new StringBuffer();
-                    for (int d = 0; d < splitTopicAsList.length; d++) {
-                        resolvedPublishTopic.append(splitTopicAsList[d]);
+                    for (int d = 0; d < splitTopicInAsList.length; d++) {
+                        resolvedPublishTopic.append(splitTopicInAsList[d]);
                     }
                     context.setResolvedPublishTopic(resolvedPublishTopic.toString());
                 } else {
@@ -234,58 +234,14 @@ public abstract class BasePayloadProcessorOutgoing<T> {
 
     }
 
-    public void substituteValueInObject(ProcessingContext context, SubstituteValue sub, JsonNode jsonObject, String keys) throws JSONException {
-        String[] splitKeys = keys.split(Pattern.quote("."));
+    public void substituteValueInObject(ProcessingContext context, SubstituteValue sub, DocumentContext jsonObject, String keys) throws JSONException {
         boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
         if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
-            removeValueFromObect(jsonObject, splitKeys);
+            jsonObject.delete(keys);
         } else {
-            if (splitKeys == null) {
-                splitKeys = new String[] { keys };
-            }
-            // substituteValueInObject(sub, jsonObject, splitKeys);
-            String jsonIn = jsonObject.toString();
-            String jsonOut = JsonPath.parse(jsonIn).set(keys, sub.typedValue()).read("$").toString();
-            try {
-                jsonObject = objectMapper.readTree(jsonOut);
-            } catch (JsonMappingException e) {
-                context.addError(new ProcessingException(e.getMessage()));
-                log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
-            } catch (JsonProcessingException e) {
-                context.addError(new ProcessingException(e.getMessage()));
-                log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
-            }
+            String jsonOut = jsonObject.set(keys, sub.typedValue()).read("$").toString();
+            // log.warn("During the processing of this key: {} an error occured {} .", keys, e.getMessage());
         }
-    }
-
-    public JsonNode removeValueFromObect(JsonNode jsonObject, String[] keys) throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).remove(currentKey);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + "is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        return removeValueFromObect(nestedJsonObjectVal, remainingKeys);
-    }
-
-    public JsonNode substituteValueInObject(SubstituteValue sub, JsonNode jsonObject, String[] keys)
-            throws JSONException {
-        String currentKey = keys[0];
-
-        if (keys.length == 1) {
-            return ((ObjectNode) jsonObject).set(currentKey, sub.value);
-        } else if (!jsonObject.has(currentKey)) {
-            throw new JSONException(currentKey + " is not a valid key.");
-        }
-
-        JsonNode nestedJsonObjectVal = jsonObject.get(currentKey);
-        String[] remainingKeys = Arrays.copyOfRange(keys, 1, keys.length);
-        JsonNode updatedNestedValue = substituteValueInObject(sub, nestedJsonObjectVal, remainingKeys);
-        return ((ObjectNode) jsonObject).set(currentKey, updatedNestedValue);
     }
 
 }
