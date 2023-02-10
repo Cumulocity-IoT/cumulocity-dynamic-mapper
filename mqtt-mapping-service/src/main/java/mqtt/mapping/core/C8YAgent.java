@@ -263,6 +263,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (mqttClient != null) {
             mqttClient.disconnect();
         }
+        operationSubscriber.disconnect(null);
+
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
