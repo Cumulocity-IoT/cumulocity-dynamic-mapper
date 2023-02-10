@@ -202,7 +202,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
       externalIdType: new FormControl(this.mapping.externalIdType),
       snoopStatus: new FormControl(this.mapping.snoopStatus),
-      filterOutbound: new FormControl(this.mapping.filterOutbound, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
+      filterOutbound: new FormControl(this.mapping.filterOutbound, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
       autoAckOperation: new FormControl(this.mapping.autoAckOperation),
     },
       checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
