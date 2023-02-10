@@ -101,7 +101,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient {
     // TDOD remove value from ADDITION_TEST_DUMMY
-    private static final String ADDITION_TEST_DUMMY = "_D1";
+    private static final String ADDITION_TEST_DUMMY = "";
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -296,12 +296,6 @@ public class MQTTClient {
                 firstRun = false;
             }
 
-            // try {
-            // Thread.sleep(WAIT_PERIOD_MS / 10);
-            // } catch (InterruptedException e) {
-            // log.error("Error on reconnect: ", e);
-            // }
-
             try {
                 subscribe("$SYS/#", 0);
                 activeSubscriptionCache = new HashMap<String, MutableInt>();
@@ -310,11 +304,12 @@ public class MQTTClient {
                 rebuildInboundMappingCache();
                 rebuildOutboundMappingCache();
                 successful = true;
-            } catch (MqttException e) {
-                log.error("Error on reconnect, retrying ... {]", e.getMessage());
+                log.info("Subscribing to topics was sucessful: {}", successful);
+
+            } catch (Exception e) {
+                log.error("Error on reconnect, retrying ... {}", e.getMessage());
                 log.debug("Stacktrace:", e);
                 successful = false;
-
             }
 
         }
@@ -654,6 +649,7 @@ public class MQTTClient {
                     unsubscribe(topic);
                 } catch (MqttException e1) {
                     log.error("Exception when unsubscribing from topic: {}, {}", topic, e1);
+                    throw new RuntimeException(e1);
                 }
             }
         });
@@ -668,6 +664,7 @@ public class MQTTClient {
                     subscribe(topic, qos);
                 } catch (MqttException e1) {
                     log.error("Exception when subscribing to topic: {}, {}", topic, e1);
+                    throw new RuntimeException(e1);
                 }
             }
         });
@@ -684,7 +681,8 @@ public class MQTTClient {
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) throws MqttPersistenceException, MqttException {
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
+            throws MqttPersistenceException, MqttException {
         MqttMessage mqttMessage = new MqttMessage();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();

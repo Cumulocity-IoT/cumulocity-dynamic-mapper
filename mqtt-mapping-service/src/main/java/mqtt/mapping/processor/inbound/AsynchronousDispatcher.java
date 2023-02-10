@@ -44,7 +44,6 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
@@ -236,7 +235,8 @@ public class AsynchronousDispatcher implements MqttCallback {
     @Override
     public void connectionLost(Throwable throwable) {
         log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
-        log.debug("Stacktrace: ", throwable);
+        log.info("Stacktrace: ", throwable);
+        throwable.printStackTrace();
         c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
         mqttClient.submitConnect();
     }
