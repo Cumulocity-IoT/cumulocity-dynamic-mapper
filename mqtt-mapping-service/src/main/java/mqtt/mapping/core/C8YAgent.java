@@ -372,7 +372,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ArrayList<Mapping> result = new ArrayList<Mapping>();
         subscriptionsService.runForTenant(tenant, () -> {
             result.addAll(mappingComponent.getMappings());
-            log.info("Found mappings: {}", result.size());
+            log.info("Loaded mappings (inbound & outbound): {}", result.size());
         });
         return result;
     }

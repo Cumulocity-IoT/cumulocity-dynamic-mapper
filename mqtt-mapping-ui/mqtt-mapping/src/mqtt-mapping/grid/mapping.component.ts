@@ -317,7 +317,7 @@ export class MappingComponent implements OnInit {
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
     // for backward compatability set direction of mapping to inbound
-    if (!this.mappingToUpdate.direction) this.mappingToUpdate.direction = Direction.INBOUND;
+    if (!this.mappingToUpdate.direction || this.mappingToUpdate.direction == null) this.mappingToUpdate.direction = Direction.INBOUND;
     console.log("Editing mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
   }
