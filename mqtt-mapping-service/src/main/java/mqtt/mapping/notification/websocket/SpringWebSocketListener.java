@@ -87,6 +87,7 @@ public class SpringWebSocketListener implements WebSocketListener {
 
     @Override
     public void afterSessionEnded(WebSocketSession session, CloseStatus closeStatus) {
+        log.info("WebSocket Session {} terminated: {}", session.getUri(), closeStatus.toString());
     }
 
     @Override

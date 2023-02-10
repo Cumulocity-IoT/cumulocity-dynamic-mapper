@@ -42,7 +42,6 @@ import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.notification.websocket.SpringWebSocketListener;
 import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
-
 import org.apache.commons.collections.ArrayStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,13 +97,14 @@ public class C8YAPISubscriber {
     private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
 
     List<ClientWebSocketContainer> wsClientList = new ArrayList<>();
-    List<NotificationSubscriptionRepresentation> subscriptionList = new ArrayList<>();
 
+    private ClientWebSocketContainer device_client;
+    private ClientWebSocketContainer tenant_client;
 
     public void init() {
-       // Subscribe on Tenant do get informed when devices get deleted/added
+        // Subscribe on Tenant do get informed when devices get deleted/added
         logger.info("Initializing Operation Subscriptions...");
-       subscribeTenant(subscriptionsService.getTenant());
+        subscribeTenant(subscriptionsService.getTenant());
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
         try {
             deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
@@ -114,15 +114,15 @@ public class C8YAPISubscriber {
             throw new RuntimeException(e);
         }
         // When one subscription exsits, connect
-       if (deviceSubList.size() > 0) {
-           String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
-           try {
-               connect(token, dispatcherOutbound);
-           } catch (URISyntaxException e) {
-               logger.error("Error connecting device subscription: {}", e.getLocalizedMessage());
-           }
+        if (deviceSubList.size() > 0) {
+            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+            try {
+                device_client = connect(token, dispatcherOutbound);
+            } catch (URISyntaxException e) {
+                logger.error("Error connecting device subscription: {}", e.getLocalizedMessage());
+            }
 
-       }
+        }
     }
 
     public void subscribeAllDevices() {
@@ -145,7 +145,7 @@ public class C8YAPISubscriber {
             String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
 
             try {
-                connect(deviceToken, dispatcherOutbound);
+                device_client = connect(deviceToken, dispatcherOutbound);
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -155,7 +155,7 @@ public class C8YAPISubscriber {
     public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor, API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String deviceName = mor.getName();
-        logger.info("Creating new Subscription for Device " + deviceName);
+        logger.info("Creating new Subscription for Device {} with ID {}", deviceName, mor.getId().getValue());
         CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
@@ -164,7 +164,7 @@ public class C8YAPISubscriber {
                 logger.info("Device Subscription not connected yet. Will connect...");
                 String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
                 try {
-                    connect(token, dispatcherOutbound);
+                    device_client = connect(token, dispatcherOutbound);
                 } catch (URISyntaxException e) {
                     logger.error("Error on connecting to Notification Service: {}", e.getLocalizedMessage());
                     throw new RuntimeException(e);
@@ -197,14 +197,14 @@ public class C8YAPISubscriber {
             while (subIt.hasNext()) {
                 notification = subIt.next();
                 if (!"tenant".equals(notification.getContext())) {
-                    logger.info("Subscription with ID {} retrieved", notification.getId().getValue());
+                    logger.debug("Subscription with ID {} retrieved", notification.getId().getValue());
                     Device device = new Device();
                     device.setId(notification.getSource().getId().getValue());
                     ManagedObjectRepresentation mor = c8YAgent.getManagedObjectForId(notification.getSource().getId().getValue());
-                    if(mor != null)
+                    if (mor != null)
                         device.setName(mor.getName());
                     else
-                        logger.warn("Device with ID {} does not exists!",notification.getSource().getId().getValue());
+                        logger.warn("Device with ID {} does not exists!", notification.getSource().getId().getValue());
                     devices.add(device);
                     if (notification.getSubscriptionFilter().getApis().size() > 0) {
                         API api = API.fromString(notification.getSubscriptionFilter().getApis().get(0));
@@ -301,7 +301,7 @@ public class C8YAPISubscriber {
                     logger.info("Connection was closed.");
                 }
             };
-            connect(tenantToken, tenantCallback);
+            tenant_client = connect(tenantToken, tenantCallback);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -321,7 +321,7 @@ public class C8YAPISubscriber {
             }
         }
         if (notification == null) {
-            logger.info("Subscription does not exist. Creating ...");
+            //logger.info("Subscription does not exist. Creating ...");
             notification = new NotificationSubscriptionRepresentation();
             final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
             filterRepresentation.setApis(List.of("managedobjects"));
@@ -348,7 +348,7 @@ public class C8YAPISubscriber {
         }
 
         if (notification == null) {
-            logger.info("Subscription does not exist. Creating ...");
+            //logger.info("Subscription does not exist. Creating ...");
             notification = new NotificationSubscriptionRepresentation();
             notification.setSource(mor);
             final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
@@ -394,26 +394,61 @@ public class C8YAPISubscriber {
         }
     }
 
-    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException{
-        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
+    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
+        //Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator();
+        int subsFound = 0;
+        List<Boolean> deviceDeleted = new ArrayList<>();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
+
             //FIXME Issues bySubscription Filter does not work yet
             if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                    subscriptionApi.delete(notification);
-                });
-                return true;
+                subsFound++;
+                if (mor.getId().getValue().equals(notification.getSource().getId().getValue())) {
+                    subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                        logger.info("Deleting Subscription {} for Device {} with ID {}", notification.getId().getValue(), mor.getName(), mor.getId().getValue());
+                        subscriptionApi.delete(notification);
+                        deviceDeleted.add(true);
+                    });
+
+                }
             }
         }
+
+        if (deviceDeleted.size() > 0 && deviceDeleted.get(0)) {
+            if (subsFound == 1)
+                disconnect(device_client);
+            return true;
+        }
+
+
         return false;
     }
 
-    public void disconnect() {
-        for (ClientWebSocketContainer client : wsClientList) {
+    public void disconnect(ClientWebSocketContainer container) {
+        /*for (ClientWebSocketContainer client : wsClientList) {
+            logger.info("Disconnecting WS Client {}", client.toString());
             client.stop();
         }
         wsClientList = new ArrayList<>();
+
+         */
+        if (container != null) {
+            logger.info("Disconnecting WS Client {}", container.toString());
+            container.stop();
+            DEVICE_NOTIFICATION_CONNECTED = false;
+        } else {
+            if (device_client != null && device_client.isRunning()) {
+                logger.info("Disconnecting WS Client {}", device_client.toString());
+                device_client.stop();
+                DEVICE_NOTIFICATION_CONNECTED = false;
+            }
+            if (tenant_client != null && tenant_client.isRunning()) {
+                logger.info("Disconnecting WS Client {}", tenant_client.toString());
+                tenant_client.stop();
+            }
+        }
     }
 
     public boolean getDeviceConnectionStatus() {
@@ -425,16 +460,16 @@ public class C8YAPISubscriber {
         return DEVICE_NOTIFICATION_CONNECTED;
     }
 
-    public void connect(String token, NotificationCallback callback) throws URISyntaxException {
-        baseUrl = baseUrl.replace("http", "ws");
-
-        URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-        final WebSocketClient webSocketClient = new StandardWebSocketClient();
-        ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
-        WebSocketListener messageListener = new SpringWebSocketListener(callback);
-        container.setMessageListener(messageListener);
-        container.setConnectionTimeout(30);
-        container.start();
+    public ClientWebSocketContainer connect(String token, NotificationCallback callback) throws URISyntaxException {
+        try {
+            baseUrl = baseUrl.replace("http", "ws");
+            URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
+            final WebSocketClient webSocketClient = new StandardWebSocketClient();
+            ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
+            WebSocketListener messageListener = new SpringWebSocketListener(callback);
+            container.setMessageListener(messageListener);
+            container.setConnectionTimeout(30);
+            container.start();
         /*
         CompletableFuture.runAsync( () -> {
 
@@ -448,7 +483,13 @@ public class C8YAPISubscriber {
            }
         });
          */
-        wsClientList.add(container);
+            wsClientList.add(container);
+            return container;
+        } catch (Exception e) {
+            logger.error("Error on connect to WS {}", e.getLocalizedMessage());
+        }
+        return null;
     }
+
 
 }
