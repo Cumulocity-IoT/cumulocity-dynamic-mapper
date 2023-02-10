@@ -186,7 +186,7 @@
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction == Direction.INBOUND">
+                <div class="col-md-6" *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction != Direction.OUTBOUND">
                   <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
                     <input type="checkbox" formControlName="createNonExistingDevice"
                       [(ngModel)]="mapping.createNonExistingDevice"
@@ -198,7 +198,7 @@
                   </label>
                 </div>
 
-                <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTBOUND">
+                <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
                   <div class="input-group">
                     <label for="filterOutbound">FilterOutbound</label>
                     <span class="hidden-xs hidden-sm m-l-4">
