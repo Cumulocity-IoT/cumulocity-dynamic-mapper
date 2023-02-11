@@ -62,46 +62,20 @@ public class MappingSubstitution implements Serializable {
             Object result;
             DocumentContext dc;
             switch (type) {
+                case OBJECT:
                 case ARRAY:
-                dc = JsonPath.parse(value.toString());
-                result = dc.read("$");
-                return result;
+                    dc = JsonPath.parse(value.toString());
+                    result = dc.read("$");
+                    return result;
                 case IGNORE:
                     return null;
                 case NUMBER:
                     return value.numberValue();
-                case OBJECT:
-                    dc = JsonPath.parse(value.toString());
-                    result = dc.read("$");
-                    return result;
                 case TEXTUAL:
                     return value.textValue();
                 default:
                     return value.toString();
             }
-
-            // if (type.equals(TYPE.TEXTUAL)) {
-
-            // } else if (type.equals(TYPE.OBJECT)) {
-            // return value;
-            // } else if {
-            // check if int
-            // try {
-            // return Integer.parseInt(value.asText());
-            // } catch (NumberFormatException e1) {
-            // // not int
-            // try {
-            // return Float.parseFloat(value.asText());
-            // } catch (NumberFormatException e2) {
-            // // not int
-            // try {
-            // return Double.parseDouble(value.asText());
-            // } catch (NumberFormatException e3) {
-            // return value;
-            // }
-            // }
-            // }
-            // }
         }
 
         @Override
