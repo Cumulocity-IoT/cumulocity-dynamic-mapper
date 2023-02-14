@@ -38,20 +38,16 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
+import mqtt.mapping.notification.websocket.CustomWebSocketClient;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
-import mqtt.mapping.notification.websocket.SpringWebSocketListener;
 import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import org.apache.commons.collections.ArrayStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.integration.websocket.ClientWebSocketContainer;
-import org.springframework.integration.websocket.WebSocketListener;
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.client.WebSocketClient;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -96,10 +92,10 @@ public class C8YAPISubscriber {
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
 
-    List<ClientWebSocketContainer> wsClientList = new ArrayList<>();
+    List<CustomWebSocketClient> wsClientList = new ArrayList<>();
 
-    private ClientWebSocketContainer device_client;
-    private ClientWebSocketContainer tenant_client;
+    private CustomWebSocketClient device_client;
+    private CustomWebSocketClient tenant_client;
 
     public void init() {
         // Subscribe on Tenant do get informed when devices get deleted/added
@@ -426,7 +422,7 @@ public class C8YAPISubscriber {
         return false;
     }
 
-    public void disconnect(ClientWebSocketContainer container) {
+    public void disconnect(CustomWebSocketClient client) {
         /*for (ClientWebSocketContainer client : wsClientList) {
             logger.info("Disconnecting WS Client {}", client.toString());
             client.stop();
@@ -434,19 +430,19 @@ public class C8YAPISubscriber {
         wsClientList = new ArrayList<>();
 
          */
-        if (container != null) {
-            logger.info("Disconnecting WS Client {}", container.toString());
-            container.stop();
+        if (client != null) {
+            logger.info("Disconnecting WS Client {}", client.toString());
+            client.close();
             DEVICE_NOTIFICATION_CONNECTED = false;
         } else {
-            if (device_client != null && device_client.isRunning()) {
+            if (device_client != null && device_client.isOpen()) {
                 logger.info("Disconnecting WS Client {}", device_client.toString());
-                device_client.stop();
+                device_client.close();
                 DEVICE_NOTIFICATION_CONNECTED = false;
             }
-            if (tenant_client != null && tenant_client.isRunning()) {
+            if (tenant_client != null && tenant_client.isOpen()) {
                 logger.info("Disconnecting WS Client {}", tenant_client.toString());
-                tenant_client.stop();
+                tenant_client.close();
             }
         }
     }
@@ -460,17 +456,23 @@ public class C8YAPISubscriber {
         return DEVICE_NOTIFICATION_CONNECTED;
     }
 
-    public ClientWebSocketContainer connect(String token, NotificationCallback callback) throws URISyntaxException {
+    public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-            final WebSocketClient webSocketClient = new StandardWebSocketClient();
+            //final WebSocketClient webSocketClient = new StandardWebSocketClient();
+            final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);
+            client.setConnectionLostTimeout(30);
+            client.connect();
+            wsClientList.add(client);
+            return client;
+            /*
             ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
             WebSocketListener messageListener = new SpringWebSocketListener(callback);
             container.setMessageListener(messageListener);
             container.setConnectionTimeout(30);
             container.start();
-        /*
+
         CompletableFuture.runAsync( () -> {
 
            while (!container.isRunning()) {
@@ -482,9 +484,12 @@ public class C8YAPISubscriber {
                container.start();
            }
         });
-         */
+
             wsClientList.add(container);
             return container;
+
+             */
+
         } catch (Exception e) {
             logger.error("Error on connect to WS {}", e.getLocalizedMessage());
         }

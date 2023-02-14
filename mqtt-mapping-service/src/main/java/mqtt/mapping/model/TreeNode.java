@@ -21,12 +21,12 @@
 
 package mqtt.mapping.model;
 
-import java.io.Serializable;
-import java.util.List;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.io.Serializable;
+import java.util.List;
 
 @ToString()
 public abstract class TreeNode implements Serializable {

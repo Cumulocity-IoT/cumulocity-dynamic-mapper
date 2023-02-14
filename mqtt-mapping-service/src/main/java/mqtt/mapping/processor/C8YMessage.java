@@ -1,11 +1,11 @@
 package mqtt.mapping.processor;
 
-import javax.validation.constraints.NotNull;
-
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import mqtt.mapping.model.API;
+
+import javax.validation.constraints.NotNull;
 
 @Getter
 @Setter

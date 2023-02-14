@@ -21,12 +21,11 @@
 
 package mqtt.mapping.processor.model;
 
-import org.springframework.web.bind.annotation.RequestMethod;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import mqtt.mapping.model.API;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 @Data
 @NoArgsConstructor
