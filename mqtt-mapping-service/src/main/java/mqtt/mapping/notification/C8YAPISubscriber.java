@@ -423,13 +423,6 @@ public class C8YAPISubscriber {
     }
 
     public void disconnect(CustomWebSocketClient client) {
-        /*for (ClientWebSocketContainer client : wsClientList) {
-            logger.info("Disconnecting WS Client {}", client.toString());
-            client.stop();
-        }
-        wsClientList = new ArrayList<>();
-
-         */
         if (client != null) {
             logger.info("Disconnecting WS Client {}", client.toString());
             client.close();
@@ -460,36 +453,11 @@ public class C8YAPISubscriber {
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-            //final WebSocketClient webSocketClient = new StandardWebSocketClient();
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);
             client.setConnectionLostTimeout(30);
             client.connect();
             wsClientList.add(client);
             return client;
-            /*
-            ClientWebSocketContainer container = new ClientWebSocketContainer(webSocketClient, webSocketUrl.toString());
-            WebSocketListener messageListener = new SpringWebSocketListener(callback);
-            container.setMessageListener(messageListener);
-            container.setConnectionTimeout(30);
-            container.start();
-
-        CompletableFuture.runAsync( () -> {
-
-           while (!container.isRunning()) {
-               try {
-                   Thread.sleep(30000);
-               } catch (InterruptedException e) {
-                   throw new RuntimeException(e);
-               }
-               container.start();
-           }
-        });
-
-            wsClientList.add(container);
-            return container;
-
-             */
-
         } catch (Exception e) {
             logger.error("Error on connect to WS {}", e.getLocalizedMessage());
         }
