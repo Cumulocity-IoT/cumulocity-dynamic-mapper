@@ -21,19 +21,17 @@
 
 package mqtt.mapping.model;
 
-import lombok.Getter;
-import lombok.ToString;
-import mqtt.mapping.processor.model.RepairStrategy;
-
-import java.io.Serializable;
-
-import javax.validation.constraints.NotNull;
-
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import lombok.Getter;
+import lombok.ToString;
+import mqtt.mapping.processor.model.RepairStrategy;
+
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
 
 @Getter
 @ToString()

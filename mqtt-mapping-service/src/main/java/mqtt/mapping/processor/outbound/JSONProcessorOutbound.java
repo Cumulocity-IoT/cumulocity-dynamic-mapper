@@ -21,27 +21,14 @@
 
 package mqtt.mapping.processor.outbound;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.joda.time.DateTime;
-import org.springframework.stereotype.Service;
-
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -49,8 +36,13 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.service.MQTTClient;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service

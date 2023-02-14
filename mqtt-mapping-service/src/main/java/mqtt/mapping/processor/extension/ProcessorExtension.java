@@ -21,10 +21,9 @@
 
 package mqtt.mapping.processor.extension;
 
-import org.springframework.stereotype.Component;
-
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
+import org.springframework.stereotype.Component;
 
 @Component
 public interface ProcessorExtension<O> {

@@ -21,40 +21,16 @@
 
 package mqtt.mapping.processor.outbound;
 
-import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.json.JSONException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestMethod;
-
-import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.ReadContext;
-
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
-import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
@@ -66,6 +42,18 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.json.JSONException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 @Slf4j
 @Service

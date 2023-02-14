@@ -21,19 +21,17 @@
 
 package mqtt.mapping.processor.inbound;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.stereotype.Service;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.model.PayloadWrapper;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
 
 @Service
 public class FlatFileProcessor extends JSONProcessor {

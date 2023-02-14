@@ -21,26 +21,7 @@
 
 package mqtt.mapping.rest;
 
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
-
-import javax.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
-
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ServiceConfiguration;
@@ -54,6 +35,17 @@ import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import javax.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController

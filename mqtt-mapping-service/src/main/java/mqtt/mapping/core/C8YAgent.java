@@ -21,36 +21,7 @@
 
 package mqtt.mapping.core;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TimeZone;
-
-import javax.annotation.PreDestroy;
-
-import com.cumulocity.model.operation.OperationStatus;
-import mqtt.mapping.notification.C8YAPISubscriber;
-import org.apache.commons.io.IOUtils;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.info.ProjectInfoProperties;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Service;
-import org.svenson.JSONParser;
-
+import c8y.IsDevice;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -59,6 +30,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
+import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
@@ -75,8 +47,6 @@ import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import c8y.IsDevice;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -84,12 +54,9 @@ import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.model.API;
-import mqtt.mapping.model.Extension;
-import mqtt.mapping.model.ExtensionEntry;
-import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingServiceRepresentation;
+import mqtt.mapping.model.*;
 import mqtt.mapping.model.extension.ExtensionsComponent;
+import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
@@ -98,6 +65,19 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
+import org.apache.commons.io.IOUtils;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+import org.svenson.JSONParser;
+
+import javax.annotation.PreDestroy;
+import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.*;
 
 @Slf4j
 @Service

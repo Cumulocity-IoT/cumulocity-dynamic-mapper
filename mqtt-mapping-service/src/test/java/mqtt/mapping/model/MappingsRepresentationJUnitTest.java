@@ -21,17 +21,16 @@
 
 package mqtt.mapping.model;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.processor.model.ProcessingContext;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.junit.jupiter.api.Test;
-
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.processor.model.ProcessingContext;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
 public class MappingsRepresentationJUnitTest {

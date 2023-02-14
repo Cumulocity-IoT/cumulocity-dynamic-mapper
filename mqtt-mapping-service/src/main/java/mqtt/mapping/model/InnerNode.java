@@ -21,18 +21,13 @@
 
 package mqtt.mapping.model;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.lang3.mutable.MutableBoolean;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+
+import java.util.*;
 
 @Slf4j
 @ToString

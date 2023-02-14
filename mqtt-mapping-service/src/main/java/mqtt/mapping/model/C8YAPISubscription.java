@@ -4,9 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @Getter
 @Setter
