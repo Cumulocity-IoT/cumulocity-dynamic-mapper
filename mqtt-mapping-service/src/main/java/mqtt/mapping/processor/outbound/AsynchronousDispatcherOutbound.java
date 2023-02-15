@@ -268,8 +268,18 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         if (op != null) {
             //Blocking for Operations to receive the processing result to update operation status
             try {
-                futureProcessingResult.get();
-                c8yAgent.updateOperationStatus(op, OperationStatus.SUCCESSFUL, null);
+                List<ProcessingContext<?>> results = futureProcessingResult.get();
+                if (results.size() > 0) {
+                    if (results.get(0).hasError()) {
+                        c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, results.get(0).getErrors().toString());
+                    } else {
+                        c8yAgent.updateOperationStatus(op, OperationStatus.SUCCESSFUL, null);
+                    }
+                } else {
+                    //No Mapping found
+                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, "No Mapping found for operation "+op.toJSON());
+
+                }
             } catch (InterruptedException e) {
                 c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
             } catch (ExecutionException e) {

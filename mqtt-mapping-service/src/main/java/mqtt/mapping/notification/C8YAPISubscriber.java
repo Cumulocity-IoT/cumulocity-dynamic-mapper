@@ -43,6 +43,7 @@ import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import org.apache.commons.collections.ArrayStack;
+import org.java_websocket.enums.ReadyState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,11 +52,11 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
 import static java.lang.Boolean.FALSE;
 
@@ -87,10 +88,14 @@ public class C8YAPISubscriber {
     @Value("${C8Y.baseURL}")
     private String baseUrl;
 
+    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
+
+    private int retryCount = 0;
 
     List<CustomWebSocketClient> wsClientList = new ArrayList<>();
 
@@ -98,9 +103,17 @@ public class C8YAPISubscriber {
     private CustomWebSocketClient tenant_client;
 
     public void init() {
+       initTenantClient();
+       initDeviceClient();
+    }
+
+    public void initTenantClient() {
         // Subscribe on Tenant do get informed when devices get deleted/added
         logger.info("Initializing Operation Subscriptions...");
         subscribeTenant(subscriptionsService.getTenant());
+    }
+
+    public void initDeviceClient() {
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
         try {
             deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
@@ -117,7 +130,6 @@ public class C8YAPISubscriber {
             } catch (URISyntaxException e) {
                 logger.error("Error connecting device subscription: {}", e.getLocalizedMessage());
             }
-
         }
     }
 
@@ -295,6 +307,7 @@ public class C8YAPISubscriber {
                 @Override
                 public void onClose() {
                     logger.info("Connection was closed.");
+                    //reconnect();
                 }
             };
             tenant_client = connect(tenantToken, tenantCallback);
@@ -302,6 +315,27 @@ public class C8YAPISubscriber {
             e.printStackTrace();
         }
 
+    }
+
+    public void reconnect() {
+        if (tenant_client != null) {
+            if (!tenant_client.isOpen()) {
+                if (tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                    initTenantClient();
+                } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                    tenant_client.reconnect();
+                }
+            }
+        }
+        if (device_client != null) {
+            if (!device_client.isOpen()) {
+                if (device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                    initDeviceClient();
+                } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                    device_client.reconnect();
+                }
+            }
+        }
     }
 
     public NotificationSubscriptionRepresentation createTenantSubscription() {
@@ -457,6 +491,9 @@ public class C8YAPISubscriber {
             client.setConnectionLostTimeout(30);
             client.connect();
             wsClientList.add(client);
+            executorService.scheduleAtFixedRate(() -> {
+                reconnect();
+            }, 30, 30, TimeUnit.SECONDS);
             return client;
         } catch (Exception e) {
             logger.error("Error on connect to WS {}", e.getLocalizedMessage());
