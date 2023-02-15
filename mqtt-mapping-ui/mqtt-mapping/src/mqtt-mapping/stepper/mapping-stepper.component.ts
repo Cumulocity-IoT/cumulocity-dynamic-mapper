@@ -477,7 +477,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         this.templateTarget = this.expandC8YTemplate(JSON.parse(this.mapping.target));
       } else {
         this.templateSource = this.expandC8YTemplate(JSON.parse(this.mapping.source));
-        this.templateTarget = this.expandExternalTemplate(this.templateTarget, levels);
+        this.templateTarget = this.expandExternalTemplate(JSON.parse(this.mapping.target), levels);
       }
     }
   }
