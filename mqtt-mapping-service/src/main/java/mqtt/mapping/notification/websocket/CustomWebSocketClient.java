@@ -2,6 +2,7 @@ package mqtt.mapping.notification.websocket;
 
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
@@ -53,18 +54,7 @@ public class CustomWebSocketClient extends WebSocketClient {
     public void onClose(int statusCode, String reason, boolean remote) {
         log.info("WebSocket closed " + (remote ? "by server. " : "") + " Code:" + statusCode + ", reason: " + reason);
         this.callback.onClose();
-        if (retryCount == 0) {
-            retryCount++;
-            connect();
-        } else {
-            try {
-                TimeUnit.SECONDS.wait(30000);
-                retryCount++;
-                connect();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
+
     }
 
     @Override
