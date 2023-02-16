@@ -24,6 +24,7 @@ package mqtt.mapping.core;
 import c8y.IsDevice;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
@@ -151,6 +152,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
     @EventListener
+    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+        log.info("Microservice unsubscribed for tenant {}", event.getTenant());
+        //this.createEvent("MQTT Mapper Microservice terminated", "mqtt_microservice_stopevent", DateTime.now(), null);
+        operationSubscriber.disconnect(null);
+        if(mqttClient != null)
+            mqttClient.disconnect();
+    }
+    @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
         credentials = event.getCredentials();
@@ -236,15 +245,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void saveConnectionConfiguration(ConfigurationConnection configuration) throws JsonProcessingException {
         connectionConfigurationComponent.saveConnectionConfiguration(configuration);
         mqttClient.reconnect();
-    }
-
-    @PreDestroy
-    private void stop() {
-        if (mqttClient != null) {
-            mqttClient.disconnect();
-        }
-        operationSubscriber.disconnect(null);
-
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
