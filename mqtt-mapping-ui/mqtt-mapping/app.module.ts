@@ -23,7 +23,6 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
 import { BootstrapComponent, CoreModule, HOOK_WIZARD, RouterModule } from '@c8y/ngx-components';
 import { MQTTMappingModule } from './src/service-mapping.module';
-import { AddExtensionComponent } from './src/mqtt-extension/add-extension.component';
 import { AddExtensionWizardComponent } from './src/mqtt-extension/add-extension-wizard.component';
 import { MappingTypeComponent } from './src/mqtt-mapping/mapping-type/mapping-type.component';
 
