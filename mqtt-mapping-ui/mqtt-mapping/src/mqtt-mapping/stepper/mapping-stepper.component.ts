@@ -327,21 +327,21 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  onSubscriptionTopicChanged(event): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(event.target.value);
+  onSubscriptionTopicChanged(subscriptionTopic): void {
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(subscriptionTopic);
     this.mapping.templateTopicSample = this.mapping.templateTopic;
     this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
   }
 
-  onPublishTopicChanged(event): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(event.target.value);
+  onPublishTopicChanged(publishTopic): void {
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(publishTopic);
     this.mapping.templateTopicSample = this.mapping.templateTopic;
     this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
 
   }
 
-  onTemplateTopicChanged(event): void {
-    this.mapping.templateTopicSample = event.target.value;
+  onTemplateTopicChanged(templateTopic): void {
+    this.mapping.templateTopicSample =templateTopic;
     this.propertyForm.patchValue({ templateTopicSample: this.mapping.templateTopic });
   }
 
@@ -556,8 +556,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.snoopedTemplateCounter++;
   }
 
-  async onTargetAPIChanged(event) {
-    const targetAPI = event.target.value;
+  async onTargetAPIChanged(targetAPI) {
     this.mapping.targetAPI = targetAPI;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       this.templateTarget = SAMPLE_TEMPLATES_C8Y[targetAPI];

@@ -55,14 +55,14 @@
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
               <div class="form-group">
                 <label translate>Mapping Name</label>
-                <input formControlName="name" type="text" class="form-control"
-                  placeholder="e.g. Mapping - 1234" #nameRef />
+                <input formControlName="name" type="text" class="form-control" placeholder="e.g. Mapping - 1234"
+                  #nameRef />
               </div>
               <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.INBOUND">
                 <label for="subscriptionTopic" translate>Subscription Topic</label>
-                <input formControlName="subscriptionTopic" type="text"
-                  class="form-control" placeholder="e.g. device/110" #subscriptionTopicRef required
-                  (change)="onSubscriptionTopicChanged($event)" />
+                <input formControlName="subscriptionTopic" type="text" class="form-control"
+                  placeholder="e.g. device/110" #subscriptionTopicRef required
+                  (change)="onSubscriptionTopicChanged(propertyForm.value.subscriptionTopic)" />
                 <c8y-messages>
                   <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
                     <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
@@ -75,9 +75,8 @@
 
               <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
                 <label for="publishTopic" translate>Publish Topic</label>
-                <input formControlName="publishTopic" type="text"
-                  class="form-control" placeholder="e.g. device/110" #publishTopicRef required
-                  (change)="onPublishTopicChanged($event)" />
+                <input formControlName="publishTopic" type="text" class="form-control" placeholder="e.g. device/110"
+                  #publishTopicRef required (change)="onPublishTopicChanged(propertyForm.value.publishTopic)" />
                 <c8y-messages>
                   <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
                     <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
@@ -99,9 +98,9 @@
                     </button>
                   </span>
                 </div>
-                <input formControlName="templateTopic" type="text"
-                  class="form-control" placeholder="e.g. device/110" #templateTopic id="templateTopic"
-                  (change)="onTemplateTopicChanged($event)" required />
+                <input formControlName="templateTopic" type="text" class="form-control" placeholder="e.g. device/110"
+                  #templateTopic id="templateTopic" (change)="onTemplateTopicChanged(propertyForm.value.templateTopic)"
+                  required />
               </div>
               <div class="form-group">
                 <div class="input-group">
@@ -118,8 +117,8 @@
                   </span>
                 </div>
                 <div>
-                  <input formControlName="templateTopicSample" type="text"
-                    class="form-control" placeholder="e.g. device/110" #templateTopicRef required />
+                  <input formControlName="templateTopicSample" type="text" class="form-control"
+                    placeholder="e.g. device/110" #templateTopicRef required />
                   <c8y-messages>
                     <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
                       <span class="text-warning">This TemplateTopic must be unique across other
@@ -160,7 +159,7 @@
                   <label for="targetAPI" translate>Target API</label>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="targetAPI"
-                      (change)="onTargetAPIChanged($event)" #targetAPIRef>
+                      (change)="onTargetAPIChanged(propertyForm.value.targetAPI)" #targetAPIRef>
                       <option *ngFor="let api of keys(API)" [ngValue]="api">
                         {{ api }}
                       </option>
@@ -182,7 +181,7 @@
                 <div class="col-md-6"
                   *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction != Direction.OUTBOUND">
                   <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
-                    <input type="checkbox" formControlName="createNonExistingDevice"/>
+                    <input type="checkbox" formControlName="createNonExistingDevice" />
                     <span></span>
                     <span>
                       {{ 'Create Non Existing Device' | translate }}
@@ -204,14 +203,13 @@
                       </button>
                     </span>
                   </div>
-                  <input formControlName="filterOutbound" type="text"
-                    class="form-control" placeholder="e.g. type or c8y_operationName" #filterOutbound
-                    id="filterOutbound" required />
+                  <input formControlName="filterOutbound" type="text" class="form-control"
+                    placeholder="e.g. type or c8y_operationName" #filterOutbound id="filterOutbound" required />
                 </div>
 
                 <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY.name">
                   <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
-                    <input type="checkbox" formControlName="updateExistingDevice"/>
+                    <input type="checkbox" formControlName="updateExistingDevice" />
                     <span></span>
                     <span>
                       {{ 'Update Existing Device' | translate }}
@@ -221,7 +219,7 @@
               </div>
               <div class="form-group">
                 <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                  <input type="checkbox" formControlName="mapDeviceIdentifier"/>
+                  <input type="checkbox" formControlName="mapDeviceIdentifier" />
                   <span></span>
                   <span>
                     {{ 'Map Device Idenfifier' | translate }}
@@ -230,7 +228,7 @@
               </div>
               <div class="form-group" *ngIf="propertyForm.get('targetAPI').value == API.OPERATION.name">
                 <label class="c8y-switch" title="{{ 'Auto acknowledge outbound operation' | translate }}">
-                  <input type="checkbox" formControlName="autoAckOperation"/>
+                  <input type="checkbox" formControlName="autoAckOperation" />
                   <span></span>
                   <span>
                     {{ 'Auto acknowledge outbound operation' | translate }}
@@ -240,8 +238,8 @@
               <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                 <label for="externalIdType" translate>External Id Type</label>
                 <div>
-                  <input formControlName="externalIdType" type="text"
-                    class="form-control" placeholder="e.g. c8y_Serial" #externalIdTypeRef />
+                  <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
+                    #externalIdTypeRef />
                 </div>
               </div>
               <div class="form-group">
@@ -259,8 +257,7 @@
                   </span>
                 </div>
                 <div class="c8y-select-wrapper">
-                  <select class="form-control" formControlName="snoopStatus"
-                    #snoopStatusRef>
+                  <select class="form-control" formControlName="snoopStatus" #snoopStatusRef>
                     <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
                       [attr.disabled]="isDisabled((q != 'ENABLED' && q != 'NONE'))">
                       {{ SnoopStatus[q] }}
@@ -294,7 +291,7 @@
                       <div>
                         <button type="button" name="sample" class="btn btn-default btn-xs"
                           (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
-                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || mapping.snoopedTemplates.length == 0 || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                           <i c8yIcon="enter-left"></i>Use Source Templates
                           <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
                             {{mapping.snoopedTemplates.length}}</span>
@@ -322,8 +319,8 @@
                   <div class="form-group" *ngIf="stepperConfiguration.showProcessorExtensions">
                     <label translate>Extensions for {{mapping.mappingType}}</label>
                     <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
-                      <select class="form-control" formControlName="exName" #extensionName (change)="onSelectExtension(templateForm.value.exName)"
-                        required>
+                      <select class="form-control" formControlName="exName" #extensionName
+                        (change)="onSelectExtension(templateForm.value.exName)" required>
                         <option [ngValue]="null" disabled>Select an extension</option>
                         <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
                           [selected]="ex.key == mapping.extension?.name">
@@ -493,7 +490,7 @@
                     <br>
                     <div class="input-group">
                       <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
-                        <input type="checkbox" formControlName="ea"  />
+                        <input type="checkbox" formControlName="ea" />
                         <span></span>
                         <span>
                           {{ 'Expand Array' | translate }}
@@ -525,8 +522,7 @@
                     </span>
                   </div>
                   <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="rs"
-                      #repairStrategyRef>
+                    <select class="form-control" formControlName="rs" #repairStrategyRef>
                       <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
                           stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         {{ RepairStrategy[q] }}
