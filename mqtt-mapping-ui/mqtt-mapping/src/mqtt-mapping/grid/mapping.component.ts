@@ -215,19 +215,19 @@ export class MappingComponent implements OnInit {
       headerText: 'Add Mapping',
       headerIcon: 'plus-circle',
     };
-    const initialState = {
+    const initialState: any = {
+      wizardConfig,
       id: 'addMappingWizard',
       direction: this.stepperConfiguration.direction,
-      wizardConfig,
     };
 
-    const modalOptions: ModalOptions = { initialState } as any;
+    const modalOptions: ModalOptions = { initialState };
     const modalRef = this.wizardModalService.show(modalOptions);
     modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
       console.log("Was selected:", result);
-      this.mappingType = result.mappingType;
       //this.direction = result.direction;
       if (result) {
+        this.mappingType = result.mappingType;
         this.addMapping();
       }
     });

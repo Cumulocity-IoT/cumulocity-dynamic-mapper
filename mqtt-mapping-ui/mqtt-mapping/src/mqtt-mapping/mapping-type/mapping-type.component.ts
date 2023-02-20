@@ -31,13 +31,13 @@ import { isDisabled } from '../stepper/util';
 export class MappingTypeComponent implements OnInit {
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
-  
+
   @ViewChild(C8yStepper, { static: true })
   stepper: C8yStepper;
-  
+
   headerText: string;
   headerIcon: string;
-  
+
   direction: Direction;
 
   canOpenInBrowser: boolean = false;
@@ -45,11 +45,11 @@ export class MappingTypeComponent implements OnInit {
   MappingType = MappingType;
   Direction = Direction;
 
-  result = {  
+  result = {
     mappingType: MappingType.JSON,
   }
 
-  constructor (public wizardComponent: WizardComponent, private fb: FormBuilder) {}
+  constructor(private wizardComponent: WizardComponent, private fb: FormBuilder) { }
 
   ngOnInit(): void {
 
@@ -73,7 +73,7 @@ export class MappingTypeComponent implements OnInit {
     this.wizardComponent.close(this.result);
   }
 
-  onSelectMappingType(t){
+  onSelectMappingType(t) {
     this.result.mappingType = t;
     this.wizardComponent.close(this.result);
   }

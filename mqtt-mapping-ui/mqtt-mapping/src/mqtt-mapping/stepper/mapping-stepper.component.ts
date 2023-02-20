@@ -188,22 +188,22 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private initPropertyForm(): void {
     this.propertyForm = new FormGroup({
-      name: new FormControl(this.mapping.name, Validators.required),
-      id: new FormControl(this.mapping.id, Validators.required),
-      targetAPI: new FormControl(this.mapping.targetAPI, Validators.required),
-      subscriptionTopic: new FormControl(this.mapping.subscriptionTopic, Validators.nullValidator),
-      publishTopic: new FormControl(this.mapping.publishTopic, (this.stepperConfiguration.direction != Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopic: new FormControl(this.mapping.templateTopic, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopicSample: new FormControl(this.mapping.templateTopicSample, Validators.required),
-      active: new FormControl(this.mapping.active),
-      qos: new FormControl(this.mapping.qos, Validators.required),
-      mapDeviceIdentifier: new FormControl(this.mapping.mapDeviceIdentifier),
-      createNonExistingDevice: new FormControl(this.mapping.createNonExistingDevice),
-      updateExistingDevice: new FormControl(this.mapping.updateExistingDevice),
-      externalIdType: new FormControl(this.mapping.externalIdType),
-      snoopStatus: new FormControl(this.mapping.snoopStatus),
-      filterOutbound: new FormControl(this.mapping.filterOutbound, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
-      autoAckOperation: new FormControl(this.mapping.autoAckOperation),
+      name: new FormControl({ value: this.mapping.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
+      id: new FormControl({ value: this.mapping.id, disabled: false }, Validators.required),
+      targetAPI: new FormControl({ value: this.mapping.targetAPI, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
+      subscriptionTopic: new FormControl({ value: this.mapping.subscriptionTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.nullValidator),
+      publishTopic: new FormControl({ value: this.mapping.publishTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction != Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
+      templateTopic: new FormControl({ value: this.mapping.templateTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
+      templateTopicSample: new FormControl({ value: this.mapping.templateTopicSample, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
+      active: new FormControl({ value: this.mapping.active, disabled: false }),
+      qos: new FormControl({ value: this.mapping.qos, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
+      mapDeviceIdentifier: new FormControl({ value: this.mapping.mapDeviceIdentifier, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      createNonExistingDevice: new FormControl({ value: this.mapping.createNonExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
+      updateExistingDevice: new FormControl({ value: this.mapping.updateExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      externalIdType: new FormControl({ value: this.mapping.externalIdType, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      snoopStatus: new FormControl({ value: this.mapping.snoopStatus, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      filterOutbound: new FormControl({ value: this.mapping.filterOutbound, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
+      autoAckOperation: new FormControl({ value: this.mapping.autoAckOperation, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name) }),
     },
       checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
     );
@@ -211,14 +211,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   private initTemplateForm(): void {
     this.templateForm = new FormGroup({
-      ps: new FormControl(this.currentSubstitution.pathSource),
-      pt: new FormControl(this.currentSubstitution.pathTarget),
-      rs: new FormControl(this.currentSubstitution.repairStrategy),
-      ea: new FormControl(this.currentSubstitution.expandArray),
-      exName: new FormControl(this.mapping?.extension?.name),
-      exEvent: new FormControl(this.mapping?.extension?.event),
-      sourceExpressionResult: new FormControl(this.sourceExpression.result),
-      targetExpressionResult: new FormControl(this.targetExpression.result),
+      ps: new FormControl({ value: this.currentSubstitution.pathSource, disabled: false }),
+      pt: new FormControl({ value: this.currentSubstitution.pathTarget, disabled: false }),
+      rs: new FormControl({ value: this.currentSubstitution.repairStrategy, disabled: this.stepperConfiguration.direction == Direction.OUTBOUND }),
+      ea: new FormControl({ value: this.currentSubstitution.expandArray, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
+      exName: new FormControl({ value: this.mapping?.extension?.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      exEvent: new FormControl({ value: this.mapping?.extension?.event, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      sourceExpressionResult: new FormControl({ value: this.sourceExpression.result, disabled: true }),
+      targetExpressionResult: new FormControl({ value: this.targetExpression.result, disabled: true }),
     },
       checkSubstitutionIsValid(this.mapping, this.stepperConfiguration)
     );
@@ -402,7 +402,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.enrichTemplates();
       // set schema for editors
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
-      this.editorSource.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, false), null);
+      if ( this.stepperConfiguration.showEditorSource) {
+        this.editorSource.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, false), null);
+      }
       this.editorTestingRequest.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
       this.editorTestingResponse.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
       this.extensions = await this.configurationService.getProcessorExtensions() as any;

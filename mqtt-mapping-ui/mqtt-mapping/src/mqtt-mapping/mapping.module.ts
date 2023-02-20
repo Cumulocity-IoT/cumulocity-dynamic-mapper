@@ -21,7 +21,7 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule, HOOK_ROUTE, HOOK_WIZARD, Route } from '@c8y/ngx-components';
+import { CoreModule, hookWizard, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { MappingComponent } from './grid/mapping.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
@@ -63,7 +63,8 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     AssetSelectorModule,
     SharedModule,
     PopoverModule,
-    ConfigurationModule
+    ConfigurationModule,
+
   ],
   entryComponents: [
     MappingComponent,
@@ -101,20 +102,6 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
       ] as Route[],
       multi: true,
     },
-    // {
-    //   provide: HOOK_WIZARD,
-    //   useValue: {
-    //     // The id of a wizard to which the entry should be hooked.
-    //     wizardId: 'addMappingWizard',
-    //     // The container component is responsible for handling subsequent steps in the wizard.
-    //     component: MappingTypeComponent,
-    //     // Menu entry name
-    //     name: 'App mapping',
-    //     // Menu entry icon
-    //     c8yIcon: 'plus-circle'
-    //   },
-    //   multi: true
-    // },
   ]
 })
 export class MappingModule { }
