@@ -139,8 +139,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
     }
 
-    this.initPropertyForm();
-    this.initTemplateForm();
+    this.setPropertyForm();
+    this.setTemplateForm();
     this.editorOptionsSource = {
       ...this.editorOptionsSource,
       modes: ['tree', 'code'],
@@ -168,6 +168,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       enableTransform: false
     };
     this.onExpressionsUpdated();
+    this.onPropertyFormUpdated();
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
 
     this.extensionEvents$.subscribe(events => {
@@ -186,7 +187,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  private initPropertyForm(): void {
+  private setPropertyForm(): void {
     this.propertyForm = new FormGroup({
       name: new FormControl({ value: this.mapping.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
       id: new FormControl({ value: this.mapping.id, disabled: false }, Validators.required),
@@ -209,7 +210,26 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
   }
 
-  private initTemplateForm(): void {
+  private getPropertyForm(): void {
+    this.mapping.name = this.propertyForm.controls['name'].value;
+    this.mapping.id = this.propertyForm.controls['id'].value;
+    this.mapping.targetAPI = this.propertyForm.controls['targetAPI'].value;
+    this.mapping.subscriptionTopic = this.propertyForm.controls['subscriptionTopic'].value;
+    this.mapping.publishTopic = this.propertyForm.controls['publishTopic'].value;
+    this.mapping.templateTopic = this.propertyForm.controls['templateTopic'].value;
+    this.mapping.templateTopicSample = this.propertyForm.controls['templateTopicSample'].value;
+    this.mapping.active = this.propertyForm.controls['active'].value;
+    this.mapping.qos = this.propertyForm.controls['qos'].value;
+    this.mapping.mapDeviceIdentifier = this.propertyForm.controls['mapDeviceIdentifier'].value;
+    this.mapping.createNonExistingDevice = this.propertyForm.controls['createNonExistingDevice'].value;
+    this.mapping.updateExistingDevice = this.propertyForm.controls['updateExistingDevice'].value;
+    this.mapping.externalIdType = this.propertyForm.controls['externalIdType'].value;
+    this.mapping.snoopStatus = this.propertyForm.controls['snoopStatus'].value;
+    this.mapping.filterOutbound = this.propertyForm.controls['filterOutbound'].value;
+    this.mapping.autoAckOperation = this.propertyForm.controls['autoAckOperation'].value;
+  }
+
+  private setTemplateForm(): void {
     this.templateForm = new FormGroup({
       ps: new FormControl({ value: this.currentSubstitution.pathSource, disabled: false }),
       pt: new FormControl({ value: this.currentSubstitution.pathTarget, disabled: false }),
@@ -224,9 +244,23 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
   }
 
+  private getTemplateForm(): void {
+    this.currentSubstitution.pathSource = this.templateForm.controls['ps'].value;
+    this.currentSubstitution.pathTarget = this.templateForm.controls['pt'].value;
+    this.currentSubstitution.repairStrategy = this.templateForm.controls['rs'].value;
+    this.currentSubstitution.expandArray = this.templateForm.controls['ea'].value;
+    if (this.mapping.extension) {
+      this.mapping.extension.name = this.templateForm.controls['exName'].value;
+      this.mapping.extension.event = this.templateForm.controls['exEvent'].value;
+    }
+    this.sourceExpression.result = this.templateForm.controls['sourceExpressionResult'].value;
+    this.targetExpression.result = this.templateForm.controls['targetExpressionResult'].value;
+  }
+
   public onSelectedSourcePathChanged(path: string) {
     this.updateSourceExpressionResult(path);
     this.currentSubstitution.pathSource = path;
+    this.templateForm.patchValue({ ps: path });
   }
 
   public updateSourceExpressionResult(path: string) {
@@ -237,6 +271,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: ''
       }
+      this.templateForm.patchValue({ sourceExpressionResult: this.sourceExpression.result });
+
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
       this.sourceExpression.errorMsg = error.message
@@ -246,6 +282,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onSelectedTargetPathChanged(path: string) {
     this.updateTargetExpressionResult(path);
     this.currentSubstitution.pathTarget = path;
+    this.templateForm.patchValue({ pt: path });
+
   }
 
   public updateTargetExpressionResult(path: string) {
@@ -256,6 +294,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: ''
       }
+
+      this.templateForm.patchValue({ targetExpressionResult: this.targetExpression.result });
+
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
       this.targetExpression.errorMsg = error.message
@@ -287,17 +328,21 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   onSubscriptionTopicChanged(event): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.subscriptionTopic);
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(event.target.value);
     this.mapping.templateTopicSample = this.mapping.templateTopic;
+    this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
   }
 
   onPublishTopicChanged(event): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.mapping.publishTopic);
+    this.mapping.templateTopic = deriveTemplateTopicFromTopic(event.target.value);
     this.mapping.templateTopicSample = this.mapping.templateTopic;
+    this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
+
   }
 
   onTemplateTopicChanged(event): void {
-    this.mapping.templateTopicSample = this.mapping.templateTopic;
+    this.mapping.templateTopicSample = event.target.value;
+    this.propertyForm.patchValue({ templateTopicSample: this.mapping.templateTopic });
   }
 
   private onExpressionsUpdated(): void {
@@ -313,6 +358,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       .subscribe(val => {
         //console.log(`Updated targetPath ${val}.`, val);
         this.updateTargetExpressionResult(val);
+      });
+  }
+  private onPropertyFormUpdated(): void {
+    this.propertyForm.valueChanges.pipe(debounceTime(500))
+      // distinctUntilChanged()
+      .subscribe(val => {
+        console.log(`Updated propertyForm ${val}.`, val);
       });
   }
 
@@ -390,19 +442,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.extensionEvents$.next(Object.keys(this.extensions[extension].extensionEntries));
   }
 
-
   public async onNextStep(event: { stepper: C8yStepper; step: CdkStep }): Promise<void> {
 
     console.log("OnNextStep", event.step.label, this.mapping)
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
+      this.getPropertyForm();
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
       // set schema for editors
       this.editorTarget.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
-      if ( this.stepperConfiguration.showEditorSource) {
+      if (this.stepperConfiguration.showEditorSource) {
         this.editorSource.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, false), null);
       }
       this.editorTestingRequest.setSchema(getSchema(this.mapping.targetAPI, this.mapping.direction, true), null);
@@ -453,6 +505,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
+      this.getTemplateForm();
       this.editorTestingRequest.set(this.editorSource ? this.editorSource.get() : {} as JSON);
       this.onSelectSubstitution(0);
       event.stepper.next();
@@ -503,11 +556,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.snoopedTemplateCounter++;
   }
 
-  async onTargetAPIChanged(evt) {
+  async onTargetAPIChanged(event) {
+    const targetAPI = event.target.value;
+    this.mapping.targetAPI = targetAPI;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.templateTarget = SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI];
+      this.templateTarget = SAMPLE_TEMPLATES_C8Y[targetAPI];
     } else {
-      this.templateTarget = (SAMPLE_TEMPLATES_EXTERNAL[this.mapping.targetAPI]);
+      this.templateTarget = (SAMPLE_TEMPLATES_EXTERNAL[targetAPI]);
     }
   }
 
