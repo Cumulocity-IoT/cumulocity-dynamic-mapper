@@ -21,7 +21,7 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookWizard, HOOK_ROUTE, Route } from '@c8y/ngx-components';
+import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { MappingComponent } from './grid/mapping.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';

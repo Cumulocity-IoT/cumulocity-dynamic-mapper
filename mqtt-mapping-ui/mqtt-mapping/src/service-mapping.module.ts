@@ -24,7 +24,6 @@ import { Route, RouterModule as NgRouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
   HOOK_NAVIGATOR_NODES,
-  HOOK_ROUTE,
   HOOK_TABS,
 } from '@c8y/ngx-components';
 import { ConfigurationModule } from './mqtt-configuration/configuration.module';
@@ -39,6 +38,8 @@ import { OverviewGuard } from './shared/overview.guard';
 import { MappingTabFactory } from './tab.factory';
 import { ExtensionComponent } from './mqtt-extension/extension.component';
 import { ExtensionPropertiesComponent } from './mqtt-extension/extension-properties.component';
+import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.component';
+import { Editor2TestModule } from './editor2/editor2-test.module';
 
 const extensionRoutes: Route[] = [
   {
@@ -70,13 +71,14 @@ const extensionRoutes: Route[] = [
     MonitoringModule,
     ConfigurationModule,
     ExtensionModule,
+    Editor2TestModule,
     FormsModule,
     ReactiveFormsModule,
   ],
   exports: [
     ServiceMappingComponent,
   ],
-  entryComponents: [ServiceMappingComponent],
+  entryComponents: [ServiceMappingComponent, MappingTypeComponent],
   declarations: [
     ServiceMappingComponent
   ],
