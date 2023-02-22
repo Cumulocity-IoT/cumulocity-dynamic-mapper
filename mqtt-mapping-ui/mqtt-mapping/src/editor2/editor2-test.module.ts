@@ -19,27 +19,33 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { CoreModule } from '@c8y/ngx-components';
-import { JsonEditorComponent } from './editor/jsoneditor.component';
-import { JsonEditor2Component } from './editor2/jsoneditor2.component';
-import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { PaginationModule } from 'ngx-bootstrap/pagination';
+import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
+import { Editor2TestComponent } from './editor2-test.component';
+import { SharedModule } from '../shared/shared.module';
 
 @NgModule({
   declarations: [
-    JsonEditorComponent,
-    JsonEditor2Component,
+    Editor2TestComponent
   ],
   imports: [
     CoreModule,
-    BsDatepickerModule,
-    PaginationModule
+    SharedModule,
   ],
   entryComponents: [
-    JsonEditorComponent,
-    JsonEditor2Component,
+    Editor2TestComponent,
   ],
-  exports: [JsonEditorComponent, JsonEditor2Component],
-  providers: []
+  exports: [],
+  providers: [
+    {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: 'mqtt-mapping/editor2-test',
+          component: Editor2TestComponent,
+        }
+      ] as Route[],
+      multi: true,
+    },
+  ]
 })
-export class SharedModule {}
+export class Editor2TestModule {}

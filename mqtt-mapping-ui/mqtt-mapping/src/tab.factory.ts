@@ -79,6 +79,13 @@ export class MappingTabFactory implements TabFactory {
         icon: 'plugin',
         orientation: 'horizontal',
       } as Tab);
+      // tabs.push({
+      //   path: 'mqtt-mapping/editor2-test',
+      //   priority: 890,
+      //   label: 'Editor2',
+      //   icon: 'file',
+      //   orientation: 'horizontal',
+      // } as Tab);
     }
 
     return tabs;
