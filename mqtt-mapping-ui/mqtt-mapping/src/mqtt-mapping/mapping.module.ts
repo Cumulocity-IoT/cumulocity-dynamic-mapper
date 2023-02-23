@@ -64,7 +64,6 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     SharedModule,
     PopoverModule,
     ConfigurationModule,
-
   ],
   entryComponents: [
     MappingComponent,

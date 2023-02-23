@@ -341,7 +341,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   onTemplateTopicChanged(templateTopic): void {
-    this.mapping.templateTopicSample =templateTopic;
+    this.mapping.templateTopicSample = templateTopic;
     this.propertyForm.patchValue({ templateTopicSample: this.mapping.templateTopic });
   }
 

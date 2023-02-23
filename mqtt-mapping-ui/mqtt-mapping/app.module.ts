@@ -36,26 +36,26 @@ import { AddExtensionWizardComponent } from './src/mqtt-extension/add-extension-
     MQTTMappingModule,
   ],
   providers: [
-    {
-      provide: HOOK_WIZARD,
-      useValue: {
-        wizardId: 'uploadExtensionWizard',
-        component: AddExtensionWizardComponent,
-        name: 'Upload Extension',
-        c8yIcon: 'upload'
-      },
-      multi: true
-    },
-    {
-      provide: HOOK_WIZARD,
-      useValue: {
-        wizardId: 'addMappingWizard',
-        component: MappingTypeComponent,
-        name: 'App mapping',
-        c8yIcon: 'plus-circle'
-      },
-      multi: true
-    },
+    // {
+    //   provide: HOOK_WIZARD,
+    //   useValue: {
+    //     wizardId: 'uploadExtensionWizard',
+    //     component: AddExtensionWizardComponent,
+    //     name: 'Upload Extension',
+    //     c8yIcon: 'upload'
+    //   },
+    //   multi: true
+    // },
+    // {
+    //   provide: HOOK_WIZARD,
+    //   useValue: {
+    //     wizardId: 'addMappingWizard',
+    //     component: MappingTypeComponent,
+    //     name: 'App mapping',
+    //     c8yIcon: 'plus-circle'
+    //   },
+    //   multi: true
+    // },
   ],
   entryComponents: [MappingTypeComponent, AddExtensionWizardComponent],
   bootstrap: [BootstrapComponent]

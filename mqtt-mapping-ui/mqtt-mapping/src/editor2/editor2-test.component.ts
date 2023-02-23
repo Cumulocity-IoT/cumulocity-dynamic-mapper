@@ -18,9 +18,10 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { API, Direction } from '../shared/mapping.model';
+import { getSchema } from '../shared/util';
 import { JsonEditor2Component } from '../shared/editor2/jsoneditor2.component';
-
 
 @Component({
   selector: 'json-editor2',
@@ -30,12 +31,11 @@ import { JsonEditor2Component } from '../shared/editor2/jsoneditor2.component';
   encapsulation: ViewEncapsulation.None,
 })
 
-export class Editor2TestComponent implements OnInit {
+export class Editor2TestComponent implements OnInit, AfterViewInit {
   constructor() {}
-
   @ViewChild('editor2Test', { static: false }) editor2: JsonEditor2Component;
   templateSource: any;
-  editorProps: {mainMenuBar: false};
+  editorProps: { mainMenuBar: false };
   public path: string;
 
   ngOnInit(): void {
@@ -52,7 +52,10 @@ export class Editor2TestComponent implements OnInit {
         }
       }
     };
-    console.log("Editor2:", this.templateSource, this.editor2);
+  }
+
+  ngAfterViewInit(): void {
+    this.editor2.setSchema(getSchema(API.MEASUREMENT.name,Direction.INBOUND,true));
   }
 
   onSelectedSourcePathChanged(event) {
@@ -60,9 +63,8 @@ export class Editor2TestComponent implements OnInit {
   }
 
   onScrollToPathChanged(event){
-    const pathRaw = event.target.value;
-    const path = pathRaw.split("/");
-    console.log("Editor2 set :", event.target.value, this.editor2, path);
-    this.editor2.scrollTo(path);
+    const pathOrg = event.target.value;
+    console.log("Editor2 set:", event.target.value, this.editor2,);
+    this.editor2.setSelectionToPath(pathOrg);
   }
 }

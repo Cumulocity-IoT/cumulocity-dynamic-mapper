@@ -24,7 +24,8 @@ svg {
 }
 
 .jsoneditor2 {
-    --jse-theme-color: var(--c8y-brand-primary);
+    /* --jse-theme-color: var(--brand-primary); */
+    --jse-theme-color: var(--navigator-bg-color,var(--navigator-dark-bg-color,var(--brand-primary,#1776bf)));
     /* --jse-theme-color-highlight: #f553b5; */
     --jse-font-size: var(--c8y-font-size-small);
 }
