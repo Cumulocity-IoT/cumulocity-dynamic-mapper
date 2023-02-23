@@ -23,8 +23,11 @@ import { NgModule } from '@angular/core';
 import { Route, RouterModule as NgRouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {
+  CoreModule,
   HOOK_NAVIGATOR_NODES,
   HOOK_TABS,
+  HOOK_WIZARD,
+  WizardComponent,
 } from '@c8y/ngx-components';
 import { ConfigurationModule } from './mqtt-configuration/configuration.module';
 import { ExtensionModule } from './mqtt-extension/extension.module';
@@ -40,6 +43,9 @@ import { ExtensionComponent } from './mqtt-extension/extension.component';
 import { ExtensionPropertiesComponent } from './mqtt-extension/extension-properties.component';
 import { MappingTypeComponent } from './mqtt-mapping/mapping-type/mapping-type.component';
 import { Editor2TestModule } from './editor2/editor2-test.module';
+import { AddExtensionWizardComponent } from './mqtt-extension/add-extension-wizard.component';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { DefaultSubscriptionsModule } from '@c8y/ngx-components/default-subscriptions';
 
 const extensionRoutes: Route[] = [
   {
@@ -64,7 +70,7 @@ const extensionRoutes: Route[] = [
 
 @NgModule({
   imports: [
-    CommonModule,
+    CoreModule,
     TestingModule,
     MappingModule,
     MappingTreeModule,
@@ -78,7 +84,7 @@ const extensionRoutes: Route[] = [
   exports: [
     ServiceMappingComponent,
   ],
-  entryComponents: [ServiceMappingComponent, MappingTypeComponent],
+  entryComponents: [ServiceMappingComponent, MappingTypeComponent, WizardComponent],
   declarations: [
     ServiceMappingComponent
   ],
@@ -86,6 +92,26 @@ const extensionRoutes: Route[] = [
     OverviewGuard,
     { provide: HOOK_NAVIGATOR_NODES, useClass: MappingNavigationFactory, multi: true },
     { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        wizardId: 'uploadExtensionWizard',
+        component: AddExtensionWizardComponent,
+        name: 'Upload Extension',
+        c8yIcon: 'upload'
+      },
+      multi: true
+    },
+    {
+      provide: HOOK_WIZARD,
+      useValue: {
+        wizardId: 'addMappingWizard',
+        component: MappingTypeComponent,
+        name: 'App mapping',
+        c8yIcon: 'plus-circle'
+      },
+      multi: true
+    },
   ],
 })
 export class MQTTMappingModule {

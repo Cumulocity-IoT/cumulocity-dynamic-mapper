@@ -22,10 +22,7 @@ import {
   Component, ElementRef, Input, OnInit, OnDestroy, ViewChild,
   Output, EventEmitter, ChangeDetectionStrategy, ViewEncapsulation
 } from '@angular/core';
-import { JSONEditor, JSONSelection, renderValue, Content, JSONPath, MenuItem, SelectionType,JSONPatchDocument, DocumentState, createKeySelection } from 'vanilla-jsoneditor'
-
-import { isEqual } from 'lodash-es'
-import { COLOR_HIGHLIGHTED } from '../util';
+import { JSONEditor, renderValue, Content, JSONPath, MenuItem, createKeySelection, createAjvValidator, stringifyJSONPath, parseJSONPath, createInsideSelection } from 'vanilla-jsoneditor'
 
 @Component({
   selector: 'mapping-json-editor2‚',
@@ -37,19 +34,10 @@ import { COLOR_HIGHLIGHTED } from '../util';
 })
 
 export class JsonEditor2Component implements OnInit, OnDestroy {
-  private editor: JSONEditor;
-  public id = 'angjsoneditor' + Math.floor(Math.random() * 1000000);
-  debug: boolean = true;
-  public optionsChanged = false;
 
   @ViewChild('jsonEditorContainer', { static: true }) jsonEditorContainer: ElementRef;
 
-  content: Content = {
-    text: undefined
-  };
-
-  @Input() props;
-
+  @Input() props = {};
   @Input('data')
   set data(value: Object) {
     this.content['json'] = value;
@@ -67,16 +55,20 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   constructor(private elementRef: ElementRef) { }
 
+  private editor: JSONEditor;
+  public id = 'angjsoneditor' + Math.floor(Math.random() * 1000000);
+  content: Content = {
+    text: undefined
+  };
   ngOnInit() {
-
     if (!this.jsonEditorContainer.nativeElement) {
       console.error(`Can't find the ElementRef reference for jsoneditor)`);
     }
-
     this.editor = new JSONEditor(
       {
         target: this.jsonEditorContainer.nativeElement,
         props: {
+          ...this.props,
           content: this.content,
           onChange: (updatedContent, previousContent, { contentErrors, patchResult }) => {
             // content is an object { json: JSONData } | { text: string }
@@ -84,128 +76,63 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             this.content = updatedContent
             this.change.emit(updatedContent);
           },
-          onRenderValue(props) {
-            // use the enum renderer, and fallback on the default renderer
-            console.log("Props before:", props);
-            props = {
-              ...props,
-              onSelect: (selection: JSONSelection) => {
-                console.log("Was selected:", selection)
-              }
-            }
-            const path: JSONPath = ['menu','popup' ]; 
-            const selection : JSONSelection = 
-            {
-              type: SelectionType.key,
-              anchorPath: path,
-              focusPath: path,
-              pointersMap: { 'menu/popup': true},
-              edit: false
-          };
-            props['selection'] = selection;
-            props['path'] = path;
-
-            console.log("Props after:", props);
-
-            return renderValue(props)
-          },
-          onRenderMenu(items: MenuItem[], context: { mode: 'tree' | 'text' | 'table', modal: boolean }) : MenuItem[] | undefined {
+          onRenderValue: this.onRenderValue.bind(this),
+          onRenderMenu(items: MenuItem[], context: { mode: 'tree' | 'text' | 'table', modal: boolean }): MenuItem[] | undefined {
             console.log("MenuItems:", items);
-            items.splice(items.findIndex(i => i['text'] === "table"),1);
+            // remove buttons for table-mode, transform, sort
+            items.splice(items.findIndex(i => (i['text'] === "table")), 1);
+            items.splice(items.findIndex(i => (i['className'] === "jse-sort")), 1);
+            items.splice(items.findIndex(i => (i['className'] === "jse-transform")), 1);
             return items;
-          }
+          },
         }
       });
-
-
   }
 
   ngOnDestroy() {
-    this.destroy();
-  }
-
-  public scrollTo(path:JSONPath) {
-    const selection = createKeySelection(path, true);
-    this.editor.scrollTo(path);
-  }
-
-  public getValidateSchema(): any {
-    return this.editor.validateSchema;
-  }
-
-  public setSchema(schema: any, schemaRefs: any) {
-    this.editor.setSchema(schema, schemaRefs);
-  }
-
-  public destroy() {
     this.editor?.destroy();
   }
 
-  public getEditor() {
-    return this.editor;
+  private onRenderValue(props) {
+    if (props.selection) {
+      const pathString = stringifyJSONPath(props.selection.anchorPath);
+      console.log("Selected node:", props.selection, pathString);
+      this.onPathChanged.emit(pathString);
+    }
+    // props = {
+    //   ...props,
+    //   onSelect: (selection: JSONSelection) => {
+    //     console.log("Was selected:", selection)
+    //   }
+    // }
+    return renderValue(props)
+  }
+
+  public updateSelection(path: JSONPath, orgPath: string) {
+    const selection = createKeySelection(path, false);
+    this.editor.updateSelection(selection);
+  }
+
+  public setSchema(schema: any) {
+    const validator = createAjvValidator({ schema })
+    this.editor.updateProps({ validator: validator });
   }
 
   public onSelect(selection: Selection) {
     console.log("Was selected:", selection);
   }
 
-  public setSelectionToPath(path: string) {
-    console.log("Set selection to path:", path);
-    let levels = this.jsonPath2EditorPath(path);
-    const selection = { path: levels };
+  public setSelectionToPath(pathString: string) {
+    const path = parseJSONPath(pathString);
+    console.log("Set selection to path:", pathString, path);
+    //const selection = createKeySelection(path, false);
+    const selection = createInsideSelection(path);
     try {
-      this.editor.setSelection(selection, selection)
+      this.editor.updateSelection(selection);
     } catch (error) {
-      console.warn("Set selection to path not possible:", levels, error);
+      console.warn("Set selection to path not possible:", pathString, error);
     }
-    this.onPathChanged.emit(path);
-  }
-
-  private editorPath2jsonPath(levels: string[]): string {
-    let path = "";
-    levels.forEach(n => {
-      if (typeof n === 'number') {
-        path = path.substring(0, path.length - 1);
-        path += '[' + n + ']';
-      } else {
-        path += n;
-      }
-      path += ".";
-    });
-    path = path.replace(/\.$/g, '')
-    if (path.startsWith("[")) {
-      path = "$" + path;
-    }
-
-    return path;
-  }
-
-  private jsonPath2EditorPath(path: string): string[] {
-    const ns = path.split(".");
-    // if payload is an json array then we have to transform the path
-    if (ns[0].startsWith("$")) {
-      const patternIndex = /\[(-?\d*)\]/;
-      let result = ns[0].match(patternIndex);
-      if (result && result.length >= 2) {
-        ns[0] = result[1];
-      }
-      console.log("Changed level 0:", ns[0]);
-    }
-    let levels = [];
-    //const patternArray = /.*(?=\[*)/
-    const patternArray = /^[^\[]+/;
-    const patternIndex = /(?<=\[)(-?\d*)(?=\])/;
-    ns.forEach(l => {
-      let ar = l.match(patternArray);
-      if (ar?.length > 0) {
-        levels.push(ar[0]);
-      }
-      let ind = l.match(patternIndex);
-      if (ind?.length > 0) {
-        levels.push(ind[0]);
-      }
-    });
-    return levels;
+    this.onPathChanged.emit(pathString);
   }
 
 }

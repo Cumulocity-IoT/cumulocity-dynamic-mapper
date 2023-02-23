@@ -24,6 +24,7 @@ import { C8yStepper, WizardComponent } from '@c8y/ngx-components';
 import { Direction, MappingType } from '../../shared/mapping.model';
 import { isDisabled } from '../stepper/util';
 
+//@Injectable({providedIn: MQTTMappingModule})
 @Component({
   selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
@@ -50,16 +51,14 @@ export class MappingTypeComponent implements OnInit {
   }
 
   constructor(private wizardComponent: WizardComponent, private fb: FormBuilder) { }
-
+  
   ngOnInit(): void {
-
     this.headerText = this.wizardComponent.wizardConfig.headerText;
     this.headerIcon = this.wizardComponent.wizardConfig.headerIcon;
     this.direction = this.wizardComponent['direction'];
     this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });
-
   }
   back() {
     this.wizardComponent.reset();
