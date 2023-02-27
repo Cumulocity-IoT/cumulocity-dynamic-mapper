@@ -52,7 +52,6 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -89,6 +88,7 @@ public class C8YAPISubscriber {
     private String baseUrl;
 
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private static ScheduledFuture<?> executorFuture = null;
 
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
@@ -457,6 +457,11 @@ public class C8YAPISubscriber {
     }
 
     public void disconnect(CustomWebSocketClient client) {
+        //Stop WS Reconnect Thread
+        if (executorFuture != null) {
+            executorFuture.cancel(true);
+            executorFuture = null;
+        }
         if (client != null) {
             logger.info("Disconnecting WS Client {}", client.toString());
             client.close();
@@ -491,9 +496,12 @@ public class C8YAPISubscriber {
             client.setConnectionLostTimeout(30);
             client.connect();
             wsClientList.add(client);
-            executorService.scheduleAtFixedRate(() -> {
-                reconnect();
-            }, 30, 30, TimeUnit.SECONDS);
+            //Only start it once
+            if (executorFuture == null) {
+                executorFuture = executorService.scheduleAtFixedRate(() -> {
+                    reconnect();
+                }, 30, 30, TimeUnit.SECONDS);
+            }
             return client;
         } catch (Exception e) {
             logger.error("Error on connect to WS {}", e.getLocalizedMessage());
