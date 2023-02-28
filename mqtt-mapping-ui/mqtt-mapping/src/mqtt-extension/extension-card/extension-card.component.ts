@@ -22,8 +22,8 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { ExtensionStatus } from '../shared/mapping.model';
-import { ExtensionService } from './extension.service';
+import { ExtensionStatus } from '../../shared/mapping.model';
+import { ExtensionService } from '../share/extension.service';
 
 @Component({
   selector: 'mapping-extension-card',

@@ -19,12 +19,8 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-wizard-header>
-  <h1 [c8yIcon]="headerIcon"></h1>
-  <h4>{{ headerText | translate }}</h4>
-</c8y-wizard-header>
-
-<c8y-wizard-body>
+<c8y-modal title="Add Extension" (onClose)="onDone($event)" (onDismiss)="onDismiss($event)" [labels]="labels"
+  [disabled]="true" #addMappingRef>
   <div class="modal-inner-scroll animated fadeIn">
     <div class="modal-body">
       <c8y-form-group *ngIf="!isAppCreated; else appCreated" [hasError]="errorMessage" class="m-auto"
@@ -48,19 +44,12 @@
       </ng-template>
     </div>
   </div>
-</c8y-wizard-body>
-<c8y-wizard-footer>
-  <button (click)="cancel()" *ngIf="!isAppCreated" class="btn btn-default" title="{{ 'Cancel' | translate }}" translate
-    type="button">
-    Cancel
-  </button>
-  <button (click)="done()" *ngIf="isAppCreated" class="btn btn-default" title="{{ 'Done' | translate }}" translate
-    type="button">
-    Done
-  </button>
-  <a (click)="$event.stopPropagation()" *ngIf="isAppCreated && canOpenInBrowser" [href]="getHref(createdApp)"
-    target="_blank" class="btn btn-primary" title="{{ 'Open' | translate }}">
-    <i c8yIcon="external-link" class="m-r-4"></i>
-    {{ 'Open' | translate }}
-  </a>
-</c8y-wizard-footer>
+
+  <div>
+    <a (click)="$event.stopPropagation()" *ngIf="isAppCreated && canOpenInBrowser" [href]="getHref(createdApp)"
+      target="_blank" class="btn btn-primary" title="{{ 'Open' | translate }}">
+      <i c8yIcon="external-link" class="m-r-4"></i>
+      {{ 'Open' | translate }}
+    </a>
+  </div>
+</c8y-modal>

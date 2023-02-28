@@ -36,19 +36,19 @@ import { SnoopStatus } from '../../shared/mapping.model';
 })
 export class SnoopingModalComponent implements OnInit {
   @ViewChild('snoopingRef', { static: false }) snoopingRef: ConfirmModalComponent;
-  
+
   @Input()
   snoopStatus: SnoopStatus
   @Input()
   numberSnooped: number
 
-  SnoopStatus = SnoopStatus; 
+  SnoopStatus = SnoopStatus;
   labels: ModalLabels = { ok: gettext('Confirm') };
   title = gettext('Snooping');
   status: StatusType = Status.INFO;
   closeSubject: Subject<boolean> = new Subject();
 
-  constructor(private translateService: TranslateService) {}
+  constructor(private translateService: TranslateService) { }
 
   ngOnInit() {
   }

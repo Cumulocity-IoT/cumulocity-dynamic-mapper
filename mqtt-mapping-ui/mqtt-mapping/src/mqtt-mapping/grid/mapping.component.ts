@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, EventEmitter, OnInit, ViewEncapsulation } from '@angular/core';
-import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DisplayOptions, gettext, Pagination, Row, WizardConfig, WizardModalService } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType, DisplayOptions, gettext, Pagination, Row } from '@c8y/ngx-components';
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, C8YAPISubscription, Direction, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
@@ -30,12 +30,12 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { ActiveRendererComponent } from '../renderer/active.renderer.component';
 import { MappingService } from '../core/mapping.service';
-import { ModalOptions } from 'ngx-bootstrap/modal';
-import { takeUntil } from 'rxjs/operators';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { EditorMode, StepperConfiguration } from '../stepper/stepper-model';
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
+import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 
 @Component({
   selector: 'mapping-mapping-grid',
@@ -57,6 +57,8 @@ export class MappingComponent implements OnInit {
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
   Direction = Direction;
+
+  param = {name: 'world'};
 
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
@@ -170,7 +172,7 @@ export class MappingComponent implements OnInit {
     public mappingService: MappingService,
     public configurationService: BrokerConfigurationService,
     public alertService: AlertService,
-    private wizardModalService: WizardModalService,
+    private bsModalService: BsModalService,
     private router: Router
   ) {
   }
@@ -211,25 +213,17 @@ export class MappingComponent implements OnInit {
   }
 
   onAddMapping() {
-    const wizardConfig: WizardConfig = {
-      headerText: 'Add Mapping',
-      headerIcon: 'plus-circle',
-    };
-    const initialState: any = {
-      wizardConfig,
-      id: 'addMappingWizard',
+    const initialState = {
       direction: this.stepperConfiguration.direction,
     };
-
-    const modalOptions: ModalOptions = { initialState };
-    const modalRef = this.wizardModalService.show(modalOptions);
-    modalRef.content.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
+    const modalRef = this.bsModalService.show( MappingTypeComponent, { initialState } );
+    modalRef.content.closeSubject.subscribe(result => {
       console.log("Was selected:", result);
-      //this.direction = result.direction;
       if (result) {
-        this.mappingType = result.mappingType;
+        this.mappingType = result;
         this.addMapping();
       }
+      modalRef.hide();
     });
   }
 

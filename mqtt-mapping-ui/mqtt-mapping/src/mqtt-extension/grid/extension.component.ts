@@ -21,19 +21,20 @@
 
 import { Component, OnInit } from '@angular/core';
 import { IManagedObject, IResultList } from '@c8y/client';
-import { WizardService, WizardConfig, WizardModalService } from '@c8y/ngx-components';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
-import { ExtensionService } from './extension.service';
+import { ExtensionService } from '../share/extension.service';
 import { ModalOptions } from 'ngx-bootstrap/modal';
-import { BrokerConfigurationService } from '../mqtt-configuration/broker-configuration.service';
-import { Operation } from '../shared/mapping.model';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { Operation } from '../../shared/mapping.model';
+import { AddExtensionComponent } from '../extension-modal/add-extension.component';
 
 
 @Component({
   selector: 'mapping-extension',
   templateUrl: './extension.component.html',
-  styleUrls: ['./extension.component.css']
+  styleUrls: ['../share/extension.component.css']
 })
 export class ExtensionComponent implements OnInit {
   reloading: boolean = false;
@@ -51,7 +52,7 @@ export class ExtensionComponent implements OnInit {
   listClass: string;
 
   constructor(
-    private wizardModalService: WizardModalService,
+    private bsModalService: BsModalService,
     private extensionService: ExtensionService,
     private configurationService: BrokerConfigurationService
   ) { }
@@ -74,21 +75,15 @@ export class ExtensionComponent implements OnInit {
   }
 
   addExtension() {
-    const wizardConfig: WizardConfig = {
-      headerText: 'Add Extension Extension',
-      headerIcon: 'plugin'
-    };
 
-    const initialState: any = {
-      wizardConfig,
-      id: 'uploadExtensionWizard'
-    };
 
-    const modalOptions: ModalOptions = { initialState };
+    const initialState = {};
 
-    const modalRef = this.wizardModalService.show(modalOptions);
-    modalRef.content.onClose.subscribe(() => {
+ 
+    const modalRef = this.bsModalService.show(AddExtensionComponent, { initialState } );
+    modalRef.content.closeSubject.subscribe(() => {
       this.loadExtensions();
+      modalRef.hide();
     });
   }
 }
