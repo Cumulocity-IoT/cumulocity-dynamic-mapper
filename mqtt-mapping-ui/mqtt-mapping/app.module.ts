@@ -21,10 +21,8 @@
 import { NgModule } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
-import { BootstrapComponent, CoreModule, HOOK_WIZARD, RouterModule } from '@c8y/ngx-components';
+import { BootstrapComponent, CoreModule, RouterModule } from '@c8y/ngx-components';
 import { MQTTMappingModule } from './src/service-mapping.module';
-import { MappingTypeComponent } from './src/mqtt-mapping/mapping-type/mapping-type.component';
-import { AddExtensionWizardComponent } from './src/mqtt-extension/add-extension-wizard.component';
 
 @NgModule({
   declarations: [],
@@ -32,32 +30,10 @@ import { AddExtensionWizardComponent } from './src/mqtt-extension/add-extension-
     BrowserAnimationsModule,
     ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
-    CoreModule.forRoot(),
+    CoreModule,
     MQTTMappingModule,
   ],
-  providers: [
-    // {
-    //   provide: HOOK_WIZARD,
-    //   useValue: {
-    //     wizardId: 'uploadExtensionWizard',
-    //     component: AddExtensionWizardComponent,
-    //     name: 'Upload Extension',
-    //     c8yIcon: 'upload'
-    //   },
-    //   multi: true
-    // },
-    // {
-    //   provide: HOOK_WIZARD,
-    //   useValue: {
-    //     wizardId: 'addMappingWizard',
-    //     component: MappingTypeComponent,
-    //     name: 'App mapping',
-    //     c8yIcon: 'plus-circle'
-    //   },
-    //   multi: true
-    // },
-  ],
-  entryComponents: [MappingTypeComponent, AddExtensionWizardComponent],
+  entryComponents: [ ],
   bootstrap: [BootstrapComponent]
 })
 export class AppModule { }

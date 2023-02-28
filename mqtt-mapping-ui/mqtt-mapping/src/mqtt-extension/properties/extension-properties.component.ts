@@ -28,7 +28,7 @@ import {
   gettext,
 } from '@c8y/ngx-components';
 
-import { ExtensionService } from './extension.service';
+import { ExtensionService } from '../share/extension.service';
 
 @Component({
   selector: 'mapping-extension-properties',

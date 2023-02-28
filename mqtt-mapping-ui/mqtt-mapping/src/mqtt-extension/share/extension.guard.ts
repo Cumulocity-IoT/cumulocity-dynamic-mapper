@@ -20,7 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { CanActivate } from '@angular/router';
-import { BrokerConfigurationService } from '../mqtt-configuration/broker-configuration.service';
+import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionGuard implements CanActivate {

@@ -20,10 +20,10 @@
  */
 import { Component, Input, ViewChild } from '@angular/core';
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
-import { AlertService, DropAreaComponent, WizardComponent } from '@c8y/ngx-components';
-import { BehaviorSubject } from 'rxjs';
-import { ERROR_MESSAGES } from './extension.constants';
-import { ExtensionService } from './extension.service';
+import { AlertService, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { ERROR_MESSAGES } from '../share/extension.constants';
+import { ExtensionService } from '../share/extension.service';
 
 @Component({
   selector: 'mapping-add-extension',
@@ -44,12 +44,13 @@ export class AddExtensionComponent {
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   private uploadCanceled: boolean = false;
+  closeSubject: Subject<boolean> = new Subject();
+  labels: ModalLabels = { cancel: "Cancel", ok: "Done" };
   
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private applicationService: ApplicationService,
-    private wizardComponent: WizardComponent
   ) { }
 
   get progress(): BehaviorSubject<number> {
@@ -97,13 +98,15 @@ export class AddExtensionComponent {
     return this.applicationService.getHref(app);
   }
 
-  cancel() {
+  onDismiss(event) {
     this.cancelFileUpload();
-    this.wizardComponent.close();
+    this.closeSubject.next(true);
+    this.closeSubject.complete();
   }
 
-  done() {
-    this.wizardComponent.close();
+  onDone(event) {
+    this.closeSubject.next(true);
+    this.closeSubject.complete();
   }
 
   private cancelFileUpload() {
