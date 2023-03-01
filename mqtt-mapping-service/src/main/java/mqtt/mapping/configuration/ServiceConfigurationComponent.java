@@ -25,8 +25,7 @@ package mqtt.mapping.configuration;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
-import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateCollectionRepresentation;
-import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
+
 import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.option.TenantOptionApi;
