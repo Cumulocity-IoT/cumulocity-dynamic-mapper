@@ -81,7 +81,7 @@ export class MappingTabFactory implements TabFactory {
       } as Tab);
       tabs.push({
         path: 'mqtt-mapping/editor2-test',
-        priority: 890,
+        priority: 870,
         label: 'Editor2',
         icon: 'file',
         orientation: 'horizontal',

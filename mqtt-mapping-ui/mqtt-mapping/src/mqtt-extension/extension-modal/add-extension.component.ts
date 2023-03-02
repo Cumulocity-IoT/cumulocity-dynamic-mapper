@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, ViewChild } from '@angular/core';
+import { Component, Input, ViewChild, ViewEncapsulation } from '@angular/core';
 import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
 import { AlertService, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -27,7 +27,9 @@ import { ExtensionService } from '../share/extension.service';
 
 @Component({
   selector: 'mapping-add-extension',
-  templateUrl: './add-extension.component.html'
+  templateUrl: './add-extension.component.html',
+  styleUrls: ['./add-extension.component.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class AddExtensionComponent {
   @Input() headerText: string;

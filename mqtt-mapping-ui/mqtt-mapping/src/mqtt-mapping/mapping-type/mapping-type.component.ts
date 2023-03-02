@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
@@ -28,6 +28,8 @@ import { isDisabled } from '../stepper/util';
 @Component({
   selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
+  styleUrls: ['./mapping-type.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class MappingTypeComponent implements OnInit {
 
