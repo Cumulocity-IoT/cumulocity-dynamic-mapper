@@ -183,7 +183,7 @@ public abstract class BasePayloadProcessor<T> {
                 ManagedObjectRepresentation attocDevice = null;
                 var newPredecessor = context.addRequest(
                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.toString(),
+                                payloadTarget.jsonString(),
                                 null, API.INVENTORY, null));
                 try {
                     attocDevice = c8yAgent.upsertDevice(

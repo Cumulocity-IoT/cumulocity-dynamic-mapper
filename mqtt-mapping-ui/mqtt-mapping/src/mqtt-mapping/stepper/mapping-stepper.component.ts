@@ -567,6 +567,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   public onAddSubstitution() {
     if (this.currentSubstitution.pathSource != '' && this.currentSubstitution.pathTarget != '') {
+      this.getTemplateForm();
       this.addSubstitution(this.currentSubstitution);
       this.selectedSubstitution = -1;
       console.log("New substitution", this.currentSubstitution, this.mapping.substitutions);
