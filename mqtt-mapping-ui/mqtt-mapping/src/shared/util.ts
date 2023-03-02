@@ -528,8 +528,10 @@ export function checkPropertiesAreValid(mappings: Mapping[], direction: Directio
     //    +       device/#                device/+/rom/
 
     if ( direction == Direction.INBOUND) {
-      let f = (st, tt) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-      error = !f(subscriptionTopic, templateTopic);
+      //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+      //error = !f(subscriptionTopic, templateTopic);
+      let f = (t=>s=>new RegExp(s.split('+').join('[^/]+').split('#').join('.+')).test(t))
+      error = !f(templateTopic)(subscriptionTopic);
       if (error) {
         errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
         defined = true
