@@ -154,14 +154,14 @@ public class App {
     public static ObjectMapper baseObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(NON_NULL);
-        objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, true);
-        objectMapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, true);
-        objectMapper.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false);
+        // objectMapper.configure(SerializationFeature.WRITE_ENUMS_USING_TO_STRING, true);
+        // objectMapper.configure(DeserializationFeature.READ_ENUMS_USING_TO_STRING, true);
+        // objectMapper.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false);
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        objectMapper.setDateFormat(new RFC3339DateFormat());
-        objectMapper.registerModule(new JavaTimeModule());
+        //objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        //objectMapper.setDateFormat(new RFC3339DateFormat());
+        //objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(new JodaModule());
 
         return objectMapper;
