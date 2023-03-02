@@ -21,15 +21,6 @@
 
 package mqtt.mapping.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import mqtt.mapping.processor.model.MappingType;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +28,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import mqtt.mapping.processor.model.MappingType;
 
 @Data
 @NoArgsConstructor
@@ -228,12 +230,4 @@ public class MappingRepresentation implements Serializable {
       return null;
     }
   }
-
-  // static public Long nextId(ArrayList<Mapping> mappings) {
-  // Long max = mappings
-  // .stream()
-  // .mapToLong(v -> v.id)
-  // .max().orElseThrow(NoSuchElementException::new);
-  // return max + 1L;
-  // }
 }

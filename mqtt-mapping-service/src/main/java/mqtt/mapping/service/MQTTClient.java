@@ -21,39 +21,6 @@
 
 package mqtt.mapping.service;
 
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.configuration.ConnectionConfigurationComponent;
-import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.core.*;
-import mqtt.mapping.model.*;
-import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
-import mqtt.mapping.processor.model.C8YRequest;
-import mqtt.mapping.processor.model.ProcessingContext;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.*;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -66,12 +33,67 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
+import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.Operation;
+import mqtt.mapping.core.ServiceOperation;
+import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.model.API;
+import mqtt.mapping.model.Direction;
+import mqtt.mapping.model.InnerNode;
+import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingNode;
+import mqtt.mapping.model.ResolveException;
+import mqtt.mapping.model.TreeNode;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Configuration

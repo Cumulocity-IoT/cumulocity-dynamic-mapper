@@ -30,7 +30,7 @@ import { MQTTMappingModule } from './src/service-mapping.module';
     BrowserAnimationsModule,
     ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
-    CoreModule,
+    CoreModule.forRoot(),
     MQTTMappingModule,
   ],
   entryComponents: [ ],

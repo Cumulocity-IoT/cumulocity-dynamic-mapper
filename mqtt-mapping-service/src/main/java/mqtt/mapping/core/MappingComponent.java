@@ -21,21 +21,32 @@
 
 package mqtt.mapping.core;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.model.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingRepresentation;
+import mqtt.mapping.model.MappingServiceRepresentation;
+import mqtt.mapping.model.MappingStatus;
+import mqtt.mapping.model.ValidationError;
 
 @Slf4j
 @Component
@@ -59,9 +70,11 @@ public class MappingComponent {
     }
 
     private void initializeMappingStatus() {
-        mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
-            statusMapping.put(ms.ident, ms);
-        });
+        if (mappingServiceRepresentation.getMappingStatus() != null){
+            mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
+                statusMapping.put(ms.ident, ms);
+            });
+        }
         if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
