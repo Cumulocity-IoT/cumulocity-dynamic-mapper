@@ -87,6 +87,9 @@ public class C8YAPISubscriber {
     @Value("${C8Y.baseURL}")
     private String baseUrl;
 
+    @Value("${APP.additionalSubscriptionIdTest}")
+    private String additionalSubscriptionIdTest;
+
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private static ScheduledFuture<?> executorFuture = null;
 
@@ -94,8 +97,6 @@ public class C8YAPISubscriber {
     private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
-
-    private int retryCount = 0;
 
     List<CustomWebSocketClient> wsClientList = new ArrayList<>();
 
@@ -124,7 +125,7 @@ public class C8YAPISubscriber {
         }
         // When one subscription exsits, connect
         if (deviceSubList.size() > 0) {
-            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
             try {
                 device_client = connect(token, dispatcherOutbound);
             } catch (URISyntaxException e) {
@@ -150,7 +151,7 @@ public class C8YAPISubscriber {
             }
         }
         if (notRep != null) {
-            String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+            String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
 
             try {
                 device_client = connect(deviceToken, dispatcherOutbound);
@@ -170,7 +171,7 @@ public class C8YAPISubscriber {
             notificationFut.complete(notification);
             if (!DEVICE_NOTIFICATION_CONNECTED) {
                 logger.info("Device Subscription not connected yet. Will connect...");
-                String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER);
+                String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
                 try {
                     device_client = connect(token, dispatcherOutbound);
                 } catch (URISyntaxException e) {
@@ -260,7 +261,7 @@ public class C8YAPISubscriber {
     public void subscribeTenant(String tenant) {
         logger.info("Creating new Subscription for Tenant " + tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
-        String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIBER);
+        String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
 
         try {
             NotificationCallback tenantCallback = new NotificationCallback() {

@@ -70,7 +70,6 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
         String payload = payloadJsonNode.toPrettyString();
         //log.info("Patched payload: {}", payload);
 
-        boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
             JsonNode extractedSourceContent = null;
             /*
@@ -150,9 +149,6 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 }
             }
 
-            if (substitution.pathTarget.equals(TIME)) {
-                substitutionTimeExists = true;
-            }
         }
 
     }

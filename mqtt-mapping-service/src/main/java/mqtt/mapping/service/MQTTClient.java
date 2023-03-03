@@ -61,6 +61,7 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -100,8 +101,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @EnableScheduling
 @Service
 public class MQTTClient {
-    // TDOD remove value from ADDITION_TEST_DUMMY
-    private static final String ADDITION_TEST_DUMMY = "_D2";
+
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
@@ -155,6 +155,9 @@ public class MQTTClient {
     private TreeNode mappingTree = InnerNode.createRootNode();;
 
     private Instant start = Instant.now();
+
+    @Value("${APP.additionalSubscriptionIdTest}")
+    private String additionalSubscriptionIdTest;
 
     @Data
     @AllArgsConstructor
@@ -243,7 +246,7 @@ public class MQTTClient {
                             mqttClient.close(true);
                         }
 
-                        mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + ADDITION_TEST_DUMMY,
+                        mqttClient = new MqttClient(broker, connectionConfiguration.getClientId() + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
                         mqttClient.setCallback(dispatcher);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
@@ -688,6 +691,7 @@ public class MQTTClient {
         String payload = currentRequest.getRequest();
         mqttMessage.setPayload(payload.getBytes());
         mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
+        log.info("Published outbound message: {} for mapping: {} ", payload, context.getMapping().name);
         return null;
     }
 
