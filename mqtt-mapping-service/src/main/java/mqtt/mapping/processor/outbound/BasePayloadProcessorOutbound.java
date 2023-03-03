@@ -108,19 +108,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
         for (String pathTarget : pathTargets) {
             SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-            if (postProcessingCache.get(pathTarget).size() == 1) {
-                // this is an indication that the substitution is the same for all
-                // events/alarms/measurements/inventory
-                if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                        substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
-                } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                    int last = postProcessingCache.get(pathTarget).size() - 1;
-                    substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
-                }
-                log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used.",
-                        pathTarget, substituteValue.repairStrategy);
-            }
 
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
