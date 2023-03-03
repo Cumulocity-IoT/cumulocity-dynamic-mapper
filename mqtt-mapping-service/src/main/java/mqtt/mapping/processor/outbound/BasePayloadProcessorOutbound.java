@@ -49,10 +49,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 @Slf4j
@@ -94,123 +92,104 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
         // if there are to little device idenfified then we replicate the first device
         Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
-        String maxEntry = postProcessingCache.entrySet()
-                .stream()
-                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().size()))
-                .max((Entry<String, Integer> e1, Entry<String, Integer> e2) -> e1.getValue()
-                        .compareTo(e2.getValue()))
-                .get().getKey();
-
-        // List<SubstituteValue> deviceEntries =
-        // postProcessingCache.get(mapping.targetAPI.identifier);
-        List<SubstituteValue> deviceEntries = postProcessingCache
-                .get(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget);
-        int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
-        SubstituteValue toDouble = deviceEntries.get(0);
-        while (deviceEntries.size() < countMaxlistEntries) {
-            deviceEntries.add(toDouble);
-        }
         Set<String> pathTargets = postProcessingCache.keySet();
 
-        int i = 0;
-        for (SubstituteValue device : deviceEntries) {
+        int predecessor = -1;
+        DocumentContext payloadTarget = JsonPath.parse(mapping.target);
+        /*
+         * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+         * is required in the payload for a substitution
+         */
+        List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
+        payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
 
-            int predecessor = -1;
-            DocumentContext payloadTarget = JsonPath.parse(mapping.target);
-            /*
-             * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
-             * is required in the payload for a substitution
-             */
-            List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-            payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        String deviceSource = "undefined";
 
-            for (String pathTarget : pathTargets) {
-                SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
-                        RepairStrategy.DEFAULT);
-                if (i < postProcessingCache.get(pathTarget).size()) {
-                    substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
-                } else if (postProcessingCache.get(pathTarget).size() == 1) {
-                    // this is an indication that the substitution is the same for all
-                    // events/alarms/measurements/inventory
-                    if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                            substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                        substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
-                    } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                        int last = postProcessingCache.get(pathTarget).size() - 1;
-                        substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
-                    }
-                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used.",
-                            pathTarget, substituteValue.repairStrategy);
+        for (String pathTarget : pathTargets) {
+            SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
+                    RepairStrategy.DEFAULT);
+            if (postProcessingCache.get(pathTarget).size() == 1) {
+                // this is an indication that the substitution is the same for all
+                // events/alarms/measurements/inventory
+                if (substituteValue.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
+                        substituteValue.repairStrategy.equals(RepairStrategy.DEFAULT)) {
+                    substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+                } else if (substituteValue.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
+                    int last = postProcessingCache.get(pathTarget).size() - 1;
+                    substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
                 }
-
-                if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                        ExternalIDRepresentation externalId = c8yAgent.findExternalId(
-                                new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
-                        if (externalId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + substituteValue + " for type "
-                                    + mapping.externalIdType + " not found!");
-                        } else if (externalId == null) {
-                            substituteValue.value = null;
-                        } else {
-                            substituteValue.value = new TextNode(externalId.getExternalId());
-                        }
-                    }
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                }
+                log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used.",
+                        pathTarget, substituteValue.repairStrategy);
             }
-            /*
-             * step 4 prepare target payload for sending to mqttBroker
-             */
+
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
-                if (topicLevels != null && topicLevels.size() > 0) {
-                    // now merge the replaced topic levels
-                    MutableInt c = new MutableInt(0);
-                    String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
-                    topicLevels.forEach(tl -> {
-                        while (c.intValue() < splitTopicInAsList.length
-                                && ("/".equals(splitTopicInAsList[c.intValue()]))) {
-                            c.increment();
-                        }
-                        splitTopicInAsList[c.intValue()] = tl;
-                        c.increment();
-                    });
-
-                    StringBuffer resolvedPublishTopic = new StringBuffer();
-                    for (int d = 0; d < splitTopicInAsList.length; d++) {
-                        resolvedPublishTopic.append(splitTopicInAsList[d]);
+                if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
+                    ExternalIDRepresentation externalId = c8yAgent.findExternalId(
+                            new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
+                    if (externalId == null && context.isSendPayload()) {
+                        throw new RuntimeException("External id " + substituteValue + " for type "
+                                + mapping.externalIdType + " not found!");
+                    } else if (externalId == null) {
+                        substituteValue.value = null;
+                    } else {
+                        substituteValue.value = new TextNode(externalId.getExternalId());
+                        deviceSource = externalId.getExternalId();
                     }
-                    context.setResolvedPublishTopic(resolvedPublishTopic.toString());
-                } else {
-                    context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
                 }
-                AbstractExtensibleRepresentation attocRequest = null;
-                // remove TOPIC_LEVEL
-                payloadTarget.delete(TOKEN_TOPIC_LEVEL);
-                var newPredecessor = context.addRequest(
-                        new C8YRequest(predecessor, RequestMethod.POST, device.value.asText(), mapping.externalIdType,
-                                payloadTarget.jsonString(),
-                                null, mapping.targetAPI, null));
-                try {
-                    attocRequest = mqttClient.createMEAO(context);
-
-                    var response = objectMapper.writeValueAsString(attocRequest);
-                    context.getCurrentRequest().setResponse(response);
-                } catch (Exception e) {
-                    context.getCurrentRequest().setError(e);
-                }
-                predecessor = newPredecessor;
-            } else {
-                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
-                        postProcessingCache.size());
+                substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+            } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
+                substituteValueInObject(substituteValue, payloadTarget, pathTarget);
             }
-            log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
-                    deviceEntries.size());
-            i++;
         }
+        /*
+         * step 4 prepare target payload for sending to mqttBroker
+         */
+        if (!mapping.targetAPI.equals(API.INVENTORY)) {
+            List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
+            if (topicLevels != null && topicLevels.size() > 0) {
+                // now merge the replaced topic levels
+                MutableInt c = new MutableInt(0);
+                String[] splitTopicInAsList = Mapping.splitTopicIncludingSeparatorAsArray(context.getTopic());
+                topicLevels.forEach(tl -> {
+                    while (c.intValue() < splitTopicInAsList.length
+                            && ("/".equals(splitTopicInAsList[c.intValue()]))) {
+                        c.increment();
+                    }
+                    splitTopicInAsList[c.intValue()] = tl;
+                    c.increment();
+                });
+
+                StringBuffer resolvedPublishTopic = new StringBuffer();
+                for (int d = 0; d < splitTopicInAsList.length; d++) {
+                    resolvedPublishTopic.append(splitTopicInAsList[d]);
+                }
+                context.setResolvedPublishTopic(resolvedPublishTopic.toString());
+            } else {
+                context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
+            }
+            AbstractExtensibleRepresentation attocRequest = null;
+            // remove TOPIC_LEVEL
+            payloadTarget.delete(TOKEN_TOPIC_LEVEL);
+            var newPredecessor = context.addRequest(
+                    new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
+                            payloadTarget.jsonString(),
+                            null, mapping.targetAPI, null));
+            try {
+                attocRequest = mqttClient.createMEAO(context);
+
+                var response = objectMapper.writeValueAsString(attocRequest);
+                context.getCurrentRequest().setResponse(response);
+            } catch (Exception e) {
+                context.getCurrentRequest().setError(e);
+            }
+            predecessor = newPredecessor;
+        } else {
+            log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+                    postProcessingCache.size());
+        }
+        log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+                1);
+
         return context;
 
     }
