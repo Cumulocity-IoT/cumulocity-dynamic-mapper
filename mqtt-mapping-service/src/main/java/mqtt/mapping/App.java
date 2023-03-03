@@ -70,7 +70,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import lombok.SneakyThrows;
 import mqtt.mapping.core.C8YAgent;
@@ -90,13 +89,15 @@ import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
 import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
 import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import mqtt.mapping.service.MQTTClient;
-import mqtt.mapping.util.RFC3339DateFormat;
 
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
 @EnableAsync
 public class App {
+
+    // TDOD set value from ADDITION_TEST_DUMMY to "" before pushing
+    public static final String ADDITION_TEST_DUMMY = "_D1";
 
     @Autowired
     C8YAgent c8yAgent;

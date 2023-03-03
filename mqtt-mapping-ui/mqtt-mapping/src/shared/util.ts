@@ -479,7 +479,7 @@ export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration:
 
     let count = countDeviceIdentifiers(mapping);
 
-    if (!stepperConfiguration.allowNoDefinedIdentifier) {
+    if (!stepperConfiguration.allowNoDefinedIdentifier && mapping.direction != Direction.OUTBOUND) {
       if (count > 1) {
         errors[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used] = true
         defined = true
@@ -656,7 +656,7 @@ export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, d
   if ( direction == Direction.INBOUND) {
     return sub.pathTarget == API[api].identifier
   } else {
-    return sub.pathSource == API[api].identifier
+    return false
   }
 }
 
