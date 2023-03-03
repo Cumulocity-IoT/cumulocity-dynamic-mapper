@@ -83,7 +83,8 @@ public class MappingRepresentation implements Serializable {
 
     if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
         && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
-        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
+        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
+        && !mapping.direction.equals(Direction.OUTBOUND)) {
       if (count > 1) {
         result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
       }
