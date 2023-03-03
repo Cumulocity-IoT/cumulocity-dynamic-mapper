@@ -154,6 +154,27 @@
                   </c8y-messages>
                 </div>
               </div>
+
+              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
+                <div class="input-group">
+                  <label for="filterOutbound">FilterOutbound</label>
+                  <span class="hidden-xs hidden-sm m-l-4">
+                    <ng-template #popFilterOutbound>The FilterOutbound can contain one fragment name to associate a
+                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
+                      applied.
+                    </ng-template>
+                    <button class="btn-clean text-primary" [popover]="popFilterOutbound" popoverTitle="Filter outbound"
+                      placement="right" triggers="focus" type="button">
+                      <i c8yIcon="question-circle-o"></i>
+                    </button>
+                  </span>
+                </div>
+                <div>
+                  <input formControlName="filterOutbound" type="text" class="form-control"
+                    placeholder="e.g. custom_OperationFragment" #filterOutbound id="filterOutbound" required />
+                </div>
+              </div>
+
               <div class="row">
                 <div class="col-md-6 form-group">
                   <label for="targetAPI" translate>Target API</label>
@@ -178,25 +199,7 @@
                 </div>
               </div>
 
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
-                <div class="input-group">
-                  <label for="filterOutbound">FilterOutbound</label>
-                  <span class="hidden-xs hidden-sm m-l-4">
-                    <ng-template #popFilterOutbound>The FilterOutbound can contain one fragment name to associate a
-                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
-                      applied.
-                    </ng-template>
-                    <button class="btn-clean text-primary" [popover]="popFilterOutbound" popoverTitle="Filter outbound"
-                      placement="right" triggers="focus" type="button">
-                      <i c8yIcon="question-circle-o"></i>
-                    </button>
-                  </span>
-                </div>
-                <div>
-                  <input formControlName="filterOutbound" type="text" class="form-control"
-                    placeholder="e.g. custom_OperationFragment" #filterOutbound id="filterOutbound" required />
-                </div>
-              </div>
+
 
               <div class="row">
                 <div class="col-md-6"
@@ -220,23 +223,26 @@
                   </label>
                 </div>
               </div>
-              <div class="form-group" *ngIf="propertyForm.get('targetAPI').value == API.OPERATION.name">
-                <label class="c8y-switch" title="{{ 'Auto acknowledge outbound operation' | translate }}">
-                  <input type="checkbox" formControlName="autoAckOperation" />
-                  <span></span>
-                  <span>
-                    {{ 'Auto acknowledge outbound operation' | translate }}
-                  </span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                  <input type="checkbox" formControlName="mapDeviceIdentifier" />
-                  <span></span>
-                  <span>
-                    {{ 'Map Device Idenfifier' | translate }}
-                  </span>
-                </label>
+              <div class="row">
+                <div class="col-md-6"
+                  *ngIf="stepperConfiguration.direction == Direction.OUTBOUND && propertyForm.get('targetAPI').value == API.OPERATION.name">
+                  <label class="c8y-switch" title="{{ 'Auto acknowledge outbound operation' | translate }}">
+                    <input type="checkbox" formControlName="autoAckOperation" />
+                    <span></span>
+                    <span>
+                      {{ 'Auto acknowledge outbound operation' | translate }}
+                    </span>
+                  </label>
+                </div>
+                <div class="col-md-6">
+                  <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
+                    <input type="checkbox" formControlName="mapDeviceIdentifier" />
+                    <span></span>
+                    <span>
+                      {{ 'Map Device Idenfifier' | translate }}
+                    </span>
+                  </label>
+                </div>
               </div>
               <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
                 <label for="externalIdType" translate>External Id Type</label>

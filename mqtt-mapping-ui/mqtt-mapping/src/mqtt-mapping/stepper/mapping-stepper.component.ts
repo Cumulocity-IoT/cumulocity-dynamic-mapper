@@ -204,7 +204,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       externalIdType: new FormControl({ value: this.mapping.externalIdType, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
       snoopStatus: new FormControl({ value: this.mapping.snoopStatus, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
       filterOutbound: new FormControl({ value: this.mapping.filterOutbound, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
-      autoAckOperation: new FormControl({ value: this.mapping.autoAckOperation, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name) }),
+      autoAckOperation: new FormControl({ value: this.mapping.autoAckOperation, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
     },
       checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
     );
