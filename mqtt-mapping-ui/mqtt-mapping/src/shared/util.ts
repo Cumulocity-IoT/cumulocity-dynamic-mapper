@@ -465,7 +465,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
   let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
-  return (count > 1);
+  return ( (mapping.direction != Direction.OUTBOUND && count == 1) || mapping.direction == Direction.OUTBOUND);
 }
 
 export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration: StepperConfiguration): ValidatorFn {

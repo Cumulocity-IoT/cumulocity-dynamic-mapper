@@ -36,7 +36,6 @@ export class MappingService {
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
-    private jsonProcessorOutbound: JSONProcessorOutbound,
     private client: FetchClient) {
     this.queriesUtil = new QueriesUtil();
   }
@@ -129,6 +128,8 @@ export class MappingService {
       method: 'PUT',
     });
     let data = await response;
+    if (!data.ok)
+      throw new Error(data.statusText)!
     let m = await data.json();
     return m;
   }
@@ -141,8 +142,10 @@ export class MappingService {
       },
       method: 'DELETE',
     });
-    let result = await response.text();
-    return result;
+    let data = await response;
+    if (!data.ok)
+      throw new Error(data.statusText)!
+    return data.text();
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
@@ -154,6 +157,8 @@ export class MappingService {
       method: 'POST',
     });
     let data = await response;
+    if (!data.ok)
+      throw new Error(data.statusText)!
     let m = await data.json();
     return m;
   }
@@ -176,9 +181,9 @@ export class MappingService {
   async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
     // if (mapping.direction == Direction.INBOUND) {
-      this.jsonProcessorInbound.deserializePayload(context, mapping);
-      this.jsonProcessorInbound.extractFromSource(context);
-      await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+    this.jsonProcessorInbound.deserializePayload(context, mapping);
+    this.jsonProcessorInbound.extractFromSource(context);
+    await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     // } else {
     //   this.jsonProcessorOuting.deserializePayload(context, mapping);
     //   this.jsonProcessorOuting.extractFromSource(context);

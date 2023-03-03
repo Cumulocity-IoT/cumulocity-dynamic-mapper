@@ -58,7 +58,7 @@ export class MappingComponent implements OnInit {
   subscription: C8YAPISubscription;
   Direction = Direction;
 
-  param = {name: 'world'};
+  param = { name: 'world' };
 
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
@@ -216,7 +216,7 @@ export class MappingComponent implements OnInit {
     const initialState = {
       direction: this.stepperConfiguration.direction,
     };
-    const modalRef = this.bsModalService.show( MappingTypeComponent, { initialState } );
+    const modalRef = this.bsModalService.show(MappingTypeComponent, { initialState });
     modalRef.content.closeSubject.subscribe(result => {
       console.log("Was selected:", result);
       if (result) {
@@ -338,12 +338,16 @@ export class MappingComponent implements OnInit {
 
   async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping)
-    await this.mappingService.deleteMapping(mapping);
-    this.alertService.success(gettext('Mapping deleted successfully'));
-    this.isConnectionToMQTTEstablished = true;
-    this.loadMappings();
-    this.refresh.emit();
-    //this.activateMappings();
+    try {
+      await this.mappingService.deleteMapping(mapping);
+      this.alertService.success(gettext('Mapping deleted successfully'));
+      this.isConnectionToMQTTEstablished = true;
+      this.loadMappings();
+      this.refresh.emit();
+      //this.activateMappings();
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to delete mapping:') + error);
+    }
   }
 
   async loadMappings(): Promise<void> {
@@ -360,19 +364,27 @@ export class MappingComponent implements OnInit {
     if (isTemplateTopicUnique(mapping, this.mappings)) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
-        await this.mappingService.updateMapping(mapping);
-        this.alertService.success(gettext('Mapping updated successfully'));
-        this.loadMappings();
-        this.refresh.emit();
+        try {
+          await this.mappingService.updateMapping(mapping);
+          this.alertService.success(gettext('Mapping updated successfully'));
+          this.loadMappings();
+          this.refresh.emit();
+        } catch (error) {
+          this.alertService.danger(gettext('Failed to updated mapping:') + error);
+        }
         //this.activateMappings();
       } else if (this.stepperConfiguration.editorMode == EditorMode.CREATE
         || this.stepperConfiguration.editorMode == EditorMode.COPY) {
         // new mapping
         console.log("Push new mapping:", mapping);
-        await this.mappingService.createMapping(mapping);
-        this.alertService.success(gettext('Mapping created successfully'));
-        this.loadMappings();
-        this.refresh.emit();
+        try {
+          await this.mappingService.createMapping(mapping);
+          this.alertService.success(gettext('Mapping created successfully'));
+          this.loadMappings();
+          this.refresh.emit();
+        } catch (error) {
+          this.alertService.danger(gettext('Failed to create mapping:') + error);
+        }
         //this.activateMappings();
       }
       this.isConnectionToMQTTEstablished = true;
@@ -383,7 +395,6 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = false;
   }
 
-
   async onCommitSubscription(deviceList: IIdentified) {
     this.subscription = {
       api: API.ALL.name,
@@ -392,10 +403,6 @@ export class MappingComponent implements OnInit {
     console.log("Changed deviceList:", this.subscription.devices);
     await this.mappingService.updateSubscriptions(this.subscription);
     this.showConfigSubscription = false;
-  }
-
-  async onSaveClicked() {
-    this.saveMappings();
   }
 
   async onActivateClicked() {
@@ -411,17 +418,6 @@ export class MappingComponent implements OnInit {
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));
     }
-  }
-
-  private async saveMappings() {
-    await this.mappingService.saveMappings(this.mappings);
-    console.log("Saved mppings:", this.mappings)
-    this.alertService.success(gettext('Mappings saved successfully'));
-    this.isConnectionToMQTTEstablished = true;
-    // if (response1.res.ok) {
-    // } else {
-    //   this.alertService.danger(gettext('Failed to save mappings'));
-    // }
   }
 
   setStepperConfiguration(mappingType: MappingType, direction: Direction) {
