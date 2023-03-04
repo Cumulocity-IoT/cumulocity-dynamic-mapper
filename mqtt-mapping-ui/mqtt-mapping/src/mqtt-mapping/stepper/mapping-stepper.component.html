@@ -157,9 +157,9 @@
 
               <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
                 <div class="input-group">
-                  <label for="filterOutbound">FilterOutbound</label>
+                  <label for="filterOutbound">Filter Outbound</label>
                   <span class="hidden-xs hidden-sm m-l-4">
-                    <ng-template #popFilterOutbound>The FilterOutbound can contain one fragment name to associate a
+                    <ng-template #popFilterOutbound>The Filter Outbound can contain one fragment name to associate a
                       mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
                       applied.
                     </ng-template>
@@ -199,8 +199,6 @@
                 </div>
               </div>
 
-
-
               <div class="row">
                 <div class="col-md-6"
                   *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction != Direction.OUTBOUND">
@@ -234,21 +232,24 @@
                     </span>
                   </label>
                 </div>
+              </div>
+              <div class="row">
                 <div class="col-md-6">
+                  <br>
                   <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
                     <input type="checkbox" formControlName="mapDeviceIdentifier" />
                     <span></span>
                     <span>
-                      {{ 'Map Device Idenfifier' | translate }}
+                      {{ 'Map Device Identifier' | translate }}
                     </span>
                   </label>
                 </div>
-              </div>
-              <div class="form-group" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
-                <label for="externalIdType" translate>External Id Type</label>
-                <div>
-                  <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
-                    #externalIdTypeRef />
+                <div class="col-md-6" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
+                  <label for="externalIdType" translate>External Id Type</label>
+                  <div>
+                    <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
+                      #externalIdTypeRef />
+                  </div>
                 </div>
               </div>
               <div class="form-group">
