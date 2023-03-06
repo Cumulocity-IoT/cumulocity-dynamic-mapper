@@ -99,10 +99,11 @@ public abstract class BasePayloadProcessor<T> {
                         .compareTo(e2.getValue()))
                 .get().getKey();
 
-        // List<SubstituteValue> deviceEntries =
-        // postProcessingCache.get(mapping.targetAPI.identifier);
-        List<SubstituteValue> deviceEntries = postProcessingCache
-                .get(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget);
+        // the following stmt does not wokr for mapping_type protobuf
+        // String deviceIdentifierMapped2PathTarget2 = MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
+        // using alternative method
+        String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
+        List<SubstituteValue> deviceEntries = postProcessingCache.get(deviceIdentifierMapped2PathTarget2);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -135,8 +136,7 @@ public abstract class BasePayloadProcessor<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    // if (pathTarget.equals(mapping.targetAPI.identifier)) {
-                    if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
+                        if (pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
 
                         ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
@@ -172,7 +172,7 @@ public abstract class BasePayloadProcessor<T> {
 
                     }
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
-                } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
+                } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
                     substituteValueInObject(substituteValue, payloadTarget, pathTarget);
                 }
             }

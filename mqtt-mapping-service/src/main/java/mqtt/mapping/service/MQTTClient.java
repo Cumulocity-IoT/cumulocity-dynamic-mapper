@@ -624,6 +624,7 @@ public class MQTTClient {
         List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
+        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
         activeOutboundMappings = updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity()));
         mappingCacheOutbound = updatedMappings.stream()
@@ -635,6 +636,7 @@ public class MQTTClient {
         List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
+        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {

@@ -149,7 +149,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                         }
                     } catch (Exception e) {
                         log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
-                        log.debug("Message Stacktrace:", e);
+                        log.info("Message Stacktrace:", e);
                         mappingStatus.errors++;
                     }
                 } else {

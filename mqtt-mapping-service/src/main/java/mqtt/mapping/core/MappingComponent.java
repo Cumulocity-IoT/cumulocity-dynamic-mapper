@@ -200,7 +200,7 @@ public class MappingComponent {
         List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                 .map(mo -> toMappingObject(mo).getC8yMQTTMapping())
                 .collect(Collectors.toList());
-        log.debug("Loaded mappings (inbound & outbound): {}", result);
+        log.debug("Loaded mappings (inbound & outbound): {}", result.size());
         return result;
     }
 
