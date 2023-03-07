@@ -23,7 +23,7 @@ import { ActionControl, AlertService, BuiltInActionType, Column, ColumnDataType,
 import { v4 as uuidv4 } from 'uuid';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { API, C8YAPISubscription, Direction, Mapping, MappingSubstitution, MappingType, Operation, PayloadWrapper, QOS, SnoopStatus } from '../../shared/mapping.model';
-import { isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
+import { getExternalTemplate, isTemplateTopicUnique, SAMPLE_TEMPLATES_C8Y } from '../../shared/util';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
@@ -269,6 +269,7 @@ export class MappingComponent implements OnInit {
       autoAckOperation: true,
       lastUpdate: Date.now()
     }
+    mapping.target = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       let sampleSource = JSON.stringify({
         message: '10,temp,1666963367'
@@ -401,7 +402,12 @@ export class MappingComponent implements OnInit {
       devices: deviceList
     }
     console.log("Changed deviceList:", this.subscription.devices);
-    await this.mappingService.updateSubscriptions(this.subscription);
+    try {
+      await this.mappingService.updateSubscriptions(this.subscription);
+      this.alertService.success(gettext('Subscriptions updated successfully'));
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to update subscriptions:') + error);
+    }
     this.showConfigSubscription = false;
   }
 
