@@ -64,7 +64,11 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 > In upcoming releases a *Generic MQTT Broker* will be part of Cumulocity IoT. If necessary we will adapt this component
 > to work with it seamlessly!
 
-Before messages can be be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
+The mapper processes messages in both directions:
+1. ```INBOUND```: from external source to C8Y
+1. ```OUTBOUND```: from C8Y to external source
+
+Before inbound messages can be be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_Diagram_Map.png"  style="width: 70%;" />
@@ -80,6 +84,13 @@ The following diagram describes how a new message is processed.
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_Diagram_Transform2.png"  style="width: 70%;" />
+</p>
+<br/>
+
+Outbound messages are organized in a flat list. Mapping are bound using the mapping property ```filterOutgoing```. This specifies an fragment name in the Cumulocity message (MEAO or Inventory). Once this fragment exists in a Cumulocity message the respective mapping is applied.
+
+<p align="center">
+<img src="resources/image/Generic_MQTT_Diagram_Transform_Outbound1.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -285,14 +296,31 @@ ___
 #### Define MQTT topic properties
 
 In the first wizzard step properties for the topic are defined.
-
-
 <p align="center">
 <img src="resources/image/Generic_MQTT_TopicDefinition.png"  style="width: 70%;" />
 </p>
 <br/>
 
 For the mappings we differentiate between a **subscription topic** and a **template topic**:
+
+For outbound mappings the properties are slightly different. Most important are the properties:
+1. ```filterOutbound```: The Filter Outbound can contain one fragment name to associate a
+                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
+                      applied.
+2. ```publishTopic```: MQTT topic to publish outbound messages to.
+
+<p align="center">
+<img src="resources/image/Generic_MQTT_TopicDefinition_Outbound.png"  style="width: 70%;" />
+</p>
+<br/>
+
+For an outbound mapping to be applied two conditions have to be fullfilled: 
+1. the Cumulocity MEAO message has to have a fragment that is defined in property ```filterOutbound```
+1. for the device a Notification 2.0 subscription has to be crerated. This is done usind the following dialog:
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTemplate_Outbound_subscription.png"  style="width: 70%;" />
+</p>
+<br/>
 
 #### Subscription Topic
 
