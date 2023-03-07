@@ -20,7 +20,7 @@
  */
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
-import { API, Direction, Mapping, MappingSubstitution, ValidationError } from "./mapping.model"
+import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -95,7 +95,9 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
    \"deviceId\": \"909090\",
    \"decription\": \"New camera operation!\",
    \"type\": \"maker_Vibration_Sensor\"
-}`
+  }`,
+  FLAT_FILE: `{\"message\":\"165, 14.5, \\\"2022-08-06T00:14:50.000+02:00\\\",\\\"c8y_FuelMeasurement\\\"\"}`,
+  GENERIC_BINARY: `{\"message\":\"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 \"\"}`
 }
 
 export const SCHEMA_EVENT = {
@@ -333,9 +335,17 @@ export const AGENT_ID = 'MQTT_MAPPING_SERVICE';
 export const MQTT_TEST_DEVICE_ID = 'MQTT_MAPPING_TEST_DEVICE';
 export const COLOR_HIGHLIGHTED: string = 'lightgrey'; //#5FAEEC';
 
+
+export function getExternalTemplate(mapping: Mapping): any {
+  if (mapping.mappingType == MappingType.FLAT_FILE || mapping.mappingType == MappingType.GENERIC_BINARY) {
+    return SAMPLE_TEMPLATES_EXTERNAL[mapping.mappingType]
+  } else {
+    return SAMPLE_TEMPLATES_EXTERNAL[mapping.targetAPI]
+  }
+}
 export function getSchema(targetAPI: string, direction: Direction, target: boolean): any {
-  if ((target && ( !direction || direction == Direction.INBOUND )) ||
-     (!target && ( direction == Direction.OUTBOUND )) ) {
+  if ((target && (!direction || direction == Direction.INBOUND)) ||
+    (!target && (direction == Direction.OUTBOUND))) {
     if (targetAPI == API.ALARM.name) {
       return SCHEMA_ALARM;
     } else if (targetAPI == API.EVENT.name) {
@@ -465,7 +475,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
   let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
     return previousValue + currentValue;
   }, 0)
-  return ( (mapping.direction != Direction.OUTBOUND && count == 1) || mapping.direction == Direction.OUTBOUND);
+  return ((mapping.direction != Direction.OUTBOUND && count == 1) || mapping.direction == Direction.OUTBOUND);
 }
 
 export function checkSubstitutionIsValid(mapping: Mapping, stepperConfiguration: StepperConfiguration): ValidatorFn {
@@ -527,30 +537,30 @@ export function checkPropertiesAreValid(mappings: Mapping[], direction: Directio
     //    +       /topic/+/value          /topic/important/value
     //    +       device/#                device/+/rom/
 
-    if ( direction == Direction.INBOUND) {
+    if (direction == Direction.INBOUND) {
       //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
       //error = !f(subscriptionTopic, templateTopic);
-      let f = (t=>s=>new RegExp(s.split('+').join('[^/]+').split('#').join('.+')).test(t))
+      let f = (t => s => new RegExp(s.split('+').join('[^/]+').split('#').join('.+')).test(t))
       error = !f(templateTopic)(subscriptionTopic);
       if (error) {
         errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
         defined = true
       }
-  
+
       // count number of "#" in subscriptionTopic
       let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
       if (count_multi > 1) {
         errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
         defined = true
       }
-  
+
       // count number of "+" in subscriptionTopic
       let count_single = (subscriptionTopic.match(/\+/g) || []).length;
       if (count_single > 1) {
         errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
         defined = true
       }
-  
+
       // wildcard "#" can only appear at the end in subscriptionTopic
       if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
         errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
@@ -653,7 +663,7 @@ export function whatIsIt(object) {
 export const isNumeric = (num: any) => (typeof (num) === 'number' || typeof (num) === "string" && num.trim() !== '') && !isNaN(num as number);
 
 export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, direction: Direction): boolean {
-  if ( direction == Direction.INBOUND) {
+  if (direction == Direction.INBOUND) {
     return sub.pathTarget == API[api].identifier
   } else {
     return false
@@ -662,7 +672,7 @@ export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, d
 
 export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
   const mp = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction))
-  if ( mp  && mp.length>0) {
+  if (mp && mp.length > 0) {
     return mp[0]
   } else {
     return null

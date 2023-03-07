@@ -108,7 +108,9 @@ public abstract class BasePayloadProcessorOutbound<T> {
         for (String pathTarget : pathTargets) {
             SubstituteValue substituteValue = new SubstituteValue(new TextNode("NOT_DEFINED"), TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
-
+            if (postProcessingCache.get(pathTarget).size() > 0) {
+                substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
+            }
             if (!mapping.targetAPI.equals(API.INVENTORY)) {
                 if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
                     ExternalIDRepresentation externalId = c8yAgent.findExternalId(

@@ -93,7 +93,9 @@ export class MappingService {
       method: 'PUT',
     });
     let data = await response;
-    let m = await data.json();
+    if (!data.ok)
+    throw new Error(data.statusText)!
+    let m = await data.text();
     return m;
   }
 
