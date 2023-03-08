@@ -95,11 +95,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
              * step 1 extract content from inbound payload
              */
             try {
-                // have to escape _DEVICE_IDENT_ , _TOPIC_LEVEL_ with BACKQUOTE "`" since
-                // JSONata4Java does work for tokens with starting "_"
-                var p = substitution.pathSource.replace(TOKEN_TOPIC_LEVEL, TOKEN_TOPIC_LEVEL_BACKQUOTE);
-                log.debug("Patched sub.pathSource: {}, {}", substitution.pathSource, p);
-                Expressions expr = Expressions.parse(p);
+                Expressions expr = Expressions.parse(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
                 log.error("Exception for: {}, {}", substitution.pathSource,
