@@ -73,9 +73,7 @@ public abstract class BasePayloadProcessor<T> {
     SysHandler sysHandler;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
-    public static String TOKEN_DEVICE_TOPIC_BACKQUOTE = "`_DEVICE_IDENT_`";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
-    public static String TOKEN_TOPIC_LEVEL_BACKQUOTE = "`_TOPIC_LEVEL_`";
 
     public static final String TIME = "time";
 
