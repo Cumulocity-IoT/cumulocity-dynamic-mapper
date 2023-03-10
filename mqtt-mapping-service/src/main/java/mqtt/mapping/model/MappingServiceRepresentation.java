@@ -21,15 +21,15 @@
 
 package mqtt.mapping.model;
 
-import java.io.Serializable;
-import java.util.ArrayList;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import mqtt.mapping.core.ServiceStatus;
+
+import java.io.Serializable;
+import java.util.ArrayList;
 
 @Data
 @NoArgsConstructor

@@ -29,7 +29,7 @@ import {
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { definesDeviceIdentifier } from '../../shared/util';
-import { MappingSubstitution } from '../../shared/mapping.model';
+import { Direction, MappingSubstitution } from '../../shared/mapping.model';
 
 @Component({
   selector: 'mapping-overwrite-device-identifier-modal',
@@ -48,6 +48,7 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
   message1: string;
   message2: string;
   message3: string;
+  direction: Direction;
   substitutionNewText: string;
   substitutionOldText: string;
   closeSubject: Subject<boolean> = new Subject();
@@ -64,9 +65,9 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
       gettext('with the new substitution:'));
     this.message3 = this.translateService.instant(
       gettext('Do you want to proceed?'));
-    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.targetAPI, this.substitutionOld) ? "* " : "");
+    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.targetAPI, this.substitutionOld, this.direction) ? "* " : "");
     this.substitutionOldText = `[ ${marksDeviceIdentifierOld}${this.substitutionOld.pathSource} -> ${this.substitutionOld.pathTarget} ]`;
-    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.targetAPI, this.substitutionNew) ? "* " : "");
+    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.targetAPI, this.substitutionNew, this.direction) ? "* " : "");
     this.substitutionNewText = `[ ${marksDeviceIdentifierNew}${this.substitutionNew.pathSource} -> ${this.substitutionNew.pathTarget} ]`;
   }
 

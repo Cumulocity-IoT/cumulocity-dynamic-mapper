@@ -64,14 +64,18 @@ Also includes an expression runtime [JSONata](https://jsonata.org) to execute ex
 > In upcoming releases a *Generic MQTT Broker* will be part of Cumulocity IoT. If necessary we will adapt this component
 > to work with it seamlessly!
 
-Before messages can be be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
+The mapper processes messages in both directions:
+1. `INBOUND`: from external source to C8Y
+2. `OUTBOUND`: from C8Y to external source
+
+Before inbound messages can be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrival times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings. 
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_Diagram_Map.png"  style="width: 70%;" />
 </p>
 <br/>
 
-Once all mappings are added to the cache we are ready to process incoming messages transmitted by tbe MQTT broker.
+Once all mappings are added to the cache we are ready to process inbound messages transmitted by the MQTT broker.
 The following diagram describes how a new message is processed.
 
 <p align="center">
@@ -80,6 +84,13 @@ The following diagram describes how a new message is processed.
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_Diagram_Transform2.png"  style="width: 70%;" />
+</p>
+<br/>
+
+Outbound messages are organized in a flat list. Mappings are bound using the mapping property ```filterOutgoing```. This specifies an fragment name in the Cumulocity message (MEAO or Inventory). Once this fragment exists in a Cumulocity message the respective mapping is applied.
+
+<p align="center">
+<img src="resources/image/Generic_MQTT_Diagram_Transform_Outbound1.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -92,23 +103,25 @@ following Mappings are supported:
 * Events
 * Measurements
 * Alarms
-* Operations (Downstream)
+* Operations (Outbound to devices)
 
 Beside that complex JSON objects & arrays are supported but not fully tested.
 
 Due to two different libraries to evaluate JSONata in:
-1. ```mqtt-mapping-ui```: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
-1. ```mqtt-mapping-service``` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+1. `mqtt-mapping-ui`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+2. `mqtt-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
 differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
-The Paho java client uses memory persistence to persit its state (used to store outbound and inbound messages while they are in flight). When the microservice restarts this information is lost. Micorservice can not use the default ```MqttDefaultFilePersistence```.
+The Paho java client uses memory persistence to persist its state (used to store outbound and inbound messages while they are in flight). When the microservice restarts this information is lost. 
+The microservice can not use the default `MqttDefaultFilePersistence` of the paho client. See [Issue](https://github.com/eclipse/paho.mqtt.java/issues/507)
 
+### Contribution
 > **Pull Requests adding mappings for other data formats or additional functionaly are welcomed!**
 
 ## Prerequisites
 In your Cumulocity IoT Tenant you must have the **microservice** feature subscribed. Per default this feature is not
-avilable and must be provided by administrators of the instance you are using.
+available and must be provided by administrators of the instance you are using.
 
 Make sure to use an user with admin privileges in your Tenant.
 
@@ -117,7 +130,7 @@ Make sure to use an user with admin privileges in your Tenant.
 You need to install two components to your Cumulocity IoT Tenant:
 
 1. Microservice - (Java)
-1. WebApp Plugin - (Angular/Cumulocity WebSDK)
+2. WebApp Plugin - (Angular/Cumulocity WebSDK)
 
 Both are provided as binaries in [Releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Take 
 the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
@@ -145,7 +158,7 @@ Select "mqtt-mapping-ui.zip" and wait until it is uploaded.
 
 > **_NOTE:_** We need to clone the Administration app to add the plugin to it
 
-After succesful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
+After successful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
 and afterwards "Administration".
 
 
@@ -163,16 +176,16 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 <br/>
 
 ## Build, Deploy, Run
-Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your Computer.
+Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your computer.
 
 ### Backend - Microservice
 Run `mvn clean package` in folder `mqtt-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
-### Frondend - Plugin
+### Frontend - Plugin
 Run `npm run build` in folder `mqtt-mapping-ui/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity istration which will build a plugin.
-The Frontend is build as Plugin [here](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
+Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity tenant.
+The Frontend is build as [Cumulocity plugin](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## Configuration MQTT connection to broker
 The MQTT broker configuration is persisted in the tenant options of a Cumulocity Tenant and can be configured by the following UI.\
@@ -196,9 +209,9 @@ Furthermore, connections to the MQTT broker can be enabled or disabled.
 ### Table of MQTT mappings
 
 Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
-1. Creating new MQTT mappings: Press button ```Add mapping```
-1. Updating exsiting MQTT mapping: Press the pencil in the row of the relevant mapping
-1. Deleting exsiting MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
+1. Creating new MQTT mappings: Press button `Add mapping`
+2. Updating existing MQTT mapping: Press the pencil in the row of the relevant mapping
+3. Deleting existing MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
 After every change the mappings is automatically updated in the mapping cache of the microservice.
 
@@ -227,14 +240,14 @@ Further example for JSONata expressions are:
         notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
         becomes <code>$sum(Account.Product.(Price * Quantity))</code>
 
-### Wizzard to define a mapping
+### Wizard to define a mapping
 
-Creation of the new mapping starts by pressing ```Add Mapping```. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
-1. ```JSON```: if your payload is in JSON format
-1. ```FLAT_FILE```: if your payload is in a csv format
-1. ```GENERIC_BINARY```: if your payload is in HEX format
-1. ```PROTOBUF_STATIC```: if your payload is a serialized protobuf message
-1. ```PROCESSOR_EXTENSION```: if you want to process the message yourself, by registering a processor extension
+Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
+1. `JSON`: if your payload is in JSON format
+1. `FLAT_FILE`: if your payload is in a csv format
+1. `GENERIC_BINARY`: if your payload is in HEX format
+1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
+1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
 
 <p align="center">
@@ -245,11 +258,11 @@ Creation of the new mapping starts by pressing ```Add Mapping```. On the next mo
 The wizzard to define a mapping consists of the steps:
 
 1. Select the type of mapping:
-* ```JSON```
-* ```FLAT_FILE```
-* ```GENERIC_BINARY```
-* ```PROTOBUF_STATIC```
-* ```PROCESSOR_EXTENSION```
+* `JSON`
+* `FLAT_FILE`
+* `GENERIC_BINARY`
+* `PROTOBUF_STATIC`
+* `PROCESSOR_EXTENSION`
 ___
   **NOTE:**
 Payload for ```FLAT_FILE``` and ```GENERIC_BINARY``` are wrapped.
@@ -279,20 +292,37 @@ $parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
 ___
 
 1. Define the properties of the topic and API to be used
-1. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
-1. Test the mapping by applying the transformation and send the result to a test device.
+2. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+3. Test the mapping by applying the transformation and send the result to a test device.
 
 #### Define MQTT topic properties
 
 In the first wizzard step properties for the topic are defined.
-
-
 <p align="center">
 <img src="resources/image/Generic_MQTT_TopicDefinition.png"  style="width: 70%;" />
 </p>
 <br/>
 
 For the mappings we differentiate between a **subscription topic** and a **template topic**:
+
+For outbound mappings the properties are slightly different. Most important are the properties:
+1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
+                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
+                      applied.
+2. `publishTopic`: MQTT topic to publish outbound messages to.
+
+<p align="center">
+<img src="resources/image/Generic_MQTT_TopicDefinition_Outbound.png"  style="width: 70%;" />
+</p>
+<br/>
+
+For an outbound mapping to be applied two conditions have to be fulfilled: 
+1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
+2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTemplate_Outbound_subscription.png"  style="width: 70%;" />
+</p>
+<br/>
 
 #### Subscription Topic
 
@@ -338,14 +368,14 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 </p>
 <br/>
 
-#### Map Device Idenfifier
+#### Map Device Identifier
 
 Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id tpye.
 
 
 #### Define templates and substitutions for source and target payload
 
-In the second wizzard step, shown on the screenshot below the mapping is furher defined:
+In the second wizard step, shown on the screenshot below the mapping is further defined:
 1. Editing the source template directly or use a snooped template by pressing button ```<-```, arrow left
 2. Editing the target template directly or use a sample template by pressing button ```->```, arrow right
 3. Adding substitutions
@@ -358,9 +388,9 @@ In the second wizzard step, shown on the screenshot below the mapping is furher 
 
 In order to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
 1. Add mapping (button with "+" sign)
-1. Show & Select already defined substitutions (button with skip symbol). A selected substitution is colored and can be deleted by pressing the button with "-" sign
-1. Delete mapping (button wiht one "-" sign), the selected substitution is deleted
-1. Delete all mappings (button wiht two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, eithe "+"- singel level or "#" - multi level
+2. Show & Select already defined substitutions (button with skip symbol). A selected substitution is colored and can be deleted by pressing the button with "-" sign
+3. Delete mapping (button with one "-" sign), the selected substitution is deleted
+4. Delete all mappings (button with two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, either "+"- single level or "#" - multi level
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_MappingTemplate_annnotated.png"  style="width: 70%;" />
@@ -369,8 +399,8 @@ In order to define a substitution ( substitute values in the target payload with
 
 To define a new substitution the following steps have to be performed:
 1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
-1. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
-1. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
+2. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
+3. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
   * ```multi-device-single-value```
   * ```multi-device-multi-value```
   * ```single-device-multi-value```\
@@ -380,10 +410,10 @@ To define a new substitution the following steps have to be performed:
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
->1. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+>2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 
-To avoid inconsistent JSON being send to the Cumulocity APIS schemas are defined for For all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if requred properties are defined and if the time is in the correct format.
+To avoid inconsistent JSON being sent to the Cumulocity API schemas are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property ```c8y_IsDevice``` is  missing in the payload.
 
@@ -464,7 +494,7 @@ All generated test devices have a fragment ```c8y_mqttMapping_TestDevice```.
 
 ### Send transformed test message to test device in Cumulocity
 
-To send the a transformed payload to a test device, press the button ```Send test message```. If an error occurs this is shown in the UI.
+To send the transformed payload to a test device, press the button ```Send test message```. If an error occurs this is shown in the UI.
 
 
 <p align="center">
@@ -486,7 +516,7 @@ In order to use a previously snooped payload click the button
 ### Update existing Mapping
 
 To avoid inconsistencies when updating the properties of a mapping, active mapping are locked - ```READ_ONLY``` - and can't be updated. All properties of the mapping are protected from changes.
-This can be seen on the follwing screenshot:
+This can be seen on the following screenshot:
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_TopicDefinition_ReadOnly.png"  style="width: 70%;" />
@@ -502,7 +532,7 @@ To allow updating an activated mapping it has to be deactivated in the list of a
 
 ### Processing Extensions
 
-When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the incoming message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
+When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />
@@ -548,16 +578,16 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 
 The mapping microservice provides endpoints to control the lifecycle and manage mappings. in details these endpoint are:
 1. ```.../configuration/connection```: retrieve and change the connection details to the MQTT broker
-1. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
-1. ```.../operation```: execute operation: reload mappings, connect to broker, diconnect from broker, reset the monitoring statistic, reload extensions
-1. ```.../monitoring/status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
-1. ```.../monitoring/status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
-1. ```.../monitoring/tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
-1. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
-1. ```.../mapping```: retrieve, create, delete, update mappings
-1. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolen)  indicates if the transfromed payload should be send to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the otcome of the mapping process as well as error
-1. ```.../extension/```: endpoint to retieve a list of all extensions
-1. ```.../extension/{extension-name}```: endpoint to retieve/delete a specific extension
+2. ```.../configuration/serice```: retrieve and change the configuration details, e.g. loglevel of the mapping service
+3. ```.../operation```: execute operation: reload mappings, connect to broker, disconnect from broker, reset the monitoring statistic, reload extensions
+4. ```.../monitoring/status/service```: retrieve service status: is microservice connected to broker, are connection details loaded
+5. ```.../monitoring/status/mapping```: retrieve mapping status: number of messages, errors processed per mapping
+6. ```.../monitoring/tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
+7. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
+8. ```.../mapping```: retrieve, create, delete, update mappings
+9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
+10. ```.../extension/```: endpoint to retieve a list of all extensions
+11. ```.../extension/{extension-name}```: endpoint to retrieve/delete a specific extension
 
 
 ### Load Test

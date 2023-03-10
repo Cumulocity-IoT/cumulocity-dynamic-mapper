@@ -38,10 +38,17 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/mappings',
+        path: 'mqtt-mapping/mappings/inbound',
         priority: 920,
-        label: 'Mapping',
-        icon: 'grid-view',
+        label: 'Mapping Inbound',
+        icon: 'swipe-right',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/mappings/outbound',
+        priority: 920,
+        label: 'Mapping Outbound',
+        icon: 'swipe-left',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
@@ -61,7 +68,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: 'mqtt-mapping/tree',
         priority: 890,
-        label: 'Mapping Tree',
+        label: 'Mapping Tree Inbound',
         icon: 'tree-structure',
         orientation: 'horizontal',
       } as Tab);
@@ -70,6 +77,13 @@ export class MappingTabFactory implements TabFactory {
         priority: 880,
         label: 'Processor Extension',
         icon: 'plugin',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: 'mqtt-mapping/editor2-test',
+        priority: 870,
+        label: 'Editor2',
+        icon: 'file',
         orientation: 'horizontal',
       } as Tab);
     }

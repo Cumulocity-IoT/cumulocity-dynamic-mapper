@@ -21,21 +21,19 @@
 
 package mqtt.mapping.model;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import javax.validation.constraints.NotNull;
-
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
-
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import mqtt.mapping.processor.model.MappingType;
+
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Getter
 @Setter
@@ -64,6 +62,9 @@ public class Mapping implements Serializable {
 
   @NotNull
   public String subscriptionTopic;
+
+  @NotNull
+  public String publishTopic;
 
   @NotNull
   public String templateTopic;
@@ -118,6 +119,18 @@ public class Mapping implements Serializable {
   public ExtensionEntry extension;
 
   @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public Direction direction;
+
+  @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public String filterOutbound;
+
+  @NotNull
+  @JsonSetter(nulls = Nulls.SKIP)
+  public Boolean autoAckOperation;
+
+  @NotNull
   public long lastUpdate;
 
   @Override
@@ -137,8 +150,8 @@ public class Mapping implements Serializable {
 
   public void sortSubstitutions() {
     MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI))
-            .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI)))))
+        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, direction))
+            .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, direction)))))
         .toArray(size -> new MappingSubstitution[size]);
     substitutions = sortedSubstitutions;
   }

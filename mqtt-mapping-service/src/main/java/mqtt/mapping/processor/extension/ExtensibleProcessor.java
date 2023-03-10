@@ -21,24 +21,22 @@
 
 package mqtt.mapping.processor.extension;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.model.Extension;
+import mqtt.mapping.model.ExtensionEntry;
+import mqtt.mapping.model.ExtensionStatus;
+import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.service.MQTTClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.model.ExtensionEntry;
-import mqtt.mapping.model.ExtensionStatus;
-import mqtt.mapping.model.Extension;
-import mqtt.mapping.processor.BasePayloadProcessor;
-import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.service.MQTTClient;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service

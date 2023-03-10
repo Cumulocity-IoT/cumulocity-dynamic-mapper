@@ -21,31 +21,29 @@
 
 package mqtt.mapping.processor.processor.fixed;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.FloatNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.protobuf.InvalidProtocolBufferException;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
+import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
+import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.model.ProcessingContext;
+import mqtt.mapping.processor.model.RepairStrategy;
+import mqtt.mapping.service.MQTTClient;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.joda.time.DateTime;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.joda.time.DateTime;
-import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.FloatNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
-import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.BasePayloadProcessor;
-import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.model.MappingType;
-import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service

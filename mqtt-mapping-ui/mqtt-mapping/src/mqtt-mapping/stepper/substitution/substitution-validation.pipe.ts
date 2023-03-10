@@ -27,6 +27,6 @@ pure: true})
 
 export class CountDeviceIdentifiersPipe implements PipeTransform {
     transform(mapping: Mapping, ...args: any[]) {
-        return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).length
+        return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).length
     }
 }
