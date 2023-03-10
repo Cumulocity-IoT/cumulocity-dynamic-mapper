@@ -35,7 +35,7 @@
     "rxjs": "~6.6.3",
     "style-loader": "^3.3.1",
     "uuid": "^9.0.0",
-    "vanilla-jsoneditor": "file:../../../svelte-jsoneditor/package-vanilla",
+    "vanilla-jsoneditor": "0.15.1",
     "zone.js": "~0.11.7"
   },
   "devDependencies": {
