@@ -43,9 +43,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.ValidationError;
 
 @Slf4j
@@ -70,9 +70,11 @@ public class MappingComponent {
     }
 
     private void initializeMappingStatus() {
-        mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
-            statusMapping.put(ms.ident, ms);
-        });
+        if (mappingServiceRepresentation.getMappingStatus() != null){
+            mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
+                statusMapping.put(ms.ident, ms);
+            });
+        }
         if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
@@ -177,7 +179,7 @@ public class MappingComponent {
         return result;
     }
 
-    public String deleteMapping(String id) {
+    public Mapping deleteMapping(String id) {
         // test id the mapping is active, we don't delete or modify active mappings
         ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
         MappingRepresentation m = toMappingObject(mo);
@@ -188,7 +190,7 @@ public class MappingComponent {
         inventoryApi.delete(GId.asGId(id));
         deleteMappingStatus(id);
         log.info("Deleted Mapping: {}", id);
-        return id;
+        return m.getC8yMQTTMapping();
     }
 
     public List<Mapping> getMappings() {
@@ -198,7 +200,7 @@ public class MappingComponent {
         List<Mapping> result = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                 .map(mo -> toMappingObject(mo).getC8yMQTTMapping())
                 .collect(Collectors.toList());
-        log.debug("Found Mappings {}", result);
+        log.debug("Loaded mappings (inbound & outbound): {}", result.size());
         return result;
     }
 

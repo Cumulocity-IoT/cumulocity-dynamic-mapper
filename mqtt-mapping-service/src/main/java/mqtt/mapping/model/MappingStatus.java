@@ -26,9 +26,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.io.Serializable;
-
 import javax.validation.constraints.NotNull;
+import java.io.Serializable;
 
 @Getter
 @NoArgsConstructor

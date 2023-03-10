@@ -1,5 +1,5 @@
 {
-  "apiVersion":"v2",
+  "apiVersion":"2",
   "version":"@project.version@",
   "provider": {
     "name":"Software AG"
@@ -21,7 +21,8 @@
     "ROLE_OPTION_MANAGEMENT_ADMIN",
     "ROLE_TENANT_ADMIN",
     "ROLE_MEASUREMENT_ADMIN",
-    "ROLE_MEASUREMENT_READ"
+    "ROLE_MEASUREMENT_READ",
+    "ROLE_NOTIFICATION_2_ADMIN"
   ],
   "roles":[
   ]

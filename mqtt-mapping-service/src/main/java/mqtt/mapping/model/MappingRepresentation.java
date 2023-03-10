@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -80,11 +79,12 @@ public class MappingRepresentation implements Serializable {
   static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     long count = Arrays.asList(mapping.substitutions).stream()
-        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI)).count();
+        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).count();
 
     if (mapping.snoopStatus != SnoopStatus.ENABLED && mapping.snoopStatus != SnoopStatus.STARTED
         && !mapping.mappingType.equals(MappingType.PROCESSOR_EXTENSION)
-        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)) {
+        && !mapping.mappingType.equals(MappingType.PROTOBUF_STATIC)
+        && !mapping.direction.equals(Direction.OUTBOUND)) {
       if (count > 1) {
         result.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
       }
@@ -194,7 +194,7 @@ public class MappingRepresentation implements Serializable {
   private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     try {
-        Object json = new JSONTokener(mapping.source).nextValue();
+      Object json = new JSONTokener(mapping.source).nextValue();
     } catch (JSONException e) {
       result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
     }
@@ -222,11 +222,13 @@ public class MappingRepresentation implements Serializable {
     return nt;
   }
 
-  // static public Long nextId(ArrayList<Mapping> mappings) {
-  // Long max = mappings
-  // .stream()
-  // .mapToLong(v -> v.id)
-  // .max().orElseThrow(NoSuchElementException::new);
-  // return max + 1L;
-  // }
+  static public MappingSubstitution findDeviceIdentifier(Mapping mapping) {
+    Object[] mp = Arrays.stream(mapping.substitutions)
+        .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).toArray();
+    if (mp.length > 0) {
+      return (MappingSubstitution) mp[0];
+    } else {
+      return null;
+    }
+  }
 }

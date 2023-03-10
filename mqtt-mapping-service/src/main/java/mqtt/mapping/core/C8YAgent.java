@@ -38,8 +38,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
 
-import javax.annotation.PreDestroy;
-
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,11 +48,14 @@ import org.svenson.JSONParser;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.model.measurement.MeasurementValue;
+import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
@@ -62,7 +63,6 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import com.cumulocity.rest.representation.tenant.auth.TrustedCertificateRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
@@ -80,16 +80,18 @@ import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.configuration.TrustedCertificateRepresentation;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.extension.ExtensionsComponent;
-import mqtt.mapping.processor.BasePayloadProcessor;
+import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.extension.ExtensibleProcessor;
 import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -144,7 +146,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private ExtensionsComponent extensions;
 
     @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessors;
+    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
+
+    @Autowired
+    C8YAPISubscriber operationSubscriber;
 
     private ExtensibleProcessor extensibleProcessor;
 
@@ -163,6 +168,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
+    @EventListener
+    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+        log.info("Microservice unsubscribed for tenant {}", event.getTenant());
+        //this.createEvent("MQTT Mapper Microservice terminated", "mqtt_microservice_stopevent", DateTime.now(), null);
+        operationSubscriber.disconnect(null);
+        if(mqttClient != null)
+            mqttClient.disconnect();
+    }
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
@@ -201,7 +214,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessor) payloadProcessors.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessor) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
@@ -224,6 +237,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
+            operationSubscriber.init();
+            //operationSubscriber.subscribeTenant(tenant);
+            //operationSubscriber.subscribeAllDevices();
+
 
         });
         serviceConfiguration = serviceConfigurations[0];
@@ -245,13 +262,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void saveConnectionConfiguration(ConfigurationConnection configuration) throws JsonProcessingException {
         connectionConfigurationComponent.saveConnectionConfiguration(configuration);
         mqttClient.reconnect();
-    }
-
-    @PreDestroy
-    private void stop() {
-        if (mqttClient != null) {
-            mqttClient.disconnect();
-        }
     }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
@@ -289,6 +299,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
         });
         return externalIDRepresentations[0];
+    }
+
+    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+        if (idType == null) {
+            idType = "c8y_Serial";
+        }
+        final String idt = idType;
+        ExternalIDRepresentation[] result = { null };
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                result[0] = identityApi.findExternalId(gid, idt, context);
+            } catch (SDKException e) {
+                log.warn("External ID type {} for {} not found", idt, gid.getValue());
+            }
+        });
+        return result[0];
     }
 
     public MappingServiceRepresentation getAgentMOR() {
@@ -345,7 +371,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ArrayList<Mapping> result = new ArrayList<Mapping>();
         subscriptionsService.runForTenant(tenant, () -> {
             result.addAll(mappingComponent.getMappings());
-            log.info("Found mappings: {}", result.size());
+            log.debug("Loaded mappings (inbound & outbound): {}", result.size());
         });
         return result;
     }
@@ -374,7 +400,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public String deleteMapping(String id) throws Exception {
-        String[] mr = { null };
+        Mapping[] mr = { null };
         Exception[] exceptions = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
@@ -386,8 +412,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         if (exceptions[0] != null ) {
             throw exceptions[0];
         }
-        mqttClient.deleteFromMappingCache(id);
-        return mr[0];
+        mqttClient.deleteFromMappingCache(mr[0]);
+        return mr[0].id;
     }
 
     public Mapping updateMapping(Mapping mapping, String id, boolean allowUpdateWhenActive) throws Exception {
@@ -689,7 +715,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveMappings().values().forEach(m -> {
+        mqttClient.getActiveInboundMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }
@@ -698,5 +724,34 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         updateMapping(mapping, id, true);
         // step 4 delete mapping from update cache
         mappingComponent.removeMappingFormDirtyMappings(mapping);
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
+        ManagedObjectRepresentation[] devices = { null };
+        subscriptionsService.runForTenant(tenant, () -> {
+            GId id = new GId();
+            id.setValue(deviceId);
+            try {
+                ManagedObjectRepresentation mor = inventoryApi.get(id);
+                devices[0] = mor;
+            } catch (SDKException exception) {
+                log.warn("Device with id {} not found!", deviceId);
+            }
+        });
+
+        return devices[0];
+    }
+
+    public void updateOperationStatus(OperationRepresentation op, OperationStatus status, String failureReason) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                op.setStatus(status.toString());
+                if (failureReason != null)
+                    op.setFailureReason(failureReason);
+                deviceControlApi.update(op);
+            } catch (SDKException exception) {
+                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(), exception.getLocalizedMessage());
+            }
+        });
     }
 }

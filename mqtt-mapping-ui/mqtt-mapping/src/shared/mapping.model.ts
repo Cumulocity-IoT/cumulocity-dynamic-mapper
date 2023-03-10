@@ -1,3 +1,5 @@
+import { IIdentified } from "@c8y/client";
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -48,7 +50,8 @@ export interface Mapping {
     name: string;
     id: string;
     ident: string;
-    subscriptionTopic: string;
+    subscriptionTopic?: string;
+    publishTopic?: string;
     templateTopic: string;
     templateTopicSample: string;
     targetAPI: string;
@@ -66,8 +69,13 @@ export interface Mapping {
     snoopedTemplates?: string[];
     mappingType: MappingType;
     extension?: ExtensionEntry;
+    direction?: Direction;
+    filterOutbound?: string;
+    autoAckOperation?: boolean;
     lastUpdate: number;
 }
+
+
 
 export interface MappingStatus {
     id: number;
@@ -117,12 +125,18 @@ export enum Status {
     NOT_READY = "NOT_READY"
 }
 
+export enum Direction {
+    INBOUND = "INBOUND",
+    OUTBOUND = "OUTBOUND"
+}
+
 export const API = {
-    ALARM: { name: "ALARM", identifier: "source.id" },
-    EVENT: { name: "EVENT", identifier: "source.id" },
-    MEASUREMENT: { name: "MEASUREMENT", identifier: "source.id" },
-    INVENTORY: { name: "INVENTORY", identifier: "_DEVICE_IDENT_" },
-    OPERATION: { name: "OPERATION", identifier: "deviceId" },
+    ALARM: { name: "ALARM", identifier: "source.id", notificationFilter: "alarms" },
+    EVENT: { name: "EVENT", identifier: "source.id", notificationFilter: "events" },
+    MEASUREMENT: { name: "MEASUREMENT", identifier: "source.id", notificationFilter: "measurements" },
+    INVENTORY: { name: "INVENTORY", identifier: "_DEVICE_IDENT_", notificationFilter: "managedObjects" },
+    OPERATION: { name: "OPERATION", identifier: "deviceId", notificationFilter: "operations" },
+    ALL: { name: "ALL", identifier: "*", notificationFilter: "*" },
 }
 
 export enum ValidationError {
@@ -179,4 +193,9 @@ export enum RepairStrategy {
     USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
     IGNORE = "IGNORE",
     REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
+}
+
+export class C8YAPISubscription {
+    api: string;
+    devices: IIdentified
 }

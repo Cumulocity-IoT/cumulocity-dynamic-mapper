@@ -29,8 +29,7 @@ import {
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { definesDeviceIdentifier } from '../../shared/util';
-import { MappingSubstitution } from '../../shared/mapping.model';
-import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { Direction, MappingSubstitution } from '../../shared/mapping.model';
 
 @Component({
   selector: 'mapping-overwrite-substitution-modal',
@@ -45,6 +44,7 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
   message1: string;
   message2: string;
   targetAPI: string;
+  direction: Direction;
   substitutionText: string;
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { ok: gettext('Overwrite'), cancel: gettext('Cancel') };
@@ -58,7 +58,7 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
       gettext('You are about to overwrite an exting substitution:'));;
     this.message2 = this.translateService.instant(
       gettext('Do you want to proceed?'));
-    let marksDeviceIdentifier = (definesDeviceIdentifier(this.targetAPI , this.substitution) ? "* " : "");
+    let marksDeviceIdentifier = (definesDeviceIdentifier(this.targetAPI , this.substitution, this.direction) ? "* " : "");
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
   }
 

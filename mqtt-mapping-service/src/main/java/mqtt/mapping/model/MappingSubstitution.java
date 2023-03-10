@@ -21,17 +21,17 @@
 
 package mqtt.mapping.model;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
 import lombok.Getter;
 import lombok.ToString;
 import mqtt.mapping.processor.model.RepairStrategy;
 
-import java.io.Serializable;
-
 import javax.validation.constraints.NotNull;
-
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.io.Serializable;
 
 @Getter
 @ToString()
@@ -39,11 +39,11 @@ public class MappingSubstitution implements Serializable {
 
     public static class SubstituteValue implements Cloneable {
         public static enum TYPE {
-            NUMBER,
-            TEXTUAL, 
-            OBJECT, 
+            ARRAY,
             IGNORE,
-            ARRAY
+            NUMBER,
+            OBJECT,
+            TEXTUAL,
         }
 
         public JsonNode value;
@@ -57,27 +57,22 @@ public class MappingSubstitution implements Serializable {
         }
 
         public Object typedValue() {
-            if (type.equals(TYPE.TEXTUAL)) {
-                return value.textValue();
-            } else if (type.equals(TYPE.OBJECT)) {
-                return value;
-            } else {
-                // check if int
-                try {
-                    return Integer.parseInt(value.textValue());
-                } catch (NumberFormatException e1) {
-                    // not int
-                    try {
-                        return Float.parseFloat(value.textValue());
-                    } catch (NumberFormatException e2) {
-                        // not int
-                        try {
-                            return Double.parseDouble(value.textValue());
-                        } catch (NumberFormatException e3) {
-                            return value;
-                        }
-                    }
-                }
+            Object result;
+            DocumentContext dc;
+            switch (type) {
+                case OBJECT:
+                case ARRAY:
+                    dc = JsonPath.parse(value.toString());
+                    result = dc.read("$");
+                    return result;
+                case IGNORE:
+                    return null;
+                case NUMBER:
+                    return value.numberValue();
+                case TEXTUAL:
+                    return value.textValue();
+                default:
+                    return value.toString();
             }
         }
 
@@ -87,11 +82,11 @@ public class MappingSubstitution implements Serializable {
         }
     }
 
-    public MappingSubstitution () {
+    public MappingSubstitution() {
         this.repairStrategy = RepairStrategy.DEFAULT;
         this.expandArray = false;
     }
-    
+
     @NotNull
     public String pathSource;
 
@@ -101,10 +96,14 @@ public class MappingSubstitution implements Serializable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public RepairStrategy repairStrategy;
-    
+
     @JsonSetter(nulls = Nulls.SKIP)
-    public boolean definesDeviceIdentifier(API api){
-        return api.identifier.equals(pathTarget);
+    public boolean definesDeviceIdentifier(API api, Direction direction) {
+        if (Direction.OUTBOUND.equals(direction)) {
+            return api.identifier.equals(pathSource);
+        } else {
+            return api.identifier.equals(pathTarget);
+        }
     }
 
     @JsonSetter(nulls = Nulls.SKIP)

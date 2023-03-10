@@ -23,27 +23,30 @@
 }
 
 .jsoneditor-menu>button {
-    display: none; 
-} 
+    display: none;
+}
 
 /* .jsoneditor-menu>.jsoneditor-modes>button, .jsoneditor-menu>button {
     color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
 } */
 
 .jsoneditor-menu>.jsoneditor-modes>button {
-    color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
-} 
+    color: var(--navigator-text-color, var(--navigator-dark-text-color, yellow));
+    border-color: var(--brand-primary, yellow);
+    background-color: var(green) !important;
 
-.jsoneditor-menu>.jsoneditor-modes>button:hover, .jsoneditor-menu>button:hover {
-    color: var(--brand-primary, #1776BF);
-    background: white;
-    border-color: var(--brand-primary, #1776BF);
-    box-shadow: inset 0 0 0 1px var(--brand-primary, #1776BF);
 }
 
-.jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected, .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:focus, .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:hover {
-    color: #fff !important;
-    background-color: var(--brand-primary, #1776BF) !important;
+.jsoneditor-menu>.jsoneditor-modes>button:hover,
+.jsoneditor-menu>button:hover {
+    box-shadow: inset 0 0 0 1px var(--c8y-btn-default-background-active);
+}
+
+.jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected,
+.jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:focus,
+.jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:hover {
+    color: var(--c8y-component-color-active, var(--c8y-root-component-color-active)) !important;
+    /* background-color: var(--c8y-component-background-active,var(--c8y-root-component-background-active)) !important; */
 }
 
 div.jsoneditor-menu>div.jsoneditor-search {
@@ -55,7 +58,8 @@ button.jsoneditor-button.jsoneditor-dragarea {
 }
 
 div>div.jsoneditor-menu {
-    background-color: var(--navigator-bg-color,var(--navigator-dark-bg-color,var(--brand-primary,#1776bf)));
+    /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
+    background-color:  var(--navigator-dark-bg-color, var(--brand-primary, #1776BF)) !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {

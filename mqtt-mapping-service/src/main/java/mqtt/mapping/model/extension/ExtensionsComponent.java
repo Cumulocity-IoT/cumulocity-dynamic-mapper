@@ -23,19 +23,18 @@ package mqtt.mapping.model.extension;
 
 
 /** Utility for managing the extensions. */
+
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.inventory.InventoryApi;
+import com.cumulocity.sdk.client.inventory.InventoryFilter;
+import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.cumulocity.sdk.client.inventory.InventoryApi;
-import com.cumulocity.sdk.client.inventory.InventoryFilter;
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 @Component
 public class ExtensionsComponent {

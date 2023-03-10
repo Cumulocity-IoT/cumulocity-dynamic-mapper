@@ -22,13 +22,13 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
-import { AddExtensionComponent } from './add-extension.component';
+import { AddExtensionComponent } from './extension-modal/add-extension.component';
 import { AddExtensionWizardComponent } from './add-extension-wizard.component';
-import { ExtensionCardComponent } from './extension-card.component';
-import { ExtensionComponent } from './extension.component';
+import { ExtensionCardComponent } from './extension-card/extension-card.component';
+import { ExtensionComponent } from './grid/extension.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { ExtensionPropertiesComponent } from './extension-properties.component';
+import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
 
 
 const extensionRoutes: Route[] = [
@@ -63,6 +63,7 @@ const extensionRoutes: Route[] = [
     CollapseModule.forRoot(),
   ],
   entryComponents: [
+    AddExtensionComponent,
     ExtensionComponent,
     ExtensionCardComponent,
     ExtensionPropertiesComponent

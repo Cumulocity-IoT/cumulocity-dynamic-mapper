@@ -19,6 +19,8 @@
  * @authors Christof Strack
  */
 
+import { Direction } from "./../../shared/mapping.model";
+
 export enum EditorMode {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
@@ -31,5 +33,7 @@ export interface StepperConfiguration {
     showProcessorExtensions?: boolean;
     editorMode: EditorMode;
     allowNoDefinedIdentifier?: boolean;
-    allowTesting?: boolean;
+    allowTestTransformation?: boolean;
+    allowTestSending?: boolean;
+    direction: Direction;
 }

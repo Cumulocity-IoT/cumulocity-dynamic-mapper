@@ -21,18 +21,15 @@
 
 package mqtt.mapping.processor.system;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.HashMap;
-
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+import com.cumulocity.model.measurement.MeasurementValue;
+import mqtt.mapping.core.C8YAgent;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.cumulocity.model.measurement.MeasurementValue;
-
-import mqtt.mapping.core.C8YAgent;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.HashMap;
 
 @Service
 public class SysHandler {
@@ -60,10 +57,10 @@ public class SysHandler {
     @Autowired
     private C8YAgent c8yAgent;
 
-    public void handleSysPayload(String topic, MqttMessage mqttMessage) {
+    public void handleSysPayload(String topic, byte[] payload) {
         if (topic == null)
             return;
-        byte[] payload = mqttMessage.getPayload();
+        //byte[] payload = mqttMessage.getPayload();
         HashMap<String, MeasurementValue> mvMap = new HashMap<>();
         if (BYTES_RECEIVED.equals(topic)) {
             MeasurementValue mv = new MeasurementValue();

@@ -18,42 +18,63 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { WizardComponent } from '@c8y/ngx-components';
-import { MappingType } from '../../shared/mapping.model';
+import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
+import { Subject } from 'rxjs';
+import { Direction, MappingType } from '../../shared/mapping.model';
+import { isDisabled } from '../stepper/util';
 
 @Component({
   selector: 'mapping-type',
   templateUrl: './mapping-type.component.html',
+  styleUrls: ['./mapping-type.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class MappingTypeComponent implements OnInit {
 
-  headerText: string;
-  headerIcon: string;
-  bodyHeaderText: string;
+  isDisabled = isDisabled;
+  formGroupStep: FormGroup;
+
+  @ViewChild(C8yStepper, { static: true })
+
+  closeSubject: Subject<MappingType>;
+  labels: ModalLabels = { cancel: "Cancel" };
+
+  @Input()
+  direction: Direction;
 
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
-  mappingType: MappingType;
+  Direction = Direction;
 
-  constructor(
-    private wizardComponent: WizardComponent
-  ) {}
+  mappingType: MappingType.JSON;
+
+  constructor(private fb: FormBuilder) { }
 
   ngOnInit(): void {
-    this.headerText = this.wizardComponent.wizardConfig.headerText;
-    this.headerIcon = this.wizardComponent.wizardConfig.headerIcon;
-    this.bodyHeaderText = this.wizardComponent.wizardConfig.bodyHeaderText;
+    this.closeSubject = new Subject();
+    console.log("Subject:", this.closeSubject, this.labels)
+    this.formGroupStep = this.fb.group({
+      mappingType: ['', Validators.required]
+    });
   }
-  cancel() {
-    this.wizardComponent.close();
+
+
+  onDismiss(event) {
+    this.closeSubject.next(undefined);
+    this.closeSubject.complete();
   }
-  done() {
-    this.wizardComponent.close(this.mappingType);
+
+  onClose(event) {
+    this.closeSubject.next(this.mappingType);
+    this.closeSubject.complete();
   }
-  onSelect(t){
+
+  onSelectMappingType(t) {
     this.mappingType = t;
-    this.wizardComponent.close(this.mappingType);
+    this.closeSubject.next(this.mappingType);
+    this.closeSubject.complete();
   }
 }

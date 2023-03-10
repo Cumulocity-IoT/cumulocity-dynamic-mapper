@@ -21,34 +21,34 @@
 
 package mqtt.mapping.processor.model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.processor.ProcessingException;
 
-@Data
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Getter
+@Setter
 @NoArgsConstructor
 /*
  * The class <code>ProcessingContext</code> collects all relevant information:
  * <code>mapping</code>, <code>topic</code>, <code>payload</code>,
  * <code>requests</code>, <code>error</code>, <code>processingType</code>,
  * <code>cardinality</code>, <code>needsRepair</code>
- * when a <code>mapping</code> is applied to an incoming <code>payload</code>
+ * when a <code>mapping</code> is applied to an inbound <code>payload</code>
  */
 public class ProcessingContext<O> {
     private Mapping mapping;
 
     private String topic;
+
+    private String resolvedPublishTopic;
 
     private O payload;
 
