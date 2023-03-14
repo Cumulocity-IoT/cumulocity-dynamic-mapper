@@ -321,25 +321,28 @@ public class C8YAPISubscriber {
     public void reconnect(MicroserviceSubscriptionsService subscriptionsService) {
         try {
             if (tenant_client != null) {
-                logger.info("Trying to reconnect ws tenant client... ");
+
                 if (!tenant_client.isOpen()) {
                     if (tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            logger.info("Trying to reconnect ws tenant client... ");
                             initTenantClient();
                         });
                     } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                        logger.info("Trying to reconnect ws tenant client... ");
                         tenant_client.reconnect();
                     }
                 }
             }
             if (device_client != null) {
-                logger.info("Trying to reconnect ws device client... ");
                 if (!device_client.isOpen()) {
                     if (device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            logger.info("Trying to reconnect ws device client... ");
                             initDeviceClient();
                         });
                     } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                        logger.info("Trying to reconnect ws device client... ");
                         device_client.reconnect();
                     }
                 }
