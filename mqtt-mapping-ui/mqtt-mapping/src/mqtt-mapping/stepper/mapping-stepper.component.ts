@@ -37,6 +37,7 @@ import { MappingService } from '../core/mapping.service';
 import { EditorMode, StepperConfiguration } from './stepper-model';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { isDisabled } from './util';
+import { FormlyFieldConfig, FormlyForm, FormlyFormOptions } from '@ngx-formly/core';
 
 @Component({
   selector: 'mapping-stepper',
@@ -68,6 +69,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   EditorMode = EditorMode;
 
   propertyForm: FormGroup;
+  propertyFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
   testForm: FormGroup;
   templateSource: any;
@@ -106,6 +108,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   };
   step: any;
 
+  fieldsProperty: FormlyFieldConfig[];
+  options: FormlyFormOptions = {};
+
+
   @ViewChild('editorSource', { static: false }) editorSource: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget: JsonEditorComponent;
   @ViewChild('editorTestingRequest', { static: false }) editorTestingRequest: JsonEditorComponent;
@@ -136,6 +142,160 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
     }
+
+    this.fieldsProperty = [
+      {
+        key: 'name',
+        type: 'input',
+        templateOptions: {
+          label: 'Mapping Name',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+        },
+      },
+      {
+        key: 'subscriptionTopic',
+        type: 'input',
+        templateOptions: {
+          label: 'Subscription Topic',
+          placeholder: 'Subscription Topic ...',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          change: (field: FormlyFieldConfig, event?: any) => {
+            this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
+            this.mapping.templateTopicSample = this.mapping.templateTopic;
+            this.mapping = {
+              ...this.mapping
+            }
+          }
+        },
+        hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+      },
+      {
+        key: 'publishTopic',
+        type: 'input',
+        templateOptions: {
+          label: 'Publish Topic',
+          placeholder: 'Publish Topic ...',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          change: (field: FormlyFieldConfig, event?: any) => {
+            const derived = deriveTemplateTopicFromTopic(this.propertyFormly.get('publishTopic').value);
+            this.mapping.templateTopicSample = derived;
+            this.mapping = {
+              ...this.mapping
+            }
+          }
+        },
+        hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
+      },
+      {
+        key: 'templateTopic',
+        type: 'input',
+        templateOptions: {
+          label: 'Template Topic',
+          placeholder: 'Template Topic ...',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          description: 'The TemplateTopic name must begin with the Topic name.'
+        },
+        hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+      },
+      {
+        key: 'templateTopicSample',
+        type: 'input',
+        templateOptions: {
+          label: 'Template Topic Sample',
+          placeholder: 'e.g. device/110',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          description: 'The TemplateTopicSample name must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND) ? 'Publish Topic.' : 'TemplateTopic.'
+        },
+      },
+      {
+        key: 'filterOutbound',
+        type: 'input',
+        templateOptions: {
+          label: 'Filter Outbound',
+          placeholder: 'e.g. custom_OperationFragment',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          description: 'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.'
+        },
+        hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
+      },
+
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-md-6',
+            key: 'targetAPI',
+            type: 'select',
+            templateOptions: {
+              label: 'Target API',
+              options: Object.keys(API).map(key => { return { label: key, value: key } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                console.log("Changes:", field, event, this.mapping)
+                this.onTargetAPIChanged(this.propertyFormly.get('targetAPI').value)
+              }
+            },
+          },
+          {
+            className: 'col-md-6',
+            key: 'createNonExistingDevice',
+            type: 'boolean',
+            templateOptions: {
+              label: 'Create Non Existing Device',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'In case a MEAO is received and the referenced device does not yet exist, it can be created automatically.'
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || this.mapping.targetAPI == API.INVENTORY.name),
+          },
+          {
+            className: 'col-md-6',
+            key: 'updateExistingDevice',
+            type: 'boolean',
+            templateOptions: {
+              label: 'Update Existing Device',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Update Existing Device.'
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || (this.stepperConfiguration.direction == Direction.INBOUND && this.mapping.targetAPI != API.INVENTORY.name)),
+          },
+          {
+            className: 'col-md-6',
+            key: 'autoAckOperation',
+            type: 'boolean',
+            templateOptions: {
+              label: 'Auto acknowledge',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Auto acknowledge outbound operation.'
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name)),
+          }],
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-md-6',
+            key: 'qos',
+            type: 'select',
+            templateOptions: {
+              label: 'QOS',
+              options: Object.values(QOS).map(key => { return { label: key, value: key } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+            },
+          },
+          {
+            className: 'col-md-6',
+            key: 'snoopStatus',
+            type: 'select',
+            templateOptions: {
+              label: 'Snoop payload',
+              options: Object.keys(SnoopStatus).map(key => { return { label: key, value: key, disabled: (key != 'ENABLED' && key != 'NONE') } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.'
+            },
+          },],
+      },
+    ];
 
     this.setPropertyForm();
     this.setTemplateForm();
