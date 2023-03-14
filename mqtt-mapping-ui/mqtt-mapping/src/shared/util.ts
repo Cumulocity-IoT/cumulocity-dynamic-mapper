@@ -20,7 +20,7 @@
  */
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
 import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
-import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError } from "./mapping.model"
+import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError, ValidationFormlyError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -512,134 +512,338 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
   return mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)).length
 }
 
-export function checkPropertiesAreValid(mappings: Mapping[], direction: Direction): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    const errors = {}
-    let error: boolean = false;
-    let defined = false
+// export function checkPropertiesAreValid(mappings: Mapping[], direction: Direction): ValidatorFn {
+//   return (control: AbstractControl): ValidationErrors | null => {
+//     const errors = {}
+//     let error: boolean = false;
+//     let defined = false
 
-    let templateTopic = control.get('templateTopic').value;
-    let templateTopicSample = control.get('templateTopicSample').value;
-    let subscriptionTopic = control.get('subscriptionTopic').value;
-    let publishTopic = control.get('publishTopic').value;
-    let id = control.get('id').value;
-    let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
+//     let templateTopic = control.get('templateTopic').value;
+//     let templateTopicSample = control.get('templateTopicSample').value;
+//     let subscriptionTopic = control.get('subscriptionTopic').value;
+//     let publishTopic = control.get('publishTopic').value;
+//     let id = control.get('id').value;
+//     let containsWildcardTemplateTopic = isWildcardTopic(subscriptionTopic);
 
-    // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
-    // for comparison the "#" must then be replaced by a "+"
-    // allowed (tt=template topic, st= subscription topic)
-    // allowed    st                      tt                    
-    //    +       /topic/                 /topic/               
-    //    -       /topic/                 /topic/value          
-    //    +       /topic/#                /topic/value
-    //    +       /topic/+                /topic/value
-    //    -       /topic/+                /topic/important/value
-    //    +       /topic/+/value          /topic/important/value
-    //    +       device/#                device/+/rom/
+//     // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
+//     // for comparison the "#" must then be replaced by a "+"
+//     // allowed (tt=template topic, st= subscription topic)
+//     // allowed    st                      tt                    
+//     //    +       /topic/                 /topic/               
+//     //    -       /topic/                 /topic/value          
+//     //    +       /topic/#                /topic/value
+//     //    +       /topic/+                /topic/value
+//     //    -       /topic/+                /topic/important/value
+//     //    +       /topic/+/value          /topic/important/value
+//     //    +       device/#                device/+/rom/
 
-    if (direction == Direction.INBOUND) {
-      //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-      //error = !f(subscriptionTopic, templateTopic);
-      let f = (t => s => new RegExp(s.split('+').join('[^/]+').split('#').join('.+')).test(t))
-      error = !f(templateTopic)(subscriptionTopic);
-      if (error) {
-        errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
-        defined = true
-      }
+//     if (direction == Direction.INBOUND) {
+//       //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+//       //error = !f(subscriptionTopic, templateTopic);
+//       let f = (t => s => new RegExp(s.split('+').join('[^/]+').split('#').join('.+')).test(t))
+//       error = !f(templateTopic)(subscriptionTopic);
+//       if (error) {
+//         errors[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic] = true
+//         defined = true
+//       }
 
-      // count number of "#" in subscriptionTopic
-      let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
-      if (count_multi > 1) {
-        errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
-        defined = true
-      }
+//       // count number of "#" in subscriptionTopic
+//       let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
+//       if (count_multi > 1) {
+//         errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+//         defined = true
+//       }
 
-      // count number of "+" in subscriptionTopic
-      let count_single = (subscriptionTopic.match(/\+/g) || []).length;
-      if (count_single > 1) {
-        errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
-        defined = true
-      }
+//       // count number of "+" in subscriptionTopic
+//       let count_single = (subscriptionTopic.match(/\+/g) || []).length;
+//       if (count_single > 1) {
+//         errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+//         defined = true
+//       }
 
-      // wildcard "#" can only appear at the end in subscriptionTopic
-      if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
-        errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
-        defined = true
-      }
+//       // wildcard "#" can only appear at the end in subscriptionTopic
+//       if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
+//         errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+//         defined = true
+//       }
 
-      // count number of "#" in templateTopic
-      count_multi = (templateTopic.match(/\#/g) || []).length;
-      if (count_multi >= 1) {
-        errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
-        defined = true
-      }
+//       // count number of "#" in templateTopic
+//       count_multi = (templateTopic.match(/\#/g) || []).length;
+//       if (count_multi >= 1) {
+//         errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] = true;
+//         defined = true
+//       }
+//     }
+
+
+//     let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
+//     let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+//     if (splitTT.length != splitTTS.length) {
+//       errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
+//     } else {
+//       for (let i = 0; i < splitTT.length; i++) {
+//         if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
+//           errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+//           break;
+//         }
+//         if (("/" == splitTTS[i]) && !("/" == splitTT[i])) {
+//           errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+//           break;
+//         }
+//         if (!("/" == splitTT[i]) && !("+" == splitTT[i])) {
+//           if (splitTT[i] != splitTTS[i]) {
+//             errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
+//             break;
+//           }
+//         }
+//       }
+//     }
+//     return defined ? errors : null;
+//   }
+
+// }
+
+export function checkTopicsInboundAreValid(control: AbstractControl) {
+  let errors = {};
+  let error: boolean = false;
+
+  {
+    const { templateTopic, templateTopicSample, subscriptionTopic } = control['controls'];
+    templateTopic.setErrors(null);
+    templateTopicSample.setErrors(null);
+    subscriptionTopic.setErrors(null);
+  }
+  
+  const { templateTopic, templateTopicSample, subscriptionTopic } = control.value;
+  // avoid displaying the message error when values are empty
+    if (templateTopic == '' || templateTopicSample  == ''||  subscriptionTopic  == '') {
+      return null;
     }
 
+  // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
+  // for comparison the "#" must then be replaced by a "+"
+  // allowed (tt=template topic, st= subscription topic)
+  // allowed    st                      tt                    
+  //    +       /topic/                 /topic/               
+  //    -       /topic/                 /topic/value          
+  //    +       /topic/#                /topic/value
+  //    +       /topic/+                /topic/value
+  //    -       /topic/+                /topic/important/value
+  //    +       /topic/+/value          /topic/important/value
+  //    +       device/#                device/+/rom/
 
-    let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
-    let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
-    if (splitTT.length != splitTTS.length) {
-      errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name];
-    } else {
-      for (let i = 0; i < splitTT.length; i++) {
-        if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
-          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
-          break;
-        }
-        if (("/" == splitTTS[i]) && !("/" == splitTT[i])) {
-          errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
-          break;
-        }
-        if (!("/" == splitTT[i]) && !("+" == splitTT[i])) {
-          if (splitTT[i] != splitTTS[i]) {
-            errors[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name];
-            break;
-          }
-        }
+
+  //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+  //error = !f(subscriptionTopic, templateTopic);
+  let f = (t => s => new RegExp(s.concat('@').split('+').join('[^/]+').split('#').join('.+')).test(t.concat('@')))
+  error = !f(templateTopic)(subscriptionTopic);
+  if (error) {
+    errors = {
+      ...errors,
+      TemplateTopic_Must_Match_The_SubscriptionTopic: {
+        ...ValidationFormlyError['TemplateTopic_Must_Match_The_SubscriptionTopic'],
+        errorPath: 'templateTopic'
       }
-    }
-
-    // // topic cannot be startstring of another topic
-    //   error = !mappings.every(m => {
-    //     return ((!topic.startsWith(m.topic) && !m.topic.startsWith(topic) || id == m.id))
-    //   })
-    //   if (error) {
-    //     errors['Topic_Not_Substring_Of_OtherTopic'] = true
-    //     defined = true
-    //   }
-
-    // error = !mappings.every(m => {
-    //   return (templateTopic != m.templateTopic || id == m.id)
-    // })
-    // if (error) {
-    //   errors[ValidationError.TemplateTopic_Not_Unique] = true
-    //   defined = true
-    // }
-
-    // error = !mappings.every(m => {
-    //   return ((!templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(templateTopic) || id == m.id))
-    // })
-    // if (error && templateTopic != '') {
-    //   errors[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic] = true
-    //   defined = true
-    // }
-
-    // if the template topic contains a wildcard a device identifier must be selected 
-    // let mdi = control.get('markedDeviceIdentifier').value;
-    // if (containsWildcardTemplateTopic && (mdi == undefined || mdi == '')) {
-    //   errors[ValidationError.Device_Identifier_Must_Be_Selected] = true;
-    //   defined = true
-    // }
-
-
-    // let containsWildcardTemplateTopic = isWildcardTopic(templateTopic);
-    // control.get('markedDeviceIdentifier').setValidators( containsWildcardTemplateTopic? Validators.required : Validators.nullValidator);
-    // control.get('markedDeviceIdentifier').updateValueAndValidity();
-    //console.log("Tested topics :", errors);
-    return defined ? errors : null;
+    };
   }
 
+  // count number of "#" in subscriptionTopic
+  let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
+  if (count_multi > 1) {
+    errors = {
+      ...errors,
+      Only_One_Multi_Level_Wildcard: {
+        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+        errorPath: 'subscriptionTopic'
+      }
+    };
+  }
+
+  // count number of "+" in subscriptionTopic
+  let count_single = (subscriptionTopic.match(/\+/g) || []).length;
+  if (count_single > 1) {
+    errors = {
+      ...errors,
+      Only_One_Single_Level_Wildcard: {
+        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+        errorPath: 'subscriptionTopic'
+      }
+    };
+  }
+
+  // wildcard "#" can only appear at the end in subscriptionTopic
+  if (count_multi >= 1 && subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != subscriptionTopic.length) {
+    errors = {
+      ...errors,
+      Multi_Level_Wildcard_Only_At_End: {
+        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+        errorPath: 'subscriptionTopic'
+      }
+    };
+  }
+
+  // count number of "#" in templateTopic
+  count_multi = (templateTopic.match(/\#/g) || []).length;
+  if (count_multi >= 1) {
+    errors = {
+      ...errors,
+      No_Multi_Level_Wildcard_Allowed_In_TemplateTopic: {
+        ...ValidationFormlyError['No_Multi_Level_Wildcard_Allowed_In_TemplateTopic'],
+        errorPath: 'templateTopic'
+      }
+    };
+  }
+
+  let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
+  let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+  if (splitTT.length != splitTTS.length) {
+    errors = {
+      ...errors,
+      TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name: {
+        ...ValidationFormlyError['TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'],
+        errorPath: 'templateTopicSample'
+      }
+    };
+  } else {
+    for (let i = 0; i < splitTT.length; i++) {
+      if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
+        errors = {
+          ...errors,
+          TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+            ...ValidationFormlyError['TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+            errorPath: 'templateTopicSample'
+          }
+        };
+        break;
+      }
+      if (("/" == splitTTS[i]) && !("/" == splitTT[i])) {
+        errors = {
+          ...errors,
+          TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+            ...ValidationFormlyError['TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+            errorPath: 'templateTopicSample'
+          }
+        };
+        break;
+      }
+      if (!("/" == splitTT[i]) && !("+" == splitTT[i]) && !("#" == splitTT[i])) {
+        if (splitTT[i] != splitTTS[i]) {
+          errors = {
+            ...errors,
+            TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+              ...ValidationFormlyError['TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+              errorPath: 'templateTopicSample'
+            }
+          };
+          break;
+        }
+      }
+    }
+  }
+  return  Object.keys(errors).length > 0 ? errors : null;
 }
+
+export function checkTopicsOutboundAreValid(control: AbstractControl) {
+  let errors = {};
+  let error: boolean = false;
+
+  {
+    const { publishTopic, templateTopicSample } = control['controls'];
+    publishTopic.setErrors(null);
+    templateTopicSample.setErrors(null);
+  }
+  
+  const { publishTopic, templateTopicSample } = control.value;
+  // avoid displaying the message error when values are empty
+    if (publishTopic == '' || templateTopicSample  == '') {
+      return null;
+    }
+
+
+  // count number of "#" in publishTopic
+  let count_multi = (publishTopic.match(/\#/g) || []).length;
+  if (count_multi > 1) {
+    errors = {
+      ...errors,
+      Only_One_Multi_Level_Wildcard: {
+        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+        errorPath: 'publishTopic'
+      }
+    };
+  }
+
+  // count number of "+" in publishTopic
+  let count_single = (publishTopic.match(/\+/g) || []).length;
+  if (count_single > 1) {
+    errors = {
+      ...errors,
+      Only_One_Single_Level_Wildcard: {
+        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+        errorPath: 'publishTopic'
+      }
+    };
+  }
+
+  // wildcard "#" can only appear at the end in subscriptionTopic
+  if (count_multi >= 1 && publishTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != publishTopic.length) {
+    errors = {
+      ...errors,
+      Multi_Level_Wildcard_Only_At_End: {
+        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+        errorPath: 'publishTopic'
+      }
+    };
+  }
+
+  let splitPT: String[] = splitTopicExcludingSeparator(publishTopic);
+  let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+  if (splitPT.length != splitTTS.length) {
+    errors = {
+      ...errors,
+      TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name: {
+        ...ValidationFormlyError['PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'],
+        errorPath: 'templateTopicSample'
+      }
+    };
+  } else {
+    for (let i = 0; i < splitPT.length; i++) {
+      if ("/" == splitPT[i] && !("/" == splitTTS[i])) {
+        errors = {
+          ...errors,
+          PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+            ...ValidationFormlyError['PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+            errorPath: 'templateTopicSample'
+          }
+        };
+        break;
+      }
+      if (("/" == splitTTS[i]) && !("/" == splitPT[i])) {
+        errors = {
+          ...errors,
+          PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+            ...ValidationFormlyError['PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+            errorPath: 'templateTopicSample'
+          }
+        };
+        break;
+      }
+      if (!("/" == splitPT[i]) && !("+" == splitPT[i]) && !("#" == splitPT[i])) {
+        if (splitPT[i] != splitTTS[i]) {
+          errors = {
+            ...errors,
+            PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: {
+              ...ValidationFormlyError['PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'],
+              errorPath: 'templateTopicSample'
+            }
+          };
+          break;
+        }
+      }
+    }
+  }
+  return  Object.keys(errors).length > 0 ? errors : null;
+}
+
 
 export function whatIsIt(object) {
   var stringConstructor = "test".constructor;

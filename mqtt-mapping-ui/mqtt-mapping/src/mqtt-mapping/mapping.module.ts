@@ -40,6 +40,8 @@ import { SharedModule } from '../shared/shared.module';
 import { ConfigurationModule } from '../mqtt-configuration/configuration.module';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
+import { FormlyModule } from '@ngx-formly/core';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
 
 @NgModule({
   declarations: [
@@ -64,6 +66,12 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     SharedModule,
     PopoverModule,
     ConfigurationModule,
+    FormlyModule.forRoot({
+      validators: [
+        { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
+        { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
+      ],
+    }),
   ],
   entryComponents: [
     MappingComponent,
