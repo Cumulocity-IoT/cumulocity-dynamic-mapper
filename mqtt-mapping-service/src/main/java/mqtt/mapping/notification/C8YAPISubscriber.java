@@ -307,7 +307,7 @@ public class C8YAPISubscriber {
 
                 @Override
                 public void onClose() {
-                    logger.info("Connection was closed.");
+                    logger.info("Tenant ws connection closed.");
                     //reconnect();
                 }
             };
@@ -318,24 +318,35 @@ public class C8YAPISubscriber {
 
     }
 
-    public void reconnect() {
-        if (tenant_client != null) {
-            if (!tenant_client.isOpen()) {
-                if (tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                    initTenantClient();
-                } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
-                    tenant_client.reconnect();
+    public void reconnect(MicroserviceSubscriptionsService subscriptionsService) {
+        try {
+            if (tenant_client != null) {
+                logger.info("Trying to reconnect ws tenant client... ");
+                if (!tenant_client.isOpen()) {
+                    if (tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            initTenantClient();
+                        });
+                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                        tenant_client.reconnect();
+                    }
                 }
             }
-        }
-        if (device_client != null) {
-            if (!device_client.isOpen()) {
-                if (device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                    initDeviceClient();
-                } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
-                    device_client.reconnect();
+            if (device_client != null) {
+                logger.info("Trying to reconnect ws device client... ");
+                if (!device_client.isOpen()) {
+                    if (device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+                            initDeviceClient();
+                        });
+                    } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                        device_client.reconnect();
+                    }
                 }
             }
+        } catch (Exception e) {
+            logger.error("Error reconnecting to Notification Service: {}", e.getLocalizedMessage());
+            e.printStackTrace();
         }
     }
 
@@ -500,7 +511,7 @@ public class C8YAPISubscriber {
             //Only start it once
             if (executorFuture == null) {
                 executorFuture = executorService.scheduleAtFixedRate(() -> {
-                    reconnect();
+                    reconnect(subscriptionsService);
                 }, 30, 30, TimeUnit.SECONDS);
             }
             return client;
