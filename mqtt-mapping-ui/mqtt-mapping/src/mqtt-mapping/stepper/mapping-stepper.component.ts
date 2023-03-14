@@ -24,10 +24,10 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject } from 'rxjs';
-import { debounceTime } from "rxjs/operators";
+import { BehaviorSubject, Subject } from 'rxjs';
+import { debounceTime, takeUntil, tap } from "rxjs/operators";
 import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers, getExternalTemplate, SAMPLE_TEMPLATES_EXTERNAL } from "../../shared/util";
+import { checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers, getExternalTemplate } from "../../shared/util";
 import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
@@ -123,6 +123,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   stepper: C8yStepper;
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  onDestroy$ = new Subject<void>();
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
@@ -150,63 +151,80 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         templateOptions: {
           label: 'Mapping Name',
           disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          required: true
         },
       },
       {
-        key: 'subscriptionTopic',
-        type: 'input',
-        templateOptions: {
-          label: 'Subscription Topic',
-          placeholder: 'Subscription Topic ...',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          change: (field: FormlyFieldConfig, event?: any) => {
-            this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
-            this.mapping.templateTopicSample = this.mapping.templateTopic;
-            this.mapping = {
-              ...this.mapping
-            }
-          }
+        validators: {
+          validation: [
+            { name: (this.stepperConfiguration.direction == Direction.INBOUND ?'checkTopicsInboundAreValid': 'checkTopicsOutboundAreValid') },
+          ]
         },
-        hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+        fieldGroup: [
+          {
+            key: 'subscriptionTopic',
+            type: 'input',
+            templateOptions: {
+              label: 'Subscription Topic',
+              placeholder: 'Subscription Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Subscription Topic',
+              change: (field: FormlyFieldConfig, event?: any) => {
+                this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
+                this.mapping.templateTopicSample = this.mapping.templateTopic;
+                this.mapping = {
+                  ...this.mapping
+                }
+              },
+              required: this.stepperConfiguration.direction == Direction.INBOUND
+            },
+            hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+          },
+          {
+            key: 'publishTopic',
+            type: 'input',
+            templateOptions: {
+              label: 'Publish Topic',
+              placeholder: 'Publish Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                const derived = deriveTemplateTopicFromTopic(this.propertyFormly.get('publishTopic').value);
+                this.mapping.templateTopicSample = derived;
+                this.mapping = {
+                  ...this.mapping
+                }
+              },
+              required: this.stepperConfiguration.direction == Direction.OUTBOUND
+            },
+            hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
+          },
+          {
+            key: 'templateTopic',
+            type: 'input',
+            templateOptions: {
+              label: 'Template Topic',
+              placeholder: 'Template Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+              required: this.stepperConfiguration.direction == Direction.INBOUND
+
+            },
+            hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+          },
+          {
+            key: 'templateTopicSample',
+            type: 'input',
+            templateOptions: {
+              label: 'Template Topic Sample',
+              placeholder: 'e.g. device/110',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'The TemplateTopicSample name is used as a sample in the mapping.',
+              //must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND  ? 'Publish Topic.' : 'TemplateTopic.'),
+              required: true
+            },
+          }]
       },
-      {
-        key: 'publishTopic',
-        type: 'input',
-        templateOptions: {
-          label: 'Publish Topic',
-          placeholder: 'Publish Topic ...',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          change: (field: FormlyFieldConfig, event?: any) => {
-            const derived = deriveTemplateTopicFromTopic(this.propertyFormly.get('publishTopic').value);
-            this.mapping.templateTopicSample = derived;
-            this.mapping = {
-              ...this.mapping
-            }
-          }
-        },
-        hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
-      },
-      {
-        key: 'templateTopic',
-        type: 'input',
-        templateOptions: {
-          label: 'Template Topic',
-          placeholder: 'Template Topic ...',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          description: 'The TemplateTopic name must begin with the Topic name.'
-        },
-        hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
-      },
-      {
-        key: 'templateTopicSample',
-        type: 'input',
-        templateOptions: {
-          label: 'Template Topic Sample',
-          placeholder: 'e.g. device/110',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          description: 'The TemplateTopicSample name must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND) ? 'Publish Topic.' : 'TemplateTopic.'
-        },
-      },
+
       {
         key: 'filterOutbound',
         type: 'input',
@@ -214,7 +232,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           label: 'Filter Outbound',
           placeholder: 'e.g. custom_OperationFragment',
           disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          description: 'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.'
+          description: 'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.',
+          required: this.stepperConfiguration.direction == Direction.OUTBOUND
         },
         hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
       },
@@ -233,7 +252,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               change: (field: FormlyFieldConfig, event?: any) => {
                 console.log("Changes:", field, event, this.mapping)
                 this.onTargetAPIChanged(this.propertyFormly.get('targetAPI').value)
-              }
+              },
+              required: true
             },
           },
           {
@@ -243,7 +263,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             templateOptions: {
               label: 'Create Non Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'In case a MEAO is received and the referenced device does not yet exist, it can be created automatically.'
+              description: 'In case a MEAO is received and the referenced device does not yet exist, it can be created automatically.',
+              required: false
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || this.mapping.targetAPI == API.INVENTORY.name),
           },
@@ -254,7 +275,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             templateOptions: {
               label: 'Update Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Update Existing Device.'
+              description: 'Update Existing Device.',
+              required: false
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || (this.stepperConfiguration.direction == Direction.INBOUND && this.mapping.targetAPI != API.INVENTORY.name)),
           },
@@ -265,7 +287,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             templateOptions: {
               label: 'Auto acknowledge',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Auto acknowledge outbound operation.'
+              description: 'Auto acknowledge outbound operation.',
+              required: false
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name)),
           }],
@@ -281,6 +304,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               label: 'QOS',
               options: Object.values(QOS).map(key => { return { label: key, value: key } }),
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              required: true
             },
           },
           {
@@ -291,13 +315,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               label: 'Snoop payload',
               options: Object.keys(SnoopStatus).map(key => { return { label: key, value: key, disabled: (key != 'ENABLED' && key != 'NONE') } }),
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.'
+              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
+              required: true
             },
           },],
       },
     ];
 
-    this.setPropertyForm();
     this.setTemplateForm();
     this.editorOptionsSource = {
       ...this.editorOptionsSource,
@@ -343,48 +367,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.onSelectSubstitution(this.selectedSubstitution);
       editorSourceRef.setAttribute("listener", "true");
     }
-  }
-
-  private setPropertyForm(): void {
-    this.propertyForm = new FormGroup({
-      name: new FormControl({ value: this.mapping.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      id: new FormControl({ value: this.mapping.id, disabled: false }, Validators.required),
-      targetAPI: new FormControl({ value: this.mapping.targetAPI, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      subscriptionTopic: new FormControl({ value: this.mapping.subscriptionTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.nullValidator),
-      publishTopic: new FormControl({ value: this.mapping.publishTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction != Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopic: new FormControl({ value: this.mapping.templateTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopicSample: new FormControl({ value: this.mapping.templateTopicSample, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      active: new FormControl({ value: this.mapping.active, disabled: false }),
-      qos: new FormControl({ value: this.mapping.qos, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      mapDeviceIdentifier: new FormControl({ value: this.mapping.mapDeviceIdentifier, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      createNonExistingDevice: new FormControl({ value: this.mapping.createNonExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
-      updateExistingDevice: new FormControl({ value: this.mapping.updateExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      externalIdType: new FormControl({ value: this.mapping.externalIdType, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      snoopStatus: new FormControl({ value: this.mapping.snoopStatus, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      filterOutbound: new FormControl({ value: this.mapping.filterOutbound, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
-      autoAckOperation: new FormControl({ value: this.mapping.autoAckOperation, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-    },
-      checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
-    );
-  }
-
-  private getPropertyForm(): void {
-    this.mapping.name = this.propertyForm.controls['name'].value;
-    this.mapping.id = this.propertyForm.controls['id'].value;
-    this.mapping.targetAPI = this.propertyForm.controls['targetAPI'].value;
-    this.mapping.subscriptionTopic = this.propertyForm.controls['subscriptionTopic'].value;
-    this.mapping.publishTopic = this.propertyForm.controls['publishTopic'].value;
-    this.mapping.templateTopic = this.propertyForm.controls['templateTopic'].value;
-    this.mapping.templateTopicSample = this.propertyForm.controls['templateTopicSample'].value;
-    this.mapping.active = this.propertyForm.controls['active'].value;
-    this.mapping.qos = this.propertyForm.controls['qos'].value;
-    this.mapping.mapDeviceIdentifier = this.propertyForm.controls['mapDeviceIdentifier'].value;
-    this.mapping.createNonExistingDevice = this.propertyForm.controls['createNonExistingDevice'].value;
-    this.mapping.updateExistingDevice = this.propertyForm.controls['updateExistingDevice'].value;
-    this.mapping.externalIdType = this.propertyForm.controls['externalIdType'].value;
-    this.mapping.snoopStatus = this.propertyForm.controls['snoopStatus'].value;
-    this.mapping.filterOutbound = this.propertyForm.controls['filterOutbound'].value;
-    this.mapping.autoAckOperation = this.propertyForm.controls['autoAckOperation'].value;
   }
 
   private setTemplateForm(): void {
@@ -612,7 +594,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
-      this.getPropertyForm();
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
