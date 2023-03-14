@@ -39,6 +39,9 @@ import { MappingTabFactory } from './tab.factory';
 import { ExtensionComponent } from './mqtt-extension/grid/extension.component';
 import { ExtensionPropertiesComponent } from './mqtt-extension/properties/extension-properties.component';
 import { Editor2TestModule } from './editor2/editor2-test.module';
+//import { FormlyModule } from '@ngx-formly/core';
+import { FormlyBootstrapModule } from '@ngx-formly/bootstrap';
+import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
 
 const extensionRoutes: Route[] = [
   {
@@ -72,7 +75,9 @@ const extensionRoutes: Route[] = [
     ExtensionModule,
     Editor2TestModule,
     FormsModule,
+    ModalModule,
     ReactiveFormsModule,
+    FormlyBootstrapModule,
   ],
   exports: [
     ServiceMappingComponent,
@@ -83,6 +88,7 @@ const extensionRoutes: Route[] = [
   ],
   providers: [
     OverviewGuard,
+    BsModalService,
     { provide: HOOK_NAVIGATOR_NODES, useClass: MappingNavigationFactory, multi: true },
     { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
   ],
