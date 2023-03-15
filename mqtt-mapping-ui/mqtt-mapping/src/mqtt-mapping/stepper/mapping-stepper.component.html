@@ -54,8 +54,7 @@
         <div class="card-block p-b-0">
           <div [formGroup]="propertyFormly">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-              <formly-form [form]="propertyFormly" [fields]="fieldsProperty" [model]="mapping"
-                [options]="options"></formly-form>
+              <formly-form [form]="propertyFormly" [fields]="fieldsProperty" [model]="mapping"></formly-form>
             </div>
           </div>
         </div>
@@ -66,16 +65,17 @@
     </c8y-stepper-buttons>
   </cdk-step>
 
-  <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
+
+  <cdk-step [stepControl]="templateFormly" label="Define templates and substitutions">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
     </div>
     <div class="col-xs-12 flex-grow no-gutter">
       <div class="card-inner-scroll fit-h">
         <div class="card-block p-b-0">
           <div class="container">
-            <div [formGroup]="templateForm">
+            <div [formGroup]="templateFormly">
               <div class="row">
-                <div class="col-lg-5 col-lg-offset-1">
+                <div class="col-lg-5 col-lg-offset-1 column-right-border">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <div class="d-flex j-c-between">
                       <label translate>Template Source - {{sourceSystem}}</label>
@@ -101,7 +101,7 @@
                       (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
                       id="editorSource"></mapping-json-editor>
                     <c8y-messages class="text-left">
-                      <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathSource == ''" translate><span
                           class="text-warning">Select source node to
                           define substitution!</span>
                       </c8y-message>
@@ -169,7 +169,164 @@
                       (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
                     </mapping-json-editor>
                     <c8y-messages class="text-right">
-                      <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathTarget == ''" translate><span
+                          class="text-warning">Select target node to
+                          define substitution!</span>
+                      </c8y-message>
+                    </c8y-messages>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <formly-form [form]="templateFormly" [fields]="fieldsTemplate" [model]="templateModel"></formly-form>
+              </div>
+              <div class="row">
+                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                  Defined Substitutions
+                  <span class="hidden-xs hidden-sm m-l-4">
+                    <ng-template #popTemplateSub>Substitutions defining the device identifier are marked with an
+                      "*".</ng-template>
+                    <button class="btn-clean text-primary" [popover]="popTemplateSub"
+                      popoverTitle="Defined substitutions" placement="right" triggers="focus" type="button">
+                      <i c8yIcon="question-circle-o"></i>
+                    </button>
+                  </span>
+                </div>
+                <div class="col-lg-10 col-lg-offset-1">
+                  <div style="min-height: 32px;">
+                    <mapping-substitution-renderer [substitutions]="mapping.substitutions"
+                      [targetAPI]="mapping.targetAPI"
+                      [settings]="{color : COLOR_HIGHLIGHTED, selectedSubstitutionIndex: selectedSubstitution, editorMode: stepperConfiguration.editorMode}"
+                      (onSelect)="onSelectSubstitution($event)" (onDelete)="onDeleteSubstitution($event)">
+                    </mapping-substitution-renderer>
+                  </div>
+                  <c8y-messages class="text-right">
+                    <c8y-message
+                      *ngIf="(countDeviceIdentifers$ |async) != 1 && !stepperConfiguration.allowNoDefinedIdentifier">
+                      <span class="text-warning">Excactly
+                        one substitution defining the
+                        DeviceIdentifier must be used.</span>
+                    </c8y-message>
+                  </c8y-messages>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <c8y-stepper-buttons class="col-xs-12 d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
+      (onNext)="onNextStep($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
+  </cdk-step>
+
+
+
+
+
+  <!-- <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
+    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+    </div>
+    <div class="col-xs-12 flex-grow no-gutter">
+      <div class="card-inner-scroll fit-h">
+        <div class="card-block p-b-0">
+          <div class="container">
+            <div [formGroup]="templateForm">
+              <div class="row">
+                <div class="col-lg-5 col-lg-offset-1">
+                  <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
+                    <div class="d-flex j-c-between">
+                      <label translate>Template Source - {{sourceSystem}}</label>
+                      <div>
+                        <button type="button" name="sample" class="btn btn-default btn-xs"
+                          (click)="onSnoopedSourceTemplates()" translate title="Use snooped templates"
+                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || mapping.snoopedTemplates.length == 0 || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                          <i c8yIcon="enter-left"></i>Use Source Templates
+                          <span *ngIf="mapping.snoopedTemplates.length > 0" class="badge">
+                            {{mapping.snoopedTemplates.length}}</span>
+                        </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popSnoopedTemplates>Use snooped templates in the source template.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popSnoopedTemplates"
+                            popoverTitle="Use snooped templates" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                    <mapping-json-editor [options]="editorOptionsSource"
+                      (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
+                      id="editorSource"></mapping-json-editor>
+                    <c8y-messages class="text-left">
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathSource == ''" translate><span
+                          class="text-warning">Select source node to
+                          define substitution!</span>
+                      </c8y-message>
+                    </c8y-messages>
+                  </div>
+                  <div class="form-group" *ngIf="stepperConfiguration.showProcessorExtensions">
+                    <label translate>Extensions for {{mapping.mappingType}}</label>
+                    <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
+                      <select class="form-control" formControlName="exName" #extensionName
+                        (change)="onSelectExtension(templateForm.value.exName)" required>
+                        <option [ngValue]="null" disabled>Select an extension</option>
+                        <option *ngFor="let ex of extensions | keyvalue" [ngValue]="ex.key"
+                          [selected]="ex.key == mapping.extension?.name">
+                          {{ ex.key }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group" *ngIf="stepperConfiguration.showProcessorExtensions">
+                    <label translate>Events for {{mapping.extension.name}}</label>
+                    <div class="c8y-select-wrapper" style="max-height: 300px; overflow: auto !important;">
+                      <select class="form-control" formControlName="exEvent" #extensionEvent required>
+                        <option [ngValue]="null" disabled>Select an event</option>
+                        <option *ngFor="let ev of extensionEvents$ | async" [ngValue]="ev"
+                          [selected]="ev == mapping.extension?.event">
+                          {{ ev }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-lg-5 column-left-border">
+                  <div class="form-group">
+                    <div class="d-flex j-c-between">
+                      <div class="d-flex">
+                        <label>Template Target - {{targetSystem}}</label>
+                        <span class="hidden-xs hidden-sm m-l-4">
+                          <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
+                            map
+                            device identifiers.</ng-template>
+                          <button class="btn-clean text-primary" [popover]="popTemplateTarget"
+                            popoverTitle='Use dummy field "_DEVICE_IDENT_"' placement="right" triggers="focus"
+                            type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                      <div>
+                        <button type="button" name="sample" class="btn btn-default btn-xs" style="min-width: 65px;"
+                          (click)="onSampleTargetTemplatesButton()" translate title="Use Sample Target Templates"
+                          [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
+                          <i c8yIcon="enter-right"></i>Use Target Templates
+                        </button>
+                        <span class="hidden-xs hidden-sm p-l-4">
+                          <ng-template #popSampleTemplates>Use sample templates in the target template.
+                          </ng-template>
+                          <button class="btn-clean text-primary" [popover]="popSampleTemplates"
+                            popoverTitle="Use sample templates" placement="right" triggers="focus" type="button">
+                            <i c8yIcon="question-circle-o"></i>
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                    <mapping-json-editor [options]="editorOptionsTarget"
+                      (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
+                    </mapping-json-editor>
+                    <c8y-messages class="text-right">
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathTarget == ''" translate><span
                           class="text-warning">Select target node to
                           define substitution!</span>
                       </c8y-message>
@@ -179,7 +336,7 @@
               </div>
 
               <div class="d-flex flex-wrap">
-                <!-- row 1-->
+            
                 <div class="col-lg-5 col-lg-offset-1">
                   <div class="form-group">
                     <div class="input-group">
@@ -213,10 +370,10 @@
                       formControlName="ps"
                       placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
                     <c8y-messages>
-                      <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
+                      <c8y-message *ngIf="templateModel.sourceExpression.errorMsg !== ''" translate><span
                           class="text-warning">{{sourceExpressionErrorMsg}}</span>
                       </c8y-message>
-                      <c8y-message *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
+                      <c8y-message *ngIf="templateModel.sourceExpression.resultType == 'Array' && !templateModel.currentSubstitution.expandArray"
                         translate><span class="text-warning">Current expression extracts an array. Consider to
                           use the option <code>Expand Array</code> if you want to create multiple
                           measurements,
@@ -232,11 +389,11 @@
                     <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
                       formControlName="pt" />
                     <c8y-messages>
-                      <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
+                      <c8y-message *ngIf="templateModel.targetExpression.errorMsg !== ''" translate><span
                           class="text-warning">{{targetExpressionErrorMsg}}</span>
                       </c8y-message>
                       <c8y-message
-                        *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution, mapping.direction)"
+                        *ngIf="definesDeviceIdentifier(mapping.targetAPI,templateModel.currentSubstitution, mapping.direction)"
                         translate>
                         <span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
                           is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
@@ -247,12 +404,12 @@
                 </div>
                 <div class="col-lg-1"></div>
 
-                <!-- row 3-->
+              
                 <div class="col-lg-5 col-lg-offset-1">
                   <div class="form-group">
                     <div class="input-group">
                       <label translate>Expression - result -&nbsp;</label>
-                      <span class="text-muted">{{sourceExpression.resultType}}</span>
+                      <span class="text-muted">{{templateModel.sourceExpression.resultType}}</span>
                     </div>
                     <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                       formControlName="sourceExpressionResult" readonly />
@@ -262,7 +419,7 @@
                   <div class="form-group">
                     <div class="input-group">
                       <label translate>Expression - result -&nbsp;</label>
-                      <span class="text-muted">{{targetExpression.resultType}}</span>
+                      <span class="text-muted">{{templateModel.targetExpression.resultType}}</span>
                     </div>
                     <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
                       formControlName="targetExpressionResult" readonly />
@@ -275,7 +432,7 @@
                 </div>
               </div>
               <div class="row">
-                <!-- row 2 -->
+           
                 <div class="col-lg-2 col-lg-offset-1">
                   <div class="form-group">
                     <br>
@@ -314,7 +471,7 @@
                   </div>
                   <div class="c8y-select-wrapper">
                     <select class="form-control" formControlName="rs" #repairStrategyRef>
-                      <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
+                      <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!templateModel.currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
                           stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
                         {{ RepairStrategy[q] }}
                       </option>
@@ -348,12 +505,12 @@
                 <div class="col-lg-offset-1">
                   <c8y-messages>
                     <c8y-message
-                      *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
+                      *ngIf="templateFormly.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
                       translate><span class="text-warning">Only one substitution defining the
                         DeviceIdentifier can be used.</span>
                     </c8y-message>
                     <c8y-message
-                      *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
+                      *ngIf="templateFormly.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
                       translate><span class="text-warning">Excactly one substitution defining the
                         DeviceIdentifier must be used.</span>
                     </c8y-message>
@@ -399,7 +556,7 @@
     </div>
     <c8y-stepper-buttons class="col-xs-12 d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
       (onNext)="onNextStep($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }"></c8y-stepper-buttons>
-  </cdk-step>
+  </cdk-step> -->
 
   <cdk-step state="final" [stepControl]="testForm" stepLabel="step3" label="Test mapping">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
