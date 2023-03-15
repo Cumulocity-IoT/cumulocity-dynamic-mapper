@@ -41,7 +41,12 @@ import { ConfigurationModule } from '../mqtt-configuration/configuration.module'
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { FormlyModule } from '@ngx-formly/core';
-import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
+import { checkSubstitutionIsValid, checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
+import { FormlyTextField } from './shared/text-field';
+import { FormlyFieldButton } from './shared/button-type';
+import { MessageWrapper } from './shared/message-wrapper';
+import { MessageField } from './shared/message-field';
+
 
 @NgModule({
   declarations: [
@@ -59,6 +64,8 @@ import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shar
     ActiveRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
+    MessageField,
+    MessageWrapper
   ],
   imports: [
     CoreModule,
@@ -70,6 +77,15 @@ import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shar
       validators: [
         { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
         { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
+        { name: 'checkSubstitutionIsValid', validation: checkSubstitutionIsValid },
+      ],
+      types: [
+        { name: 'text', component: FormlyTextField },
+        { name: 'button', component: FormlyFieldButton },
+        { name: 'messageField', component: MessageField },
+      ],
+      wrappers: [
+        { name: 'messageWrapper', component: MessageWrapper },
       ],
     }),
   ],
