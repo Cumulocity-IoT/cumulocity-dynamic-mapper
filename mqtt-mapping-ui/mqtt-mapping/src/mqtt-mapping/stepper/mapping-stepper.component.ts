@@ -37,7 +37,7 @@ import { EditorMode, StepperConfiguration } from './stepper-model';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { isDisabled } from './util';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { MessageWrapper } from '../shared/message-wrapper';
+import { MessageWrapper } from '../shared/formly/message-wrapper';
 
 @Component({
   selector: 'mapping-stepper',
@@ -265,9 +265,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: 'col-lg-6 p-l-0',
+            className: 'col-lg-6 p-l-16 p-t-24',
             key: 'createNonExistingDevice',
-            type: 'boolean',
+            type: 'c8y-switch',
             templateOptions: {
               label: 'Create Non Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -277,9 +277,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || this.mapping.targetAPI == API.INVENTORY.name),
           },
           {
-            className: 'col-lg-6 p-l-0',
+            className: 'col-lg-6 p-l-16 p-t-24',
             key: 'updateExistingDevice',
-            type: 'boolean',
+            type: 'c8y-switch',
             templateOptions: {
               label: 'Update Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -289,9 +289,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || (this.stepperConfiguration.direction == Direction.INBOUND && this.mapping.targetAPI != API.INVENTORY.name)),
           },
           {
-            className: 'col-lg-6 p-l-0',
+            className: 'col-lg-6 p-l-16 p-t-24',
             key: 'autoAckOperation',
-            type: 'boolean',
+            type: 'c8y-switch',
             templateOptions: {
               label: 'Auto acknowledge',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -385,20 +385,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             className: 'col-lg-5 col-lg-offset-1 column-right-border p-b-24',
             //wrappers: ['messageWrapper'],
-            type: 'messageField',
+            type: 'message-field',
             templateOptions: {
               //enabled: (this.templateModel?.sourceExpression?.resultType == 'Array' && !this.templateModel.currentSubstitution.expandArray),
               textClass: 'text-warning',
             },
             expressionProperties: {
-              'templateOptions.content': 'Current expression extracts an array. Consider to use the option "Expand Array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"</code>"',
+              'templateOptions.content': (model) => 'Current expression extracts an array. Consider to use the option "Expand Array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"',
               'templateOptions.enabled': (model) => (model?.sourceExpression?.resultType == 'Array' && !model.currentSubstitution.expandArray),
             }
           },
           {
             className: 'col-lg-5 column-left-border p-b-24',
             //wrappers: ['messageWrapper'],
-            type: 'messageField',
+            type: 'message-field',
             templateOptions: {
               textClass: 'text-info',
             },
@@ -451,11 +451,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: 'col-lg-3 col-lg-offset-1',
+            className: 'col-lg-3 col-lg-offset-1 p-l-16 p-t-24',
             key: 'currentSubstitution.expandArray',
-            type: 'boolean',
+            type: 'c8y-switch',
             templateOptions: {
               label: 'Expand Array',
+              description:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+              substitutions.`,
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
               readonly: true,
             }
@@ -466,6 +468,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: 'select',
             templateOptions: {
               label: 'Repair strategy',
+              description: `Strategy defining what should happen when extracted arrays in
+              different expressions do not have the same size. How are missing values handled?`,
               options: Object.keys(RepairStrategy).map(key => {
                 return {
                   label: key, value: key, disabled: ((!this.templateModel.currentSubstitution.expandArray && (key == 'USE_FIRST_VALUE_OF_ARRAY' || key == 'USE_LAST_VALUE_OF_ARRAY')) ||
@@ -480,10 +484,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             }
           },
           {
-            className: 'col-lg-3',
+            className: 'col-lg-3 pull-right p-t-24',
             type: 'button',
             templateOptions: {
               text: 'Add new substitution',
+              description:`Add new substitution. Before target and source property in
+              templates
+              have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),
               disabled: !this.stepperConfiguration.showEditorSource || this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               readonly: true,

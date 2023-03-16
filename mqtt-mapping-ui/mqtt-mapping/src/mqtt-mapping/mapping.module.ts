@@ -42,10 +42,13 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { FormlyModule } from '@ngx-formly/core';
 import { checkSubstitutionIsValid, checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
-import { FormlyTextField } from './shared/text-field';
-import { FormlyFieldButton } from './shared/button-type';
-import { MessageWrapper } from './shared/message-wrapper';
-import { MessageField } from './shared/message-field';
+import { FormlyTextField } from './shared/formly/text-field';
+import { FormlyFieldButton } from './shared/formly/button-type';
+import { MessageWrapper } from './shared/formly/message-wrapper';
+import { MessageField } from './shared/formly/message-field';
+import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper';
+import { C8YSwitchField } from './shared/formly/c8y-switch-field';
+import { CommonModule } from '@angular/common';
 
 
 @NgModule({
@@ -65,7 +68,9 @@ import { MessageField } from './shared/message-field';
     SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,
-    MessageWrapper
+    MessageWrapper,
+    FormlyHorizontalWrapper,
+    C8YSwitchField
   ],
   imports: [
     CoreModule,
@@ -82,10 +87,12 @@ import { MessageField } from './shared/message-field';
       types: [
         { name: 'text', component: FormlyTextField },
         { name: 'button', component: FormlyFieldButton },
-        { name: 'messageField', component: MessageField },
+        { name: 'message-field', component: MessageField },
+        { name: 'c8y-switch', component: C8YSwitchField },
       ],
       wrappers: [
-        { name: 'messageWrapper', component: MessageWrapper },
+        { name: 'message-wrapper', component: MessageWrapper },
+        { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
       ],
     }),
   ],
