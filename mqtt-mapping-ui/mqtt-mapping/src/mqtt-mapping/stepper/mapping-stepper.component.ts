@@ -20,7 +20,7 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
@@ -171,12 +171,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroup: [
           {
             key: 'subscriptionTopic',
+            wrappers: ['tooltip-wrapper'],
             type: 'input',
             templateOptions: {
               label: 'Subscription Topic',
               placeholder: 'Subscription Topic ...',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Subscription Topic',
+              tooltip: 'Subscription Topic',
               change: (field: FormlyFieldConfig, event?: any) => {
                 this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
                 this.mapping.templateTopicSample = this.mapping.templateTopic;
@@ -209,11 +210,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             key: 'templateTopic',
             type: 'input',
+            wrappers: ['tooltip-wrapper'],
             templateOptions: {
               label: 'Template Topic',
               placeholder: 'Template Topic ...',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+              tooltip: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
               required: this.stepperConfiguration.direction == Direction.INBOUND
 
             },
@@ -222,11 +224,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             key: 'templateTopicSample',
             type: 'input',
+            wrappers: ['tooltip-wrapper'],
             templateOptions: {
               label: 'Template Topic Sample',
               placeholder: 'e.g. device/110',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'The TemplateTopicSample name is used as a sample in the mapping.',
+              tooltip: `The TemplateTopicSample name
+              must have the same number of
+              levels and must match the TemplateTopic.`,
               //must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND  ? 'Publish Topic.' : 'TemplateTopic.'),
               required: true
             },
@@ -319,11 +324,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: 'col-lg-6 p-l-0',
             key: 'snoopStatus',
             type: 'select',
+            wrappers: ['tooltip-wrapper'],
             templateOptions: {
               label: 'Snoop payload',
               options: Object.keys(SnoopStatus).map(key => { return { label: key, value: key, disabled: (key != 'ENABLED' && key != 'NONE') } }),
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
+              tooltip: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
               required: true
             },
           },],
@@ -332,20 +338,30 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
     this.fieldsTemplate = [
       {
-        // validators: {
-        //   validation: [
-        //     { name: 'checkSubstitutionIsValid' },
-        //   ]
-        // },
         fieldGroup: [
           {
             className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
             key: 'currentSubstitution.pathSource',
             type: 'input',
+            wrappers: ['tooltip-wrapper'],
+
             templateOptions: {
               label: 'Evaluate Expression on Source',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               placeholder: 'e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10',
+              tooltip: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>to convert a UNIX timestamp to ISO date format use:
+                  <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to join substring starting at position 5 of property <code>txt</code> with
+                  device
+                  identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
               change: (field: FormlyFieldConfig, event?: any) => {
                 this.templateFormly.get('currentSubstitution.pathSource').setErrors(null);
                 this.updateSourceExpressionResult(this.templateFormly.get('currentSubstitution.pathSource').value);
@@ -356,7 +372,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 }
 
               },
-              //description: 'Use <a href="https://jsonata.org" target="_blank">JSONata</a> in your expressions: <ol> <li>to convert a UNIX timestamp to ISO date format use:  <code>$fromMillis($number(deviceTimestamp))</code></li> <li>to join substring starting at position 5 of property <code>txt</code> with device identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li> <li>function chaining using <code>~></code> is not supported, instead use function notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code> becomes <code>$sum(Account.Product.(Price * Quantity))</code></li> </ol>',
               required: false
             },
           },
@@ -384,10 +399,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroup: [
           {
             className: 'col-lg-5 col-lg-offset-1 column-right-border p-b-24',
-            //wrappers: ['messageWrapper'],
             type: 'message-field',
             templateOptions: {
-              //enabled: (this.templateModel?.sourceExpression?.resultType == 'Array' && !this.templateModel.currentSubstitution.expandArray),
               textClass: 'text-warning',
             },
             expressionProperties: {
@@ -397,7 +410,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           },
           {
             className: 'col-lg-5 column-left-border p-b-24',
-            //wrappers: ['messageWrapper'],
             type: 'message-field',
             templateOptions: {
               textClass: 'text-info',
@@ -451,12 +463,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: 'col-lg-3 col-lg-offset-1 p-l-16 p-t-24',
+            className: 'col-lg-3 col-lg-offset-1 p-l-24',
             key: 'currentSubstitution.expandArray',
             type: 'c8y-switch',
+            wrappers: ['tooltip-wrapper'],
             templateOptions: {
               label: 'Expand Array',
-              description:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+              tooltip:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
               substitutions.`,
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
               readonly: true,
@@ -466,9 +479,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: 'col-lg-4',
             key: 'currentSubstitution.repairStrategy',
             type: 'select',
+            wrappers: ['tooltip-wrapper'],
             templateOptions: {
               label: 'Repair strategy',
-              description: `Strategy defining what should happen when extracted arrays in
+              tooltip: `Strategy defining what should happen when extracted arrays in
               different expressions do not have the same size. How are missing values handled?`,
               options: Object.keys(RepairStrategy).map(key => {
                 return {
@@ -499,6 +513,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       },
     ];
 
+    this.setTemplateForm();
     this.editorOptionsSource = {
       ...this.editorOptionsSource,
       modes: ['tree', 'code'],
@@ -544,29 +559,25 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  // private setTemplateForm(): void {
-  //   this.templateForm = new FormGroup({
-  //     ps: new FormControl({ value: this.currentSubstitution.pathSource, disabled: false }),
-  //     pt: new FormControl({ value: this.currentSubstitution.pathTarget, disabled: false }),
-  //     rs: new FormControl({ value: this.currentSubstitution.repairStrategy, disabled: this.stepperConfiguration.direction == Direction.OUTBOUND }),
-  //     ea: new FormControl({ value: this.currentSubstitution.expandArray, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
-  //     exName: new FormControl({ value: this.mapping?.extension?.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-  //     exEvent: new FormControl({ value: this.mapping?.extension?.event, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-  //     sourceExpressionResult: new FormControl({ value: this.sourceExpression.result, disabled: true }),
-  //     targetExpressionResult: new FormControl({ value: this.targetExpression.result, disabled: true }),
-  //   },
-  //     checkSubstitutionIsValid(this.mapping, this.stepperConfiguration)
-  //   );
-  // }
 
+  private setTemplateForm(): void {
+    this.templateForm = new FormGroup({
+      exName: new FormControl({ value: this.mapping?.extension?.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+      exEvent: new FormControl({ value: this.mapping?.extension?.event, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
+    },
+    );
+  }
 
+  private getTemplateForm(): void {
+    if (this.mapping.extension) {
+      this.mapping.extension.name = this.templateForm.controls['exName'].value;
+      this.mapping.extension.event = this.templateForm.controls['exEvent'].value;
+    }
+  }
 
   public onSelectedSourcePathChanged(path: string) {
     this.updateSourceExpressionResult(path);
     this.templateModel.currentSubstitution.pathSource = path;
-    // this.templateModel.currentSubstitution = {
-    //   ...this.templateModel.currentSubstitution
-    // }
   }
 
   public updateSourceExpressionResult(path: string) {
@@ -589,9 +600,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onSelectedTargetPathChanged(path: string) {
     this.updateTargetExpressionResult(path);
     this.templateModel.currentSubstitution.pathTarget = path;
-    // this.templateModel.currentSubstitution = {
-    //   ...this.templateModel.currentSubstitution
-    // }
   }
 
   public updateTargetExpressionResult(path: string) {
@@ -747,6 +755,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         event.stepper.next();
       }
     } else if (this.step == "Define templates and substitutions") {
+      this.getTemplateForm();
       this.editorTestingRequest.set(this.editorSource ? this.editorSource.get() : {} as JSON);
       this.onSelectSubstitution(0);
       event.stepper.next();
