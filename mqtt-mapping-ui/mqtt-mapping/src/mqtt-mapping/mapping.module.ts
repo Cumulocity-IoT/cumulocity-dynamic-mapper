@@ -49,6 +49,7 @@ import { MessageField } from './shared/formly/message-field';
 import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper';
 import { C8YSwitchField } from './shared/formly/c8y-switch-field';
 import { CommonModule } from '@angular/common';
+import { TooltipWrapper } from './shared/formly/tooltip-wrapper';
 
 
 @NgModule({
@@ -70,7 +71,8 @@ import { CommonModule } from '@angular/common';
     MessageField,
     MessageWrapper,
     FormlyHorizontalWrapper,
-    C8YSwitchField
+    C8YSwitchField,
+    TooltipWrapper
   ],
   imports: [
     CoreModule,
@@ -93,6 +95,7 @@ import { CommonModule } from '@angular/common';
       wrappers: [
         { name: 'message-wrapper', component: MessageWrapper },
         { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
+        { name: 'tooltip-wrapper', component: TooltipWrapper },
       ],
     }),
   ],
