@@ -334,6 +334,29 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },],
       },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-lg-6 p-l-16 p-t-24',
+            key: 'mapDeviceIdentifier',
+            type: 'c8y-switch',
+            templateOptions: {
+              label: 'Map Device Identifier',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+            },
+          },
+          {
+            className: 'col-lg-6 p-l-0',
+            key: 'externalIdType',
+            type: 'input',
+            templateOptions: {
+              label: 'External Id type',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+            },
+            hideExpression: (model) => (!model.mapDeviceIdentifier),
+          },],
+      },
     ];
 
     this.fieldsTemplate = [
