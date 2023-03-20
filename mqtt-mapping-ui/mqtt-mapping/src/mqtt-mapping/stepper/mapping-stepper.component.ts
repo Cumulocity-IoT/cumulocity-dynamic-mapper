@@ -252,7 +252,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       },
 
       {
-        //fieldGroupClassName: 'row',
         fieldGroup: [
           {
             className: 'col-lg-6 p-l-0',

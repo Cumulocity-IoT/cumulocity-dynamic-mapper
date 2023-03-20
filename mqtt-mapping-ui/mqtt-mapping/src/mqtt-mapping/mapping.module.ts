@@ -21,7 +21,7 @@
 
 
 import { NgModule } from '@angular/core';
-import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
+import { CoreModule, DynamicFormsModule, HOOK_ROUTE, Route, SelectComponent } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { MappingComponent } from './grid/mapping.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
@@ -40,7 +40,7 @@ import { SharedModule } from '../shared/shared.module';
 import { ConfigurationModule } from '../mqtt-configuration/configuration.module';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
-import { FormlyModule } from '@ngx-formly/core';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { checkSubstitutionIsValid, checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
 import { FormlyTextField } from './shared/formly/text-field';
 import { FormlyFieldButton } from './shared/formly/button-type';
@@ -48,8 +48,8 @@ import { MessageWrapper } from './shared/formly/message-wrapper';
 import { MessageField } from './shared/formly/message-field';
 import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper';
 import { C8YSwitchField } from './shared/formly/c8y-switch-field';
-import { CommonModule } from '@angular/common';
 import { TooltipWrapper } from './shared/formly/tooltip-wrapper';
+import { FormlyBootstrapModule } from '@ngx-formly/bootstrap';
 
 
 @NgModule({
@@ -72,7 +72,7 @@ import { TooltipWrapper } from './shared/formly/tooltip-wrapper';
     MessageWrapper,
     FormlyHorizontalWrapper,
     C8YSwitchField,
-    TooltipWrapper
+    TooltipWrapper,
   ],
   imports: [
     CoreModule,
@@ -80,24 +80,26 @@ import { TooltipWrapper } from './shared/formly/tooltip-wrapper';
     SharedModule,
     PopoverModule,
     ConfigurationModule,
-    FormlyModule.forRoot({
-      validators: [
-        { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
-        { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
-        { name: 'checkSubstitutionIsValid', validation: checkSubstitutionIsValid },
-      ],
-      types: [
-        { name: 'text', component: FormlyTextField },
-        { name: 'button', component: FormlyFieldButton },
-        { name: 'message-field', component: MessageField },
-        { name: 'c8y-switch', component: C8YSwitchField },
-      ],
-      wrappers: [
-        { name: 'message-wrapper', component: MessageWrapper },
-        { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
-        { name: 'tooltip-wrapper', component: TooltipWrapper },
-      ],
-    }),
+    //FormlyBootstrapModule,
+    DynamicFormsModule,
+    // FormlyModule.forRoot({
+    //   validators: [
+    //     { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
+    //     { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
+    //     { name: 'checkSubstitutionIsValid', validation: checkSubstitutionIsValid },
+    //   ],
+    //   types: [
+    //     { name: 'text', component: FormlyTextField },
+    //     { name: 'button', component: FormlyFieldButton },
+    //     { name: 'message-field', component: MessageField },
+    //     { name: 'c8y-switch', component: C8YSwitchField },
+    //   ],
+    //   wrappers: [
+    //     { name: 'message-wrapper', component: MessageWrapper },
+    //     { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
+    //     { name: 'tooltip-wrapper', component: TooltipWrapper },
+    //   ],
+    // }),
   ],
   entryComponents: [
     MappingComponent,
@@ -134,6 +136,30 @@ import { TooltipWrapper } from './shared/formly/tooltip-wrapper';
         },
       ] as Route[],
       multi: true,
+    },
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        validators: [
+          { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
+          { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
+          { name: 'checkSubstitutionIsValid', validation: checkSubstitutionIsValid },
+        ],
+        types: [
+          { name: 'text', component: FormlyTextField },
+          { name: 'button', component: FormlyFieldButton },
+          { name: 'message-field', component: MessageField },
+          { name: 'c8y-switch', component: C8YSwitchField },
+          { name: 'select', component: SelectComponent, wrappers: ['c8y-form-field'] },
+          { name: 'enum', extends: 'select' }
+        ],
+        wrappers: [
+          { name: 'message-wrapper', component: MessageWrapper },
+          { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
+          { name: 'tooltip-wrapper', component: TooltipWrapper },
+        ]
+      }
     },
   ]
 })
