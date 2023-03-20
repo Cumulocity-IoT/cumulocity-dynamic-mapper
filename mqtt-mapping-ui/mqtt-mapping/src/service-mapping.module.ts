@@ -39,8 +39,6 @@ import { MappingTabFactory } from './tab.factory';
 import { ExtensionComponent } from './mqtt-extension/grid/extension.component';
 import { ExtensionPropertiesComponent } from './mqtt-extension/properties/extension-properties.component';
 import { Editor2TestModule } from './editor2/editor2-test.module';
-//import { FormlyModule } from '@ngx-formly/core';
-import { FormlyBootstrapModule } from '@ngx-formly/bootstrap';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
 
 const extensionRoutes: Route[] = [
@@ -76,8 +74,8 @@ const extensionRoutes: Route[] = [
     Editor2TestModule,
     FormsModule,
     ModalModule,
-    ReactiveFormsModule,
-    FormlyBootstrapModule,
+    ReactiveFormsModule
+,
   ],
   exports: [
     ServiceMappingComponent,
