@@ -346,10 +346,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: 'col-lg-6',
             key: 'mapDeviceIdentifier',
             type: 'checkbox',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Map Device Identifier',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               switchMode: true,
+              description: `If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.`,
               indeterminate: false
             },
           },
@@ -465,7 +467,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               readonly: true,
             },
             expressionProperties: {
-              'templateOptions.label': label => 'Result Type ' + this.templateModel.currentSubstitution.sourceExpression.resultType,
+              'templateOptions.label': label => `Result Type [${this.templateModel.currentSubstitution.sourceExpression.resultType}]`,
             }
           },
           {
@@ -477,7 +479,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               readonly: true,
             },
             expressionProperties: {
-              'templateOptions.label': label => 'Result Type ' + this.templateModel.currentSubstitution.targetExpression.resultType,
+              'templateOptions.label': label => `Result Type [${this.templateModel.currentSubstitution.targetExpression.resultType}]`,
             }
           }],
       },
