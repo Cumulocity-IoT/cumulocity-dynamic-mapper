@@ -37,7 +37,7 @@ import { EditorMode, StepperConfiguration } from './stepper-model';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
 import { isDisabled } from './util';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { MessageWrapper } from '../shared/formly/message-wrapper';
+
 
 @Component({
   selector: 'mapping-stepper',
@@ -171,13 +171,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroup: [
           {
             key: 'subscriptionTopic',
-            wrappers: ['tooltip-wrapper'],
+            wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
               label: 'Subscription Topic',
               placeholder: 'Subscription Topic ...',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              tooltip: 'Subscription Topic',
+              description: 'Subscription Topic',
               change: (field: FormlyFieldConfig, event?: any) => {
                 this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
                 this.mapping.templateTopicSample = this.mapping.templateTopic;
@@ -210,12 +210,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             key: 'templateTopic',
             type: 'input',
-            wrappers: ['tooltip-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Template Topic',
               placeholder: 'Template Topic ...',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              tooltip: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+              description: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
               required: this.stepperConfiguration.direction == Direction.INBOUND
 
             },
@@ -224,14 +224,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             key: 'templateTopicSample',
             type: 'input',
-            wrappers: ['tooltip-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Template Topic Sample',
               placeholder: 'e.g. device/110',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              tooltip: `The TemplateTopicSample name
+              description: `The TemplateTopicSample name
               must have the same number of
-              levels and must match the TemplateTopic.`,
+              levels and must match the TemplateTopic.  Topic.The TemplateTopicSample name must have the same number of lmple name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.`,
               //must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND  ? 'Publish Topic.' : 'TemplateTopic.'),
               required: true
             },
@@ -250,7 +250,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         },
         hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
       },
-
       {
         fieldGroup: [
           {
@@ -269,38 +268,45 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: 'col-lg-6 p-l-16 p-t-24',
+            className: 'col-lg-6',
             key: 'createNonExistingDevice',
-            type: 'c8y-switch',
+            type: 'switch',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Create Non Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: 'In case a MEAO is received and the referenced device does not yet exist, it can be created automatically.',
-              required: false
+              description: 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
+              required: false,
+              switchMode: true,
+              indeterminate: false,
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || this.mapping.targetAPI == API.INVENTORY.name),
           },
           {
-            className: 'col-lg-6 p-l-16 p-t-24',
+            className: 'col-lg-6',
             key: 'updateExistingDevice',
-            type: 'c8y-switch',
+            type: 'switch',
             templateOptions: {
               label: 'Update Existing Device',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: 'Update Existing Device.',
-              required: false
+              required: false,
+              switchMode: true,
+              indeterminate: false
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || (this.stepperConfiguration.direction == Direction.INBOUND && this.mapping.targetAPI != API.INVENTORY.name)),
           },
           {
-            className: 'col-lg-6 p-l-16 p-t-24',
+            className: 'col-lg-6',
             key: 'autoAckOperation',
-            type: 'c8y-switch',
+            type: 'switch',
             templateOptions: {
               label: 'Auto acknowledge',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: 'Auto acknowledge outbound operation.',
-              required: false
+              required: false,
+              switchMode: true,
+              indeterminate: false
             },
             hideExpression: () => (this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name)),
           }],
@@ -323,12 +329,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: 'col-lg-6 p-l-0',
             key: 'snoopStatus',
             type: 'select',
-            wrappers: ['tooltip-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Snoop payload',
               options: Object.keys(SnoopStatus).map(key => { return { label: key, value: key, disabled: (key != 'ENABLED' && key != 'NONE') } }),
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              tooltip: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
+              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
               required: true
             },
           },],
@@ -337,12 +343,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className: 'col-lg-6 p-l-16 p-t-24',
+            className: 'col-lg-6',
             key: 'mapDeviceIdentifier',
-            type: 'c8y-switch',
+            type: 'checkbox',
             templateOptions: {
               label: 'Map Device Identifier',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              switchMode: true,
+              indeterminate: false
             },
           },
           {
@@ -365,13 +373,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
             key: 'currentSubstitution.pathSource',
             type: 'input',
-            wrappers: ['tooltip-wrapper'],
-
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Source',
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               placeholder: 'e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10',
-              tooltip: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
                 <li>to convert a UNIX timestamp to ISO date format use:
@@ -485,26 +492,28 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: 'col-lg-3 col-lg-offset-1 p-l-24',
+            className: 'col-lg-3 col-lg-offset-1',
             key: 'currentSubstitution.expandArray',
-            type: 'c8y-switch',
-            wrappers: ['tooltip-wrapper'],
+            type: 'switch',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Expand Array',
-              tooltip:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+              description:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
               substitutions.`,
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
               readonly: true,
+              switchMode: true,
+              indeterminate: false
             }
           },
           {
             className: 'col-lg-4',
             key: 'currentSubstitution.repairStrategy',
             type: 'select',
-            wrappers: ['tooltip-wrapper'],
+            wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Repair strategy',
-              tooltip: `Strategy defining what should happen when extracted arrays in
+              description: `Strategy defining what should happen when extracted arrays in
               different expressions do not have the same size. How are missing values handled?`,
               options: Object.keys(RepairStrategy).map(key => {
                 return {
