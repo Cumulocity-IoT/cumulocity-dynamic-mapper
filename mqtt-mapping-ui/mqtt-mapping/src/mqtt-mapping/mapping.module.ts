@@ -18,8 +18,6 @@
  *
  * @authors Christof Strack
  */
-
-
 import { NgModule } from '@angular/core';
 import { CoreModule, DynamicFormsModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
