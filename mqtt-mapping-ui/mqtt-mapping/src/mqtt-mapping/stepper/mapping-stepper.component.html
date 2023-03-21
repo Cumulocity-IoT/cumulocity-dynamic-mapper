@@ -54,7 +54,7 @@
         <div class="card-block p-b-0">
           <div [formGroup]="propertyFormly">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-              <formly-form [form]="propertyFormly" [fields]="fieldsProperty" [model]="mapping"></formly-form>
+              <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
             </div>
           </div>
         </div>
@@ -181,7 +181,7 @@
             </div>
             <div [formGroup]="templateFormly">
               <div class="row">
-                <formly-form [form]="templateFormly" [fields]="fieldsTemplate" [model]="templateModel"></formly-form>
+                <formly-form [form]="templateFormly" [fields]="templateFormlyFields" [model]="templateModel"></formly-form>
               </div>
             </div>
             <div [formGroup]="templateForm">
@@ -242,12 +242,12 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - {{targetSystem}} Request</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest"
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="testingModel.request"
                     #editorTestingRequest>
                   </mapping-json-editor>
                   <c8y-messages>
-                    <c8y-message *ngIf="templateTestingErrorMsg" translate><span
-                        class="text-warning">{{templateTestingErrorMsg}}</span>
+                    <c8y-message *ngIf="testingModel.errorMsg" translate><span
+                        class="text-warning">{{testingModel.errorMsg}}</span>
                     </c8y-message>
                   </c8y-messages>
                 </div>
@@ -257,7 +257,7 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - {{targetSystem}} Response</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse"
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="testingModel.response"
                     #editorTestingResponse>
                   </mapping-json-editor>
                 </div>
@@ -274,8 +274,8 @@
       </button>
       <button type="button" class="btn btn-default" (click)="onNextTestResult()"
         [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)">
-        Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
-          {{templateTestingResults.length}}</span>
+        Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
+          {{testingModel.results.length}}</span>
       </button>
       <button type="button" class="btn btn-default" [attr.disabled]="isDisabled(!stepperConfiguration.allowTestSending)"
         (click)="onSendTest()">

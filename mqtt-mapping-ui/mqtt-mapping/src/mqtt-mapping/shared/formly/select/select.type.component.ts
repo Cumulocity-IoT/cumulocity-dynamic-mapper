@@ -56,7 +56,5 @@ export class SelectComponent extends FieldType implements OnInit {
     if (this.to?.valueProp?.length > 0) {
       this.valueProp = this.to.valueProp;
     }
-
-    //this.formControl.setValue(this.field?.defaultValue ?? undefined);
   }
 }
