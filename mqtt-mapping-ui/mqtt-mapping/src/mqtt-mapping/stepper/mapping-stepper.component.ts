@@ -22,21 +22,21 @@ import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
-import { COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers, getExternalTemplate } from "../../shared/util";
-import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
-import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
-import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
-import { C8YRequest } from '../processor/prosessor.model';
-import { MappingService } from '../core/mapping.service';
-import { EditorMode, StepperConfiguration } from './stepper-model';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
+import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { COLOR_HIGHLIGHTED, countDeviceIdentifiers, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getExternalTemplate, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/util";
+import { MappingService } from '../core/mapping.service';
+import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
+import { C8YRequest } from '../processor/prosessor.model';
+import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
+import { EditorMode, StepperConfiguration } from './stepper-model';
+import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { isDisabled } from './util';
-import { FormlyFieldConfig } from '@ngx-formly/core';
 
 
 @Component({
@@ -80,7 +80,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   } = {
       results: [],
       selectedResult: -1
-    };
+  };
 
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
@@ -98,11 +98,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @ViewChild('editorTarget', { static: false }) editorTarget: JsonEditorComponent;
   @ViewChild('editorTestingRequest', { static: false }) editorTestingRequest: JsonEditorComponent;
   @ViewChild('editorTestingResponse', { static: false }) editorTestingResponse: JsonEditorComponent;
-
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild: SubstitutionRendererComponent;
+  @ViewChild(C8yStepper, { static: false }) stepper: C8yStepper;
 
-  @ViewChild(C8yStepper, { static: false })
-  stepper: C8yStepper;
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   onDestroy$ = new Subject<void>();
@@ -112,7 +110,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     public configurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private elementRef: ElementRef,
-
   ) { }
 
   ngOnInit() {
