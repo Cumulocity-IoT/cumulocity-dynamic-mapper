@@ -1,0 +1,17 @@
+<div class="c8y-select-wrapper">
+  <select
+    class="form-control"
+    [formControl]="formControl"
+    [class.is-invalid]="showError"
+    [formlyAttributes]="field"
+    [required]="to.required"
+  >
+    <option [ngValue]="undefined" selected disabled>{{ placeholder$ | async | translate }}</option>
+    <ng-container *ngFor="let opt of to.options">
+      <option [ngValue]="opt[valueProp]" [disabled]="opt.disabled || false">
+        {{ opt[labelProp] | translate }}
+      </option>
+    </ng-container>
+  </select>
+</div>
+  
