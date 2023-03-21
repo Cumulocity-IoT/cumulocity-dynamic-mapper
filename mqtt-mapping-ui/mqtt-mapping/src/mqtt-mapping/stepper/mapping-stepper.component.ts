@@ -54,32 +54,34 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
-  API = API;
   ValidationError = ValidationError;
-  RepairStrategy = RepairStrategy;
-  QOS = QOS;
-  SnoopStatus = SnoopStatus;
   Direction = Direction;
-  keys = Object.keys;
-  values = Object.values;
-  isWildcardTopic = isWildcardTopic;
-  definesDeviceIdentifier = definesDeviceIdentifier;
-  isDisabled = isDisabled;
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
+  isDisabled = isDisabled;
 
   propertyFormly: FormGroup = new FormGroup({});
+  propertyFormlyFields: FormlyFieldConfig[];
   templateFormly: FormGroup = new FormGroup({});
-  templateModel: any = {};
   templateForm: FormGroup;
+  templateFormlyFields: FormlyFieldConfig[];
   testForm: FormGroup;
+
+  templateModel: any = {};
   templateSource: any;
   templateTarget: any;
-  templateTestingResults: C8YRequest[] = [];
-  templateTestingErrorMsg: string;
-  templateTestingRequest: any;
-  templateTestingResponse: any;
-  selectedTestingResult: number = -1;
+
+  testingModel: {
+    results: C8YRequest[],
+    errorMsg?: string,
+    request?: any,
+    response?: any,
+    selectedResult: number
+  } = {
+      results: [],
+      selectedResult: -1
+    };
+
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
@@ -91,9 +93,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
   step: any;
-
-  fieldsProperty: FormlyFieldConfig[];
-  fieldsTemplate: FormlyFieldConfig[];
 
   @ViewChild('editorSource', { static: false }) editorSource: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget: JsonEditorComponent;
@@ -152,7 +151,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
     }
 
-    this.fieldsProperty = [
+    this.propertyFormlyFields = [
       {
         key: 'name',
         type: 'input',
@@ -368,7 +367,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       },
     ];
 
-    this.fieldsTemplate = [
+    this.templateFormlyFields = [
       {
         fieldGroup: [
           {
@@ -500,7 +499,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Expand Array',
-              description:`Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+              description: `Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
               substitutions.`,
               disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
               readonly: true,
@@ -535,7 +534,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: 'button',
             templateOptions: {
               text: 'Add new substitution',
-              description:`Add new substitution. Before target and source property in
+              description: `Add new substitution. Before target and source property in
               templates
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),
@@ -667,7 +666,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   async onTestTransformation() {
     let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), false);
-    this.templateTestingResults = testProcessingContext.requests;
+    this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
       this.alertService.warning("Test tranformation was not successfull!");
       testProcessingContext.errors.forEach(msg => {
@@ -679,7 +678,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   async onSendTest() {
     let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), true);
-    this.templateTestingResults = testProcessingContext.requests;
+    this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
       this.alertService.warning("Test tranformation was not successfull!");
       testProcessingContext.errors.forEach(msg => {
@@ -690,19 +689,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onNextTestResult() {
-    if (this.selectedTestingResult >= this.templateTestingResults.length - 1) {
-      this.selectedTestingResult = -1;
+    if (this.testingModel.selectedResult >= this.testingModel.results.length - 1) {
+      this.testingModel.selectedResult = -1;
     }
-    this.selectedTestingResult++;
-    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length) {
-      this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
-      this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
-      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI, this.mapping.direction, true), null);
-      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error
+    this.testingModel.selectedResult++;
+    if (this.testingModel.selectedResult >= 0 && this.testingModel.selectedResult < this.testingModel.results.length) {
+      this.testingModel.request = this.testingModel.results[this.testingModel.selectedResult].request;
+      this.testingModel.response = this.testingModel.results[this.testingModel.selectedResult].response;
+      this.editorTestingRequest.setSchema(getSchema(this.testingModel.results[this.testingModel.selectedResult].targetAPI, this.mapping.direction, true), null);
+      this.testingModel.errorMsg = this.testingModel.results[this.testingModel.selectedResult].error
     } else {
-      this.templateTestingRequest = JSON.parse("{}");
-      this.templateTestingResponse = JSON.parse("{}");
-      this.templateTestingErrorMsg = undefined;
+      this.testingModel.request = JSON.parse("{}");
+      this.testingModel.response = JSON.parse("{}");
+      this.testingModel.errorMsg = undefined;
     }
   }
 
