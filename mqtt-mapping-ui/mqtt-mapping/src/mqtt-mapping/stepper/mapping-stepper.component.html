@@ -26,7 +26,8 @@
   <ng-template c8yStepperIcon="final">
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
-  <cdk-step [stepControl]="propertyForm" label="Define topic">
+
+  <cdk-step [stepControl]="propertyFormly" label="Define topic">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
       <div class="row">
         <div class="col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
@@ -51,230 +52,9 @@
     <div class="col-xs-12 flex-grow no-gutter">
       <div class="card-inner-scroll fit-h">
         <div class="card-block p-b-0">
-          <div [formGroup]="propertyForm">
+          <div [formGroup]="propertyFormly">
             <div class="col-md-6 col-md-offset-3 col-lg-6 col-lg-offset-3">
-              <div class="form-group">
-                <label translate>Mapping Name</label>
-                <input formControlName="name" type="text" class="form-control" placeholder="e.g. Mapping - 1234"
-                  #nameRef />
-              </div>
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.INBOUND">
-                <label for="subscriptionTopic" translate>Subscription Topic</label>
-                <input formControlName="subscriptionTopic" type="text" class="form-control"
-                  placeholder="e.g. device/110" #subscriptionTopicRef required
-                  (change)="onSubscriptionTopicChanged(propertyForm.value.subscriptionTopic)" />
-                <c8y-messages>
-                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
-                    <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
-                  </c8y-message>
-                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
-                    translate><span class="text-warning">MultiLevel wildcard "#" can only appear at the end.</span>
-                  </c8y-message>
-                </c8y-messages>
-              </div>
-
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
-                <label for="publishTopic" translate>Publish Topic</label>
-                <input formControlName="publishTopic" type="text" class="form-control" placeholder="e.g. device/110"
-                  #publishTopicRef required (change)="onPublishTopicChanged(propertyForm.value.publishTopic)" />
-                <c8y-messages>
-                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Only_One_Multi_Level_Wildcard]" translate>
-                    <span class="text-warning">Only one MultiLevel wildcard "#" is allowed.</span>
-                  </c8y-message>
-                  <c8y-message *ngIf="propertyForm.errors?.[ValidationError.Multi_Level_Wildcard_Only_At_End]"
-                    translate><span class="text-warning">MultiLevel wildcard "#" can only appear at the end.</span>
-                  </c8y-message>
-                </c8y-messages>
-              </div>
-              <div class="form-group" *ngIf="stepperConfiguration.direction != Direction.OUTBOUND">
-                <div class="input-group">
-                  <label for="templateTopic">Template Topic</label>
-                  <span class="hidden-xs hidden-sm m-l-4">
-                    <ng-template #popTemplateTopic>The TemplateTopic name must begin with the Topic name.
-                    </ng-template>
-                    <button class="btn-clean text-primary" [popover]="popTemplateTopic"
-                      popoverTitle="Template Topic Name" placement="right" triggers="focus" type="button">
-                      <i c8yIcon="question-circle-o"></i>
-                    </button>
-                  </span>
-                </div>
-                <input formControlName="templateTopic" type="text" class="form-control" placeholder="e.g. device/110"
-                  #templateTopic id="templateTopic" (change)="onTemplateTopicChanged(propertyForm.value.templateTopic)"
-                  required />
-              </div>
-              <div class="form-group">
-                <div class="input-group">
-                  <label for="templateTopic">Template Topic Sample</label>
-                  <span class="hidden-xs hidden-sm m-l-4">
-                    <ng-template #popTemplateTopicSample><span class="text-warning">The TemplateTopicSample name
-                        must have the same number of
-                        levels and must match the TemplateTopic.</span>
-                    </ng-template>
-                    <button class="btn-clean text-primary" [popover]="popTemplateTopicSample"
-                      popoverTitle="Template Topic Name" placement="right" triggers="focus" type="button">
-                      <i c8yIcon="question-circle-o"></i>
-                    </button>
-                  </span>
-                </div>
-                <div>
-                  <input formControlName="templateTopicSample" type="text" class="form-control"
-                    placeholder="e.g. device/110" #templateTopicRef required />
-                  <c8y-messages>
-                    <c8y-message *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Not_Unique]" translate>
-                      <span class="text-warning">This TemplateTopic must be unique across other
-                        TemplateTopics.</span>
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic]"
-                      translate><span class="text-warning">This TemplateTopic can't be the starting part of another
-                        TemplateTopic or vice</span>
-                      versa.
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic]"
-                      translate><span class="text-warning">The TemplateTopic must match the
-                        SubscriptionTopic.</span>
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name]"
-                      translate><span class="text-warning">The TemplateTopic and TemplateTopicSample do not have
-                        same number of levels in the
-                        Topic Name.</span>
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="propertyForm.errors?.[ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name]"
-                      translate><span class="text-warning">TemplateTopic and TemplateTopicSample do not have same
-                        structure in the Topic Name.</span>
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="propertyForm.get('templateTopic').touched || propertyForm.get('subscriptionTopic').touched"
-                      translate><span class="text-info">After changing the TemplateTopic or SubscriptionTopic all
-                        substitions should to be revised.</span>
-                    </c8y-message>
-                  </c8y-messages>
-                </div>
-              </div>
-
-              <div class="form-group" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
-                <div class="input-group">
-                  <label for="filterOutbound">Filter Outbound</label>
-                  <span class="hidden-xs hidden-sm m-l-4">
-                    <ng-template #popFilterOutbound>The Filter Outbound can contain one fragment name to associate a
-                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
-                      applied.
-                    </ng-template>
-                    <button class="btn-clean text-primary" [popover]="popFilterOutbound" popoverTitle="Filter outbound"
-                      placement="right" triggers="focus" type="button">
-                      <i c8yIcon="question-circle-o"></i>
-                    </button>
-                  </span>
-                </div>
-                <div>
-                  <input formControlName="filterOutbound" type="text" class="form-control"
-                    placeholder="e.g. custom_OperationFragment" #filterOutbound id="filterOutbound" required />
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 form-group">
-                  <label for="targetAPI" translate>Target API</label>
-                  <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="targetAPI"
-                      (change)="onTargetAPIChanged(propertyForm.value.targetAPI)" #targetAPIRef>
-                      <option *ngFor="let api of keys(API)" [ngValue]="api">
-                        {{ api }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-6 form-group">
-                  <label translate>QOS</label>
-                  <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="qos" #qosRef>
-                      <option *ngFor="let q of QOS | keyvalue" [ngValue]="q.key">
-                        {{ q.value }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6"
-                  *ngIf="mapping.targetAPI != API.INVENTORY.name && stepperConfiguration.direction != Direction.OUTBOUND">
-                  <label class="c8y-switch" title="{{ 'Create Non Existing Device' | translate }}">
-                    <input type="checkbox" formControlName="createNonExistingDevice" />
-                    <span></span>
-                    <span>
-                      {{ 'Create Non Existing Device' | translate }}
-                    </span>
-                  </label>
-                </div>
-
-                <div class="col-md-6" *ngIf="mapping.targetAPI == API.INVENTORY.name">
-                  <label class="c8y-switch" title="{{ 'Update Existing Device' | translate }}">
-                    <input type="checkbox" formControlName="updateExistingDevice" />
-                    <span></span>
-                    <span>
-                      {{ 'Update Existing Device' | translate }}
-                    </span>
-                  </label>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6"
-                  *ngIf="stepperConfiguration.direction == Direction.OUTBOUND && propertyForm.get('targetAPI').value == API.OPERATION.name">
-                  <label class="c8y-switch" title="{{ 'Auto acknowledge outbound operation' | translate }}">
-                    <input type="checkbox" formControlName="autoAckOperation" />
-                    <span></span>
-                    <span>
-                      {{ 'Auto acknowledge outbound operation' | translate }}
-                    </span>
-                  </label>
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <br>
-                  <label class="c8y-switch" title="{{ 'Map device identifier' | translate }}">
-                    <input type="checkbox" formControlName="mapDeviceIdentifier" />
-                    <span></span>
-                    <span>
-                      {{ 'Map Device Identifier' | translate }}
-                    </span>
-                  </label>
-                </div>
-                <div class="col-md-6" *ngIf="propertyForm.get('mapDeviceIdentifier').value">
-                  <label for="externalIdType" translate>External Id Type</label>
-                  <div>
-                    <input formControlName="externalIdType" type="text" class="form-control" placeholder="e.g. c8y_Serial"
-                      #externalIdTypeRef />
-                  </div>
-                </div>
-              </div>
-              <div class="form-group">
-                <div class="input-group">
-                  <label class="m-r-4" translate>Snoop payload</label>
-                  <span class="hidden-xs hidden-sm">
-                    <ng-template #popTemplateSnoop>Snooping records the payloads and saves them for later usage.
-                      Once the snooping starts and payloads are recorded, they can be used as templates for
-                      defining
-                      the source format of the MQTT mapping.</ng-template>
-                    <button class="btn-clean text-primary" [popover]="popTemplateSnoop" popoverTitle="Snoop payload"
-                      placement="top" triggers="focus" type="button">
-                      <i c8yIcon="question-circle-o"></i>
-                    </button>
-                  </span>
-                </div>
-                <div class="c8y-select-wrapper">
-                  <select class="form-control" formControlName="snoopStatus" #snoopStatusRef>
-                    <option *ngFor="let q of keys(SnoopStatus)" [ngValue]="q"
-                      [attr.disabled]="isDisabled((q != 'ENABLED' && q != 'NONE'))">
-                      {{ SnoopStatus[q] }}
-                    </option>
-                  </select>
-                </div>
-              </div>
+              <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
             </div>
           </div>
         </div>
@@ -283,9 +63,10 @@
     <c8y-stepper-buttons class="col-xs-12 d-block card-footer p-24 separator" (onCancel)="onCancel.emit()"
       (onNext)="onNextStep($event)" [labels]="{ next: 'Next', cancel: 'Cancel' }">
     </c8y-stepper-buttons>
-
   </cdk-step>
-  <cdk-step [stepControl]="templateForm" label="Define templates and substitutions">
+
+
+  <cdk-step [stepControl]="templateFormly" label="Define templates and substitutions">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
     </div>
     <div class="col-xs-12 flex-grow no-gutter">
@@ -294,7 +75,7 @@
           <div class="container">
             <div [formGroup]="templateForm">
               <div class="row">
-                <div class="col-lg-5 col-lg-offset-1">
+                <div class="col-lg-5 col-lg-offset-1 column-right-border">
                   <div class="form-group" *ngIf="stepperConfiguration.showEditorSource">
                     <div class="d-flex j-c-between">
                       <label translate>Template Source - {{sourceSystem}}</label>
@@ -320,7 +101,7 @@
                       (onPathChanged)="onSelectedSourcePathChanged($event)" [data]="templateSource" #editorSource
                       id="editorSource"></mapping-json-editor>
                     <c8y-messages class="text-left">
-                      <c8y-message *ngIf="currentSubstitution.pathSource == ''" translate><span
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathSource == ''" translate><span
                           class="text-warning">Select source node to
                           define substitution!</span>
                       </c8y-message>
@@ -358,7 +139,8 @@
                       <div class="d-flex">
                         <label>Template Target - {{targetSystem}}</label>
                         <span class="hidden-xs hidden-sm m-l-4">
-                          <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_" to
+                          <ng-template #popTemplateTarget>The template contains the dummy field "_DEVICE_IDENT_"
+                            (inbound) or "_TOPIC_LEVEL_"(outbound) to
                             map
                             device identifiers.</ng-template>
                           <button class="btn-clean text-primary" [popover]="popTemplateTarget"
@@ -388,7 +170,7 @@
                       (onPathChanged)="onSelectedTargetPathChanged($event)" [data]="templateTarget" #editorTarget>
                     </mapping-json-editor>
                     <c8y-messages class="text-right">
-                      <c8y-message *ngIf="currentSubstitution.pathTarget == ''" translate><span
+                      <c8y-message *ngIf="templateModel.currentSubstitution.pathTarget == ''" translate><span
                           class="text-warning">Select target node to
                           define substitution!</span>
                       </c8y-message>
@@ -396,190 +178,13 @@
                   </div>
                 </div>
               </div>
-
-              <div class="d-flex flex-wrap">
-                <!-- row 1-->
-                <div class="col-lg-5 col-lg-offset-1">
-                  <div class="form-group">
-                    <div class="input-group">
-                      <label translate>Evaluate Expression on Source
-                      </label>
-                      <span class="hidden-xs hidden-sm p-l-4">
-                        <ng-template #popTemplateJSON>Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-                          in your expressions:
-                          <ol>
-                            <li>to convert a UNIX timestamp to ISO date format use:
-                              <code>$fromMillis($number(deviceTimestamp))</code>
-                            </li>
-                            <li>to join substring starting at position 5 of property <code>txt</code> with
-                              device
-                              identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
-                            <li>escape properties with special characters with <code>`</code>. The property
-                              <code>customer-1</code> becomes <code>`customer-1`</code>
-                            </li>
-                            <li>function chaining using <code>~></code> is not supported, instead use function
-                              notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-                              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-                          </ol>
-                        </ng-template>
-                        <button class="btn-clean text-primary delay-hide" [popover]="popTemplateJSON"
-                          popoverTitle="JSONata" placement="right" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                    <input #pathSourceRef type="text" class="form-control text-monospace font-smaller"
-                      formControlName="ps"
-                      placeholder="e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10" />
-                    <c8y-messages>
-                      <c8y-message *ngIf="sourceExpression.errorMsg !== ''" translate><span
-                          class="text-warning">{{sourceExpressionErrorMsg}}</span>
-                      </c8y-message>
-                      <c8y-message *ngIf="sourceExpression.resultType == 'Array' && !currentSubstitution.expandArray"
-                        translate><span class="text-warning">Current expression extracts an array. Consider to
-                          use the option <code>Expand Array</code> if you want to create multiple
-                          measurements,
-                          alarms, events or devices, i.e. <code>multi-device</code> or
-                          <code>multi-value</code></span>
-                      </c8y-message>
-                    </c8y-messages>
-                  </div>
-                </div>
-                <div class="col-lg-5 column-left-border">
-                  <div class="form-group">
-                    <label translate>Substitute in Target</label>
-                    <input #pathTargetRef type="text" class="text-monospace form-control font-smaller "
-                      formControlName="pt" />
-                    <c8y-messages>
-                      <c8y-message *ngIf="targetExpression.errorMsg !== ''" translate><span
-                          class="text-warning">{{targetExpressionErrorMsg}}</span>
-                      </c8y-message>
-                      <c8y-message
-                        *ngIf="definesDeviceIdentifier(mapping.targetAPI,currentSubstitution, mapping.direction)"
-                        translate>
-                        <span class="text-info"> <b>{{API[mapping.targetAPI].identifier}}</b>
-                          is resolved using the external Id <b>{{mapping.externalIdType}}</b> defined in the
-                          previous step.</span>
-                      </c8y-message>
-                    </c8y-messages>
-                  </div>
-                </div>
-                <div class="col-lg-1"></div>
-
-                <!-- row 3-->
-                <div class="col-lg-5 col-lg-offset-1">
-                  <div class="form-group">
-                    <div class="input-group">
-                      <label translate>Expression - result -&nbsp;</label>
-                      <span class="text-muted">{{sourceExpression.resultType}}</span>
-                    </div>
-                    <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                      formControlName="sourceExpressionResult" readonly />
-                  </div>
-                </div>
-                <div class="col-lg-5 column-left-border">
-                  <div class="form-group">
-                    <div class="input-group">
-                      <label translate>Expression - result -&nbsp;</label>
-                      <span class="text-muted">{{targetExpression.resultType}}</span>
-                    </div>
-                    <input #sourceExpressionResultRef type="text" class="text-monospace form-control font-smaller"
-                      formControlName="targetExpressionResult" readonly />
-                  </div>
-                </div>
-              </div>
+            </div>
+            <div [formGroup]="templateFormly">
               <div class="row">
-                <div class="legend form-block col-lg-10 col-lg-offset-1">
-                  Add new or show details of current substitution
-                </div>
+                <formly-form [form]="templateFormly" [fields]="templateFormlyFields" [model]="templateModel"></formly-form>
               </div>
-              <div class="row">
-                <!-- row 2 -->
-                <div class="col-lg-2 col-lg-offset-1">
-                  <div class="form-group">
-                    <br>
-                    <div class="input-group">
-                      <label class="c8y-switch" title="{{ 'Expand Array' | translate }}">
-                        <input type="checkbox" formControlName="ea" />
-                        <span></span>
-                        <span>
-                          {{ 'Expand Array' | translate }}
-                        </span>
-                      </label>
-                      <span class="hidden-xs hidden-sm">
-                        <ng-template #popExpandArray>Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
-                          substitutions.</ng-template>
-                        <button class="btn-clean text-primary" [popover]="popExpandArray" popoverTitle="Expand Array"
-                          placement="top" triggers="focus" type="button">
-                          <i c8yIcon="question-circle-o"></i>
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-lg-5">
-                  <div class="input-group">
-                    <label class="m-r-4" translate>Repair strategy</label>
-                    <span class="hidden-xs hidden-sm">
-                      <ng-template #popRepairStrategy>Strategy defining what should happen when extracted arrays
-                        in
-                        different expressions do not have the same size. How are missing values handled?
-                      </ng-template>
-                      <button class="btn-clean text-primary" [popover]="popRepairStrategy"
-                        popoverTitle="Repair strategy" placement="top" triggers="focus" type="button">
-                        <i c8yIcon="question-circle-o"></i>
-                      </button>
-                    </span>
-                  </div>
-                  <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="rs" #repairStrategyRef>
-                      <option *ngFor="let q of keys(RepairStrategy)" [ngValue]="q" [attr.disabled]="isDisabled((!currentSubstitution.expandArray && (q == 'USE_FIRST_VALUE_OF_ARRAY' || q == 'USE_LAST_VALUE_OF_ARRAY')) || 
-                          stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                        {{ RepairStrategy[q] }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-lg-3">
-                  <br>
-                  <div class="p-b-8 pull-right">
-                    <button type="button" name="sample" class="btn btn-default" (click)="onAddSubstitution()" translate
-                      title="Add new substitution"
-                      [attr.disabled]="isDisabled(!stepperConfiguration.showEditorSource || stepperConfiguration.editorMode == EditorMode.READ_ONLY)">
-                      <i c8yIcon="add"></i>Add Substitution
-                    </button>
-                    <span class="hidden-xs hidden-sm p-l-4">
-                      <ng-template #popTemplateAdd>Add new substitution. Before target and source property in
-                        templates
-                        have to be selected.
-                      </ng-template>
-                      <button class="btn-clean text-primary" [popover]="popTemplateAdd"
-                        popoverTitle="Add new substitution" placement="right" triggers="focus" type="button">
-                        <i c8yIcon="question-circle-o"></i>
-                      </button>
-                    </span>
-                  </div>
-                </div>
-                <div class="col-lg-1"></div>
-              </div>
-              <div class="row">
-
-                <div class="col-lg-offset-1">
-                  <c8y-messages>
-                    <c8y-message
-                      *ngIf="templateForm.errors?.[ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used]"
-                      translate><span class="text-warning">Only one substitution defining the
-                        DeviceIdentifier can be used.</span>
-                    </c8y-message>
-                    <c8y-message
-                      *ngIf="templateForm.errors?.[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used]"
-                      translate><span class="text-warning">Excactly one substitution defining the
-                        DeviceIdentifier must be used.</span>
-                    </c8y-message>
-                  </c8y-messages>
-                </div>
-              </div>
-
+            </div>
+            <div [formGroup]="templateForm">
               <div class="row">
                 <div class="legend form-block col-lg-10 col-lg-offset-1">
                   Defined Substitutions
@@ -610,7 +215,6 @@
                   </c8y-messages>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -638,12 +242,12 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - {{targetSystem}} Request</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingRequest"
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="testingModel.request"
                     #editorTestingRequest>
                   </mapping-json-editor>
                   <c8y-messages>
-                    <c8y-message *ngIf="templateTestingErrorMsg" translate><span
-                        class="text-warning">{{templateTestingErrorMsg}}</span>
+                    <c8y-message *ngIf="testingModel.errorMsg" translate><span
+                        class="text-warning">{{testingModel.errorMsg}}</span>
                     </c8y-message>
                   </c8y-messages>
                 </div>
@@ -653,7 +257,7 @@
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
                   <label for="testResult" translate>Testing - {{targetSystem}} Response</label>
-                  <mapping-json-editor [options]="editorOptionsTesting" [data]="templateTestingResponse"
+                  <mapping-json-editor [options]="editorOptionsTesting" [data]="testingModel.response"
                     #editorTestingResponse>
                   </mapping-json-editor>
                 </div>
@@ -670,8 +274,8 @@
       </button>
       <button type="button" class="btn btn-default" (click)="onNextTestResult()"
         [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)">
-        Show Next Test Result&nbsp;<span *ngIf="templateTestingResults.length > 0" class="badge badge-success">
-          {{templateTestingResults.length}}</span>
+        Show Next Test Result&nbsp;<span *ngIf="testingModel.results.length > 0" class="badge badge-success">
+          {{testingModel.results.length}}</span>
       </button>
       <button type="button" class="btn btn-default" [attr.disabled]="isDisabled(!stepperConfiguration.allowTestSending)"
         (click)="onSendTest()">

@@ -20,23 +20,24 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import { AfterContentChecked, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject } from 'rxjs';
-import { debounceTime } from "rxjs/operators";
-import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
-import { checkPropertiesAreValid, checkSubstitutionIsValid, COLOR_HIGHLIGHTED, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt, countDeviceIdentifiers, getExternalTemplate, SAMPLE_TEMPLATES_EXTERNAL } from "../../shared/util";
-import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
-import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
-import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
-import { C8YRequest } from '../processor/prosessor.model';
-import { MappingService } from '../core/mapping.service';
-import { EditorMode, StepperConfiguration } from './stepper-model';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
+import { JsonEditorComponent, JsonEditorOptions } from '../../shared/editor/jsoneditor.component';
+import { API, Direction, Extension, Mapping, MappingSubstitution, QOS, RepairStrategy, SnoopStatus, ValidationError } from "../../shared/mapping.model";
+import { COLOR_HIGHLIGHTED, countDeviceIdentifiers, definesDeviceIdentifier, deriveTemplateTopicFromTopic, getExternalTemplate, getSchema, isWildcardTopic, SAMPLE_TEMPLATES_C8Y, splitTopicExcludingSeparator, TOKEN_DEVICE_TOPIC, TOKEN_TOPIC_LEVEL, whatIsIt } from "../../shared/util";
+import { MappingService } from '../core/mapping.service';
+import { OverwriteSubstitutionModalComponent } from '../overwrite/overwrite-substitution-modal.component';
+import { C8YRequest } from '../processor/prosessor.model';
+import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
+import { EditorMode, StepperConfiguration } from './stepper-model';
+import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { isDisabled } from './util';
+
 
 @Component({
   selector: 'mapping-stepper',
@@ -53,30 +54,34 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<Mapping>();
 
-  API = API;
   ValidationError = ValidationError;
-  RepairStrategy = RepairStrategy;
-  QOS = QOS;
-  SnoopStatus = SnoopStatus;
   Direction = Direction;
-  keys = Object.keys;
-  values = Object.values;
-  isWildcardTopic = isWildcardTopic;
-  definesDeviceIdentifier = definesDeviceIdentifier;
-  isDisabled = isDisabled;
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
+  isDisabled = isDisabled;
 
-  propertyForm: FormGroup;
+  propertyFormly: FormGroup = new FormGroup({});
+  propertyFormlyFields: FormlyFieldConfig[];
+  templateFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
+  templateFormlyFields: FormlyFieldConfig[];
   testForm: FormGroup;
+
+  templateModel: any = {};
   templateSource: any;
   templateTarget: any;
-  templateTestingResults: C8YRequest[] = [];
-  templateTestingErrorMsg: string;
-  templateTestingRequest: any;
-  templateTestingResponse: any;
-  selectedTestingResult: number = -1;
+
+  testingModel: {
+    results: C8YRequest[],
+    errorMsg?: string,
+    request?: any,
+    response?: any,
+    selectedResult: number
+  } = {
+      results: [],
+      selectedResult: -1
+  };
+
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
@@ -84,46 +89,27 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
   editorOptionsTesting: JsonEditorOptions = new JsonEditorOptions();
-  sourceExpression = {
-    Rresult: '',
-    resultType: 'empty',
-    errrorMsg: ''
-  } as any
-  targetExpression = {
-    Rresult: '',
-    resultType: 'empty',
-    errrorMsg: ''
-  } as any
 
-  showConfigMapping: boolean = false;
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
-  currentSubstitution: MappingSubstitution = {
-    pathSource: '',
-    pathTarget: '',
-    repairStrategy: RepairStrategy.DEFAULT,
-    expandArray: false
-  };
   step: any;
 
   @ViewChild('editorSource', { static: false }) editorSource: JsonEditorComponent;
   @ViewChild('editorTarget', { static: false }) editorTarget: JsonEditorComponent;
   @ViewChild('editorTestingRequest', { static: false }) editorTestingRequest: JsonEditorComponent;
   @ViewChild('editorTestingResponse', { static: false }) editorTestingResponse: JsonEditorComponent;
-
   @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild: SubstitutionRendererComponent;
+  @ViewChild(C8yStepper, { static: false }) stepper: C8yStepper;
 
-  @ViewChild(C8yStepper, { static: false })
-  stepper: C8yStepper;
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
+  onDestroy$ = new Subject<void>();
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
     public configurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private elementRef: ElementRef,
-
   ) { }
 
   ngOnInit() {
@@ -131,13 +117,431 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem = this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'MQTT Broker';
     this.sourceSystem = this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'MQTT Broker';
+    this.templateModel = {
+      mapping: this.mapping,
+      currentSubstitution: {
+        pathSource: '',
+        pathTarget: '',
+        repairStrategy: RepairStrategy.DEFAULT,
+        expandArray: false,
+        targetExpression: {
+          path: '',
+          result: '',
+          resultType: 'empty',
+          errrorMsg: '',
+          infoMsg: '',
+          infoShow: ''
+        },
+        sourceExpression: {
+          path: '',
+          result: '',
+          resultType: 'empty',
+          errrorMsg: '',
+          infoMsg: '',
+          infoShow: ''
+        }
+      }
+    }
     console.log("Mapping to be updated:", this.mapping, this.stepperConfiguration);
     let numberSnooped = (this.mapping.snoopedTemplates ? this.mapping.snoopedTemplates.length : 0);
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success("Already " + numberSnooped + " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next");
     }
 
-    this.setPropertyForm();
+    this.propertyFormlyFields = [
+      {
+        key: 'name',
+        type: 'input',
+        templateOptions: {
+          label: 'Mapping Name',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          required: true
+        },
+      },
+      {
+        validators: {
+          validation: [
+            { name: (this.stepperConfiguration.direction == Direction.INBOUND ? 'checkTopicsInboundAreValid' : 'checkTopicsOutboundAreValid') },
+          ]
+        },
+        fieldGroup: [
+          {
+            key: 'subscriptionTopic',
+            wrappers: ['c8y-form-field'],
+            type: 'input',
+            templateOptions: {
+              label: 'Subscription Topic',
+              placeholder: 'Subscription Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Subscription Topic',
+              change: (field: FormlyFieldConfig, event?: any) => {
+                this.mapping.templateTopic = deriveTemplateTopicFromTopic(this.propertyFormly.get('subscriptionTopic').value);
+                this.mapping.templateTopicSample = this.mapping.templateTopic;
+                this.mapping = {
+                  ...this.mapping
+                }
+              },
+              required: this.stepperConfiguration.direction == Direction.INBOUND
+            },
+            hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+          },
+          {
+            key: 'publishTopic',
+            type: 'input',
+            templateOptions: {
+              label: 'Publish Topic',
+              placeholder: 'Publish Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                const derived = deriveTemplateTopicFromTopic(this.propertyFormly.get('publishTopic').value);
+                this.mapping.templateTopicSample = derived;
+                this.mapping = {
+                  ...this.mapping
+                }
+              },
+              required: this.stepperConfiguration.direction == Direction.OUTBOUND
+            },
+            hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
+          },
+          {
+            key: 'templateTopic',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Template Topic',
+              placeholder: 'Template Topic ...',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+              required: this.stepperConfiguration.direction == Direction.INBOUND
+
+            },
+            hideExpression: (this.stepperConfiguration.direction == Direction.OUTBOUND),
+          },
+          {
+            key: 'templateTopicSample',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Template Topic Sample',
+              placeholder: 'e.g. device/110',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: `The TemplateTopicSample name
+              must have the same number of
+              levels and must match the TemplateTopic.  Topic.The TemplateTopicSample name must have the same number of lmple name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.`,
+              //must have the same number of levels and must match the ' + (this.stepperConfiguration.direction == Direction.OUTBOUND  ? 'Publish Topic.' : 'TemplateTopic.'),
+              required: true
+            },
+          }]
+      },
+
+      {
+        key: 'filterOutbound',
+        type: 'input',
+        templateOptions: {
+          label: 'Filter Outbound',
+          placeholder: 'e.g. custom_OperationFragment',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          description: 'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.',
+          required: this.stepperConfiguration.direction == Direction.OUTBOUND
+        },
+        hideExpression: (this.stepperConfiguration.direction != Direction.OUTBOUND),
+      },
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-6 p-l-0',
+            key: 'targetAPI',
+            type: 'select',
+            templateOptions: {
+              label: 'Target API',
+              options: Object.keys(API).map(key => { return { label: key, value: key } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                console.log("Changes:", field, event, this.mapping)
+                this.onTargetAPIChanged(this.propertyFormly.get('targetAPI').value)
+              },
+              required: true
+            },
+          },
+          {
+            className: 'col-lg-6',
+            key: 'createNonExistingDevice',
+            type: 'switch',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Create Non Existing Device',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
+              required: false,
+              switchMode: true,
+              indeterminate: false,
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || this.mapping.targetAPI == API.INVENTORY.name),
+          },
+          {
+            className: 'col-lg-6',
+            key: 'updateExistingDevice',
+            type: 'switch',
+            templateOptions: {
+              label: 'Update Existing Device',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Update Existing Device.',
+              required: false,
+              switchMode: true,
+              indeterminate: false
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.OUTBOUND || (this.stepperConfiguration.direction == Direction.INBOUND && this.mapping.targetAPI != API.INVENTORY.name)),
+          },
+          {
+            className: 'col-lg-6',
+            key: 'autoAckOperation',
+            type: 'switch',
+            templateOptions: {
+              label: 'Auto acknowledge',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Auto acknowledge outbound operation.',
+              required: false,
+              switchMode: true,
+              indeterminate: false
+            },
+            hideExpression: () => (this.stepperConfiguration.direction == Direction.INBOUND || (this.stepperConfiguration.direction == Direction.OUTBOUND && this.mapping.targetAPI != API.OPERATION.name)),
+          }],
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-lg-6 p-l-0',
+            key: 'qos',
+            type: 'select',
+            templateOptions: {
+              label: 'QOS',
+              options: Object.values(QOS).map(key => { return { label: key, value: key } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              required: true
+            },
+          },
+          {
+            className: 'col-lg-6 p-l-0',
+            key: 'snoopStatus',
+            type: 'select',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Snoop payload',
+              options: Object.keys(SnoopStatus).map(key => { return { label: key, value: key, disabled: (key != 'ENABLED' && key != 'NONE') } }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: 'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the MQTT mapping.',
+              required: true
+            },
+          },],
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
+          {
+            className: 'col-lg-6',
+            key: 'mapDeviceIdentifier',
+            type: 'checkbox',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Map Device Identifier',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              switchMode: true,
+              description: `If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.`,
+              indeterminate: false
+            },
+          },
+          {
+            className: 'col-lg-6 p-l-0',
+            key: 'externalIdType',
+            type: 'input',
+            templateOptions: {
+              label: 'External Id type',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+            },
+            hideExpression: (model) => (!model.mapDeviceIdentifier),
+          },],
+      },
+    ];
+
+    this.templateFormlyFields = [
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
+            key: 'currentSubstitution.pathSource',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Evaluate Expression on Source',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              placeholder: 'e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10',
+              description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+              in your expressions:
+              <ol>
+                <li>to convert a UNIX timestamp to ISO date format use:
+                  <code>$fromMillis($number(deviceTimestamp))</code>
+                </li>
+                <li>to join substring starting at position 5 of property <code>txt</code> with
+                  device
+                  identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                <li>function chaining using <code>~</code> is not supported, instead use function
+                  notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+                  becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+              </ol>`,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                this.templateFormly.get('currentSubstitution.pathSource').setErrors(null);
+                this.updateSourceExpressionResult(this.templateFormly.get('currentSubstitution.pathSource').value);
+                if (this.templateModel.currentSubstitution.sourceExpression.errorMsg != '') {
+                  this.templateFormly.get('currentSubstitution.pathSource').setErrors({
+                    evalError: this.templateModel.currentSubstitution.sourceExpression.errorMsg
+                  })
+                }
+
+              },
+              required: false
+            },
+          },
+          {
+            className: 'col-lg-5 text-monospace font-smaller column-left-border',
+            key: 'currentSubstitution.pathTarget',
+            type: 'input',
+            templateOptions: {
+              label: 'Evaluate Expression on Target',
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              change: (field: FormlyFieldConfig, event?: any) => {
+                this.templateFormly.get('currentSubstitution.pathTarget').setErrors(null);
+                this.updateTargetExpressionResult(this.templateFormly.get('currentSubstitution.pathTarget').value);
+                if (this.templateModel.currentSubstitution.targetExpression.errorMsg != '') {
+                  this.templateFormly.get('currentSubstitution.pathTarget').setErrors({
+                    evalError: this.templateModel.currentSubstitution.targetExpression.errorMsg
+                  })
+                }
+              },
+              required: false
+            },
+          }],
+      },
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-5 col-lg-offset-1 column-right-border p-b-24',
+            type: 'message-field',
+            templateOptions: {
+              textClass: 'text-warning',
+            },
+            expressionProperties: {
+              'templateOptions.content': (model) => 'Current expression extracts an array. Consider to use the option "Expand Array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"',
+              'templateOptions.enabled': (model) => (model?.sourceExpression?.resultType == 'Array' && !model.currentSubstitution.expandArray),
+            }
+          },
+          {
+            className: 'col-lg-5 column-left-border p-b-24',
+            type: 'message-field',
+            templateOptions: {
+              textClass: 'text-info',
+            },
+            expressionProperties: {
+              'templateOptions.content': (model) => API[model.mapping.targetAPI].identifier + ` is resolved using the external Id ` + model.mapping.externalIdType + ` defined in the
+                          previous step.`,
+              'templateOptions.enabled': (model) => {
+                const c = definesDeviceIdentifier(model.mapping.targetAPI, model?.currentSubstitution, model.mapping.direction)
+                //console.log("WWWWW", c, model?.currentSubstitution)
+                return c
+              },
+            }
+          },],
+      },
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
+            key: 'currentSubstitution.sourceExpression.result',
+            type: 'input',
+            templateOptions: {
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              readonly: true,
+            },
+            expressionProperties: {
+              'templateOptions.label': label => `Result Type [${this.templateModel.currentSubstitution.sourceExpression.resultType}]`,
+            }
+          },
+          {
+            className: 'col-lg-5 text-monospace font-smaller column-left-border',
+            key: 'currentSubstitution.targetExpression.result',
+            type: 'input',
+            templateOptions: {
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              readonly: true,
+            },
+            expressionProperties: {
+              'templateOptions.label': label => `Result Type [${this.templateModel.currentSubstitution.targetExpression.resultType}]`,
+            }
+          }],
+      },
+      {
+        className: 'legend form-block col-lg-10 col-lg-offset-1',
+        key: 'textField',
+        type: 'text',
+        templateOptions: {
+          label: 'Add new or show details of current substitution'
+        }
+      },
+      {
+        fieldGroup: [
+          {
+            className: 'col-lg-3 col-lg-offset-1',
+            key: 'currentSubstitution.expandArray',
+            type: 'switch',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Expand Array',
+              description: `Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
+              substitutions.`,
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
+              readonly: true,
+              switchMode: true,
+              indeterminate: false
+            }
+          },
+          {
+            className: 'col-lg-4',
+            key: 'currentSubstitution.repairStrategy',
+            type: 'select',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Repair strategy',
+              description: `Strategy defining what should happen when extracted arrays in
+              different expressions do not have the same size. How are missing values handled?`,
+              options: Object.keys(RepairStrategy).map(key => {
+                return {
+                  label: key, value: key, disabled: ((!this.templateModel.currentSubstitution.expandArray && (key == 'USE_FIRST_VALUE_OF_ARRAY' || key == 'USE_LAST_VALUE_OF_ARRAY')) ||
+                    this.stepperConfiguration.editorMode == EditorMode.READ_ONLY)
+                }
+              }),
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND,
+              readonly: true,
+            },
+            expressionProperties: {
+              'templateOptions.label': label => 'Result Type ' + this.templateModel.currentSubstitution.targetExpression.resultType,
+            }
+          },
+          {
+            className: 'col-lg-3 pull-right p-t-24',
+            type: 'button',
+            templateOptions: {
+              text: 'Add new substitution',
+              description: `Add new substitution. Before target and source property in
+              templates
+              have to be selected.`,
+              onClick: ($event) => this.onAddSubstitution(),
+              disabled: !this.stepperConfiguration.showEditorSource || this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              readonly: true,
+            }
+          }],
+      },
+    ];
+
     this.setTemplateForm();
     this.editorOptionsSource = {
       ...this.editorOptionsSource,
@@ -165,8 +569,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       enableSort: false,
       enableTransform: false
     };
-    this.onExpressionsUpdated();
-    this.onPropertyFormUpdated();
+
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
 
     this.extensionEvents$.subscribe(events => {
@@ -185,191 +588,64 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  private setPropertyForm(): void {
-    this.propertyForm = new FormGroup({
-      name: new FormControl({ value: this.mapping.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      id: new FormControl({ value: this.mapping.id, disabled: false }, Validators.required),
-      targetAPI: new FormControl({ value: this.mapping.targetAPI, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      subscriptionTopic: new FormControl({ value: this.mapping.subscriptionTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.nullValidator),
-      publishTopic: new FormControl({ value: this.mapping.publishTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction != Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopic: new FormControl({ value: this.mapping.templateTopic, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.nullValidator : Validators.required)),
-      templateTopicSample: new FormControl({ value: this.mapping.templateTopicSample, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      active: new FormControl({ value: this.mapping.active, disabled: false }),
-      qos: new FormControl({ value: this.mapping.qos, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, Validators.required),
-      mapDeviceIdentifier: new FormControl({ value: this.mapping.mapDeviceIdentifier, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      createNonExistingDevice: new FormControl({ value: this.mapping.createNonExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
-      updateExistingDevice: new FormControl({ value: this.mapping.updateExistingDevice, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      externalIdType: new FormControl({ value: this.mapping.externalIdType, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      snoopStatus: new FormControl({ value: this.mapping.snoopStatus, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      filterOutbound: new FormControl({ value: this.mapping.filterOutbound, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }, (this.stepperConfiguration.direction == Direction.OUTBOUND ? Validators.required : Validators.nullValidator)),
-      autoAckOperation: new FormControl({ value: this.mapping.autoAckOperation, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-    },
-      checkPropertiesAreValid(this.mappings, this.stepperConfiguration.direction)
-    );
-  }
-
-  private getPropertyForm(): void {
-    this.mapping.name = this.propertyForm.controls['name'].value;
-    this.mapping.id = this.propertyForm.controls['id'].value;
-    this.mapping.targetAPI = this.propertyForm.controls['targetAPI'].value;
-    this.mapping.subscriptionTopic = this.propertyForm.controls['subscriptionTopic'].value;
-    this.mapping.publishTopic = this.propertyForm.controls['publishTopic'].value;
-    this.mapping.templateTopic = this.propertyForm.controls['templateTopic'].value;
-    this.mapping.templateTopicSample = this.propertyForm.controls['templateTopicSample'].value;
-    this.mapping.active = this.propertyForm.controls['active'].value;
-    this.mapping.qos = this.propertyForm.controls['qos'].value;
-    this.mapping.mapDeviceIdentifier = this.propertyForm.controls['mapDeviceIdentifier'].value;
-    this.mapping.createNonExistingDevice = this.propertyForm.controls['createNonExistingDevice'].value;
-    this.mapping.updateExistingDevice = this.propertyForm.controls['updateExistingDevice'].value;
-    this.mapping.externalIdType = this.propertyForm.controls['externalIdType'].value;
-    this.mapping.snoopStatus = this.propertyForm.controls['snoopStatus'].value;
-    this.mapping.filterOutbound = this.propertyForm.controls['filterOutbound'].value;
-    this.mapping.autoAckOperation = this.propertyForm.controls['autoAckOperation'].value;
-  }
 
   private setTemplateForm(): void {
     this.templateForm = new FormGroup({
-      ps: new FormControl({ value: this.currentSubstitution.pathSource, disabled: false }),
-      pt: new FormControl({ value: this.currentSubstitution.pathTarget, disabled: false }),
-      rs: new FormControl({ value: this.currentSubstitution.repairStrategy, disabled: this.stepperConfiguration.direction == Direction.OUTBOUND }),
-      ea: new FormControl({ value: this.currentSubstitution.expandArray, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || this.stepperConfiguration.direction == Direction.OUTBOUND }),
       exName: new FormControl({ value: this.mapping?.extension?.name, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
       exEvent: new FormControl({ value: this.mapping?.extension?.event, disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY }),
-      sourceExpressionResult: new FormControl({ value: this.sourceExpression.result, disabled: true }),
-      targetExpressionResult: new FormControl({ value: this.targetExpression.result, disabled: true }),
     },
-      checkSubstitutionIsValid(this.mapping, this.stepperConfiguration)
     );
   }
 
   private getTemplateForm(): void {
-    this.currentSubstitution.pathSource = this.templateForm.controls['ps'].value;
-    this.currentSubstitution.pathTarget = this.templateForm.controls['pt'].value;
-    this.currentSubstitution.repairStrategy = this.templateForm.controls['rs'].value;
-    this.currentSubstitution.expandArray = this.templateForm.controls['ea'].value;
     if (this.mapping.extension) {
       this.mapping.extension.name = this.templateForm.controls['exName'].value;
       this.mapping.extension.event = this.templateForm.controls['exEvent'].value;
     }
-    this.sourceExpression.result = this.templateForm.controls['sourceExpressionResult'].value;
-    this.targetExpression.result = this.templateForm.controls['targetExpressionResult'].value;
   }
 
   public onSelectedSourcePathChanged(path: string) {
     this.updateSourceExpressionResult(path);
-    this.currentSubstitution.pathSource = path;
-    this.templateForm.patchValue({ ps: path });
+    this.templateModel.currentSubstitution.pathSource = path;
   }
 
   public updateSourceExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorSource?.get(), path);
-      this.sourceExpression = {
+      this.templateModel.currentSubstitution.sourceExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
         errorMsg: ''
       }
-      this.templateForm.patchValue({ sourceExpressionResult: this.sourceExpression.result });
-
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
-      this.sourceExpression.errorMsg = error.message
+      this.templateModel.currentSubstitution.sourceExpression.errorMsg = error.message
+    }
+    this.templateModel = {
+      ...this.templateModel
     }
   }
 
   public onSelectedTargetPathChanged(path: string) {
     this.updateTargetExpressionResult(path);
-    this.currentSubstitution.pathTarget = path;
-    this.templateForm.patchValue({ pt: path });
-
+    this.templateModel.currentSubstitution.pathTarget = path;
   }
 
   public updateTargetExpressionResult(path: string) {
     try {
       let r: JSON = this.mappingService.evaluateExpression(this.editorTarget?.get(), path);
-      this.targetExpression = {
+      this.templateModel.currentSubstitution.targetExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
         errorMsg: ''
       }
-
-      this.templateForm.patchValue({ targetExpressionResult: this.targetExpression.result });
-
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
-      this.targetExpression.errorMsg = error.message
+      this.templateModel.currentSubstitution.targetExpression.errorMsg = error.message
     }
-  }
-
-  onTopicUpdated(): void {
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      this.propertyForm.get('subscriptionTopic').valueChanges.pipe(debounceTime(500))
-        // distinctUntilChanged()
-        .subscribe(val => {
-          let touched = this.propertyForm.get('subscriptionTopic').dirty;
-          console.log(`subscriptionTopic changed is ${val}.`, touched);
-          if (touched) {
-            this.mapping.templateTopic = val as string;
-          }
-        });
-    } else {
-      this.propertyForm.get('publishTopic').valueChanges.pipe(debounceTime(500))
-        // distinctUntilChanged()
-        .subscribe(val => {
-          let touched = this.propertyForm.get('publishTopic').dirty;
-          console.log(`publishTopic changed is ${val}.`, touched);
-          if (touched) {
-            this.mapping.templateTopic = val as string;
-          }
-        });
+    this.templateModel = {
+      ...this.templateModel
     }
-  }
-
-  onSubscriptionTopicChanged(subscriptionTopic): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(subscriptionTopic);
-    this.mapping.templateTopicSample = this.mapping.templateTopic;
-    this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
-  }
-
-  onPublishTopicChanged(publishTopic): void {
-    this.mapping.templateTopic = deriveTemplateTopicFromTopic(publishTopic);
-    this.mapping.templateTopicSample = this.mapping.templateTopic;
-    this.propertyForm.patchValue({ templateTopic: this.mapping.templateTopic, templateTopicSample: this.mapping.templateTopic });
-
-  }
-
-  onTemplateTopicChanged(templateTopic): void {
-    this.mapping.templateTopicSample = templateTopic;
-    this.propertyForm.patchValue({ templateTopicSample: this.mapping.templateTopic });
-  }
-
-  private onExpressionsUpdated(): void {
-    this.templateForm.get('ps').valueChanges.pipe(debounceTime(500))
-      // distinctUntilChanged()
-      .subscribe(val => {
-        //console.log(`Updated sourcePath ${val}.`, val);
-        this.updateSourceExpressionResult(val);
-      });
-
-    this.templateForm.get('pt').valueChanges.pipe(debounceTime(500))
-      // distinctUntilChanged()
-      .subscribe(val => {
-        //console.log(`Updated targetPath ${val}.`, val);
-        this.updateTargetExpressionResult(val);
-      });
-  }
-  private onPropertyFormUpdated(): void {
-    // this.propertyForm.valueChanges.pipe(debounceTime(500))
-    //   // distinctUntilChanged()
-    //   .subscribe(val => {
-    //     console.log(`Updated propertyForm ${val}.`, val);
-    //   });
-    // this.propertyForm.get('updateExistingDevice').valueChanges.pipe(debounceTime(500))
-    //   // distinctUntilChanged()
-    //   .subscribe(val => {
-    //     console.log(`Updated updateExistingDevice ${val}.`, !val);
-    //     this.stepperConfiguration.allowNoDefinedIdentifier = !val;
-    //   });
   }
 
   private getCurrentMapping(patched: boolean): Mapping {
@@ -387,7 +663,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   async onTestTransformation() {
     let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), false);
-    this.templateTestingResults = testProcessingContext.requests;
+    this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
       this.alertService.warning("Test tranformation was not successfull!");
       testProcessingContext.errors.forEach(msg => {
@@ -399,7 +675,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
 
   async onSendTest() {
     let testProcessingContext = await this.mappingService.testResult(this.getCurrentMapping(true), true);
-    this.templateTestingResults = testProcessingContext.requests;
+    this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
       this.alertService.warning("Test tranformation was not successfull!");
       testProcessingContext.errors.forEach(msg => {
@@ -410,19 +686,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onNextTestResult() {
-    if (this.selectedTestingResult >= this.templateTestingResults.length - 1) {
-      this.selectedTestingResult = -1;
+    if (this.testingModel.selectedResult >= this.testingModel.results.length - 1) {
+      this.testingModel.selectedResult = -1;
     }
-    this.selectedTestingResult++;
-    if (this.selectedTestingResult >= 0 && this.selectedTestingResult < this.templateTestingResults.length) {
-      this.templateTestingRequest = this.templateTestingResults[this.selectedTestingResult].request;
-      this.templateTestingResponse = this.templateTestingResults[this.selectedTestingResult].response;
-      this.editorTestingRequest.setSchema(getSchema(this.templateTestingResults[this.selectedTestingResult].targetAPI, this.mapping.direction, true), null);
-      this.templateTestingErrorMsg = this.templateTestingResults[this.selectedTestingResult].error
+    this.testingModel.selectedResult++;
+    if (this.testingModel.selectedResult >= 0 && this.testingModel.selectedResult < this.testingModel.results.length) {
+      this.testingModel.request = this.testingModel.results[this.testingModel.selectedResult].request;
+      this.testingModel.response = this.testingModel.results[this.testingModel.selectedResult].response;
+      this.editorTestingRequest.setSchema(getSchema(this.testingModel.results[this.testingModel.selectedResult].targetAPI, this.mapping.direction, true), null);
+      this.testingModel.errorMsg = this.testingModel.results[this.testingModel.selectedResult].error
     } else {
-      this.templateTestingRequest = JSON.parse("{}");
-      this.templateTestingResponse = JSON.parse("{}");
-      this.templateTestingErrorMsg = undefined;
+      this.testingModel.request = JSON.parse("{}");
+      this.testingModel.response = JSON.parse("{}");
+      this.testingModel.errorMsg = undefined;
     }
   }
 
@@ -452,7 +728,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
-      this.getPropertyForm();
       console.log("Populate jsonPath if wildcard:", isWildcardTopic(this.mapping.subscriptionTopic), this.mapping.substitutions.length)
       console.log("Templates from mapping:", this.mapping.target, this.mapping.source)
       this.enrichTemplates();
@@ -570,12 +845,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onAddSubstitution() {
-    this.getTemplateForm();
-    if (this.currentSubstitution.pathSource != '' && this.currentSubstitution.pathTarget != '') {
-      this.addSubstitution(this.currentSubstitution);
+    if (this.templateModel.currentSubstitution.pathSource != '' && this.templateModel.currentSubstitution.pathTarget != '') {
+      this.addSubstitution(this.templateModel.currentSubstitution);
       this.selectedSubstitution = -1;
-      console.log("New substitution", this.currentSubstitution, this.mapping.substitutions);
-      this.currentSubstitution = {
+      console.log("New substitution", this.templateModel.currentSubstitution, this.mapping.substitutions);
+      this.templateModel.currentSubstitution = {
         pathSource: '',
         pathTarget: '',
         repairStrategy: RepairStrategy.DEFAULT,
@@ -660,9 +934,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected
-      this.currentSubstitution = _.clone(this.mapping.substitutions[selected])
-      this.editorSource?.setSelectionToPath(this.currentSubstitution.pathSource);
-      this.editorTarget.setSelectionToPath(this.currentSubstitution.pathTarget);
+      this.templateModel.currentSubstitution = _.clone(this.mapping.substitutions[selected])
+      this.editorSource?.setSelectionToPath(this.templateModel.currentSubstitution.pathSource);
+      this.editorTarget.setSelectionToPath(this.templateModel.currentSubstitution.pathTarget);
     }
   }
 

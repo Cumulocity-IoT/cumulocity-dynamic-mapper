@@ -4,7 +4,7 @@
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.",
   "scripts": {
     "start": "c8ycli server --env.extraWebpackConfig=./extra-webpack.config.js",
-    "start:admin": "npm start -- --shell administration-1016",
+    "start:admin": "npm start -- --shell administration-debug",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
@@ -26,6 +26,7 @@
     "@c8y/client": "1016.0.128",
     "@c8y/ngx-components": "1016.0.128",
     "@c8y/style": "1016.0.128",
+    "@ngx-formly/bootstrap": "^5.10.13",
     "@ngx-translate/core": "14.0.0",
     "build": "^0.1.4",
     "jsonata": "^1.8.6",
@@ -35,7 +36,7 @@
     "rxjs": "~6.6.3",
     "style-loader": "^3.3.1",
     "uuid": "^9.0.0",
-    "vanilla-jsoneditor": "0.15.1",
+    "vanilla-jsoneditor": "0.16.0",
     "zone.js": "~0.11.7"
   },
   "devDependencies": {
