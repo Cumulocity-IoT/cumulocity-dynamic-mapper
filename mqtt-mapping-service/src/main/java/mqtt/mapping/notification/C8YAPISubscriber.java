@@ -321,14 +321,14 @@ public class C8YAPISubscriber {
 
     }
 
-    public void reconnect(MicroserviceSubscriptionsService subscriptionsService) {
+    //@Scheduled(fixedRate = 30000, initialDelay = 30000)
+    public void reconnect() {
         try {
             if (tenant_client != null) {
-
                 if (!tenant_client.isOpen()) {
                     if (tenantWSStatusCode == 401 || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            logger.info("Trying to reconnect ws tenant client... ");
+                        logger.info("Trying to reconnect ws tenant client... ");
+                        subscriptionsService.runForEachTenant(() -> {
                             initTenantClient();
                         });
                     } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
@@ -340,8 +340,8 @@ public class C8YAPISubscriber {
             if (device_client != null) {
                 if (!device_client.isOpen()) {
                     if (deviceWSStatusCode == 401 || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            logger.info("Trying to reconnect ws device client... ");
+                        logger.info("Trying to reconnect ws device client... ");
+                        subscriptionsService.runForEachTenant(() -> {
                             initDeviceClient();
                         });
                     } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
@@ -463,32 +463,35 @@ public class C8YAPISubscriber {
 
         if (deviceDeleted.size() > 0 && deviceDeleted.get(0)) {
             if (subsFound == 1)
-                disconnect(device_client);
+                disconnect(true);
             return true;
         }
 
         return false;
     }
 
-    public void disconnect(CustomWebSocketClient client) {
+    public void disconnect(Boolean onlyDeviceClient) {
         //Stop WS Reconnect Thread
-        if (executorFuture != null) {
-            executorFuture.cancel(true);
-            executorFuture = null;
-        }
-        if (client != null) {
-            logger.info("Disconnecting WS Client {}", client.toString());
-            client.close();
+        executorService.shutdown();
+        if (onlyDeviceClient != null && onlyDeviceClient) {
+            if (device_client != null && device_client.isOpen()) {
+                logger.info("Disconnecting WS Device Client {}", device_client.toString());
+                device_client.close();
+                device_client = null;
+            }
         } else {
             if (device_client != null && device_client.isOpen()) {
                 logger.info("Disconnecting WS Device Client {}", device_client.toString());
                 device_client.close();
+                device_client = null;
             }
             if (tenant_client != null && tenant_client.isOpen()) {
                 logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
                 tenant_client.close();
+                tenant_client = null;
             }
         }
+
     }
 
     public void setDeviceConnectionStatus(int status) {
@@ -506,7 +509,7 @@ public class C8YAPISubscriber {
             //Only start it once
             if (executorFuture == null) {
                 executorFuture = executorService.scheduleAtFixedRate(() -> {
-                    reconnect(subscriptionsService);
+                    reconnect();
                 }, 30, 30, TimeUnit.SECONDS);
             }
             return client;
