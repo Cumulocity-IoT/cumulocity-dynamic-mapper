@@ -70,7 +70,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     @Override
     public void onOpen(URI serverUri) {
         log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
-        operationSubscriber.setDeviceConnectionStatus(true);
+        operationSubscriber.setDeviceConnectionStatus(200);
     }
 
     @Override
@@ -93,9 +93,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     }
 
     @Override
-    public void onClose() {
+    public void onClose(int statusCode, String reason) {
         log.info("Connection was closed.");
-        operationSubscriber.setDeviceConnectionStatus(false);
+        if (reason.contains("401"))
+            operationSubscriber.setDeviceConnectionStatus(401);
+        else
+            operationSubscriber.setDeviceConnectionStatus(0);
     }
 
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
