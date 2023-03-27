@@ -28,5 +28,5 @@ public interface NotificationCallback {
     /**
      * Called on close of the underlying WebSocket connection. Normally, a reconnection should be attempted.
      */
-    void onClose();
+    void onClose(int statusCode, String reason);
 }

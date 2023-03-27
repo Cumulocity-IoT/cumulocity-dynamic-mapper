@@ -64,8 +64,6 @@ public class C8YAPISubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
     private static final Logger logger = LoggerFactory.getLogger(C8YAPISubscriber.class);
 
-    public static boolean DEVICE_NOTIFICATION_CONNECTED = FALSE;
-
     @Autowired
     private TokenApi tokenApi;
 
@@ -102,6 +100,8 @@ public class C8YAPISubscriber {
 
     private CustomWebSocketClient device_client;
     private CustomWebSocketClient tenant_client;
+    private int tenantWSStatusCode = 0;
+    private int deviceWSStatusCode = 0;
 
     public void init() {
        initTenantClient();
@@ -169,7 +169,7 @@ public class C8YAPISubscriber {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
             notificationFut.complete(notification);
-            if (!DEVICE_NOTIFICATION_CONNECTED) {
+            if (deviceWSStatusCode != 200) {
                 logger.info("Device Subscription not connected yet. Will connect...");
                 String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
                 try {
@@ -178,7 +178,6 @@ public class C8YAPISubscriber {
                     logger.error("Error on connecting to Notification Service: {}", e.getLocalizedMessage());
                     throw new RuntimeException(e);
                 }
-                DEVICE_NOTIFICATION_CONNECTED = true;
             }
         });
         return notificationFut;
@@ -269,6 +268,7 @@ public class C8YAPISubscriber {
                 @Override
                 public void onOpen(URI uri) {
                     logger.info("Connected to Cumulocity notification service over WebSocket " + uri);
+                    tenantWSStatusCode = 200;
                 }
 
                 @Override
@@ -306,9 +306,12 @@ public class C8YAPISubscriber {
                 }
 
                 @Override
-                public void onClose() {
+                public void onClose(int statusCode, String reason) {
                     logger.info("Tenant ws connection closed.");
-                    //reconnect();
+                    if (reason.contains("401"))
+                        tenantWSStatusCode = 401;
+                    else
+                        tenantWSStatusCode = 0;
                 }
             };
             tenant_client = connect(tenantToken, tenantCallback);
@@ -318,14 +321,14 @@ public class C8YAPISubscriber {
 
     }
 
-    public void reconnect(MicroserviceSubscriptionsService subscriptionsService) {
+    //@Scheduled(fixedRate = 30000, initialDelay = 30000)
+    public void reconnect() {
         try {
             if (tenant_client != null) {
-
                 if (!tenant_client.isOpen()) {
-                    if (tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            logger.info("Trying to reconnect ws tenant client... ");
+                    if (tenantWSStatusCode == 401 || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                        logger.info("Trying to reconnect ws tenant client... ");
+                        subscriptionsService.runForEachTenant(() -> {
                             initTenantClient();
                         });
                     } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
@@ -336,9 +339,9 @@ public class C8YAPISubscriber {
             }
             if (device_client != null) {
                 if (!device_client.isOpen()) {
-                    if (device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                            logger.info("Trying to reconnect ws device client... ");
+                    if (deviceWSStatusCode == 401 || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                        logger.info("Trying to reconnect ws device client... ");
+                        subscriptionsService.runForEachTenant(() -> {
                             initDeviceClient();
                         });
                     } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
@@ -360,21 +363,20 @@ public class C8YAPISubscriber {
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
+            //Needed for 1015 releases
             if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
                 logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
                 return notification;
             }
         }
-        if (notification == null) {
-            //logger.info("Subscription does not exist. Creating ...");
-            notification = new NotificationSubscriptionRepresentation();
-            final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-            filterRepresentation.setApis(List.of("managedobjects"));
-            notification.setContext("tenant");
-            notification.setSubscription(subscriptionName);
-            notification.setSubscriptionFilter(filterRepresentation);
-            notification = subscriptionApi.subscribe(notification);
-        }
+        //logger.info("Subscription does not exist. Creating ...");
+        notification = new NotificationSubscriptionRepresentation();
+        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+        filterRepresentation.setApis(List.of("managedobjects"));
+        notification.setContext("tenant");
+        notification.setSubscription(subscriptionName);
+        notification.setSubscriptionFilter(filterRepresentation);
+        notification = subscriptionApi.subscribe(notification);
         return notification;
     }
 
@@ -392,18 +394,16 @@ public class C8YAPISubscriber {
             }
         }
 
-        if (notification == null) {
-            //logger.info("Subscription does not exist. Creating ...");
-            notification = new NotificationSubscriptionRepresentation();
-            notification.setSource(mor);
-            final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-            //filterRepresentation.setApis(List.of("operations"));
-            filterRepresentation.setApis(List.of(api.notificationFilter));
-            notification.setContext("mo");
-            notification.setSubscription(subscriptionName);
-            notification.setSubscriptionFilter(filterRepresentation);
-            notification = subscriptionApi.subscribe(notification);
-        }
+        //logger.info("Subscription does not exist. Creating ...");
+        notification = new NotificationSubscriptionRepresentation();
+        notification.setSource(mor);
+        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+        //filterRepresentation.setApis(List.of("operations"));
+        filterRepresentation.setApis(List.of(api.notificationFilter));
+        notification.setContext("mo");
+        notification.setSubscription(subscriptionName);
+        notification.setSubscriptionFilter(filterRepresentation);
+        notification = subscriptionApi.subscribe(notification);
         return notification;
     }
 
@@ -463,44 +463,39 @@ public class C8YAPISubscriber {
 
         if (deviceDeleted.size() > 0 && deviceDeleted.get(0)) {
             if (subsFound == 1)
-                disconnect(device_client);
+                disconnect(true);
             return true;
         }
-
 
         return false;
     }
 
-    public void disconnect(CustomWebSocketClient client) {
+    public void disconnect(Boolean onlyDeviceClient) {
         //Stop WS Reconnect Thread
-        if (executorFuture != null) {
-            executorFuture.cancel(true);
-            executorFuture = null;
-        }
-        if (client != null) {
-            logger.info("Disconnecting WS Client {}", client.toString());
-            client.close();
-            DEVICE_NOTIFICATION_CONNECTED = false;
+        executorService.shutdown();
+        if (onlyDeviceClient != null && onlyDeviceClient) {
+            if (device_client != null && device_client.isOpen()) {
+                logger.info("Disconnecting WS Device Client {}", device_client.toString());
+                device_client.close();
+                device_client = null;
+            }
         } else {
             if (device_client != null && device_client.isOpen()) {
-                logger.info("Disconnecting WS Client {}", device_client.toString());
+                logger.info("Disconnecting WS Device Client {}", device_client.toString());
                 device_client.close();
-                DEVICE_NOTIFICATION_CONNECTED = false;
+                device_client = null;
             }
             if (tenant_client != null && tenant_client.isOpen()) {
-                logger.info("Disconnecting WS Client {}", tenant_client.toString());
+                logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
                 tenant_client.close();
+                tenant_client = null;
             }
         }
+
     }
 
-    public boolean getDeviceConnectionStatus() {
-        return DEVICE_NOTIFICATION_CONNECTED;
-    }
-
-    public boolean setDeviceConnectionStatus(boolean status) {
-        DEVICE_NOTIFICATION_CONNECTED = status;
-        return DEVICE_NOTIFICATION_CONNECTED;
+    public void setDeviceConnectionStatus(int status) {
+        deviceWSStatusCode = status;
     }
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
@@ -514,7 +509,7 @@ public class C8YAPISubscriber {
             //Only start it once
             if (executorFuture == null) {
                 executorFuture = executorService.scheduleAtFixedRate(() -> {
-                    reconnect(subscriptionsService);
+                    reconnect();
                 }, 30, 30, TimeUnit.SECONDS);
             }
             return client;
