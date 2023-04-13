@@ -29,13 +29,12 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.Extension;
+import mqtt.mapping.model.*;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +58,17 @@ public class MQTTMappingRestController {
 
     @Autowired
     private MappingComponent mappingStatusComponent;
+
+    @Value("${APP.disableOutputMapping}")
+    private boolean disableOutputMapping;
+
+    @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Feature> getFeatures() {
+        log.info("Get Feature status");
+        Feature feature = new Feature();
+        feature.setOutputMappingEnabled(!disableOutputMapping);
+        return new ResponseEntity<Feature>(feature, HttpStatus.OK);
+    }
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
