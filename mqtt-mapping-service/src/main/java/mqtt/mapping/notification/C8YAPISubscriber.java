@@ -88,6 +88,9 @@ public class C8YAPISubscriber {
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
+    @Value("${APP.disableOutputMapping}")
+    private boolean disableOutputMapping;
+
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private static ScheduledFuture<?> executorFuture = null;
 
@@ -104,8 +107,11 @@ public class C8YAPISubscriber {
     private int deviceWSStatusCode = 0;
 
     public void init() {
-       initTenantClient();
-       initDeviceClient();
+        logger.info("OutputMapping Config: "+disableOutputMapping);
+        if (!disableOutputMapping) {
+            initTenantClient();
+            initDeviceClient();
+        }
     }
 
     public void initTenantClient() {
