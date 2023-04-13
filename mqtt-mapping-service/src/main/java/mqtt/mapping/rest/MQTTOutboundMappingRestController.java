@@ -1,12 +1,14 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +29,13 @@ public class MQTTOutboundMappingRestController {
     @Autowired
     C8YAPISubscriber c8yApiSubscriber;
 
+    @Value("${APP.disableOutputMapping}")
+    private boolean disableOutputMapping;
+
     @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
+        if (disableOutputMapping)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
@@ -47,6 +54,8 @@ public class MQTTOutboundMappingRestController {
 
     @RequestMapping(value = "/subscription", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionUpdate(@Valid @RequestBody C8YAPISubscription subscription) {
+        if (disableOutputMapping)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             //List<NotificationSubscriptionRepresentation> deviceSubscriptions = c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
             C8YAPISubscription c8ySubscription = c8yApiSubscriber.getDeviceSubscriptions(null, null);
@@ -98,6 +107,8 @@ public class MQTTOutboundMappingRestController {
 
     @RequestMapping(value = "/subscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YAPISubscription> subscriptionsGet(@RequestParam(required = false) String deviceId, @RequestParam(required = false) String subscriptionName) {
+        if (disableOutputMapping)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YAPISubscription c8YAPISubscription = c8yApiSubscriber.getDeviceSubscriptions(deviceId, subscriptionName);
             return ResponseEntity.ok(c8YAPISubscription);
@@ -108,6 +119,8 @@ public class MQTTOutboundMappingRestController {
 
     @RequestMapping(value = "/subscription/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
+        if (disableOutputMapping)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(deviceId);
                 if (mor != null) {
