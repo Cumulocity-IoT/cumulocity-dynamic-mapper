@@ -96,9 +96,6 @@ import mqtt.mapping.service.MQTTClient;
 @EnableAsync
 public class App {
 
-    // TDOD set value from ADDITION_TEST_DUMMY to "" before pushing
-    public static final String ADDITION_TEST_DUMMY = "";
-
     @Autowired
     C8YAgent c8yAgent;
 

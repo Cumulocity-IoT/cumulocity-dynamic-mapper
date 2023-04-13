@@ -341,7 +341,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           {
             className: 'col-lg-6',
             key: 'mapDeviceIdentifier',
-            type: 'checkbox',
+            type: 'switch',
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Map Device Identifier',
