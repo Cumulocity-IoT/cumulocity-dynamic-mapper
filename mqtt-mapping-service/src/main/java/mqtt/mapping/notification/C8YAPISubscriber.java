@@ -88,8 +88,8 @@ public class C8YAPISubscriber {
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
-    @Value("${APP.disableOutputMapping}")
-    private boolean disableOutputMapping;
+    @Value("${APP.outputMappingEnabled}")
+    private boolean outputMappingEnabled;
 
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private static ScheduledFuture<?> executorFuture = null;
@@ -107,8 +107,8 @@ public class C8YAPISubscriber {
     private int deviceWSStatusCode = 0;
 
     public void init() {
-        logger.info("OutputMapping Config: "+disableOutputMapping);
-        if (!disableOutputMapping) {
+        logger.info("OutputMapping Config: " + outputMappingEnabled);
+        if (outputMappingEnabled) {
             initTenantClient();
             initDeviceClient();
         }
@@ -143,7 +143,8 @@ public class C8YAPISubscriber {
     public void subscribeAllDevices() {
         InventoryFilter filter = new InventoryFilter();
         filter.byFragmentType("c8y_IsDevice");
-        Iterator<ManagedObjectRepresentation> deviceIt = inventoryApi.getManagedObjectsByFilter(filter).get().allPages().iterator();
+        Iterator<ManagedObjectRepresentation> deviceIt = inventoryApi.getManagedObjectsByFilter(filter).get().allPages()
+                .iterator();
         NotificationSubscriptionRepresentation notRep = null;
         while (deviceIt.hasNext()) {
             ManagedObjectRepresentation mor = deviceIt.next();
@@ -167,7 +168,8 @@ public class C8YAPISubscriber {
         }
     }
 
-    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor, API api) throws ExecutionException, InterruptedException {
+    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor,
+            API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String deviceName = mor.getName();
         logger.info("Creating new Subscription for Device {} with ID {}", deviceName, mor.getId().getValue());
@@ -206,7 +208,8 @@ public class C8YAPISubscriber {
         C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
         List<Device> devices = new ArrayStack();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
             while (subIt.hasNext()) {
                 notification = subIt.next();
@@ -214,7 +217,8 @@ public class C8YAPISubscriber {
                     logger.debug("Subscription with ID {} retrieved", notification.getId().getValue());
                     Device device = new Device();
                     device.setId(notification.getSource().getId().getValue());
-                    ManagedObjectRepresentation mor = c8YAgent.getManagedObjectForId(notification.getSource().getId().getValue());
+                    ManagedObjectRepresentation mor = c8YAgent
+                            .getManagedObjectForId(notification.getSource().getId().getValue());
                     if (mor != null)
                         device.setName(mor.getName());
                     else
@@ -231,7 +235,8 @@ public class C8YAPISubscriber {
         return c8YAPISubscription;
     }
 
-    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId, String deviceSubscription) {
+    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId,
+            String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -248,7 +253,8 @@ public class C8YAPISubscriber {
         CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
             while (subIt.hasNext()) {
                 notification = subIt.next();
@@ -266,7 +272,8 @@ public class C8YAPISubscriber {
     public void subscribeTenant(String tenant) {
         logger.info("Creating new Subscription for Tenant " + tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
-        String tenantToken = createToken(notification.getSubscription(), TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
+        String tenantToken = createToken(notification.getSubscription(),
+                TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
 
         try {
             NotificationCallback tenantCallback = new NotificationCallback() {
@@ -283,26 +290,31 @@ public class C8YAPISubscriber {
                         logger.info("Tenant Notification received: <{}>", notification.getMessage());
                         logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
 
-                        ManagedObjectRepresentation mor = JSONBase.getJSONParser().parse(ManagedObjectRepresentation.class, notification.getMessage());
+                        ManagedObjectRepresentation mor = JSONBase.getJSONParser()
+                                .parse(ManagedObjectRepresentation.class, notification.getMessage());
                         /*
-                        if (notification.getNotificationHeaders().contains("CREATE")) {
-                            logger.info("New Device created with name {} and id {}", mor.getName(), mor.getId().getValue());
-                            final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
-                            if (morRetrieved != null) {
-                                subscribeDevice(morRetrieved);
-                            }
-                        }
+                         * if (notification.getNotificationHeaders().contains("CREATE")) {
+                         * logger.info("New Device created with name {} and id {}", mor.getName(),
+                         * mor.getId().getValue());
+                         * final ManagedObjectRepresentation morRetrieved =
+                         * c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                         * if (morRetrieved != null) {
+                         * subscribeDevice(morRetrieved);
+                         * }
+                         * }
                          */
                         if (notification.getNotificationHeaders().contains("DELETE")) {
 
                             logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
-                            final ManagedObjectRepresentation morRetrieved = c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                            final ManagedObjectRepresentation morRetrieved = c8YAgent
+                                    .getManagedObjectForId(mor.getId().getValue());
                             if (morRetrieved != null) {
                                 unsubscribeDevice(morRetrieved);
                             }
                         }
                     } catch (Exception e) {
-                        logger.error("Error on processing Tenant Notification {}: {}", notification, e.getLocalizedMessage());
+                        logger.error("Error on processing Tenant Notification {}: {}", notification,
+                                e.getLocalizedMessage());
                     }
                 }
 
@@ -327,17 +339,19 @@ public class C8YAPISubscriber {
 
     }
 
-    //@Scheduled(fixedRate = 30000, initialDelay = 30000)
+    // @Scheduled(fixedRate = 30000, initialDelay = 30000)
     public void reconnect() {
         try {
             if (tenant_client != null) {
                 if (!tenant_client.isOpen()) {
-                    if (tenantWSStatusCode == 401 || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                    if (tenantWSStatusCode == 401
+                            || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                         logger.info("Trying to reconnect ws tenant client... ");
                         subscriptionsService.runForEachTenant(() -> {
                             initTenantClient();
                         });
-                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING) || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
+                            || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
                         logger.info("Trying to reconnect ws tenant client... ");
                         tenant_client.reconnect();
                     }
@@ -345,12 +359,14 @@ public class C8YAPISubscriber {
             }
             if (device_client != null) {
                 if (!device_client.isOpen()) {
-                    if (deviceWSStatusCode == 401 || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                    if (deviceWSStatusCode == 401
+                            || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                         logger.info("Trying to reconnect ws device client... ");
                         subscriptionsService.runForEachTenant(() -> {
                             initDeviceClient();
                         });
-                    } else if (device_client.getReadyState().equals(ReadyState.CLOSING) || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                    } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
+                            || device_client.getReadyState().equals(ReadyState.CLOSED)) {
                         logger.info("Trying to reconnect ws device client... ");
                         device_client.reconnect();
                     }
@@ -365,17 +381,20 @@ public class C8YAPISubscriber {
     public NotificationSubscriptionRepresentation createTenantSubscription() {
 
         final String subscriptionName = TENANT_SUBSCRIPTION;
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant")).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+                .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
+                .get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
-            //Needed for 1015 releases
+            // Needed for 1015 releases
             if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
                 logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
                 return notification;
             }
         }
-        //logger.info("Subscription does not exist. Creating ...");
+        // logger.info("Subscription does not exist. Creating ...");
         notification = new NotificationSubscriptionRepresentation();
         final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
         filterRepresentation.setApis(List.of("managedobjects"));
@@ -390,21 +409,25 @@ public class C8YAPISubscriber {
         final GId sourceId = GId.asGId(mor.getId());
         final String subscriptionName = DEVICE_SUBSCRIPTION;
 
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId())).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+                .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId()))
+                .get().allPages().iterator();
         NotificationSubscriptionRepresentation notification = null;
         while (subIt.hasNext()) {
             notification = subIt.next();
             if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                logger.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(), notification.getSource().getId().getValue());
+                logger.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(),
+                        notification.getSource().getId().getValue());
                 return notification;
             }
         }
 
-        //logger.info("Subscription does not exist. Creating ...");
+        // logger.info("Subscription does not exist. Creating ...");
         notification = new NotificationSubscriptionRepresentation();
         notification.setSource(mor);
         final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        //filterRepresentation.setApis(List.of("operations"));
+        // filterRepresentation.setApis(List.of("operations"));
         filterRepresentation.setApis(List.of(api.notificationFilter));
         notification.setContext("mo");
         notification.setSubscription(subscriptionName);
@@ -423,11 +446,13 @@ public class C8YAPISubscriber {
     }
 
     public void unsubscribe() {
-        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi
+                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
+                .get().allPages().iterator();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
             logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
-            //FIXME Issues bySubscription Filter does not work yet
+            // FIXME Issues bySubscription Filter does not work yet
             if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
                 subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
                     subscriptionApi.delete(notification);
@@ -435,7 +460,9 @@ public class C8YAPISubscriber {
             }
 
         }
-        Iterator<NotificationSubscriptionRepresentation> tenantSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(TENANT_SUBSCRIPTION)).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> tenantSubIt = subscriptionApi
+                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(TENANT_SUBSCRIPTION))
+                .get().allPages().iterator();
         while (tenantSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = tenantSubIt.next();
             logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
@@ -446,19 +473,24 @@ public class C8YAPISubscriber {
     }
 
     public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
-        //Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
-        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator();
+        // Iterator<NotificationSubscriptionRepresentation> deviceSubIt =
+        // subscriptionApi.getSubscriptionsByFilter(new
+        // NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
+        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi
+                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
+                .get().allPages().iterator();
         int subsFound = 0;
         List<Boolean> deviceDeleted = new ArrayList<>();
         while (deviceSubIt.hasNext()) {
             NotificationSubscriptionRepresentation notification = deviceSubIt.next();
 
-            //FIXME Issues bySubscription Filter does not work yet
+            // FIXME Issues bySubscription Filter does not work yet
             if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
                 subsFound++;
                 if (mor.getId().getValue().equals(notification.getSource().getId().getValue())) {
                     subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                        logger.info("Deleting Subscription {} for Device {} with ID {}", notification.getId().getValue(), mor.getName(), mor.getId().getValue());
+                        logger.info("Deleting Subscription {} for Device {} with ID {}",
+                                notification.getId().getValue(), mor.getName(), mor.getId().getValue());
                         subscriptionApi.delete(notification);
                         deviceDeleted.add(true);
                     });
@@ -477,7 +509,7 @@ public class C8YAPISubscriber {
     }
 
     public void disconnect(Boolean onlyDeviceClient) {
-        //Stop WS Reconnect Thread
+        // Stop WS Reconnect Thread
         executorService.shutdown();
         if (onlyDeviceClient != null && onlyDeviceClient) {
             if (device_client != null && device_client.isOpen()) {
@@ -512,7 +544,7 @@ public class C8YAPISubscriber {
             client.setConnectionLostTimeout(30);
             client.connect();
             wsClientList.add(client);
-            //Only start it once
+            // Only start it once
             if (executorFuture == null) {
                 executorFuture = executorService.scheduleAtFixedRate(() -> {
                     reconnect();
@@ -524,6 +556,5 @@ public class C8YAPISubscriber {
         }
         return null;
     }
-
 
 }

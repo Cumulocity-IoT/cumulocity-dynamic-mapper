@@ -59,14 +59,18 @@ public class MQTTMappingRestController {
     @Autowired
     private MappingComponent mappingStatusComponent;
 
-    @Value("${APP.disableOutputMapping}")
-    private boolean disableOutputMapping;
+    @Value("${APP.externalExtensionsEnabled}")
+    private boolean externalExtensionsEnabled;
+
+    @Value("${APP.outputMappingEnabled}")
+    private boolean outputMappingEnabled;
 
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         log.info("Get Feature status");
         Feature feature = new Feature();
-        feature.setOutputMappingEnabled(!disableOutputMapping);
+        feature.setOutputMappingEnabled(outputMappingEnabled);
+        feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
