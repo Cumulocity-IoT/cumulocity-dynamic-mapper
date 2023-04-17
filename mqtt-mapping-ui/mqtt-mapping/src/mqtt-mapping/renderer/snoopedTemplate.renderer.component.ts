@@ -18,16 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared/mapping.model';
+import { Component } from "@angular/core";
+import { CellRendererContext } from "@c8y/ngx-components";
 
 @Component({
-  template: `<span>{{context.item.snoopedTemplates.length}}</span>`
+  template: `<span>{{ context.item.snoopedTemplates.length }}</span>`,
 })
 export class SnoopedTemplateRendererComponent {
-  constructor(
-    public context: CellRendererContext,
-  ) {}
-
+  constructor(public context: CellRendererContext) {}
 }

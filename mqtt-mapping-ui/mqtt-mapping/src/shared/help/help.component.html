@@ -19,10 +19,7 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-action-bar-item
-  [placement]="'right'"
-  itemClass="pull-right"
->
+<c8y-action-bar-item [placement]="'right'" itemClass="pull-right">
   <button
     class="btn btn-help"
     [title]="'Open help' | translate"
@@ -30,10 +27,7 @@
     [attr.aria-expanded]="!isCollapsed"
     aria-controls="collapseHelp"
   >
-    <i
-      [c8yIcon]="'question-circle-o'"
-      class="text-info"
-    ></i>
+    <i [c8yIcon]="'question-circle-o'" class="text-info"></i>
   </button>
 </c8y-action-bar-item>
 <div
@@ -42,10 +36,7 @@
   [collapse]="isCollapsed"
   [isAnimated]="true"
 >
-  <div
-    class="c8y-help-drawer-block"
-    #docOutlet
-  >
+  <div class="c8y-help-drawer-block" #docOutlet>
     <div *ngIf="isLoading">
       <c8y-loading></c8y-loading>
     </div>
@@ -57,33 +48,23 @@
           [ngClass]="{ 'text-warning': hasError, 'text-muted': !hasError }"
           class="c8y-icon-duocolor icon-48"
         ></i>
-        <div
-          class="p-l-16 p-t-16 flex-grow"
-          *ngIf="!hasError"
-        >
-          <h4 class="text-bold text-primary m-b-16">{{title}}</h4>
+        <div class="p-l-16 p-t-16 flex-grow" *ngIf="!hasError">
+          <h4 class="text-bold text-primary m-b-16">{{ title }}</h4>
           <div
             id="helpContent"
             class="help-content"
-            [innerHTML] = "sectionContent"
+            [innerHTML]="sectionContent"
           ></div>
-          
         </div>
 
-        <div
-          class="p-l-16 p-t-16 flex-grow"
-          *ngIf="hasError"
-        >
-          <h4
-            class="text-bold m-b-16"
-            translate>Sorry, that didn't work</h4>
+        <div class="p-l-16 p-t-16 flex-grow" *ngIf="hasError">
+          <h4 class="text-bold m-b-16" translate>Sorry, that didn't work</h4>
           <div class="help-content">
             <p translate>The content couldn't be loaded.</p>
           </div>
         </div>
       </div>
     </div>
-
   </div>
   <div class="c8y-help-drawer-footer" *ngIf="!isLoading">
     <button
@@ -93,7 +74,9 @@
       [attr.aria-expanded]="!isCollapsed"
       aria-controls="collapseHelp"
       translate
-    >Close</button>
+    >
+      Close
+    </button>
     <a
       href="{{ hasError ? getUrl() : getUrl(src) }}"
       class="btn btn-primary"

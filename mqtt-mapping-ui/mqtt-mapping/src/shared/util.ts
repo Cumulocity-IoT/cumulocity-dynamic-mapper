@@ -326,6 +326,7 @@ export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_SERVICE_ENDPOINT = 'monitoring/status/service';
+export const PATH_FEATURE_ENDPOINT = 'feature';
 export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';

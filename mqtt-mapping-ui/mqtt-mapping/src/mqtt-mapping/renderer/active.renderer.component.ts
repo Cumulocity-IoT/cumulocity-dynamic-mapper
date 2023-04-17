@@ -18,19 +18,23 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { AlertService, CellRendererContext } from '@c8y/ngx-components';
-import { MappingService } from '../core/mapping.service';
+import { Component } from "@angular/core";
+import { AlertService, CellRendererContext } from "@c8y/ngx-components";
+import { MappingService } from "../core/mapping.service";
 
 @Component({
   template: `
-  <div>
-    <label class="c8y-switch c8y-switch--inline">
-          <input type="checkbox" [(ngModel)]="active" (change)="onActivate($event)"/> 
-          <span></span>
-    </label>
-  </div>
-    `
+    <div>
+      <label class="c8y-switch c8y-switch--inline">
+        <input
+          type="checkbox"
+          [(ngModel)]="active"
+          (change)="onActivate($event)"
+        />
+        <span></span>
+      </label>
+    </div>
+  `,
 })
 export class ActiveRendererComponent {
   constructor(
@@ -44,9 +48,11 @@ export class ActiveRendererComponent {
 
   active: boolean;
 
-  async onActivate( event ) {
+  async onActivate(event) {
     let action = this.active ? "Activate" : "Deactivate";
-    this.alertService.success( action + " mapping: " + this.context.item.id + "!");
+    this.alertService.success(
+      action + " mapping: " + this.context.item.id + "!"
+    );
     let parameter = { id: this.context.item.id, active: this.active };
     await this.mappingService.changeActivationMapping(parameter);
     this.mappingService.reloadMappings();

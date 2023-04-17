@@ -24,28 +24,51 @@
 <!-- <mapping-help src="/apps/mqtt-mapping/assets/help/help-mapping.html"></mapping-help> -->
 <!-- <mapping-help src="."></mapping-help> -->
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="loadMappings()">
+  <button
+    class="btn btn-link"
+    title="{{ 'Refresh' | translate }}"
+    (click)="loadMappings()"
+  >
     <i c8yIcon="refresh"></i>
-    {{ 'Refresh' | translate }}
+    {{ "Refresh" | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Add mapping' | translate }}" (click)="onAddMapping()">
+  <button
+    class="btn btn-link"
+    title="{{ 'Add mapping' | translate }}"
+    (click)="onAddMapping()"
+  >
     <i c8yIcon="plus-circle"></i>
-    {{ 'Add mapping' | translate }}
+    {{ "Add mapping" | translate }}
   </button>
-  <button class="btn btn-link" title="{{ 'Activate mappings' | translate }}" (click)="onActivateClicked()">
+  <button
+    class="btn btn-link"
+    title="{{ 'Activate mappings' | translate }}"
+    (click)="onActivateClicked()"
+  >
     <i c8yIcon="c8y-connector-out"></i>
-    {{ 'Activate mappings' | translate }}
+    {{ "Activate mappings" | translate }}
   </button>
-  <button *ngIf="stepperConfiguration.direction == Direction.OUTBOUND" class="btn btn-link" title="{{ 'Define subscriptions' | translate }}" (click)="onDefineSubscription()">
+  <button
+    *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
+    class="btn btn-link"
+    title="{{ 'Define subscriptions' | translate }}"
+    (click)="onDefineSubscription()"
+  >
     <i c8yIcon="subscription"></i>
-    {{ 'Define subscription' | translate }}
+    {{ "Define subscription" | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
   <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
     <div class="card-block">
-      <c8y-data-grid [title]="title | translate" [columns]="columns" [rows]="mappings"
-        [pagination]="pagination" [actionControls]="actionControls" [refresh]="refresh">
+      <c8y-data-grid
+        [title]="title | translate"
+        [columns]="columns"
+        [rows]="mappings"
+        [pagination]="pagination"
+        [actionControls]="actionControls"
+        [refresh]="refresh"
+      >
       </c8y-data-grid>
     </div>
   </div>
@@ -56,7 +79,13 @@
       <p>
         <strong>No mappings available.</strong><br />
         <small translate>Add a new mapping by clicking below.</small><br />
-        <button class="btn btn-primary" title="Add record" (click)="onAddMapping()" translate>Add mapping
+        <button
+          class="btn btn-primary"
+          title="Add record"
+          (click)="onAddMapping()"
+          translate
+        >
+          Add mapping
         </button>
       </p>
     </div>
@@ -64,18 +93,27 @@
 
   <div [ngClass]="{ drawerOpen: showConfigMapping }">
     <div class="bottom-drawer">
-      <mapping-stepper *ngIf="showConfigMapping" (onCancel)="showConfigMapping = false" (onCommit)="onCommitMapping($event)"
-        [mapping]="mappingToUpdate" [mappings]="mappings" [stepperConfiguration]="stepperConfiguration">
+      <mapping-stepper
+        *ngIf="showConfigMapping"
+        (onCancel)="showConfigMapping = false"
+        (onCommit)="onCommitMapping($event)"
+        [mapping]="mappingToUpdate"
+        [mappings]="mappings"
+        [stepperConfiguration]="stepperConfiguration"
+      >
       </mapping-stepper>
     </div>
   </div>
 
   <div [ngClass]="{ drawerOpen: showConfigSubscription }">
     <div class="bottom-drawer">
-      <mapping-subscription *ngIf="showConfigSubscription" (onCancel)="showConfigSubscription = false" (onCommit)="onCommitSubscription($event)"
-        [deviceList]="subscription.devices" >
+      <mapping-subscription
+        *ngIf="showConfigSubscription"
+        (onCancel)="showConfigSubscription = false"
+        (onCommit)="onCommitSubscription($event)"
+        [deviceList]="subscription.devices"
+      >
       </mapping-subscription>
     </div>
   </div>
-
 </div>

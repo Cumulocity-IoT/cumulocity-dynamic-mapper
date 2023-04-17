@@ -19,32 +19,30 @@
  * @authors Christof Strack
  */
 
-
-import { NgModule } from '@angular/core';
-import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
-import { AddExtensionComponent } from './extension-modal/add-extension.component';
-import { AddExtensionWizardComponent } from './add-extension-wizard.component';
-import { ExtensionCardComponent } from './extension-card/extension-card.component';
-import { ExtensionComponent } from './grid/extension.component';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
-
+import { NgModule } from "@angular/core";
+import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { AddExtensionComponent } from "./extension-modal/add-extension.component";
+import { AddExtensionWizardComponent } from "./add-extension-wizard.component";
+import { ExtensionCardComponent } from "./extension-card/extension-card.component";
+import { ExtensionComponent } from "./grid/extension.component";
+import { BsDropdownModule } from "ngx-bootstrap/dropdown";
+import { CollapseModule } from "ngx-bootstrap/collapse";
+import { ExtensionPropertiesComponent } from "./properties/extension-properties.component";
 
 const extensionRoutes: Route[] = [
   {
-    path: 'mqtt-mapping/extensions',
+    path: "mqtt-mapping/extensions",
     children: [
       {
-        path: '',
+        path: "",
         pathMatch: "full",
         component: ExtensionComponent,
       },
       {
-        path: 'properties/:id',
+        path: "properties/:id",
         component: ExtensionPropertiesComponent,
-      }
-    ]
+      },
+    ],
   },
 ];
 
@@ -57,24 +55,20 @@ const extensionRoutes: Route[] = [
     ExtensionCardComponent,
     ExtensionPropertiesComponent,
   ],
-  imports: [
-    CoreModule,
-    BsDropdownModule.forRoot(),
-    CollapseModule.forRoot(),
-  ],
+  imports: [CoreModule, BsDropdownModule.forRoot(), CollapseModule.forRoot()],
   entryComponents: [
     AddExtensionComponent,
     ExtensionComponent,
     ExtensionCardComponent,
-    ExtensionPropertiesComponent
+    ExtensionPropertiesComponent,
   ],
   exports: [],
   providers: [
     {
       provide: HOOK_ROUTE,
       useValue: extensionRoutes,
-      multi: true
+      multi: true,
     },
-  ]
+  ],
 })
-export class ExtensionModule { }
+export class ExtensionModule {}

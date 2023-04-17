@@ -18,46 +18,59 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, ViewChild } from '@angular/core';
-import { ActionControl, BulkActionControl, Column, DataGridComponent, DataSourceModifier, DisplayOptions, GridConfig, LoadMoreMode, Pagination, ServerSideDataResult } from '@c8y/ngx-components';
-import { TestingDeviceService } from './testing.service';
+import { Component, EventEmitter, ViewChild } from "@angular/core";
+import {
+  ActionControl,
+  BulkActionControl,
+  Column,
+  DataGridComponent,
+  DataSourceModifier,
+  DisplayOptions,
+  GridConfig,
+  LoadMoreMode,
+  Pagination,
+  ServerSideDataResult,
+} from "@c8y/ngx-components";
+import { TestingDeviceService } from "./testing.service";
 
 @Component({
-  selector: 'mapping-testing-grid',
-  templateUrl: 'testing.component.html',
-  styleUrls: ['../../mqtt-mapping/shared/mapping.style.css'],
+  selector: "mapping-testing-grid",
+  templateUrl: "testing.component.html",
+  styleUrls: ["../../mqtt-mapping/shared/mapping.style.css"],
 })
-
 export class TestingComponent {
+  @ViewChild(DataGridComponent, { static: false })
+  deviceGrid: DataGridComponent;
 
-  @ViewChild(DataGridComponent, { static: false }) deviceGrid: DataGridComponent;
-
-  loadMoreItemsLabel: string = 'Load more managed objects';
-  loadingItemsLabel: string = 'Loading managed objects…';
+  loadMoreItemsLabel: string = "Load more managed objects";
+  loadingItemsLabel: string = "Loading managed objects…";
 
   displayOptions: DisplayOptions = {
     bordered: true,
     striped: true,
     filter: true,
-    gridHeader: true
+    gridHeader: true,
   };
 
   columns: Column[] = this.service.getColumns();
   pagination: Pagination = this.service.getPagination();
-  infiniteScroll: LoadMoreMode = 'auto';
+  infiniteScroll: LoadMoreMode = "auto";
   serverSideDataCallback: any;
 
   refresh: EventEmitter<any> = new EventEmitter<any>();
 
   selectable: boolean = true;
   actionControls: ActionControl[] = this.service.getActionControls();
-  bulkActionControls: BulkActionControl[] = this.service.getBulkActionControls();
+  bulkActionControls: BulkActionControl[] =
+    this.service.getBulkActionControls();
   constructor(private service: TestingDeviceService) {
     // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
     // we're setting up `onRefreshClick` to be executed on refresh event
     this.refresh.subscribe(() => this.onRefreshClick());
-    this.service.refreshData$.subscribe(v =>{ this.deviceGrid.reload()}) 
+    this.service.refreshData$.subscribe((v) => {
+      this.deviceGrid.reload();
+    });
   }
 
   /**
@@ -99,16 +112,14 @@ export class TestingComponent {
     console.log({ deviceQueryString });
   }
 
-
   /** Executes an action on grid config change. */
   onConfigChange(gridConfig: GridConfig) {
-    console.log('grid config changed:');
+    console.log("grid config changed:");
     console.dir(gridConfig);
   }
 
   /** Executes an action on refresh event. */
   onRefreshClick() {
-    console.log('refresh clicked');
+    console.log("refresh clicked");
   }
-
 }

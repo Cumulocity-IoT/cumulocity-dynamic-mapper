@@ -18,22 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { AfterViewInit, Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { API, Direction } from '../shared/mapping.model';
-import { getSchema } from '../shared/util';
-import { JsonEditor2Component } from '../shared/editor2/jsoneditor2.component';
+import {
+  AfterViewInit,
+  Component,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation,
+} from "@angular/core";
+import { API, Direction } from "../shared/mapping.model";
+import { getSchema } from "../shared/util";
+import { JsonEditor2Component } from "../shared/editor2/jsoneditor2.component";
 
 @Component({
-  selector: 'json-editor2',
-  templateUrl: 'editor2-test.component.html',
-  styleUrls: ['./editor2-test.style.css'],
+  selector: "json-editor2",
+  templateUrl: "editor2-test.component.html",
+  styleUrls: ["./editor2-test.style.css"],
 
   encapsulation: ViewEncapsulation.None,
 })
-
 export class Editor2TestComponent implements OnInit, AfterViewInit {
   constructor() {}
-  @ViewChild('editor2Test', { static: false }) editor2: JsonEditor2Component;
+  @ViewChild("editor2Test", { static: false }) editor2: JsonEditor2Component;
   templateSource: any;
   editorProps: { mainMenuBar: false };
   public path: string;
@@ -47,24 +52,26 @@ export class Editor2TestComponent implements OnInit, AfterViewInit {
           menuitem: [
             { value: "New", onclick: "CreateNewDoc()" },
             { value: "Open", onclick: "OpenDoc()" },
-            { value: "Close", onclick: "CloseDoc()" }
-          ]
-        }
-      }
+            { value: "Close", onclick: "CloseDoc()" },
+          ],
+        },
+      },
     };
   }
 
   ngAfterViewInit(): void {
-    this.editor2.setSchema(getSchema(API.MEASUREMENT.name,Direction.INBOUND,true));
+    this.editor2.setSchema(
+      getSchema(API.MEASUREMENT.name, Direction.INBOUND, true)
+    );
   }
 
   onSelectedSourcePathChanged(event) {
     console.log("Something happend in the editor: ", event);
   }
 
-  onScrollToPathChanged(event){
+  onScrollToPathChanged(event) {
     const pathOrg = event.target.value;
-    console.log("Editor2 set:", event.target.value, this.editor2,);
+    console.log("Editor2 set:", event.target.value, this.editor2);
     this.editor2.setSelectionToPath(pathOrg);
   }
 }

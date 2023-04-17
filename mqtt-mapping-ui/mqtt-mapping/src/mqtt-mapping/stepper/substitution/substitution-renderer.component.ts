@@ -18,23 +18,28 @@
  *
  * @authors Christof Strack
  */
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation } from '@angular/core';
-import { definesDeviceIdentifier } from '../../../shared/util';
-import { MappingSubstitution } from '../../../shared/mapping.model';
-import { isDisabled } from '../util';
-import { EditorMode } from '../stepper-model';
-
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewChild,
+  ViewEncapsulation,
+} from "@angular/core";
+import { definesDeviceIdentifier } from "../../../shared/util";
+import { MappingSubstitution } from "../../../shared/mapping.model";
+import { isDisabled } from "../util";
+import { EditorMode } from "../stepper-model";
 
 @Component({
-  selector: 'mapping-substitution-renderer',
-  templateUrl: 'substitution-renderer.component.html',
-  styleUrls: ['./substitution-renderer.style.css',
-  ],
+  selector: "mapping-substitution-renderer",
+  templateUrl: "substitution-renderer.component.html",
+  styleUrls: ["./substitution-renderer.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-
 export class SubstitutionRendererComponent implements OnInit {
-
   @Input()
   substitutions: MappingSubstitution[] = [];
   @Input()
@@ -45,12 +50,12 @@ export class SubstitutionRendererComponent implements OnInit {
   @Output() onSelect = new EventEmitter<number>();
   @Output() onDelete = new EventEmitter<number>();
 
-  public id =  Math.floor(Math.random() * 1000000);
+  public id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
   isDisabled = isDisabled;
   EditorMode = EditorMode;
 
-  constructor(  private elementRef: ElementRef,) { }
+  constructor(private elementRef: ElementRef) {}
 
   ngOnInit() {
     //console.log ("Setting for renderer:", this.setting)
@@ -62,16 +67,18 @@ export class SubstitutionRendererComponent implements OnInit {
     this.onSelect.emit(index);
   }
 
-  public scrollToSubstitution(i: number){
+  public scrollToSubstitution(i: number) {
     i++;
     if (!i || i < 0 || i >= this.substitutions.length) {
       i = 0;
     }
-    console.log ("Scroll to:", i);
-    this.elementRef.nativeElement.querySelector(`#sub-${this.id}-${i}` ).scrollIntoView();
+    console.log("Scroll to:", i);
+    this.elementRef.nativeElement
+      .querySelector(`#sub-${this.id}-${i}`)
+      .scrollIntoView();
   }
 
-  public onSubstitutionDelete( index: number) {
+  public onSubstitutionDelete(index: number) {
     console.log("Delete substitution:", index);
     this.settings.selectedSubstitutionIndex = index;
     this.onDelete.emit(index);

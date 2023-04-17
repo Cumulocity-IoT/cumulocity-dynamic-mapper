@@ -1,3 +1,3 @@
-export function isDisabled ( condition: boolean){
-    return condition ? '' : null;
+export function isDisabled(condition: boolean) {
+  return condition ? "" : null;
 }

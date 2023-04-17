@@ -18,25 +18,26 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from "@angular/core";
 import {
   ConfirmModalComponent,
   gettext,
   ModalLabels,
   Status,
   StatusType,
-} from '@c8y/ngx-components';
-import { TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
-import { definesDeviceIdentifier } from '../../shared/util';
-import { Direction, MappingSubstitution } from '../../shared/mapping.model';
+} from "@c8y/ngx-components";
+import { TranslateService } from "@ngx-translate/core";
+import { Subject } from "rxjs";
+import { definesDeviceIdentifier } from "../../shared/util";
+import { Direction, MappingSubstitution } from "../../shared/mapping.model";
 
 @Component({
-  selector: 'mapping-overwrite-device-identifier-modal',
-  templateUrl: 'overwrite-device-identifier-modal.component.html',
+  selector: "mapping-overwrite-device-identifier-modal",
+  templateUrl: "overwrite-device-identifier-modal.component.html",
 })
 export class OverwriteDeviceIdentifierModalComponent implements OnInit {
-  @ViewChild('overwriteDeviceIdentifierRef', { static: false }) overwriteDeviceIdentifierRef: ConfirmModalComponent;
+  @ViewChild("overwriteDeviceIdentifierRef", { static: false })
+  overwriteDeviceIdentifierRef: ConfirmModalComponent;
 
   @Input()
   substitutionOld: MappingSubstitution;
@@ -52,22 +53,42 @@ export class OverwriteDeviceIdentifierModalComponent implements OnInit {
   substitutionNewText: string;
   substitutionOldText: string;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = { ok: gettext('Overwrite'), cancel: gettext('Keep old Device Identifier') };
-  title = gettext('Overwrite');
+  labels: ModalLabels = {
+    ok: gettext("Overwrite"),
+    cancel: gettext("Keep old Device Identifier"),
+  };
+  title = gettext("Overwrite");
   status: StatusType = Status.WARNING;
 
-  constructor(private translateService: TranslateService) { }
+  constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
     this.message1 = this.translateService.instant(
-      gettext('You are about to overwrite the defice identifier of the existing substitution:'));
+      gettext(
+        "You are about to overwrite the defice identifier of the existing substitution:"
+      )
+    );
     this.message2 = this.translateService.instant(
-      gettext('with the new substitution:'));
+      gettext("with the new substitution:")
+    );
     this.message3 = this.translateService.instant(
-      gettext('Do you want to proceed?'));
-    let marksDeviceIdentifierOld = (definesDeviceIdentifier(this.targetAPI, this.substitutionOld, this.direction) ? "* " : "");
+      gettext("Do you want to proceed?")
+    );
+    let marksDeviceIdentifierOld = definesDeviceIdentifier(
+      this.targetAPI,
+      this.substitutionOld,
+      this.direction
+    )
+      ? "* "
+      : "";
     this.substitutionOldText = `[ ${marksDeviceIdentifierOld}${this.substitutionOld.pathSource} -> ${this.substitutionOld.pathTarget} ]`;
-    let marksDeviceIdentifierNew = (definesDeviceIdentifier(this.targetAPI, this.substitutionNew, this.direction) ? "* " : "");
+    let marksDeviceIdentifierNew = definesDeviceIdentifier(
+      this.targetAPI,
+      this.substitutionNew,
+      this.direction
+    )
+      ? "* "
+      : "";
     this.substitutionNewText = `[ ${marksDeviceIdentifierNew}${this.substitutionNew.pathSource} -> ${this.substitutionNew.pathTarget} ]`;
   }
 

@@ -18,34 +18,37 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from "@angular/core";
 import {
   ConfirmModalComponent,
   gettext,
   ModalLabels,
   Status,
   StatusType,
-} from '@c8y/ngx-components';
-import { TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
+} from "@c8y/ngx-components";
+import { TranslateService } from "@ngx-translate/core";
+import { Subject } from "rxjs";
 
 @Component({
-  selector: 'mapping-terminate-connection',
-  templateUrl: 'terminate-connection-modal.component.html',
+  selector: "mapping-terminate-connection",
+  templateUrl: "terminate-connection-modal.component.html",
 })
 export class TerminateBrokerConnectionModalComponent implements OnInit {
-  @ViewChild('modalRef', { static: false }) modalRef: ConfirmModalComponent;
+  @ViewChild("modalRef", { static: false }) modalRef: ConfirmModalComponent;
   message: string;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = { ok: gettext('Disconnect'), cancel: gettext('Cancel') };
-  title = gettext('Disconnect');
+  labels: ModalLabels = {
+    ok: gettext("Disconnect"),
+    cancel: gettext("Cancel"),
+  };
+  title = gettext("Disconnect");
   status: StatusType = Status.WARNING;
 
   constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
     this.message = this.translateService.instant(
-      gettext('You are about to diconnect. Do you want to proceed?')
+      gettext("You are about to diconnect. Do you want to proceed?")
     );
   }
 

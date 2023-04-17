@@ -18,21 +18,17 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import {
-  IManagedObject,
-} from '@c8y/client';
-import {
-  gettext,
-} from '@c8y/ngx-components';
+import { Component, OnInit } from "@angular/core";
+import { FormGroup } from "@angular/forms";
+import { ActivatedRoute } from "@angular/router";
+import { IManagedObject } from "@c8y/client";
+import { gettext } from "@c8y/ngx-components";
 
-import { ExtensionService } from '../share/extension.service';
+import { ExtensionService } from "../share/extension.service";
 
 @Component({
-  selector: 'mapping-extension-properties',
-  templateUrl: './extension-properties.component.html'
+  selector: "mapping-extension-properties",
+  templateUrl: "./extension-properties.component.html",
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extensionsEntryForm: FormGroup;
@@ -45,8 +41,8 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   constructor(
     private activatedRoute: ActivatedRoute,
-    private extensionService: ExtensionService,
-  ) { }
+    private extensionService: ExtensionService
+  ) {}
 
   async ngOnInit() {
     await this.refresh();
@@ -65,7 +61,7 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   async loadExtension() {
     const { id } = this.activatedRoute.snapshot.params;
-    let filter = { id: id }
+    let filter = { id: id };
     let result = await this.extensionService.getExtensionsEnriched(filter);
     this.extension = result[0];
     // let copy = {
@@ -74,18 +70,16 @@ export class ExtensionPropertiesComponent implements OnInit {
     //   message: this.extension.extensionEntries[0].message + "copy"
     // };
     // this.extension.extensionEntries.push(copy);
-    this.extension.extensionEntries?.forEach(entry => {
+    this.extension.extensionEntries?.forEach((entry) => {
       this.isCollapsed[entry.name] = true;
     });
-
   }
 
   private setBreadcrumbConfig() {
     this.breadcrumbConfig = {
-      icon: 'c8y-modules',
-      label: gettext('Extensions'),
-      path: 'mqtt-mapping/extensions'
+      icon: "c8y-modules",
+      label: gettext("Extensions"),
+      path: "mqtt-mapping/extensions",
     };
   }
-
 }

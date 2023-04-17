@@ -19,22 +19,21 @@
  * @authors Christof Strack
  */
 
-import { Component, OnInit } from '@angular/core';
-import { IManagedObject, IResultList } from '@c8y/client';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { shareReplay, switchMap, tap } from 'rxjs/operators';
-import { ExtensionService } from '../share/extension.service';
-import { ModalOptions } from 'ngx-bootstrap/modal';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { Operation } from '../../shared/mapping.model';
-import { AddExtensionComponent } from '../extension-modal/add-extension.component';
-
+import { Component, OnInit } from "@angular/core";
+import { IManagedObject, IResultList } from "@c8y/client";
+import { BsModalService } from "ngx-bootstrap/modal";
+import { BehaviorSubject, Observable } from "rxjs";
+import { shareReplay, switchMap, tap } from "rxjs/operators";
+import { ExtensionService } from "../share/extension.service";
+import { ModalOptions } from "ngx-bootstrap/modal";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { Operation } from "../../shared/mapping.model";
+import { AddExtensionComponent } from "../extension-modal/add-extension.component";
 
 @Component({
-  selector: 'mapping-extension',
-  templateUrl: './extension.component.html',
-  styleUrls: ['../share/extension.component.css']
+  selector: "mapping-extension",
+  templateUrl: "./extension.component.html",
+  styleUrls: ["../share/extension.component.css"],
 })
 export class ExtensionComponent implements OnInit {
   reloading: boolean = false;
@@ -55,14 +54,16 @@ export class ExtensionComponent implements OnInit {
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
     private configurationService: BrokerConfigurationService
-  ) { }
+  ) {}
 
   async ngOnInit() {
     this.loadExtensions();
-    this.extensions$.subscribe( exts => {
+    this.extensions$.subscribe((exts) => {
       console.log("New extenions:", exts);
-    })
-    this.externalExtensionEnabled = (await this.configurationService.getServiceConfiguration()).externalExtensionEnabled;
+    });
+    this.externalExtensionEnabled = (
+      await this.configurationService.getServiceConfiguration()
+    ).externalExtensionEnabled;
   }
 
   loadExtensions() {
@@ -75,12 +76,11 @@ export class ExtensionComponent implements OnInit {
   }
 
   addExtension() {
-
-
     const initialState = {};
 
- 
-    const modalRef = this.bsModalService.show(AddExtensionComponent, { initialState } );
+    const modalRef = this.bsModalService.show(AddExtensionComponent, {
+      initialState,
+    });
     modalRef.content.closeSubject.subscribe(() => {
       this.loadExtensions();
       modalRef.hide();

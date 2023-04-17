@@ -19,17 +19,23 @@
  * @authors Christof Strack
  */
 import { Injectable } from "@angular/core";
-import { IFetchResponse, IMeasurement, IResult, MeasurementService } from "@c8y/client";
-import * as _ from 'lodash';
+import {
+  IFetchResponse,
+  IMeasurement,
+  IResult,
+  MeasurementService,
+} from "@c8y/client";
+import * as _ from "lodash";
 import { ProcessingContext } from "../processor/prosessor.model";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class FacadeMeasurementService {
-  constructor(
-    private measurement: MeasurementService) {
-  }
+  constructor(private measurement: MeasurementService) {}
 
-  public create(measurement: IMeasurement, context: ProcessingContext): Promise<IResult<IMeasurement>> {
+  public create(
+    measurement: IMeasurement,
+    context: ProcessingContext
+  ): Promise<IResult<IMeasurement>> {
     if (context.sendPayload) {
       return this.measurement.create(measurement);
     } else {
@@ -37,10 +43,10 @@ export class FacadeMeasurementService {
         ...measurement,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
         lastUpdated: new Date().toISOString(),
-      }
+      };
       const promise = Promise.resolve({
         data: copyMeasurement,
-        res: {status: 200} as IFetchResponse
+        res: { status: 200 } as IFetchResponse,
       });
       return promise;
     }

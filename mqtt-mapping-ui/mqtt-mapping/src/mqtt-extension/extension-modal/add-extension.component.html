@@ -23,15 +23,30 @@
   <h4>Add Extension</h4>
 </div>
 
-<c8y-modal (onClose)="onDone($event)" (onDismiss)="onDismiss($event)" [labels]="labels" [disabled]="true"
-  #addMappingRef>
+<c8y-modal
+  (onClose)="onDone($event)"
+  (onDismiss)="onDismiss($event)"
+  [labels]="labels"
+  [disabled]="true"
+  #addMappingRef
+>
   <div class="modal-inner-scroll animated fadeIn">
     <div class="modal-body">
-      <c8y-form-group *ngIf="!isAppCreated; else appCreated" [hasError]="errorMessage" class="m-auto"
-        style="max-width: 285px">
-        <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.jar'" [loading]="isLoading"
-          [maxAllowedFiles]="1" [message]="'Upload a *.jar file' | translate" [progress]="progress | async"
-          class="drop-area">
+      <c8y-form-group
+        *ngIf="!isAppCreated; else appCreated"
+        [hasError]="errorMessage"
+        class="m-auto"
+        style="max-width: 285px"
+      >
+        <c8y-drop-area
+          (dropped)="onFileDroppedEvent($event)"
+          [accept]="'.jar'"
+          [loading]="isLoading"
+          [maxAllowedFiles]="1"
+          [message]="'Upload a *.jar file' | translate"
+          [progress]="progress | async"
+          class="drop-area"
+        >
         </c8y-drop-area>
         <c8y-messages>
           <c8y-message *ngIf="errorMessage">
@@ -41,8 +56,13 @@
       </c8y-form-group>
       <ng-template #appCreated>
         <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
-          <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
-            type="success">
+          <c8y-operation-result
+            text="{{ successText | translate }}"
+            [vertical]="true"
+            [size]="84"
+            class="lead"
+            type="success"
+          >
           </c8y-operation-result>
         </div>
       </ng-template>
@@ -50,10 +70,16 @@
   </div>
 
   <div>
-    <a (click)="$event.stopPropagation()" *ngIf="isAppCreated && canOpenInBrowser" [href]="getHref(createdApp)"
-      target="_blank" class="btn btn-primary" title="{{ 'Open' | translate }}">
+    <a
+      (click)="$event.stopPropagation()"
+      *ngIf="isAppCreated && canOpenInBrowser"
+      [href]="getHref(createdApp)"
+      target="_blank"
+      class="btn btn-primary"
+      title="{{ 'Open' | translate }}"
+    >
       <i c8yIcon="external-link" class="m-r-4"></i>
-      {{ 'Open' | translate }}
+      {{ "Open" | translate }}
     </a>
   </div>
 </c8y-modal>

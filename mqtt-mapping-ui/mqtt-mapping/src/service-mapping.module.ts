@@ -18,41 +18,41 @@
  *
  * @authors Christof Strack
  */
-import { NgModule } from '@angular/core';
-import { Route, RouterModule as NgRouterModule } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { NgModule } from "@angular/core";
+import { Route, RouterModule as NgRouterModule } from "@angular/router";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import {
   CoreModule,
   HOOK_NAVIGATOR_NODES,
   HOOK_TABS,
-} from '@c8y/ngx-components';
-import { ConfigurationModule } from './mqtt-configuration/configuration.module';
-import { ExtensionModule } from './mqtt-extension/extension.module';
-import { MappingTreeModule } from './mqtt-mapping-tree/tree.module';
-import { MappingModule } from './mqtt-mapping/mapping.module';
-import { MonitoringModule } from './mqtt-monitoring/monitoring.module';
-import { TestingModule } from './mqtt-testing-devices/testing.module';
-import { MappingNavigationFactory } from './navigation.factory';
-import { ServiceMappingComponent } from './service-mapping.component';
-import { OverviewGuard } from './shared/overview.guard';
-import { MappingTabFactory } from './tab.factory';
-import { ExtensionComponent } from './mqtt-extension/grid/extension.component';
-import { ExtensionPropertiesComponent } from './mqtt-extension/properties/extension-properties.component';
-import { Editor2TestModule } from './editor2/editor2-test.module';
-import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
+} from "@c8y/ngx-components";
+import { ConfigurationModule } from "./mqtt-configuration/configuration.module";
+import { ExtensionModule } from "./mqtt-extension/extension.module";
+import { MappingTreeModule } from "./mqtt-mapping-tree/tree.module";
+import { MappingModule } from "./mqtt-mapping/mapping.module";
+import { MonitoringModule } from "./mqtt-monitoring/monitoring.module";
+import { TestingModule } from "./mqtt-testing-devices/testing.module";
+import { MappingNavigationFactory } from "./navigation.factory";
+import { ServiceMappingComponent } from "./service-mapping.component";
+import { OverviewGuard } from "./shared/overview.guard";
+import { MappingTabFactory } from "./tab.factory";
+import { ExtensionComponent } from "./mqtt-extension/grid/extension.component";
+import { ExtensionPropertiesComponent } from "./mqtt-extension/properties/extension-properties.component";
+import { Editor2TestModule } from "./editor2/editor2-test.module";
+import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
 
 const extensionRoutes: Route[] = [
   {
-    path: 'mqtt-mapping/extensions',
+    path: "mqtt-mapping/extensions",
     component: ExtensionComponent,
     pathMatch: "full",
     children: [
       {
         // path: 'mqtt-mapping/extensions/properties/50051686',
-        path: 'properties/:id',
+        path: "properties/:id",
         component: ExtensionPropertiesComponent,
-      }
-    ]
+      },
+    ],
     //canActivate: [ExtensionGuard],
   },
   // {
@@ -60,7 +60,6 @@ const extensionRoutes: Route[] = [
   //   component: ExtensionPropertiesComponent,
   // }
 ];
-
 
 @NgModule({
   imports: [
@@ -74,23 +73,22 @@ const extensionRoutes: Route[] = [
     Editor2TestModule,
     FormsModule,
     ModalModule,
-    ReactiveFormsModule
-,
+    ReactiveFormsModule,
   ],
-  exports: [
-    ServiceMappingComponent,
-  ],
+  exports: [ServiceMappingComponent],
   entryComponents: [ServiceMappingComponent],
-  declarations: [
-    ServiceMappingComponent
-  ],
+  declarations: [ServiceMappingComponent],
   providers: [
     OverviewGuard,
     BsModalService,
-    { provide: HOOK_NAVIGATOR_NODES, useClass: MappingNavigationFactory, multi: true },
+    {
+      provide: HOOK_NAVIGATOR_NODES,
+      useClass: MappingNavigationFactory,
+      multi: true,
+    },
     { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
   ],
 })
 export class MQTTMappingModule {
-  constructor() { }
+  constructor() {}
 }
