@@ -49,7 +49,7 @@ export class MappingTreeService {
       return undefined;
     }
     let tree = (await response.json()) as JSON;
-    // ignore first level of the object, as it does not contain any information
+    //ignore first level of the object, as it does not contain any information
     if (tree?.["childNodes"]) {
       tree = tree?.["childNodes"];
     }

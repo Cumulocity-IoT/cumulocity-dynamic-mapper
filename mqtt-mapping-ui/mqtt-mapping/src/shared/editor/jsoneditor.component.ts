@@ -18,6 +18,7 @@
  *
  * @authors Christof Strack
  */
+
 import {
   Component,
   ElementRef,
@@ -30,10 +31,6 @@ import {
   forwardRef,
   ChangeDetectionStrategy,
   ViewEncapsulation,
-  AfterContentInit,
-  AfterViewInit,
-  AfterContentChecked,
-  AfterViewChecked,
 } from "@angular/core";
 import JSONEditor from "jsoneditor";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from "@angular/forms";
@@ -64,14 +61,7 @@ import { COLOR_HIGHLIGHTED } from "../util";
   encapsulation: ViewEncapsulation.None,
 })
 export class JsonEditorComponent
-  implements
-    ControlValueAccessor,
-    OnInit,
-    OnDestroy,
-    AfterViewInit,
-    AfterContentInit,
-    AfterContentChecked,
-    AfterViewChecked
+  implements ControlValueAccessor, OnInit, OnDestroy
 {
   private editor: any;
   public id = "angjsoneditor" + Math.floor(Math.random() * 1000000);
@@ -107,19 +97,6 @@ export class JsonEditorComponent
   onPathChanged: EventEmitter<string> = new EventEmitter<string>();
 
   constructor(private elementRef: ElementRef) {}
-  ngAfterViewChecked(): void {
-    //console.log("ngAfterViewChecked:", Object.keys(this.editor?.get()))
-  }
-  ngAfterContentChecked(): void {
-    //console.log("ngAfterContentChecked:", Object.keys(this.editor?.get()))
-  }
-  ngAfterContentInit(): void {
-    //console.log("ngAfterContentInit:", Object.keys(this.editor?.get()))
-  }
-  ngAfterViewInit(): void {
-    //this.onInit.emit('INITIALISED');
-    //console.log("ngAfterViewInit:", Object.keys(this.editor?.get()))
-  }
 
   ngOnInit() {
     let optionsBefore = this.options;
@@ -168,6 +145,9 @@ export class JsonEditorComponent
     this.destroy();
   }
 
+  hasObservers(eventEmitter: EventEmitter<any>): boolean {
+    return eventEmitter.observers.length > 0;
+  } 
   /**
    * ngModel
    * ControlValueAccessor
@@ -344,7 +324,9 @@ export class JsonEditorComponent
       } catch (error) {
         console.warn("Set selection to path not possible:", node.path, error);
       }
-      this.onPathChanged.emit(this.editorPath2jsonPath(node.path));
+      if (this.hasObservers(this.onPathChanged)) {
+        this.onPathChanged.emit(this.editorPath2jsonPath(node.path));
+      }
     }
   }
 
@@ -357,7 +339,9 @@ export class JsonEditorComponent
     } catch (error) {
       console.warn("Set selection to path not possible:", levels, error);
     }
-    this.onPathChanged.emit(path);
+    if (this.hasObservers(this.onPathChanged)) {
+      this.onPathChanged.emit(path);
+    }
   }
 
   private editorPath2jsonPath(levels: string[]): string {
