@@ -21,32 +21,41 @@
 
 <c8y-title>MQTT Mapping</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="loadConnectionStatus()">
+  <button
+    class="btn btn-link"
+    title="{{ 'Refresh' | translate }}"
+    (click)="loadConnectionStatus()"
+  >
     <i c8yIcon="refresh"></i>
-    {{ 'Refresh' | translate }}
+    {{ "Refresh" | translate }}
   </button>
 </c8y-action-bar-item>
-
 
 <div class="col-md-8 col-xs-12">
   <div class="card">
     <div class="card-header separator j-c-between">
       <h4 class="card-title">
-        {{ 'Broker Configuration' | translate }}
+        {{ "Broker Configuration" | translate }}
       </h4>
       <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isConnectionEnabled,
-              inactive: !isConnectionEnabled
-            }"></span>
-        {{ 'Connection enabled' | translate }}
+        <span
+          class="c8y-pulse animated pulse"
+          [ngClass]="{
+            active: isConnectionEnabled,
+            inactive: !isConnectionEnabled
+          }"
+        ></span>
+        {{ "Connection enabled" | translate }}
       </div>
       <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
-              active: isBrokerConnected,
-              inactive: !isBrokerConnected
-            }"></span>
-        {{ 'Broker connected' | translate }}
+        <span
+          class="c8y-pulse animated pulse"
+          [ngClass]="{
+            active: isBrokerConnected,
+            inactive: !isBrokerConnected
+          }"
+        ></span>
+        {{ "Broker connected" | translate }}
       </div>
     </div>
     <div class="inner-scroll">
@@ -56,22 +65,46 @@
             <div class="row">
               <div class="col-lg-6">
                 <label for="mqttHost" translate>MQTT Host</label>
-                <input formControlName="mqttHost" [(ngModel)]="connectionConfiguration.mqttHost" type="text"
-                  class="form-control" placeholder="e.g. test.mosquitto.org" #mqttHostRef required />
+                <input
+                  formControlName="mqttHost"
+                  [(ngModel)]="connectionConfiguration.mqttHost"
+                  type="text"
+                  class="form-control"
+                  placeholder="e.g. test.mosquitto.org"
+                  #mqttHostRef
+                  required
+                />
                 <c8y-messages>
-                  <c8y-message *ngIf="!connectionForm.get('mqttHost').untouched && !mqttHostRef.value" translate>This field
-                    is
-                    required.</c8y-message>
+                  <c8y-message
+                    *ngIf="
+                      !connectionForm.get('mqttHost').untouched &&
+                      !mqttHostRef.value
+                    "
+                    translate
+                    >This field is required.</c8y-message
+                  >
                 </c8y-messages>
               </div>
               <div class="col-lg-6">
                 <label for="mqttPort" translate>MQTT Port</label>
-                <input formControlName="mqttPort" [(ngModel)]="connectionConfiguration.mqttPort" type="number"
-                  class="form-control" placeholder="e.g. 1883" #mqttPortRef required />
+                <input
+                  formControlName="mqttPort"
+                  [(ngModel)]="connectionConfiguration.mqttPort"
+                  type="number"
+                  class="form-control"
+                  placeholder="e.g. 1883"
+                  #mqttPortRef
+                  required
+                />
                 <c8y-messages>
-                  <c8y-message *ngIf="!connectionForm.get('mqttPort').untouched && !mqttPortRef.value" translate>This field
-                    is
-                    required.</c8y-message>
+                  <c8y-message
+                    *ngIf="
+                      !connectionForm.get('mqttPort').untouched &&
+                      !mqttPortRef.value
+                    "
+                    translate
+                    >This field is required.</c8y-message
+                  >
                 </c8y-messages>
               </div>
             </div>
@@ -80,51 +113,94 @@
             <div class="row">
               <div class="col-lg-6">
                 <label for="user" translate>User</label>
-                <input formControlName="user" [(ngModel)]="connectionConfiguration.user" type="text"
-                  class="form-control" placeholder="{{ 'user' | translate }}" #userRef />
+                <input
+                  formControlName="user"
+                  [(ngModel)]="connectionConfiguration.user"
+                  type="text"
+                  class="form-control"
+                  placeholder="{{ 'user' | translate }}"
+                  #userRef
+                />
               </div>
               <div class="col-lg-6">
                 <label for="password" translate>Password</label>
-                <input formControlName="password" [(ngModel)]="connectionConfiguration.password" type="password"
-                  class="form-control" placeholder="{{ 'password' | translate }}" #passwordRef/>
+                <input
+                  formControlName="password"
+                  [(ngModel)]="connectionConfiguration.password"
+                  type="password"
+                  class="form-control"
+                  placeholder="{{ 'password' | translate }}"
+                  #passwordRef
+                />
               </div>
             </div>
           </c8y-form-group>
           <c8y-form-group>
             <label for="clientId" translate>ClientId</label>
-            <input formControlName="clientId" [(ngModel)]="connectionConfiguration.clientId" type="text"
-              class="form-control" placeholder="e.g. poc-1234" #clientIdRef required />
+            <input
+              formControlName="clientId"
+              [(ngModel)]="connectionConfiguration.clientId"
+              type="text"
+              class="form-control"
+              placeholder="e.g. poc-1234"
+              #clientIdRef
+              required
+            />
             <c8y-messages>
-              <c8y-message *ngIf="!connectionForm.get('clientId').untouched && !clientIdRef.value" translate>This field is
-                required.</c8y-message>
+              <c8y-message
+                *ngIf="
+                  !connectionForm.get('clientId').untouched &&
+                  !clientIdRef.value
+                "
+                translate
+                >This field is required.</c8y-message
+              >
             </c8y-messages>
           </c8y-form-group>
           <c8y-form-group>
             <div class="row">
               <div class="col-lg-3">
-                <br>
+                <br />
                 <label class="c8y-switch" title="{{ 'Use TLS' | translate }}">
-                  <input type="checkbox" formControlName="useTLS" [(ngModel)]="connectionConfiguration.useTLS"
-                    #useTLSRef />
+                  <input
+                    type="checkbox"
+                    formControlName="useTLS"
+                    [(ngModel)]="connectionConfiguration.useTLS"
+                    #useTLSRef
+                  />
                   <span></span>
                   <span>
-                    {{ 'Use TLS'}}
+                    {{ "Use TLS" }}
                   </span>
                 </label>
                 <c8y-messages>
-                  <c8y-message *ngIf="!connectionForm.get('useTLS').untouched && !useTLSRef.value" translate>This field is
-                    required.
+                  <c8y-message
+                    *ngIf="
+                      !connectionForm.get('useTLS').untouched &&
+                      !useTLSRef.value
+                    "
+                    translate
+                    >This field is required.
                   </c8y-message>
                 </c8y-messages>
               </div>
-              <div class="col-lg-3" *ngIf = "connectionConfiguration.useTLS">
-                <br>
-                <label class="c8y-switch" title="{{ 'Use Self signed certificate' | translate }}">
-                  <input type="checkbox" formControlName="useSelfSignedCertificate" [(ngModel)]="connectionConfiguration.useSelfSignedCertificate"
-                    #useTLSRef />
+              <div class="col-lg-3" *ngIf="connectionConfiguration.useTLS">
+                <br />
+                <label
+                  class="c8y-switch"
+                  title="{{ 'Use Self signed certificate' | translate }}"
+                >
+                  <input
+                    type="checkbox"
+                    formControlName="useSelfSignedCertificate"
+                    [(ngModel)]="
+                      connectionConfiguration.useSelfSignedCertificate
+                    "
+                    #useTLSRef
+                  />
                   <span></span>
                   <span>
-                    {{ 'Use Self signed certificate'}}
+                    {{ "Use Self signed certificate" }}
                   </span>
                 </label>
               </div>
@@ -133,31 +209,58 @@
                 <input formControlName="fingerprintSelfSignedCertificate" [(ngModel)]="connectionConfiguration.fingerprintSelfSignedCertificate" type="text"
                   class="form-control" placeholder="{{ 'fingerprint' | translate }}"  required />
               </div> -->
-              <div class="col-lg-6" *ngIf = "connectionConfiguration.useSelfSignedCertificate">
-                <label  translate>Name of self-signed certificate uploaded to Cumulocity</label>
-                <input formControlName="nameCertificate" [(ngModel)]="connectionConfiguration.nameCertificate" type="text"
-                  class="form-control" placeholder="{{ 'name certificate' | translate }}"/>
+              <div
+                class="col-lg-6"
+                *ngIf="connectionConfiguration.useSelfSignedCertificate"
+              >
+                <label translate
+                  >Name of self-signed certificate uploaded to Cumulocity</label
+                >
+                <input
+                  formControlName="nameCertificate"
+                  [(ngModel)]="connectionConfiguration.nameCertificate"
+                  type="text"
+                  class="form-control"
+                  placeholder="{{ 'name certificate' | translate }}"
+                />
               </div>
             </div>
           </c8y-form-group>
-          <c8y-form-group *ngIf = "connectionConfiguration.useTLS">
-            <div class="row">
-            </div>
+          <c8y-form-group *ngIf="connectionConfiguration.useTLS">
+            <div class="row"></div>
           </c8y-form-group>
         </div>
       </div>
       <div class="card-footer text-center">
         <div class="form-group">
-          <button type="button" name="save" class="btn btn-primary" (click)="clickedSaveConnectionConfiguration()"
-            [disabled]="!connectionForm.valid" translate>
+          <button
+            type="button"
+            name="save"
+            class="btn btn-primary"
+            (click)="clickedSaveConnectionConfiguration()"
+            [disabled]="!connectionForm.valid"
+            translate
+          >
             Save
           </button>
-          <button type="button" name="connect" class="btn btn-primary" (click)="clickedConnect()"
-            [disabled]="isBrokerConnected" translate>
+          <button
+            type="button"
+            name="connect"
+            class="btn btn-primary"
+            (click)="clickedConnect()"
+            [disabled]="isBrokerConnected"
+            translate
+          >
             Connect
           </button>
-          <button type="button" name="disconnect" class="btn btn-danger" (click)="clickedDisconnect()"
-            [disabled]="!isBrokerConnected" translate>
+          <button
+            type="button"
+            name="disconnect"
+            class="btn btn-danger"
+            (click)="clickedDisconnect()"
+            [disabled]="!isBrokerConnected"
+            translate
+          >
             Disconnect
           </button>
         </div>
@@ -167,14 +270,17 @@
   <div class="card">
     <div class="card-header separator j-c-between">
       <h4 class="card-title">
-        {{ 'Service Configuration' | translate }}
+        {{ "Service Configuration" | translate }}
       </h4>
       <div class="c8y-realtime">
-        <span class="c8y-pulse animated pulse" [ngClass]="{
+        <span
+          class="c8y-pulse animated pulse"
+          [ngClass]="{
             active: isBrokerAgentCreated$ | async,
             inactive: !isBrokerAgentCreated$ | async
-          }"></span>
-        {{ 'MQTT Mapping Service' | translate }}
+          }"
+        ></span>
+        {{ "MQTT Mapping Service" | translate }}
       </div>
     </div>
     <div class="inner-scroll">
@@ -183,22 +289,36 @@
           <c8y-form-group>
             <div class="row">
               <div class="col-lg-6">
-                <label class="c8y-switch" title="{{ 'Log payload in Backend' | translate }}">
-                  <input type="checkbox" formControlName="logPayload" [(ngModel)]="serviceConfiguration.logPayload"
-                    #useTLSRef/>
+                <label
+                  class="c8y-switch"
+                  title="{{ 'Log payload in Backend' | translate }}"
+                >
+                  <input
+                    type="checkbox"
+                    formControlName="logPayload"
+                    [(ngModel)]="serviceConfiguration.logPayload"
+                    #useTLSRef
+                  />
                   <span></span>
                   <span>
-                    {{ 'Log Payload'}}
+                    {{ "Log Payload" }}
                   </span>
                 </label>
               </div>
               <div class="col-lg-6">
-                <label class="c8y-switch" title="{{ 'Log substitution in Backend' | translate }}">
-                  <input type="checkbox" formControlName="logSubstitution" [(ngModel)]="serviceConfiguration.logSubstitution"
-                    #useTLSRef/>
+                <label
+                  class="c8y-switch"
+                  title="{{ 'Log substitution in Backend' | translate }}"
+                >
+                  <input
+                    type="checkbox"
+                    formControlName="logSubstitution"
+                    [(ngModel)]="serviceConfiguration.logSubstitution"
+                    #useTLSRef
+                  />
                   <span></span>
                   <span>
-                    {{ 'Log Substitution'}}
+                    {{ "Log Substitution" }}
                   </span>
                 </label>
               </div>
@@ -208,7 +328,13 @@
       </div>
       <div class="card-footer text-center">
         <div class="form-group">
-          <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate>
+          <button
+            type="button"
+            name="update"
+            class="btn btn-primary"
+            (click)="clickedSaveServiceConfiguration()"
+            translate
+          >
             Save
           </button>
         </div>

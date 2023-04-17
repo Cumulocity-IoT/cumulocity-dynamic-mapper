@@ -22,18 +22,18 @@
 import { Direction } from "./../../shared/mapping.model";
 
 export enum EditorMode {
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-  READ_ONLY = 'READ_ONLY',
-  COPY = "COPY"
+  CREATE = "CREATE",
+  UPDATE = "UPDATE",
+  READ_ONLY = "READ_ONLY",
+  COPY = "COPY",
 }
 
 export interface StepperConfiguration {
-    showEditorSource?: boolean;
-    showProcessorExtensions?: boolean;
-    editorMode: EditorMode;
-    allowNoDefinedIdentifier?: boolean;
-    allowTestTransformation?: boolean;
-    allowTestSending?: boolean;
-    direction: Direction;
+  showEditorSource?: boolean;
+  showProcessorExtensions?: boolean;
+  editorMode: EditorMode;
+  allowNoDefinedIdentifier?: boolean;
+  allowTestTransformation?: boolean;
+  allowTestSending?: boolean;
+  direction: Direction;
 }

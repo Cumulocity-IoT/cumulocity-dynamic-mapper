@@ -19,28 +19,46 @@
  * @authors Christof Strack
  */
 import {
-  Component, ElementRef, Input, OnInit, OnDestroy, ViewChild,
-  Output, EventEmitter, ChangeDetectionStrategy, ViewEncapsulation
-} from '@angular/core';
-import { JSONEditor, renderValue, Content, JSONPath, MenuItem, createKeySelection, createAjvValidator, stringifyJSONPath, parseJSONPath, createInsideSelection } from 'vanilla-jsoneditor'
+  Component,
+  ElementRef,
+  Input,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+  ViewEncapsulation,
+} from "@angular/core";
+import {
+  JSONEditor,
+  renderValue,
+  Content,
+  JSONPath,
+  MenuItem,
+  createKeySelection,
+  createAjvValidator,
+  stringifyJSONPath,
+  parseJSONPath,
+  createInsideSelection,
+} from "vanilla-jsoneditor";
 
 @Component({
-  selector: 'mapping-json-editor2‚',
+  selector: "mapping-json-editor2‚",
   template: `<div class="jsoneditor2" [id]="id" #jsonEditorContainer></div>`,
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./jsoneditor2.style.css'],
+  styleUrls: ["./jsoneditor2.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-
 export class JsonEditor2Component implements OnInit, OnDestroy {
-
-  @ViewChild('jsonEditorContainer', { static: true }) jsonEditorContainer: ElementRef;
+  @ViewChild("jsonEditorContainer", { static: true })
+  jsonEditorContainer: ElementRef;
 
   @Input() props = {};
-  @Input('data')
+  @Input("data")
   set data(value: Object) {
-    this.content['json'] = value;
+    this.content["json"] = value;
 
     if (this.editor) {
       this.editor.destroy();
@@ -53,40 +71,60 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @Output()
   onPathChanged: EventEmitter<string> = new EventEmitter<string>();
 
-  constructor(private elementRef: ElementRef) { }
+  constructor(private elementRef: ElementRef) {}
 
   private editor: JSONEditor;
-  public id = 'angjsoneditor' + Math.floor(Math.random() * 1000000);
+  public id = "angjsoneditor" + Math.floor(Math.random() * 1000000);
   content: Content = {
-    text: undefined
+    text: undefined,
   };
   ngOnInit() {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error(`Can't find the ElementRef reference for jsoneditor)`);
     }
-    this.editor = new JSONEditor(
-      {
-        target: this.jsonEditorContainer.nativeElement,
-        props: {
-          ...this.props,
-          content: this.content,
-          onChange: (updatedContent, previousContent, { contentErrors, patchResult }) => {
-            // content is an object { json: JSONData } | { text: string }
-            console.log('onChange', { updatedContent, previousContent, contentErrors, patchResult })
-            this.content = updatedContent
-            this.change.emit(updatedContent);
-          },
-          onRenderValue: this.onRenderValue.bind(this),
-          onRenderMenu(items: MenuItem[], context: { mode: 'tree' | 'text' | 'table', modal: boolean }): MenuItem[] | undefined {
-            console.log("MenuItems:", items);
-            // remove buttons for table-mode, transform, sort
-            items.splice(items.findIndex(i => (i['text'] === "table")), 1);
-            items.splice(items.findIndex(i => (i['className'] === "jse-sort")), 1);
-            items.splice(items.findIndex(i => (i['className'] === "jse-transform")), 1);
-            return items;
-          },
-        }
-      });
+    this.editor = new JSONEditor({
+      target: this.jsonEditorContainer.nativeElement,
+      props: {
+        ...this.props,
+        content: this.content,
+        onChange: (
+          updatedContent,
+          previousContent,
+          { contentErrors, patchResult }
+        ) => {
+          // content is an object { json: JSONData } | { text: string }
+          console.log("onChange", {
+            updatedContent,
+            previousContent,
+            contentErrors,
+            patchResult,
+          });
+          this.content = updatedContent;
+          this.change.emit(updatedContent);
+        },
+        onRenderValue: this.onRenderValue.bind(this),
+        onRenderMenu(
+          items: MenuItem[],
+          context: { mode: "tree" | "text" | "table"; modal: boolean }
+        ): MenuItem[] | undefined {
+          console.log("MenuItems:", items);
+          // remove buttons for table-mode, transform, sort
+          items.splice(
+            items.findIndex((i) => i["text"] === "table"),
+            1
+          );
+          items.splice(
+            items.findIndex((i) => i["className"] === "jse-sort"),
+            1
+          );
+          items.splice(
+            items.findIndex((i) => i["className"] === "jse-transform"),
+            1
+          );
+          return items;
+        },
+      },
+    });
   }
 
   ngOnDestroy() {
@@ -105,7 +143,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     //     console.log("Was selected:", selection)
     //   }
     // }
-    return renderValue(props)
+    return renderValue(props);
   }
 
   public updateSelection(path: JSONPath, orgPath: string) {
@@ -114,7 +152,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   }
 
   public setSchema(schema: any) {
-    const validator = createAjvValidator({ schema })
+    const validator = createAjvValidator({ schema });
     this.editor.updateProps({ validator: validator });
   }
 
@@ -134,5 +172,4 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     }
     this.onPathChanged.emit(pathString);
   }
-
 }

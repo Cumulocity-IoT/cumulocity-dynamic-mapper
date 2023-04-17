@@ -18,22 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output, ViewEncapsulation } from '@angular/core';
-import { IIdentified } from '@c8y/client';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewEncapsulation,
+} from "@angular/core";
+import { IIdentified } from "@c8y/client";
 
 @Component({
-  selector: 'mapping-subscription',
-  templateUrl: 'mapping-subscription.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  selector: "mapping-subscription",
+  templateUrl: "mapping-subscription.component.html",
+  styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-
 export class MappingSubscriptionComponent implements OnInit {
-  
   @Input() deviceList: IIdentified;
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<IIdentified>();
-  
+
   ngOnInit(): void {
     console.log("MappingSubscription:", this.deviceList);
   }
@@ -43,15 +48,10 @@ export class MappingSubscriptionComponent implements OnInit {
   }
 
   clickedUpdateSubscription() {
-
     this.onCommit.emit(this.deviceList);
-
   }
 
   clickedCancel() {
-    
     this.onCancel.emit();
-
   }
-
 }

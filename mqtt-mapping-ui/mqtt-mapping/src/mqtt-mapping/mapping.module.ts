@@ -18,37 +18,45 @@
  *
  * @authors Christof Strack
  */
-import { NgModule } from '@angular/core';
-import { CoreModule, DynamicFormsModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
-import { PopoverModule } from 'ngx-bootstrap/popover';
-import { MappingComponent } from './grid/mapping.component';
-import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { OverwriteDeviceIdentifierModalComponent } from './overwrite/overwrite-device-identifier-modal.component';
-import { OverwriteSubstitutionModalComponent } from './overwrite/overwrite-substitution-modal.component';
-import { APIRendererComponent } from './renderer/api.renderer.component';
-import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
-import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.renderer.component';
-import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
-import { ActiveRendererComponent } from './renderer/active.renderer.component';
-import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { SnoopingModalComponent } from './snooping/snooping-modal.component';
-import { MappingStepperComponent } from './stepper/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './stepper/substitution/substitution-renderer.component';
-import { SharedModule } from '../shared/shared.module';
-import { ConfigurationModule } from '../mqtt-configuration/configuration.module';
-import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
-import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { checkSubstitutionIsValid, checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/util';
-import { FormlyTextField } from './shared/formly/text-field';
-import { FormlyFieldButton } from './shared/formly/button-type';
-import { MessageField } from './shared/formly/message-field';
-import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper';
-import { C8YSwitchField } from './shared/formly/c8y-switch-field';
-import { FormlyBootstrapModule } from '@ngx-formly/bootstrap';
-import { SelectComponent } from './shared/formly/select/select.type.component';
-import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component';
-
+import { NgModule } from "@angular/core";
+import {
+  CoreModule,
+  DynamicFormsModule,
+  HOOK_ROUTE,
+  Route,
+} from "@c8y/ngx-components";
+import { PopoverModule } from "ngx-bootstrap/popover";
+import { MappingComponent } from "./grid/mapping.component";
+import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
+import { OverwriteDeviceIdentifierModalComponent } from "./overwrite/overwrite-device-identifier-modal.component";
+import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
+import { APIRendererComponent } from "./renderer/api.renderer.component";
+import { QOSRendererComponent } from "./renderer/qos-cell.renderer.component";
+import { SnoopedTemplateRendererComponent } from "./renderer/snoopedTemplate.renderer.component";
+import { StatusRendererComponent } from "./renderer/status-cell.renderer.component";
+import { ActiveRendererComponent } from "./renderer/active.renderer.component";
+import { TemplateRendererComponent } from "./renderer/template.renderer.component";
+import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
+import { MappingStepperComponent } from "./stepper/mapping-stepper.component";
+import { SubstitutionRendererComponent } from "./stepper/substitution/substitution-renderer.component";
+import { SharedModule } from "../shared/shared.module";
+import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
+import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
+import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
+import { FORMLY_CONFIG } from "@ngx-formly/core";
+import {
+  checkSubstitutionIsValid,
+  checkTopicsInboundAreValid,
+  checkTopicsOutboundAreValid,
+} from "../shared/util";
+import { FormlyTextField } from "./shared/formly/text-field";
+import { FormlyFieldButton } from "./shared/formly/button-type";
+import { MessageField } from "./shared/formly/message-field";
+import { FormlyHorizontalWrapper } from "./shared/formly/horizontal-wrapper";
+import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
+import { FormlyBootstrapModule } from "@ngx-formly/bootstrap";
+import { SelectComponent } from "./shared/formly/select/select.type.component";
+import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
 
 @NgModule({
   declarations: [
@@ -70,7 +78,7 @@ import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component'
     FormlyHorizontalWrapper,
     C8YSwitchField,
     SelectComponent,
-    FieldCheckbox
+    FieldCheckbox,
   ],
   imports: [
     CoreModule,
@@ -101,7 +109,7 @@ import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component'
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/mappings/inbound',
+          path: "mqtt-mapping/mappings/inbound",
           component: MappingComponent,
         },
       ] as Route[],
@@ -111,7 +119,7 @@ import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component'
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/mappings/outbound',
+          path: "mqtt-mapping/mappings/outbound",
           component: MappingComponent,
         },
       ] as Route[],
@@ -122,25 +130,38 @@ import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component'
       multi: true,
       useValue: {
         validators: [
-          { name: 'checkTopicsInboundAreValid', validation: checkTopicsInboundAreValid },
-          { name: 'checkTopicsOutboundAreValid', validation: checkTopicsOutboundAreValid },
-          { name: 'checkSubstitutionIsValid', validation: checkSubstitutionIsValid },
+          {
+            name: "checkTopicsInboundAreValid",
+            validation: checkTopicsInboundAreValid,
+          },
+          {
+            name: "checkTopicsOutboundAreValid",
+            validation: checkTopicsOutboundAreValid,
+          },
+          {
+            name: "checkSubstitutionIsValid",
+            validation: checkSubstitutionIsValid,
+          },
         ],
         types: [
-          { name: 'text', component: FormlyTextField },
-          { name: 'button', component: FormlyFieldButton },
-          { name: 'message-field', component: MessageField },
-          { name: 'c8y-switch', component: C8YSwitchField },
-          { name: 'select', component: SelectComponent, wrappers: ['c8y-form-field'] },
-          { name: 'enum', extends: 'select' },
-          { name: 'checkbox', component: FieldCheckbox},
-          { name: 'boolean', extends: 'checkbox'},
+          { name: "text", component: FormlyTextField },
+          { name: "button", component: FormlyFieldButton },
+          { name: "message-field", component: MessageField },
+          { name: "c8y-switch", component: C8YSwitchField },
+          {
+            name: "select",
+            component: SelectComponent,
+            wrappers: ["c8y-form-field"],
+          },
+          { name: "enum", extends: "select" },
+          { name: "checkbox", component: FieldCheckbox },
+          { name: "boolean", extends: "checkbox" },
         ],
         wrappers: [
-          { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
-        ]
-      }
+          { name: "form-field-horizontal", component: FormlyHorizontalWrapper },
+        ],
+      },
     },
-  ]
+  ],
 })
-export class MappingModule { }
+export class MappingModule {}

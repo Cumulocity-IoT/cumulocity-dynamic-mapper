@@ -18,9 +18,9 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared/mapping.model';
+import { Component } from "@angular/core";
+import { CellRendererContext } from "@c8y/ngx-components";
+import { SnoopStatus } from "../../shared/mapping.model";
 
 @Component({
   template: `
@@ -31,24 +31,31 @@ import { SnoopStatus } from '../../shared/mapping.model';
     }"></span>
     </div>
  -->
-<div class="c8y-realtime" title="Tested">
-  <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.tested,
-      inactive: !context.item.tested
-    }" ></span>
-</div>
-<div class="c8y-realtime" title="Snooping">
-  <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.snoopStatus == 'ENABLED' || context.item.snoopStatus == 'STARTED',
-      inactive: context.item.snoopStatus == 'NONE' || context.item.snoopStatus == 'STOPPED'
-    }"></span>
-</div>
-`
+    <div class="c8y-realtime" title="Tested">
+      <span
+        class="c8y-pulse animated pulse"
+        [ngClass]="{
+          active: context.item.tested,
+          inactive: !context.item.tested
+        }"
+      ></span>
+    </div>
+    <div class="c8y-realtime" title="Snooping">
+      <span
+        class="c8y-pulse animated pulse"
+        [ngClass]="{
+          active:
+            context.item.snoopStatus == 'ENABLED' ||
+            context.item.snoopStatus == 'STARTED',
+          inactive:
+            context.item.snoopStatus == 'NONE' ||
+            context.item.snoopStatus == 'STOPPED'
+        }"
+      ></span>
+    </div>
+  `,
 })
 export class StatusRendererComponent {
-  constructor(
-    public context: CellRendererContext,
-  ) { 
-  }
+  constructor(public context: CellRendererContext) {}
   SnoopStatus: SnoopStatus;
 }

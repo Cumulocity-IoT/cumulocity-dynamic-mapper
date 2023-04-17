@@ -18,13 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input } from '@angular/core';
-import { get, isUndefined } from 'lodash-es';
-
+import { Component, Input } from "@angular/core";
+import { get, isUndefined } from "lodash-es";
 
 @Component({
-  selector: 'mapping-help',
-  templateUrl: './help.component.html'
+  selector: "mapping-help",
+  templateUrl: "./help.component.html",
 })
 export class HelpComponent {
   /**
@@ -32,7 +31,7 @@ export class HelpComponent {
    * to parse the source to display.
    */
   @Input()
-  src: string = '';
+  src: string = "";
 
   /**
    * Indicates if the help dialog is collapsed.
@@ -55,7 +54,7 @@ export class HelpComponent {
   /**
    * An title. Set in open by passing the source.
    */
-  title = '';
+  title = "";
 
   /**
    * Indicates if the component is loading.
@@ -91,19 +90,19 @@ export class HelpComponent {
    * @param src The source of the help on the guide.
    * @param index This flag is used to call the index.json content of a guide. For example, "https://www.cumulocity.com/guides/users-guide/cockpit/index.json".
    */
-  getUrl(src = '', index = false) {
+  getUrl(src = "", index = false) {
     let docsUrl;
     //const srcUrl = new URL(`${docsUrl}${src}`);
     // const srcUrl = new URL(`${src}`);
     //const srcUrl = (new URL(`${src}`, document.location)).href
 
-    const [url, hashFragment] = src.split('#');
+    const [url, hashFragment] = src.split("#");
 
     if (index) {
       src = `${url}index.json`;
     }
     // return `${src}`;
-    return '.';
+    return ".";
   }
 
   /**
@@ -133,22 +132,22 @@ export class HelpComponent {
     this.isLoading = true;
     this.requestContent();
     if (!this.icon) {
-      this.icon = 'life-saver';
+      this.icon = "life-saver";
     }
   }
 
   private requestContent() {
     const req = new XMLHttpRequest();
     req.onreadystatechange = () => this.render(req);
-    req.addEventListener('load', () => this.render(req));
-    req.open('GET', this.getUrl(this.src, true));
-    req.responseType = 'json';
-    req.setRequestHeader('Accept', 'text/html');
+    req.addEventListener("load", () => this.render(req));
+    req.open("GET", this.getUrl(this.src, true));
+    req.responseType = "json";
+    req.setRequestHeader("Accept", "text/html");
     req.send();
   }
 
   private clean() {
-    this.title = '';
+    this.title = "";
     this.hasError = false;
   }
 

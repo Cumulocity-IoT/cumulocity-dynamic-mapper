@@ -18,18 +18,22 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, ViewChild, ViewEncapsulation } from '@angular/core';
-import { ApplicationService, IApplication, IManagedObject } from '@c8y/client';
-import { AlertService, DropAreaComponent, ModalLabels } from '@c8y/ngx-components';
-import { BehaviorSubject, Subject } from 'rxjs';
-import { ERROR_MESSAGES } from '../share/extension.constants';
-import { ExtensionService } from '../share/extension.service';
+import { Component, Input, ViewChild, ViewEncapsulation } from "@angular/core";
+import { ApplicationService, IApplication, IManagedObject } from "@c8y/client";
+import {
+  AlertService,
+  DropAreaComponent,
+  ModalLabels,
+} from "@c8y/ngx-components";
+import { BehaviorSubject, Subject } from "rxjs";
+import { ERROR_MESSAGES } from "../share/extension.constants";
+import { ExtensionService } from "../share/extension.service";
 
 @Component({
-  selector: 'mapping-add-extension',
-  templateUrl: './add-extension.component.html',
-  styleUrls: ['./add-extension.component.style.css'],
-  encapsulation: ViewEncapsulation.None
+  selector: "mapping-add-extension",
+  templateUrl: "./add-extension.component.html",
+  styleUrls: ["./add-extension.component.style.css"],
+  encapsulation: ViewEncapsulation.None,
 })
 export class AddExtensionComponent {
   @Input() headerText: string;
@@ -48,12 +52,12 @@ export class AddExtensionComponent {
   private uploadCanceled: boolean = false;
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: "Cancel", ok: "Done" };
-  
+
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
-    private applicationService: ApplicationService,
-  ) { }
+    private applicationService: ApplicationService
+  ) {}
 
   get progress(): BehaviorSubject<number> {
     return this.extensionService.progress;
@@ -70,17 +74,16 @@ export class AddExtensionComponent {
     this.isLoading = true;
     this.errorMessage = null;
     this.progress.next(0);
-    const nameUpload = file.name.split('.').slice(0, -1).join('.')
+    const nameUpload = file.name.split(".").slice(0, -1).join(".");
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
-        c8y_mqttMapping_Extension:
-        {
+        c8y_mqttMapping_Extension: {
           name: nameUpload,
-          external: true
+          external: true,
         },
         name: nameUpload,
-      }
+      };
       await this.uploadExtensionHandler(file, this.createdApp);
       this.isAppCreated = true;
     } catch (ex) {

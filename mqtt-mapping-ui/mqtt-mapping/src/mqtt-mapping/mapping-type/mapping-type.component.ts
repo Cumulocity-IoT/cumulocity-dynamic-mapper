@@ -18,26 +18,30 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
-import { Direction, MappingType } from '../../shared/mapping.model';
-import { isDisabled } from '../stepper/util';
+import {
+  Component,
+  Input,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation,
+} from "@angular/core";
+import { FormBuilder, FormGroup, Validators } from "@angular/forms";
+import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
+import { Subject } from "rxjs";
+import { Direction, MappingType } from "../../shared/mapping.model";
+import { isDisabled } from "../stepper/util";
 
 @Component({
-  selector: 'mapping-type',
-  templateUrl: './mapping-type.component.html',
-  styleUrls: ['./mapping-type.style.css'],
-  encapsulation: ViewEncapsulation.None
+  selector: "mapping-type",
+  templateUrl: "./mapping-type.component.html",
+  styleUrls: ["./mapping-type.style.css"],
+  encapsulation: ViewEncapsulation.None,
 })
 export class MappingTypeComponent implements OnInit {
-
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
 
   @ViewChild(C8yStepper, { static: true })
-
   closeSubject: Subject<MappingType>;
   labels: ModalLabels = { cancel: "Cancel" };
 
@@ -51,16 +55,15 @@ export class MappingTypeComponent implements OnInit {
 
   mappingType: MappingType.JSON;
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
-    console.log("Subject:", this.closeSubject, this.labels)
+    console.log("Subject:", this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
-      mappingType: ['', Validators.required]
+      mappingType: ["", Validators.required],
     });
   }
-
 
   onDismiss(event) {
     this.closeSubject.next(undefined);

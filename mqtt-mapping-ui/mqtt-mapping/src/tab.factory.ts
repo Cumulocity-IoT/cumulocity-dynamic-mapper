@@ -18,74 +18,98 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
-import { TabFactory, Tab } from '@c8y/ngx-components';
-import { Router } from '@angular/router';
+import { Injectable } from "@angular/core";
+import { TabFactory, Tab } from "@c8y/ngx-components";
+import { Router } from "@angular/router";
+import { BrokerConfigurationService } from "./mqtt-configuration/broker-configuration.service";
+import { Feature } from "./shared/mapping.model";
 
 @Injectable()
 export class MappingTabFactory implements TabFactory {
-  constructor(public router: Router) {}
-
-  get() {
+  _feature: Feature;
+  constructor(
+    public router: Router,
+    private configurationService: BrokerConfigurationService
+  ) {
+  }
+  
+  async get() {
     //console.log("MappingTabFactory",this.router.url, this.router.url.match(/mqtt-mapping/g));
+    //console.log("Feature: ", this._feature)
+    if (!this._feature) {
+      this._feature = await this.configurationService.getFeatures();
+      //console.log("Feature reload: ", this._feature)
+    }
+
     const tabs: Tab[] = [];
     if (this.router.url.match(/mqtt-mapping/g)) {
       tabs.push({
-        path: 'mqtt-mapping/configuration',
+        path: "mqtt-mapping/configuration",
         priority: 930,
-        label: 'Configuration',
-        icon: 'cog',
-        orientation: 'horizontal',
+        label: "Configuration",
+        icon: "cog",
+        orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/mappings/inbound',
+        path: "mqtt-mapping/mappings/inbound",
         priority: 920,
-        label: 'Mapping Inbound',
-        icon: 'swipe-right',
-        orientation: 'horizontal',
+        label: "Mapping Inbound",
+        icon: "swipe-right",
+        orientation: "horizontal",
       } as Tab);
+      this.configurationService.getFeatures();
+      if (this._feature.outputMappingEnabled) {
+        tabs.push({
+          path: "mqtt-mapping/mappings/outbound",
+          priority: 920,
+          label: "Mapping Outbound",
+          icon: "swipe-left",
+          orientation: "horizontal",
+        } as Tab);
+      }
       tabs.push({
-        path: 'mqtt-mapping/mappings/outbound',
-        priority: 920,
-        label: 'Mapping Outbound',
-        icon: 'swipe-left',
-        orientation: 'horizontal',
-      } as Tab);
-      tabs.push({
-        path: 'mqtt-mapping/monitoring',
+        path: "mqtt-mapping/monitoring",
         priority: 910,
-        label: 'Monitoring',
-        icon: 'monitoring',
-        orientation: 'horizontal',
+        label: "Monitoring",
+        icon: "monitoring",
+        orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/testing',
+        path: "mqtt-mapping/testing",
         priority: 900,
-        label: 'Test Devices',
-        icon: 'reflector-bulb',
-        orientation: 'horizontal',
+        label: "Test Devices",
+        icon: "reflector-bulb",
+        orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/tree',
+        path: "mqtt-mapping/tree",
         priority: 890,
-        label: 'Mapping Tree Inbound',
-        icon: 'tree-structure',
-        orientation: 'horizontal',
+        label: "Mapping Tree Inbound",
+        icon: "tree-structure",
+        orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: 'mqtt-mapping/extensions',
+        path: "mqtt-mapping/extensions",
         priority: 880,
-        label: 'Processor Extension',
-        icon: 'plugin',
-        orientation: 'horizontal',
+        label: "Processor Extension",
+        icon: "plugin",
+        orientation: "horizontal",
       } as Tab);
-      tabs.push({
-        path: 'mqtt-mapping/editor2-test',
-        priority: 870,
-        label: 'Editor2',
-        icon: 'file',
-        orientation: 'horizontal',
-      } as Tab);
+
+      // this tab is used to develop the migration from json library:
+      //     "vanilla-jsoneditor": "^0.16.1"
+      // to 
+      //     "jsoneditor": "^9.9.2"
+      // Do NOT DELETE
+
+      // tabs.push({
+      //   path: "mqtt-mapping/editor2-test",
+      //   priority: 870,
+      //   label: "Editor2",
+      //   icon: "file",
+      //   orientation: "horizontal",
+      // } as Tab);
+      
     }
 
     return tabs;

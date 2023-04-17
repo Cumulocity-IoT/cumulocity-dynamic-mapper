@@ -18,8 +18,8 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { Component } from "@angular/core";
+import { CellRendererContext } from "@c8y/ngx-components";
 
 /**
  * The example component for custom header renderer.
@@ -28,10 +28,12 @@ import { CellRendererContext } from '@c8y/ngx-components';
  */
 @Component({
   template: `
-    <span style="text-transform: uppercase; font-variant: small-caps; text-decoration: underline;">
+    <span
+      style="text-transform: uppercase; font-variant: small-caps; text-decoration: underline;"
+    >
       {{ context.property.header }}
     </span>
-  `
+  `,
 })
 export class TypeHeaderCellRendererComponent {
   constructor(public context: CellRendererContext) {}

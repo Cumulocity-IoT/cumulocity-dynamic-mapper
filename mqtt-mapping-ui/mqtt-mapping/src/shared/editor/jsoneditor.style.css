@@ -19,118 +19,123 @@
  * @authors Christof Strack
  */
 .jsoneditor-menu a.jsoneditor-poweredBy {
-    display: none;
+  display: none;
 }
 
-.jsoneditor-menu>button {
-    display: none;
+.jsoneditor-menu > button {
+  display: none;
 }
 
 /* .jsoneditor-menu>.jsoneditor-modes>button, .jsoneditor-menu>button {
     color: var(--navigator-text-color, var(--navigator-dark-text-color, white));
 } */
 
-.jsoneditor-menu>.jsoneditor-modes>button {
-    color: var(--navigator-text-color, var(--navigator-dark-text-color, yellow));
-    border-color: var(--brand-primary, yellow);
-    background-color: var(green) !important;
-
+.jsoneditor-menu > .jsoneditor-modes > button {
+  color: var(--navigator-text-color, var(--navigator-dark-text-color, yellow));
+  border-color: var(--brand-primary, yellow);
+  background-color: var(green) !important;
 }
 
-.jsoneditor-menu>.jsoneditor-modes>button:hover,
-.jsoneditor-menu>button:hover {
-    box-shadow: inset 0 0 0 1px var(--c8y-btn-default-background-active);
+.jsoneditor-menu > .jsoneditor-modes > button:hover,
+.jsoneditor-menu > button:hover {
+  box-shadow: inset 0 0 0 1px var(--c8y-btn-default-background-active);
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected,
 .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:focus,
 .jsoneditor-contextmenu .jsoneditor-menu li button.jsoneditor-selected:hover {
-    color: var(--c8y-component-color-active, var(--c8y-root-component-color-active)) !important;
-    /* background-color: var(--c8y-component-background-active,var(--c8y-root-component-background-active)) !important; */
+  color: var(
+    --c8y-component-color-active,
+    var(--c8y-root-component-color-active)
+  ) !important;
+  /* background-color: var(--c8y-component-background-active,var(--c8y-root-component-background-active)) !important; */
 }
 
-div.jsoneditor-menu>div.jsoneditor-search {
-    display: none;
+div.jsoneditor-menu > div.jsoneditor-search {
+  display: none;
 }
 
 button.jsoneditor-button.jsoneditor-dragarea {
-    display: none !important;
+  display: none !important;
 }
 
-div>div.jsoneditor-menu {
-    /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
-    background-color:  var(--navigator-dark-bg-color, var(--brand-primary, #1776BF)) !important;
+div > div.jsoneditor-menu {
+  /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
+  background-color: var(
+    --navigator-dark-bg-color,
+    var(--brand-primary, #1776bf)
+  ) !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-icon {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-button {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-dragarea {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr .jsoneditor-schema-error {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr.parse-error .jsoneditor-schema-error {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-search button {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-frame button.jsoneditor-refresh {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
-.jsoneditor-statusbar>.jsoneditor-validation-error-icon {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+.jsoneditor-statusbar > .jsoneditor-validation-error-icon {
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
-.jsoneditor-statusbar>.jsoneditor-parse-error-icon {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+.jsoneditor-statusbar > .jsoneditor-parse-error-icon {
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
-.jsoneditor-menu>button {
-    background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+.jsoneditor-menu > button {
+  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-value {
-    font-size: smaller !important;
+  font-size: smaller !important;
 }
 
 .jsoneditor-field {
-    font-size: smaller !important;
+  font-size: smaller !important;
 }
 
 .jsoneditor {
-    line-height: 75% !important;
+  line-height: 75% !important;
 }
 
 .jsoneditor-readonly {
-    font-size: smaller !important;
+  font-size: smaller !important;
 }
 
 .jsoneditor-popover {
-    font-size: smaller !important;
-    width: 150px !important;
+  font-size: smaller !important;
+  width: 150px !important;
 }
 
 .ace_editor {
-    font-size: smaller !important;
+  font-size: smaller !important;
 }

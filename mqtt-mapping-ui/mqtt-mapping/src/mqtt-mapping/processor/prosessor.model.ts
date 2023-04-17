@@ -18,52 +18,56 @@
  *
  * @authors Christof Strack
  */
-import { Mapping, MappingType, RepairStrategy } from "../../shared/mapping.model";
+import {
+  Mapping,
+  MappingType,
+  RepairStrategy,
+} from "../../shared/mapping.model";
 
 export interface C8YRequest {
-    predecessor?: number;
-    method?: string;
-    source?: any;
-    externalIdType?: string;
-    request?: any;
-    response?: any;
-    targetAPI?: string;
-    error?: string;
+  predecessor?: number;
+  method?: string;
+  source?: any;
+  externalIdType?: string;
+  request?: any;
+  response?: any;
+  targetAPI?: string;
+  error?: string;
 }
 
 export interface ProcessingContext {
-    mapping: Mapping;
-    topic: string;
-    resolvedPublishTopic?:string;
-    payload?: JSON;
-    payloadRaw?: any;
-    requests?: C8YRequest[];
-    errors?: string [];
-    processingType?: ProcessingType;
-    cardinality: Map<string, number>;
-    mappingType: MappingType;
-    postProcessingCache: Map<string, SubstituteValue[]>;
-    sendPayload?: boolean;
+  mapping: Mapping;
+  topic: string;
+  resolvedPublishTopic?: string;
+  payload?: JSON;
+  payloadRaw?: any;
+  requests?: C8YRequest[];
+  errors?: string[];
+  processingType?: ProcessingType;
+  cardinality: Map<string, number>;
+  mappingType: MappingType;
+  postProcessingCache: Map<string, SubstituteValue[]>;
+  sendPayload?: boolean;
 }
 
 export enum ProcessingType {
-    UNDEFINED,
-    ONE_DEVICE_ONE_VALUE,
-    ONE_DEVICE_MULTIPLE_VALUE,
-    MULTIPLE_DEVICE_ONE_VALUE,
-    MULTIPLE_DEVICE_MULTIPLE_VALUE,
+  UNDEFINED,
+  ONE_DEVICE_ONE_VALUE,
+  ONE_DEVICE_MULTIPLE_VALUE,
+  MULTIPLE_DEVICE_ONE_VALUE,
+  MULTIPLE_DEVICE_MULTIPLE_VALUE,
 }
 
 export enum SubstituteValueType {
-    NUMBER,
-    TEXTUAL,
-    OBJECT,
-    IGNORE,
-    ARRAY
+  NUMBER,
+  TEXTUAL,
+  OBJECT,
+  IGNORE,
+  ARRAY,
 }
 
 export interface SubstituteValue {
-    value: any;
-    type: SubstituteValueType;
-    repairStrategy: RepairStrategy
+  value: any;
+  type: SubstituteValueType;
+  repairStrategy: RepairStrategy;
 }

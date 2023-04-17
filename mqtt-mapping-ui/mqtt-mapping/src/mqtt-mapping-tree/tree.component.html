@@ -21,23 +21,33 @@
 
 <c8y-title>Mapping Tree Inbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Refresh' | translate  }}" (click)="loadMappingTree()">
+  <button
+    class="btn btn-link"
+    title="{{ 'Refresh' | translate }}"
+    (click)="loadMappingTree()"
+  >
     <i c8yIcon="refresh"></i>
-    {{ 'Refresh' }}
+    {{ "Refresh" }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-header separator j-c-between">
     <h4 class="card-title">
-      {{ 'Mapping Tree' | translate }}
+      {{ "Mapping Tree" | translate }}
     </h4>
   </div>
 
   <div class="card-block">
-    <div class="col-md-6 col-lg-8 ">
-      <mapping-json-editor [options]="editorOptionsTree" [data]="templateTree" #editorTree id="editorTree"></mapping-json-editor>
+    <div class="col-md-6 col-lg-8">
+      <mapping-json-editor
+        [options]="editorOptionsTree"
+        [data]="templateTree"
+        #editorTree
+        id="editorTree"
+      ></mapping-json-editor>
       <c8y-messages class="text-left">
-        <c8y-message *ngIf="false"><span class="text-warning">Dummy message!</span>
+        <c8y-message *ngIf="false"
+          ><span class="text-warning">Dummy message!</span>
         </c8y-message>
       </c8y-messages>
     </div>

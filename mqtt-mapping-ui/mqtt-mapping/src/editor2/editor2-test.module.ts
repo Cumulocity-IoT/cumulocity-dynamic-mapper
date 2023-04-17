@@ -18,34 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { NgModule } from '@angular/core';
-import { CoreModule, HOOK_ROUTE, Route } from '@c8y/ngx-components';
-import { Editor2TestComponent } from './editor2-test.component';
-import { SharedModule } from '../shared/shared.module';
+import { NgModule } from "@angular/core";
+import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { Editor2TestComponent } from "./editor2-test.component";
+import { SharedModule } from "../shared/shared.module";
 
 @NgModule({
-  declarations: [
-    Editor2TestComponent
-  ],
-  imports: [
-    CoreModule,
-    SharedModule,
-  ],
-  entryComponents: [
-    Editor2TestComponent,
-  ],
+  declarations: [Editor2TestComponent],
+  imports: [CoreModule, SharedModule],
+  entryComponents: [Editor2TestComponent],
   exports: [],
   providers: [
     {
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: 'mqtt-mapping/editor2-test',
+          path: "mqtt-mapping/editor2-test",
           component: Editor2TestComponent,
-        }
+        },
       ] as Route[],
       multi: true,
     },
-  ]
+  ],
 })
 export class Editor2TestModule {}

@@ -18,25 +18,41 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
-import { FetchClient, InventoryService, QueriesUtil } from '@c8y/client';
-import * as _ from 'lodash';
-import { BehaviorSubject } from 'rxjs';
-import { BrokerConfigurationService } from '../../mqtt-configuration/broker-configuration.service';
-import { C8YAPISubscription, Direction, Mapping, Operation } from '../../shared/mapping.model';
-import { BASE_URL, MQTT_MAPPING_FRAGMENT, MQTT_MAPPING_TYPE, PATH_MAPPING_ENDPOINT, PATH_SUBSCRIPTIONS_ENDPOINT, PATH_SUBSCRIPTION_ENDPOINT } from '../../shared/util';
-import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
-import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
-import { ProcessingContext, ProcessingType, SubstituteValue } from '../processor/prosessor.model';
+import { Injectable } from "@angular/core";
+import { FetchClient, InventoryService, QueriesUtil } from "@c8y/client";
+import * as _ from "lodash";
+import { BehaviorSubject } from "rxjs";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import {
+  C8YAPISubscription,
+  Direction,
+  Mapping,
+  Operation,
+} from "../../shared/mapping.model";
+import {
+  BASE_URL,
+  MQTT_MAPPING_FRAGMENT,
+  MQTT_MAPPING_TYPE,
+  PATH_MAPPING_ENDPOINT,
+  PATH_SUBSCRIPTIONS_ENDPOINT,
+  PATH_SUBSCRIPTION_ENDPOINT,
+} from "../../shared/util";
+import { JSONProcessorInbound } from "../processor/impl/json-processor-inbound.service";
+import { JSONProcessorOutbound } from "../processor/impl/json-processor-outbound.service";
+import {
+  ProcessingContext,
+  ProcessingType,
+  SubstituteValue,
+} from "../processor/prosessor.model";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class MappingService {
-
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
-    private client: FetchClient) {
+    private client: FetchClient
+  ) {
     this.queriesUtil = new QueriesUtil();
   }
 
@@ -45,7 +61,10 @@ export class MappingService {
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
   public async changeActivationMapping(parameter: any) {
-    await this.configurationService.runOperation(Operation.ACTIVATE_MAPPING, parameter);
+    await this.configurationService.runOperation(
+      Operation.ACTIVATE_MAPPING,
+      parameter
+    );
   }
 
   public async loadMappings(direction: Direction): Promise<Mapping[]> {
@@ -56,12 +75,16 @@ export class MappingService {
       withTotalPages: true,
       type: MQTT_MAPPING_TYPE,
     };
-    let query: any = { 'c8y_mqttMapping.direction': direction };
+    let query: any = { "c8y_mqttMapping.direction": direction };
 
     if (direction == Direction.INBOUND) {
-      query = this.queriesUtil.addOrFilter(query, { __not: { __has: 'c8y_mqttMapping.direction' } },);
+      query = this.queriesUtil.addOrFilter(query, {
+        __not: { __has: "c8y_mqttMapping.direction" },
+      });
     }
-    query = this.queriesUtil.addAndFilter(query, { type: { __has: 'c8y_mqttMapping' } });
+    query = this.queriesUtil.addAndFilter(query, {
+      type: { __has: "c8y_mqttMapping" },
+    });
 
     let data = (await this.inventory.listQuery(query, filter)).data;
     // const query = {
@@ -69,10 +92,12 @@ export class MappingService {
     // }
     //let data = (await this.inventory.list(filter)).data;
 
-    data.forEach(m => result.push({
-      ...m[MQTT_MAPPING_FRAGMENT],
-      id: m.id
-    }))
+    data.forEach((m) =>
+      result.push({
+        ...m[MQTT_MAPPING_FRAGMENT],
+        id: m.id,
+      })
+    );
     return result;
   }
 
@@ -85,87 +110,97 @@ export class MappingService {
   }
 
   async updateSubscriptions(sub: C8YAPISubscription): Promise<any> {
-    let response = this.client.fetch(`${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`, {
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(sub),
-      method: 'PUT',
-    });
+    let response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(sub),
+        method: "PUT",
+      }
+    );
     let data = await response;
-    if (!data.ok)
-    throw new Error(data.statusText)!
+    if (!data.ok) throw new Error(data.statusText)!;
     let m = await data.text();
     return m;
   }
 
-
   async getSubscriptions(): Promise<C8YAPISubscription> {
-    let response = this.client.fetch(`${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`, {
-      headers: {
-        'content-type': 'application/json',
-      },
-      method: 'GET',
-    });
+    let response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "GET",
+      }
+    );
     let data = await response;
     let sub = await data.json();
     return sub;
   }
 
   async saveMappings(mappings: Mapping[]): Promise<void> {
-    mappings.forEach(m => {
+    mappings.forEach((m) => {
       this.inventory.update({
         c8y_mqttMapping: m,
         id: m.id,
-      })
-    })
+      });
+    });
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
-    let response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`, {
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(mapping),
-      method: 'PUT',
-    });
+    let response = this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(mapping),
+        method: "PUT",
+      }
+    );
     let data = await response;
-    if (!data.ok)
-      throw new Error(data.statusText)!
+    if (!data.ok) throw new Error(data.statusText)!;
     let m = await data.json();
     return m;
   }
 
   async deleteMapping(mapping: Mapping): Promise<string> {
     //let result = this.inventory.delete(mapping.id)
-    let response = await this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`, {
-      headers: {
-        'content-type': 'application/json',
-      },
-      method: 'DELETE',
-    });
+    let response = await this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "DELETE",
+      }
+    );
     let data = await response;
-    if (!data.ok)
-      throw new Error(data.statusText)!
+    if (!data.ok) throw new Error(data.statusText)!;
     return data.text();
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
     let response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
       body: JSON.stringify(mapping),
-      method: 'POST',
+      method: "POST",
     });
     let data = await response;
-    if (!data.ok)
-      throw new Error(data.statusText)!
+    if (!data.ok) throw new Error(data.statusText)!;
     let m = await data.json();
     return m;
   }
 
-  private initializeContext(mapping: Mapping, sendPayload: boolean): ProcessingContext {
+  private initializeContext(
+    mapping: Mapping,
+    sendPayload: boolean
+  ): ProcessingContext {
     let ctx: ProcessingContext = {
       mapping: mapping,
       topic: mapping.templateTopicSample,
@@ -175,12 +210,15 @@ export class MappingService {
       mappingType: mapping.mappingType,
       postProcessingCache: new Map<string, SubstituteValue[]>(),
       sendPayload: sendPayload,
-      requests: []
-    }
+      requests: [],
+    };
     return ctx;
   }
 
-  async testResult(mapping: Mapping, sendPayload: boolean): Promise<ProcessingContext> {
+  async testResult(
+    mapping: Mapping,
+    sendPayload: boolean
+  ): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
     // if (mapping.direction == Direction.INBOUND) {
     this.jsonProcessorInbound.deserializePayload(context, mapping);
@@ -197,12 +235,11 @@ export class MappingService {
   }
 
   public evaluateExpression(json: JSON, path: string): JSON {
-    let result: any = '';
-    if (path != undefined && path != '' && json != undefined) {
-      const expression = this.JSONATA(path)
-      result = expression.evaluate(json) as JSON
+    let result: any = "";
+    if (path != undefined && path != "" && json != undefined) {
+      const expression = this.JSONATA(path);
+      result = expression.evaluate(json) as JSON;
     }
     return result;
   }
-
 }

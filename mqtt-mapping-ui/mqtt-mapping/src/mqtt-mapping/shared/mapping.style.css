@@ -50,10 +50,24 @@ json-editor > div {
 }
 
 .column-left-border {
-  border-left: 1px solid; border-color: var(--legend-color, var(--component-legend-color, var(--root-component-legend-color, var(--gray-5, #677680))));
+  border-left: 1px solid;
+  border-color: var(
+    --legend-color,
+    var(
+      --component-legend-color,
+      var(--root-component-legend-color, var(--gray-5, #677680))
+    )
+  );
   margin-left: -1px;
-} 
+}
 
 .column-right-border {
-  border-right: 1px solid; border-color: var(--legend-color, var(--component-legend-color, var(--root-component-legend-color, var(--gray-5, #677680))));
-} 
+  border-right: 1px solid;
+  border-color: var(
+    --legend-color,
+    var(
+      --component-legend-color,
+      var(--root-component-legend-color, var(--gray-5, #677680))
+    )
+  );
+}

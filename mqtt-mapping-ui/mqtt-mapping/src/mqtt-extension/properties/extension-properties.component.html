@@ -22,7 +22,11 @@
 <c8y-title>{{ extension?.name }}</c8y-title>
 
 <c8y-breadcrumb>
-  <c8y-breadcrumb-item [icon]="'c8y-modules'" [label]="'Extensions' | translate" [path]="'mqtt-mapping/extensions'">
+  <c8y-breadcrumb-item
+    [icon]="'c8y-modules'"
+    [label]="'Extensions' | translate"
+    [path]="'mqtt-mapping/extensions'"
+  >
   </c8y-breadcrumb-item>
   <c8y-breadcrumb-item [label]="extension?.name"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
@@ -33,11 +37,19 @@
       <div *ngIf="!isLoading" class="d-contents">
         <div class="card-block separator-bottom large-padding flex-no-shrink">
           <div class="list-group">
-            <div class="list-group-item collapsible flex-row" [ngClass]="{ expanded: isCollapsed[entry.name]}"
-              *ngFor="let entry of extension.extensionEntries; let i = index">
+            <div
+              class="list-group-item collapsible flex-row"
+              [ngClass]="{ expanded: isCollapsed[entry.name] }"
+              *ngFor="let entry of extension.extensionEntries; let i = index"
+            >
               <div class="list-item-actions">
-                <button type="button" title="{{ 'Expand' | translate }}" class="collapse-btn"
-                  (click)="isCollapsed[entry.name] = !isCollapsed[entry.name]" [attr.aria-expanded]="!isCollapsed">
+                <button
+                  type="button"
+                  title="{{ 'Expand' | translate }}"
+                  class="collapse-btn"
+                  (click)="isCollapsed[entry.name] = !isCollapsed[entry.name]"
+                  [attr.aria-expanded]="!isCollapsed"
+                >
                   <i c8yIcon="chevron-down"></i>
                 </button>
               </div>
@@ -46,26 +58,45 @@
               </div>
 
               <div class="list-item-body">
-                <span>{{entry.name}} </span>
-                <span class="label label-primary m-l-8">{{extension.external ? 'external' : 'internal' }}</span>
+                <span>{{ entry.name }} </span>
+                <span class="label label-primary m-l-8">{{
+                  extension.external ? "external" : "internal"
+                }}</span>
               </div>
-              <div [collapse]="isCollapsed[entry.name]" [isAnimated]="true" class="collapse">
+              <div
+                [collapse]="isCollapsed[entry.name]"
+                [isAnimated]="true"
+                class="collapse"
+              >
                 <dl>
                   <dt><label class="small" translate>Event Name</label></dt>
-                  <dd><span class="m-l-16 small">{{entry.event}}</span></dd>
-                  <dt><label class="small" translate>Event Implementation</label></dt>
-                  <dd><span class="m-l-16 small">{{entry.name}}</span></dd>
+                  <dd>
+                    <span class="m-l-16 small">{{ entry.event }}</span>
+                  </dd>
+                  <dt>
+                    <label class="small" translate>Event Implementation</label>
+                  </dt>
+                  <dd>
+                    <span class="m-l-16 small">{{ entry.name }}</span>
+                  </dd>
                   <dt><label class="small" translate>Message</label></dt>
-                  <dd><span class="m-l-16 small">{{entry.message}}</span></dd>
+                  <dd>
+                    <span class="m-l-16 small">{{ entry.message }}</span>
+                  </dd>
                 </dl>
               </div>
             </div>
             <c8y-ui-empty-state
-            *ngIf="!extension.extensionEntries || extension.extensionEntries.length == 0"
-            [icon]="'plugin'"
-            [title]="'No entries for this extension, try to reload extensions.'"
-            [horizontal]="true"
-          ></c8y-ui-empty-state>
+              *ngIf="
+                !extension.extensionEntries ||
+                extension.extensionEntries.length == 0
+              "
+              [icon]="'plugin'"
+              [title]="
+                'No entries for this extension, try to reload extensions.'
+              "
+              [horizontal]="true"
+            ></c8y-ui-empty-state>
           </div>
         </div>
       </div>

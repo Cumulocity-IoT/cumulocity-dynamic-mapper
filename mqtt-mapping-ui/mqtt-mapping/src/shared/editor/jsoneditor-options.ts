@@ -19,12 +19,12 @@
  * @authors Christof Strack
  */
 
-export type JsonEditorMode = 'tree' | 'view' | 'form' | 'code' | 'text';
+export type JsonEditorMode = "tree" | "view" | "form" | "code" | "text";
 
 export interface JsonEditorTreeNode {
-  field: String,
-  value: String,
-  path: String[]
+  field: String;
+  value: String;
+  path: String[];
 }
 
 export interface IError {
@@ -35,7 +35,6 @@ export interface IError {
 export class JsonEditorOptions {
   public ace: any;
   public ajv: Object;
-
 
   /**
    *   {function} onChange  Callback method, triggered
@@ -56,7 +55,6 @@ export class JsonEditorOptions {
 */
   public onChangeJSON: () => void;
 
-
   public onNodeName: () => void;
   public onCreateMenu: () => void;
   public onColorPicker: () => void;
@@ -67,8 +65,7 @@ export class JsonEditorOptions {
 //     passing the changed contents
 //     as stringified JSON.
 */
-  public onChangeText: (jsonstr:string) => void;
-
+  public onChangeText: (jsonstr: string) => void;
 
   /**
    *   {function} onSelectionChange Callback method,
@@ -84,7 +81,6 @@ export class JsonEditorOptions {
   Only applicable for modes
 */
   public onTextSelectionChange: () => void;
-
 
   /**
    *   // {function} onEvent Callback method, triggered
@@ -120,14 +116,19 @@ export class JsonEditorOptions {
 */
   public onClassName: () => void;
 
-  public onEditable: (node: JsonEditorTreeNode | {}) => boolean | { field: boolean, value: boolean };
+  public onEditable: (
+    node: JsonEditorTreeNode | {}
+  ) => boolean | { field: boolean; value: boolean };
 
   /**
    *   {function} onError   Callback method, triggered
   when an error occurs
    */
   public onError: (error: any) => void;
-  public onModeChange: (newMode: JsonEditorMode, oldMode: JsonEditorMode) => void;
+  public onModeChange: (
+    newMode: JsonEditorMode,
+    oldMode: JsonEditorMode
+  ) => void;
   public onValidate: (json: Object) => IError[];
   public onValidationError: (errors: object[]) => void;
 
@@ -177,7 +178,7 @@ export class JsonEditorOptions {
     this.expandAll = false;
     this.sortObjectKeys = false;
     this.history = true;
-    this.mode = 'tree';
+    this.mode = "tree";
     this.search = true;
     this.indentation = 2;
   }

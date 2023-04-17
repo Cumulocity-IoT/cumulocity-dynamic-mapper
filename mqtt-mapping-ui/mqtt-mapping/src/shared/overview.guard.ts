@@ -18,13 +18,13 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
-import { CanActivate } from '@angular/router';
-import { ApplicationService } from '@c8y/client';
+import { Injectable } from "@angular/core";
+import { CanActivate } from "@angular/router";
+import { ApplicationService } from "@c8y/client";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class OverviewGuard implements CanActivate {
-  private static readonly APPLICATION_MQTT = 'mqtt-mapping-service';
+  private static readonly APPLICATION_MQTT = "mqtt-mapping-service";
 
   private activateOverviewNavigationPromise: Promise<boolean>;
 
@@ -36,7 +36,7 @@ export class OverviewGuard implements CanActivate {
         .isAvailable(OverviewGuard.APPLICATION_MQTT)
         .then((result) => {
           if (!(result && result.data)) {
-            console.error('Generic MQTT Agent Microservice not subscribed!');
+            console.error("Generic MQTT Agent Microservice not subscribed!");
           }
 
           return result && result.data;

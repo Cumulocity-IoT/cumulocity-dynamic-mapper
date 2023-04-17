@@ -18,15 +18,15 @@
  *
  * @authors Christof Strack
  */
-div.jsoneditor-menu>div.jsoneditor-search {
-    display: block !important;
+div.jsoneditor-menu > div.jsoneditor-search {
+  display: block !important;
 }
 
-.jsoneditor-menu>button {
-    display: block !important;
+.jsoneditor-menu > button {
+  display: block !important;
 }
 
-json-editor>div {
-    max-height: 30em;
-    overflow: auto !important;
-  }
+json-editor > div {
+  max-height: 30em;
+  overflow: auto !important;
+}

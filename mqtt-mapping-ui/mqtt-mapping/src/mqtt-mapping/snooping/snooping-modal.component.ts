@@ -18,40 +18,40 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from "@angular/core";
 import {
   ConfirmModalComponent,
   gettext,
   ModalLabels,
   Status,
   StatusType,
-} from '@c8y/ngx-components';
-import { TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
-import { SnoopStatus } from '../../shared/mapping.model';
+} from "@c8y/ngx-components";
+import { TranslateService } from "@ngx-translate/core";
+import { Subject } from "rxjs";
+import { SnoopStatus } from "../../shared/mapping.model";
 
 @Component({
-  selector: 'mapping-snooping-modal',
-  templateUrl: 'snooping-modal.component.html',
+  selector: "mapping-snooping-modal",
+  templateUrl: "snooping-modal.component.html",
 })
 export class SnoopingModalComponent implements OnInit {
-  @ViewChild('snoopingRef', { static: false }) snoopingRef: ConfirmModalComponent;
+  @ViewChild("snoopingRef", { static: false })
+  snoopingRef: ConfirmModalComponent;
 
   @Input()
-  snoopStatus: SnoopStatus
+  snoopStatus: SnoopStatus;
   @Input()
-  numberSnooped: number
+  numberSnooped: number;
 
   SnoopStatus = SnoopStatus;
-  labels: ModalLabels = { ok: gettext('Confirm') };
-  title = gettext('Snooping');
+  labels: ModalLabels = { ok: gettext("Confirm") };
+  title = gettext("Snooping");
   status: StatusType = Status.INFO;
   closeSubject: Subject<boolean> = new Subject();
 
-  constructor(private translateService: TranslateService) { }
+  constructor(private translateService: TranslateService) {}
 
-  ngOnInit() {
-  }
+  ngOnInit() {}
 
   async ngAfterViewInit() {
     try {
@@ -71,5 +71,4 @@ export class SnoopingModalComponent implements OnInit {
     this.closeSubject.next(false);
     this.closeSubject.complete();
   }
-
 }
