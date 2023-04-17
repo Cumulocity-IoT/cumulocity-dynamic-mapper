@@ -726,6 +726,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       navigationBar: false,
       enableSort: false,
       enableTransform: false,
+      name: "message"
     };
 
     this.editorOptionsTarget = {

@@ -18,8 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms"
-import { StepperConfiguration } from "src/mqtt-mapping/stepper/stepper-model"
+import { AbstractControl } from "@angular/forms"
 import { API, Direction, Mapping, MappingSubstitution, MappingType, ValidationError, ValidationFormlyError } from "./mapping.model"
 
 export const SAMPLE_TEMPLATES_C8Y = {

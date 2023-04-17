@@ -48,6 +48,7 @@ export class MappingTreeComponent implements OnInit {
       enableTransform: false,
       mainMenuBar: true,
       search: true,
+      name: 'root'
     };
     this.loadMappingTree();
   }
