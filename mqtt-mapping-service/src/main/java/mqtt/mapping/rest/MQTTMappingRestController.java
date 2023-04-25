@@ -78,10 +78,11 @@ public class MQTTMappingRestController {
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            final ConfigurationConnection configuration = c8yAgent
+            ConfigurationConnection configuration = c8yAgent
                     .loadConnectionConfiguration();
             if (configuration == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
+                //throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
+                configuration = new ConfigurationConnection();
             }
             // don't modify original copy
             ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();

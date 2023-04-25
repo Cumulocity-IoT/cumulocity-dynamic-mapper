@@ -42,6 +42,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.App;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingServiceRepresentation;
@@ -56,8 +57,12 @@ public class MappingComponent {
 
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
-    @Autowired
+
     private ObjectMapper objectMapper;
+    @Autowired
+    public void setObjectMapper (ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
 
     @Autowired
     private InventoryApi inventoryApi;
