@@ -63,6 +63,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -76,6 +77,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.App;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
@@ -112,32 +114,55 @@ public class MQTTClient {
     @Getter
     private ServiceConfiguration serviceConfiguration;
 
-    @Autowired
+
     private ConnectionConfigurationComponent connectionConfigurationComponent;
-
     @Autowired
+    public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
+        this.connectionConfigurationComponent = connectionConfigurationComponent;
+    }
+
     private ServiceConfigurationComponent serviceConfigurationComponent;
-
     @Autowired
+    public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
+        this.serviceConfigurationComponent = serviceConfigurationComponent;
+    }
+
+
     private MappingComponent mappingStatusComponent;
+    @Autowired
+    public void setMappingStatusComponent(MappingComponent mappingStatusComponent) {
+        this.mappingStatusComponent = mappingStatusComponent;
+    }
 
     private MqttClient mqttClient;
 
-    @Autowired
     private C8YAgent c8yAgent;
+    @Autowired
+    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
+        this.c8yAgent = c8yAgent;
+    }
 
     // @Autowired
     // private SynchronousDispatcher dispatcher;
 
-    @Autowired
     private AsynchronousDispatcher dispatcher;
-
     @Autowired
+    public void setDispatcher(AsynchronousDispatcher dispatcher) {
+        this.dispatcher = dispatcher;
+    }
+
     private ObjectMapper objectMapper;
-
     @Autowired
+    public void setObjectMapper (ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
+
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
+    @Autowired
+    public void setCachedThreadPool(ExecutorService cachedThreadPool) {
+        this.cachedThreadPool = cachedThreadPool;
+    }
 
     private Future<Boolean> connectTask;
     private Future<Boolean> initializeTask;

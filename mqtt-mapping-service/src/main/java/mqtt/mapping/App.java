@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -96,11 +97,23 @@ import mqtt.mapping.service.MQTTClient;
 @EnableAsync
 public class App {
 
+    private C8YAgent c8yAgent;
     @Autowired
-    C8YAgent c8yAgent;
+    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
+        this.c8yAgent = c8yAgent;
+    }
 
+    private MQTTClient mqttClient;
     @Autowired
-    MQTTClient mqttClient;
+    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+        this.mqttClient = mqttClient;
+    }
+
+    private ObjectMapper objectMapper;
+    @Autowired
+    public void setObjectMapper (@Lazy ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
 
     @Bean
     public TaskExecutor taskExecutor() {
@@ -117,7 +130,6 @@ public class App {
     }
 
     @Bean
-    @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper objectMapper = baseObjectMapper();
         objectMapper.registerModule(cumulocityModule());

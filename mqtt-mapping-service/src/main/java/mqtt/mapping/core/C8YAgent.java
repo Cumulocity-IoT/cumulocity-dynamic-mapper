@@ -42,6 +42,7 @@ import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
@@ -127,29 +128,55 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    @Autowired
     private MQTTClient mqttClient;
-
     @Autowired
+    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+        this.mqttClient = mqttClient;
+    }
+
     private ObjectMapper objectMapper;
-
     @Autowired
+    public void setObjectMapper (ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
+
     private ConnectionConfigurationComponent connectionConfigurationComponent;
-
+    
     @Autowired
+    public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
+        this.connectionConfigurationComponent = connectionConfigurationComponent;
+    }
+
     private ServiceConfigurationComponent serviceConfigurationComponent;
-
     @Autowired
+    public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
+        this.serviceConfigurationComponent = serviceConfigurationComponent;
+    }
+
     private MappingComponent mappingComponent;
-
     @Autowired
+    public void setMappingComponent(MappingComponent mappingComponent) {
+        this.mappingComponent = mappingComponent;
+    }
+
+    
     private ExtensionsComponent extensions;
-
     @Autowired
+    public void setExtensions(ExtensionsComponent extensions) {
+        this.extensions = extensions;
+    }
+    
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
-
     @Autowired
+    public void setPayloadProcessorsInbound(Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound) {
+        this.payloadProcessorsInbound = payloadProcessorsInbound;
+    }
+
     C8YAPISubscriber operationSubscriber;
+    @Autowired
+    public void setOperationSubscriber(C8YAPISubscriber operationSubscriber) {
+        this.operationSubscriber = operationSubscriber;
+    }
 
     private ExtensibleProcessor extensibleProcessor;
 
