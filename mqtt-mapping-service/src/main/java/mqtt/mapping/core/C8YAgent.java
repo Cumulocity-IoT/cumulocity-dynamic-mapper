@@ -174,7 +174,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     C8YAPISubscriber operationSubscriber;
     @Autowired
-    public void setOperationSubscriber(C8YAPISubscriber operationSubscriber) {
+    public void setOperationSubscriber(@Lazy C8YAPISubscriber operationSubscriber) {
         this.operationSubscriber = operationSubscriber;
     }
 

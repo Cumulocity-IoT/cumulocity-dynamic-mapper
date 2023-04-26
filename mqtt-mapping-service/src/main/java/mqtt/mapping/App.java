@@ -29,12 +29,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -97,24 +95,6 @@ import mqtt.mapping.service.MQTTClient;
 @EnableAsync
 public class App {
 
-    private C8YAgent c8yAgent;
-    @Autowired
-    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-        this.c8yAgent = c8yAgent;
-    }
-
-    private MQTTClient mqttClient;
-    @Autowired
-    public void setMQTTClient (@Lazy MQTTClient mqttClient){
-        this.mqttClient = mqttClient;
-    }
-
-    private ObjectMapper objectMapper;
-    @Autowired
-    public void setObjectMapper (@Lazy ObjectMapper objectMapper){
-        this.objectMapper = objectMapper;
-    }
-
     @Bean
     public TaskExecutor taskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -143,8 +123,8 @@ public class App {
 
     @Bean("payloadProcessorsInbound")
     public Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound(ObjectMapper objectMapper,
-            MQTTClient mqttClient,
-            C8YAgent c8yAgent) {
+            @Lazy MQTTClient mqttClient,
+            @Lazy C8YAgent c8yAgent) {
         return Map.of(
                 MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
                 MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, mqttClient, c8yAgent),
