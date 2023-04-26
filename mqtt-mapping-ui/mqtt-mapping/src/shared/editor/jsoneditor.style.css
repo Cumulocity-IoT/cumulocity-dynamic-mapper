@@ -61,10 +61,12 @@ button.jsoneditor-button.jsoneditor-dragarea {
 
 div > div.jsoneditor-menu {
   /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
-  background-color: var(
+  background-color: grey
+  /*var(
     --navigator-dark-bg-color,
-    var(--brand-primary, #1776bf)
-  ) !important;
+    var(--brand-primary, )
+    var(--brand-primary, #1776bf)) */
+   !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {

@@ -205,16 +205,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     this.propertyFormlyFields = [
-      {
-        key: "name",
-        type: "input",
-        templateOptions: {
-          label: "Mapping Name",
-          disabled:
-            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          required: true,
-        },
-      },
+
       {
         validators: {
           validation: [
@@ -227,6 +218,17 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           ],
         },
         fieldGroup: [
+          {
+            key: "name",
+            wrappers: ["c8y-form-field"],
+            type: "input",
+            templateOptions: {
+              label: "Mapping Name",
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              required: true,
+            },
+          },
           {
             key: "subscriptionTopic",
             wrappers: ["c8y-form-field"],
@@ -357,7 +359,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
+               "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
               required: false,
               switchMode: true,
               indeterminate: false,
