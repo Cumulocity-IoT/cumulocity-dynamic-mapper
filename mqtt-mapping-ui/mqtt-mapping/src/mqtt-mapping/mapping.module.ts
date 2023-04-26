@@ -43,7 +43,7 @@ import { SharedModule } from "../shared/shared.module";
 import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
-import { FORMLY_CONFIG } from "@ngx-formly/core";
+import { FORMLY_CONFIG, FormlyModule } from "@ngx-formly/core";
 import {
   checkSubstitutionIsValid,
   checkTopicsInboundAreValid,
@@ -86,6 +86,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
     SharedModule,
     PopoverModule,
     ConfigurationModule,
+    //FormlyModule,
     FormlyBootstrapModule,
     DynamicFormsModule,
   ],
