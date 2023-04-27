@@ -87,7 +87,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
     PopoverModule,
     ConfigurationModule,
     //FormlyModule,
-    FormlyBootstrapModule,
+    //FormlyBootstrapModule,
     DynamicFormsModule,
   ],
   entryComponents: [
