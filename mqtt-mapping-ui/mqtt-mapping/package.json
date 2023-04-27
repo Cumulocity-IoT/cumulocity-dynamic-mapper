@@ -46,7 +46,6 @@
     "@angular/localize": "14.0.6",
     "@angular/service-worker": "14.0.6",
     "@c8y/cli": "1017.0.139",
-    "@types/webpack": "^5.28.1",
     "file-loader": "^6.2.0",
     "typescript": "4.7.4"
   },
