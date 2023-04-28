@@ -67,6 +67,7 @@ export class TerminateBrokerConnectionModalComponent implements OnInit {
   }
 
   onDismiss() {
+    this.closeSubject.next(false);
     this.closeSubject.complete();
   }
 }

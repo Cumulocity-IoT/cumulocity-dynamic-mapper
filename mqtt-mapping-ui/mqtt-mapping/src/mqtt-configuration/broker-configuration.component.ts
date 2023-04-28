@@ -202,10 +202,12 @@ export class BokerConfigurationComponent implements OnInit {
       this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
     terminateExistingConnectionModalRef.content.closeSubject.subscribe(
       async (isTerminateConnection: boolean) => {
+        console.log("Termination result:", isTerminateConnection);
         if (!isTerminateConnection) {
-          return;
+        } else {
+          await this.disconnectFromMQTT();
         }
-        await this.disconnectFromMQTT();
+        terminateExistingConnectionModalRef.hide();
       }
     );
   }

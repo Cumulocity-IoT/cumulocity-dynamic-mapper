@@ -77,7 +77,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.App;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
@@ -325,17 +324,24 @@ public class MQTTClient {
             }
 
             try {
-                subscribe("$SYS/#", 0);
-                activeSubscriptionCache = new HashMap<String, MutableInt>();
-                activeInboundMappings = new HashMap<String, Mapping>();
-                activeOutboundMappings = new HashMap<String, Mapping>();
-                rebuildInboundMappingCache();
-                rebuildOutboundMappingCache();
+                // test if the mqtt connection is configured and enabled
+                if (shouldConnect()){
+                    try {
+                        // is not working for broker.emqx.io
+                        subscribe("$SYS/#", 0);       
+                    } catch (Exception e) {
+                        log.warn("Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}", e.getMessage(), e);
+                    }
+                    activeSubscriptionCache = new HashMap<String, MutableInt>();
+                    activeInboundMappings = new HashMap<String, Mapping>();
+                    activeOutboundMappings = new HashMap<String, Mapping>();
+                    rebuildInboundMappingCache();
+                    rebuildOutboundMappingCache();
+                    log.info("Subscribing to topics was sucessful: {}", successful);
+                }
                 successful = true;
-                log.info("Subscribing to topics was sucessful: {}", successful);
-
             } catch (Exception e) {
-                log.error("Error on reconnect, retrying ... {}", e.getMessage());
+                log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
                 log.debug("Stacktrace:", e);
                 successful = false;
             }
