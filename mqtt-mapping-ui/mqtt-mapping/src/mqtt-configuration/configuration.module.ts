@@ -37,7 +37,7 @@ import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-c
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/configuration",
+          path: "sag-ps-pkg-mqtt-mapping/configuration",
           component: BokerConfigurationComponent,
         },
       ] as Route[],

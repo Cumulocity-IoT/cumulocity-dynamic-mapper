@@ -43,12 +43,12 @@ import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
 
 const extensionRoutes: Route[] = [
   {
-    path: "mqtt-mapping/extensions",
+    path: "sag-ps-pkg-mqtt-mapping/extensions",
     component: ExtensionComponent,
     pathMatch: "full",
     children: [
       {
-        // path: 'mqtt-mapping/extensions/properties/50051686',
+        // path: 'sag-ps-pkg-mqtt-mapping/extensions/properties/50051686',
         path: "properties/:id",
         component: ExtensionPropertiesComponent,
       },
@@ -56,7 +56,7 @@ const extensionRoutes: Route[] = [
     //canActivate: [ExtensionGuard],
   },
   // {
-  //   path: 'mqtt-mapping/extensions/properties/:id',
+  //   path: 'sag-ps-pkg-mqtt-mapping/extensions/properties/:id',
   //   component: ExtensionPropertiesComponent,
   // }
 ];

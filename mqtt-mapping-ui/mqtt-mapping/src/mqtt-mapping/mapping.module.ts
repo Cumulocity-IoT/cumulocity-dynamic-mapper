@@ -110,7 +110,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/mappings/inbound",
+          path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
           component: MappingComponent,
         },
       ] as Route[],
@@ -120,7 +120,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/mappings/outbound",
+          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
           component: MappingComponent,
         },
       ] as Route[],
