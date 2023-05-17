@@ -34,7 +34,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     parent: gettext("Settings"),
     label: gettext("MQTT Mapping"),
     icon: "ftp-server",
-    path: "/mqtt-mapping/mappings/inbound",
+    path: "/sag-ps-pkg-mqtt-mapping/mappings/inbound",
     priority: 99,
     preventDuplicates: true,
   });

@@ -209,7 +209,7 @@ export class MappingComponent implements OnInit {
 
     const href = this.router.url;
     this.stepperConfiguration.direction = href.match(
-      /mqtt-mapping\/mappings\/inbound/g
+      /sag-ps-pkg-mqtt-mapping\/mappings\/inbound/g
     )
       ? Direction.INBOUND
       : Direction.OUTBOUND;

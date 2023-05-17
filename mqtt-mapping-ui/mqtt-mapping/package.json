@@ -1,10 +1,10 @@
 {
-  "name": "sag-ps-pkg-mqtt-mapping",
+  "name": "mqtt-mapping",
   "version": "3.1.0",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The lugin support both directions: inbound/outbound.",
   "scripts": {
     "start": "c8ycli server --env.extraWebpackConfig=./extra-webpack.config.js",
-    "start:admin": "npm start -- --shell administration-1",
+    "start:admin": "npm start -- --shell administration-extended",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
@@ -51,7 +51,7 @@
   },
   "c8y": {
     "application": {
-      "name": "sag-ps-pkg-mqtt-mapping",
+      "name": "mqtt-mapping",
       "contextPath": "sag-ps-pkg-mqtt-mapping",
       "key": "sag-ps-pkg-mqtt-mapping-key",
       "globalTitle": "MQTT mapping widget",
