@@ -19,7 +19,7 @@
   ~ @authors Christof Strack
   -->
 
-‚<label
+  <label
   [class.c8y-checkbox]="!to.switchMode"
   [class.c8y-switch]="to.switchMode"
   [class.has-error]="showError"
@@ -33,18 +33,14 @@
     [indeterminate]="to.indeterminate && formControl.value == null"
     [formControl]="formControl"
     [formlyAttributes]="field"
-    [attr.data-cy]="
-      'c8y-field-checkbox--' + (field.templateOptions?.optionDataCy || to.label)
-    "
+    [attr.data-cy]="'c8y-field-checkbox--' + (field.templateOptions?.optionDataCy || to.label)"
   />
   <span></span>
-  <span class="text-truncate" title="{{ to.label | humanize }}">{{
-    to.label | humanize
-  }}</span>
+  <span class="text-truncate" title="{{ to.label | humanize }}">{{ to.label | humanize }}</span>
   <span *ngIf="to.required && to.hideRequiredMarker !== true">
     <em class="m-l-4" translate>(required)</em>
   </span>
-  <button
+  <!-- <button
     class="btn-help btn-help--sm m-t-auto m-b-auto"
     type="button"
     [attr.aria-label]="'Help' | translate"
@@ -52,5 +48,6 @@
     triggers="focus"
     placement="right"
     *ngIf="!!to.description"
-  ></button>
+  ></button> -->
 </label>
+

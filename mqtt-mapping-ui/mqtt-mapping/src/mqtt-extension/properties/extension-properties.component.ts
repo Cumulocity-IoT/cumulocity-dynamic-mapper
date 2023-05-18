@@ -79,7 +79,7 @@ export class ExtensionPropertiesComponent implements OnInit {
     this.breadcrumbConfig = {
       icon: "c8y-modules",
       label: gettext("Extensions"),
-      path: "mqtt-mapping/extensions",
+      path: "sag-ps-pkg-mqtt-mapping/extensions",
     };
   }
 }

@@ -33,7 +33,7 @@ import { SharedModule } from "../shared/shared.module";
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/tree",
+          path: "sag-ps-pkg-mqtt-mapping/tree",
           component: MappingTreeComponent,
         },
       ] as Route[],

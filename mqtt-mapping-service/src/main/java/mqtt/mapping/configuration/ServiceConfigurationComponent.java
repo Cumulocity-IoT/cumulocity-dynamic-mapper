@@ -33,6 +33,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -51,8 +52,11 @@ public class ServiceConfigurationComponent {
 
     private final Platform platform;
 
-    @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    public void setObjectMapper (ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
 
     @Autowired
     public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi, Platform platform) {

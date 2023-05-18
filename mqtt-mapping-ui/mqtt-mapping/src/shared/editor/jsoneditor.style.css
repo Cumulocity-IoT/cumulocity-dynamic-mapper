@@ -61,58 +61,60 @@ button.jsoneditor-button.jsoneditor-dragarea {
 
 div > div.jsoneditor-menu {
   /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
-  background-color: var(
+  background-color: rgb(134, 134, 134)
+  /*var(
     --navigator-dark-bg-color,
-    var(--brand-primary, #1776bf)
-  ) !important;
+    var(--brand-primary, )
+    var(--brand-primary, #1776bf)) */
+   !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-icon {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-button {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree button.jsoneditor-dragarea {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 div.jsoneditor-tree .jsoneditor-button.jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr .jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-text-errors tr.parse-error .jsoneditor-schema-error {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-search button {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-frame button.jsoneditor-refresh {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-statusbar > .jsoneditor-validation-error-icon {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-statusbar > .jsoneditor-parse-error-icon {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-menu > button {
-  background-image: url("/apps/mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
+  background-image: url("/apps/sag-ps-pkg-mqtt-mapping/assets/img/jsoneditor-icons.svg") !important;
 }
 
 .jsoneditor-value {
