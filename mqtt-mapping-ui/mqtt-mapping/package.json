@@ -1,10 +1,10 @@
 {
   "name": "mqtt-mapping",
-  "version": "3.0.0",
-  "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.",
+  "version": "3.1.0",
+  "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The lugin support both directions: inbound/outbound.",
   "scripts": {
     "start": "c8ycli server --env.extraWebpackConfig=./extra-webpack.config.js",
-    "start:admin": "npm start -- --shell administration-extended",
+    "start:admin": "npm start -- --shell administration-1016",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
@@ -23,20 +23,20 @@
     "@angular/platform-browser-dynamic": "14.0.6",
     "@angular/router": "14.0.6",
     "@angular/upgrade": "14.0.6",
-    "@c8y/client": "1016.0.209",
-    "@c8y/ngx-components": "1016.0.209",
-    "@c8y/style": "1016.0.209",
+    "@c8y/client": "1016.0.214",
+    "@c8y/ngx-components": "1016.0.214",
+    "@c8y/style": "1016.0.214",
     "@ngx-formly/bootstrap": "^5.10.13",
     "@ngx-translate/core": "14.0.0",
     "build": "^0.1.4",
     "jsonata": "^1.8.6",
-    "jsoneditor": "^9.9.2",
+    "jsoneditor": "^9.10.0",
     "ngx-bootstrap": "6.2.0",
     "run": "^1.4.0",
     "rxjs": "~6.6.3",
     "style-loader": "^3.3.1",
     "uuid": "^9.0.0",
-    "vanilla-jsoneditor": "^0.16.1",
+    "vanilla-jsoneditor": "^0.17.1",
     "zone.js": "~0.11.7"
   },
   "devDependencies": {
@@ -45,16 +45,15 @@
     "@angular/language-service": "14.0.6",
     "@angular/localize": "14.0.6",
     "@angular/service-worker": "14.0.6",
-    "@c8y/cli": "1016.0.209",
-    "@types/webpack": "^5.28.0",
+    "@c8y/cli": "1016.0.214",
     "file-loader": "^6.2.0",
     "typescript": "4.7.4"
   },
   "c8y": {
     "application": {
       "name": "mqtt-mapping",
-      "contextPath": "mqtt-mapping",
-      "key": "mqtt-mapping-application-key",
+      "contextPath": "sag-ps-pkg-mqtt-mapping",
+      "key": "sag-ps-pkg-mqtt-mapping-key",
       "globalTitle": "MQTT mapping widget",
       "tabsHorizontal": true,
       "isPackage": true,
@@ -69,7 +68,7 @@
         }
       ],
       "remotes": {
-        "mqtt-mapping": [
+        "sag-ps-pkg-mqtt-mapping": [
           "MQTTMappingModule"
         ]
       }

@@ -31,7 +31,7 @@ import { ExtensionPropertiesComponent } from "./properties/extension-properties.
 
 const extensionRoutes: Route[] = [
   {
-    path: "mqtt-mapping/extensions",
+    path: "sag-ps-pkg-mqtt-mapping/extensions",
     children: [
       {
         path: "",

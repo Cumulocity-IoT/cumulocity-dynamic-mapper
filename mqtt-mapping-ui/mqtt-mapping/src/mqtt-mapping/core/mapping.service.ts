@@ -26,6 +26,7 @@ import { BrokerConfigurationService } from "../../mqtt-configuration/broker-conf
 import {
   C8YAPISubscription,
   Direction,
+  Feature,
   Mapping,
   Operation,
 } from "../../shared/mapping.model";
@@ -47,6 +48,8 @@ import {
 
 @Injectable({ providedIn: "root" })
 export class MappingService {
+
+  _feature: Feature;
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
@@ -126,19 +129,27 @@ export class MappingService {
     return m;
   }
 
-  async getSubscriptions(): Promise<C8YAPISubscription> {
-    let response = this.client.fetch(
-      `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
-      {
-        headers: {
-          "content-type": "application/json",
-        },
-        method: "GET",
-      }
-    );
-    let data = await response;
-    let sub = await data.json();
-    return sub;
+  async getSubscriptions(): Promise<C8YAPISubscription > {
+    if (!this._feature) {
+      this._feature = await this.configurationService.getFeatures();
+    }
+    if (this._feature.outputMappingEnabled) {
+      let response = this.client.fetch(
+        `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
+        {
+          headers: {
+            "content-type": "application/json",
+          },
+          method: "GET",
+        }
+      );
+      let data = await response;
+      let sub = await data.json();
+      return sub;
+    } else {
+      //return Promise.resolve();
+      return null;
+    }
   }
 
   async saveMappings(mappings: Mapping[]): Promise<void> {

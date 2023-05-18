@@ -45,7 +45,7 @@ import { TypeHeaderCellRendererComponent } from "./grid/type-data-grid-column/ty
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/testing",
+          path: "sag-ps-pkg-mqtt-mapping/testing",
           component: TestingComponent,
         },
       ] as Route[],

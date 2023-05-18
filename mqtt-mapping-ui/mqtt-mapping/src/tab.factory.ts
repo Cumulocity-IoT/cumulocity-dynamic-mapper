@@ -34,7 +34,7 @@ export class MappingTabFactory implements TabFactory {
   }
   
   async get() {
-    //console.log("MappingTabFactory",this.router.url, this.router.url.match(/mqtt-mapping/g));
+    //console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-mqtt-mapping/g));
     //console.log("Feature: ", this._feature)
     if (!this._feature) {
       this._feature = await this.configurationService.getFeatures();
@@ -42,16 +42,16 @@ export class MappingTabFactory implements TabFactory {
     }
 
     const tabs: Tab[] = [];
-    if (this.router.url.match(/mqtt-mapping/g)) {
+    if (this.router.url.match(/sag-ps-pkg-mqtt-mapping/g)) {
       tabs.push({
-        path: "mqtt-mapping/configuration",
+        path: "sag-ps-pkg-mqtt-mapping/configuration",
         priority: 930,
         label: "Configuration",
         icon: "cog",
         orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: "mqtt-mapping/mappings/inbound",
+        path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
         priority: 920,
         label: "Mapping Inbound",
         icon: "swipe-right",
@@ -60,7 +60,7 @@ export class MappingTabFactory implements TabFactory {
       this.configurationService.getFeatures();
       if (this._feature.outputMappingEnabled) {
         tabs.push({
-          path: "mqtt-mapping/mappings/outbound",
+          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
           priority: 920,
           label: "Mapping Outbound",
           icon: "swipe-left",
@@ -68,28 +68,28 @@ export class MappingTabFactory implements TabFactory {
         } as Tab);
       }
       tabs.push({
-        path: "mqtt-mapping/monitoring",
+        path: "sag-ps-pkg-mqtt-mapping/monitoring",
         priority: 910,
         label: "Monitoring",
         icon: "monitoring",
         orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: "mqtt-mapping/testing",
+        path: "sag-ps-pkg-mqtt-mapping/testing",
         priority: 900,
         label: "Test Devices",
         icon: "reflector-bulb",
         orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: "mqtt-mapping/tree",
+        path: "sag-ps-pkg-mqtt-mapping/tree",
         priority: 890,
         label: "Mapping Tree Inbound",
         icon: "tree-structure",
         orientation: "horizontal",
       } as Tab);
       tabs.push({
-        path: "mqtt-mapping/extensions",
+        path: "sag-ps-pkg-mqtt-mapping/extensions",
         priority: 880,
         label: "Processor Extension",
         icon: "plugin",
@@ -103,7 +103,7 @@ export class MappingTabFactory implements TabFactory {
       // Do NOT DELETE
 
       // tabs.push({
-      //   path: "mqtt-mapping/editor2-test",
+      //   path: "sag-ps-pkg-mqtt-mapping/editor2-test",
       //   priority: 870,
       //   label: "Editor2",
       //   icon: "file",

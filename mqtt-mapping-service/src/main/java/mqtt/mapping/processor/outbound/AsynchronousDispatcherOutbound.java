@@ -61,8 +61,11 @@ import java.util.concurrent.Future;
 @Service
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
-    @Autowired
     C8YAPISubscriber operationSubscriber;
+    @Autowired
+    public void setOperationSubscriber(C8YAPISubscriber operationSubscriber) {
+        this.operationSubscriber = operationSubscriber;
+    }
 
     @Autowired
     C8YAgent c8YAgent;

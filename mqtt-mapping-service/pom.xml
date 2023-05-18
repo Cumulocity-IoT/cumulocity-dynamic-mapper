@@ -49,7 +49,7 @@
     </dependencyManagement>
 
     <dependencies>
-        
+
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-joda</artifactId>
@@ -135,7 +135,8 @@
             <plugin>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-package-maven-plugin</artifactId>
-                <version>1015.334.0</version>
+                <!-- <version>1015.334.0</version> -->
+                <version>1017.187.0</version>
                 <executions>
                     <execution>
                         <id>package</id>
@@ -148,6 +149,14 @@
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
+                            <heap>
+                                <min>256m</min>
+                                <max>768m</max>
+                            </heap>
+                            <metaspace>
+                                <min>128m</min>
+                                <max>192m</max>
+                            </metaspace>
                         </configuration>
                     </execution>
                 </executions>

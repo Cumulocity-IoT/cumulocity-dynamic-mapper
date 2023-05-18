@@ -43,7 +43,7 @@ import { SharedModule } from "../shared/shared.module";
 import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
-import { FORMLY_CONFIG } from "@ngx-formly/core";
+import { FORMLY_CONFIG, FormlyModule } from "@ngx-formly/core";
 import {
   checkSubstitutionIsValid,
   checkTopicsInboundAreValid,
@@ -86,7 +86,8 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
     SharedModule,
     PopoverModule,
     ConfigurationModule,
-    FormlyBootstrapModule,
+    //FormlyModule,
+    //FormlyBootstrapModule,
     DynamicFormsModule,
   ],
   entryComponents: [
@@ -109,7 +110,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/mappings/inbound",
+          path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
           component: MappingComponent,
         },
       ] as Route[],
@@ -119,7 +120,7 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/mappings/outbound",
+          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
           component: MappingComponent,
         },
       ] as Route[],

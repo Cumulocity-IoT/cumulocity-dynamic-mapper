@@ -34,7 +34,7 @@ import { IdRendererComponent } from "./renderer/id-cell.renderer.component";
       provide: HOOK_ROUTE,
       useValue: [
         {
-          path: "mqtt-mapping/monitoring",
+          path: "sag-ps-pkg-mqtt-mapping/monitoring",
           component: MonitoringComponent,
         },
       ] as Route[],

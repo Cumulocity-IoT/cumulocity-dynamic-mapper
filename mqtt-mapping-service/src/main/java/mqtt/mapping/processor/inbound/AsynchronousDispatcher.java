@@ -42,6 +42,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -166,14 +167,23 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
+    private C8YAgent c8yAgent;
     @Autowired
-    protected C8YAgent c8yAgent;
+    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
+        this.c8yAgent = c8yAgent;
+    }
 
+    private MQTTClient mqttClient;
     @Autowired
-    protected MQTTClient mqttClient;
+    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+        this.mqttClient = mqttClient;
+    }
 
+    private ObjectMapper objectMapper;
     @Autowired
-    protected ObjectMapper objectMapper;
+    public void setObjectMapper (@Lazy ObjectMapper objectMapper){
+        this.objectMapper = objectMapper;
+    }
 
     @Autowired
     SysHandler sysHandler;
