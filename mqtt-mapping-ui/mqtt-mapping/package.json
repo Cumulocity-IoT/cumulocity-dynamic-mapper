@@ -4,7 +4,7 @@
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The lugin support both directions: inbound/outbound.",
   "scripts": {
     "start": "c8ycli server --env.extraWebpackConfig=./extra-webpack.config.js",
-    "start:admin": "npm start -- --shell administration-extended",
+    "start:admin": "npm start -- --shell administration-1017",
     "build": "c8ycli build --env.extraWebpackConfig=./extra-webpack.config.js",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
