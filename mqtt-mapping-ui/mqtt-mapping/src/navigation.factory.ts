@@ -21,15 +21,18 @@
 import { Injectable } from "@angular/core";
 import { ApplicationService } from "@c8y/client";
 import {
+  AlertService,
   gettext,
   NavigatorNode,
   NavigatorNodeFactory,
 } from "@c8y/ngx-components";
+import { Feature } from "./shared/mapping.model";
+import { BrokerConfigurationService } from "./mqtt-configuration/broker-configuration.service";
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
   private static readonly APPLICATION_MQTT_GENERIC = "mqtt-mapping-service";
-
+  _feature: Feature;
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext("Settings"),
     label: gettext("MQTT Mapping"),
@@ -39,16 +42,30 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     preventDuplicates: true,
   });
 
-  constructor(private applicationService: ApplicationService) {}
+  constructor(
+    private applicationService: ApplicationService,
+    private alertService: AlertService,
+    private configurationService: BrokerConfigurationService) {}
 
-  get() {
+  async get() {
+    if (!this._feature) {
+      const f: any= await this.configurationService.getFeatures();
+      if (f.error) {
+        console.error("mqtt-mapping-service microservice not accessible", f);
+        this._feature = undefined;
+      } else {
+        this._feature = f;
+      }
+    }
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_MQTT_GENERIC)
       .then((result) => {
-        if (!(result && result.data)) {
-          console.error("MQTT Generic Microservice not subscribed!");
+        if (!(result && result.data) || !this._feature) {
+          this.alertService.danger("mqtt-mapping-service microservice not subscribed. Please subscribe this service before using the mapping editor!");
+          console.error("mqtt-mapping-service microservice not subscribed!");
           return [];
         }
+        console.error("mqtt-mapping-service:", result);
         //console.log('navigation node: ', this.NAVIGATION_NODE_MQTT);
         return this.NAVIGATION_NODE_MQTT;
       });
