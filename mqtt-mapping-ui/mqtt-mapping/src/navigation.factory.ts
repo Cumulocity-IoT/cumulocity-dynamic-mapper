@@ -61,7 +61,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       .isAvailable(MappingNavigationFactory.APPLICATION_MQTT_GENERIC)
       .then((result) => {
         if (!(result && result.data) || !this._feature) {
-          this.alertService.danger("mqtt-mapping-service microservice not subscribed. Please subscribe this service before using the mapping editor!");
+          this.alertService.danger("Microservice:mqtt-mapping-service  not subscribed. Please subscribe this service before using the mapping editor!");
           console.error("mqtt-mapping-service microservice not subscribed!");
           return [];
         }
