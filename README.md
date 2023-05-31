@@ -13,7 +13,7 @@
 - [Definition and Activation  of MQTT mappings](#definition-and-activation-of-mqtt-mappings)
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
   * [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format-cumulocity-rest-format)
-    + [Wizzard to define a mapping](#wizzard-to-define-a-mapping)
+    + [Wizard to define a mapping](#wizard-to-define-a-mapping)
     + [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
     + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
     + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
@@ -255,7 +255,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 </p>
 <br/>
 
-The wizzard to define a mapping consists of the steps:
+The wizard to define a mapping consists of the steps:
 
 1. Select the type of mapping:
 * `JSON`
@@ -297,7 +297,7 @@ ___
 
 #### Define MQTT topic properties
 
-In the first wizzard step properties for the topic are defined.
+In the first wizard step properties for the topic are defined.
 <p align="center">
 <img src="resources/image/Generic_MQTT_TopicDefinition.png"  style="width: 70%;" />
 </p>
@@ -346,7 +346,7 @@ The levels of the Template Topic are split and added to the payload:
   ]
 ```
 The entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Id.
-The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizzard step. It must not be deleted when editing the JSON source template.
+The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
 
 #### Snooping payloads on source topic
 
