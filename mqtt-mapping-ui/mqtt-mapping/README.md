@@ -18,7 +18,7 @@ The mapper processes messages in both directions:
 2. `OUTBOUND`: from C8Y to external source
 
 <p align="center">
-<img src="../../resources/image/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
+<img src="assets/img/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
 </p>
 <br/>
 
