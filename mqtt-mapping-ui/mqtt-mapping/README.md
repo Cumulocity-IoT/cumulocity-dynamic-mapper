@@ -17,10 +17,11 @@ The mapper processes messages in both directions:
 1. `INBOUND`: from external source to C8Y
 2. `OUTBOUND`: from C8Y to external source
 
-<p align="center">
-<img src="../../resources/image/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
-</p>
-<br/>
+<!-- <p align="center">
+<img src="./images/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
+</p> -->
+![Overview](images/Generic_MQTT_AddMapping.png)
+
 
 For the complete documentation please check the github projekt [cumulocity-dynamic-mqtt-mapper](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper).
 
