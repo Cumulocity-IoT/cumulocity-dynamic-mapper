@@ -568,7 +568,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: "col-lg-5 col-lg-offset-1 column-right-border not-p-b-24",
+            className: "col-lg-5 col-lg-offset-1 reduced-top column-right-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-warning",
@@ -582,7 +582,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: "col-lg-5 column-left-border not-p-b-24",
+            className: "col-lg-5 reduced-top column-left-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-info",

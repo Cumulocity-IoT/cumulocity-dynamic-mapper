@@ -71,3 +71,7 @@ json-editor > div {
     )
   );
 }
+
+.reduced-top {
+  top: -20px;
+}
