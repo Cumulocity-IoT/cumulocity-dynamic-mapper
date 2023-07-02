@@ -94,32 +94,30 @@ public class InnerNode extends TreeNode {
         return results;
     }
 
-    public void addMapping(Mapping mapping, List<String> remainingLevels)
+    public void addMapping(Mapping mapping, List<String> levels, int currentLevel )
             throws ResolveException {
-        var currentLevel = remainingLevels.get(0);
-        List<TreeNode> specificChildren = getChildNodes().getOrDefault(currentLevel, new ArrayList<TreeNode>());
-        if (remainingLevels.size() == 1) {
+        List<TreeNode> specificChildren = getChildNodes().getOrDefault(levels.get(currentLevel), new ArrayList<TreeNode>());
+        String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
+        if (currentLevel == levels.size() - 1) {
             log.info(
-                    "Adding mappingNode: currentLevel: {}, reaminingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
-                    currentLevel,
-                    remainingLevels, getLevel(), getAbsolutePath(), mapping.id);
-            MappingNode child = MappingNode.createMappingNode(this, mapping, currentLevel);
-            log.debug("Adding mappingNode: {}, {}, {}", getLevel(), currentLevel, child.toString());
+                    "Adding mappingNode : currentPathMonitoring: {}, currentNode.absolutePath: {}, mappingId : {}",
+                    currentPathMonitoring, getAbsolutePath(), mapping.id);
+            MappingNode child = MappingNode.createMappingNode(this, mapping, levels.get(currentLevel));
+            log.debug("Adding mappingNode : currentPathMonitoring {}, child: {}", currentPathMonitoring, child.toString());
             specificChildren.add(child);
-            getChildNodes().put(currentLevel, specificChildren);
-        } else if (remainingLevels.size() > 1) {
-            remainingLevels.remove(0);
+            getChildNodes().put(levels.get(currentLevel), specificChildren);
+        } else if (currentLevel < levels.size() - 1) {
             log.info(
-                    "Adding innerNode  : currentLevel: {}, reaminingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-                    currentLevel, remainingLevels, getLevel(), getAbsolutePath());
+                    "Adding innerNode   : currentPathMonitoring: {}, currentNode.absolutePath: {}",
+                    currentPathMonitoring, getLevel(), getAbsolutePath());
             InnerNode child;
-            if (getChildNodes().containsKey(currentLevel)) {
+            if (getChildNodes().containsKey(levels.get(currentLevel))) {
                 if (specificChildren.size() == 1) {
                     if (specificChildren.get(0) instanceof InnerNode) {
                         child = (InnerNode) specificChildren.get(0);
                     } else {
                         throw new ResolveException(
-                                "Could not add mapping to tree, since at this node is already blocked by mapping: "
+                                "Could not add mapping to tree, since at this node is already blocked by mappingId : "
                                         + specificChildren.get(0).toString());
                     }
                 } else {
@@ -128,12 +126,12 @@ public class InnerNode extends TreeNode {
                                     + specificChildren.size() + " nodes");
                 }
             } else {
-                child = InnerNode.createInnerNode(this, currentLevel);
-                log.debug("Adding innerNode: {}, {}, {}", getLevel(), currentLevel, child.toString());
+                child = InnerNode.createInnerNode(this, levels.get(currentLevel));
+                log.debug("Adding innerNode: currentPathMonitoring: {}, child: {}, {}", currentPathMonitoring, child.toString());
                 specificChildren.add(child);
-                getChildNodes().put(currentLevel, specificChildren);
+                getChildNodes().put(levels.get(currentLevel), specificChildren);
             }
-            child.addMapping(mapping, remainingLevels);
+            child.addMapping(mapping, levels, currentLevel + 1);
         } else {
             throw new ResolveException("Could not add mapping to tree: " + mapping.toString());
         }
@@ -146,7 +144,7 @@ public class InnerNode extends TreeNode {
             path = mapping.subscriptionTopic;
         }
         List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
-        addMapping(mapping, levels);
+        addMapping(mapping, levels, 0);
     }
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
