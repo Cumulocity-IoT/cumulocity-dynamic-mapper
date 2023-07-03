@@ -337,9 +337,9 @@ public class MQTTClient {
                     activeOutboundMappings = new HashMap<String, Mapping>();
                     rebuildInboundMappingCache();
                     rebuildOutboundMappingCache();
-                    log.info("Subscribing to topics was sucessful: {}", successful);
                 }
                 successful = true;
+                log.info("Subscribing to topics was sucessful: {}", successful);
             } catch (Exception e) {
                 log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
                 log.debug("Stacktrace:", e);
