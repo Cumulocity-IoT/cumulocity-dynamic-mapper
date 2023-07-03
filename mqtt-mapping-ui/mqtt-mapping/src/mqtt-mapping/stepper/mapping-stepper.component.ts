@@ -205,7 +205,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     this.propertyFormlyFields = [
-
       {
         validators: {
           validation: [
@@ -372,6 +371,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6",
             key: "updateExistingDevice",
             type: "switch",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Update Existing Device",
               disabled:
@@ -963,6 +963,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
+      this.templateModel.mapping = this.mapping;
       console.log(
         "Populate jsonPath if wildcard:",
         isWildcardTopic(this.mapping.subscriptionTopic),
