@@ -84,104 +84,112 @@ public class AsynchronousDispatcher implements MqttCallback {
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+            MappingStatus mappingStatusUnspecified = mappingStatusComponent
+                    .getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
-                MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
+                // only process active mappings
+                if (mapping.isActive()) {
+                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
 
-                ProcessingContext<?> context;
-                if (mapping.mappingType.payloadType.equals(String.class)) {
-                    context = new ProcessingContext<String>();
-                } else {
-                    context = new ProcessingContext<byte[]>();
-                }
-                context.setTopic(topic);
-                context.setMappingType(mapping.mappingType);
-                context.setMapping(mapping);
-                context.setSendPayload(sendPayload);
-                // identify the corect processor based on the mapping type
-                MappingType mappingType = context.getMappingType();
-                BasePayloadProcessor processor = payloadProcessorsInbound.get(mappingType);
-
-                if (processor != null) {
-                    try {
-                        processor.deserializePayload(context, mqttMessage);
-                        if (c8yAgent.getServiceConfiguration().logPayload) {
-                            log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
-                                    context.getPayload().toString());
-                        } else {
-                            log.info("New message on topic: '{}'", context.getTopic());
-                        }
-                        mappingStatus.messagesReceived++;
-                        if (mapping.snoopStatus == SnoopStatus.ENABLED
-                                || mapping.snoopStatus == SnoopStatus.STARTED) {
-                            String serializedPayload = null;
-                            if (context.getPayload() instanceof JsonNode) {
-                                serializedPayload = objectMapper.writeValueAsString((JsonNode) context.getPayload());
-                            } else if (context.getPayload() instanceof String) {
-                                serializedPayload = (String) context.getPayload();
-                            }
-                            if (context.getPayload() instanceof byte[]) {
-                                serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
-                            }
-
-                            if (serializedPayload != null) {
-                                mappingStatus.snoopedTemplatesActive++;
-                                mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
-                                mapping.addSnoopedTemplate(serializedPayload);
-
-                                log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
-                                        mapping.snoopedTemplates.size(),
-                                        mapping.snoopStatus);
-                                mappingStatusComponent.setMappingDirty(mapping);
-
-                            } else {
-                                log.warn(
-                                        "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
-                                        context.getPayload().getClass());
-                            }
-                        } else {
-                            processor.extractFromSource(context);
-                            processor.substituteInTargetAndSend(context);
-                            // processor.substituteInTargetAndSend(context);
-                            List<C8YRequest> resultRequests = context.getRequests();
-                            if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
-                                mappingStatus.errors++;
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
-                        log.info("Message Stacktrace:", e);
-                        mappingStatus.errors++;
+                    ProcessingContext<?> context;
+                    if (mapping.mappingType.payloadType.equals(String.class)) {
+                        context = new ProcessingContext<String>();
+                    } else {
+                        context = new ProcessingContext<byte[]>();
                     }
-                } else {
-                    mappingStatusUnspecified.errors++;
-                    log.error("No process for MessageType: {} registered, ignoring this message!", mappingType);
+                    context.setTopic(topic);
+                    context.setMappingType(mapping.mappingType);
+                    context.setMapping(mapping);
+                    context.setSendPayload(sendPayload);
+                    // identify the corect processor based on the mapping type
+                    MappingType mappingType = context.getMappingType();
+                    BasePayloadProcessor processor = payloadProcessorsInbound.get(mappingType);
+
+                    if (processor != null) {
+                        try {
+                            processor.deserializePayload(context, mqttMessage);
+                            if (c8yAgent.getServiceConfiguration().logPayload) {
+                                log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
+                                        context.getPayload().toString());
+                            } else {
+                                log.info("New message on topic: '{}'", context.getTopic());
+                            }
+                            mappingStatus.messagesReceived++;
+                            if (mapping.snoopStatus == SnoopStatus.ENABLED
+                                    || mapping.snoopStatus == SnoopStatus.STARTED) {
+                                String serializedPayload = null;
+                                if (context.getPayload() instanceof JsonNode) {
+                                    serializedPayload = objectMapper
+                                            .writeValueAsString((JsonNode) context.getPayload());
+                                } else if (context.getPayload() instanceof String) {
+                                    serializedPayload = (String) context.getPayload();
+                                }
+                                if (context.getPayload() instanceof byte[]) {
+                                    serializedPayload = Hex.encodeHexString((byte[]) context.getPayload());
+                                }
+
+                                if (serializedPayload != null) {
+                                    mappingStatus.snoopedTemplatesActive++;
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mapping.addSnoopedTemplate(serializedPayload);
+
+                                    log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                                            mapping.snoopedTemplates.size(),
+                                            mapping.snoopStatus);
+                                    mappingStatusComponent.setMappingDirty(mapping);
+
+                                } else {
+                                    log.warn(
+                                            "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            context.getPayload().getClass());
+                                }
+                            } else {
+                                processor.extractFromSource(context);
+                                processor.substituteInTargetAndSend(context);
+                                // processor.substituteInTargetAndSend(context);
+                                List<C8YRequest> resultRequests = context.getRequests();
+                                if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                    mappingStatus.errors++;
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
+                            log.info("Message Stacktrace:", e);
+                            mappingStatus.errors++;
+                        }
+                    } else {
+                        mappingStatusUnspecified.errors++;
+                        log.error("No process for MessageType: {} registered, ignoring this message!", mappingType);
+                    }
+                    processingResult.add(context);
                 }
-                processingResult.add(context);
+
             });
             return processingResult;
         }
-
 
     }
 
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
     private C8YAgent c8yAgent;
+
     @Autowired
     public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
 
     private MQTTClient mqttClient;
+
     @Autowired
-    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+    public void setMQTTClient(@Lazy MQTTClient mqttClient) {
         this.mqttClient = mqttClient;
     }
 
     private ObjectMapper objectMapper;
+
     @Autowired
-    public void setObjectMapper (@Lazy ObjectMapper objectMapper){
+    public void setObjectMapper(@Lazy ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -220,7 +228,8 @@ public class AsynchronousDispatcher implements MqttCallback {
                 try {
                     resolvedMappings = mqttClient.resolveMappings(topic);
                 } catch (Exception e) {
-                    log.warn("Error resolving appropriate map for topic \""+topic+"\". Could NOT be parsed. Ignoring this message!");
+                    log.warn("Error resolving appropriate map for topic \"" + topic
+                            + "\". Could NOT be parsed. Ignoring this message!");
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
@@ -233,7 +242,8 @@ public class AsynchronousDispatcher implements MqttCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic, payloadProcessorsInbound,
+                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic,
+                        payloadProcessorsInbound,
                         sendPayload, mqttMessage, objectMapper));
 
         return futureProcessingResult;
