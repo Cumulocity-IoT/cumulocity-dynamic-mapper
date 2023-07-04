@@ -31,6 +31,7 @@
     "@c8y/ngx-components": "1016.0.214",
     "@c8y/style": "1016.0.214",
     "@ngx-formly/bootstrap": "^5.10.13",
+    "@ngx-formly/core": "^5.12.7",
     "@ngx-translate/core": "14.0.0",
     "build": "^0.1.4",
     "jsonata": "^1.8.6",
@@ -72,9 +73,18 @@
         }
       ],
       "copy": [
-        { "from": "node_modules/jsoneditor/dist/img/jsoneditor-icons.svg", "to": "assets" },
-        { "from": "README.md", "to": "README.md" },
-        { "from": "../../resources/image/Generic_MQTT_AddMapping.png", "to": "images/Generic_MQTT_AddMapping.png" }
+        {
+          "from": "node_modules/jsoneditor/dist/img/jsoneditor-icons.svg",
+          "to": "assets"
+        },
+        {
+          "from": "README.md",
+          "to": "README.md"
+        },
+        {
+          "from": "../../resources/image/Generic_MQTT_AddMapping.png",
+          "to": "images/Generic_MQTT_AddMapping.png"
+        }
       ],
       "remotes": {
         "sag-ps-pkg-mqtt-mapping": [
