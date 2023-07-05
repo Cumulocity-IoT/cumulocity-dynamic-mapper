@@ -712,8 +712,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-3 pull-right p-t-24",
             type: "button",
             templateOptions: {
-              text: "Add new substitution",
-              description: `Add new substitution. Before target and source property in
+              text: "Upsert substitution",
+              description: `Upsert substitution. Before target and source property in
               templates
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),

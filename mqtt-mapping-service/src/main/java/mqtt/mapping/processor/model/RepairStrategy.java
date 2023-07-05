@@ -27,4 +27,5 @@ public enum RepairStrategy {
     USE_LAST_VALUE_OF_ARRAY,
     IGNORE,
     REMOVE_IF_MISSING,
+    REMOVE_IF_NULL,
 }
