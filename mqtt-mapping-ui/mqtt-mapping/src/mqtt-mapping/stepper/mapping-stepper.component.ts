@@ -205,7 +205,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     this.propertyFormlyFields = [
-
       {
         validators: {
           validation: [
@@ -569,7 +568,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: "col-lg-5 col-lg-offset-1 reduced-top column-right-border not-p-b-24",
+            className: "col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-warning",
@@ -713,8 +712,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-3 pull-right p-t-24",
             type: "button",
             templateOptions: {
-              text: "Add new substitution",
-              description: `Add new substitution. Before target and source property in
+              text: "Upsert substitution",
+              description: `Upsert substitution. Before target and source property in
               templates
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),

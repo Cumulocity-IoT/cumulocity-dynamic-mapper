@@ -94,16 +94,18 @@ public class InnerNode extends TreeNode {
         return results;
     }
 
-    public void addMapping(Mapping mapping, List<String> levels, int currentLevel )
+    public void addMapping(Mapping mapping, List<String> levels, int currentLevel)
             throws ResolveException {
-        List<TreeNode> specificChildren = getChildNodes().getOrDefault(levels.get(currentLevel), new ArrayList<TreeNode>());
+        List<TreeNode> specificChildren = getChildNodes().getOrDefault(levels.get(currentLevel),
+                new ArrayList<TreeNode>());
         String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
         if (currentLevel == levels.size() - 1) {
             log.info(
                     "Adding mappingNode : currentPathMonitoring: {}, currentNode.absolutePath: {}, mappingId : {}",
                     currentPathMonitoring, getAbsolutePath(), mapping.id);
             MappingNode child = MappingNode.createMappingNode(this, mapping, levels.get(currentLevel));
-            log.debug("Adding mappingNode : currentPathMonitoring {}, child: {}", currentPathMonitoring, child.toString());
+            log.debug("Adding mappingNode : currentPathMonitoring {}, child: {}", currentPathMonitoring,
+                    child.toString());
             specificChildren.add(child);
             getChildNodes().put(levels.get(currentLevel), specificChildren);
         } else if (currentLevel < levels.size() - 1) {
@@ -127,7 +129,8 @@ public class InnerNode extends TreeNode {
                 }
             } else {
                 child = InnerNode.createInnerNode(this, levels.get(currentLevel));
-                log.debug("Adding innerNode: currentPathMonitoring: {}, child: {}, {}", currentPathMonitoring, child.toString());
+                log.debug("Adding innerNode: currentPathMonitoring: {}, child: {}, {}", currentPathMonitoring,
+                        child.toString());
                 specificChildren.add(child);
                 getChildNodes().put(levels.get(currentLevel), specificChildren);
             }
@@ -163,9 +166,6 @@ public class InnerNode extends TreeNode {
         MutableBoolean foundMapping = new MutableBoolean(false);
         String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
         boolean hasChildren = getChildNodes() != null && getChildNodes().size() > 0;
-        if (getChildNodes().size() > 1) {
-            branchingLevel.setValue(currentLevel);
-        }
 
         if (currentLevel == levels.size() - 1 && hasChildren) {
             log.info(
@@ -183,7 +183,7 @@ public class InnerNode extends TreeNode {
                     } else
                         return false;
                 } else
-                    return true;
+                    return false;
             });
             return foundMapping.booleanValue();
         } else if (currentLevel < levels.size() - 1 && hasChildren) {
@@ -194,7 +194,10 @@ public class InnerNode extends TreeNode {
                 List<TreeNode> list = getChildNodes().get(levels.get(currentLevel));
                 list.removeIf(tn -> {
                     boolean bm = false;
-                    if (tn instanceof InnerNode) {
+                    if (tn instanceof InnerNode && ! foundMapping.booleanValue()) {
+                        if (getChildNodes().size() > 1) {
+                            branchingLevel.setValue(currentLevel);
+                        }
                         try {
                             bm = ((InnerNode) tn).deleteMapping(mapping, levels, currentLevel + 1, branchingLevel);
                             foundMapping.setValue(bm);
@@ -203,7 +206,7 @@ public class InnerNode extends TreeNode {
                                     "Deleting mapping error            : currentPathMonitoring: {}, branchingLevel: {}",
                                     currentPathMonitoring, branchingLevel, e.getMessage());
                         }
-                        if (currentLevel  < branchingLevel.getValue()) {
+                        if (currentLevel < branchingLevel.getValue()) {
                             log.info(
                                     "Deleting innerNode stopped: currentPathMonitoring: {}, branchingLevel: {}",
                                     currentPathMonitoring, branchingLevel);
@@ -217,7 +220,7 @@ public class InnerNode extends TreeNode {
                     }
                     return bm;
                 });
-                if (list.size() == 0 ) {
+                if (list.size() == 0) {
                     getChildNodes().remove(levels.get(currentLevel));
                 }
             }
