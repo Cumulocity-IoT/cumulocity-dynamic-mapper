@@ -275,6 +275,7 @@ export enum RepairStrategy {
   USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
   IGNORE = "IGNORE",
   REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
+  REMOVE_IF_NULL = "REMOVE_IF_NULL",
 }
 
 export class C8YAPISubscription {
