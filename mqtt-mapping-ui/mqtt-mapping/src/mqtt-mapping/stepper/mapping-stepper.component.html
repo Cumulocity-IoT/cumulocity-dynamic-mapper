@@ -362,6 +362,7 @@
                         selectedSubstitutionIndex: selectedSubstitution,
                         editorMode: stepperConfiguration.editorMode
                       }"
+                      [direction]="mapping.direction"
                       (onSelect)="onSelectSubstitution($event)"
                       (onDelete)="onDeleteSubstitution($event)"
                     >
