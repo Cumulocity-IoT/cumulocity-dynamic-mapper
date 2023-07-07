@@ -219,8 +219,9 @@ public abstract class BasePayloadProcessor<T> {
 
     public void substituteValueInObject(SubstituteValue sub, DocumentContext jsonObject, String keys)
             throws JSONException {
-        boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
-        if (( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) || sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL)) && subValueEmpty) {
+        boolean subValueMissing = sub.value == null ;
+        boolean subValueNull = sub.value.isNull() ;
+        if (( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing ) || ( sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
             jsonObject.delete(keys);
         } else {
             jsonObject.set(keys, sub.typedValue());

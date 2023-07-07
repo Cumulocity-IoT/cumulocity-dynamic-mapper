@@ -405,7 +405,13 @@ To define a new substitution the following steps have to be performed:
   * ```multi-device-multi-value```
   * ```single-device-multi-value```\
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
-4. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
+4. Select a repair strategy that determines how the mapping is applied:
+  *  ```DEFAULT```: Map the extracted values to the attribute addressed on right side
+  *  ```USE_FIRST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
+  *  ```USE_LAST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
+  *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+  *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+5. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
 <br/>
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
