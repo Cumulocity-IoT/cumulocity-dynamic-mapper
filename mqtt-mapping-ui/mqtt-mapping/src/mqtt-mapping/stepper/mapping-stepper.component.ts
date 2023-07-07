@@ -684,7 +684,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               label: "Repair strategy",
               description: `Strategy defining what should happen when extracted arrays in
               different expressions do not have the same size. How are missing values handled?`,
-              options: Object.keys(RepairStrategy).map((key) => {
+              options: Object.keys(RepairStrategy).filter( (key) =>  key != 'IGNORE' ).map((key) => {
                 return {
                   label: key,
                   value: key,
