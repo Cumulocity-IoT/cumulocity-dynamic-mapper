@@ -62,8 +62,12 @@ public class MappingSubstitution implements Serializable {
             switch (type) {
                 case OBJECT:
                 case ARRAY:
-                    dc = JsonPath.parse(value.toString());
-                    result = dc.read("$");
+                    if (value != null && !value.isNull()) {
+                        dc = JsonPath.parse(value.toString());
+                        result = dc.read("$");
+                    } else {
+                        result= value;
+                    }
                     return result;
                 case IGNORE:
                     return null;
