@@ -61,8 +61,7 @@ export class ExtensionPropertiesComponent implements OnInit {
 
   async loadExtension() {
     const { id } = this.activatedRoute.snapshot.params;
-    let filter = { id: id };
-    let result = await this.extensionService.getExtensionsEnriched(filter);
+    let result = await this.extensionService.getExtensionsEnriched(id);
     this.extension = result[0];
     // let copy = {
     //   name: this.extension.extensionEntries[0].name + "copy",
