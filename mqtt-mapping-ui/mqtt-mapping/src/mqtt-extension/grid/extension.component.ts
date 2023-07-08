@@ -42,7 +42,7 @@ export class ExtensionComponent implements OnInit {
 
   extensions$: Observable<IResultList<IManagedObject>> = this.reload$.pipe(
     tap(() => (this.reloading = true)),
-    switchMap(() => this.extensionService.getExtensionsEnriched()),
+    switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
     tap(console.log),
     tap(() => (this.reloading = false)),
     shareReplay()
