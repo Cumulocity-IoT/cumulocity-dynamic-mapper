@@ -1027,6 +1027,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             this.mapping.snoopStatus = SnoopStatus.NONE;
             event.stepper.next();
           }
+          modalRef.hide();
         });
       } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
         console.log("Continue snoop ...?");
@@ -1060,6 +1061,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           } else {
             this.onCancel.emit();
           }
+          modalRef.hide();
         });
       } else {
         event.stepper.next();
@@ -1245,6 +1247,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           overwrite,
           this.mapping.substitutions
         );
+        modalRef.hide();
       });
     } else {
       this.mapping.substitutions.push(sub);

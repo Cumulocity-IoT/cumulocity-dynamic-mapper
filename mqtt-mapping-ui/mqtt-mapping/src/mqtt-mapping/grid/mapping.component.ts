@@ -271,7 +271,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.CREATE,
     };
 
@@ -338,7 +338,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.UPDATE,
     };
     if (mapping.active) {
@@ -365,7 +365,7 @@ export class MappingComponent implements OnInit {
       allowNoDefinedIdentifier: false,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.COPY,
     };
     this.setStepperConfiguration(mapping.mappingType, mapping.direction);
@@ -492,7 +492,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
@@ -501,7 +501,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     }
     if (direction == Direction.OUTBOUND)
