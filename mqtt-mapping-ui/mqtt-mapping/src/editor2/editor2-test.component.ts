@@ -40,11 +40,14 @@ export class Editor2TestComponent implements OnInit, AfterViewInit {
   constructor() {}
   @ViewChild("editor2Test", { static: false }) editor2: JsonEditor2Component;
   templateSource: any;
-  editorProps: { mainMenuBar: false };
+  options: any;
   public path: string;
 
   ngOnInit(): void {
     this.templateSource = {
+      source: {id: "1234"},
+      type: "c8y_Type",
+      time: "2023-07-13T10:10:10",
       menu: {
         id: "file",
         value: "File",
@@ -57,6 +60,7 @@ export class Editor2TestComponent implements OnInit, AfterViewInit {
         },
       },
     };
+    this.options = { mainMenuBar: true, navigationBar: false, statusBar: false };
   }
 
   ngAfterViewInit(): void {
