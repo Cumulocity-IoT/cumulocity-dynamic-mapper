@@ -33,6 +33,7 @@ export interface StepperConfiguration {
   showProcessorExtensions?: boolean;
   editorMode: EditorMode;
   allowNoDefinedIdentifier?: boolean;
+  allowDefiningSubstitutions?: boolean;
   allowTestTransformation?: boolean;
   allowTestSending?: boolean;
   direction: Direction;
