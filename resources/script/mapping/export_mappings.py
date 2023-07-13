@@ -41,8 +41,13 @@ import getopt
 
 
 def main(argv):
-    opts, args = getopt.getopt(
-        argv, "U:u:p:f:d", ["password=", "url=", "user=", "file=", "dummy="])
+    try:
+        opts, args = getopt.getopt(
+            argv, "U:u:p:f:d", ["password=", "url=", "user=", "file=", "dummy="])
+    except:
+        print('export_mappings.py -U <url> -u <user> -p <password> -f <file>')
+        sys.exit()
+
     for opt, arg in opts:
         if opt == '-h':
             print('create.py -U <url> -u <user> -p <password> -f <file>')
