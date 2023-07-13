@@ -27,8 +27,10 @@ svg {
   /* --jse-theme-color: var(--brand-primary); */
   --jse-theme-color: var(
     --navigator-bg-color,
-    var(--navigator-dark-bg-color, var(--brand-primary, #1776bf))
+    var(--navigator-dark-bg-color, var(--brand-primary,  rgb(134, 134, 134)))
   );
   /* --jse-theme-color-highlight: #f553b5; */
-  --jse-font-size: var(--c8y-font-size-small);
+  /* --jse-font-size: var(--c8y-font-size-xs, 8px); */
+  --jse-font-size:   var(--c8y-font-size-small);
+  --jse-font-size-mono: var(--c8y-font-size-small);
 }
