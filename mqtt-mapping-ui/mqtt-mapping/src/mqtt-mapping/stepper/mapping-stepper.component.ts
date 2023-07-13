@@ -655,6 +655,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         templateOptions: {
           label: "Add new or show details of current substitution",
         },
+        hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
       },
       {
         fieldGroup: [
@@ -674,6 +675,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               switchMode: true,
               indeterminate: false,
             },
+            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-4",
@@ -707,6 +709,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.templateModel.currentSubstitution.targetExpression
                   .resultType,
             },
+            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-3 pull-right p-t-24",
@@ -718,10 +721,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),
               disabled:
-                !this.stepperConfiguration.showEditorSource ||
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              !this.stepperConfiguration.showEditorSource ||
+              this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               readonly: true,
             },
+            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
           },
         ],
       },
