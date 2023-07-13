@@ -41,3 +41,5 @@ resources/script/createSampleMappings_private.sh
 resources/script/attic/createSampleMappings_private.sh
 attic/*
 **/node_modules
+mqtt-mapping-extension/.factorypath
+.gitignore
