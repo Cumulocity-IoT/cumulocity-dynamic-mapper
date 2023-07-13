@@ -91,6 +91,7 @@ export class MappingComponent implements OnInit {
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
     allowNoDefinedIdentifier: false,
+    allowDefiningSubstitutions: true,
     showProcessorExtensions: false,
     allowTestTransformation: true,
     allowTestSending: true,
@@ -269,6 +270,7 @@ export class MappingComponent implements OnInit {
       ...this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: false,
@@ -336,6 +338,7 @@ export class MappingComponent implements OnInit {
       ...this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: false,
@@ -363,6 +366,7 @@ export class MappingComponent implements OnInit {
       ...this.stepperConfiguration,
       showEditorSource: true,
       allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: false,
@@ -489,6 +493,7 @@ export class MappingComponent implements OnInit {
       this.stepperConfiguration = {
         ...this.stepperConfiguration,
         showProcessorExtensions: false,
+        allowDefiningSubstitutions: false,
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
@@ -498,6 +503,7 @@ export class MappingComponent implements OnInit {
       this.stepperConfiguration = {
         ...this.stepperConfiguration,
         showProcessorExtensions: true,
+        allowDefiningSubstitutions: false,
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
