@@ -304,7 +304,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: `The TemplateTopicSample name
               must have the same number of
-              levels and must match the TemplateTopic.  Topic.The TemplateTopicSample name must have the same number of lmple name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.`,
+              levels and must match the TemplateTopic.`,
               required: true,
             },
           },
@@ -490,7 +490,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             templateOptions: {
               label: "Evaluate Expression on Source",
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder:
                 "e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -623,7 +623,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: "input",
             templateOptions: {
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.stepperConfiguration.allowDefiningSubstitutions,
               readonly: true,
             },
             expressionProperties: {
@@ -870,10 +870,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
     this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successfull!");
+      this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
+    } else {
+      this.alertService.success("Testing tranformation was successful!");
     }
     this.onNextTestResult();
   }
@@ -885,10 +887,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
     this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successfull!");
+      this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
+    } else {
+      this.alertService.info(`Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`);
+      //console.log("RES", testProcessingContext.requests[0].response);
     }
     this.onNextTestResult();
   }
