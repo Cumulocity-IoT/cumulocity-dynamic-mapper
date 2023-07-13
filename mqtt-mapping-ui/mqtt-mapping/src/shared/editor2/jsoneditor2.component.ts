@@ -55,7 +55,12 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @ViewChild("jsonEditorContainer", { static: true })
   jsonEditorContainer: ElementRef;
 
-  @Input() props = {};
+  @Input() options
+  // @Input("editorProps")
+  // set editorProps(value: Object) {
+  //   this.editorProps = value
+  // }
+
   @Input("data")
   set data(value: Object) {
     this.content["json"] = value;
@@ -85,7 +90,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.editor = new JSONEditor({
       target: this.jsonEditorContainer.nativeElement,
       props: {
-        ...this.props,
+        ...this.options,
         content: this.content,
         onChange: (
           updatedContent,
