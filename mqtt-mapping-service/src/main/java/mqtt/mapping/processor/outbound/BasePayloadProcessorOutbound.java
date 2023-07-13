@@ -185,7 +185,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
     public void substituteValueInObject(MappingType type, SubstituteValue sub, DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
-        boolean subValueNull = sub.value.isNull();
+        boolean subValueNull =  (sub.value == null) || ( sub.value != null && sub.value.isNull());
         if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
                 (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
                 ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
