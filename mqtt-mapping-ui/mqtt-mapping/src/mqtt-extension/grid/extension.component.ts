@@ -82,7 +82,7 @@ export class ExtensionComponent implements OnInit {
       initialState,
     });
     modalRef.content.closeSubject.subscribe(() => {
-      this.loadExtensions();
+      this.reloadExtensions();
       modalRef.hide();
     });
   }

@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, Input, ViewChild, ViewEncapsulation } from "@angular/core";
-import { ApplicationService, IApplication, IManagedObject } from "@c8y/client";
+import { ApplicationService, IApplication, IManagedObject, IManagedObjectBinary } from "@c8y/client";
 import {
   AlertService,
   DropAreaComponent,
@@ -36,11 +36,6 @@ import { ExtensionService } from "../share/extension.service";
   encapsulation: ViewEncapsulation.None,
 })
 export class AddExtensionComponent {
-  @Input() headerText: string;
-  @Input() headerIcon: string;
-  @Input() successText: string;
-  @Input() uploadExtensionHandler: any;
-  @Input() canGoBack: boolean = false;
 
   @ViewChild(DropAreaComponent) dropAreaComponent;
 
@@ -84,7 +79,7 @@ export class AddExtensionComponent {
         },
         name: nameUpload,
       };
-      await this.uploadExtensionHandler(file, this.createdApp);
+      await this.uploadExtension(file, this.createdApp);
       this.isAppCreated = true;
     } catch (ex) {
       this.extensionService.cancelExtensionCreation(this.createdApp);
@@ -118,5 +113,12 @@ export class AddExtensionComponent {
     this.uploadCanceled = true;
     this.extensionService.cancelExtensionCreation(this.createdApp);
     this.createdApp = null;
+  }
+
+  async uploadExtension(
+    file: File,
+    app: Partial<IManagedObject>
+  ): Promise<IManagedObjectBinary> {
+    return this.extensionService.uploadExtension(file, app);
   }
 }
