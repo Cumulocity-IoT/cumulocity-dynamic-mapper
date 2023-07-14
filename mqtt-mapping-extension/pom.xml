@@ -60,6 +60,11 @@
             <artifactId>mqtt-mapping-interface</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.softwareag.c8y.mqtt</groupId>
+            <artifactId>mqtt-mapping-service</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
     </dependencyManagement>
 
@@ -67,6 +72,11 @@
         <dependency>
             <groupId>com.softwareag.c8y.mqtt</groupId>
             <artifactId>mqtt-mapping-interface</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.softwareag.c8y.mqtt</groupId>
+            <artifactId>mqtt-mapping-service</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>
