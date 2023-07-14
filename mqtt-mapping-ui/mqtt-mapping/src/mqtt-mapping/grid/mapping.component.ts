@@ -273,7 +273,7 @@ export class MappingComponent implements OnInit {
       allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.CREATE,
     };
 
@@ -341,7 +341,7 @@ export class MappingComponent implements OnInit {
       allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.UPDATE,
     };
     if (mapping.active) {
@@ -369,7 +369,7 @@ export class MappingComponent implements OnInit {
       allowDefiningSubstitutions: true,
       showProcessorExtensions: false,
       allowTestTransformation: true,
-      allowTestSending: false,
+      allowTestSending: true,
       editorMode: EditorMode.COPY,
     };
     this.setStepperConfiguration(mapping.mappingType, mapping.direction);
