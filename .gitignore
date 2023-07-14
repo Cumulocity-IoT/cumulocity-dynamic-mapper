@@ -43,3 +43,4 @@ attic/*
 **/node_modules
 mqtt-mapping-extension/.factorypath
 .gitignore
+mqtt-mapping-interface/.factorypath

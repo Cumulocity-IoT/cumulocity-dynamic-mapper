@@ -605,7 +605,7 @@ public class MQTTClient {
                 } catch (MqttException e1) {
                     log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
                 }
-            } else if (subscriptionTopicChanged) {
+            } else if (subscriptionTopicChanged && activeMapping != null) {
                 MutableInt activeMappingSubs = activeSubscriptionCache.get(activeMapping.subscriptionTopic);
                 activeMappingSubs.subtract(1);
                 if (activeMappingSubs.intValue() <= 0) {

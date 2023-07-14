@@ -21,14 +21,11 @@
 
 package mqtt.mapping.processor;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.processor.extension.external.CustomEventOuter;
@@ -37,9 +34,7 @@ import mqtt.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
-import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 
 @Slf4j
 public class ProcessorExtensionTest {

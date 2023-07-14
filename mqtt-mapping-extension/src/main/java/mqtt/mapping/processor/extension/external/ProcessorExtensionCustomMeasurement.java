@@ -54,12 +54,12 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtension<b
 //     }
     
     public ProcessorExtensionCustomMeasurement (){
-        this.objectMapper = new ObjectMapper();;
+        this.objectMapper = new ObjectMapper();
     }
-
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
+
         JsonNode jsonNode;
         try {
             jsonNode = objectMapper.readTree(context.getPayload());
