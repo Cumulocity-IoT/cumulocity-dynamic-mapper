@@ -486,7 +486,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.pathSource",
             type: "input",
-            wrappers: ["c8y-form-field"],
+            wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Source",
               disabled:
