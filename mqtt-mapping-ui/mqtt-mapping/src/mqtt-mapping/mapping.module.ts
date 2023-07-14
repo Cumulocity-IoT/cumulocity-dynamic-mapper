@@ -56,7 +56,7 @@ import { FormlyHorizontalWrapper } from "./shared/formly/horizontal-wrapper";
 import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
 import { SelectComponent } from "./shared/formly/select/select.type.component";
 import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
-import { WrapperCustomFormField } from "./shared/formly/custom-form-field-wrapper";
+import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
 
 @NgModule({
   declarations: [
