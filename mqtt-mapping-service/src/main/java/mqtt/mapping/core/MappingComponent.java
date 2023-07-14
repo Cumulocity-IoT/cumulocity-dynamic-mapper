@@ -66,8 +66,9 @@ public class MappingComponent {
     @Autowired
     private InventoryApi inventoryApi;
 
-    @Getter
     private MappingServiceRepresentation mappingServiceRepresentation;
+
+    private boolean intialized = false;
 
     public void removeStatusMapping(String ident) {
         statusMapping.remove(ident);
@@ -82,26 +83,27 @@ public class MappingComponent {
         if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
+        intialized = true;
     }
 
-    public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
+    public void initializeMappingComponent( MappingServiceRepresentation mappingServiceRepresentation) {
         this.mappingServiceRepresentation = mappingServiceRepresentation;
         initializeMappingStatus();
     }
 
     public void sendStatusMapping() {
         // avoid sending empty monitoring events
-        if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null) {
+        if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && intialized) {
             log.debug("Sending monitoring: {}", statusMapping.values().size());
             Map<String, Object> service = new HashMap<String, Object>();
             MappingStatus[] array = statusMapping.values().toArray(new MappingStatus[0]);
             service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, array);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-            updateMor.setId(mappingServiceRepresentation.getId());
+            updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
             updateMor.setAttrs(service);
             this.inventoryApi.update(updateMor);
         } else {
-            log.debug("Ignoring mapping monitoring: {}", statusMapping.values().size());
+            log.debug("Ignoring mapping monitoring: {}, intialized: {}", statusMapping.values().size(), intialized);
         }
     }
 
@@ -112,7 +114,7 @@ public class MappingComponent {
             Map<String, Object> service = new HashMap<String, Object>();
             service.put(MappingServiceRepresentation.SERVICE_STATUS_FRAGMENT, entry);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-            updateMor.setId(mappingServiceRepresentation.getId());
+            updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
             updateMor.setAttrs(service);
             this.inventoryApi.update(updateMor);
         } else {
