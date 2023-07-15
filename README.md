@@ -9,6 +9,7 @@
   * [Microservice](#microservice)
   * [Web App Plugin](#web-app-plugin)
   * [Build, Deploy, Run](#build-deploy-run)
+  * [Permissions](#permissions)
 - [Configuration MQTT connection to broker](#configuration-mqtt-connection-to-broker)
 - [Definition and Activation  of MQTT mappings](#definition-and-activation-of-mqtt-mappings)
   * [Table of MQTT mappings](#table-of-mqtt-mappings)
@@ -177,6 +178,27 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 
 ## Build, Deploy, Run
 Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your computer.
+
+## Permissions
+The solution differentiates two different roles:
+1. `ROLE_MQTT_MAPPING_ADMIN`: can use/access all tabs, including **Configuration**, **Processor Extension**. In addition the relevant endpoints in `MQTTMappingRestController`:
+
+    1.1. `POST /configuration/connection`
+
+    1.2. `POST /configuration/service` 
+
+    1.3 `DELETE /extension/{extensionName}` 
+
+    are accessible.
+1. `ROLE_MQTT_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
+
+The two roles have to be assigned in the Web UI **Adminisitration**, see [here](https://cumulocity.com/guides/users-guide/administration/#managing-permissions).
+
+The available tabs for `ROLE_MQTT_MAPPING_ADMIN` are as follows:
+![ROLE_MQTT_MAPPING_ADMIN](./resources/image/Generic_MQTT_UI_AdminRole_Tabs.png)
+
+The available tabs for `ROLE_MQTT_MAPPING_CREATE` are as follows:
+![ROLE_MQTT_MAPPING_CREATE](./resources/image/Generic_MQTT_UI_CreateRole_Tabs.png)
 
 ### Backend - Microservice
 Run `mvn clean package` in folder `mqtt-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
