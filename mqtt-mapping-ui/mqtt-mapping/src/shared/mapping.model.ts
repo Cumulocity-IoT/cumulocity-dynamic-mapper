@@ -92,6 +92,8 @@ export interface ServiceStatus {
 export interface Feature {
   outputMappingEnabled: boolean;
   externalExtensionsEnabled: boolean;
+  userHasMQTTMappingCreateRole: boolean;
+  userHasMQTTMappingAdminRole: boolean;
 }
 
 export interface PayloadWrapper {

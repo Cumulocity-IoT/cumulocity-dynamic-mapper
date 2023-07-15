@@ -21,6 +21,7 @@
 
 package mqtt.mapping.rest;
 
+import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
@@ -57,6 +58,9 @@ public class MQTTMappingRestController {
     C8YAgent c8yAgent;
 
     @Autowired
+	private RoleService roleService;
+
+    @Autowired
     private MappingComponent mappingStatusComponent;
 
     @Value("${APP.externalExtensionsEnabled}")
@@ -65,12 +69,23 @@ public class MQTTMappingRestController {
     @Value("${APP.outputMappingEnabled}")
     private boolean outputMappingEnabled;
 
+    @Value("${APP.userRolesEnabled}")
+    private Boolean userRolesEnabled;
+
+    @Value("${APP.mqttMappingAdminRole}")
+    private String mqttMappingAdminRole;
+
+    @Value("${APP.mqttMappingCreateRole}")
+    private String mqttMappingCreateRole;
+
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         log.info("Get Feature status");
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
+        feature.setUserHasMQTTMappingCreateRole(userHasMQTTMappingCreateRole());
+        feature.setUserHasMQTTMappingAdminRole(userHasMQTTMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
@@ -81,7 +96,8 @@ public class MQTTMappingRestController {
             ConfigurationConnection configuration = c8yAgent
                     .loadConnectionConfiguration();
             if (configuration == null) {
-                //throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not available");
+                // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not
+                // available");
                 configuration = new ConfigurationConnection();
             }
             // don't modify original copy
@@ -97,6 +113,12 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> configureConnectionToBroker(
             @Valid @RequestBody ConfigurationConnection configuration) {
+
+        if (!userHasMQTTMappingAdminRole()) {
+            log.error("Insufficient Permission, user does not have required permission to access this API");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
 
         // don't modify original copy
         ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
@@ -114,6 +136,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
         log.info("Get connection details");
+
         try {
             final ServiceConfiguration configuration = c8yAgent.loadServiceConfiguration();
             if (configuration == null) {
@@ -133,6 +156,13 @@ public class MQTTMappingRestController {
 
         // don't modify original copy
         log.info("Post service configuration: {}", configuration.toString());
+
+        if (!userHasMQTTMappingAdminRole()) {
+            log.error("Insufficient Permission, user does not have required permission to access this API");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
+
         try {
             mqttClient.saveServiceConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -243,8 +273,7 @@ public class MQTTMappingRestController {
             if (ex instanceof IllegalArgumentException) {
                 log.error("Updating active mappings is not allowed {}", ex);
                 throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
-            }
-            else if (ex instanceof RuntimeException)
+            } else if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
             else if (ex instanceof JsonProcessingException)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
@@ -252,8 +281,6 @@ public class MQTTMappingRestController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-
-
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
@@ -288,11 +315,26 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
+
+        if (!userHasMQTTMappingAdminRole()) {
+            log.error("Insufficient Permission, user does not have required permission to access this API");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
         Extension result = c8yAgent.deleteProcessorExtension(extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
         return ResponseEntity.status(HttpStatus.OK).body(result);
+    }
+
+    private boolean userHasMQTTMappingAdminRole() {
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
+    }
+
+    private boolean userHasMQTTMappingCreateRole() {
+        return !userRolesEnabled || userHasMQTTMappingAdminRole()
+                || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
     }
 
 }

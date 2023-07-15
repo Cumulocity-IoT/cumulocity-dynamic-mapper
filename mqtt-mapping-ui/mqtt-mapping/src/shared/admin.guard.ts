@@ -16,30 +16,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ * @authors Christof Strack
  */
+import { Injectable } from "@angular/core";
+import { CanActivate } from "@angular/router";
+import { BrokerConfigurationService } from "../mqtt-configuration/broker-configuration.service";
+import { Feature } from "./mapping.model";
 
-package mqtt.mapping.model;
+@Injectable({ providedIn: "root" })
+export class AdminGuard implements CanActivate {
+  private adminPromise: Promise<boolean>;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+  constructor(private configurationService: BrokerConfigurationService) {}
 
-import javax.validation.constraints.NotNull;
+  canActivate(): Promise<boolean> {
+    this.adminPromise = this.configurationService.getFeatures().then((conf) => {
+      console.log(
+        "User has externalExtensionEnabled:",
+        conf.userHasMQTTMappingAdminRole
+      );
+      return conf.userHasMQTTMappingAdminRole;
+    });
 
-@Getter
-@Setter
-@ToString()
-public class Feature {
-    @NotNull
-    public boolean outputMappingEnabled;
-
-    @NotNull
-    public boolean externalExtensionsEnabled;
-
-    @NotNull
-    public boolean userHasMQTTMappingCreateRole;
-
-    @NotNull
-    public boolean userHasMQTTMappingAdminRole;
+    return this.adminPromise;
+  }
 }

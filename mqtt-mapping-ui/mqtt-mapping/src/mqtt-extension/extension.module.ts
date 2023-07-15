@@ -27,6 +27,7 @@ import { ExtensionComponent } from "./grid/extension.component";
 import { BsDropdownModule } from "ngx-bootstrap/dropdown";
 import { CollapseModule } from "ngx-bootstrap/collapse";
 import { ExtensionPropertiesComponent } from "./properties/extension-properties.component";
+import { AdminGuard } from "../shared/admin.guard";
 
 const extensionRoutes: Route[] = [
   {
@@ -36,6 +37,7 @@ const extensionRoutes: Route[] = [
         path: "",
         pathMatch: "full",
         component: ExtensionComponent,
+        canActivate: [AdminGuard],
       },
       {
         path: "properties/:id",
