@@ -42,64 +42,82 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-
 @Slf4j
 @Component
 public class ProcessorExtensionCustomMeasurement implements ProcessorExtension<byte[]> {
 
-    private ObjectMapper objectMapper;
-//     @Autowired
-//     public void setObjectMapper (ObjectMapper objectMapper){
-//         this.objectMapper = objectMapper;
-//     }
-    
-    public ProcessorExtensionCustomMeasurement (){
-        this.objectMapper = new ObjectMapper();
-    }
-    @Override
-    public void extractFromSource(ProcessingContext<byte[]> context)
-            throws ProcessingException {
+        private ObjectMapper objectMapper;
+        // @Autowired
+        // public void setObjectMapper (ObjectMapper objectMapper){
+        // this.objectMapper = objectMapper;
+        // }
 
-        JsonNode jsonNode;
-        try {
-            jsonNode = objectMapper.readTree(context.getPayload());
-        } catch (IOException e) {
-            throw new ProcessingException(e.getMessage());
+        public ProcessorExtensionCustomMeasurement() {
+                this.objectMapper = new ObjectMapper();
         }
-        Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-        postProcessingCache.put("time",
-                new ArrayList<SubstituteValue>(
-                        Arrays.asList(new SubstituteValue(
-                                new TextNode(new DateTime(
-                                        jsonNode.get("time").textValue())
-                                        .toString()),
-                                TYPE.TEXTUAL,
-                                RepairStrategy.DEFAULT))));
+        @Override
+        public void extractFromSource(ProcessingContext<byte[]> context)
+                        throws ProcessingException {
 
-        ObjectNode fragment = objectMapper.createObjectNode();
-        fragment.set("value",  new FloatNode(jsonNode.get("temperature").floatValue()));
-        fragment.set("unit",  new TextNode(jsonNode.get("unit").textValue()));
+                JsonNode jsonNode;
+                try {
+                        jsonNode = objectMapper.readTree(context.getPayload());
+                } catch (IOException e) {
+                        throw new ProcessingException(e.getMessage());
+                }
+                Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
-        postProcessingCache.put("c8y_Fragment_to_remove",
-                new ArrayList<SubstituteValue>(Arrays.asList(
-                        new SubstituteValue(null,
-                                TYPE.TEXTUAL,
-                                RepairStrategy.REMOVE_IF_NULL))));
+                postProcessingCache.put("time",
+                                new ArrayList<SubstituteValue>(
+                                                Arrays.asList(new SubstituteValue(
+                                                                new TextNode(new DateTime(
+                                                                                jsonNode.get("time").textValue())
+                                                                                .toString()),
+                                                                TYPE.TEXTUAL,
+                                                                RepairStrategy.DEFAULT))));
 
-        postProcessingCache.put("c8y_Temperature",
-                new ArrayList<SubstituteValue>(Arrays.asList(
-                        new SubstituteValue(fragment,
-                                TYPE.OBJECT,
-                                RepairStrategy.DEFAULT))));
+                ObjectNode fragment = objectMapper.createObjectNode();
+                fragment.set("value", new FloatNode(jsonNode.get("temperature").floatValue()));
+                fragment.set("unit", new TextNode(jsonNode.get("unit").textValue()));
 
-        postProcessingCache.put(context.getMapping().targetAPI.identifier,
-                new ArrayList<SubstituteValue>(Arrays.asList(
-                        new SubstituteValue(new TextNode(jsonNode.get("externalId").textValue()),
-                                TYPE.TEXTUAL,
-                                RepairStrategy.DEFAULT))));
+                postProcessingCache.put("c8y_Fragment_to_remove",
+                                new ArrayList<SubstituteValue>(Arrays.asList(
+                                                new SubstituteValue(null,
+                                                                TYPE.TEXTUAL,
+                                                                RepairStrategy.REMOVE_IF_NULL))));
 
-        log.info("New measurement over json processor: {}, {}, {}", jsonNode.get("time").textValue(), jsonNode.get("unit").textValue(), jsonNode.get("temperature").floatValue());
-    }
+                postProcessingCache.put("c8y_Temperature",
+                                new ArrayList<SubstituteValue>(Arrays.asList(
+                                                new SubstituteValue(fragment,
+                                                                TYPE.OBJECT,
+                                                                RepairStrategy.DEFAULT))));
+
+                postProcessingCache.put(context.getMapping().targetAPI.identifier,
+                                new ArrayList<SubstituteValue>(Arrays.asList(
+                                                new SubstituteValue(
+                                                                new TextNode(jsonNode.get("externalId").textValue()),
+                                                                TYPE.TEXTUAL,
+                                                                RepairStrategy.DEFAULT))));
+
+                float unexpected = Float.NaN;
+                if (jsonNode.get("unexpected") != null) {
+                        // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
+                        // "unexpected" does not yet exists in the target payload
+                        postProcessingCache.put("c8y_Unexpected",
+                                        new ArrayList<SubstituteValue>(
+                                                        Arrays.asList(new SubstituteValue(
+                                                                        new FloatNode(jsonNode.get("unexpected")
+                                                                                        .floatValue()),
+                                                                        TYPE.NUMBER,
+                                                                        RepairStrategy.CREATE_IF_MISSING))));
+                        unexpected = jsonNode.get("unexpected").floatValue();
+
+                }
+
+                log.info("New measurement over json processor: {}, {}, {}, {}", jsonNode.get("time").textValue(),
+                                jsonNode.get("unit").textValue(), jsonNode.get("temperature").floatValue(),
+                                unexpected);
+        }
 
 }

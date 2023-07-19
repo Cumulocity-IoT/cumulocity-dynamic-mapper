@@ -358,7 +358,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-               "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
+                "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
               required: false,
               switchMode: true,
               indeterminate: false,
@@ -490,7 +490,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             templateOptions: {
               label: "Evaluate Expression on Source",
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.stepperConfiguration.allowDefiningSubstitutions,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder:
                 "e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -568,7 +569,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: "col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24",
+            className:
+              "col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-warning",
@@ -607,7 +609,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           },
         ],
       },
-      
+
       {
         fieldGroup: [
           {
@@ -623,7 +625,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: "input",
             templateOptions: {
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY || !this.stepperConfiguration.allowDefiningSubstitutions,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
               readonly: true,
             },
             expressionProperties: {
@@ -675,7 +678,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               switchMode: true,
               indeterminate: false,
             },
-            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-4",
@@ -686,18 +690,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               label: "Repair strategy",
               description: `Strategy defining what should happen when extracted arrays in
               different expressions do not have the same size. How are missing values handled?`,
-              options: Object.keys(RepairStrategy).filter( (key) =>  key != 'IGNORE' ).map((key) => {
-                return {
-                  label: key,
-                  value: key,
-                  disabled:
-                    (!this.templateModel.currentSubstitution.expandArray &&
-                      (key == "USE_FIRST_VALUE_OF_ARRAY" ||
-                        key == "USE_LAST_VALUE_OF_ARRAY")) ||
-                    this.stepperConfiguration.editorMode ==
-                      EditorMode.READ_ONLY,
-                };
-              }),
+              options: Object.keys(RepairStrategy)
+                .filter((key) => key != "IGNORE" && key != "CREATE_IF_MISSING")
+                .map((key) => {
+                  return {
+                    label: key,
+                    value: key,
+                    disabled:
+                      (!this.templateModel.currentSubstitution.expandArray &&
+                        (key == "USE_FIRST_VALUE_OF_ARRAY" ||
+                          key == "USE_LAST_VALUE_OF_ARRAY")) ||
+                      this.stepperConfiguration.editorMode ==
+                        EditorMode.READ_ONLY,
+                  };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 this.stepperConfiguration.direction == Direction.OUTBOUND,
@@ -709,7 +715,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.templateModel.currentSubstitution.targetExpression
                   .resultType,
             },
-            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-3 pull-right p-t-24",
@@ -721,11 +728,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),
               disabled:
-              !this.stepperConfiguration.showEditorSource ||
-              this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                !this.stepperConfiguration.showEditorSource ||
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               readonly: true,
             },
-            hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
         ],
       },
@@ -739,7 +747,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       navigationBar: false,
       enableSort: false,
       enableTransform: false,
-      name: "message"
+      name: "message",
     };
 
     this.editorOptionsTarget = {
@@ -896,7 +904,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         this.alertService.danger(msg);
       });
     } else {
-      this.alertService.info(`Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`);
+      this.alertService.info(
+        `Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`
+      );
       //console.log("RES", testProcessingContext.requests[0].response);
     }
     this.onNextTestResult();
