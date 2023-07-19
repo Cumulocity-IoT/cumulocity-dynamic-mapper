@@ -223,11 +223,20 @@ public abstract class BasePayloadProcessor<T> {
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull =  (sub.value == null) || ( sub.value != null && sub.value.isNull());
+        // variant where the default strategy for PROCESSOR_EXTENSION is REMOVE_IF_MISSING
+        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+        // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
+        // ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
+        //         && (subValueMissing || subValueNull)))
         if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-                ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
-                        && (subValueMissing || subValueNull))) {
+                (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
             jsonObject.delete(keys);
+        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING) ) {
+            boolean pathIsNested =  keys.contains(".") ||  keys.contains("[") ;
+            if (pathIsNested) {
+                throw new JSONException ("Can only crrate new nodes ion the root level!");
+            }
+            jsonObject.put("$", keys, sub.typedValue());
         } else {
             jsonObject.set(keys, sub.typedValue());
         }
