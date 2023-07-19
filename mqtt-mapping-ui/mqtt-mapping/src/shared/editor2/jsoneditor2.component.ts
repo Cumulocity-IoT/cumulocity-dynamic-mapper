@@ -38,7 +38,6 @@ import {
   MenuItem,
   createKeySelection,
   createAjvValidator,
-  stringifyJSONPath,
   parseJSONPath,
   createInsideSelection,
 } from "vanilla-jsoneditor";
@@ -108,6 +107,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.change.emit(updatedContent);
         },
         onRenderValue: this.onRenderValue.bind(this),
+        // onSelect(selection: JSONEditorSelection | undefined){
+        // TODO extract path from selection
+        //   this.onPathChanged.emit(selection);
+        // },
         onRenderMenu(
           items: MenuItem[],
           context: { mode: "tree" | "text" | "table"; modal: boolean }
@@ -137,11 +140,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   }
 
   private onRenderValue(props) {
-    if (props.selection) {
-      const pathString = stringifyJSONPath(props.selection.anchorPath);
-      console.log("Selected node:", props.selection, pathString);
-      this.onPathChanged.emit(pathString);
-    }
+    // if (props.selection) {
+    //   const pathString = stringifyJSONPath(props.selection.anchorPath);
+    //   console.log("Selected node:", props.selection, pathString);
+    //   this.onPathChanged.emit(pathString);
+    // }
     // props = {
     //   ...props,
     //   onSelect: (selection: JSONSelection) => {
@@ -161,9 +164,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.editor.updateProps({ validator: validator });
   }
 
-  public onSelect(selection: Selection) {
-    console.log("Was selected:", selection);
-  }
+  // public onSelect(selection: Selection) {
+  //   console.log("Was selected:", selection);
+  // }
 
   public setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
