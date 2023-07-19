@@ -42,7 +42,7 @@ export class MappingTabFactory implements TabFactory {
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-mqtt-mapping/g)) {
-      if (!this._feature.userHasMQTTMappingAdminRole) {
+      if (this._feature.userHasMQTTMappingAdminRole) {
         tabs.push({
           path: "sag-ps-pkg-mqtt-mapping/configuration",
           priority: 930,
@@ -89,7 +89,7 @@ export class MappingTabFactory implements TabFactory {
         icon: "tree-structure",
         orientation: "horizontal",
       } as Tab);
-      if (!this._feature.userHasMQTTMappingAdminRole) {
+      if (this._feature.userHasMQTTMappingAdminRole) {
         tabs.push({
           path: "sag-ps-pkg-mqtt-mapping/extensions",
           priority: 880,
