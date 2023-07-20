@@ -358,7 +358,7 @@ export function getSchema(targetAPI: string, direction: Direction, target: boole
       return SCHEMA_OPERATION;
     }
   } else {
-    SCHEMA_PAYLOAD;
+    return SCHEMA_PAYLOAD;
   }
 }
 
