@@ -159,13 +159,13 @@
                         </span>
                       </div>
                     </div>
-                    <mapping-json-editor
+                    <mapping-json-editor2
                       [options]="editorOptionsSource"
                       (onPathChanged)="onSelectedSourcePathChanged($event)"
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
-                    ></mapping-json-editor>
+                    ></mapping-json-editor2>
                     <c8y-messages class="text-left">
                       <c8y-message
                         *ngIf="
@@ -300,13 +300,14 @@
                         </span>
                       </div>
                     </div>
-                    <mapping-json-editor
+                    <mapping-json-editor2
                       [options]="editorOptionsTarget"
                       (onPathChanged)="onSelectedTargetPathChanged($event)"
                       [data]="templateTarget"
                       #editorTarget
+                      id="editorTarget"
                     >
-                    </mapping-json-editor>
+                    </mapping-json-editor2>
                     <c8y-messages class="text-right">
                       <c8y-message
                         *ngIf="
@@ -419,12 +420,12 @@
                   <label for="testResult" translate
                     >Testing - {{ targetSystem }} Request</label
                   >
-                  <mapping-json-editor
+                  <mapping-json-editor2
                     [options]="editorOptionsTesting"
                     [data]="testingModel.request"
                     #editorTestingRequest
                   >
-                  </mapping-json-editor>
+                  </mapping-json-editor2>
                   <c8y-messages>
                     <c8y-message *ngIf="testingModel.errorMsg" translate
                       ><span class="text-warning">{{
@@ -441,12 +442,12 @@
                   <label for="testResult" translate
                     >Testing - {{ targetSystem }} Response</label
                   >
-                  <mapping-json-editor
+                  <mapping-json-editor2
                     [options]="editorOptionsTesting"
                     [data]="testingModel.response"
                     #editorTestingResponse
                   >
-                  </mapping-json-editor>
+                  </mapping-json-editor2>
                 </div>
               </div>
             </div>
