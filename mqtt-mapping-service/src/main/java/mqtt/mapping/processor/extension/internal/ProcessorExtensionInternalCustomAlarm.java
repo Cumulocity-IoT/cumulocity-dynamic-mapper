@@ -26,7 +26,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
@@ -41,7 +41,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
-public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtension<byte[]> {
+public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtensionInbound<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {

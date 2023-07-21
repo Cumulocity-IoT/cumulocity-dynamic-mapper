@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
-import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
@@ -44,7 +44,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
-public class ProcessorExtensionCustomMeasurement implements ProcessorExtension<byte[]> {
+public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExtensionInbound<byte[]> {
 
         private ObjectMapper objectMapper;
         // @Autowired
@@ -52,7 +52,7 @@ public class ProcessorExtensionCustomMeasurement implements ProcessorExtension<b
         // this.objectMapper = objectMapper;
         // }
 
-        public ProcessorExtensionCustomMeasurement() {
+        public ProcessorExtensionInboundCustomMeasurement() {
                 this.objectMapper = new ObjectMapper();
         }
 
