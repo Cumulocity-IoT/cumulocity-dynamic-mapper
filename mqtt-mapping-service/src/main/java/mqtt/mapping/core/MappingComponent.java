@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -38,14 +39,20 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.model.API;
+import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
+import mqtt.mapping.model.ResolveException;
+import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
 
 @Slf4j
@@ -56,10 +63,10 @@ public class MappingComponent {
 
     private Set<Mapping> dirtyMappings = new HashSet<Mapping>();
 
-
     private ObjectMapper objectMapper;
+
     @Autowired
-    public void setObjectMapper (ObjectMapper objectMapper){
+    public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -70,12 +77,28 @@ public class MappingComponent {
 
     private boolean intialized = false;
 
+    @Getter
+    @Setter
+    private Map<String, Mapping> activeInboundMappings = new HashMap<String, Mapping>();
+
+    @Getter
+    @Setter
+    private Map<String, Mapping> activeOutboundMappings = new HashMap<String, Mapping>();
+
+    @Getter
+    @Setter
+    private Map<String, Mapping> mappingCacheOutbound = new HashMap<String, Mapping>();
+
+    @Getter
+    @Setter
+    private TreeNode mappingTree = InnerNode.createRootNode();
+
     public void removeStatusMapping(String ident) {
         statusMapping.remove(ident);
     }
 
     private void initializeMappingStatus() {
-        if (mappingServiceRepresentation.getMappingStatus() != null){
+        if (mappingServiceRepresentation.getMappingStatus() != null) {
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 statusMapping.put(ms.ident, ms);
             });
@@ -86,7 +109,7 @@ public class MappingComponent {
         intialized = true;
     }
 
-    public void initializeMappingComponent( MappingServiceRepresentation mappingServiceRepresentation) {
+    public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
         this.mappingServiceRepresentation = mappingServiceRepresentation;
         initializeMappingStatus();
     }
@@ -191,7 +214,7 @@ public class MappingComponent {
         MappingRepresentation m = toMappingObject(mo);
         if (m.getC8yMQTTMapping().isActive()) {
             throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
-        } 
+        }
         // mapping is deactivated and we can delete it
         inventoryApi.delete(GId.asGId(id));
         deleteMappingStatus(id);
@@ -213,13 +236,14 @@ public class MappingComponent {
     public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive) {
         // test id the mapping is active, we don't delete or modify active mappings
         Mapping result = null;
-        // when we do housekeeping tasks we need to update active mapping, e.g. add snooped messages
+        // when we do housekeeping tasks we need to update active mapping, e.g. add
+        // snooped messages
         // this is an exception
-        if (!allowUpdateWhenActive){
+        if (!allowUpdateWhenActive) {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(mapping.id));
             if (mapping.isActive()) {
                 throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
-            } 
+            }
         }
         // mapping is deactivated and we can delete it
         List<Mapping> mappings = getMappings();
@@ -281,5 +305,53 @@ public class MappingComponent {
 
     private void deleteMappingStatus(String id) {
         statusMapping.remove(id);
+    }
+
+    public void initializeCache() {
+        activeInboundMappings = new HashMap<String, Mapping>();
+        activeOutboundMappings = new HashMap<String, Mapping>();
+    }
+
+    public void addToMappingTree(Mapping mapping) {
+        try {
+            ((InnerNode) getMappingTree()).addMapping(mapping);
+        } catch (ResolveException e) {
+            log.error("Could not add mapping {}, ignoring mapping", mapping);
+        }
+    }
+
+    public void deleteFromMappingTree(Mapping mapping) {
+        try {
+            ((InnerNode) getMappingTree()).deleteMapping(mapping);
+        } catch (ResolveException e) {
+            log.error("Could not delete mapping {}, ignoring mapping", mapping);
+        }
+    }
+
+    public void rebuildOutboundMappingCache(List<Mapping> updatedMappings) {
+        // TODO review how to organize the cache efficiently to identify a mapping
+        // depending on the payload
+        // only add outbound mappings to the cache
+        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
+        setActiveOutboundMappings(updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getId, Function.identity())));
+        setMappingCacheOutbound(updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity())));
+    }
+
+    public List<Mapping> resolveOutboundMappings(JsonNode message, API api) {
+        // use mappingCacheOutbound and the key filterOutbound to identify the matching
+        // mappings.
+        // the need to be returend in a list
+        List<Mapping> result = new ArrayList<>();
+
+        for (Mapping m : getActiveOutboundMappings().values()) {
+            String key = m.getFilterOutbound();
+            if (message.has(key) && m.targetAPI.equals(api)) {
+                log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
+                result.add(m);
+            }
+        }
+        return result;
     }
 }
