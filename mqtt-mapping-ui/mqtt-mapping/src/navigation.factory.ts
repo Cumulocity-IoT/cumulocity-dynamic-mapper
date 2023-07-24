@@ -65,8 +65,6 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
           console.error("mqtt-mapping-service microservice not subscribed!");
           return [];
         }
-        console.error("mqtt-mapping-service:", result);
-        //console.log('navigation node: ', this.NAVIGATION_NODE_MQTT);
         return this.NAVIGATION_NODE_MQTT;
       });
   }

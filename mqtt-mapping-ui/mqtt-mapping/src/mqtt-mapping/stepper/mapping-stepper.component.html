@@ -137,7 +137,7 @@
                           <i c8yIcon="enter-left"></i>Use Source Templates
                           <span
                             *ngIf="mapping.snoopedTemplates.length > 0"
-                            class="badge"
+                            class="badge animated flash infinite animation-slow "
                           >
                             {{ mapping.snoopedTemplates.length }}</span
                           >
@@ -362,6 +362,7 @@
                         selectedSubstitutionIndex: selectedSubstitution,
                         editorMode: stepperConfiguration.editorMode
                       }"
+                      [direction]="mapping.direction"
                       (onSelect)="onSelectSubstitution($event)"
                       (onDelete)="onDeleteSubstitution($event)"
                     >

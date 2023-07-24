@@ -276,6 +276,7 @@ export enum RepairStrategy {
   IGNORE = "IGNORE",
   REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
   REMOVE_IF_NULL = "REMOVE_IF_NULL",
+  CREATE_IF_MISSING = "CREATE_IF_MISSING",
 }
 
 export class C8YAPISubscription {

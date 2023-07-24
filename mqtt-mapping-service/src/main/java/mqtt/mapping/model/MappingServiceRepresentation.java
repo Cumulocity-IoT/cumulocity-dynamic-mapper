@@ -34,24 +34,24 @@ import java.util.ArrayList;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class  MappingServiceRepresentation extends ManagedObjectRepresentation implements Serializable  {
+public class  MappingServiceRepresentation implements Serializable  {
 
   public static final String SERVICE_STATUS_FRAGMENT = "service_status";
   public static final String MAPPING_STATUS_FRAGMENT = "mapping_status";
   public static final String AGENT_ID = "MQTT_MAPPING_SERVICE";
   public static final String AGENT_NAME = "MQTT Mapping Service";
 
-  // @JsonProperty("id")
-  // private String id;
+  @JsonProperty("id")
+  private String id;
 
-  // @JsonProperty("type")
-  // private String type;
+  @JsonProperty("type")
+  private String type;
 
-  // @JsonProperty(value = "name")
-  // private String name;
+  @JsonProperty(value = "name")
+  private String name;
 
-  // @JsonProperty(value = "description")
-  // private String description;
+  @JsonProperty(value = "description")
+  private String description;
 
   @JsonProperty(value = MAPPING_STATUS_FRAGMENT)
   private ArrayList<MappingStatus> mappingStatus;

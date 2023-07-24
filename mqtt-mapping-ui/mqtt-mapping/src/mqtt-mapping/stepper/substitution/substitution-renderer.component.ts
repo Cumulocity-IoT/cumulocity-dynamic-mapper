@@ -29,7 +29,7 @@ import {
   ViewEncapsulation,
 } from "@angular/core";
 import { definesDeviceIdentifier } from "../../../shared/util";
-import { MappingSubstitution } from "../../../shared/mapping.model";
+import { Direction, Mapping, MappingSubstitution } from "../../../shared/mapping.model";
 import { isDisabled } from "../util";
 import { EditorMode } from "../stepper-model";
 
@@ -46,6 +46,8 @@ export class SubstitutionRendererComponent implements OnInit {
   targetAPI: string;
   @Input()
   settings: any;
+  @Input()
+  direction: Direction;
 
   @Output() onSelect = new EventEmitter<number>();
   @Output() onDelete = new EventEmitter<number>();

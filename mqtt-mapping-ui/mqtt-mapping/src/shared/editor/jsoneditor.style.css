@@ -18,6 +18,14 @@
  *
  * @authors Christof Strack
  */
+
+.jsoneditor {
+  border: thin solid #d1d8df!important;
+}
+
+.jsoneditor-menu  {
+  border-bottom: thin solid #d1d8df!important;
+}
 .jsoneditor-menu a.jsoneditor-poweredBy {
   display: none;
 }
@@ -62,11 +70,10 @@ button.jsoneditor-button.jsoneditor-dragarea {
 div > div.jsoneditor-menu {
   /* background-color: var(--c8y-component-brand-primary, var(--c8y-root-component-brand-primary)) !important; */
   background-color: rgb(134, 134, 134)
-  /*var(
+    /*var(
     --navigator-dark-bg-color,
     var(--brand-primary, )
-    var(--brand-primary, #1776bf)) */
-   !important;
+    var(--brand-primary, #1776bf)) */ !important;
 }
 
 .jsoneditor-contextmenu .jsoneditor-menu li button .jsoneditor-expand {
