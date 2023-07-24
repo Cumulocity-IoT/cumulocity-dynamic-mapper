@@ -26,8 +26,10 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @ToString
@@ -36,6 +38,7 @@ public class InnerNode extends TreeNode {
     @Setter
     @Getter
     private Map<String, List<TreeNode>> childNodes;
+
     static public InnerNode createRootNode() {
         InnerNode in = new InnerNode();
         in.setDepthIndex(0);
@@ -91,31 +94,32 @@ public class InnerNode extends TreeNode {
         return results;
     }
 
-    public void addMapping(Mapping mapping, List<String> remainingLevels)
+    public void addMapping(Mapping mapping, List<String> levels, int currentLevel)
             throws ResolveException {
-        var currentLevel = remainingLevels.get(0);
-        List<TreeNode> specificChildren = getChildNodes().getOrDefault(currentLevel, new ArrayList<TreeNode>());
-        if (remainingLevels.size() == 1) {
+        List<TreeNode> specificChildren = getChildNodes().getOrDefault(levels.get(currentLevel),
+                new ArrayList<TreeNode>());
+        String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
+        if (currentLevel == levels.size() - 1) {
             log.info(
-                    "Adding mappingNode: currentLevel: {}, reaminingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
-                    currentLevel,
-                    remainingLevels, getLevel(), getAbsolutePath(), mapping.id);
-            MappingNode child = MappingNode.createMappingNode(this, mapping, currentLevel);
-            log.debug("Adding mappingNode: {}, {}, {}", getLevel(), currentLevel, child.toString());
+                    "Adding mappingNode : currentPathMonitoring: {}, currentNode.absolutePath: {}, mappingId : {}",
+                    currentPathMonitoring, getAbsolutePath(), mapping.id);
+            MappingNode child = MappingNode.createMappingNode(this, mapping, levels.get(currentLevel));
+            log.debug("Adding mappingNode : currentPathMonitoring {}, child: {}", currentPathMonitoring,
+                    child.toString());
             specificChildren.add(child);
-            getChildNodes().put(currentLevel, specificChildren);
-        } else if (remainingLevels.size() > 1) {
-            remainingLevels.remove(0);
-            log.info("Adding innerNode  : currentLevel: {}, reaminingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-            currentLevel, remainingLevels, getLevel(), getAbsolutePath());
+            getChildNodes().put(levels.get(currentLevel), specificChildren);
+        } else if (currentLevel < levels.size() - 1) {
+            log.info(
+                    "Adding innerNode   : currentPathMonitoring: {}, currentNode.absolutePath: {}",
+                    currentPathMonitoring, getLevel(), getAbsolutePath());
             InnerNode child;
-            if (getChildNodes().containsKey(currentLevel)) {
+            if (getChildNodes().containsKey(levels.get(currentLevel))) {
                 if (specificChildren.size() == 1) {
                     if (specificChildren.get(0) instanceof InnerNode) {
                         child = (InnerNode) specificChildren.get(0);
                     } else {
                         throw new ResolveException(
-                                "Could not add mapping to tree, since at this node is already blocked by mapping: "
+                                "Could not add mapping to tree, since at this node is already blocked by mappingId : "
                                         + specificChildren.get(0).toString());
                     }
                 } else {
@@ -124,12 +128,13 @@ public class InnerNode extends TreeNode {
                                     + specificChildren.size() + " nodes");
                 }
             } else {
-                child = InnerNode.createInnerNode(this, currentLevel);
-                log.debug("Adding innerNode: {}, {}, {}", getLevel(), currentLevel, child.toString());
+                child = InnerNode.createInnerNode(this, levels.get(currentLevel));
+                log.debug("Adding innerNode: currentPathMonitoring: {}, child: {}, {}", currentPathMonitoring,
+                        child.toString());
                 specificChildren.add(child);
-                getChildNodes().put(currentLevel, specificChildren);
+                getChildNodes().put(levels.get(currentLevel), specificChildren);
             }
-            child.addMapping(mapping, remainingLevels);
+            child.addMapping(mapping, levels, currentLevel + 1);
         } else {
             throw new ResolveException("Could not add mapping to tree: " + mapping.toString());
         }
@@ -142,7 +147,7 @@ public class InnerNode extends TreeNode {
             path = mapping.subscriptionTopic;
         }
         List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
-        addMapping(mapping, levels);
+        addMapping(mapping, levels, 0);
     }
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
@@ -152,81 +157,81 @@ public class InnerNode extends TreeNode {
             path = mapping.subscriptionTopic;
         }
         List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
-        deleteMapping(mapping, levels);
+        MutableInt branchingLevel = new MutableInt(0);
+        deleteMapping(mapping, levels, 0, branchingLevel);
     }
 
-    private Boolean deleteMapping(Mapping mapping, List<String> remainingLevels) throws ResolveException {
-        MutableBoolean stopDeleting = new MutableBoolean(false);
-        var currentLevel = remainingLevels.get(0);
-        List<TreeNode> specificChildren = getChildNodes().get(currentLevel);
-        if (remainingLevels.size() == 1 && specificChildren != null) {
+    private boolean deleteMapping(Mapping mapping, List<String> levels, int currentLevel, MutableInt branchingLevel)
+            throws ResolveException {
+        MutableBoolean foundMapping = new MutableBoolean(false);
+        String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
+        boolean hasChildren = getChildNodes() != null && getChildNodes().size() > 0;
+
+        if (currentLevel == levels.size() - 1 && hasChildren) {
             log.info(
-                    "Deleting (?) mappingNode: currentLevel: {}, remainingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
-                    currentLevel, remainingLevels,  getLevel(), getAbsolutePath(),  mapping.id);
+                    "Deleting mappingNode (?)      : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
+                    currentPathMonitoring, branchingLevel, mapping.id);
             // find child and remove
-            specificChildren.removeIf(tn -> {
-                if (tn instanceof MappingNode) {
-                    if (((MappingNode) tn).getMapping().id.equals(mapping.id)) {
+            getChildNodes().entrySet().removeIf(tn -> {
+                if (tn.getValue().get(0) instanceof MappingNode) {
+                    if (((MappingNode) tn.getValue().get(0)).getMapping().id.equals(mapping.id)) {
                         log.info(
-                            "Deleting mappingNode    : currentLevel: {}, remainingLevels: {}, currentNode: {}, currentNode.absolutePath: {}, mapping: {}",
-                            remainingLevels.get(0), remainingLevels,  tn.getLevel(), tn.getAbsolutePath(),  mapping.id);
+                                "Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
+                                currentPathMonitoring, branchingLevel, mapping.id);
+                        foundMapping.setTrue();
                         return true;
                     } else
                         return false;
                 } else
-                    return true;
+                    return false;
             });
-            stopDeleting.setFalse();
-        } else if (remainingLevels.size() > 1 && specificChildren != null) {
-            remainingLevels.remove(0);
-            // currentLevel = remainingLevels.get(0);
-            // specificChildren = getChildNodes().get(currentLevel);
-            log.info("Deleting (?) innerNode  : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-            currentLevel, remainingLevels, getLevel(), getAbsolutePath());
-            InnerNode child;
-            if (getChildNodes().containsKey(currentLevel)) {
-                if (specificChildren.size() == 1) {
-                    if (specificChildren.get(0) instanceof InnerNode) {
-                        child = (InnerNode) specificChildren.get(0);
-                    } else {
-                        throw new ResolveException(
-                                "Could not delete mapping to tree, since at this node is already blocked by mapping: "
-                                        + specificChildren.get(0).toString());
-                    }
-                } else {
-                    throw new ResolveException(
-                            "Could not delete mapping to tree, multiple mappings are only allowed at the end of the tree. This node already contains: "
-                                    + specificChildren.size() + " nodes");
-                }
-                stopDeleting.setValue(child.deleteMapping(mapping, remainingLevels));
-                // find child and remove
-                if (!stopDeleting.getValue()) {
-                    specificChildren.removeIf(tn -> {
-                        if (((InnerNode) tn).getChildNodes().size() <= 1) {
-                            log.info("Deleting innerNode      : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-                            currentLevel, remainingLevels, tn.getLevel(), tn.getAbsolutePath());
-                            return true;
-                        } else {
-                            stopDeleting.setValue(true);
-                            return false;
+            return foundMapping.booleanValue();
+        } else if (currentLevel < levels.size() - 1 && hasChildren) {
+            log.info(
+                    "Deleting innerNode  (?)       : currentPathMonitoring: {}, branchingLevel: {}",
+                    currentPathMonitoring, branchingLevel);
+            if (getChildNodes().containsKey(levels.get(currentLevel))) {
+                List<TreeNode> list = getChildNodes().get(levels.get(currentLevel));
+                list.removeIf(tn -> {
+                    boolean bm = false;
+                    if (tn instanceof InnerNode && ! foundMapping.booleanValue()) {
+                        if (getChildNodes().size() > 1) {
+                            branchingLevel.setValue(currentLevel);
                         }
-                    });
-                log.debug("Current children: {}", specificChildren.size());
-
+                        try {
+                            bm = ((InnerNode) tn).deleteMapping(mapping, levels, currentLevel + 1, branchingLevel);
+                            foundMapping.setValue(bm);
+                        } catch (ResolveException e) {
+                            log.error(
+                                    "Deleting mapping error            : currentPathMonitoring: {}, branchingLevel: {}",
+                                    currentPathMonitoring, branchingLevel, e.getMessage());
+                        }
+                        if (currentLevel < branchingLevel.getValue()) {
+                            log.info(
+                                    "Deleting innerNode stopped: currentPathMonitoring: {}, branchingLevel: {}",
+                                    currentPathMonitoring, branchingLevel);
+                            bm = false;
+                        }
+                    }
+                    if (bm) {
+                        log.info(
+                                "Deleting innerNode            : currentPathMonitoring: {}, branchingLevel: {}",
+                                currentPathMonitoring, branchingLevel);
+                    }
+                    return bm;
+                });
+                if (list.size() == 0) {
+                    getChildNodes().remove(levels.get(currentLevel));
                 }
             }
-        } else {
-            //throw new ResolveException("Could not delete mapping from tree: " + mapping.toString());
-            log.warn("Could not delete mapping from tree: subscriptionTopic{}, id: {}", mapping.subscriptionTopic, mapping.id);
-            stopDeleting.setFalse();
         }
-        // test if we are in the root node, then delete the last level
-        if (getDepthIndex() == 0 && !stopDeleting.getValue()) {
-            log.info("Deleting innerNode      : currentLevel: {}, remainingLevels: {}, currentNode: {} , currentNode.absolutePath: {}",
-            currentLevel, remainingLevels, getLevel(), getAbsolutePath());
-            getChildNodes().remove(currentLevel);
-        }
-    
-        return stopDeleting.getValue();
+        return foundMapping.booleanValue();
+    }
+
+    private String createPathMonitoring(List<String> levels, int currentLevel) {
+        List<String> copyLevels = levels.stream().collect(Collectors.toList());
+        String cl = levels.get(currentLevel);
+        copyLevels.set(currentLevel, "__" + cl + "__");
+        return copyLevels.toString();
     }
 }

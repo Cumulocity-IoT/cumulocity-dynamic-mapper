@@ -205,7 +205,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
 
     this.propertyFormlyFields = [
-
       {
         validators: {
           validation: [
@@ -305,7 +304,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: `The TemplateTopicSample name
               must have the same number of
-              levels and must match the TemplateTopic.  Topic.The TemplateTopicSample name must have the same number of lmple name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.The TemplateTopicSample name must have the same number of levels and must match the TemplateTopic.`,
+              levels and must match the TemplateTopic.`,
               required: true,
             },
           },
@@ -359,7 +358,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-               "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
+                "In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.",
               required: false,
               switchMode: true,
               indeterminate: false,
@@ -372,6 +371,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6",
             key: "updateExistingDevice",
             type: "switch",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Update Existing Device",
               disabled:
@@ -486,11 +486,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.pathSource",
             type: "input",
-            wrappers: ["c8y-form-field"],
+            wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Source",
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder:
                 "e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
@@ -568,7 +569,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: "col-lg-5 col-lg-offset-1 column-right-border not-p-b-24",
+            className:
+              "col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-warning",
@@ -582,7 +584,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: "col-lg-5 column-left-border not-p-b-24",
+            className: "col-lg-5 reduced-top column-left-border not-p-b-24",
             type: "message-field",
             templateOptions: {
               textClass: "text-info",
@@ -607,7 +609,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           },
         ],
       },
-      
+
       {
         fieldGroup: [
           {
@@ -623,7 +625,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: "input",
             templateOptions: {
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
               readonly: true,
             },
             expressionProperties: {
@@ -655,6 +658,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         templateOptions: {
           label: "Add new or show details of current substitution",
         },
+        hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
       },
       {
         fieldGroup: [
@@ -674,6 +678,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               switchMode: true,
               indeterminate: false,
             },
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-4",
@@ -684,18 +690,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               label: "Repair strategy",
               description: `Strategy defining what should happen when extracted arrays in
               different expressions do not have the same size. How are missing values handled?`,
-              options: Object.keys(RepairStrategy).map((key) => {
-                return {
-                  label: key,
-                  value: key,
-                  disabled:
-                    (!this.templateModel.currentSubstitution.expandArray &&
-                      (key == "USE_FIRST_VALUE_OF_ARRAY" ||
-                        key == "USE_LAST_VALUE_OF_ARRAY")) ||
-                    this.stepperConfiguration.editorMode ==
-                      EditorMode.READ_ONLY,
-                };
-              }),
+              options: Object.keys(RepairStrategy)
+                .filter((key) => key != "IGNORE" && key != "CREATE_IF_MISSING")
+                .map((key) => {
+                  return {
+                    label: key,
+                    value: key,
+                    disabled:
+                      (!this.templateModel.currentSubstitution.expandArray &&
+                        (key == "USE_FIRST_VALUE_OF_ARRAY" ||
+                          key == "USE_LAST_VALUE_OF_ARRAY")) ||
+                      this.stepperConfiguration.editorMode ==
+                        EditorMode.READ_ONLY,
+                  };
+                }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 this.stepperConfiguration.direction == Direction.OUTBOUND,
@@ -707,13 +715,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.templateModel.currentSubstitution.targetExpression
                   .resultType,
             },
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
             className: "col-lg-3 pull-right p-t-24",
             type: "button",
             templateOptions: {
-              text: "Add new substitution",
-              description: `Add new substitution. Before target and source property in
+              text: "Upsert substitution",
+              description: `Upsert substitution. Before target and source property in
               templates
               have to be selected.`,
               onClick: ($event) => this.onAddSubstitution(),
@@ -722,6 +732,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               readonly: true,
             },
+            hideExpression:
+              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
         ],
       },
@@ -735,7 +747,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       navigationBar: false,
       enableSort: false,
       enableTransform: false,
-      name: "message"
+      name: "message",
     };
 
     this.editorOptionsTarget = {
@@ -870,10 +882,12 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
     this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successfull!");
+      this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
+    } else {
+      this.alertService.success("Testing tranformation was successful!");
     }
     this.onNextTestResult();
   }
@@ -885,10 +899,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
     this.testingModel.results = testProcessingContext.requests;
     if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successfull!");
+      this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
+    } else {
+      this.alertService.info(
+        `Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`
+      );
+      //console.log("RES", testProcessingContext.requests[0].response);
     }
     this.onNextTestResult();
   }
@@ -963,6 +982,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.step = event.step.label;
 
     if (this.step == "Define topic") {
+      this.templateModel.mapping = this.mapping;
       console.log(
         "Populate jsonPath if wildcard:",
         isWildcardTopic(this.mapping.subscriptionTopic),

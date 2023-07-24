@@ -1,33 +1,28 @@
-# Cumulocity widget plugin
+# Dynamic MQTT Mapping Service for Cumulocity
 
-This is the Cumulocity module federation plugin. Plugins can be developed like any Cumulocity application, but can be used at runtime by other applications. Therefore, they export an Angular module which can then be imported by any other application. The exports are defined in `package.json`:
 
-```
-"exports": [
-  {
-     "name": "Example widget plugin",
-     "module": "MQTTPluginModule",
-     "path": "./widget/widget-plugin.module.ts",
-     "description": "Adds custom widget"
-  }
-]
-```
+Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses
+this gap by providing the following artifcats:
 
-**How to start**
-Run the command below to scaffold a `widget` plugin.
+* A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
+connect to a MQTT broker, a generic Data Mapper & Expression Language  for data mapping and the
+[Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
+* A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT broker connection & to perform 
+graphical MQTT Data Mappings within the Cumumlocity IoT UI.
 
-```
-c8ycli new <yourPluginName> widget-plugin
-```
+Using the solution you are able to connect to any MQTT broker and map any JSON-based payload on any topic dynamically to
+the Cumulocity IoT Domain Model in a graphical way.
 
-As the app.module is a typical Cumuloctiy application, any new plugin can be tested via the CLI:
+The mapper processes messages in both directions:
+1. `INBOUND`: from external source to C8Y
+2. `OUTBOUND`: from C8Y to external source
 
-```
-npm start -- --shell cockpit
-```
+<!-- <p align="center">
+<img src="./images/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
+</p> -->
+![Overview](images/Generic_MQTT_AddMapping.png)
 
-In the Module Federation terminology, `widget` plugin is called `remote` and the `cokpit` is called `shell`. Modules provided by this `widget` will be loaded by the `cockpit` application at the runtime. This plugin provides a basic custom widget that can be accessed through the `Add widget` menu.
 
-> Note that the `--shell` flag creates a proxy to the cockpit application and provides` MQTTPluginModule` as an `remote` via URL options.
+For the complete documentation please check the github projekt [cumulocity-dynamic-mqtt-mapper](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper).
 
-Also deploying needs no special handling and can be simply done via `npm run deploy`. As soon as the application has exports it will be uploaded as a plugin.
+**NOTE:** This solution requires an additional microservice. The microservice ```mqtt-mapping-service.zip``` can be found in the [release section](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper/releases) of the github project. Instruction how to the deploy the microservice can be found in the [documentation](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper#microservice).

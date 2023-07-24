@@ -1,0 +1,44 @@
+<ng-template #popTemplate><div [innerHtml]="to.description"></div></ng-template>
+<div class="form-group" [class.has-error]="showError">
+  <label *ngIf="to.label && to.hideLabel !== true" [attr.for]="id" class="text-pre-wrap">
+    {{ to.label | humanize }}
+    <i
+      *ngIf="to.tooltip"
+      class="text-info"
+      c8yIcon="info-circle"
+      title="{{ to.tooltip | translate }}"
+    ></i>
+    <button
+      class="btn-help btn-help--sm m-t-auto m-b-auto"
+      type="button"
+      [attr.aria-label]="'Help' | translate"
+
+      [popover]="popTemplate"
+      triggers="focus"
+      placement="right"
+      *ngIf="to.description && showDescriptionAsPopup"
+    ></button>
+  </label>
+  <div class="d-flex">
+    <div class="flex-grow">
+      <ng-template #fieldComponent></ng-template>
+    </div>
+    <ng-container *ngIf="to.customTemplateRef">
+      <ng-container *ngTemplateOutlet="to.customTemplateRef"></ng-container>
+    </ng-container>
+  </div>
+
+  <div *ngIf="showError" class="c8y-messages">
+    <formly-validation-message
+      class="form-control-feedback-message"
+      [field]="field"
+    ></formly-validation-message>
+  </div>
+
+  <div
+    class="help-block has-info text-muted"
+    *ngIf="!showError && to.description && !showDescriptionAsPopup"
+  >
+    {{ to.description | translate }}
+  </div>
+</div>

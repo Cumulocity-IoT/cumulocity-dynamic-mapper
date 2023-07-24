@@ -39,6 +39,7 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import mqtt.mapping.processor.system.SysHandler;
@@ -98,7 +99,8 @@ public abstract class BasePayloadProcessor<T> {
                 .get().getKey();
 
         // the following stmt does not wokr for mapping_type protobuf
-        // String deviceIdentifierMapped2PathTarget2 = MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
+        // String deviceIdentifierMapped2PathTarget2 =
+        // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
         // using alternative method
         String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
         List<SubstituteValue> deviceEntries = postProcessingCache.get(deviceIdentifierMapped2PathTarget2);
@@ -134,7 +136,7 @@ public abstract class BasePayloadProcessor<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                        if (pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
+                    if (pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
 
                         ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
@@ -169,9 +171,9 @@ public abstract class BasePayloadProcessor<T> {
                         }
 
                     }
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
                 } else if (!pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
-                    substituteValueInObject(substituteValue, payloadTarget, pathTarget);
+                    substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
                 }
             }
             /*
@@ -217,11 +219,24 @@ public abstract class BasePayloadProcessor<T> {
         return context;
     }
 
-    public void substituteValueInObject(SubstituteValue sub, DocumentContext jsonObject, String keys)
+    public void substituteValueInObject(MappingType type, SubstituteValue sub, DocumentContext jsonObject, String keys)
             throws JSONException {
-        boolean subValueEmpty = sub.value == null || sub.value.isEmpty();
-        if (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueEmpty) {
+        boolean subValueMissing = sub.value == null;
+        boolean subValueNull =  (sub.value == null) || ( sub.value != null && sub.value.isNull());
+        // variant where the default strategy for PROCESSOR_EXTENSION is REMOVE_IF_MISSING
+        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+        // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
+        // ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
+        //         && (subValueMissing || subValueNull)))
+        if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
             jsonObject.delete(keys);
+        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING) ) {
+            boolean pathIsNested =  keys.contains(".") ||  keys.contains("[") ;
+            if (pathIsNested) {
+                throw new JSONException ("Can only crrate new nodes ion the root level!");
+            }
+            jsonObject.put("$", keys, sub.typedValue());
         } else {
             jsonObject.set(keys, sub.typedValue());
         }

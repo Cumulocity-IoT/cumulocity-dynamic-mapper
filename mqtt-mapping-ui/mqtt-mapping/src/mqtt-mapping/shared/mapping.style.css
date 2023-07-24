@@ -71,3 +71,11 @@ json-editor > div {
     )
   );
 }
+
+.reduced-top {
+  top: -20px;
+}
+
+.animation-slow {
+  animation-duration: 2s;
+}

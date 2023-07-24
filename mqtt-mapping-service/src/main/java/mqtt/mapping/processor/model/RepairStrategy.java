@@ -26,5 +26,7 @@ public enum RepairStrategy {
     USE_FIRST_VALUE_OF_ARRAY,
     USE_LAST_VALUE_OF_ARRAY,
     IGNORE,
-    REMOVE_IF_MISSING,
+    REMOVE_IF_MISSING, // remove the node in the target if it the evaluation of the source expression returns undefined, empty. This allows for using mapping with dynamic content
+    REMOVE_IF_NULL,    // remove the node in the target if it the evaluation of the source expression returns null. This allows for using mapping with dynamic content
+    CREATE_IF_MISSING, // create the node in the target if it doesn't exist. This allows for using mapping with dynamic content
 }

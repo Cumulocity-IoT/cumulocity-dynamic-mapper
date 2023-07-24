@@ -166,9 +166,9 @@ export abstract class PayloadProcessorInbound {
             }
           }
           if (
-            substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING &&
-            !substituteValue
+            (substituteValue.repairStrategy ==
+              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
+              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
           ) {
             _.unset(payloadTarget, pathTarget);
           } else {
@@ -176,9 +176,9 @@ export abstract class PayloadProcessorInbound {
           }
         } else if (pathTarget != API[mapping.targetAPI].identifier) {
           if (
-            substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING &&
-            !substituteValue
+            (substituteValue.repairStrategy ==
+              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
+              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
           ) {
             _.unset(payloadTarget, pathTarget);
           } else {
