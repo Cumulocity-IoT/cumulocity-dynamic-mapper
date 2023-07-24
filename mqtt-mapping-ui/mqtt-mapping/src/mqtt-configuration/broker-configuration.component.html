@@ -39,7 +39,7 @@
       </h4>
       <div class="c8y-realtime">
         <span
-          class="c8y-pulse animated pulse"
+          class="c8y-pulse animated pulse animation-slow "
           [ngClass]="{
             active: isConnectionEnabled,
             inactive: !isConnectionEnabled
@@ -49,7 +49,7 @@
       </div>
       <div class="c8y-realtime">
         <span
-          class="c8y-pulse animated pulse"
+          class="c8y-pulse animated pulse animation-slow "
           [ngClass]="{
             active: isBrokerConnected,
             inactive: !isBrokerConnected
@@ -274,7 +274,7 @@
       </h4>
       <div class="c8y-realtime">
         <span
-          class="c8y-pulse animated pulse"
+          class="c8y-pulse animated pulse animation-slow"
           [ngClass]="{
             active: isBrokerAgentCreated$ | async,
             inactive: !isBrokerAgentCreated$ | async

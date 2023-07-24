@@ -56,30 +56,27 @@ export class ExtensionService {
     private configurationService: BrokerConfigurationService
   ) {}
 
-  async getExtensions(customFilter: any = {}): Promise<IManagedObject[]> {
+  async getExtensions(extensionId: string): Promise<IManagedObject[]> {
     const filter: object = {
       pageSize: 100,
       withTotalPages: true,
       fragmentType: PROCESSOR_EXTENSION_TYPE,
     };
-    const query: object = {
-      //   fragmentType: 'pas_extension',
-    };
-    Object.assign(query, customFilter);
-    let result;
-    if (Object.keys(customFilter).length == 0) {
+
+    let result = [];
+    if (!extensionId) {
       result = (await this.inventoryService.list(filter)).data;
     } else {
-      result = (await this.inventoryService.listQuery(query, filter)).data;
+      result.push((await this.inventoryService.detail(extensionId)).data);
     }
 
     return result;
   }
   async getExtensionsEnriched(
-    customFilter: any = {}
+    extensionId: string
   ): Promise<IManagedObject[]> {
     let listOfExtensionsInventory: Promise<IManagedObject[]> =
-      this.getExtensions(customFilter);
+      this.getExtensions(extensionId);
     let listOfExtensionsBackend: Promise<Object> =
       this.configurationService.getProcessorExtensions();
     let combinedResult = Promise.all([

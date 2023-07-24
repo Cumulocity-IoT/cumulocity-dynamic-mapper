@@ -39,3 +39,10 @@ bin/
 .vscode/settings.json
 resources/script/createSampleMappings_private.sh
 resources/script/attic/createSampleMappings_private.sh
+attic/*
+mqtt-mapping-ui/mqtt-mapping/node_modules/*
+mqtt-mapping-extension/.factorypath
+mqtt-mapping-interface/.factorypath
+.gitignore
+.gitignore
+mqtt-mapping-service/.factorypath

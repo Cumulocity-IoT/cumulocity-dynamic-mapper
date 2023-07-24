@@ -405,7 +405,13 @@ To define a new substitution the following steps have to be performed:
   * ```multi-device-multi-value```
   * ```single-device-multi-value```\
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
-4. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
+4. Select a repair strategy that determines how the mapping is applied:
+  *  ```DEFAULT```: Map the extracted values to the attribute addressed on right side
+  *  ```USE_FIRST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
+  *  ```USE_LAST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
+  *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+  *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+5. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
 <br/>
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
@@ -553,6 +559,8 @@ The following guide lays out hte steps to create and use a processor extension:
 </p>
 <br/>
 
+
+
 ### Monitoring
 
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
@@ -610,7 +618,7 @@ This needs to be packages in a ```jar``` file. The extension packaged as a ```ja
 In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
 ```
 CustomEvent=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomEvent
-CustomOperation=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomOperation
+CustomMeasurement=mqtt.mapping.processor.extension.external.ProcessorExtensionCustomMeasurement
 ```
 
 The steps required for a external extension are as follows. The extension:
@@ -618,6 +626,8 @@ The steps required for a external extension are as follows. The extension:
 2. be registered in the properties file <code>mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
 3. be developed/packed in the maven module <code>mqtt-mapping-extension</code>. **Not** in the maven module <code>mqtt-mapping-service</code>. This is reserved for internal extensions.
 4. be uploaded through the Web UI.
+
+> **_NOTE:_** When you implement <code>ProcessorExtension<O></code> an additional <code>RepairStrategy.CREATE_IF_MISSING</code> can be used. This helps to address mapping cases, where you want to create a mapping that adapts to different structures of source payloads. It is used to create a node in the target if it doesn't exist and allows for using mapping with dynamic content. See [sample 25](./resources/script/mapping/sampleMapping/SampleMappings_06.pdf).
 
 A sample how to build an extension is contained in the maven module [mqtt-mapping-extension](./mqtt-mapping-extension).
 The following diagram shows how the dispatcher handles meassages with different format:

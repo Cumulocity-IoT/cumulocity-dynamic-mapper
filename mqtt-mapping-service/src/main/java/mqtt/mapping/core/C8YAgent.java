@@ -182,6 +182,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
+    private ManagedObjectRepresentation mappingServiceManagedObjectRepresentation;
+
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
     public String tenant = null;
@@ -275,6 +277,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         mappingServiceRepresentation = objectMapper.convertValue(mappingServiceRepresentations[0],
                 MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
+        mappingServiceManagedObjectRepresentation = mappingServiceRepresentations[0];
 
         try {
             mqttClient.submitInitialize();
@@ -344,8 +347,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result[0];
     }
 
-    public MappingServiceRepresentation getAgentMOR() {
-        return mappingServiceRepresentation;
+    public ManagedObjectRepresentation getAgentMOR() {
+        return mappingServiceManagedObjectRepresentation;
     }
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
@@ -386,7 +389,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
         EventRepresentation[] eventRepresentations = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            eventRepresentations[0].setSource(parentMor != null ? parentMor : mappingServiceRepresentation);
+            eventRepresentations[0].setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
             eventRepresentations[0].setText(message);
             eventRepresentations[0].setDateTime(eventTime);
             eventRepresentations[0].setType(type);

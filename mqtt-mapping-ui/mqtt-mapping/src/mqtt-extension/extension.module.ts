@@ -22,7 +22,6 @@
 import { NgModule } from "@angular/core";
 import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
 import { AddExtensionComponent } from "./extension-modal/add-extension.component";
-import { AddExtensionWizardComponent } from "./add-extension-wizard.component";
 import { ExtensionCardComponent } from "./extension-card/extension-card.component";
 import { ExtensionComponent } from "./grid/extension.component";
 import { BsDropdownModule } from "ngx-bootstrap/dropdown";
@@ -51,7 +50,6 @@ const extensionRoutes: Route[] = [
     ExtensionComponent,
     ExtensionCardComponent,
     AddExtensionComponent,
-    AddExtensionWizardComponent,
     ExtensionCardComponent,
     ExtensionPropertiesComponent,
   ],
