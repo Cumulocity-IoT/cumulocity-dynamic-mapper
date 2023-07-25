@@ -43,3 +43,4 @@ mqtt-mapping-ui/mqtt-mapping/node_modules/*
 mqtt-mapping-extension/.factorypath
 mqtt-mapping-interface/.factorypath
 mqtt-mapping-service/.factorypath
+mqtt-mapping-service/src/main/resources/application-dev.properties
