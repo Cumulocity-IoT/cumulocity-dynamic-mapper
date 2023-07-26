@@ -390,6 +390,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6",
             key: "autoAckOperation",
             type: "switch",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Auto acknowledge",
               disabled:
