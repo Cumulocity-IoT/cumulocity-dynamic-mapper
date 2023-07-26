@@ -2,11 +2,9 @@ package mqtt.mapping.notification.websocket;
 
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -34,9 +32,8 @@ public class CustomWebSocketClient extends WebSocketClient {
         this.callback.onOpen(this.uri);
         this.started = true;
         this.retryCount = 0;
-        executorService.scheduleAtFixedRate(() -> {
-            send(ByteBuffer.allocate(0));
-        }, 1, 1, TimeUnit.MINUTES);
+        //send(ByteBuffer.allocate(0));
+        executorService.scheduleAtFixedRate(this::sendPing, 1, 1, TimeUnit.MINUTES);
     }
 
     @Override
@@ -53,8 +50,8 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
         log.info("WebSocket closed " + (remote ? "by server. " : "") + " Code:" + statusCode + ", reason: " + reason);
+        this.executorService.shutdown();
         this.callback.onClose(statusCode, reason);
-
     }
 
     @Override
