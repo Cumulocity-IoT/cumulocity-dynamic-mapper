@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
+import javax.validation.constraints.NotNull;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -151,11 +153,44 @@ public class MappingRepresentation implements Serializable {
   static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     result.addAll(isSubstituionValid(mapping));
-    result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
     result.addAll(isTemplateTopicValid(mapping.templateTopic));
-    result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.templateTopic, mapping.templateTopicSample));
+    if (mapping.direction.equals(Direction.INBOUND)) {
+      result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
+      result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.templateTopic, mapping.templateTopicSample));
+    } else {
+      result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.templateTopicSample));
+    }
+
     result.addAll(areJSONTemplatesValid(mapping));
     // result.addAll(isTemplateTopicUnique(mappings, mapping));
+    return result;
+  }
+
+  private static Collection<? extends ValidationError> isPublishTopicTemplateAndTopicSampleValid(
+      @NotNull String publishTopic, @NotNull String templateTopicSample) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    String[] splitPT = Mapping.splitTopicIncludingSeparatorAsArray(publishTopic);
+    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(templateTopicSample);
+    if (splitPT.length != splitTTS.length) {
+      result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+    } else {
+      for (int i = 0; i < splitPT.length; i++) {
+        if (("/").equals(splitPT[i]) && !("/").equals(splitTTS[i])) {
+          result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          break;
+        }
+        if (("/").equals(splitTTS[i]) && !("/").equals(splitPT[i])) {
+          result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          break;
+        }
+        if (!("/").equals(splitPT[i]) && !("+").equals(splitPT[i]) && !("#").equals(splitPT[i])) {
+          if (!splitPT[i].equals(splitTTS[i])) {
+            result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+            break;
+          }
+        }
+      }
+    }
     return result;
   }
 
