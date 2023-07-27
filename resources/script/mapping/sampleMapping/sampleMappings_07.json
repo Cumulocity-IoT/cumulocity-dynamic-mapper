@@ -251,12 +251,12 @@
         "ident": "e87a10ad-c223-4bd7-bd91-9df23e2bd3cf",
         "tested": false,
         "mapDeviceIdentifier": true,
-        "active": true,
+        "active": false,
         "autoAckOperation": true,
         "targetAPI": "INVENTORY",
         "source": "{\"device\":[\"d1_id\",\"d2_id\"],\"types\":{\"type_A\":\"type_A\",\"type_B\":\"type_B\"},\"used_name\":[\"Pressure_d1\",\"Pressure_d2\"]}",
-        "externalIdType": "c8y_Serial",
         "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
+        "externalIdType": "c8y_Serial",
         "templateTopic": "multiarray/devices",
         "qos": "AT_LEAST_ONCE",
         "substitutions": [
@@ -280,13 +280,13 @@
             }
         ],
         "updateExistingDevice": false,
-        "lastUpdate": 1668635844108,
         "mappingType": "JSON",
+        "lastUpdate": 1689776688104,
         "name": "Mapping - 6",
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
-        "subscriptionTopic": "multiarray/devices",
         "id": "9757072892",
+        "subscriptionTopic": "multiarray/devices",
         "direction": "INBOUND"
     },
     {
@@ -1111,7 +1111,7 @@
         "direction": "OUTBOUND",
         "snoopStatus": "NONE",
         "mapDeviceIdentifier": true,
-        "active": true,
+        "active": false,
         "targetAPI": "EVENT",
         "filterOutbound": "bus_event",
         "publishTopic": "evt/outbound/#",
@@ -1119,7 +1119,7 @@
         "templateTopic": "evt/outbound/+",
         "updateExistingDevice": false,
         "mappingType": "JSON",
-        "lastUpdate": 1678172898227,
+        "lastUpdate": 1690385612576,
         "name": "Mapping - 23"
     },
     {
@@ -1244,12 +1244,52 @@
         "substitutions": [],
         "updateExistingDevice": false,
         "mappingType": "PROCESSOR_EXTENSION",
-        "lastUpdate": 1689351773392,
+        "lastUpdate": 1690318558279,
         "name": "Mapping - 26",
         "snoopedTemplates": [],
         "createNonExistingDevice": false,
         "id": "4857522418",
         "subscriptionTopic": "measurementExt",
         "direction": "INBOUND"
+    },
+    {
+        "templateTopicSample": "opp/outbound/berlin_01",
+        "ident": "5a2665a2-60c4-449e-a041-e343db9c3f57",
+        "tested": false,
+        "autoAckOperation": true,
+        "source": "{\"deviceId\":\"909090\",\"bus_opp\":\"New engine restart operation!\"}",
+        "externalIdType": "c8y_Serial",
+        "qos": "AT_LEAST_ONCE",
+        "substitutions": [
+            {
+                "pathSource": "deviceId",
+                "pathTarget": "_TOPIC_LEVEL_[2]",
+                "repairStrategy": "DEFAULT",
+                "expandArray": false
+            },
+            {
+                "pathSource": "bus_opp",
+                "pathTarget": "decription",
+                "repairStrategy": "DEFAULT",
+                "expandArray": false
+            }
+        ],
+        "snoopedTemplates": [],
+        "createNonExistingDevice": false,
+        "id": "2558069177",
+        "subscriptionTopic": "",
+        "direction": "OUTBOUND",
+        "snoopStatus": "NONE",
+        "mapDeviceIdentifier": true,
+        "active": false,
+        "targetAPI": "OPERATION",
+        "filterOutbound": "bus_opp",
+        "publishTopic": "opp/outbound/#",
+        "target": "{\"deviceId\":\"909090\",\"decription\":\"dummy operation!\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
+        "templateTopic": "",
+        "updateExistingDevice": false,
+        "mappingType": "JSON",
+        "lastUpdate": 1690443835433,
+        "name": "Mapping - 27"
     }
 ]
