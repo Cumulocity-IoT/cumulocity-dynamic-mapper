@@ -23,7 +23,7 @@ package mqtt.mapping.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
-import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
@@ -43,7 +43,7 @@ public class ExtensionEntry implements Serializable {
 
     @NotNull
     @JsonIgnore
-    private ProcessorExtension extensionImplementation;
+    private ProcessorExtensionInbound extensionImplementation;
 
     @NotNull
     public boolean loaded;
