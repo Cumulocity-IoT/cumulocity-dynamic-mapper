@@ -710,7 +710,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   if (splitPT.length != splitTTS.length) {
     errors = {
       ...errors,
-      TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name: {
+      PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name: {
         ...ValidationFormlyError['PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'],
         errorPath: 'templateTopicSample'
       }

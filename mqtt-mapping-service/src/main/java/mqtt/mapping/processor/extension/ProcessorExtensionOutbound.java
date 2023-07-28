@@ -26,6 +26,6 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 @Component
-public interface ProcessorExtension<O> {
-    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
+public interface ProcessorExtensionOutbound<O> {
+    public abstract void substituteInTarget(ProcessingContext<O> context) throws ProcessingException;
 }

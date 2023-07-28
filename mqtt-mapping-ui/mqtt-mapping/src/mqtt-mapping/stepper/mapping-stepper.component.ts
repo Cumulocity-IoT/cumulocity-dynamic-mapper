@@ -327,11 +327,13 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           this.stepperConfiguration.direction != Direction.OUTBOUND,
       },
       {
+        fieldGroupClassName: "row",
         fieldGroup: [
           {
             className: "col-lg-6 p-l-0",
             key: "targetAPI",
             type: "select",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Target API",
               options: Object.keys(API).map((key) => {
@@ -390,6 +392,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6",
             key: "autoAckOperation",
             type: "switch",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Auto acknowledge",
               disabled:
@@ -413,6 +416,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6 p-l-0",
             key: "qos",
             type: "select",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "QOS",
               options: Object.values(QOS).map((key) => {
@@ -1046,6 +1050,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             this.mapping.snoopStatus = SnoopStatus.NONE;
             event.stepper.next();
           }
+          modalRef.hide();
         });
       } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
         console.log("Continue snoop ...?");
@@ -1079,6 +1084,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           } else {
             this.onCancel.emit();
           }
+          modalRef.hide();
         });
       } else {
         event.stepper.next();
@@ -1264,6 +1270,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           overwrite,
           this.mapping.substitutions
         );
+        modalRef.hide();
       });
     } else {
       this.mapping.substitutions.push(sub);

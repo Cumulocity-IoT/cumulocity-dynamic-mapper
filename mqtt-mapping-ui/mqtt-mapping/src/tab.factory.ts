@@ -30,9 +30,8 @@ export class MappingTabFactory implements TabFactory {
   constructor(
     public router: Router,
     private configurationService: BrokerConfigurationService
-  ) {
-  }
-  
+  ) {}
+
   async get() {
     //console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-mqtt-mapping/g));
     //console.log("Feature: ", this._feature)
@@ -43,13 +42,15 @@ export class MappingTabFactory implements TabFactory {
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-mqtt-mapping/g)) {
-      tabs.push({
-        path: "sag-ps-pkg-mqtt-mapping/configuration",
-        priority: 930,
-        label: "Configuration",
-        icon: "cog",
-        orientation: "horizontal",
-      } as Tab);
+      if (this._feature.userHasMQTTMappingAdminRole) {
+        tabs.push({
+          path: "sag-ps-pkg-mqtt-mapping/configuration",
+          priority: 930,
+          label: "Configuration",
+          icon: "cog",
+          orientation: "horizontal",
+        } as Tab);
+      }
       tabs.push({
         path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
         priority: 920,
@@ -88,16 +89,18 @@ export class MappingTabFactory implements TabFactory {
         icon: "tree-structure",
         orientation: "horizontal",
       } as Tab);
-      tabs.push({
-        path: "sag-ps-pkg-mqtt-mapping/extensions",
-        priority: 880,
-        label: "Processor Extension",
-        icon: "plugin",
-        orientation: "horizontal",
-      } as Tab);
+      if (this._feature.userHasMQTTMappingAdminRole) {
+        tabs.push({
+          path: "sag-ps-pkg-mqtt-mapping/extensions",
+          priority: 880,
+          label: "Processor Extension",
+          icon: "plugin",
+          orientation: "horizontal",
+        } as Tab);
+      }
 
       // this tab is used to develop the migration from json library:
-      //     "vanilla-jsoneditor": "^0.17.8"
+      //     "vanilla-jsoneditor": "^0.16.1"
       // to 
       //     "jsoneditor": "^9.9.2"
       // Do NOT DELETE

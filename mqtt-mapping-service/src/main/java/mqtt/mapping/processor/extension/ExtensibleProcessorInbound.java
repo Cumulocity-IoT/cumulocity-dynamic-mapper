@@ -40,11 +40,11 @@ import java.util.Map;
 
 @Slf4j
 @Service
-public class ExtensibleProcessor extends BasePayloadProcessor<byte[]> {
+public class ExtensibleProcessorInbound extends BasePayloadProcessor<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public ExtensibleProcessorInbound(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         super(objectMapper, mqttClient, c8yAgent);
     }
 
@@ -58,7 +58,7 @@ public class ExtensibleProcessor extends BasePayloadProcessor<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
-        ProcessorExtension extension = null;
+        ProcessorExtensionInbound extension = null;
         try {
             extension = getProcessorExtension(context.getMapping().extension);
             if (extension == null) {
@@ -81,7 +81,7 @@ public class ExtensibleProcessor extends BasePayloadProcessor<byte[]> {
         extension.extractFromSource(context);
     }
 
-    public ProcessorExtension<?> getProcessorExtension(ExtensionEntry extension) {
+    public ProcessorExtensionInbound<?> getProcessorExtension(ExtensionEntry extension) {
         String name = extension.getName();
         String event = extension.getEvent();
         return extensions.get(name).getExtensionEntries().get(event).getExtensionImplementation();
