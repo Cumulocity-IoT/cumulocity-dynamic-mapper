@@ -19,27 +19,13 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.model;
+package mqtt.mapping.processor.extension;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.model.ProcessingContext;
+import org.springframework.stereotype.Component;
 
-import javax.validation.constraints.NotNull;
-
-@Getter
-@Setter
-@ToString()
-public class Feature {
-    @NotNull
-    public boolean outputMappingEnabled;
-
-    @NotNull
-    public boolean externalExtensionsEnabled;
-
-    @NotNull
-    public boolean userHasMQTTMappingCreateRole;
-
-    @NotNull
-    public boolean userHasMQTTMappingAdminRole;
+@Component
+public interface ProcessorExtensionInbound<O> {
+    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 }

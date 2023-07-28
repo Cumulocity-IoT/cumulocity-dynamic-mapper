@@ -66,6 +66,7 @@ import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
+import { Dir } from "@angular/cdk/bidi";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -203,17 +204,35 @@ export class MappingComponent implements OnInit {
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router
-  ) {}
-
-  async ngOnInit() {
-    this.subscription = await this.mappingService.getSubscriptions();
-
+  ) {
     const href = this.router.url;
     this.stepperConfiguration.direction = href.match(
       /sag-ps-pkg-mqtt-mapping\/mappings\/inbound/g
     )
       ? Direction.INBOUND
       : Direction.OUTBOUND;
+
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.columns[1] = {
+        header: "Publish Topic",
+        name: "publishTopic",
+        path: "publishTopic",
+        filterable: true,
+        gridTrackSize: "12.5%",
+      }
+      this.columns[2] = {
+        header: "Template Topic Sample",
+        name: "templateTopicSample",
+        path: "templateTopicSample",
+        filterable: true,
+        gridTrackSize: "12.5%",
+      }
+    }
+  }
+
+  async ngOnInit() {
+    this.subscription = await this.mappingService.getSubscriptions();
+
     this.title = `Mapping List ${this.stepperConfiguration.direction}`;
 
     this.loadMappings();
@@ -497,7 +516,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
@@ -507,7 +526,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     }
     if (direction == Direction.OUTBOUND)

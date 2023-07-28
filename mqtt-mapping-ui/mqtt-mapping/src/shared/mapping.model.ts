@@ -92,6 +92,8 @@ export interface ServiceStatus {
 export interface Feature {
   outputMappingEnabled: boolean;
   externalExtensionsEnabled: boolean;
+  userHasMQTTMappingCreateRole: boolean;
+  userHasMQTTMappingAdminRole: boolean;
 }
 
 export interface PayloadWrapper {
@@ -176,6 +178,9 @@ export enum ValidationError {
   Device_Identifier_Must_Be_Selected,
   TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
   TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name
+
 }
 
 export const ValidationFormlyError = {
