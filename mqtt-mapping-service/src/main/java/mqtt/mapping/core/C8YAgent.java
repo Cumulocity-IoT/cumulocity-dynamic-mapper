@@ -90,8 +90,8 @@ import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.extension.ExtensionsComponent;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.extension.ExtensibleProcessor;
-import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
+import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
@@ -178,7 +178,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.operationSubscriber = operationSubscriber;
     }
 
-    private ExtensibleProcessor extensibleProcessor;
+    private ExtensibleProcessorInbound extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -243,7 +243,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessor) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
@@ -645,14 +645,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     extensionEntry.setLoaded(false);
                 } else {
                     Object object = clazz.getDeclaredConstructor().newInstance();
-                    if (!(object instanceof ProcessorExtension)) {
+                    if (!(object instanceof ProcessorExtensionInbound)) {
                         String msg = String.format(
                                 "Extension: %s=%s is not instance of ProcessorExtension, ignoring this entry!", key,
                                 newExtensions.getProperty(key));
                         log.warn(msg);
                         extensionEntry.setLoaded(false);
                     } else {
-                        ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
+                        ProcessorExtensionInbound<?> extensionImpl = (ProcessorExtensionInbound<?>) clazz.getDeclaredConstructor()
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
@@ -745,7 +745,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveInboundMappings().values().forEach(m -> {
+        mappingComponent.getActiveInboundMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }

@@ -88,13 +88,14 @@ public class C8YAPISubscriber {
     @Value("${C8Y.baseURL}")
     private String baseUrl;
 
+
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
     @Value("${APP.outputMappingEnabled}")
     private boolean outputMappingEnabled;
 
-    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private ScheduledExecutorService executorService = null;
     private static ScheduledFuture<?> executorFuture = null;
 
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
@@ -513,7 +514,6 @@ public class C8YAPISubscriber {
 
     public void disconnect(Boolean onlyDeviceClient) {
         // Stop WS Reconnect Thread
-        executorService.shutdown();
         if (onlyDeviceClient != null && onlyDeviceClient) {
             if (device_client != null && device_client.isOpen()) {
                 logger.info("Disconnecting WS Device Client {}", device_client.toString());
@@ -521,6 +521,8 @@ public class C8YAPISubscriber {
                 device_client = null;
             }
         } else {
+            this.executorService.shutdownNow();
+            this.executorFuture = null;
             if (device_client != null && device_client.isOpen()) {
                 logger.info("Disconnecting WS Device Client {}", device_client.toString());
                 device_client.close();
@@ -541,6 +543,7 @@ public class C8YAPISubscriber {
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         try {
+            this.executorService = Executors.newScheduledThreadPool(1);
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);

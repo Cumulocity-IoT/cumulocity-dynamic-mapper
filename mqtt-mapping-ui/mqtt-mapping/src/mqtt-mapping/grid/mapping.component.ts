@@ -516,7 +516,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
@@ -526,7 +526,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: false,
+        allowTestSending: true,
       };
     }
     if (direction == Direction.OUTBOUND)
