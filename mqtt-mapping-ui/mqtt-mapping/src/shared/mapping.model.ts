@@ -287,5 +287,5 @@ export enum RepairStrategy {
 
 export class C8YAPISubscription {
   api: string;
-  devices: IIdentified;
+  devices: IIdentified[];
 }
