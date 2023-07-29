@@ -149,7 +149,7 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Adding: {}", m.ident);
-            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic ,m.publishTopic, 0, 0, 0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
