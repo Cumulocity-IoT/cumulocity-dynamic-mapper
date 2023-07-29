@@ -172,10 +172,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.payloadProcessorsInbound = payloadProcessorsInbound;
     }
 
-    C8YAPISubscriber operationSubscriber;
+    public C8YAPISubscriber notificationSubscriber;
     @Autowired
-    public void setOperationSubscriber(@Lazy C8YAPISubscriber operationSubscriber) {
-        this.operationSubscriber = operationSubscriber;
+    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
+        this.notificationSubscriber = notificationSubscriber;
     }
 
     private ExtensibleProcessorInbound extensibleProcessor;
@@ -201,7 +201,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
         //this.createEvent("MQTT Mapper Microservice terminated", "mqtt_microservice_stopevent", DateTime.now(), null);
-        operationSubscriber.disconnect(null);
+        notificationSubscriber.disconnect(null);
         if(mqttClient != null)
             mqttClient.disconnect();
     }
@@ -266,9 +266,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
-            operationSubscriber.init();
-            //operationSubscriber.subscribeTenant(tenant);
-            //operationSubscriber.subscribeAllDevices();
+            notificationSubscriber.init();
+            //notificationSubscriber.subscribeTenant(tenant);
+            //notificationSubscriber.subscribeAllDevices();
 
 
         });
@@ -783,5 +783,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(), exception.getLocalizedMessage());
             }
         });
+    }
+    public void notificationSubscriberReconnect() {
+        notificationSubscriber.disconnect(false); 
+        notificationSubscriber.reconnect();
+
     }
 }
