@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Injectable } from "@angular/core";
-import { FetchClient, InventoryService, QueriesUtil } from "@c8y/client";
+import { FetchClient, IFetchResponse, InventoryService, QueriesUtil } from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
@@ -129,12 +129,12 @@ export class MappingService {
     return m;
   }
 
-  async getSubscriptions(): Promise<C8YAPISubscription > {
+   async getSubscriptions(): Promise<C8YAPISubscription> {
     if (!this._feature) {
       this._feature = await this.configurationService.getFeatures();
     }
     if (this._feature.outputMappingEnabled) {
-      let response = this.client.fetch(
+      const res : IFetchResponse = await this.client.fetch(
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
         {
           headers: {
@@ -143,9 +143,8 @@ export class MappingService {
           method: "GET",
         }
       );
-      let data = await response;
-      let sub = await data.json();
-      return sub;
+      const data = await res.json();
+      return data;
     } else {
       //return Promise.resolve();
       return null;

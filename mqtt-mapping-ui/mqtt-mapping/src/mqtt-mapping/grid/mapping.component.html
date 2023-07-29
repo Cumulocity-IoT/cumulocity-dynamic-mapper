@@ -73,6 +73,40 @@
     </div>
   </div>
 
+  <!-- <div *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">  -->
+  <!-- <div>
+    <c8y-list-group>
+      <c8y-li
+        *c8yFor="
+          let sub of subscription?.devices;
+          loadMore: 'show';
+          enableVirtualScroll: true;
+          virtualScrollElementSize: 40;
+          virtualScrollStrategy: 'fixed';
+          virtualScrollContainerHeight: 400
+        "
+      >
+        <c8y-li-icon [icon]="'device'"></c8y-li-icon> {{sub.id}}
+        <c8y-li-footer>
+          Device name:
+          {{ sub.name }}
+        </c8y-li-footer>
+      </c8y-li>
+    </c8y-list-group>
+  </div> -->
+  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
+    <div class="card-block">
+      <c8y-list-group>
+        <c8y-li>
+          <label>Subscriptions</label>
+        </c8y-li>
+        <c8y-li *ngFor="let sub of subscription.devices">
+          <c8y-li-icon [icon]="'sensor'"></c8y-li-icon> {{ sub.id }} - {{ sub.name }} 
+        </c8y-li>
+      </c8y-list-group>
+    </div>
+  </div>
+
   <div class="card-block col-md-offset-5 bg-white">
     <div class="c8y-empty-state" *ngIf="mappings.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>
