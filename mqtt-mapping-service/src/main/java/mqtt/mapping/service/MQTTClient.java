@@ -488,6 +488,8 @@ public class MQTTClient {
             c8yAgent.reloadExtensions();
         } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
             c8yAgent.setActivationMapping(operation.getParameter());
+        } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
+            c8yAgent.notificationSubscriberReconnect();
         }
     }
 
