@@ -46,4 +46,7 @@ public class ServiceOperation {
     public static ServiceOperation reloadExtensions() {
         return new ServiceOperation(Operation.RELOAD_EXTENSIONS, null);
     } 
+    public static ServiceOperation refreshNotificationSubscription() {
+        return new ServiceOperation(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
+    }
 }

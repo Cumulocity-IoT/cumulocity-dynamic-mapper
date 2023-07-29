@@ -264,6 +264,7 @@ export enum Operation {
   RELOAD_EXTENSIONS,
   RELOAD_MAPPINGS,
   RESET_STATUS_MAPPING,
+  REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
 }
 
 export enum MappingType {
