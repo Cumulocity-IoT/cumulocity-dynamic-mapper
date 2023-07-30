@@ -477,7 +477,7 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = false;
   }
 
-  async onCommitSubscription(deviceList: IIdentified[]) {
+  async onCommitSubscriptions(deviceList: IIdentified[]) {
     this.subscription = {
       api: API.ALL.name,
       devices: deviceList,
