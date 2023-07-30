@@ -51,11 +51,11 @@
   <button
     *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
     class="btn btn-link"
-    title="{{ 'Define subscriptions' | translate }}"
+    title="{{ 'Manage subscriptions' | translate }}"
     (click)="onDefineSubscription()"
   >
     <i c8yIcon="subscription"></i>
-    {{ "Define subscription" | translate }}
+    {{ "Manage subscriptions" | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
@@ -98,10 +98,10 @@
     <div class="card-block">
       <c8y-list-group>
         <c8y-li>
-          <label>Subscriptions</label>
+          <label>Subscriptions for outbound mappings</label>
         </c8y-li>
-        <c8y-li *ngFor="let sub of subscription.devices">
-          <c8y-li-icon [icon]="'sensor'"></c8y-li-icon> {{ sub.id }} - {{ sub.name }} 
+        <c8y-li *ngFor="let sub of subscription?.devices">
+          <c8y-li-icon [icon]="'sensor'"></c8y-li-icon> Device: {{ sub.id }} - {{ sub.name }} 
         </c8y-li>
       </c8y-list-group>
     </div>
@@ -144,7 +144,7 @@
       <mapping-subscription
         *ngIf="showConfigSubscription"
         (onCancel)="showConfigSubscription = false"
-        (onCommit)="onCommitSubscription($event)"
+        (onCommit)="onCommitSubscriptions($event)"
         [deviceList]="subscription.devices"
       >
       </mapping-subscription>
