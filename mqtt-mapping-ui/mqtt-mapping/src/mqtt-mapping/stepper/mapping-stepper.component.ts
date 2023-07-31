@@ -320,7 +320,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           disabled:
             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
           description:
-            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.",
+            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value",
           required: this.stepperConfiguration.direction == Direction.OUTBOUND,
         },
         hideExpression:

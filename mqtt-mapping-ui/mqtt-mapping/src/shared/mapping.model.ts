@@ -264,6 +264,7 @@ export enum Operation {
   RELOAD_EXTENSIONS,
   RELOAD_MAPPINGS,
   RESET_STATUS_MAPPING,
+  REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
 }
 
 export enum MappingType {
@@ -286,5 +287,5 @@ export enum RepairStrategy {
 
 export class C8YAPISubscription {
   api: string;
-  devices: IIdentified;
+  devices: IIdentified[];
 }

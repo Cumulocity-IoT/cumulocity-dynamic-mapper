@@ -51,11 +51,11 @@
   <button
     *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
     class="btn btn-link"
-    title="{{ 'Define subscriptions' | translate }}"
+    title="{{ 'Manage subscriptions' | translate }}"
     (click)="onDefineSubscription()"
   >
     <i c8yIcon="subscription"></i>
-    {{ "Define subscription" | translate }}
+    {{ "Manage subscriptions" | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
@@ -70,6 +70,40 @@
         [refresh]="refresh"
       >
       </c8y-data-grid>
+    </div>
+  </div>
+
+  <!-- <div *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">  -->
+  <!-- <div>
+    <c8y-list-group>
+      <c8y-li
+        *c8yFor="
+          let sub of subscription?.devices;
+          loadMore: 'show';
+          enableVirtualScroll: true;
+          virtualScrollElementSize: 40;
+          virtualScrollStrategy: 'fixed';
+          virtualScrollContainerHeight: 400
+        "
+      >
+        <c8y-li-icon [icon]="'device'"></c8y-li-icon> {{sub.id}}
+        <c8y-li-footer>
+          Device name:
+          {{ sub.name }}
+        </c8y-li-footer>
+      </c8y-li>
+    </c8y-list-group>
+  </div> -->
+  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
+    <div class="card-block">
+      <c8y-list-group>
+        <c8y-li>
+          <label>Subscriptions for outbound mappings</label>
+        </c8y-li>
+        <c8y-li *ngFor="let sub of subscription?.devices">
+          <c8y-li-icon [icon]="'sensor'"></c8y-li-icon> Device: {{ sub.id }} - {{ sub.name }} 
+        </c8y-li>
+      </c8y-list-group>
     </div>
   </div>
 
@@ -110,7 +144,7 @@
       <mapping-subscription
         *ngIf="showConfigSubscription"
         (onCancel)="showConfigSubscription = false"
-        (onCommit)="onCommitSubscription($event)"
+        (onCommit)="onCommitSubscriptions($event)"
         [deviceList]="subscription.devices"
       >
       </mapping-subscription>
