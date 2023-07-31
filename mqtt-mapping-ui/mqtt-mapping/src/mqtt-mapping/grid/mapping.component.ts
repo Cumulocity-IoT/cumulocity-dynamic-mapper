@@ -61,7 +61,7 @@ import { TemplateRendererComponent } from "../renderer/template.renderer.compone
 import { ActiveRendererComponent } from "../renderer/active.renderer.component";
 import { MappingService } from "../core/mapping.service";
 import { BsModalService } from "ngx-bootstrap/modal";
-import { Subject } from "rxjs";
+import { Observable, Subject, from } from "rxjs";
 import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
@@ -85,6 +85,7 @@ export class MappingComponent implements OnInit {
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
+  devices: IIdentified[] = [];
   Direction = Direction;
 
   param = { name: "world" };
@@ -228,11 +229,14 @@ export class MappingComponent implements OnInit {
         gridTrackSize: "12.5%",
       }
     }
+    this.loadSubscriptions();
+  }
+  
+  async loadSubscriptions () {
+    this.subscription = await this.mappingService.getSubscriptions();
   }
 
-  async ngOnInit() {
-    this.subscription = await this.mappingService.getSubscriptions();
-
+  ngOnInit() {
     this.title = `Mapping List ${this.stepperConfiguration.direction}`;
 
     this.loadMappings();
@@ -473,7 +477,7 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = false;
   }
 
-  async onCommitSubscription(deviceList: IIdentified) {
+  async onCommitSubscriptions(deviceList: IIdentified[]) {
     this.subscription = {
       api: API.ALL.name,
       devices: deviceList,

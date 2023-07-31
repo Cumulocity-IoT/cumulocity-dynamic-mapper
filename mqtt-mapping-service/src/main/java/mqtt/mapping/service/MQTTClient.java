@@ -336,7 +336,7 @@ public class MQTTClient {
                     rebuildOutboundMappingCache();
                 }
                 successful = true;
-                log.info("Subscribing to topics was sucessful: {}", successful);
+                log.info("Subscribing to topics was successful: {}", successful);
             } catch (Exception e) {
                 log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
                 log.debug("Stacktrace:", e);
@@ -488,6 +488,8 @@ public class MQTTClient {
             c8yAgent.reloadExtensions();
         } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
             c8yAgent.setActivationMapping(operation.getParameter());
+        } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
+            c8yAgent.notificationSubscriberReconnect();
         }
     }
 

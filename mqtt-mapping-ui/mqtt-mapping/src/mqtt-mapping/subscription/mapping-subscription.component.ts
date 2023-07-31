@@ -35,7 +35,7 @@ import { IIdentified } from "@c8y/client";
   encapsulation: ViewEncapsulation.None,
 })
 export class MappingSubscriptionComponent implements OnInit {
-  @Input() deviceList: IIdentified;
+  @Input() deviceList: IIdentified[];
   @Output() onCancel = new EventEmitter<any>();
   @Output() onCommit = new EventEmitter<IIdentified>();
 

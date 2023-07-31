@@ -204,11 +204,6 @@
                   </span>
                 </label>
               </div>
-              <!-- <div class="col-lg-4" *ngIf = "connectionConfiguration.useSelfSignedCertificate">
-                <label  translate>Fingerprint of self-signed certificate</label>
-                <input formControlName="fingerprintSelfSignedCertificate" [(ngModel)]="connectionConfiguration.fingerprintSelfSignedCertificate" type="text"
-                  class="form-control" placeholder="{{ 'fingerprint' | translate }}"  required />
-              </div> -->
               <div
                 class="col-lg-6"
                 *ngIf="connectionConfiguration.useSelfSignedCertificate"
@@ -262,6 +257,28 @@
             translate
           >
             Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" *ngIf="feature.outputMappingEnabled">
+    <div class="card-header separator j-c-between">
+      <h4 class="card-title">
+        {{ "Cumulocity Notification Endpoint" | translate }}
+      </h4>
+    </div>
+    <div class="inner-scroll">
+      <div class="card-footer text-center">
+        <div class="form-group">
+          <button
+            type="button"
+            name="update"
+            class="btn btn-primary"
+            (click)="clickedReconnect2NotificationEnpoint()"
+            translate
+          >
+            Reconnect
           </button>
         </div>
       </div>

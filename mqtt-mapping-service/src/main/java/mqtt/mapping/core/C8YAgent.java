@@ -129,53 +129,59 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     private MQTTClient mqttClient;
+
     @Autowired
-    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+    public void setMQTTClient(@Lazy MQTTClient mqttClient) {
         this.mqttClient = mqttClient;
     }
 
     private ObjectMapper objectMapper;
+
     @Autowired
-    public void setObjectMapper (ObjectMapper objectMapper){
+    public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
     private ConnectionConfigurationComponent connectionConfigurationComponent;
-    
+
     @Autowired
     public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
         this.connectionConfigurationComponent = connectionConfigurationComponent;
     }
 
     private ServiceConfigurationComponent serviceConfigurationComponent;
+
     @Autowired
     public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
         this.serviceConfigurationComponent = serviceConfigurationComponent;
     }
 
     private MappingComponent mappingComponent;
+
     @Autowired
     public void setMappingComponent(MappingComponent mappingComponent) {
         this.mappingComponent = mappingComponent;
     }
 
-    
     private ExtensionsComponent extensions;
+
     @Autowired
     public void setExtensions(ExtensionsComponent extensions) {
         this.extensions = extensions;
     }
-    
+
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
+
     @Autowired
     public void setPayloadProcessorsInbound(Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound) {
         this.payloadProcessorsInbound = payloadProcessorsInbound;
     }
 
-    C8YAPISubscriber operationSubscriber;
+    public C8YAPISubscriber notificationSubscriber;
+
     @Autowired
-    public void setOperationSubscriber(@Lazy C8YAPISubscriber operationSubscriber) {
-        this.operationSubscriber = operationSubscriber;
+    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
+        this.notificationSubscriber = notificationSubscriber;
     }
 
     private ExtensibleProcessorInbound extensibleProcessor;
@@ -200,11 +206,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @EventListener
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
-        //this.createEvent("MQTT Mapper Microservice terminated", "mqtt_microservice_stopevent", DateTime.now(), null);
-        operationSubscriber.disconnect(null);
-        if(mqttClient != null)
+        // this.createEvent("MQTT Mapper Microservice terminated",
+        // "mqtt_microservice_stopevent", DateTime.now(), null);
+        notificationSubscriber.disconnect(null);
+        if (mqttClient != null)
             mqttClient.disconnect();
     }
+
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
@@ -243,7 +251,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
+                    .get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
@@ -266,10 +275,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
-            operationSubscriber.init();
-            //operationSubscriber.subscribeTenant(tenant);
-            //operationSubscriber.subscribeAllDevices();
-
+            notificationSubscriber.init();
+            // notificationSubscriber.subscribeTenant(tenant);
+            // notificationSubscriber.subscribeAllDevices();
 
         });
         serviceConfiguration = serviceConfigurations[0];
@@ -389,7 +397,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
         EventRepresentation[] eventRepresentations = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            eventRepresentations[0].setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
+            eventRepresentations[0]
+                    .setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
             eventRepresentations[0].setText(message);
             eventRepresentations[0].setDateTime(eventTime);
             eventRepresentations[0].setType(type);
@@ -439,7 +448,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 exceptions[0] = e;
             }
         });
-        if (exceptions[0] != null ) {
+        if (exceptions[0] != null) {
             throw exceptions[0];
         }
         mqttClient.deleteFromMappingCache(mr[0]);
@@ -652,11 +661,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         log.warn(msg);
                         extensionEntry.setLoaded(false);
                     } else {
-                        ProcessorExtensionInbound<?> extensionImpl = (ProcessorExtensionInbound<?>) clazz.getDeclaredConstructor()
+                        ProcessorExtensionInbound<?> extensionImpl = (ProcessorExtensionInbound<?>) clazz
+                                .getDeclaredConstructor()
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
-                        log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
+                        log.info("Successfully registered bean: {} for key: {}", newExtensions.getProperty(key),
                                 key);
                     }
                 }
@@ -780,8 +790,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     op.setFailureReason(failureReason);
                 deviceControlApi.update(op);
             } catch (SDKException exception) {
-                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(), exception.getLocalizedMessage());
+                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(),
+                        exception.getLocalizedMessage());
             }
         });
+    }
+
+    public void notificationSubscriberReconnect() {
+        subscriptionsService.runForTenant(tenant, () -> {
+            // notificationSubscriber.disconnect(false);
+            // notificationSubscriber.reconnect();
+            notificationSubscriber.disconnect(false);
+            notificationSubscriber.init();
+        });
+
     }
 }
