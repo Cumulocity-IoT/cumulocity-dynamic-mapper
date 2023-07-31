@@ -149,7 +149,7 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Adding: {}", m.ident);
-            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic ,m.publishTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
@@ -339,18 +339,26 @@ public class MappingComponent {
                 .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity())));
     }
 
-    public List<Mapping> resolveOutboundMappings(JsonNode message, API api) {
+    public List<Mapping> resolveOutboundMappings(JsonNode message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterOutbound to identify the matching
         // mappings.
         // the need to be returend in a list
         List<Mapping> result = new ArrayList<>();
 
-        for (Mapping m : getActiveOutboundMappings().values()) {
-            String key = m.getFilterOutbound();
-            if (message.has(key) && m.targetAPI.equals(api)) {
-                log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
-                result.add(m);
+        try {
+            for (Mapping m : getActiveOutboundMappings().values()) {
+                // test if message has property associated for this mapping, JsonPointer must begin with "/"
+                String key = "/" + m.getFilterOutbound().replace('.','/');
+                JsonNode testNode = message.at(key);
+                if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
+                    log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
+                    result.add(m);
+                } else {
+                     log.debug("Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", key, m.getFilterOutbound(), message.get("id"), api , message.toPrettyString());
+                }
             }
+        } catch (IllegalArgumentException e) {
+            throw new ResolveException(e.getMessage());
         }
         return result;
     }
