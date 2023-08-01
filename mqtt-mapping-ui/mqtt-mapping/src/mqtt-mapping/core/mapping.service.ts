@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Injectable } from "@angular/core";
-import { FetchClient, IFetchResponse, InventoryService, QueriesUtil } from "@c8y/client";
+import { FetchClient, IFetchResponse, IIdentified, InventoryService, QueriesUtil } from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
@@ -121,6 +121,22 @@ export class MappingService {
         },
         body: JSON.stringify(sub),
         method: "PUT",
+      }
+    );
+    let data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    let m = await data.text();
+    return m;
+  }
+
+  async deleteSubscriptions(device: IIdentified): Promise<any> {
+    let response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "DELETE",
       }
     );
     let data = await response;
