@@ -53,7 +53,7 @@ export class MonitoringComponent implements OnInit {
   columns: Column[] = [
     {
       name: "id",
-      header: "Mapping Id",
+      header: "System ID",
       path: "id",
       filterable: false,
       dataType: ColumnDataType.TextShort,
