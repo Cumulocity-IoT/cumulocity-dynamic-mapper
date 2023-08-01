@@ -58,96 +58,80 @@
     {{ "Manage subscriptions" | translate }}
   </button>
 </c8y-action-bar-item>
-<div class="card">
-  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
+<div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
+  <div class="card">
     <div class="card-block">
       <c8y-data-grid
-        [title]="title | translate"
-        [columns]="columns"
+        [title]="titleMapping | translate"
+        [columns]="columnsMappings"
         [rows]="mappings"
         [pagination]="pagination"
-        [actionControls]="actionControls"
+        [actionControls]="actionControlMapping"
+        [refresh]="refresh"
+      >
+      </c8y-data-grid>
+    </div>
+    <div class="card-block col-md-offset-5 bg-white">
+      <div class="c8y-empty-state" *ngIf="mappings.length === 0">
+        <h1 [c8yIcon]="'file-text'"></h1>
+        <p>
+          <strong>No mappings available.</strong><br />
+          <small translate>Add a new mapping by clicking below.</small><br />
+          <button
+            class="btn btn-primary"
+            title="Add record"
+            (click)="onAddMapping()"
+            translate
+          >
+            Add mapping
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white">
+  <div
+    class="card"
+    *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
+  >
+    <div class="card-block">
+      <c8y-data-grid
+        [title]="titleSubsription | translate"
+        [columns]="columnsSubscriptions"
+        [rows]="subscription?.devices"
+        [pagination]="pagination"
+        [actionControls]="actionControlSubscription"
         [refresh]="refresh"
       >
       </c8y-data-grid>
     </div>
   </div>
+</div>
 
-  <!-- <div *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">  -->
-  <!-- <div>
-    <c8y-list-group>
-      <c8y-li
-        *c8yFor="
-          let sub of subscription?.devices;
-          loadMore: 'show';
-          enableVirtualScroll: true;
-          virtualScrollElementSize: 40;
-          virtualScrollStrategy: 'fixed';
-          virtualScrollContainerHeight: 400
-        "
-      >
-        <c8y-li-icon [icon]="'device'"></c8y-li-icon> {{sub.id}}
-        <c8y-li-footer>
-          Device name:
-          {{ sub.name }}
-        </c8y-li-footer>
-      </c8y-li>
-    </c8y-list-group>
-  </div> -->
-  <div class="col-xs-12 col-sm-10 col-md-8 col-lg-12 bg-white" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
-    <div class="card-block">
-      <c8y-list-group>
-        <c8y-li>
-          <label>Subscriptions for outbound mappings</label>
-        </c8y-li>
-        <c8y-li *ngFor="let sub of subscription?.devices">
-          <c8y-li-icon [icon]="'sensor'"></c8y-li-icon> Device: {{ sub.id }} - {{ sub.name }} 
-        </c8y-li>
-      </c8y-list-group>
-    </div>
+<div [ngClass]="{ drawerOpen: showConfigMapping }">
+  <div class="bottom-drawer">
+    <mapping-stepper
+      *ngIf="showConfigMapping"
+      (onCancel)="showConfigMapping = false"
+      (onCommit)="onCommitMapping($event)"
+      [mapping]="mappingToUpdate"
+      [mappings]="mappings"
+      [stepperConfiguration]="stepperConfiguration"
+    >
+    </mapping-stepper>
   </div>
+</div>
 
-  <div class="card-block col-md-offset-5 bg-white">
-    <div class="c8y-empty-state" *ngIf="mappings.length === 0">
-      <h1 [c8yIcon]="'file-text'"></h1>
-      <p>
-        <strong>No mappings available.</strong><br />
-        <small translate>Add a new mapping by clicking below.</small><br />
-        <button
-          class="btn btn-primary"
-          title="Add record"
-          (click)="onAddMapping()"
-          translate
-        >
-          Add mapping
-        </button>
-      </p>
-    </div>
-  </div>
-
-  <div [ngClass]="{ drawerOpen: showConfigMapping }">
-    <div class="bottom-drawer">
-      <mapping-stepper
-        *ngIf="showConfigMapping"
-        (onCancel)="showConfigMapping = false"
-        (onCommit)="onCommitMapping($event)"
-        [mapping]="mappingToUpdate"
-        [mappings]="mappings"
-        [stepperConfiguration]="stepperConfiguration"
-      >
-      </mapping-stepper>
-    </div>
-  </div>
-
-  <div [ngClass]="{ drawerOpen: showConfigSubscription }">
-    <div class="bottom-drawer">
-      <mapping-subscription
-        *ngIf="showConfigSubscription"
-        (onCancel)="showConfigSubscription = false"
-        (onCommit)="onCommitSubscriptions($event)"
-        [deviceList]="subscription.devices"
-      >
-      </mapping-subscription>
-    </div>
+<div [ngClass]="{ drawerOpen: showConfigSubscription }">
+  <div class="bottom-drawer">
+    <mapping-subscription
+      *ngIf="showConfigSubscription"
+      (onCancel)="showConfigSubscription = false"
+      (onCommit)="onCommitSubscriptions($event)"
+      [deviceList]="subscription.devices"
+    >
+    </mapping-subscription>
   </div>
 </div>
