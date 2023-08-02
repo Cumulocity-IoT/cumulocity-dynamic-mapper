@@ -24,6 +24,7 @@ import {
   IExternalIdentity,
   IIdentified,
   IResult,
+  IResultList,
 } from "@c8y/client";
 import * as _ from "lodash";
 import { ProcessingContext } from "../processor/prosessor.model";
@@ -38,7 +39,45 @@ export class FacadeIdentityService {
     private identity: IdentityService
   ) {}
 
-  public detail(
+  public async resolveGlobalId2ExternalId(
+    managedObjectId: string,
+    externalIdType: string,
+    context: ProcessingContext
+  ): Promise<IExternalIdentity> {
+    if (context.sendPayload) {
+      let result: IExternalIdentity = undefined;
+      const res = await this.identity.list(managedObjectId);
+      // while (res.data.length) {
+
+      //   if (externalId.getType().equals(idType)) {
+      //     result = externalId;
+      //     break;
+      //   }
+
+      //   entries.push(...(res.data as ManagedObjectKPI[]));
+      //   if (res.data.length < res.paging.pageSize) {
+      //     break;
+      //   }
+      //   if (!res.paging.nextPage) {
+      //     break;
+      //   }
+
+      //   res = await res.paging.next();
+      // }
+      // results.
+      // for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
+      //     if (externalId.getType().equals(idType)) {
+      //         result = externalId;
+      //         break;
+      //     }
+      // }
+      return result;
+    } else {
+      //return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
+    }
+  }
+
+  public resolveExternalId2GlobalId(
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IResult<IExternalIdentity>> {

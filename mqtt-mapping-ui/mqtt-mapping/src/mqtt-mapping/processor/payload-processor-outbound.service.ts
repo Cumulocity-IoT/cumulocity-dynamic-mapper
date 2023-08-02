@@ -21,19 +21,30 @@
 import { Injectable } from "@angular/core";
 import { AlertService } from "@c8y/ngx-components";
 import * as _ from "lodash";
-import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
-import { findDeviceIdentifier, MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
+import {
+  API,
+  Mapping,
+  MappingType,
+  RepairStrategy,
+} from "../../shared/mapping.model";
+import {
+  findDeviceIdentifier,
+  splitTopicExcludingSeparator,
+  splitTopicIncludingSeparator,
+  TOKEN_TOPIC_LEVEL,
+} from "../../shared/util";
 import { getTypedValue } from "../shared/util";
-import { C8YClient } from "../core/c8y-client.service";
+import { C8YAgent } from "../core/c8y-agent.service";
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType,
 } from "./prosessor.model";
+import { MQTTClient } from "../core/mqtt-client.service";
 
 @Injectable({ providedIn: "root" })
 export abstract class PayloadProcessorOutbound {
-  constructor(private alert: AlertService, private c8yClient: C8YClient) {}
+  constructor(private alert: AlertService, private c8yAgent: C8YAgent,  private mqttClient: MQTTClient) {}
 
   public abstract deserializePayload(
     context: ProcessingContext,
@@ -50,180 +61,154 @@ export abstract class PayloadProcessorOutbound {
 
     let postProcessingCache: Map<string, SubstituteValue[]> =
       context.postProcessingCache;
+    const pathTargets = postProcessingCache.keys();
 
-    let deviceEntries: SubstituteValue[] = postProcessingCache.get(
-      findDeviceIdentifier(context.mapping).pathTarget
+    let predecessor: number = -1;
+    let payloadTarget: JSON = null;
+    try {
+      payloadTarget = JSON.parse(mapping.target);
+    } catch (e) {
+      this.alert.warning("Target Payload is not a valid json object!");
+      throw e;
+    }
+
+    /*
+     * step 0 patch payload with dummy property _TOPIC_LEVEL_ in case the content
+     * is required in the payload for a substitution
+     */
+    const splitTopicExAsList: string[] = splitTopicExcludingSeparator(
+      context.topic
     );
+    payloadTarget[TOKEN_TOPIC_LEVEL] = splitTopicExAsList;
+    let deviceSource: string = "undefined";
 
-    let i: number = 0;
-    for (let device of deviceEntries) {
-      let predecessor: number = -1;
-      let payloadTarget: JSON = null;
-      try {
-        payloadTarget = JSON.parse(mapping.target);
-      } catch (e) {
-        this.alert.warning("Target Payload is not a valid json object!");
-        throw e;
+    for (let pathTarget of pathTargets) {
+      let substituteValue: SubstituteValue = {
+        value: "NOT_DEFINED" as any,
+        type: SubstituteValueType.TEXTUAL,
+        repairStrategy: RepairStrategy.DEFAULT,
+      };
+      if (postProcessingCache.get(pathTarget).length > 0) {
+        substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
       }
-      for (let pathTarget of postProcessingCache.keys()) {
-        let substituteValue: SubstituteValue = {
-          value: "NOT_DEFINED" as any,
-          type: SubstituteValueType.TEXTUAL,
-          repairStrategy: RepairStrategy.DEFAULT,
-        };
-        if (i < postProcessingCache.get(pathTarget).length) {
-          substituteValue = _.clone(postProcessingCache.get(pathTarget)[i]);
-        } else if (postProcessingCache.get(pathTarget).length == 1) {
-          // this is an indication that the substitution is the same for all
-          // events/alarms/measurements/inventory
-          if (
-            substituteValue.repairStrategy ==
-              RepairStrategy.USE_FIRST_VALUE_OF_ARRAY ||
-            substituteValue.repairStrategy == RepairStrategy.DEFAULT
-          ) {
-            substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
-          } else if (
-            substituteValue.repairStrategy ==
-            RepairStrategy.USE_LAST_VALUE_OF_ARRAY
-          ) {
-            let last: number = postProcessingCache.get(pathTarget).length - 1;
-            substituteValue = _.clone(
-              postProcessingCache.get(pathTarget)[last]
-            );
-          }
-          console.warn(
-            `During the processing of this pathTarget: ${pathTarget} a repair strategy: ${substituteValue.repairStrategy} was used!`
-          );
-        }
 
-        if (mapping.targetAPI != API.INVENTORY.name) {
-          if (pathTarget == API[mapping.targetAPI].identifier) {
-            let sourceId: string = await this.c8yClient.resolveExternalId(
-              {
-                externalId: substituteValue.value.toString(),
-                type: mapping.externalIdType,
-              },
-              context
-            );
-            if (!sourceId && mapping.createNonExistingDevice) {
-              let request = {
-                c8y_IsDevice: {},
-                name:
-                  "device_" +
-                  mapping.externalIdType +
-                  "_" +
-                  substituteValue.value,
-                c8y_mqttMapping_Generated_Type: {},
-                c8y_mqttMapping_TestDevice: {},
-                type: MQTT_TEST_DEVICE_TYPE,
-              };
-              let newPredecessor = context.requests.push({
-                predecessor: predecessor,
-                method: "PATCH",
-                source: device.value,
-                externalIdType: mapping.externalIdType,
-                request: request,
-                targetAPI: API.INVENTORY.name,
-              });
-              try {
-                let response = await this.c8yClient.upsertDevice(
-                  {
-                    externalId: substituteValue.value.toString(),
-                    type: mapping.externalIdType,
-                  },
-                  context
-                );
-                context.requests[newPredecessor - 1].response = response;
-                substituteValue.value = response.id as any;
-              } catch (e) {
-                context.requests[newPredecessor - 1].error = e;
-              }
-              predecessor = newPredecessor;
-            } else if (sourceId == null && context.sendPayload) {
-              throw new Error(
-                "External id " +
-                  substituteValue +
-                  " for type " +
-                  mapping.externalIdType +
-                  " not found!"
-              );
-            } else if (sourceId == null) {
-              substituteValue.value = null;
-            } else {
-              substituteValue.value = sourceId.toString();
-            }
-          }
-          if (
-            (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
-          ) {
-            _.unset(payloadTarget, pathTarget);
-          } else {
-            _.set(payloadTarget, pathTarget, getTypedValue(substituteValue));
-          }
-        } else if (pathTarget != API[mapping.targetAPI].identifier) {
-          if (
-            (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
-          ) {
-            _.unset(payloadTarget, pathTarget);
-          } else {
-            _.set(payloadTarget, pathTarget, getTypedValue(substituteValue));
-          }
-        }
-      }
-      /*
-       * step 4 prepare target payload for sending to c8y
-       */
-      if (mapping.targetAPI == API.INVENTORY.name) {
-        let newPredecessor = context.requests.push({
-          predecessor: predecessor,
-          method: "PATCH",
-          source: device.value,
-          externalIdType: mapping.externalIdType,
-          request: payloadTarget,
-          targetAPI: API.INVENTORY.name,
-        });
-        try {
-          let response = await this.c8yClient.upsertDevice(
-            {
-              externalId: getTypedValue(device),
-              type: mapping.externalIdType,
-            },
-            context
+      if (mapping.targetAPI != API.INVENTORY.name) {
+        if (pathTarget == findDeviceIdentifier(mapping).pathTarget) {
+          deviceSource = await this.c8yAgent.resolveGlobalId2ExternalId( 
+            substituteValue.value, mapping.externalIdType, context
           );
-          context.requests[newPredecessor - 1].response = response;
-        } catch (e) {
-          context.requests[newPredecessor - 1].error = e;
+
+          if ((deviceSource == null || !deviceSource) && context.sendPayload) {
+            throw new Error(
+              "External id " +
+                substituteValue +
+                " for type " +
+                mapping.externalIdType +
+                " not found!"
+            );
+          } else if (deviceSource == null) {
+            substituteValue.value = null;
+          } else {
+            substituteValue.value = deviceSource;
+          }
         }
-        predecessor = context.requests.length;
-      } else if (mapping.targetAPI != API.INVENTORY.name) {
-        let newPredecessor = context.requests.push({
-          predecessor: predecessor,
-          method: "POST",
-          source: device.value,
-          externalIdType: mapping.externalIdType,
-          request: payloadTarget,
-          targetAPI: API[mapping.targetAPI].name,
-        });
-        try {
-          let response = await this.c8yClient.createMEAO(context);
-          context.requests[newPredecessor - 1].response = response;
-        } catch (e) {
-          context.requests[newPredecessor - 1].error = e;
-        }
-        predecessor = context.requests.length;
-      } else {
-        console.warn(
-          "Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}"
+        this.substituteValueInObject(
+          mapping.mappingType,
+          substituteValue,
+          payloadTarget,
+          pathTarget
+        );
+      } else if (pathTarget != findDeviceIdentifier(mapping).pathTarget) {
+        this.substituteValueInObject(
+          mapping.mappingType,
+          substituteValue,
+          payloadTarget,
+          pathTarget
         );
       }
-      console.log(
-        `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
+    }
+
+    /*
+     * step 4 prepare target payload for sending to mqttBroker
+     */
+
+    if (mapping.targetAPI != API.INVENTORY.name) {
+
+      let topicLevels : string [] = payloadTarget[TOKEN_TOPIC_LEVEL];
+      if ( !topicLevels && topicLevels.length > 0) {
+          // now merge the replaced topic levels
+          let c : number = 0;
+          let splitTopicInAsList :  string[] = splitTopicIncludingSeparator(context.topic);
+          topicLevels.forEach(tl => {
+              while (c  < splitTopicInAsList.length
+                      && ("/" == (splitTopicInAsList[c]))) {
+                  c++;
+              }
+              splitTopicInAsList[c] = tl;
+              c++;
+          });
+
+          let resolvedPublishTopic: string = '';
+          for ( let d: number = 0; d < splitTopicInAsList.length; d++) {
+              resolvedPublishTopic.concat(splitTopicInAsList[d]);
+          }
+          context.resolvedPublishTopic = resolvedPublishTopic.toString();
+      } else {
+          context.resolvedPublishTopic = context.mapping.publishTopic;
+      }
+
+      // leave the topic for debugging purposes
+      //_.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
+      let newPredecessor = context.requests.push({
+        predecessor: predecessor,
+        method: "POST",
+        source: deviceSource,
+        externalIdType: mapping.externalIdType,
+        request: payloadTarget,
+        targetAPI: API[mapping.targetAPI].name,
+      });
+      try {
+        let response = await this.mqttClient.createMEAO(context);
+        context.requests[newPredecessor - 1].response = response;
+      } catch (e) {
+        context.requests[newPredecessor - 1].error = e;
+      }
+      predecessor = context.requests.length;
+    } else {
+      console.warn(
+        "Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}"
       );
-      i++;
+    }
+    console.log(
+      `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: 1`
+    );
+  }
+
+  public substituteValueInObject(
+    type: MappingType,
+    sub: SubstituteValue,
+    jsonObject: JSON,
+    keys: string
+  ) {
+    let subValueMissing: boolean = sub.value == null;
+    let subValueNull: boolean =
+      sub.value == null || (sub.value != null && sub.value != undefined);
+
+    if (
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
+        subValueMissing) ||
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+    ) {
+      _.unset(jsonObject, keys);
+    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+      let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+      if (pathIsNested) {
+        throw new Error("Can only crrate new nodes ion the root level!");
+      }
+      //jsonObject.put("$", keys, sub.typedValue());
+      _.set(jsonObject, keys, getTypedValue(sub));
+    } else {
+      _.set(jsonObject, keys, getTypedValue(sub));
     }
   }
 }

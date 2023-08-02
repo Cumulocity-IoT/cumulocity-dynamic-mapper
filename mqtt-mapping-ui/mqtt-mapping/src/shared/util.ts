@@ -63,7 +63,6 @@ export const SAMPLE_TEMPLATES_C8Y = {
 }`
 }
 
-
 export const SAMPLE_TEMPLATES_EXTERNAL = {
   MEASUREMENT: `{                                               
     \"Temperature\": {
@@ -779,7 +778,7 @@ export function definesDeviceIdentifier(api: string, sub: MappingSubstitution, d
   if (direction == Direction.INBOUND) {
     return sub?.pathTarget == API[api].identifier
   } else {
-    return false
+    return sub?.pathSource == API[api].identifier
   }
 }
 
