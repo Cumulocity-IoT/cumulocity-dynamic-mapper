@@ -175,7 +175,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
             );
           }
           console.log(
-            `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget}`
+            `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
           );
         }
         if (substitution.pathTarget === TIME) {

@@ -226,7 +226,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
             ExternalIDRepresentation mappingServiceIdRepresentation = null;
             try {
-                mappingServiceIdRepresentation = resolveExternalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
+                mappingServiceIdRepresentation = resolveExternalId2GlobalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
                         null);
             } catch (Exception e) {
                 log.error(e.getMessage());
@@ -324,14 +324,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return measurementRepresentations[0];
     }
 
-    public ExternalIDRepresentation resolveExternalId(ID identity, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(ID identity, ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
         ExternalIDRepresentation[] externalIDRepresentations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                externalIDRepresentations[0] = identityApi.getExternalId(identity, context);
+                externalIDRepresentations[0] = identityApi.resolveExternalId2GlobalId(identity, context);
             } catch (SDKException e) {
                 log.warn("External ID {} not found", identity.getValue());
             }
@@ -339,7 +339,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return externalIDRepresentations[0];
     }
 
-    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String idType, ProcessingContext<?> context) {
         if (idType == null) {
             idType = "c8y_Serial";
         }
@@ -347,7 +347,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ExternalIDRepresentation[] result = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                result[0] = identityApi.findExternalId(gid, idt, context);
+                result[0] = identityApi.resolveGlobalId2ExternalId(gid, idt, context);
             } catch (SDKException e) {
                 log.warn("External ID type {} for {} not found", idt, gid.getValue());
             }
@@ -539,7 +539,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation extId = resolveExternalId(identity, context);
+                ExternalIDRepresentation extId = resolveExternalId2GlobalId(identity, context);
                 if (extId == null) {
                     // Device does not exist
                     ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
