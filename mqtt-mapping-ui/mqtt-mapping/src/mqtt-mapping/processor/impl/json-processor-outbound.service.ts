@@ -27,6 +27,7 @@ import {
   isNumeric,
   whatIsIt,
   TIME,
+  findDeviceIdentifier,
 } from "../../../shared/util";
 import {
   ProcessingContext,
@@ -56,8 +57,8 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
     let payload: string = JSON.stringify(payloadJsonNode, null, 4);
     let substitutionTimeExists: boolean = false;
 
-    mapping.substitutions.forEach((substitution) => {
-      let extractedSourceContent: JSON;
+    mapping.substitutions.forEach( async (substitution) => {
+      let extractedSourceContent: any;
       try {
         // step 1 extract content from inbound payload
         extractedSourceContent = this.evaluateExpression(
@@ -139,6 +140,22 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             }
           } else if (isNumeric(JSON.stringify(extractedSourceContent))) {
             context.cardinality.set(substitution.pathTarget, 1);
+
+            if (substitution.pathSource == (findDeviceIdentifier(mapping).pathSource)
+                    && substitution.resolve2ExternalId) {
+                let externalId : string = await this.c8yAgent.resolveGlobalId2ExternalId(
+                  JSON.stringify(extractedSourceContent), mapping.externalIdType,
+                        context);
+                if (externalId == null && context.sendPayload) {
+                    throw new Error("External id " + JSON.stringify(extractedSourceContent) + " for type "
+                            + mapping.externalIdType + " not found!");
+                } else if (externalId == null) {
+                    extractedSourceContent = null;
+                } else {
+                    extractedSourceContent= externalId;
+                }
+            }
+
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
               type: SubstituteValueType.NUMBER,
@@ -150,6 +167,22 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             );
           } else if (whatIsIt(extractedSourceContent) == "String") {
             context.cardinality.set(substitution.pathTarget, 1);
+
+            if (substitution.pathSource == (findDeviceIdentifier(mapping).pathSource)
+                    && substitution.resolve2ExternalId) {
+                let externalId : string = await this.c8yAgent.resolveGlobalId2ExternalId(
+                  JSON.stringify(extractedSourceContent), mapping.externalIdType,
+                        context);
+                if (externalId == null && context.sendPayload) {
+                    throw new Error("External id " + JSON.stringify(extractedSourceContent) + " for type "
+                            + mapping.externalIdType + " not found!");
+                } else if (externalId == null) {
+                    extractedSourceContent = null;
+                } else {
+                    extractedSourceContent= externalId;
+                }
+            }
+
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
               type: SubstituteValueType.TEXTUAL,
