@@ -112,4 +112,7 @@ public class MappingSubstitution implements Serializable {
 
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean expandArray;
+
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean resolve2ExternalId;
 }

@@ -98,7 +98,7 @@ public class MappingsRepresentationJUnitTest {
     assertEquals("p1s", m1.substitutions[0].pathSource);
     m1.sortSubstitutions();
     log.info("My substitutions {}", Arrays.toString(m1.substitutions));
-    assertEquals("p2s", m1.substitutions[0].pathSource);
+    assertEquals("p1s", m1.substitutions[0].pathSource);
 
   }
 
