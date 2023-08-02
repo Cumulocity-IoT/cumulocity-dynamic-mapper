@@ -44,7 +44,7 @@ import { MQTTClient } from "../core/mqtt-client.service";
 
 @Injectable({ providedIn: "root" })
 export abstract class PayloadProcessorOutbound {
-  constructor(private alert: AlertService, private c8yAgent: C8YAgent,  private mqttClient: MQTTClient) {}
+  constructor(private alert: AlertService, public c8yAgent: C8YAgent,  private mqttClient: MQTTClient) {}
 
   public abstract deserializePayload(
     context: ProcessingContext,
@@ -91,41 +91,13 @@ export abstract class PayloadProcessorOutbound {
       if (postProcessingCache.get(pathTarget).length > 0) {
         substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
       }
-
-      if (mapping.targetAPI != API.INVENTORY.name) {
-        if (pathTarget == findDeviceIdentifier(mapping).pathTarget) {
-          deviceSource = await this.c8yAgent.resolveGlobalId2ExternalId( 
-            substituteValue.value, mapping.externalIdType, context
-          );
-
-          if ((deviceSource == null || !deviceSource) && context.sendPayload) {
-            throw new Error(
-              "External id " +
-                substituteValue +
-                " for type " +
-                mapping.externalIdType +
-                " not found!"
-            );
-          } else if (deviceSource == null) {
-            substituteValue.value = null;
-          } else {
-            substituteValue.value = deviceSource;
-          }
-        }
-        this.substituteValueInObject(
-          mapping.mappingType,
-          substituteValue,
-          payloadTarget,
-          pathTarget
-        );
-      } else if (pathTarget != findDeviceIdentifier(mapping).pathTarget) {
-        this.substituteValueInObject(
-          mapping.mappingType,
-          substituteValue,
-          payloadTarget,
-          pathTarget
-        );
-      }
+      
+      this.substituteValueInObject(
+        mapping.mappingType,
+        substituteValue,
+        payloadTarget,
+        pathTarget
+      );
     }
 
     /*
