@@ -150,6 +150,18 @@ public class MappingRepresentation implements Serializable {
     return result;
   }
 
+  static public List<ValidationError> isFilterOutboundUnique(List<Mapping> mappings, Mapping mapping) {
+    ArrayList<ValidationError> result = new ArrayList<ValidationError>();
+    var filterOutbound = mapping.filterOutbound;
+    mappings.forEach(m -> {
+      if ((filterOutbound.equals(m.filterOutbound))
+          && (mapping.id != m.id)) {
+        result.add(ValidationError.FilterOutbound_Must_Be_Unique);
+      }
+    });
+    return result;
+  }
+
   static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     result.addAll(isSubstituionValid(mapping));
@@ -158,6 +170,7 @@ public class MappingRepresentation implements Serializable {
       result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
       result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.templateTopic, mapping.templateTopicSample));
     } else {
+      result.addAll(isFilterOutboundUnique(mappings,mapping));
       result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.templateTopicSample));
     }
 
