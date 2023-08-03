@@ -35,47 +35,50 @@
   </div>
 </div> -->
 
-<c8y-list-group class="separator-top">
-  <c8y-li
-    *ngFor="let sub of substitutions; let i = index"
-    id="{{ 'sub-' + id + '-' + i }}"
-    [ngStyle]="{
-      background:
-        i == settings.selectedSubstitutionIndex ? settings.color : 'none'
-    }"
-    (click)="onSubstitutionSelect(i)"
-  >
-    <c8y-li-icon icon="replace"></c8y-li-icon>
-    <div class="d-flex">
-      <div class="flex-grow text-truncate">
-        <div class="text-truncate">
-          <span *ngIf="!sub.registeredType" class="text-12"
-            >{{
-              (i | number : "2.0-0") +
-                ". [ " +
-                (definesDeviceIdentifier(targetAPI, sub, direction) ? "* " : "") +
-                sub.pathSource +
-                " -> " +
-                sub.pathTarget +
-                " ]"
-            }}
-          </span>
+<div style="height:200px;overflow:auto">
+  <c8y-list-group>
+    <c8y-li
+      *ngFor="let sub of substitutions; let i = index"
+      id="{{ 'sub-' + id + '-' + i }}"
+      [ngStyle]="{
+        background:
+          i == settings.selectedSubstitutionIndex ? settings.color : 'none'
+      }"
+      (click)="onSubstitutionSelect(i)"
+    >
+      <c8y-li-icon icon="replace"></c8y-li-icon>
+      <c8y-li-body>
+        <div class="d-flex">
+          <div class="flex-grow text-truncate">
+            <div class="text-truncate">
+              <span *ngIf="!sub.registeredType" class="text-12"
+                >{{
+                  (i | number : "2.0-0") +
+                    ". [ " +
+                    (definesDeviceIdentifier(targetAPI, sub, direction) ? "* " : "") +
+                    sub.pathSource +
+                    " -> " +
+                    sub.pathTarget +
+                    " ]"
+                }}
+              </span>
+            </div>
+          </div>
+          <div class="m-l-8">
+            <button
+              title="{{ 'Remove' | translate }}"
+              class="btn btn-icon btn-clean"
+              (click)="onSubstitutionDelete(i)"
+              [attr.disabled]="
+                isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+              "
+            >
+              <i c8yIcon="minus-circle" class="text-danger"></i>
+              <span class="sr-only" translate>Remove</span>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div class="m-l-8">
-        <button
-          title="{{ 'Remove' | translate }}"
-          class="btn btn-icon btn-clean"
-          (click)="onSubstitutionDelete(i)"
-          [attr.disabled]="
-            isDisabled(settings.editorMode == EditorMode.READ_ONLY)
-          "
-        >
-          <i c8yIcon="minus-circle" class="text-danger"></i>
-          <span class="sr-only" translate>Remove</span>
-        </button>
-      </div>
-    </div>
-  </c8y-li>
-</c8y-list-group>
+      </c8y-li-body>
+    </c8y-li>
+  </c8y-list-group>
+</div>
