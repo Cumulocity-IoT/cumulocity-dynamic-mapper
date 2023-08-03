@@ -162,7 +162,7 @@ public abstract class BasePayloadProcessor<T> {
                                 context.getCurrentRequest().setError(e);
                             }
                         } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + substituteValue + " for type "
+                            throw new RuntimeException("External id " + substituteValue.typedValue().toString() + " for type "
                                     + mapping.externalIdType + " not found!");
                         } else if (sourceId == null) {
                             substituteValue.value = null;
