@@ -118,6 +118,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
+  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(
+    0
+  );
   sourceSystem: string;
   targetSystem: string;
 
@@ -951,6 +954,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
+    this.selectedResult$.next(this.testingModel.selectedResult);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length
