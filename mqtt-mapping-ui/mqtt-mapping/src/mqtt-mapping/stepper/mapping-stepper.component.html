@@ -416,9 +416,14 @@
             <div class="row">
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  <label for="testResult" translate
-                    >Testing - {{ targetSystem }} Request</label
-                  >
+                  
+                  <div style="display:flex">
+                    <label for="testResult" translate
+                      >Testing - {{ targetSystem }} Request&nbsp;</label
+                    >
+                    <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
+                  </div>
+
                   <mapping-json-editor
                     [options]="editorOptionsTesting"
                     [data]="testingModel.request"
@@ -438,9 +443,12 @@
             <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
               <div class="col-md-6 col-md-offset-3 col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  <label for="testResult" translate
-                    >Testing - {{ targetSystem }} Response</label
-                  >
+                  <div style="display:flex">
+                    <label for="testResult" translate
+                      >Testing - {{ targetSystem }} Response&nbsp;</label
+                    >
+                    <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
+                  </div>
                   <mapping-json-editor
                     [options]="editorOptionsTesting"
                     [data]="testingModel.response"
