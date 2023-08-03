@@ -51,6 +51,7 @@ import {
 } from "../../shared/mapping.model";
 import {
   getExternalTemplate,
+  isFilterOutboundUnique,
   isTemplateTopicUnique,
   SAMPLE_TEMPLATES_C8Y,
 } from "../../shared/util";
@@ -380,10 +381,14 @@ export class MappingComponent implements OnInit {
     console.log("Delete device", device);
     try {
       await this.mappingService.deleteSubscriptions(device);
-      this.alertService.success(gettext("Subscription for this device deleted successfully"));
+      this.alertService.success(
+        gettext("Subscription for this device deleted successfully")
+      );
       this.loadSubscriptions();
     } catch (error) {
-      this.alertService.danger(gettext("Failed to delete subscription:") + error);
+      this.alertService.danger(
+        gettext("Failed to delete subscription:") + error
+      );
     }
   }
 
@@ -465,7 +470,12 @@ export class MappingComponent implements OnInit {
 
     console.log("Changed mapping:", mapping);
 
-    if (isTemplateTopicUnique(mapping, this.mappings)) {
+    if (
+      (mapping.direction == Direction.INBOUND &&
+        isTemplateTopicUnique(mapping, this.mappings)) ||
+      (mapping.direction == Direction.OUTBOUND &&
+        isFilterOutboundUnique(mapping, this.mappings))
+    ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
         try {
@@ -499,13 +509,23 @@ export class MappingComponent implements OnInit {
       }
       this.isConnectionToMQTTEstablished = true;
     } else {
-      this.alertService.danger(
-        gettext(
-          "Topic is already used: " +
-            mapping.subscriptionTopic +
-            ". Please use a different topic."
-        )
-      );
+      if (mapping.direction == Direction.INBOUND) {
+        this.alertService.danger(
+          gettext(
+            "Topic is already used: " +
+              mapping.subscriptionTopic +
+              ". Please use a different topic."
+          )
+        );
+      } else {
+        this.alertService.danger(
+          gettext(
+            "FilterOutbound is already used: " +
+              mapping.filterOutbound +
+              ". Please use a different filter."
+          )
+        );
+      }
     }
     this.showConfigMapping = false;
   }
