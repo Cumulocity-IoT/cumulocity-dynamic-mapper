@@ -32,8 +32,7 @@
 </c8y-breadcrumb>
 
 <div class="row">
-  <div class="card">
-    <form class="d-flex d-col" novalidate>
+  <div class="card col-lg-8">
       <div *ngIf="!isLoading" class="d-contents">
         <c8y-list-group>
           <c8y-li
@@ -56,10 +55,12 @@
               }}</span>
             </button>
             <c8y-li-collapse>
-              <table class="table">
+              <table class="table table-condensed table-striped">
                 <thead>
-                  <th>Property</th>
-                  <th>Value</th>
+                  <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                  </tr>
                 </thead>
                 <tbody>
                   <tr>
@@ -89,6 +90,5 @@
           ></c8y-ui-empty-state>
         </c8y-list-group>
       </div>
-    </form>
   </div>
 </div>
