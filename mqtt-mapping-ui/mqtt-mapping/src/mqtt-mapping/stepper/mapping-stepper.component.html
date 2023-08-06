@@ -425,7 +425,7 @@
                     <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
                   </div>
 
-                  <mapping-json-editor
+                  <mapping-json-editor2
                     [options]="editorOptionsTesting"
                     [data]="testingModel.request"
                     #editorTestingRequest
@@ -450,7 +450,7 @@
                     >
                     <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
                   </div>
-                  <mapping-json-editor
+                  <mapping-json-editor2
                     [options]="editorOptionsTesting"
                     [data]="testingModel.response"
                     #editorTestingResponse

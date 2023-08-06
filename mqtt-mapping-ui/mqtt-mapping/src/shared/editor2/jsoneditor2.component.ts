@@ -45,6 +45,7 @@ import {
   KeySelection,
   isJSONContent,
   JSONContent,
+  isMultiSelection,
 } from "vanilla-jsoneditor";
 
 @Component({
@@ -140,9 +141,13 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       let st = stringifyJSONPath((selection as any).path);
       this.onPathChanged.emit(st);
       console.log("Selected path:", st);
+    } else if (isMultiSelection(selection)){
+      let st = stringifyJSONPath((selection as any).anchorPath);
+      this.onPathChanged.emit(st);
+      console.log("Selected anchorPath:", st);
     }
 
-    console.log("Validation:",this.editor.validate());
+    console.log("Validation:",this.editor.validate(), selection);
   }
 
   public setSchema(schema: any) {
