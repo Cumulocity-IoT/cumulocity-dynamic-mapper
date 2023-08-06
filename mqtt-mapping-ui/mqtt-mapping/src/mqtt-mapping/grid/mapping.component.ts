@@ -51,6 +51,7 @@ import {
 } from "../../shared/mapping.model";
 import {
   getExternalTemplate,
+  isFilterOutboundUnique,
   isTemplateTopicUnique,
   SAMPLE_TEMPLATES_C8Y,
 } from "../../shared/util";
@@ -61,11 +62,12 @@ import { TemplateRendererComponent } from "../renderer/template.renderer.compone
 import { ActiveRendererComponent } from "../renderer/active.renderer.component";
 import { MappingService } from "../core/mapping.service";
 import { BsModalService } from "ngx-bootstrap/modal";
-import { Subject } from "rxjs";
+import { Observable, Subject, from } from "rxjs";
 import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
+import { Dir } from "@angular/cdk/bidi";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -84,6 +86,7 @@ export class MappingComponent implements OnInit {
   mappings: Mapping[] = [];
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
+  devices: IIdentified[] = [];
   Direction = Direction;
 
   param = { name: "world" };
@@ -98,7 +101,8 @@ export class MappingComponent implements OnInit {
     editorMode: EditorMode.UPDATE,
     direction: Direction.INBOUND,
   };
-  title: string = `Mapping List ${this.stepperConfiguration.direction}`;
+  titleMapping: string;
+  titleSubsription: string = `Subscription on devices for mapping OUTBOUND`;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -107,10 +111,10 @@ export class MappingComponent implements OnInit {
     gridHeader: true,
   };
 
-  columns: Column[] = [
+  columnsMappings: Column[] = [
     {
       name: "id",
-      header: "#",
+      header: "System ID",
       path: "id",
       filterable: false,
       dataType: ColumnDataType.TextShort,
@@ -186,6 +190,23 @@ export class MappingComponent implements OnInit {
     },
   ];
 
+  columnsSubscriptions: Column[] = [
+    {
+      name: "id",
+      header: "System ID",
+      path: "id",
+      filterable: false,
+      dataType: ColumnDataType.TextShort,
+      visible: true,
+    },
+    {
+      header: "Name",
+      name: "name",
+      path: "name",
+      filterable: true,
+    },
+  ];
+
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
@@ -195,7 +216,8 @@ export class MappingComponent implements OnInit {
     pageSize: 3,
     currentPage: 1,
   };
-  actionControls: ActionControl[] = [];
+  actionControlMapping: ActionControl[] = [];
+  actionControlSubscription: ActionControl[] = [];
 
   constructor(
     public mappingService: MappingService,
@@ -203,21 +225,41 @@ export class MappingComponent implements OnInit {
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router
-  ) {}
-
-  async ngOnInit() {
-    this.subscription = await this.mappingService.getSubscriptions();
-
+  ) {
     const href = this.router.url;
     this.stepperConfiguration.direction = href.match(
       /sag-ps-pkg-mqtt-mapping\/mappings\/inbound/g
     )
       ? Direction.INBOUND
       : Direction.OUTBOUND;
-    this.title = `Mapping List ${this.stepperConfiguration.direction}`;
 
+    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
+      this.columnsMappings[1] = {
+        header: "Publish Topic",
+        name: "publishTopic",
+        path: "publishTopic",
+        filterable: true,
+        gridTrackSize: "12.5%",
+      };
+      this.columnsMappings[2] = {
+        header: "Template Topic Sample",
+        name: "templateTopicSample",
+        path: "templateTopicSample",
+        filterable: true,
+        gridTrackSize: "12.5%",
+      };
+    }
+    this.titleMapping = `Mapping ${this.stepperConfiguration.direction}`;
+    this.loadSubscriptions();
+  }
+
+  async loadSubscriptions() {
+    this.subscription = await this.mappingService.getSubscriptions();
+  }
+
+  ngOnInit() {
     this.loadMappings();
-    this.actionControls.push(
+    this.actionControlMapping.push(
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
@@ -233,6 +275,10 @@ export class MappingComponent implements OnInit {
         callback: this.deleteMapping.bind(this),
       }
     );
+    this.actionControlSubscription.push({
+      type: BuiltInActionType.Delete,
+      callback: this.deleteSubscription.bind(this),
+    });
 
     this.mappingService.listToReload().subscribe(() => {
       this.loadMappings();
@@ -331,6 +377,21 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
+  async deleteSubscription(device: IIdentified) {
+    console.log("Delete device", device);
+    try {
+      await this.mappingService.deleteSubscriptions(device);
+      this.alertService.success(
+        gettext("Subscription for this device deleted successfully")
+      );
+      this.loadSubscriptions();
+    } catch (error) {
+      this.alertService.danger(
+        gettext("Failed to delete subscription:") + error
+      );
+    }
+  }
+
   updateMapping(mapping: Mapping) {
     if (!mapping.direction)
       this.stepperConfiguration.direction = Direction.INBOUND;
@@ -409,7 +470,12 @@ export class MappingComponent implements OnInit {
 
     console.log("Changed mapping:", mapping);
 
-    if (isTemplateTopicUnique(mapping, this.mappings)) {
+    if (
+      (mapping.direction == Direction.INBOUND &&
+        isTemplateTopicUnique(mapping, this.mappings)) ||
+      (mapping.direction == Direction.OUTBOUND &&
+        isFilterOutboundUnique(mapping, this.mappings))
+    ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
         try {
@@ -443,18 +509,28 @@ export class MappingComponent implements OnInit {
       }
       this.isConnectionToMQTTEstablished = true;
     } else {
-      this.alertService.danger(
-        gettext(
-          "Topic is already used: " +
-            mapping.subscriptionTopic +
-            ". Please use a different topic."
-        )
-      );
+      if (mapping.direction == Direction.INBOUND) {
+        this.alertService.danger(
+          gettext(
+            "Topic is already used: " +
+              mapping.subscriptionTopic +
+              ". Please use a different topic."
+          )
+        );
+      } else {
+        this.alertService.danger(
+          gettext(
+            "FilterOutbound is already used: " +
+              mapping.filterOutbound +
+              ". Please use a different filter."
+          )
+        );
+      }
     }
     this.showConfigMapping = false;
   }
 
-  async onCommitSubscription(deviceList: IIdentified) {
+  async onCommitSubscriptions(deviceList: IIdentified[]) {
     this.subscription = {
       api: API.ALL.name,
       devices: deviceList,
@@ -471,11 +547,11 @@ export class MappingComponent implements OnInit {
     this.showConfigSubscription = false;
   }
 
-  async onActivateClicked() {
-    this.activateMappings();
+  async onReloadClicked() {
+    this.reloadMappings();
   }
 
-  private async activateMappings() {
+  private async reloadMappings() {
     const response2 = await this.configurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );

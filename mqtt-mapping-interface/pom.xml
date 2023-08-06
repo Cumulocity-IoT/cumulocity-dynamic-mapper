@@ -163,7 +163,8 @@
                             <include>mqtt/mapping/model/*.java</include>
                             <include>mqtt/mapping/processor/model/*.java</include>
                             <include>mqtt/mapping/processor/model/ProcessingContext.java</include>
-                            <include>mqtt/mapping/processor/extension/ProcessorExtension.java</include>
+                            <include>mqtt/mapping/processor/extension/ProcessorExtensionInbound.java</include>
+                            <include>mqtt/mapping/processor/extension/ProcessorExtensionOutbound.java</include>
                         </includes>
                     </configuration>
                 </plugin>

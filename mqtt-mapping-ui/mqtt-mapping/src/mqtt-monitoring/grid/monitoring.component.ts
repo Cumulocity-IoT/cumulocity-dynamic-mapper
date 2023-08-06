@@ -53,7 +53,7 @@ export class MonitoringComponent implements OnInit {
   columns: Column[] = [
     {
       name: "id",
-      header: "Mapping Id",
+      header: "System ID",
       path: "id",
       filterable: false,
       dataType: ColumnDataType.TextShort,
@@ -67,7 +67,15 @@ export class MonitoringComponent implements OnInit {
       path: "subscriptionTopic",
       filterable: false,
       dataType: ColumnDataType.TextLong,
-      gridTrackSize: "20%",
+      gridTrackSize: "15%",
+    },
+    {
+      name: "publishTopic",
+      header: "Publish Topic",
+      path: "publishTopic",
+      filterable: false,
+      dataType: ColumnDataType.TextLong,
+      gridTrackSize: "15%",
     },
     {
       header: "# Errors",
@@ -75,7 +83,7 @@ export class MonitoringComponent implements OnInit {
       path: "errors",
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "17.5%",
+      gridTrackSize: "15%",
     },
     {
       header: "# Messages Received",
@@ -83,7 +91,7 @@ export class MonitoringComponent implements OnInit {
       path: "messagesReceived",
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "17.5%",
+      gridTrackSize: "15%",
     },
     {
       header: "# Snooped Templates Total",
@@ -91,7 +99,7 @@ export class MonitoringComponent implements OnInit {
       path: "snoopedTemplatesTotal",
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "17.5%",
+      gridTrackSize: "15%",
     },
     {
       header: "# Snooped Templates Active",
@@ -99,7 +107,7 @@ export class MonitoringComponent implements OnInit {
       path: "snoopedTemplatesActive",
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "17.5%",
+      gridTrackSize: "15%",
     },
   ];
 

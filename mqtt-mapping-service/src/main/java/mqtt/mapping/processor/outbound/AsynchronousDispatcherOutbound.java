@@ -233,14 +233,14 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     private ExecutorService cachedThreadPool;
 
     @Autowired
-    MappingComponent mappingStatusComponent;
+    MappingComponent mappingComponent;
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
     public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage,
             boolean sendPayload) {
-        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
@@ -255,7 +255,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         if (c8yMessage.getPayload() != null) {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
-                resolvedMappings = mqttClient.resolveOutboundMappings(message, c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveOutboundMappings(message, c8yMessage.getApi());
             } catch (Exception e) {
                 log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
                 log.debug(e.getMessage(), e);
@@ -268,7 +268,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, payloadProcessorsOutbound,
+                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessorsOutbound,
                         sendPayload, c8yMessage, objectMapper));
 
         if (op != null) {

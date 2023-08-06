@@ -115,6 +115,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
+  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(
+    0
+  );
   sourceSystem: string;
   targetSystem: string;
 
@@ -317,18 +320,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           disabled:
             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
           description:
-            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.",
+            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value",
           required: this.stepperConfiguration.direction == Direction.OUTBOUND,
         },
         hideExpression:
           this.stepperConfiguration.direction != Direction.OUTBOUND,
       },
       {
+        fieldGroupClassName: "row",
         fieldGroup: [
           {
             className: "col-lg-6 p-l-0",
             key: "targetAPI",
             type: "select",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Target API",
               options: Object.keys(API).map((key) => {
@@ -387,6 +392,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6",
             key: "autoAckOperation",
             type: "switch",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "Auto acknowledge",
               disabled:
@@ -410,6 +416,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className: "col-lg-6 p-l-0",
             key: "qos",
             type: "select",
+            wrappers: ["c8y-form-field"],
             templateOptions: {
               label: "QOS",
               options: Object.values(QOS).map((key) => {
@@ -679,7 +686,34 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-4",
+            className: "col-lg-3",
+            key: "currentSubstitution.resolve2ExternalId",
+            type: "switch",
+            wrappers: ["c8y-form-field"],
+            templateOptions: {
+              label: "Resolve to externalId",
+              description: `Resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.`,
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              readonly: true,
+              switchMode: true,
+              indeterminate: false,
+            },
+            hideExpression:
+            (model) => {
+              const d1 = model.mapping.direction  == Direction.INBOUND;
+              const d2 = model.mapping.direction  == Direction.OUTBOUND;
+              const d3 = definesDeviceIdentifier(
+                model.mapping.targetAPI,
+                model?.currentSubstitution,
+                model.mapping.direction
+              );
+              const r = d1 || (d2 && !d3) 
+              //console.log("WWWWW", c, model?.currentSubstitution)
+              return r;
+            }
+          },
+          {
+            className: "col-lg-2",
             key: "currentSubstitution.repairStrategy",
             type: "select",
             wrappers: ["c8y-form-field"],
@@ -716,7 +750,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-3 pull-right p-t-24",
+            className: "col-lg-1  p-t-24",
             type: "button",
             templateOptions: {
               text: "Upsert substitution",
@@ -955,6 +989,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
+    this.selectedResult$.next(this.testingModel.selectedResult);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length

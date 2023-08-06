@@ -39,7 +39,7 @@ import { FacadeMeasurementService } from "./facade-measurement.service";
 import { FacadeOperationService } from "./facade-operation.service";
 
 @Injectable({ providedIn: "root" })
-export class C8YClient {
+export class C8YAgent {
   constructor(
     private inventory: FacadeInventoryService,
     private identity: FacadeIdentityService,
@@ -124,7 +124,7 @@ export class C8YClient {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IManagedObject> {
-    let deviceId: string = await this.resolveExternalId(identity, context);
+    let deviceId: string = await this.resolveExternalId2GlobalId(identity, context);
     let currentRequest = context.requests[context.requests.length - 1].request;
     let device: Partial<IManagedObject> = {
       ...currentRequest,
@@ -156,15 +156,29 @@ export class C8YClient {
     }
   }
 
-  async resolveExternalId(
+  async resolveExternalId2GlobalId(
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<string> {
     try {
-      const { data, res } = await this.identity.detail(identity, context);
+      const { data, res } = await this.identity.resolveExternalId2GlobalId(identity, context);
       return data.managedObject.id as string;
     } catch (e) {
       console.log(`External id ${identity.externalId} doesn't exist!`);
+      return;
+    }
+  }
+
+  async resolveGlobalId2ExternalId(
+    identity: string,
+    externalIdType: string,
+    context: ProcessingContext
+  ): Promise<string> {
+    try {
+      const  data = await this.identity.resolveGlobalId2ExternalId(identity, externalIdType, context);
+      return data.managedObject.id as string;
+    } catch (e) {
+      console.log(`External id ${identity}, ${externalIdType}  doesn't exist!`);
       return;
     }
   }

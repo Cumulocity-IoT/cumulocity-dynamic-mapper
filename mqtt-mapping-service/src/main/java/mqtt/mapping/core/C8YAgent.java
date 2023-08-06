@@ -90,8 +90,8 @@ import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.extension.ExtensionsComponent;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.extension.ExtensibleProcessor;
-import mqtt.mapping.processor.extension.ProcessorExtension;
+import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
+import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
@@ -129,56 +129,62 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     private MQTTClient mqttClient;
+
     @Autowired
-    public void setMQTTClient (@Lazy MQTTClient mqttClient){
+    public void setMQTTClient(@Lazy MQTTClient mqttClient) {
         this.mqttClient = mqttClient;
     }
 
     private ObjectMapper objectMapper;
+
     @Autowired
-    public void setObjectMapper (ObjectMapper objectMapper){
+    public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
     private ConnectionConfigurationComponent connectionConfigurationComponent;
-    
+
     @Autowired
     public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
         this.connectionConfigurationComponent = connectionConfigurationComponent;
     }
 
     private ServiceConfigurationComponent serviceConfigurationComponent;
+
     @Autowired
     public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
         this.serviceConfigurationComponent = serviceConfigurationComponent;
     }
 
     private MappingComponent mappingComponent;
+
     @Autowired
     public void setMappingComponent(MappingComponent mappingComponent) {
         this.mappingComponent = mappingComponent;
     }
 
-    
     private ExtensionsComponent extensions;
+
     @Autowired
     public void setExtensions(ExtensionsComponent extensions) {
         this.extensions = extensions;
     }
-    
+
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
+
     @Autowired
     public void setPayloadProcessorsInbound(Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound) {
         this.payloadProcessorsInbound = payloadProcessorsInbound;
     }
 
-    C8YAPISubscriber operationSubscriber;
+    public C8YAPISubscriber notificationSubscriber;
+
     @Autowired
-    public void setOperationSubscriber(@Lazy C8YAPISubscriber operationSubscriber) {
-        this.operationSubscriber = operationSubscriber;
+    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
+        this.notificationSubscriber = notificationSubscriber;
     }
 
-    private ExtensibleProcessor extensibleProcessor;
+    private ExtensibleProcessorInbound extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
@@ -200,11 +206,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @EventListener
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
-        //this.createEvent("MQTT Mapper Microservice terminated", "mqtt_microservice_stopevent", DateTime.now(), null);
-        operationSubscriber.disconnect(null);
-        if(mqttClient != null)
+        // this.createEvent("MQTT Mapper Microservice terminated",
+        // "mqtt_microservice_stopevent", DateTime.now(), null);
+        notificationSubscriber.disconnect(null);
+        if (mqttClient != null)
             mqttClient.disconnect();
     }
+
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
@@ -218,7 +226,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
             ExternalIDRepresentation mappingServiceIdRepresentation = null;
             try {
-                mappingServiceIdRepresentation = resolveExternalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
+                mappingServiceIdRepresentation = resolveExternalId2GlobalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
                         null);
             } catch (Exception e) {
                 log.error(e.getMessage());
@@ -243,7 +251,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             }
             mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
 
-            extensibleProcessor = (ExtensibleProcessor) payloadProcessorsInbound.get(MappingType.PROCESSOR_EXTENSION);
+            extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
+                    .get(MappingType.PROCESSOR_EXTENSION);
             serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
 
             // if managedObject for internal mapping extension exists
@@ -266,10 +275,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     internalExtensions[0].getId().getValue(), internalExtensions[0]);
-            operationSubscriber.init();
-            //operationSubscriber.subscribeTenant(tenant);
-            //operationSubscriber.subscribeAllDevices();
-
+            notificationSubscriber.init();
+            // notificationSubscriber.subscribeTenant(tenant);
+            // notificationSubscriber.subscribeAllDevices();
 
         });
         serviceConfiguration = serviceConfigurations[0];
@@ -316,14 +324,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return measurementRepresentations[0];
     }
 
-    public ExternalIDRepresentation resolveExternalId(ID identity, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(ID identity, ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
         ExternalIDRepresentation[] externalIDRepresentations = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                externalIDRepresentations[0] = identityApi.getExternalId(identity, context);
+                externalIDRepresentations[0] = identityApi.resolveExternalId2GlobalId(identity, context);
             } catch (SDKException e) {
                 log.warn("External ID {} not found", identity.getValue());
             }
@@ -331,7 +339,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return externalIDRepresentations[0];
     }
 
-    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String idType, ProcessingContext<?> context) {
         if (idType == null) {
             idType = "c8y_Serial";
         }
@@ -339,7 +347,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ExternalIDRepresentation[] result = { null };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                result[0] = identityApi.findExternalId(gid, idt, context);
+                result[0] = identityApi.resolveGlobalId2ExternalId(gid, idt, context);
             } catch (SDKException e) {
                 log.warn("External ID type {} for {} not found", idt, gid.getValue());
             }
@@ -389,7 +397,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
         EventRepresentation[] eventRepresentations = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            eventRepresentations[0].setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
+            eventRepresentations[0]
+                    .setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
             eventRepresentations[0].setText(message);
             eventRepresentations[0].setDateTime(eventTime);
             eventRepresentations[0].setType(type);
@@ -439,7 +448,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 exceptions[0] = e;
             }
         });
-        if (exceptions[0] != null ) {
+        if (exceptions[0] != null) {
             throw exceptions[0];
         }
         mqttClient.deleteFromMappingCache(mr[0]);
@@ -530,7 +539,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation extId = resolveExternalId(identity, context);
+                ExternalIDRepresentation extId = resolveExternalId2GlobalId(identity, context);
                 if (extId == null) {
                     // Device does not exist
                     ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
@@ -645,18 +654,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     extensionEntry.setLoaded(false);
                 } else {
                     Object object = clazz.getDeclaredConstructor().newInstance();
-                    if (!(object instanceof ProcessorExtension)) {
+                    if (!(object instanceof ProcessorExtensionInbound)) {
                         String msg = String.format(
                                 "Extension: %s=%s is not instance of ProcessorExtension, ignoring this entry!", key,
                                 newExtensions.getProperty(key));
                         log.warn(msg);
                         extensionEntry.setLoaded(false);
                     } else {
-                        ProcessorExtension<?> extensionImpl = (ProcessorExtension<?>) clazz.getDeclaredConstructor()
+                        ProcessorExtensionInbound<?> extensionImpl = (ProcessorExtensionInbound<?>) clazz
+                                .getDeclaredConstructor()
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
-                        log.info("Sucessfully registered bean: {} for key: {}", newExtensions.getProperty(key),
+                        log.info("Successfully registered bean: {} for key: {}", newExtensions.getProperty(key),
                                 key);
                     }
                 }
@@ -745,7 +755,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mqttClient.getActiveInboundMappings().values().forEach(m -> {
+        mappingComponent.getActiveInboundMappings().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }
@@ -780,8 +790,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     op.setFailureReason(failureReason);
                 deviceControlApi.update(op);
             } catch (SDKException exception) {
-                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(), exception.getLocalizedMessage());
+                log.error("Operation with id {} could not be updated: {}", op.getDeviceId().getValue(),
+                        exception.getLocalizedMessage());
             }
         });
+    }
+
+    public void notificationSubscriberReconnect() {
+        subscriptionsService.runForTenant(tenant, () -> {
+            // notificationSubscriber.disconnect(false);
+            // notificationSubscriber.reconnect();
+            notificationSubscriber.disconnect(false);
+            notificationSubscriber.init();
+        });
+
     }
 }

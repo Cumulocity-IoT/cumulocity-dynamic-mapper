@@ -19,35 +19,13 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.model;
+package mqtt.mapping.processor.extension;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.*;
-import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
+import mqtt.mapping.processor.ProcessingException;
+import mqtt.mapping.processor.model.ProcessingContext;
+import org.springframework.stereotype.Component;
 
-import javax.validation.constraints.NotNull;
-import java.io.Serializable;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString()
-public class ExtensionEntry implements Serializable {
-
-    @NotNull
-    private String event;
-
-    @NotNull
-    private String name;
-
-    @NotNull
-    @JsonIgnore
-    private ProcessorExtensionInbound extensionImplementation;
-
-    @NotNull
-    public boolean loaded;
-
-    @NotNull
-    public String message;
+@Component
+public interface ProcessorExtensionInbound<O> {
+    public abstract void extractFromSource(ProcessingContext<O> context) throws ProcessingException;
 }
