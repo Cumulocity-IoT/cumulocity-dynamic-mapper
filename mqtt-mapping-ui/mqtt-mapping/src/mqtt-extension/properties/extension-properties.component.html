@@ -32,74 +32,63 @@
 </c8y-breadcrumb>
 
 <div class="row">
-  <div class="card content-fullpage">
-    <form class="d-flex d-col content-fullpage" novalidate>
+  <div class="card col-lg-8">
       <div *ngIf="!isLoading" class="d-contents">
-        <div class="card-block separator-bottom large-padding flex-no-shrink">
-          <div class="list-group">
-            <div
-              class="list-group-item collapsible flex-row"
-              [ngClass]="{ expanded: isCollapsed[entry.name] }"
-              *ngFor="let entry of extension.extensionEntries; let i = index"
-            >
-              <div class="list-item-actions">
-                <button
-                  type="button"
-                  title="{{ 'Expand' | translate }}"
-                  class="collapse-btn"
-                  (click)="isCollapsed[entry.name] = !isCollapsed[entry.name]"
-                  [attr.aria-expanded]="!isCollapsed"
-                >
-                  <i c8yIcon="chevron-down"></i>
-                </button>
-              </div>
-              <div class="list-item-icon">
-                <i c8yIcon="plugin"></i>
-              </div>
-
-              <div class="list-item-body">
-                <span>{{ entry.name }} </span>
-                <span class="label label-primary m-l-8">{{
-                  extension.external ? "external" : "internal"
-                }}</span>
-              </div>
-              <div
-                [collapse]="isCollapsed[entry.name]"
-                [isAnimated]="true"
-                class="collapse"
-              >
-                <dl>
-                  <dt><label class="small" translate>Event Name</label></dt>
-                  <dd>
-                    <span class="m-l-16 small">{{ entry.event }}</span>
-                  </dd>
-                  <dt>
-                    <label class="small" translate>Event Implementation</label>
-                  </dt>
-                  <dd>
-                    <span class="m-l-16 small">{{ entry.name }}</span>
-                  </dd>
-                  <dt><label class="small" translate>Message</label></dt>
-                  <dd>
-                    <span class="m-l-16 small">{{ entry.message }}</span>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-            <c8y-ui-empty-state
-              *ngIf="
-                !extension.extensionEntries ||
-                extension.extensionEntries.length == 0
-              "
-              [icon]="'plugin'"
-              [title]="
-                'No entries for this extension, try to reload extensions.'
-              "
-              [horizontal]="true"
-            ></c8y-ui-empty-state>
-          </div>
-        </div>
+        <c8y-list-group>
+          <c8y-li
+            *ngFor="
+              let entry of extension?.extensionEntries;
+              let i = index;
+              loadMore: 'show';
+              enableVirtualScroll: true;
+              virtualScrollElementSize: 40;
+              virtualScrollStrategy: 'fixed';
+              virtualScrollContainerHeight: 400
+            "
+            #li
+          >
+            <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
+            <button class="btn-clean" (click)="li.collapsed = !li.collapsed">
+              <span>{{ entry.name }} </span>
+              <span class="label label-primary m-l-8">{{
+                extension.external ? "External" : "Internal"
+              }}</span>
+            </button>
+            <c8y-li-collapse>
+              <table class="table table-condensed table-striped">
+                <thead>
+                  <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Event Name</td>
+                    <td>{{ entry.event }}</td>
+                  </tr>
+                  <tr>
+                    <td>Event Implementation</td>
+                    <td>{{ entry.name }}</td>
+                  </tr>
+                  <tr>
+                    <td>Message</td>
+                    <td>{{ entry.message }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </c8y-li-collapse>
+          </c8y-li>
+          <c8y-ui-empty-state
+            *ngIf="
+              !extension.extensionEntries ||
+              extension.extensionEntries.length == 0
+            "
+            [icon]="'plugin'"
+            [title]="'No entries for this extension, try to reload extensions.'"
+            [horizontal]="true"
+          ></c8y-ui-empty-state>
+        </c8y-list-group>
       </div>
-    </form>
   </div>
 </div>

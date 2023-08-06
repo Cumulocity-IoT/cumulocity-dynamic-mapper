@@ -138,7 +138,7 @@ public abstract class BasePayloadProcessor<T> {
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     if (pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
 
-                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId(
+                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
                         if (sourceId == null && mapping.createNonExistingDevice) {
                             ManagedObjectRepresentation attocDevice = null;
@@ -162,7 +162,7 @@ public abstract class BasePayloadProcessor<T> {
                                 context.getCurrentRequest().setError(e);
                             }
                         } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + substituteValue + " for type "
+                            throw new RuntimeException("External id " + substituteValue.typedValue().toString() + " for type "
                                     + mapping.externalIdType + " not found!");
                         } else if (sourceId == null) {
                             substituteValue.value = null;

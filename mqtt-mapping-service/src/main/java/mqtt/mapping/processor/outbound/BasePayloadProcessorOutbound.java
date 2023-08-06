@@ -25,7 +25,6 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -111,24 +110,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             if (postProcessingCache.get(pathTarget).size() > 0) {
                 substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
             }
-            if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                if (pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                    ExternalIDRepresentation externalId = c8yAgent.findExternalId(
-                            new GId(substituteValue.typedValue().toString()), mapping.externalIdType, context);
-                    if (externalId == null && context.isSendPayload()) {
-                        throw new RuntimeException("External id " + substituteValue + " for type "
-                                + mapping.externalIdType + " not found!");
-                    } else if (externalId == null) {
-                        substituteValue.value = null;
-                    } else {
-                        substituteValue.value = new TextNode(externalId.getExternalId());
-                        deviceSource = externalId.getExternalId();
-                    }
-                }
-                substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
-            } else if (!pathTarget.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathTarget)) {
-                substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
-            }
+            substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
         }
         /*
          * step 4 prepare target payload for sending to mqttBroker

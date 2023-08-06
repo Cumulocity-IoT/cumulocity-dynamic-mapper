@@ -24,23 +24,19 @@ hs_err_pid*
 
 *.classpath
 *.project
-*.log
 *.orig
+.DS_Store
+.vscode/settings.json
 .settings/
-target/
-logs/
-bin/
 .idea/*
 *.iml
 
-.gitignore
-.DS_Store
-.vscode/settings.json
-.vscode/settings.json
-resources/script/createSampleMappings_private.sh
-resources/script/attic/createSampleMappings_private.sh
+target/
+logs/
+bin/
 attic/*
-**/node_modules
+
+mqtt-mapping-ui/mqtt-mapping/node_modules/*
 mqtt-mapping-extension/.factorypath
-.gitignore
 mqtt-mapping-interface/.factorypath
+mqtt-mapping-service/.factorypath

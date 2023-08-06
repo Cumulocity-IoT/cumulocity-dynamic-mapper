@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.processor.extension.external.CustomEventOuter;
-import mqtt.mapping.processor.extension.external.ProcessorExtensionCustomEvent;
+import mqtt.mapping.processor.extension.external.ProcessorExtensionInboundCustomEvent;
 import mqtt.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.model.API;
@@ -37,7 +37,7 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 
 @Slf4j
-public class ProcessorExtensionTest {
+public class ProcessorExtensionInboundTest {
 
   @Test
   void testDeserializeCustomEvent() {
@@ -49,7 +49,7 @@ public class ProcessorExtensionTest {
     .setEventType("type_Dummy")
     .build();
 
-    ProcessorExtensionCustomEvent extension = new ProcessorExtensionCustomEvent();
+    ProcessorExtensionInboundCustomEvent extension = new ProcessorExtensionInboundCustomEvent();
     ProcessingContext context = new ProcessingContext();
     context.setPayload(proto.toByteArray());
     Mapping m1 = new Mapping();

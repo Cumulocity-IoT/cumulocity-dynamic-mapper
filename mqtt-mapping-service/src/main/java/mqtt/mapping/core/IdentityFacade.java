@@ -57,7 +57,7 @@ public class IdentityFacade {
         }
     }
 
-    public ExternalIDRepresentation getExternalId(ID externalID, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, ProcessingContext<?> context) {
         if (context == null || context.isSendPayload()) {
             return identityApi.getExternalId(externalID);
         } else {
@@ -65,12 +65,12 @@ public class IdentityFacade {
         }
     }
 
-    public ExternalIDRepresentation findExternalId(GId gid, String idType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType, ProcessingContext<?> context) {
         if (context == null || context.isSendPayload()) {
             ExternalIDRepresentation[] result = { null };
             ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
             for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
-                if (externalId.getType().equals(idType)) {
+                if (externalId.getType().equals(externalIdType)) {
                     result[0] = externalId;
                     break;
                 }
