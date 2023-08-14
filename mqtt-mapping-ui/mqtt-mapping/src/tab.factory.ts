@@ -100,7 +100,7 @@ export class MappingTabFactory implements TabFactory {
       }
 
       // this tab is used to develop the migration from json library:
-      //     "vanilla-jsoneditor": "^0.16.1"
+      //     "vanilla-jsoneditor": "^0.17.9"
       // to 
       //     "jsoneditor": "^9.9.2"
       // Do NOT DELETE
