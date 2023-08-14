@@ -42,11 +42,11 @@
   </button>
   <button
     class="btn btn-link"
-    title="{{ 'Activate mappings' | translate }}"
-    (click)="onActivateClicked()"
+    title="{{ 'Reload mappings' | translate }}"
+    (click)="onReloadClicked()"
   >
     <i c8yIcon="c8y-connector-out"></i>
-    {{ "Activate mappings" | translate }}
+    {{ "Reload mappings" | translate }}
   </button>
   <button
     *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"

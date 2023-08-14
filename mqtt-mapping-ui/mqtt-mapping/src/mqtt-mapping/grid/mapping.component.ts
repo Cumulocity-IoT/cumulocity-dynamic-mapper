@@ -547,11 +547,11 @@ export class MappingComponent implements OnInit {
     this.showConfigSubscription = false;
   }
 
-  async onActivateClicked() {
-    this.activateMappings();
+  async onReloadClicked() {
+    this.reloadMappings();
   }
 
-  private async activateMappings() {
+  private async reloadMappings() {
     const response2 = await this.configurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );

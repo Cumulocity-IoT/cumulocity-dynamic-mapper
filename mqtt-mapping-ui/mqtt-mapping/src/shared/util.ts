@@ -350,7 +350,7 @@ export function getSchema(
       return SCHEMA_OPERATION;
     }
   } else {
-    SCHEMA_PAYLOAD;
+    return SCHEMA_PAYLOAD;
   }
 }
 

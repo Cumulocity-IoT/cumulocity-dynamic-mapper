@@ -32,7 +32,7 @@ import {
 } from "@angular/core";
 import {
   JSONEditor,
-  renderValue,
+  stringifyJSONPath,
   Content,
   JSONPath,
   MenuItem,
@@ -40,10 +40,16 @@ import {
   createAjvValidator,
   parseJSONPath,
   createInsideSelection,
+  JSONEditorSelection,
+  isKeySelection,
+  KeySelection,
+  isJSONContent,
+  JSONContent,
+  isMultiSelection,
 } from "vanilla-jsoneditor";
 
 @Component({
-  selector: "mapping-json-editor2‚",
+  selector: "mapping-json-editor2",
   template: `<div class="jsoneditor2" [id]="id" #jsonEditorContainer></div>`,
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,15 +60,12 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @ViewChild("jsonEditorContainer", { static: true })
   jsonEditorContainer: ElementRef;
 
-  @Input() options
-  // @Input("editorProps")
-  // set editorProps(value: Object) {
-  //   this.editorProps = value
-  // }
-
+  @Input() options;
   @Input("data")
   set data(value: Object) {
-    this.content["json"] = value;
+    if (value) {
+      this.content["json"] = value;
+    }
 
     if (this.editor) {
       this.editor.destroy();
@@ -81,6 +84,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   public id = "angjsoneditor" + Math.floor(Math.random() * 1000000);
   content: Content = {
     text: undefined,
+    json: {
+      greeting: 'Hello World'
+    }
   };
   ngOnInit() {
     if (!this.jsonEditorContainer.nativeElement) {
@@ -106,11 +112,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.content = updatedContent;
           this.change.emit(updatedContent);
         },
-        onRenderValue: this.onRenderValue.bind(this),
-        // onSelect(selection: JSONEditorSelection | undefined){
-        // TODO extract path from selection
-        //   this.onPathChanged.emit(selection);
-        // },
+        onSelect: this.onSelect.bind(this),
         onRenderMenu(
           items: MenuItem[],
           context: { mode: "tree" | "text" | "table"; modal: boolean }
@@ -139,24 +141,18 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.editor?.destroy();
   }
 
-  private onRenderValue(props) {
-    // if (props.selection) {
-    //   const pathString = stringifyJSONPath(props.selection.anchorPath);
-    //   console.log("Selected node:", props.selection, pathString);
-    //   this.onPathChanged.emit(pathString);
-    // }
-    // props = {
-    //   ...props,
-    //   onSelect: (selection: JSONSelection) => {
-    //     console.log("Was selected:", selection)
-    //   }
-    // }
-    return renderValue(props);
-  }
+  private onSelect(selection: JSONEditorSelection | undefined) {
+    if (isKeySelection(selection)) {
+      let st = stringifyJSONPath((selection as any).path);
+      this.onPathChanged.emit(st);
+      console.log("Selected path:", st);
+    } else if (isMultiSelection(selection)){
+      let st = stringifyJSONPath((selection as any).anchorPath);
+      this.onPathChanged.emit(st);
+      console.log("Selected anchorPath:", st);
+    }
 
-  public updateSelection(path: JSONPath, orgPath: string) {
-    const selection = createKeySelection(path, false);
-    this.editor.updateSelection(selection);
+    console.log("Validation:",this.editor.validate(), selection);
   }
 
   public setSchema(schema: any) {
@@ -164,20 +160,30 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.editor.updateProps({ validator: validator });
   }
 
-  // public onSelect(selection: Selection) {
-  //   console.log("Was selected:", selection);
-  // }
-
   public setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     console.log("Set selection to path:", pathString, path);
-    //const selection = createKeySelection(path, false);
-    const selection = createInsideSelection(path);
+    const selection = createKeySelection(path, false);
     try {
-      this.editor.updateSelection(selection);
+      this.editor.select(selection);
     } catch (error) {
       console.warn("Set selection to path not possible:", pathString, error);
     }
     this.onPathChanged.emit(pathString);
+  }
+
+  public get(): JSON {
+    const content: Content = this.editor.get();
+    if (isJSONContent(content)) {
+      const c: any = (this.editor.get() as JSONContent).json;
+      return c;
+    }
+  }
+
+  public set(json: any) {
+    const value: JSONContent = {
+      json: json,
+    };
+    this.editor.set(value);
   }
 }
