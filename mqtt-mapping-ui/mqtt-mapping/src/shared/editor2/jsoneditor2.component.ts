@@ -63,7 +63,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @Input() options;
   @Input("data")
   set data(value: Object) {
-    this.content["json"] = value;
+    if (value) {
+      this.content["json"] = value;
+    }
 
     if (this.editor) {
       this.editor.destroy();
@@ -82,6 +84,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   public id = "angjsoneditor" + Math.floor(Math.random() * 1000000);
   content: Content = {
     text: undefined,
+    json: {
+      greeting: 'Hello World'
+    }
   };
   ngOnInit() {
     if (!this.jsonEditorContainer.nativeElement) {
