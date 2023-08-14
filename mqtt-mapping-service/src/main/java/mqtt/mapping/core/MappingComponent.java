@@ -87,7 +87,7 @@ public class MappingComponent {
 
     @Getter
     @Setter
-    private Map<String, Mapping> mappingCacheOutbound = new HashMap<String, Mapping>();
+    private Map<String, Mapping> mappingCacheOutbound = new HashMap<String, List <Mapping>>();
 
     @Getter
     @Setter
