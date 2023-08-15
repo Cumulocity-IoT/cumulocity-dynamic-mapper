@@ -46,6 +46,7 @@ import {
   isJSONContent,
   JSONContent,
   isMultiSelection,
+  createMultiSelection,
 } from "vanilla-jsoneditor";
 
 @Component({
@@ -117,7 +118,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           items: MenuItem[],
           context: { mode: "tree" | "text" | "table"; modal: boolean }
         ): MenuItem[] | undefined {
-          console.log("MenuItems:", items);
+          //console.log("MenuItems:", items);
           // remove buttons for table-mode, transform, sort
           items.splice(
             items.findIndex((i) => i["text"] === "table"),
@@ -163,7 +164,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   public setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     console.log("Set selection to path:", pathString, path);
-    const selection = createKeySelection(path, false);
+    // const selection = createKeySelection(path, false);
+    const selection = createMultiSelection(path, path);
+    
     try {
       this.editor.select(selection);
     } catch (error) {
