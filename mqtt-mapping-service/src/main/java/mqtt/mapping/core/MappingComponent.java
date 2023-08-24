@@ -87,7 +87,7 @@ public class MappingComponent {
 
     @Getter
     @Setter
-    private Map<String, Mapping> mappingCacheOutbound = new HashMap<String, List <Mapping>>();
+    private Map<String, List<Mapping>> mappingCacheOutbound = new HashMap<String, List <Mapping>>();
 
     @Getter
     @Setter
@@ -335,8 +335,10 @@ public class MappingComponent {
         log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
         setActiveOutboundMappings(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
+        // setMappingCacheOutbound(updatedMappings.stream()
+        //         .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity())));
         setMappingCacheOutbound(updatedMappings.stream()
-                .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity())));
+                .collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
     }
 
     public List<Mapping> resolveOutboundMappings(JsonNode message, API api) throws ResolveException {

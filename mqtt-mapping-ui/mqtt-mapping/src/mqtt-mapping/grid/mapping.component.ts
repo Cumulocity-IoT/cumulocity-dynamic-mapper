@@ -472,9 +472,11 @@ export class MappingComponent implements OnInit {
 
     if (
       (mapping.direction == Direction.INBOUND &&
-        isTemplateTopicUnique(mapping, this.mappings)) ||
-      (mapping.direction == Direction.OUTBOUND &&
-        isFilterOutboundUnique(mapping, this.mappings))
+        isTemplateTopicUnique(mapping, this.mappings)) 
+        // test if we can attach multiple outbound mappings to the same filterOutbound
+        || (mapping.direction == Direction.OUTBOUND 
+        //  && isFilterOutboundUnique(mapping, this.mappings)
+        )
     ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
