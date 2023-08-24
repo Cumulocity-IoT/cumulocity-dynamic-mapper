@@ -170,7 +170,8 @@ public class MappingRepresentation implements Serializable {
       result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
       result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.templateTopic, mapping.templateTopicSample));
     } else {
-      result.addAll(isFilterOutboundUnique(mappings,mapping));
+      // test if we can attach multiple outbound mappings to the same filterOutbound
+      // result.addAll(isFilterOutboundUnique(mappings,mapping));
       result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.templateTopicSample));
     }
 

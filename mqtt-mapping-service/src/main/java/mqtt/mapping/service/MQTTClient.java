@@ -35,6 +35,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -532,7 +533,14 @@ public class MQTTClient {
             }
 
             mappingComponent.getActiveOutboundMappings().remove(mapping);
-            mappingComponent.getMappingCacheOutbound().remove(mapping.filterOutbound);
+            List<Mapping> mappingCacheOutbound = mappingComponent.getMappingCacheOutbound().get(mapping.filterOutbound);
+            Iterator<Mapping> it = mappingCacheOutbound.iterator();
+            while (it.hasNext()) {
+                Mapping m = it.next();
+                if (m.id.equals(mapping.id)){
+                    it.remove();
+                }
+            }
 
         } else {
             // find mapping for given id to work with the subscriptionTopic of the mapping
