@@ -105,13 +105,13 @@ export class MappingTabFactory implements TabFactory {
       //     "jsoneditor": "^9.9.2"
       // Do NOT DELETE
 
-      tabs.push({
-        path: "sag-ps-pkg-mqtt-mapping/editor2-test",
-        priority: 870,
-        label: "Editor2",
-        icon: "file",
-        orientation: "horizontal",
-      } as Tab);
+      // tabs.push({
+      //   path: "sag-ps-pkg-mqtt-mapping/editor2-test",
+      //   priority: 870,
+      //   label: "Editor2",
+      //   icon: "file",
+      //   orientation: "horizontal",
+      // } as Tab);
       
     }
 

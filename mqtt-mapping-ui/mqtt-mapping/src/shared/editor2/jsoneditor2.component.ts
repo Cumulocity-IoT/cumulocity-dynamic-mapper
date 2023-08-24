@@ -34,7 +34,6 @@ import {
   JSONEditor,
   stringifyJSONPath,
   Content,
-  JSONPath,
   MenuItem,
   createKeySelection,
   createAjvValidator,
