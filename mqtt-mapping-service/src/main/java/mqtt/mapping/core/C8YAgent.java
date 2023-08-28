@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
@@ -192,7 +191,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
-    public String tenant = null;
+    @Getter
+    @Setter
+    private String tenant = null;
 
     private MicroserviceCredentials credentials;
 
@@ -216,6 +217,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
+        mappingComponent.setTenant(tenant);
         credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
@@ -404,73 +406,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             eventRepresentations[0].setType(type);
             this.eventApi.createAsync(eventRepresentations[0]);
         });
-    }
-
-    public ArrayList<Mapping> getMappings() {
-        ArrayList<Mapping> result = new ArrayList<Mapping>();
-        subscriptionsService.runForTenant(tenant, () -> {
-            result.addAll(mappingComponent.getMappings());
-            log.debug("Loaded mappings (inbound & outbound): {}", result.size());
-        });
-        return result;
-    }
-
-    public void saveMappings(List<Mapping> mappings) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            mappingComponent.saveMappings(mappings);
-        });
-    }
-
-    public Mapping createMapping(Mapping mapping) {
-        Mapping[] mr = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingComponent.createMapping(mapping);
-        });
-        mqttClient.upsertInMappingCache(mr[0]);
-        return mr[0];
-    }
-
-    public Mapping getMapping(String ident) {
-        Mapping[] mr = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
-            mr[0] = mappingComponent.getMapping(ident);
-        });
-        return mr[0];
-    }
-
-    public String deleteMapping(String id) throws Exception {
-        Mapping[] mr = { null };
-        Exception[] exceptions = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
-            try {
-                mr[0] = mappingComponent.deleteMapping(id);
-            } catch (Exception e) {
-                exceptions[0] = e;
-            }
-        });
-        if (exceptions[0] != null) {
-            throw exceptions[0];
-        }
-        mqttClient.deleteFromMappingCache(mr[0]);
-        return mr[0].id;
-    }
-
-    public Mapping updateMapping(Mapping mapping, String id, boolean allowUpdateWhenActive) throws Exception {
-        Mapping[] mr = { null };
-        Exception[] exceptions = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
-            try {
-                mr[0] = mappingComponent.updateMapping(mapping, allowUpdateWhenActive);
-                log.info("Update Mapping {}", mr[0]);
-            } catch (Exception e) {
-                exceptions[0] = e;
-            }
-        });
-        if (exceptions[0] != (null)) {
-            throw exceptions[0];
-        }
-        mqttClient.upsertInMappingCache(mr[0]);
-        return mr[0];
     }
 
     public MQTTClient.Certificate loadCertificateByName(String fingerprint) {
@@ -722,25 +657,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return results[0];
     }
 
-    public void sendStatusMapping() {
-        subscriptionsService.runForTenant(tenant, () -> {
-            mappingComponent.sendStatusMapping();
-        });
-    }
-
-    public void sendStatusService(ServiceStatus serviceStatus) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            mappingComponent.sendStatusService(serviceStatus);
-        });
-    }
-
     public void cleanDirtyMappings() throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
         for (Mapping mapping : mappingComponent.getMappingDirty()) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
-            updateMapping(mapping, mapping.id, true);
+            mappingComponent.updateMapping(mapping, true);
         }
         // reset dirtySet
         mappingComponent.resetMappingDirty();
@@ -755,13 +678,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         Mapping mapping = mappingComponent.getMapping(id);
         mapping.setActive(activeBoolean);
         // step 2. retrieve collected snoopedTemplates
-        mappingComponent.getActiveInboundMappings().values().forEach(m -> {
+        mappingComponent.getActiveMappingInbound().values().forEach(m -> {
             if (m.id == id) {
                 mapping.setSnoopedTemplates(m.getSnoopedTemplates());
             }
         });
         // step 3. update mapping in inventory
-        updateMapping(mapping, id, true);
+        mappingComponent.updateMapping(mapping, true);
         // step 4 delete mapping from update cache
         mappingComponent.removeMappingFormDirtyMappings(mapping);
     }
