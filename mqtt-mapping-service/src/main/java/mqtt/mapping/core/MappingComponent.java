@@ -359,10 +359,6 @@ public class MappingComponent {
         statusMapping.remove(id);
     }
 
-    public void initializeCache() {
-        activeMappingInbound = new HashMap<String, Mapping>();
-        activeMappingOutbound = new HashMap<String, Mapping>();
-    }
 
     public void addToCacheMappingInbound(Mapping mapping) {
         try {
@@ -470,6 +466,7 @@ public class MappingComponent {
     }
 
     public void rebuildInboundMappingCache(List<Mapping> updatedMappings) {
+        log.info("Loaded mappings inbound: {} to cache", updatedMappings.size());
         setActiveMappingInbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
@@ -484,6 +481,48 @@ public class MappingComponent {
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
         setCacheMappingInbound(rebuildMappingTree(updatedMappings));
+    }
+
+
+
+    public void setActivationMapping(Map<String, String> parameter) throws Exception {
+        // step 1. update activation for mapping
+        String id = parameter.get("id");
+        String active = parameter.get("active");
+        Boolean activeBoolean = Boolean.parseBoolean(active);
+        log.info("Setting active: {} got mapping: {}, {}", id, active, activeBoolean);
+        Mapping mapping = getMapping(id);
+        mapping.setActive(activeBoolean);
+        // step 2. retrieve collected snoopedTemplates
+        getActiveMappingInbound().values().forEach(m -> {
+            if (m.id == id) {
+                mapping.setSnoopedTemplates(m.getSnoopedTemplates());
+            }
+        });
+        // step 3. update mapping in inventory
+        updateMapping(mapping, true);
+        // step 4. delete mapping from update cache
+        removeMappingFormDirtyMappings(mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildOutboundMappingCache();
+        } else {
+            deleteFromCacheMappingInbound(mapping);
+            addToCacheMappingInbound(mapping);
+            getActiveMappingInbound().put(mapping.id, mapping);
+        }
+    }
+
+    public void cleanDirtyMappings() throws Exception {
+        // test if for this tenant dirty mappings exist
+        log.debug("Testing for dirty maps");
+        for (Mapping mapping : getMappingDirty()) {
+            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
+            // no reload required
+            updateMapping(mapping, true);
+        }
+        // reset dirtySet
+        resetMappingDirty();
     }
 
 }

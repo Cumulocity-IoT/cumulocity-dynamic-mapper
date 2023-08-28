@@ -332,10 +332,11 @@ public class MQTTClient {
                                 "Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
                                 e.getMessage(), e);
                     }
-                    mappingComponent.initializeCache();
+                    
                     activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
-                    rebuildActiveSubscriptionMappingInbound();
                     mappingComponent.rebuildOutboundMappingCache();
+                    List<Mapping> updatedMappings = rebuildActiveSubscriptionMappingInbound();
+                    mappingComponent.rebuildInboundMappingCache(updatedMappings);
                 }
                 successful = true;
                 log.info("Subscribing to topics was successful: {}", successful);
@@ -436,7 +437,7 @@ public class MQTTClient {
                 log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
                         statusInitializeTask, isConnected());
             }
-            c8yAgent.cleanDirtyMappings();
+            mappingComponent.cleanDirtyMappings();
             mappingComponent.sendStatusMapping();
             mappingComponent.sendStatusService(getServiceStatus());
         } catch (Exception ex) {
@@ -560,13 +561,11 @@ public class MQTTClient {
 
     }
 
-    public void rebuildActiveSubscriptionMappingInbound() {
+    public List<Mapping> rebuildActiveSubscriptionMappingInbound() {
         // only add inbound mappings to the cache
         List<Mapping> updatedMappings = mappingComponent.getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
-        mappingComponent.rebuildInboundMappingCache(updatedMappings);
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
@@ -604,6 +603,7 @@ public class MQTTClient {
             }
         });
         activeSubscriptionMappingInbound = updatedSubscriptionCache;
+        return updatedMappings;
     }
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
