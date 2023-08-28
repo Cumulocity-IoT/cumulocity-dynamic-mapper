@@ -181,9 +181,9 @@ public class MQTTMappingRestController {
         log.info("Post operation: {}", operation.toString());
         try {
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
-                mqttClient.rebuildActiveSubscriptionMappingInbound();
-                mappingComponent.rebuildInboundMappingCache();
                 mappingComponent.rebuildOutboundMappingCache();
+                List<Mapping> updatedMappings = mqttClient.rebuildActiveSubscriptionMappingInbound();
+                mappingComponent.rebuildInboundMappingCache(updatedMappings);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 mqttClient.connectToBroker();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
@@ -195,7 +195,7 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 c8yAgent.reloadExtensions();
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
-                c8yAgent.setActivationMapping(operation.getParameter());
+                mappingComponent.setActivationMapping(operation.getParameter());
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
                 c8yAgent.notificationSubscriberReconnect();
             }

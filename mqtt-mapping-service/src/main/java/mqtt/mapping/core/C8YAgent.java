@@ -657,37 +657,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return results[0];
     }
 
-    public void cleanDirtyMappings() throws Exception {
-        // test if for this tenant dirty mappings exist
-        log.debug("Testing for dirty maps");
-        for (Mapping mapping : mappingComponent.getMappingDirty()) {
-            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
-            // no reload required
-            mappingComponent.updateMapping(mapping, true);
-        }
-        // reset dirtySet
-        mappingComponent.resetMappingDirty();
-    }
-
-    public void setActivationMapping(Map<String, String> parameter) throws Exception {
-        // step 1. update activation for mapping
-        String id = parameter.get("id");
-        String active = parameter.get("active");
-        Boolean activeBoolean = Boolean.parseBoolean(active);
-        log.info("Setting active: {} got mapping: {}, {}", id, active, activeBoolean);
-        Mapping mapping = mappingComponent.getMapping(id);
-        mapping.setActive(activeBoolean);
-        // step 2. retrieve collected snoopedTemplates
-        mappingComponent.getActiveMappingInbound().values().forEach(m -> {
-            if (m.id == id) {
-                mapping.setSnoopedTemplates(m.getSnoopedTemplates());
-            }
-        });
-        // step 3. update mapping in inventory
-        mappingComponent.updateMapping(mapping, true);
-        // step 4 delete mapping from update cache
-        mappingComponent.removeMappingFormDirtyMappings(mapping);
-    }
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
         ManagedObjectRepresentation[] devices = { null };
