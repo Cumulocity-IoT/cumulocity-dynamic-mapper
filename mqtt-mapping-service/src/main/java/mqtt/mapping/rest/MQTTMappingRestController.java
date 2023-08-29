@@ -25,9 +25,12 @@ import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.Operation;
 import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.*;
@@ -58,7 +61,17 @@ public class MQTTMappingRestController {
     C8YAgent c8yAgent;
 
     @Autowired
-	private RoleService roleService;
+    MappingComponent mappingComponent;
+
+
+    @Autowired
+    ConnectionConfigurationComponent connectionConfigurationComponent;
+
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Autowired
+    private RoleService roleService;
 
     @Autowired
     private MappingComponent mappingStatusComponent;
@@ -93,7 +106,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            ConfigurationConnection configuration = c8yAgent
+            ConfigurationConnection configuration = connectionConfigurationComponent
                     .loadConnectionConfiguration();
             if (configuration == null) {
                 // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not
@@ -138,7 +151,7 @@ public class MQTTMappingRestController {
         log.info("Get connection details");
 
         try {
-            final ServiceConfiguration configuration = c8yAgent.loadServiceConfiguration();
+            final ServiceConfiguration configuration = serviceConfigurationComponent.loadServiceConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }
@@ -176,7 +189,28 @@ public class MQTTMappingRestController {
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
         log.info("Post operation: {}", operation.toString());
         try {
-            mqttClient.runOperation(operation);
+            if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
+                mappingComponent.rebuildOutboundMappingCache();
+                // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+                // sync, the ActiveSubscriptionMappingInbound is build on the
+                // reviously used updatedMappings
+                List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
+                mqttClient.updateActiveSubscriptionMappingInbound(updatedMappings, false);
+            } else if (operation.getOperation().equals(Operation.CONNECT)) {
+                mqttClient.connectToBroker();
+            } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
+                mqttClient.disconnectFromBroker();
+            } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
+                mappingComponent.sendStatusMapping();
+            } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
+                mappingComponent.resetMappingStatus();
+            } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
+                c8yAgent.reloadExtensions();
+            } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
+                mappingComponent.setActivationMapping(operation.getParameter());
+            } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
+                c8yAgent.notificationSubscriberReconnect();
+            }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -215,14 +249,14 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings() {
         log.info("Get mappings");
-        List<Mapping> result = c8yAgent.getMappings();
+        List<Mapping> result = mappingComponent.getMappings();
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         log.info("Get mapping: {}", id);
-        Mapping result = c8yAgent.getMapping(id);
+        Mapping result = mappingComponent.getMapping(id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
         }
@@ -232,18 +266,25 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         log.info("Delete mapping: {}", id);
-        String result = null;
+        Mapping mapping = null;
 
         try {
-            result = c8yAgent.deleteMapping(id);
+            mapping = mappingComponent.deleteMapping(id);
+            if (mapping == null)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Mapping with id " + id + " could not be found.");
+
+            Mapping deletedMapping = mappingComponent.deleteFromMappingCache(mapping);
+
+            if (!Direction.OUTBOUND.equals(mapping.direction)) {
+                mqttClient.deleteActiveSubscriptionMappingInbound(mapping);
+            }
         } catch (Exception ex) {
             log.error("Deleting active mappings is not allowed {}", ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
-        if (result == null)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Mapping with id " + id + " could not be found.");
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+
+        return ResponseEntity.status(HttpStatus.OK).body(mapping.id);
 
     }
 
@@ -251,7 +292,15 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping: {}", mapping);
-            Mapping result = c8yAgent.createMapping(mapping);
+            Mapping result = mappingComponent.createMapping(mapping);
+            if (Direction.OUTBOUND.equals(mapping.direction)) {
+                mappingComponent.rebuildOutboundMappingCache();
+            } else {
+                mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
+                mappingComponent.deleteFromCacheMappingInbound(mapping);
+                mappingComponent.addToCacheMappingInbound(mapping);
+                mappingComponent.getActiveMappingInbound().put(mapping.id, mapping);
+            }
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
@@ -267,7 +316,15 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            Mapping result = c8yAgent.updateMapping(mapping, id, false);
+            Mapping result = mappingComponent.updateMapping(mapping, false);
+            if (Direction.OUTBOUND.equals(mapping.direction)) {
+                mappingComponent.rebuildOutboundMappingCache();
+            } else {
+                mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
+                mappingComponent.deleteFromCacheMappingInbound(mapping);
+                mappingComponent.addToCacheMappingInbound(mapping);
+                mappingComponent.getActiveMappingInbound().put(mapping.id, mapping);
+            }
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
             if (ex instanceof IllegalArgumentException) {

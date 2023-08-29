@@ -21,6 +21,7 @@
 
 package mqtt.mapping.configuration;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
 import com.cumulocity.sdk.client.SDKException;
@@ -28,6 +29,9 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,9 +47,17 @@ public class ConnectionConfigurationComponent {
 
     private final TenantOptionApi tenantOptionApi;
 
-    private ObjectMapper objectMapper;
+    @Getter
+    @Setter
+    private String tenant = null;
+
     @Autowired
-    public void setObjectMapper (ObjectMapper objectMapper){
+    private MicroserviceSubscriptionsService subscriptionsService;
+
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -54,7 +66,8 @@ public class ConnectionConfigurationComponent {
         this.tenantOptionApi = tenantOptionApi;
     }
 
-    public void saveConnectionConfiguration(final ConfigurationConnection configuration) throws JsonProcessingException {
+    public void saveConnectionConfiguration(final ConfigurationConnection configuration)
+            throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
@@ -72,20 +85,25 @@ public class ConnectionConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
-        try {
-            final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConfigurationConnection.class);
-            log.debug("Returning connection configuration found: {}:", configuration.mqttHost );
-            return configuration;
-        } catch (SDKException exception) {
-            log.error("No configuration found, returning empty element!");
-            //exception.printStackTrace();
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        return null;
+        ConfigurationConnection[] results = { null };
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
+                final ConfigurationConnection configuration = new ObjectMapper().readValue(
+                        optionRepresentation.getValue(),
+                        ConfigurationConnection.class);
+                log.debug("Returning connection configuration found: {}:", configuration.mqttHost);
+                results[0] = configuration;
+            } catch (SDKException exception) {
+                log.warn("No configuration found, returning empty element!");
+                results[0] = new ConfigurationConnection();
+            } catch (JsonMappingException e) {
+                e.printStackTrace();
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        });
+        return results[0];
     }
 
     public void deleteAllConfiguration() {
@@ -103,9 +121,10 @@ public class ConnectionConfigurationComponent {
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ConfigurationConnection.class);
+            final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
+                    ConfigurationConnection.class);
             configuration.enabled = enabled;
-            log.debug("Setting connection: {}:", configuration.enabled );
+            log.debug("Setting connection: {}:", configuration.enabled);
             final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
@@ -114,7 +133,7 @@ public class ConnectionConfigurationComponent {
             return configuration;
         } catch (SDKException exception) {
             log.warn("No configuration found, returning empty element!");
-            //exception.printStackTrace();
+            // exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();
         } catch (JsonProcessingException e) {
