@@ -25,7 +25,9 @@ import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.Operation;
@@ -60,6 +62,13 @@ public class MQTTMappingRestController {
 
     @Autowired
     MappingComponent mappingComponent;
+
+
+    @Autowired
+    ConnectionConfigurationComponent connectionConfigurationComponent;
+
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
     @Autowired
     private RoleService roleService;
@@ -97,7 +106,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            ConfigurationConnection configuration = c8yAgent
+            ConfigurationConnection configuration = connectionConfigurationComponent
                     .loadConnectionConfiguration();
             if (configuration == null) {
                 // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not
@@ -142,7 +151,7 @@ public class MQTTMappingRestController {
         log.info("Get connection details");
 
         try {
-            final ServiceConfiguration configuration = c8yAgent.loadServiceConfiguration();
+            final ServiceConfiguration configuration = serviceConfigurationComponent.loadServiceConfiguration();
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }

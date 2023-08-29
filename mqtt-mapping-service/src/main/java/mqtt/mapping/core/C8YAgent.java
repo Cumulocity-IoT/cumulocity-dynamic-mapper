@@ -218,6 +218,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         tenant = event.getCredentials().getTenant();
         mappingComponent.setTenant(tenant);
+        serviceConfigurationComponent.setTenant(tenant);
+        connectionConfigurationComponent.setTenant(tenant);
+
         credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
@@ -638,25 +641,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions();
     }
-
-    public ServiceConfiguration loadServiceConfiguration() {
-        ServiceConfiguration[] results = { new ServiceConfiguration() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            results[0] = serviceConfigurationComponent.loadServiceConfiguration();
-            log.info("Found service configuration: {}", results[0]);
-        });
-        return results[0];
-    }
-
-    public ConfigurationConnection loadConnectionConfiguration() {
-        ConfigurationConnection[] results = { new ConfigurationConnection() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            results[0] = connectionConfigurationComponent.loadConnectionConfiguration();
-            log.info("Found connection configuration: {}", results[0]);
-        });
-        return results[0];
-    }
-
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
         ManagedObjectRepresentation[] devices = { null };
