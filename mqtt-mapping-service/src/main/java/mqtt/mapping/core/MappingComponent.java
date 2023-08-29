@@ -24,10 +24,8 @@ package mqtt.mapping.core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -359,7 +357,6 @@ public class MappingComponent {
         statusMapping.remove(id);
     }
 
-
     public void addToCacheMappingInbound(Mapping mapping) {
         try {
             ((InnerNode) getCacheMappingInbound()).addMapping(mapping);
@@ -377,12 +374,10 @@ public class MappingComponent {
     }
 
     public void rebuildOutboundMappingCache() {
+        // only add outbound mappings to the cache
         List<Mapping> updatedMappings = getMappings().stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        // TODO review how to organize the cache efficiently to identify a mapping
-        // depending on the payload
-        // only add outbound mappings to the cache
         log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
         setActiveMappingOutbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -420,36 +415,14 @@ public class MappingComponent {
 
     public Mapping deleteFromMappingCache(Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            // TODO update activeOutboundMapping
-            Optional<Mapping> activeOutboundMapping = getActiveMappingOutbound().values().stream()
-                    .filter(m -> m.id.equals(mapping.id))
-                    .findFirst();
-            if (!activeOutboundMapping.isPresent()) {
-                return null;
-            }
-
-            getActiveMappingOutbound().remove(mapping.id);
-            List<Mapping> mappingCacheOutbound = getCacheMappingOutbound().get(mapping.filterOutbound);
-            Iterator<Mapping> it = mappingCacheOutbound.iterator();
-            while (it.hasNext()) {
-                Mapping m = it.next();
-                if (m.id.equals(mapping.id)) {
-                    it.remove();
-                    return m;
-                }
-            }
-            return null;
-
+            Mapping deletedMapping = getActiveMappingOutbound().remove(mapping.id);
+            List<Mapping> cmo = getCacheMappingOutbound().get(mapping.filterOutbound);
+            cmo.removeIf( m -> mapping.id.equals(m.id));
+            return deletedMapping;
         } else {
-            // find mapping for given id to work with the subscriptionTopic of the mapping
-            Optional<Mapping> activeInboundMapping = getActiveMappingInbound().values().stream()
-                    .filter(m -> m.id.equals(mapping.id)).findFirst();
-            if (!activeInboundMapping.isPresent()) {
-                return null;
-            }
-            Mapping existingMapping = activeInboundMapping.get();
-            deleteFromCacheMappingInbound(existingMapping);
-            return existingMapping;
+            Mapping deletedMapping = getActiveMappingInbound().remove(mapping.id);
+            deleteFromCacheMappingInbound(deletedMapping);
+            return deletedMapping;
         }
     }
 
@@ -465,7 +438,7 @@ public class MappingComponent {
         return in;
     }
 
-    public void rebuildInboundMappingCache(List<Mapping> updatedMappings) {
+    public void rebuildMappingInboundCache(List<Mapping> updatedMappings) {
         log.info("Loaded mappings inbound: {} to cache", updatedMappings.size());
         setActiveMappingInbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -473,7 +446,7 @@ public class MappingComponent {
         setCacheMappingInbound(rebuildMappingTree(updatedMappings));
     }
 
-    public void rebuildInboundMappingCache() {
+    public List<Mapping> rebuildMappingInboundCache() {
         List<Mapping> updatedMappings = getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
@@ -481,9 +454,8 @@ public class MappingComponent {
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
         setCacheMappingInbound(rebuildMappingTree(updatedMappings));
+        return updatedMappings;
     }
-
-
 
     public void setActivationMapping(Map<String, String> parameter) throws Exception {
         // step 1. update activation for mapping

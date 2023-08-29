@@ -182,9 +182,11 @@ public class MQTTMappingRestController {
         try {
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
                 mappingComponent.rebuildOutboundMappingCache();
-                // in order to keep both caches in sync, the InboundMappingCache is build on the reviously used updatedMappings
-                List<Mapping> updatedMappings = mqttClient.rebuildActiveSubscriptionMappingInbound(false);
-                mappingComponent.rebuildInboundMappingCache(updatedMappings);
+                // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+                // sync, the ActiveSubscriptionMappingInbound is build on the
+                // reviously used updatedMappings
+                List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
+                mqttClient.updateActiveSubscriptionMappingInbound(updatedMappings, false);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 mqttClient.connectToBroker();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
@@ -260,8 +262,8 @@ public class MQTTMappingRestController {
         try {
             mapping = mappingComponent.deleteMapping(id);
             if (mapping == null)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Mapping with id " + id + " could not be found.");
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Mapping with id " + id + " could not be found.");
 
             Mapping deletedMapping = mappingComponent.deleteFromMappingCache(mapping);
 
