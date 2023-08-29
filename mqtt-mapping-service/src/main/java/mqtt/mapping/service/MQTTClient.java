@@ -82,7 +82,6 @@ import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.ResolveException;
@@ -211,8 +210,8 @@ public class MQTTClient {
     }
 
     public void reloadConfiguration() {
-        serviceConfiguration = c8yAgent.loadServiceConfiguration();
-        connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+        serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+        connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
     }
 
     public void submitConnect() {
