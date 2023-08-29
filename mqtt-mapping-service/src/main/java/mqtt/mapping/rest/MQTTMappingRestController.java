@@ -182,7 +182,8 @@ public class MQTTMappingRestController {
         try {
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
                 mappingComponent.rebuildOutboundMappingCache();
-                List<Mapping> updatedMappings = mqttClient.rebuildActiveSubscriptionMappingInbound();
+                // in order to keep both caches in sync, the InboundMappingCache is build on the reviously used updatedMappings
+                List<Mapping> updatedMappings = mqttClient.rebuildActiveSubscriptionMappingInbound(false);
                 mappingComponent.rebuildInboundMappingCache(updatedMappings);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 mqttClient.connectToBroker();
