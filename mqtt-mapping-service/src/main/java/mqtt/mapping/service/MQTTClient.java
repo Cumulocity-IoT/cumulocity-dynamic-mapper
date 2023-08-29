@@ -35,14 +35,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
@@ -83,17 +81,12 @@ import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.Operation;
-import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.Direction;
-import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
-import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
@@ -172,7 +165,8 @@ public class MQTTClient {
 
     @Getter
     @Setter
-    private Map<String, MutableInt> activeSubscriptionCache = new HashMap<String, MutableInt>();
+    // keeps track of number of active mappings per subscriptionTopic
+    private Map<String, MutableInt> activeSubscriptionMappingInbound;
 
     private Instant start = Instant.now();
 
@@ -216,8 +210,8 @@ public class MQTTClient {
     }
 
     public void reloadConfiguration() {
-        serviceConfiguration = c8yAgent.loadServiceConfiguration();
-        connectionConfiguration = c8yAgent.loadConnectionConfiguration();
+        serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+        connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
     }
 
     public void submitConnect() {
@@ -331,10 +325,13 @@ public class MQTTClient {
                                 "Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
                                 e.getMessage(), e);
                     }
-                    mappingComponent.initializeCache();
-                    activeSubscriptionCache = new HashMap<String, MutableInt>();
-                    rebuildInboundMappingCache();
-                    rebuildOutboundMappingCache();
+
+                    mappingComponent.rebuildOutboundMappingCache();
+                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+                    // sync, the ActiveSubscriptionMappingInbound is build on the
+                    // reviously used updatedMappings
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
+                    updateActiveSubscriptionMappingInbound(updatedMappings, true);
                 }
                 successful = true;
                 log.info("Subscribing to topics was successful: {}", successful);
@@ -370,7 +367,7 @@ public class MQTTClient {
         try {
             if (isConnected()) {
                 log.debug("Disconnected from MQTT broker I: {}", mqttClient.getServerURI());
-                getActiveSubscriptionCache().entrySet().forEach(entry -> {
+                getActiveSubscriptionMappingInbound().entrySet().forEach(entry -> {
                     // only unsubscribe if still active subscriptions exist
                     String topic = entry.getKey();
                     MutableInt activeSubs = entry.getValue();
@@ -395,25 +392,13 @@ public class MQTTClient {
     public void disconnectFromBroker() {
         connectionConfiguration = connectionConfigurationComponent.enableConnection(false);
         disconnect();
-        c8yAgent.sendStatusService(getServiceStatus());
+        mappingComponent.sendStatusService(getServiceStatus());
     }
 
     public void connectToBroker() {
         connectionConfiguration = connectionConfigurationComponent.enableConnection(true);
         submitConnect();
-        c8yAgent.sendStatusService(getServiceStatus());
-    }
-
-    private TreeNode rebuildMappingTree(List<Mapping> mappings) {
-        InnerNode in = InnerNode.createRootNode();
-        mappings.forEach(m -> {
-            try {
-                in.addMapping(m);
-            } catch (ResolveException e) {
-                log.error("Could not add mapping {}, ignoring mapping", m);
-            }
-        });
-        return in;
+        mappingComponent.sendStatusService(getServiceStatus());
     }
 
     public void subscribe(String topic, Integer qos) throws MqttException {
@@ -447,9 +432,9 @@ public class MQTTClient {
                 log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
                         statusInitializeTask, isConnected());
             }
-            c8yAgent.cleanDirtyMappings();
-            c8yAgent.sendStatusMapping();
-            c8yAgent.sendStatusService(getServiceStatus());
+            mappingComponent.cleanDirtyMappings();
+            mappingComponent.sendStatusMapping();
+            mappingComponent.sendStatusService(getServiceStatus());
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
@@ -470,28 +455,7 @@ public class MQTTClient {
     }
 
     public TreeNode getActiveMappingTree() {
-        return mappingComponent.getMappingTree();
-    }
-
-    public void runOperation(ServiceOperation operation) throws Exception {
-        if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
-            rebuildInboundMappingCache();
-            rebuildOutboundMappingCache();
-        } else if (operation.getOperation().equals(Operation.CONNECT)) {
-            connectToBroker();
-        } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
-            disconnectFromBroker();
-        } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
-            c8yAgent.sendStatusMapping();
-        } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
-            mappingComponent.resetMappingStatus();
-        } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
-            c8yAgent.reloadExtensions();
-        } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
-            c8yAgent.setActivationMapping(operation.getParameter());
-        } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-            c8yAgent.notificationSubscriberReconnect();
-        }
+        return mappingComponent.getCacheMappingInbound();
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
@@ -522,142 +486,80 @@ public class MQTTClient {
         submitConnect();
     }
 
-    public void deleteFromMappingCache(Mapping mapping) {
-        if (Direction.OUTBOUND.equals(mapping.direction)) {
-            // TODO update activeOutboundMapping
-            Optional<Mapping> activeOutboundMapping = mappingComponent.getActiveOutboundMappings().values().stream()
-                    .filter(m -> m.id.equals(mapping.id))
-                    .findFirst();
-            if (!activeOutboundMapping.isPresent()) {
-                return;
-            }
-
-            mappingComponent.getActiveOutboundMappings().remove(mapping);
-            List<Mapping> mappingCacheOutbound = mappingComponent.getMappingCacheOutbound().get(mapping.filterOutbound);
-            Iterator<Mapping> it = mappingCacheOutbound.iterator();
-            while (it.hasNext()) {
-                Mapping m = it.next();
-                if (m.id.equals(mapping.id)){
-                    it.remove();
+    public void deleteActiveSubscriptionMappingInbound(Mapping mapping) {
+        if (getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
+            MutableInt activeSubs = getActiveSubscriptionMappingInbound()
+                    .get(mapping.subscriptionTopic);
+            activeSubs.subtract(1);
+            if (activeSubs.intValue() <= 0) {
+                try {
+                    mqttClient.unsubscribe(mapping.subscriptionTopic);
+                } catch (MqttException e) {
+                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic,
+                            e);
                 }
             }
-
-        } else {
-            // find mapping for given id to work with the subscriptionTopic of the mapping
-            Optional<Mapping> activeInboundMapping = mappingComponent.getActiveInboundMappings().values().stream()
-                    .filter(m -> m.id.equals(mapping.id)).findFirst();
-            if (!activeInboundMapping.isPresent()) {
-                return;
-            }
-            Mapping existingMapping = activeInboundMapping.get();
-            if (getActiveSubscriptionCache().containsKey(existingMapping.subscriptionTopic)) {
-                MutableInt activeSubs = getActiveSubscriptionCache()
-                        .get(existingMapping.subscriptionTopic);
-                activeSubs.subtract(1);
-                if (activeSubs.intValue() <= 0) {
-                    try {
-                        mqttClient.unsubscribe(existingMapping.subscriptionTopic);
-                    } catch (MqttException e) {
-                        log.error("Exception when unsubscribing from topic: {}, {}", existingMapping.subscriptionTopic,
-                                e);
-                    }
-                }
-            }
-            mappingComponent.deleteFromMappingTree(existingMapping);
-            rebuildOutboundMappingCache();
         }
     }
 
-    public void upsertInMappingCache(Mapping mapping) {
+    public void upsertActiveSubscriptionMappingInbound(Mapping mapping) {
         // test if subsctiptionTopic has changed
         Mapping activeMapping = null;
         Boolean create = true;
+        Boolean subscriptionTopicChanged = false;
+        Optional<Mapping> activeMappingOptional = mappingComponent.getActiveMappingInbound().values().stream()
+                .filter(m -> m.id.equals(mapping.id))
+                .findFirst();
 
-        if (Direction.OUTBOUND.equals(mapping.direction)) {
-            // TODO update activeOutboundMapping and build specific cache oraganiesed by the
-            // filterOutbound fragment
-            Optional<Mapping> activeMappingOptional = mappingComponent.getActiveOutboundMappings().values().stream()
-                    .filter(m -> m.id.equals(mapping.id))
-                    .findFirst();
+        if (activeMappingOptional.isPresent()) {
+            create = false;
+            activeMapping = activeMappingOptional.get();
+            subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
+        }
 
-            if (activeMappingOptional.isPresent()) {
-                create = false;
-                activeMapping = activeMappingOptional.get();
+        if (!getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
+            getActiveSubscriptionMappingInbound().put(mapping.subscriptionTopic, new MutableInt(0));
+        }
+        MutableInt updatedMappingSubs = getActiveSubscriptionMappingInbound()
+                .get(mapping.subscriptionTopic);
+
+        // consider unsubscribing from previous subscription topic if it has changed
+        if (create) {
+            updatedMappingSubs.add(1);
+            log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
+            try {
+                subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+            } catch (MqttException e1) {
+                log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
             }
-
-            mappingComponent.getActiveOutboundMappings().put(mapping.id, mapping);
-            rebuildOutboundMappingCache();
-        } else {
-            Boolean subscriptionTopicChanged = false;
-            Optional<Mapping> activeMappingOptional = mappingComponent.getActiveInboundMappings().values().stream()
-                    .filter(m -> m.id.equals(mapping.id))
-                    .findFirst();
-
-            if (activeMappingOptional.isPresent()) {
-                create = false;
-                activeMapping = activeMappingOptional.get();
-                subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
+        } else if (subscriptionTopicChanged && activeMapping != null) {
+            MutableInt activeMappingSubs = getActiveSubscriptionMappingInbound()
+                    .get(activeMapping.subscriptionTopic);
+            activeMappingSubs.subtract(1);
+            if (activeMappingSubs.intValue() <= 0) {
+                try {
+                    mqttClient.unsubscribe(mapping.subscriptionTopic);
+                } catch (MqttException e) {
+                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
+                }
             }
-
-            if (!getActiveSubscriptionCache().containsKey(mapping.subscriptionTopic)) {
-                getActiveSubscriptionCache().put(mapping.subscriptionTopic, new MutableInt(0));
-            }
-            MutableInt updatedMappingSubs = getActiveSubscriptionCache()
-                    .get(mapping.subscriptionTopic);
-
-            // consider unsubscribing from previous subscription topic if it has changed
-            if (create) {
-                updatedMappingSubs.add(1);
+            updatedMappingSubs.add(1);
+            if (!getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
                 log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (MqttException e1) {
                     log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
                 }
-            } else if (subscriptionTopicChanged && activeMapping != null) {
-                MutableInt activeMappingSubs = getActiveSubscriptionCache()
-                        .get(activeMapping.subscriptionTopic);
-                activeMappingSubs.subtract(1);
-                if (activeMappingSubs.intValue() <= 0) {
-                    try {
-                        mqttClient.unsubscribe(mapping.subscriptionTopic);
-                    } catch (MqttException e) {
-                        log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
-                    }
-                }
-                updatedMappingSubs.add(1);
-                if (!getActiveSubscriptionCache().containsKey(mapping.subscriptionTopic)) {
-                    log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
-                    try {
-                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                    } catch (MqttException e1) {
-                        log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
-                    }
-                }
             }
-
-            mappingComponent.deleteFromMappingTree(mapping);
-            mappingComponent.addToMappingTree(mapping);
-            mappingComponent.getActiveInboundMappings().put(mapping.id, mapping);
         }
+
     }
 
-    public void rebuildOutboundMappingCache() {
-        // TODO review how to organize the cache efficiently to identify a mapping
-        // depending on the payload
-        // only add outbound mappings to the cache
-        List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
-                .filter(m -> Direction.OUTBOUND.equals(m.direction))
-                .collect(Collectors.toList());
-        mappingComponent.rebuildOutboundMappingCache(updatedMappings);
-    }
-
-    public void rebuildInboundMappingCache() {
-        // only add inbound mappings to the cache
-        List<Mapping> updatedMappings = c8yAgent.getMappings().stream()
-                .filter(m -> !Direction.OUTBOUND.equals(m.direction))
-                .collect(Collectors.toList());
-        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
+    public List<Mapping> updateActiveSubscriptionMappingInbound(List<Mapping> updatedMappings, boolean reset) {
+        if (reset) {
+            activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
+        }
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
@@ -668,7 +570,7 @@ public class MQTTClient {
         });
 
         // unsubscribe topics not used
-        getActiveSubscriptionCache().keySet().forEach((topic) -> {
+        getActiveSubscriptionMappingInbound().keySet().forEach((topic) -> {
             if (!updatedSubscriptionCache.containsKey(topic)) {
                 log.info("Unsubscribe from topic: {}", topic);
                 try {
@@ -682,7 +584,7 @@ public class MQTTClient {
 
         // subscribe to new topics
         updatedSubscriptionCache.keySet().forEach((topic) -> {
-            if (!getActiveSubscriptionCache().containsKey(topic)) {
+            if (!getActiveSubscriptionMappingInbound().containsKey(topic)) {
                 int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                         .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                 log.info("Subscribing to topic: {}, qos: {}", topic, qos);
@@ -694,18 +596,14 @@ public class MQTTClient {
                 }
             }
         });
-        activeSubscriptionCache = updatedSubscriptionCache;
-        mappingComponent.setActiveInboundMappings(updatedMappings.stream()
-                .collect(Collectors.toMap(Mapping::getId, Function.identity())));
-        // update mappings tree
-        mappingComponent.setMappingTree(rebuildMappingTree(updatedMappings));
+        activeSubscriptionMappingInbound = updatedSubscriptionCache;
+        return updatedMappings;
     }
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws MqttPersistenceException, MqttException {
         MqttMessage mqttMessage = new MqttMessage();
-        C8YRequest currentRequest = context.getCurrentRequest();
-        String payload = currentRequest.getRequest();
+        String payload = context.getCurrentRequest().getRequest();
         mqttMessage.setPayload(payload.getBytes());
         mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
         log.info("Published outbound message: {} for mapping: {} ", payload, context.getMapping().name);
@@ -713,7 +611,7 @@ public class MQTTClient {
     }
 
     public Map<String, Integer> getActiveSubscriptions() {
-        return getActiveSubscriptionCache().entrySet().stream()
+        return getActiveSubscriptionMappingInbound().entrySet().stream()
                 .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
