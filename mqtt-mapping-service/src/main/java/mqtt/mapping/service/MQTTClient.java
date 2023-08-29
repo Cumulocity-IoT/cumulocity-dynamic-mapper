@@ -328,10 +328,11 @@ public class MQTTClient {
                     }
 
                     mappingComponent.rebuildOutboundMappingCache();
-                    // in order to keep both caches in sync, the InboundMappingCache is build on the
+                    // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
+                    // sync, the ActiveSubscriptionMappingInbound is build on the
                     // reviously used updatedMappings
-                    List<Mapping> updatedMappings = rebuildActiveSubscriptionMappingInbound(true);
-                    mappingComponent.rebuildInboundMappingCache(updatedMappings);
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
+                    updateActiveSubscriptionMappingInbound(updatedMappings, true);
                 }
                 successful = true;
                 log.info("Subscribing to topics was successful: {}", successful);
@@ -556,14 +557,10 @@ public class MQTTClient {
 
     }
 
-    public List<Mapping> rebuildActiveSubscriptionMappingInbound(boolean reset) {
+    public List<Mapping> updateActiveSubscriptionMappingInbound(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
             activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
         }
-        // only add inbound mappings to the cache
-        List<Mapping> updatedMappings = mappingComponent.getMappings().stream()
-                .filter(m -> !Direction.OUTBOUND.equals(m.direction))
-                .collect(Collectors.toList());
         Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
