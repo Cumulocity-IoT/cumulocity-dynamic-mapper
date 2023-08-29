@@ -35,14 +35,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
@@ -83,17 +81,13 @@ import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.Operation;
-import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Direction;
-import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.ResolveException;
 import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
-import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
@@ -173,7 +167,7 @@ public class MQTTClient {
     @Getter
     @Setter
     // keeps track of number of active mappings per subscriptionTopic
-    private Map<String, MutableInt> activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
+    private Map<String, MutableInt> activeSubscriptionMappingInbound;
 
     private Instant start = Instant.now();
 
@@ -332,10 +326,11 @@ public class MQTTClient {
                                 "Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
                                 e.getMessage(), e);
                     }
-                    
-                    activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
+
                     mappingComponent.rebuildOutboundMappingCache();
-                    List<Mapping> updatedMappings = rebuildActiveSubscriptionMappingInbound();
+                    // in order to keep both caches in sync, the InboundMappingCache is build on the
+                    // reviously used updatedMappings
+                    List<Mapping> updatedMappings = rebuildActiveSubscriptionMappingInbound(true);
                     mappingComponent.rebuildInboundMappingCache(updatedMappings);
                 }
                 successful = true;
@@ -561,7 +556,10 @@ public class MQTTClient {
 
     }
 
-    public List<Mapping> rebuildActiveSubscriptionMappingInbound() {
+    public List<Mapping> rebuildActiveSubscriptionMappingInbound(boolean reset) {
+        if (reset) {
+            activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
+        }
         // only add inbound mappings to the cache
         List<Mapping> updatedMappings = mappingComponent.getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
