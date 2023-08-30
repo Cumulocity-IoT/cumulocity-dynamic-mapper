@@ -7,7 +7,6 @@ import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 
@@ -16,9 +15,6 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     private final NotificationCallback callback;
 
-    private boolean started;
-
-    private int retryCount = 0;
 
     private ScheduledExecutorService executorService = null;
 
@@ -32,8 +28,6 @@ public class CustomWebSocketClient extends WebSocketClient {
     public void onOpen(ServerHandshake serverHandshake) {
         this.executorService = Executors.newScheduledThreadPool(1);
         this.callback.onOpen(this.uri);
-        this.started = true;
-        this.retryCount = 0;
         //send(ByteBuffer.allocate(0));
         executorService.scheduleAtFixedRate(this::sendPing, 1, 1, TimeUnit.MINUTES);
     }
@@ -52,7 +46,8 @@ public class CustomWebSocketClient extends WebSocketClient {
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
         log.info("WebSocket closed " + (remote ? "by server. " : "") + " Code:" + statusCode + ", reason: " + reason);
-        this.executorService.shutdownNow();
+        if (this.executorService != null)
+            this.executorService.shutdownNow();
         this.callback.onClose(statusCode, reason);
     }
 
