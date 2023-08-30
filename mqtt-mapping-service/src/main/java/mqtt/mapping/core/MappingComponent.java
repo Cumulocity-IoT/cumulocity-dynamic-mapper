@@ -184,17 +184,11 @@ public class MappingComponent {
     }
 
     public void setMappingDirty(Mapping mapping) {
-        log.debug("Setting dirty: {}", mapping);
         dirtyMappings.add(mapping);
     }
 
     public void removeMappingFormDirtyMappings(Mapping mapping) {
-        for (Mapping m : dirtyMappings) {
-            if (m.id.equals(mapping.id)) {
-                log.info("Removed mapping form dirty mappings dirty: {} for id: {}", m, mapping.id);
-                dirtyMappings.remove(m);
-            }
-        }
+        dirtyMappings.removeIf(m -> m.id.equals(mapping.id));
     }
 
     public Set<Mapping> getMappingDirty() {
@@ -299,34 +293,32 @@ public class MappingComponent {
     }
 
     public Mapping createMapping(Mapping mapping) {
-        Mapping result = null;
         List<Mapping> mappings = getMappings();
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
-        if (errors.size() == 0) {
-            result = subscriptionsService.callForTenant(tenant, () -> {
-                MappingRepresentation mr = new MappingRepresentation();
-                // 1. step create managed object
-                mapping.lastUpdate = System.currentTimeMillis();
-                mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
-                mr.setC8yMQTTMapping(mapping);
-                ManagedObjectRepresentation mor = toManagedObject(mr);
-                mor = inventoryApi.create(mor);
-
-                // 2. step update mapping.id with if from previously created managedObject
-                mapping.id = mor.getId().getValue();
-                mr.getC8yMQTTMapping().setId(mapping.id);
-                mor = toManagedObject(mr);
-                mor.setId(GId.asGId(mapping.id));
-
-                inventoryApi.update(mor);
-                log.info("Created mapping: {}", mor);
-                return mapping;
-            });
-        } else {
+        if (errors.size() != 0) {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
+        Mapping result = subscriptionsService.callForTenant(tenant, () -> {
+            MappingRepresentation mr = new MappingRepresentation();
+            // 1. step create managed object
+            mapping.lastUpdate = System.currentTimeMillis();
+            mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
+            mr.setC8yMQTTMapping(mapping);
+            ManagedObjectRepresentation mor = toManagedObject(mr);
+            mor = inventoryApi.create(mor);
+
+            // 2. step update mapping.id with if from previously created managedObject
+            mapping.id = mor.getId().getValue();
+            mr.getC8yMQTTMapping().setId(mapping.id);
+            mor = toManagedObject(mr);
+            mor.setId(GId.asGId(mapping.id));
+
+            inventoryApi.update(mor);
+            log.info("Created mapping: {}", mor);
+            return mapping;
+        });
         return result;
     }
 
@@ -373,7 +365,8 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveOutboundMappings(JsonNode message, API api) throws ResolveException {
-        // use mappingCacheOutbound and the key filterOutbound to identify the matching mappings.
+        // use mappingCacheOutbound and the key filterOutbound to identify the matching
+        // mappings.
         // the need to be returend in a list
         List<Mapping> result = new ArrayList<>();
         try {

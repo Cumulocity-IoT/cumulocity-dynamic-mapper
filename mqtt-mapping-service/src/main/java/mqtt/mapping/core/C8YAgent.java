@@ -404,8 +404,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
         subscriptionsService.runForTenant(tenant, () -> {
             EventRepresentation er = new EventRepresentation();
-            er
-                    .setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
+            er.setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
             er.setText(message);
             er.setDateTime(eventTime);
             er.setType(type);
@@ -476,13 +475,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
-            ManagedObjectRepresentation mor = null;
+            ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
+                    ManagedObjectRepresentation.class);
             try {
                 ExternalIDRepresentation extId = resolveExternalId2GlobalId(identity, context);
                 if (extId == null) {
                     // Device does not exist
-                    mor = objectMapper.readValue(currentRequest.getRequest(),
-                            ManagedObjectRepresentation.class);
                     // append external id to name
                     mor.setName(mor.getName());
                     mor.set(new IsDevice());
@@ -491,16 +489,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     identityApi.create(mor, identity, context);
                 } else {
                     // Device exists - update needed
-                    mor = objectMapper.readValue(currentRequest.getRequest(),
-                            ManagedObjectRepresentation.class);
                     mor.setId(extId.getManagedObject().getId());
                     mor = inventoryApi.update(mor, context);
 
                     log.info("Device updated: {}", mor);
                 }
-            } catch (JsonProcessingException e) {
-                log.error("Could not map payload: {}", currentRequest.getRequest());
-                error.append("Could not map payload: " + currentRequest.getRequest());
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {}", currentRequest.getRequest(), s);
                 error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
@@ -529,8 +522,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     InputStream downloadInputStream = binaryApi.downloadFile(extension.getId());
 
                     // step 2 create temporary file,because classloader needs a url resource
-                    File tempFile;
-                    tempFile = File.createTempFile(extName, "jar");
+                    File tempFile =  File.createTempFile(extName, "jar");
                     tempFile.deleteOnExit();
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
@@ -644,10 +636,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
-            GId id = new GId();
-            id.setValue(deviceId);
             try {
-                return inventoryApi.get(id);
+                return inventoryApi.get(GId.asGId(deviceId));
             } catch (SDKException exception) {
                 log.warn("Device with id {} not found!", deviceId);
             }
