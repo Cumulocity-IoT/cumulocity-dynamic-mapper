@@ -41,7 +41,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConnectionConfigurationComponent {
     private static final String OPTION_CATEGORY_CONFIGURATION = "mqtt.dynamic.service";
-
     private static final String OPTION_KEY_CONNECTION_CONFIGURATION = "credentials.connection.configuration";
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 
@@ -73,11 +72,7 @@ public class ConnectionConfigurationComponent {
         }
 
         final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = new OptionRepresentation();
-        optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        optionRepresentation.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
-        optionRepresentation.setValue(configurationJson);
-
+        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION, configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
@@ -108,18 +103,14 @@ public class ConnectionConfigurationComponent {
     }
 
     public void deleteAllConfiguration() {
-        final OptionPK optionPK = new OptionPK();
-        optionPK.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        optionPK.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
+        final OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
         optionPK.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
     }
 
     public ConfigurationConnection enableConnection(boolean enabled) {
-        final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
+        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
