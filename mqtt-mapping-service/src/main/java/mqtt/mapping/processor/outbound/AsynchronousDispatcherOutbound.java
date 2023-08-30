@@ -176,14 +176,14 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                 }
 
                                 if (serializedPayload != null) {
-                                    mappingStatus.snoopedTemplatesActive++;
-                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mapping.addSnoopedTemplate(serializedPayload);
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mappingStatus.snoopedTemplatesActive++;
 
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.setMappingDirty(mapping);
+                                    mappingStatusComponent.addDirtyMapping(mapping);
 
                                 } else {
                                     log.warn(
@@ -260,7 +260,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         if (c8yMessage.getPayload() != null) {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
-                resolvedMappings = mappingComponent.resolveOutboundMappings(message, c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveMappingOutbound(message, c8yMessage.getApi());
             } catch (Exception e) {
                 log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
                 log.debug(e.getMessage(), e);

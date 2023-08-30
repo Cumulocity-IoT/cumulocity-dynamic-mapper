@@ -21,7 +21,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-public class MQTTOutboundMappingRestController {
+public class MQTTMappingOutboundRestController {
 
     @Autowired
     C8YAgent c8yAgent;

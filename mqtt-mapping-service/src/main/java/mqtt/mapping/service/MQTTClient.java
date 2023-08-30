@@ -326,7 +326,7 @@ public class MQTTClient {
                                 e.getMessage(), e);
                     }
 
-                    mappingComponent.rebuildOutboundMappingCache();
+                    mappingComponent.rebuildMappingOutboundCache();
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // reviously used updatedMappings
@@ -454,9 +454,6 @@ public class MQTTClient {
         return serviceStatus;
     }
 
-    public TreeNode getActiveMappingTree() {
-        return mappingComponent.getCacheMappingInbound();
-    }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
             throws Exception {
@@ -471,8 +468,8 @@ public class MQTTClient {
         serviceConfigurationComponent.saveServiceConfiguration(configuration);
     }
 
-    public List<Mapping> resolveMappings(String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getActiveMappingTree()
+    public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
+        List<TreeNode> resolvedMappings = mappingComponent.getCacheMappingInbound()
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
                 .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());

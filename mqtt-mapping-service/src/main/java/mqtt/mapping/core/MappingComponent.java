@@ -107,10 +107,6 @@ public class MappingComponent {
     // cache of active inbound mappings stored in a tree
     private TreeNode cacheMappingInbound = InnerNode.createRootNode();
 
-    public void removeStatusMapping(String ident) {
-        statusMapping.remove(ident);
-    }
-
     private void initializeMappingStatus() {
         if (mappingServiceRepresentation.getMappingStatus() != null) {
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
@@ -181,22 +177,6 @@ public class MappingComponent {
         ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
         msl.forEach(ms -> ms.reset());
         return msl;
-    }
-
-    public void setMappingDirty(Mapping mapping) {
-        dirtyMappings.add(mapping);
-    }
-
-    public void removeMappingFormDirtyMappings(Mapping mapping) {
-        dirtyMappings.removeIf(m -> m.id.equals(mapping.id));
-    }
-
-    public Set<Mapping> getMappingDirty() {
-        return dirtyMappings;
-    }
-
-    public void resetMappingDirty() {
-        dirtyMappings = new HashSet<Mapping>();
     }
 
     public void saveMappings(List<Mapping> mappings) {
@@ -350,7 +330,7 @@ public class MappingComponent {
         }
     }
 
-    public void rebuildOutboundMappingCache() {
+    public void rebuildMappingOutboundCache() {
         // only add outbound mappings to the cache
         List<Mapping> updatedMappings = getMappings().stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
@@ -364,7 +344,7 @@ public class MappingComponent {
                 .collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
     }
 
-    public List<Mapping> resolveOutboundMappings(JsonNode message, API api) throws ResolveException {
+    public List<Mapping> resolveMappingOutbound(JsonNode message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterOutbound to identify the matching
         // mappings.
         // the need to be returend in a list
@@ -433,27 +413,20 @@ public class MappingComponent {
         return updatedMappings;
     }
 
-    public void setActivationMapping(Map<String, String> parameter) throws Exception {
+    public void setActivationMapping(String id, Boolean active) throws Exception {
         // step 1. update activation for mapping
-        String id = parameter.get("id");
-        String active = parameter.get("active");
-        Boolean activeBoolean = Boolean.parseBoolean(active);
-        log.info("Setting active: {} got mapping: {}, {}", id, active, activeBoolean);
+        log.info("Setting active: {} got mapping: {}", id, active);
         Mapping mapping = getMapping(id);
-        mapping.setActive(activeBoolean);
+        mapping.setActive(active);
         // step 2. retrieve collected snoopedTemplates
-        getActiveMappingInbound().values().forEach(m -> {
-            if (m.id == id) {
-                mapping.setSnoopedTemplates(m.getSnoopedTemplates());
-            }
-        });
+        mapping.setSnoopedTemplates(getActiveMappingInbound().get(id).getSnoopedTemplates()); 
         // step 3. update mapping in inventory
         updateMapping(mapping, true);
         // step 4. delete mapping from update cache
-        removeMappingFormDirtyMappings(mapping);
+        removeDirtyMapping(mapping);
         // step 5. update caches
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            rebuildOutboundMappingCache();
+            rebuildMappingOutboundCache();
         } else {
             deleteFromCacheMappingInbound(mapping);
             addToCacheMappingInbound(mapping);
@@ -464,13 +437,21 @@ public class MappingComponent {
     public void cleanDirtyMappings() throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
-        for (Mapping mapping : getMappingDirty()) {
+        for (Mapping mapping : dirtyMappings) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
             updateMapping(mapping, true);
         }
         // reset dirtySet
-        resetMappingDirty();
+        dirtyMappings = new HashSet<Mapping>();
+    }
+
+    private void removeDirtyMapping(Mapping mapping) {
+        dirtyMappings.removeIf(m -> m.id.equals(mapping.id));
+    }
+
+    public void addDirtyMapping(Mapping mapping) {
+        dirtyMappings.add(mapping);
     }
 
 }
