@@ -89,23 +89,23 @@ public class MappingComponent {
 
     @Getter
     @Setter
-    // cache of active inbound mappings stored by mapping.id
-    private Map<String, Mapping> activeMappingInbound = new HashMap<String, Mapping>();
+    // cache of inbound mappings stored by mapping.id
+    private Map<String, Mapping> cacheMappingInbound = new HashMap<String, Mapping>();
 
     @Getter
     @Setter
-    // cache of active outbound mappings stored by mapping.id
-    private Map<String, Mapping> activeMappingOutbound = new HashMap<String, Mapping>();
+    // cache of outbound mappings stored by mapping.id
+    private Map<String, Mapping> cacheMappingOutbound = new HashMap<String, Mapping>();
 
     @Getter
     @Setter
-    // cache of active outbound mappings stored by mapping.filterOundbound
-    private Map<String, List<Mapping>> cacheMappingOutbound = new HashMap<String, List<Mapping>>();
+    // cache of outbound mappings stored by mapping.filterOundbound used for resolving
+    private Map<String, List<Mapping>> resolverMappingOutbound = new HashMap<String, List<Mapping>>();
 
     @Getter
     @Setter
-    // cache of active inbound mappings stored in a tree
-    private TreeNode cacheMappingInbound = InnerNode.createRootNode();
+    // cache of inbound mappings stored in a tree used for resolving
+    private TreeNode resolverMappingInbound = InnerNode.createRootNode();
 
     private void initializeMappingStatus() {
         if (mappingServiceRepresentation.getMappingStatus() != null) {
@@ -316,7 +316,7 @@ public class MappingComponent {
 
     public void addToCacheMappingInbound(Mapping mapping) {
         try {
-            ((InnerNode) getCacheMappingInbound()).addMapping(mapping);
+            ((InnerNode) getResolverMappingInbound()).addMapping(mapping);
         } catch (ResolveException e) {
             log.error("Could not add mapping {}, ignoring mapping", mapping);
         }
@@ -324,7 +324,7 @@ public class MappingComponent {
 
     public void deleteFromCacheMappingInbound(Mapping mapping) {
         try {
-            ((InnerNode) getCacheMappingInbound()).deleteMapping(mapping);
+            ((InnerNode) getResolverMappingInbound()).deleteMapping(mapping);
         } catch (ResolveException e) {
             log.error("Could not delete mapping {}, ignoring mapping", mapping);
         }
@@ -336,11 +336,11 @@ public class MappingComponent {
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
         log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
-        setActiveMappingOutbound(updatedMappings.stream()
+        setCacheMappingOutbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // setMappingCacheOutbound(updatedMappings.stream()
         // .collect(Collectors.toMap(Mapping::getFilterOutbound, Function.identity())));
-        setCacheMappingOutbound(updatedMappings.stream()
+        setResolverMappingOutbound(updatedMappings.stream()
                 .collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
     }
 
@@ -350,7 +350,7 @@ public class MappingComponent {
         // the need to be returend in a list
         List<Mapping> result = new ArrayList<>();
         try {
-            for (Mapping m : getActiveMappingOutbound().values()) {
+            for (Mapping m : getCacheMappingOutbound().values()) {
                 // test if message has property associated for this mapping, JsonPointer must
                 // begin with "/"
                 String key = "/" + m.getFilterOutbound().replace('.', '/');
@@ -371,12 +371,12 @@ public class MappingComponent {
 
     public Mapping deleteFromMappingCache(Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
-            Mapping deletedMapping = getActiveMappingOutbound().remove(mapping.id);
-            List<Mapping> cmo = getCacheMappingOutbound().get(mapping.filterOutbound);
+            Mapping deletedMapping = getCacheMappingOutbound().remove(mapping.id);
+            List<Mapping> cmo = getResolverMappingOutbound().get(mapping.filterOutbound);
             cmo.removeIf(m -> mapping.id.equals(m.id));
             return deletedMapping;
         } else {
-            Mapping deletedMapping = getActiveMappingInbound().remove(mapping.id);
+            Mapping deletedMapping = getCacheMappingInbound().remove(mapping.id);
             deleteFromCacheMappingInbound(deletedMapping);
             return deletedMapping;
         }
@@ -394,23 +394,20 @@ public class MappingComponent {
         return in;
     }
 
-    public void rebuildMappingInboundCache(List<Mapping> updatedMappings) {
+    public List<Mapping>  rebuildMappingInboundCache(List<Mapping> updatedMappings) {
         log.info("Loaded mappings inbound: {} to cache", updatedMappings.size());
-        setActiveMappingInbound(updatedMappings.stream()
+        setCacheMappingInbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
-        setCacheMappingInbound(rebuildMappingTree(updatedMappings));
+        setResolverMappingInbound(rebuildMappingTree(updatedMappings));
+        return updatedMappings;
     }
 
     public List<Mapping> rebuildMappingInboundCache() {
         List<Mapping> updatedMappings = getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        setActiveMappingInbound(updatedMappings.stream()
-                .collect(Collectors.toMap(Mapping::getId, Function.identity())));
-        // update mappings tree
-        setCacheMappingInbound(rebuildMappingTree(updatedMappings));
-        return updatedMappings;
+        return rebuildMappingInboundCache (updatedMappings);
     }
 
     public void setActivationMapping(String id, Boolean active) throws Exception {
@@ -419,7 +416,7 @@ public class MappingComponent {
         Mapping mapping = getMapping(id);
         mapping.setActive(active);
         // step 2. retrieve collected snoopedTemplates
-        mapping.setSnoopedTemplates(getActiveMappingInbound().get(id).getSnoopedTemplates()); 
+        mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates()); 
         // step 3. update mapping in inventory
         updateMapping(mapping, true);
         // step 4. delete mapping from update cache
@@ -430,7 +427,7 @@ public class MappingComponent {
         } else {
             deleteFromCacheMappingInbound(mapping);
             addToCacheMappingInbound(mapping);
-            getActiveMappingInbound().put(mapping.id, mapping);
+            getCacheMappingInbound().put(mapping.id, mapping);
         }
     }
 

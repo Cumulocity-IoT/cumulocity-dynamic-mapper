@@ -469,7 +469,7 @@ public class MQTTClient {
     }
 
     public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = mappingComponent.getCacheMappingInbound()
+        List<TreeNode> resolvedMappings = mappingComponent.getResolverMappingInbound()
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
                 .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
@@ -504,7 +504,7 @@ public class MQTTClient {
         Mapping activeMapping = null;
         Boolean create = true;
         Boolean subscriptionTopicChanged = false;
-        Optional<Mapping> activeMappingOptional = mappingComponent.getActiveMappingInbound().values().stream()
+        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().values().stream()
                 .filter(m -> m.id.equals(mapping.id))
                 .findFirst();
 

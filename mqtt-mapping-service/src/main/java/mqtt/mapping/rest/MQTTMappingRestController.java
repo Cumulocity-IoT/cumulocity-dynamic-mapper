@@ -235,8 +235,8 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getActiveMappingTree() {
-        TreeNode result = mqttClient.getActiveMappingTree();
+    public ResponseEntity<TreeNode> getInboundMappingTree() {
+        TreeNode result = mappingComponent.getResolverMappingInbound();
         log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
@@ -301,7 +301,7 @@ public class MQTTMappingRestController {
                 mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
                 mappingComponent.deleteFromCacheMappingInbound(mapping);
                 mappingComponent.addToCacheMappingInbound(mapping);
-                mappingComponent.getActiveMappingInbound().put(mapping.id, mapping);
+                mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
@@ -325,7 +325,7 @@ public class MQTTMappingRestController {
                 mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
                 mappingComponent.deleteFromCacheMappingInbound(mapping);
                 mappingComponent.addToCacheMappingInbound(mapping);
-                mappingComponent.getActiveMappingInbound().put(mapping.id, mapping);
+                mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (Exception ex) {
