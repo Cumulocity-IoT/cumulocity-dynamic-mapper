@@ -97,7 +97,8 @@ public class ServiceConfigurationComponent {
             return;
         }
         final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
+        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
+                OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
@@ -105,9 +106,8 @@ public class ServiceConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        ServiceConfiguration result = 
-        subscriptionsService.callForTenant(tenant, () -> {
-             ServiceConfiguration rt = null;
+        ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
+            ServiceConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
                 final ServiceConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),

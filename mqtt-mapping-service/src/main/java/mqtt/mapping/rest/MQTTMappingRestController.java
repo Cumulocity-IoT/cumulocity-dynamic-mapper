@@ -138,7 +138,8 @@ public class MQTTMappingRestController {
         configurationClone.setPassword("");
         log.info("Post MQTT broker configuration: {}", configurationClone.toString());
         try {
-            c8yAgent.saveConnectionConfiguration(configuration);
+            connectionConfigurationComponent.saveConnectionConfiguration(configuration);
+            mqttClient.reconnect();
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -177,7 +178,7 @@ public class MQTTMappingRestController {
         }
 
         try {
-            mqttClient.saveServiceConfiguration(configuration);
+            serviceConfigurationComponent.saveServiceConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -276,7 +277,7 @@ public class MQTTMappingRestController {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Mapping with id " + id + " could not be found.");
 
-            Mapping deletedMapping = mappingComponent.deleteFromMappingCache(mapping);
+            mappingComponent.deleteFromMappingCache(mapping);
 
             if (!Direction.OUTBOUND.equals(mapping.direction)) {
                 mqttClient.deleteActiveSubscriptionMappingInbound(mapping);
@@ -294,7 +295,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping: {}", mapping);
-            Mapping result = mappingComponent.createMapping(mapping);
+            mapping = mappingComponent.createMapping(mapping);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache();
             } else {
@@ -303,7 +304,7 @@ public class MQTTMappingRestController {
                 mappingComponent.addToCacheMappingInbound(mapping);
                 mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
             }
-            return ResponseEntity.status(HttpStatus.OK).body(result);
+            return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
@@ -318,7 +319,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            Mapping result = mappingComponent.updateMapping(mapping, false);
+            mapping = mappingComponent.updateMapping(mapping, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache();
             } else {
@@ -327,7 +328,7 @@ public class MQTTMappingRestController {
                 mappingComponent.addToCacheMappingInbound(mapping);
                 mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
             }
-            return ResponseEntity.status(HttpStatus.OK).body(result);
+            return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {
             if (ex instanceof IllegalArgumentException) {
                 log.error("Updating active mappings is not allowed {}", ex);

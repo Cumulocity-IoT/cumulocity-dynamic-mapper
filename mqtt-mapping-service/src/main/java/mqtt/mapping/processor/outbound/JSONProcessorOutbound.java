@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.node.TextNode;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution;
@@ -165,7 +164,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                             .add(new SubstituteValue(extractedSourceContent, TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (mqttClient.getServiceConfiguration().logSubstitution) {
+                if (c8yAgent.getServiceConfiguration().logSubstitution) {
                     log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
