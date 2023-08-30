@@ -131,14 +131,14 @@ public class AsynchronousDispatcher implements MqttCallback {
                                 }
 
                                 if (serializedPayload != null) {
-                                    mappingStatus.snoopedTemplatesActive++;
-                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mapping.addSnoopedTemplate(serializedPayload);
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mappingStatus.snoopedTemplatesActive++;
 
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.setMappingDirty(mapping);
+                                    mappingStatusComponent.addDirtyMapping(mapping);
 
                                 } else {
                                     log.warn(
@@ -228,7 +228,7 @@ public class AsynchronousDispatcher implements MqttCallback {
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
                 try {
-                    resolvedMappings = mqttClient.resolveMappings(topic);
+                    resolvedMappings = mqttClient.resolveMappingInbound(topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map for topic \"" + topic
                             + "\". Could NOT be parsed. Ignoring this message!");

@@ -91,12 +91,10 @@ public class SynchronousDispatcher implements MqttCallback {
             if (mqttMessage.getPayload() != null) {
                 List<Mapping> resolvedMappings = new ArrayList<>();
                 try {
-                    resolvedMappings = mqttClient.resolveMappings(topic);
+                    resolvedMappings = mqttClient.resolveMappingInbound(topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!", e);
                     mappingStatusUnspecified.errors++;
-                    // TODO review if exception has to be thrown
-                    // throw e;
                 }
 
                 resolvedMappings.forEach(mapping -> {
@@ -141,16 +139,13 @@ public class SynchronousDispatcher implements MqttCallback {
                                 }
 
                                 if (serializedPayload != null) {
-                                    mappingStatus.snoopedTemplatesActive++;
-                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mapping.addSnoopedTemplate(serializedPayload);
-
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mappingStatus.snoopedTemplatesActive++;
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.setMappingDirty(mapping);
-                                    mappingStatusComponent.setMappingDirty(mapping);
-
+                                    mappingStatusComponent.addDirtyMapping(mapping);
                                 } else {
                                     log.warn(
                                             "Message could NOT be parsed, ignoring this message, as class is not valid: {}",

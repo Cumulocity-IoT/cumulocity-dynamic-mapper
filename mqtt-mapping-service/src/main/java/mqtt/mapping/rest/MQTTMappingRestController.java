@@ -190,7 +190,7 @@ public class MQTTMappingRestController {
         log.info("Post operation: {}", operation.toString());
         try {
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
-                mappingComponent.rebuildOutboundMappingCache();
+                mappingComponent.rebuildMappingOutboundCache();
                 // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                 // sync, the ActiveSubscriptionMappingInbound is build on the
                 // reviously used updatedMappings
@@ -207,7 +207,9 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 c8yAgent.reloadExtensions();
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
-                mappingComponent.setActivationMapping(operation.getParameter());
+                String id = operation.getParameter().get("id");
+                Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
+                mappingComponent.setActivationMapping(id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
                 c8yAgent.notificationSubscriberReconnect();
             }
@@ -294,7 +296,7 @@ public class MQTTMappingRestController {
             log.info("Add mapping: {}", mapping);
             Mapping result = mappingComponent.createMapping(mapping);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildOutboundMappingCache();
+                mappingComponent.rebuildMappingOutboundCache();
             } else {
                 mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
                 mappingComponent.deleteFromCacheMappingInbound(mapping);
@@ -318,7 +320,7 @@ public class MQTTMappingRestController {
             log.info("Update mapping: {}, {}", mapping, id);
             Mapping result = mappingComponent.updateMapping(mapping, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildOutboundMappingCache();
+                mappingComponent.rebuildMappingOutboundCache();
             } else {
                 mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
                 mappingComponent.deleteFromCacheMappingInbound(mapping);
