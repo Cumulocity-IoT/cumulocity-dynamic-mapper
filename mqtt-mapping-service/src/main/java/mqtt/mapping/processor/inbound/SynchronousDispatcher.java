@@ -118,7 +118,7 @@ public class SynchronousDispatcher implements MqttCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, mqttMessage);
-                            if (mqttClient.getServiceConfiguration().logPayload) {
+                            if (c8yAgent.getServiceConfiguration().logPayload) {
                                 log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
                                         context.getPayload().toString());
                             } else {
