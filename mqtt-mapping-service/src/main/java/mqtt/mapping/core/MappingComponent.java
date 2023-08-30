@@ -31,6 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -215,81 +216,66 @@ public class MappingComponent {
             });
             log.debug("Saved mappings!");
         });
-
     }
 
     public Mapping getMapping(String id) {
-        Mapping[] result = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             if (mo != null) {
-                result[0] = toMappingObject(mo).getC8yMQTTMapping();
-                log.info("Found Mapping: {}", result[0].id);
+                Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
+                log.info("Found Mapping: {}", mt.id);
+                return mt;
             }
+            return null;
         });
-        return result[0];
+        return result;
     }
 
-    public Mapping deleteMapping(String id) throws Exception {
-        Mapping[] result = { null };
+    public Mapping deleteMapping(String id) {
         // test id the mapping is active, we don't delete or modify active mappings
-        Exception[] exceptions = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
-            try {
-                ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
-                MappingRepresentation m = toMappingObject(mo);
-                if (m.getC8yMQTTMapping().isActive()) {
-                    throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
-                }
-                // mapping is deactivated and we can delete it
-                inventoryApi.delete(GId.asGId(id));
-                result[0] = m.getC8yMQTTMapping();
-                deleteMappingStatus(id);
-            } catch (Exception e) {
-                exceptions[0] = e;
+        Mapping result = subscriptionsService.callForTenant(tenant, () -> {
+            ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
+            MappingRepresentation m = toMappingObject(mo);
+            if (m.getC8yMQTTMapping().isActive()) {
+                throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
             }
+            // mapping is deactivated and we can delete it
+            inventoryApi.delete(GId.asGId(id));
+            deleteMappingStatus(id);
+            return m.getC8yMQTTMapping();
         });
-        if (exceptions[0] != null) {
-            throw exceptions[0];
-        }
         log.info("Deleted Mapping: {}", id);
-
-        return result[0];
+        return result;
     }
 
     public List<Mapping> getMappings() {
-        List<Mapping> result = new ArrayList<Mapping>();
-        subscriptionsService.runForTenant(tenant, () -> {
+        List<Mapping> result = subscriptionsService.callForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
             inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
             ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
-            result.addAll(StreamSupport.stream(moc.get().allPages().spliterator(), true)
+            List<Mapping> res = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                     .map(mo -> toMappingObject(mo).getC8yMQTTMapping())
-                    .collect(Collectors.toList()));
-            log.debug("Loaded mappings (inbound & outbound): {}", result.size());
+                    .collect(Collectors.toList());
+            log.debug("Loaded mappings (inbound & outbound): {}", res.size());
+            return res;
         });
         return result;
     }
 
     public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive) throws Exception {
         // test id the mapping is active, we don't delete or modify active mappings
-        Mapping[] result = { null };
-        Exception[] exceptions = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        MutableObject<Exception> exception = new MutableObject<Exception>(null);
+        Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
-            // snooped messages
-            // this is an exception
-            if (!allowUpdateWhenActive) {
-                ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(mapping.id));
-                if (mapping.isActive()) {
-                    throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
-                }
+            // snooped messages. This is an exception
+            if (!allowUpdateWhenActive && mapping.isActive()) {
+                throw new IllegalArgumentException("Mapping is still active, deactivate mapping before deleting!");
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings();
-            MappingRepresentation mr = new MappingRepresentation();
             List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
             if (errors.size() == 0) {
+                MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
                 mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
                 mr.setC8yMQTTMapping(mapping);
@@ -297,28 +283,28 @@ public class MappingComponent {
                 ManagedObjectRepresentation mor = toManagedObject(mr);
                 mor.setId(GId.asGId(mapping.id));
                 inventoryApi.update(mor);
-                result[0] = mapping;
+                return mapping;
             } else {
                 String errorList = errors.stream().map(e -> e.toString()).reduce("",
                         (res, error) -> res + "[ " + error + " ]");
-                exceptions[0] = new RuntimeException("Validation errors:" + errorList);
+                exception.setValue(new RuntimeException("Validation errors:" + errorList));
             }
+            return null;
         });
 
-        if (exceptions[0] != null) {
-            throw exceptions[0];
+        if (exception.getValue() != null) {
+            throw exception.getValue();
         }
-        return result[0];
+        return result;
     }
 
     public Mapping createMapping(Mapping mapping) {
-
+        Mapping result = null;
         List<Mapping> mappings = getMappings();
-        MappingRepresentation mr = new MappingRepresentation();
-        Mapping[] result = { null };
         List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
         if (errors.size() == 0) {
-            subscriptionsService.runForTenant(tenant, () -> {
+            result = subscriptionsService.callForTenant(tenant, () -> {
+                MappingRepresentation mr = new MappingRepresentation();
                 // 1. step create managed object
                 mapping.lastUpdate = System.currentTimeMillis();
                 mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
@@ -334,15 +320,14 @@ public class MappingComponent {
 
                 inventoryApi.update(mor);
                 log.info("Created mapping: {}", mor);
-                result[0] = mapping;
+                return mapping;
             });
         } else {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
             throw new RuntimeException("Validation errors:" + errorList);
         }
-        return result[0];
-
+        return result;
     }
 
     private ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
@@ -388,11 +373,9 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveOutboundMappings(JsonNode message, API api) throws ResolveException {
-        // use mappingCacheOutbound and the key filterOutbound to identify the matching
-        // mappings.
+        // use mappingCacheOutbound and the key filterOutbound to identify the matching mappings.
         // the need to be returend in a list
         List<Mapping> result = new ArrayList<>();
-
         try {
             for (Mapping m : getActiveMappingOutbound().values()) {
                 // test if message has property associated for this mapping, JsonPointer must
@@ -417,7 +400,7 @@ public class MappingComponent {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             Mapping deletedMapping = getActiveMappingOutbound().remove(mapping.id);
             List<Mapping> cmo = getCacheMappingOutbound().get(mapping.filterOutbound);
-            cmo.removeIf( m -> mapping.id.equals(m.id));
+            cmo.removeIf(m -> mapping.id.equals(m.id));
             return deletedMapping;
         } else {
             Mapping deletedMapping = getActiveMappingInbound().remove(mapping.id);

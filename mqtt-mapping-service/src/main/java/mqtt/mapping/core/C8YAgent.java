@@ -38,6 +38,7 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -224,14 +225,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        ManagedObjectRepresentation[] mappingServiceRepresentations = { new ManagedObjectRepresentation() };
-        ServiceConfiguration[] serviceConfigurations = { null };
+        MutableObject<ManagedObjectRepresentation> msr = new MutableObject<ManagedObjectRepresentation>(
+                new ManagedObjectRepresentation());
+        MutableObject<ServiceConfiguration> sc = new MutableObject<ServiceConfiguration>(null);
         // register agent
         subscriptionsService.runForTenant(tenant, () -> {
 
             ExternalIDRepresentation mappingServiceIdRepresentation = null;
             try {
-                mappingServiceIdRepresentation = resolveExternalId2GlobalId(new ID(null, MappingServiceRepresentation.AGENT_ID),
+                mappingServiceIdRepresentation = resolveExternalId2GlobalId(
+                        new ID(null, MappingServiceRepresentation.AGENT_ID),
                         null);
             } catch (Exception e) {
                 log.error(e.getMessage());
@@ -239,58 +242,58 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             if (mappingServiceIdRepresentation != null) {
                 log.info("Agent with ID {} already exists {}", MappingServiceRepresentation.AGENT_ID,
                         mappingServiceIdRepresentation);
-                mappingServiceRepresentations[0] = mappingServiceIdRepresentation.getManagedObject();
+                msr.setValue(mappingServiceIdRepresentation.getManagedObject());
             } else {
-                mappingServiceRepresentations[0].setName(MappingServiceRepresentation.AGENT_NAME);
-                mappingServiceRepresentations[0].set(new Agent());
-                mappingServiceRepresentations[0].set(new IsDevice());
-                mappingServiceRepresentations[0].setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT,
+                msr.getValue().setName(MappingServiceRepresentation.AGENT_NAME);
+                msr.getValue().set(new Agent());
+                msr.getValue().set(new IsDevice());
+                msr.getValue().setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT,
                         new ArrayList<>());
-                mappingServiceRepresentations[0] = inventoryApi.create(mappingServiceRepresentations[0], null);
-                log.info("Agent has been created with ID {}", mappingServiceRepresentations[0].getId());
-                ExternalIDRepresentation externalAgentId = identityApi.create(mappingServiceRepresentations[0],
+                msr.setValue(inventoryApi.create(msr.getValue(), null));
+                log.info("Agent has been created with ID {}", msr.getValue().getId());
+                ExternalIDRepresentation externalAgentId = identityApi.create(msr.getValue(),
                         new ID("c8y_Serial",
                                 MappingServiceRepresentation.AGENT_ID),
                         null);
                 log.debug("ExternalId created: {}", externalAgentId.getExternalId());
             }
-            mappingServiceRepresentations[0] = inventoryApi.get(mappingServiceRepresentations[0].getId());
+            msr.setValue(inventoryApi.get(msr.getValue().getId()));
 
             extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
                     .get(MappingType.PROCESSOR_EXTENSION);
-            serviceConfigurations[0] = serviceConfigurationComponent.loadServiceConfiguration();
+            sc.setValue(serviceConfigurationComponent.loadServiceConfiguration());
 
-            // if managedObject for internal mapping extension exists
-            ManagedObjectRepresentation[] internalExtensions = { null };
+            // test if managedObject for internal mapping extension exists
+            MutableObject<ManagedObjectRepresentation> internalExtension = new MutableObject<ManagedObjectRepresentation>(
+                    null);
+
             extensions.getInternal().forEach(m -> {
-                internalExtensions[0] = m;
+                internalExtension.setValue(m);
             });
-            if (internalExtensions[0] == null) {
-                internalExtensions[0] = new ManagedObjectRepresentation();
-                // internalExtensions[0].setProperty(ProcessorExtensionsRepresentation.PROCESSOR_EXTENSION_INTERNAL_TYPE,
-                // new HashMap());
+            if (internalExtension.getValue() == null) {
+                ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
                 Map<String, ?> props = Map.of("name",
                         ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                         "external", false);
-                internalExtensions[0].setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
+                ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
                         props);
-                internalExtensions[0].setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
-                internalExtensions[0] = inventoryApi.create(internalExtensions[0], null);
+                ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
+                internalExtension.setValue(inventoryApi.create(ie, null));
             }
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                    internalExtensions[0].getId().getValue(), internalExtensions[0]);
+                    internalExtension.getValue().getId().getValue(), internalExtension.getValue());
             notificationSubscriber.init();
             // notificationSubscriber.subscribeTenant(tenant);
             // notificationSubscriber.subscribeAllDevices();
 
         });
-        serviceConfiguration = serviceConfigurations[0];
+        serviceConfiguration = sc.getValue();
         loadProcessorExtensions();
-        mappingServiceRepresentation = objectMapper.convertValue(mappingServiceRepresentations[0],
+        mappingServiceRepresentation = objectMapper.convertValue(msr.getValue(),
                 MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
-        mappingServiceManagedObjectRepresentation = mappingServiceRepresentations[0];
+        mappingServiceManagedObjectRepresentation = msr.getValue();
 
         try {
             mqttClient.submitInitialize();
@@ -311,37 +314,37 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
             throws SDKException {
 
-        MeasurementRepresentation[] measurementRepresentations = { new MeasurementRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            measurementRepresentations[0].setAttrs(attributes);
-            measurementRepresentations[0].setSource(mor);
-            measurementRepresentations[0].setType(eventType);
-            measurementRepresentations[0].setDateTime(timestamp);
+        MeasurementRepresentation measurementRepresentation = subscriptionsService.callForTenant(tenant, () -> {
+            MeasurementRepresentation mr = new MeasurementRepresentation();
+            mr.setAttrs(attributes);
+            mr.setSource(mor);
+            mr.setType(eventType);
+            mr.setDateTime(timestamp);
 
             // Step 3: Iterate over all fragments provided
             Iterator<Map.Entry<String, Object>> fragmentKeys = fragments.entrySet().iterator();
             while (fragmentKeys.hasNext()) {
                 Map.Entry<String, Object> currentFragment = fragmentKeys.next();
-                measurementRepresentations[0].set(currentFragment.getValue(), currentFragment.getKey());
+                mr.set(currentFragment.getValue(), currentFragment.getKey());
             }
-            measurementRepresentations[0] = measurementApi.create(measurementRepresentations[0]);
+            return measurementApi.create(mr);
         });
-        return measurementRepresentations[0];
+        return measurementRepresentation;
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(ID identity, ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
-        ExternalIDRepresentation[] externalIDRepresentations = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                externalIDRepresentations[0] = identityApi.resolveExternalId2GlobalId(identity, context);
+                return identityApi.resolveExternalId2GlobalId(identity, context);
             } catch (SDKException e) {
                 log.warn("External ID {} not found", identity.getValue());
             }
+            return null;
         });
-        return externalIDRepresentations[0];
+        return result;
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String idType, ProcessingContext<?> context) {
@@ -349,15 +352,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             idType = "c8y_Serial";
         }
         final String idt = idType;
-        ExternalIDRepresentation[] result = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                result[0] = identityApi.resolveGlobalId2ExternalId(gid, idt, context);
+                return identityApi.resolveGlobalId2ExternalId(gid, idt, context);
             } catch (SDKException e) {
                 log.warn("External ID type {} for {} not found", idt, gid.getValue());
             }
+            return null;
         });
-        return result[0];
+        return result;
     }
 
     public ManagedObjectRepresentation getAgentMOR() {
@@ -385,132 +388,129 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public AlarmRepresentation createAlarm(String severity, String message, String type, DateTime alarmTime,
             ManagedObjectRepresentation parentMor) {
-        AlarmRepresentation[] alarmRepresentations = { new AlarmRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            alarmRepresentations[0].setSeverity(severity);
-            alarmRepresentations[0].setSource(parentMor);
-            alarmRepresentations[0].setText(message);
-            alarmRepresentations[0].setDateTime(alarmTime);
-            alarmRepresentations[0].setStatus("ACTIVE");
-            alarmRepresentations[0].setType(type);
-
-            alarmRepresentations[0] = this.alarmApi.create(alarmRepresentations[0]);
+        AlarmRepresentation alarmRepresentation = subscriptionsService.callForTenant(tenant, () -> {
+            AlarmRepresentation ar = new AlarmRepresentation();
+            ar.setSeverity(severity);
+            ar.setSource(parentMor);
+            ar.setText(message);
+            ar.setDateTime(alarmTime);
+            ar.setStatus("ACTIVE");
+            ar.setType(type);
+            return this.alarmApi.create(ar);
         });
-        return alarmRepresentations[0];
+        return alarmRepresentation;
     }
 
     public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor) {
-        EventRepresentation[] eventRepresentations = { new EventRepresentation() };
         subscriptionsService.runForTenant(tenant, () -> {
-            eventRepresentations[0]
+            EventRepresentation er = new EventRepresentation();
+            er
                     .setSource(parentMor != null ? parentMor : mappingServiceManagedObjectRepresentation);
-            eventRepresentations[0].setText(message);
-            eventRepresentations[0].setDateTime(eventTime);
-            eventRepresentations[0].setType(type);
-            this.eventApi.createAsync(eventRepresentations[0]);
+            er.setText(message);
+            er.setDateTime(eventTime);
+            er.setType(type);
+            this.eventApi.createAsync(er);
         });
     }
 
     public MQTTClient.Certificate loadCertificateByName(String fingerprint) {
-        TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
-            results[0] = serviceConfigurationComponent.loadCertificateByName(fingerprint, credentials);
-            log.info("Found certificate with fingerprint: {}", results[0].getFingerprint());
+        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
+            return serviceConfigurationComponent.loadCertificateByName(fingerprint, credentials);
         });
-        StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n").append(results[0].getCertInPemFormat())
+        log.info("Found certificate with fingerprint: {}", result.getFingerprint());
+        StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
+                .append(result.getCertInPemFormat())
                 .append("\n").append("-----END CERTIFICATE-----");
 
-        return new MQTTClient.Certificate(results[0].getFingerprint(), cert.toString());
+        return new MQTTClient.Certificate(result.getFingerprint(), cert.toString());
     }
 
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context) throws ProcessingException {
-        String[] errors = { "" };
-        AbstractExtensibleRepresentation[] results = { null };
+        StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         API targetAPI = context.getMapping().getTargetAPI();
-        subscriptionsService.runForTenant(tenant, () -> {
+        AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
+            AbstractExtensibleRepresentation rt = null;
             try {
                 if (targetAPI.equals(API.EVENT)) {
                     EventRepresentation eventRepresentation = objectMapper.readValue(payload,
                             EventRepresentation.class);
-                    results[0] = eventApi.create(eventRepresentation);
-                    log.info("New event posted: {}", results[0]);
+                    rt = eventApi.create(eventRepresentation);
+                    log.info("New event posted: {}", rt);
                 } else if (targetAPI.equals(API.ALARM)) {
                     AlarmRepresentation alarmRepresentation = objectMapper.readValue(payload,
                             AlarmRepresentation.class);
-                    results[0] = alarmApi.create(alarmRepresentation);
-                    log.info("New alarm posted: {}", results[0]);
+                    rt = alarmApi.create(alarmRepresentation);
+                    log.info("New alarm posted: {}", rt);
                 } else if (targetAPI.equals(API.MEASUREMENT)) {
-                    // MeasurementRepresentation mr = objectMapper.readValue(payload,
-                    // MeasurementRepresentation.class);
                     MeasurementRepresentation measurementRepresentation = jsonParser
                             .parse(MeasurementRepresentation.class, payload);
-                    results[0] = measurementApi.create(measurementRepresentation);
-                    log.info("New measurement posted: {}", results[0]);
+                    rt = measurementApi.create(measurementRepresentation);
+                    log.info("New measurement posted: {}", rt);
                 } else if (targetAPI.equals(API.OPERATION)) {
                     OperationRepresentation operationRepresentation = jsonParser
                             .parse(OperationRepresentation.class, payload);
-                    results[0] = deviceControlApi.create(operationRepresentation);
-                    log.info("New operation posted: {}", results[0]);
+                    rt = deviceControlApi.create(operationRepresentation);
+                    log.info("New operation posted: {}", rt);
                 } else {
                     log.error("Not existing API!");
                 }
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {} {}", targetAPI, payload);
-                errors[0] = "Could not map payload: " + targetAPI + "/" + payload;
+                error.append("Could not map payload: " + targetAPI + "/" + payload);
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {} {}", targetAPI, payload, s);
-                errors[0] = "Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s;
+                error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
             }
+            return rt;
         });
-        if (!errors[0].equals("")) {
-            throw new ProcessingException(errors[0]);
+        if (!error.toString().equals("")) {
+            throw new ProcessingException(error.toString());
         }
-        return results[0];
+        return result;
     }
 
     public ManagedObjectRepresentation upsertDevice(ID identity, ProcessingContext<?> context)
             throws ProcessingException {
-        String[] errors = { "" };
+        StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
-        ManagedObjectRepresentation[] devices = { new ManagedObjectRepresentation() };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
+            ManagedObjectRepresentation mor = null;
             try {
                 ExternalIDRepresentation extId = resolveExternalId2GlobalId(identity, context);
                 if (extId == null) {
                     // Device does not exist
-                    ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
+                    mor = objectMapper.readValue(currentRequest.getRequest(),
                             ManagedObjectRepresentation.class);
                     // append external id to name
                     mor.setName(mor.getName());
                     mor.set(new IsDevice());
                     mor = inventoryApi.create(mor, context);
                     log.info("New device created: {}", mor);
-                    devices[0] = mor;
                     identityApi.create(mor, identity, context);
                 } else {
                     // Device exists - update needed
-                    ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
+                    mor = objectMapper.readValue(currentRequest.getRequest(),
                             ManagedObjectRepresentation.class);
                     mor.setId(extId.getManagedObject().getId());
                     mor = inventoryApi.update(mor, context);
-                    devices[0] = mor;
+
                     log.info("Device updated: {}", mor);
                 }
-
             } catch (JsonProcessingException e) {
                 log.error("Could not map payload: {}", currentRequest.getRequest());
-                errors[0] = "Could not map payload: " + currentRequest.getRequest();
+                error.append("Could not map payload: " + currentRequest.getRequest());
             } catch (SDKException s) {
                 log.error("Could not sent payload to c8y: {} {}", currentRequest.getRequest(), s);
-                errors[0] = "Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s;
+                error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
             }
+            return mor;
         });
-        if (!errors[0].equals("")) {
-            throw new ProcessingException(errors[0]);
+        if (!error.toString().equals("")) {
+            throw new ProcessingException(error.toString());
         }
-        return devices[0];
+        return device;
     }
 
     private void loadProcessorExtensions() {
@@ -643,19 +643,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
-        ManagedObjectRepresentation[] devices = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             GId id = new GId();
             id.setValue(deviceId);
             try {
-                ManagedObjectRepresentation mor = inventoryApi.get(id);
-                devices[0] = mor;
+                return inventoryApi.get(id);
             } catch (SDKException exception) {
                 log.warn("Device with id {} not found!", deviceId);
             }
+            return null;
         });
 
-        return devices[0];
+        return device;
     }
 
     public void updateOperationStatus(OperationRepresentation op, OperationStatus status, String failureReason) {
@@ -679,6 +678,5 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             notificationSubscriber.disconnect(false);
             notificationSubscriber.init();
         });
-
     }
 }
