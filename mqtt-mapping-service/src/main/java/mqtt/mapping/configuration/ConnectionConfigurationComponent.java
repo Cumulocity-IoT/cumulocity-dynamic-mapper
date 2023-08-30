@@ -85,25 +85,26 @@ public class ConnectionConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
-        ConfigurationConnection[] results = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ConfigurationConnection result =  subscriptionsService.callForTenant(tenant, () -> {
+            ConfigurationConnection rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
                 final ConfigurationConnection configuration = new ObjectMapper().readValue(
                         optionRepresentation.getValue(),
                         ConfigurationConnection.class);
                 log.debug("Returning connection configuration found: {}:", configuration.mqttHost);
-                results[0] = configuration;
+                rt = configuration;
             } catch (SDKException exception) {
                 log.warn("No configuration found, returning empty element!");
-                results[0] = new ConfigurationConnection();
+                rt = new ConfigurationConnection();
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
+            return rt;
         });
-        return results[0];
+        return result;
     }
 
     public void deleteAllConfiguration() {
