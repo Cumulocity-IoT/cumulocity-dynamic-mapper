@@ -80,6 +80,7 @@ public class C8YAPISubscriber {
     private C8YAgent c8YAgent;
 
     private AsynchronousDispatcherOutbound dispatcherOutbound;
+
     @Autowired
     public void setDispatcherOutbound(@Lazy AsynchronousDispatcherOutbound dispatcherOutbound) {
         this.dispatcherOutbound = dispatcherOutbound;
@@ -96,8 +97,6 @@ public class C8YAPISubscriber {
     private boolean outputMappingEnabled;
 
     private ScheduledExecutorService executorService = null;
-    private static ScheduledFuture<?> executorFuture = null;
-
     private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
@@ -128,6 +127,7 @@ public class C8YAPISubscriber {
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
         try {
             deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
+            logger.info("Subscribing to devices {}", deviceSubList);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (ExecutionException e) {
@@ -173,7 +173,7 @@ public class C8YAPISubscriber {
     }
 
     public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor,
-            API api) throws ExecutionException, InterruptedException {
+                                                                                     API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String deviceName = mor.getName();
         logger.info("Creating new Subscription for Device {} with ID {}", deviceName, mor.getId().getValue());
@@ -240,7 +240,7 @@ public class C8YAPISubscriber {
     }
 
     public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId,
-            String deviceSubscription) {
+                                                                                                        String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -346,6 +346,7 @@ public class C8YAPISubscriber {
     // @Scheduled(fixedRate = 30000, initialDelay = 30000)
     public void reconnect() {
         try {
+            logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
             if (tenant_client != null) {
                 if (!tenant_client.isOpen()) {
                     if (tenantWSStatusCode == 401
@@ -450,66 +451,19 @@ public class C8YAPISubscriber {
     }
 
     public void unsubscribe() {
-        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi
-                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
-                .get().allPages().iterator();
-        while (deviceSubIt.hasNext()) {
-            NotificationSubscriptionRepresentation notification = deviceSubIt.next();
-            logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
-            // FIXME Issues bySubscription Filter does not work yet
-            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                    subscriptionApi.delete(notification);
-                });
-            }
-
-        }
-        Iterator<NotificationSubscriptionRepresentation> tenantSubIt = subscriptionApi
-                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(TENANT_SUBSCRIPTION))
-                .get().allPages().iterator();
-        while (tenantSubIt.hasNext()) {
-            NotificationSubscriptionRepresentation notification = tenantSubIt.next();
-            logger.info("Deleting Subscription with ID {}", notification.getId().getValue());
-            subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                subscriptionApi.delete(notification);
-            });
-        }
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            subscriptionApi.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
+        });
     }
 
-    public boolean unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
-        // Iterator<NotificationSubscriptionRepresentation> deviceSubIt =
-        // subscriptionApi.getSubscriptionsByFilter(new
-        // NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId())).get().allPages().iterator();
-        Iterator<NotificationSubscriptionRepresentation> deviceSubIt = subscriptionApi
-                .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
-                .get().allPages().iterator();
-        int subsFound = 0;
-        List<Boolean> deviceDeleted = new ArrayList<>();
-        while (deviceSubIt.hasNext()) {
-            NotificationSubscriptionRepresentation notification = deviceSubIt.next();
 
-            // FIXME Issues bySubscription Filter does not work yet
-            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                subsFound++;
-                if (mor.getId().getValue().equals(notification.getSource().getId().getValue())) {
-                    subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-                        logger.info("Deleting Subscription {} for Device {} with ID {}",
-                                notification.getId().getValue(), mor.getName(), mor.getId().getValue());
-                        subscriptionApi.delete(notification);
-                        deviceDeleted.add(true);
-                    });
-
-                }
-            }
-        }
-
-        if (deviceDeleted.size() > 0 && deviceDeleted.get(0)) {
-            if (subsFound == 1)
+    public void unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            subscriptionApi.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
+            if (!subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator().hasNext()) {
                 disconnect(true);
-            return true;
-        }
-
-        return false;
+            }
+        });
     }
 
     public void disconnect(Boolean onlyDeviceClient) {
@@ -522,7 +476,6 @@ public class C8YAPISubscriber {
             }
         } else {
             this.executorService.shutdownNow();
-            this.executorFuture = null;
             if (device_client != null && device_client.isOpen()) {
                 logger.info("Disconnecting WS Device Client {}", device_client.toString());
                 device_client.close();
@@ -543,7 +496,6 @@ public class C8YAPISubscriber {
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         try {
-            this.executorService = Executors.newScheduledThreadPool(1);
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);
@@ -551,8 +503,9 @@ public class C8YAPISubscriber {
             client.connect();
             wsClientList.add(client);
             // Only start it once
-            if (executorFuture == null) {
-                executorFuture = executorService.scheduleAtFixedRate(() -> {
+            if (this.executorService == null) {
+                this.executorService = Executors.newScheduledThreadPool(1);
+                this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
                 }, 30, 30, TimeUnit.SECONDS);
             }
