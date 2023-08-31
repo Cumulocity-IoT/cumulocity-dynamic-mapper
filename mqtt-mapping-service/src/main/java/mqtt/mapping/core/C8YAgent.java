@@ -33,12 +33,12 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -231,9 +231,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
             if (mappingServiceIdRepresentation != null) {
-                log.info("Agent with ID {} already exists {}", MappingServiceRepresentation.AGENT_ID,
-                        mappingServiceIdRepresentation);
-                amo = mappingServiceIdRepresentation.getManagedObject();
+                amo =  inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
+                log.info("Agent with ID {} already exists {} , {}", MappingServiceRepresentation.AGENT_ID,
+                        mappingServiceIdRepresentation, amo);
             } else {
                 amo.setName(MappingServiceRepresentation.AGENT_NAME);
                 amo.set(new Agent());
@@ -252,25 +252,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     .get(MappingType.PROCESSOR_EXTENSION);
 
             // test if managedObject for internal mapping extension exists
-            MutableObject<ManagedObjectRepresentation> internalExtension = new MutableObject<ManagedObjectRepresentation>(
-                    null);
-
-            extensions.getInternal().forEach(m -> {
-                internalExtension.setValue(m);
-            });
-            if (internalExtension.getValue() == null) {
-                ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
+            List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
+            ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
+            if (internalExtension == null || internalExtension.size() == 0 ) {
                 Map<String, ?> props = Map.of("name",
                         ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                         "external", false);
                 ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
                         props);
                 ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
-                internalExtension.setValue(inventoryApi.create(ie, null));
+                ie = inventoryApi.create(ie, null);
+            } else {
+                ie = internalExtension.get(0);
             }
             log.info("Internal extension: {} registered: {}",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                    internalExtension.getValue().getId().getValue(), internalExtension.getValue());
+                    ie.getId().getValue(), ie);
             notificationSubscriber.init();
             // notificationSubscriber.subscribeTenant(tenant);
             // notificationSubscriber.subscribeAllDevices();
