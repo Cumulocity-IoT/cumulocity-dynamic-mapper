@@ -131,14 +131,14 @@ public class AsynchronousDispatcher implements MqttCallback {
                                 }
 
                                 if (serializedPayload != null) {
-                                    mappingStatus.snoopedTemplatesActive++;
-                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mapping.addSnoopedTemplate(serializedPayload);
+                                    mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
+                                    mappingStatus.snoopedTemplatesActive++;
 
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.setMappingDirty(mapping);
+                                    mappingStatusComponent.addDirtyMapping(mapping);
 
                                 } else {
                                     log.warn(
@@ -206,7 +206,7 @@ public class AsynchronousDispatcher implements MqttCallback {
     private ExecutorService cachedThreadPool;
 
     @Autowired
-    MappingComponent mappingStatusComponent;
+    MappingComponent mappingComponent;
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
@@ -221,14 +221,14 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     public Future<List<ProcessingContext<?>>> processMessage(String topic, MqttMessage mqttMessage,
             boolean sendPayload) throws Exception {
-        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
                 try {
-                    resolvedMappings = mqttClient.resolveMappings(topic);
+                    resolvedMappings = mappingComponent.resolveMappingInbound(topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map for topic \"" + topic
                             + "\". Could NOT be parsed. Ignoring this message!");
@@ -244,7 +244,7 @@ public class AsynchronousDispatcher implements MqttCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingStatusComponent, c8yAgent, topic,
+                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic,
                         payloadProcessorsInbound,
                         sendPayload, mqttMessage, objectMapper));
 

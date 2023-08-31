@@ -37,6 +37,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -76,31 +77,28 @@ public class ServiceConfigurationComponent {
 
     public TrustedCertificateRepresentation loadCertificateByName(String certificateName,
             MicroserviceCredentials credentials) {
-        TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
+        MutableObject<TrustedCertificateRepresentation> result = new MutableObject<TrustedCertificateRepresentation>(
+                new TrustedCertificateRepresentation());
         TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
                 String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
                 MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
         certificates.forEach(cert -> {
             if (cert.getName().equals(certificateName)) {
-                results[0] = cert;
+                result.setValue(cert);
                 log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(),
                         cert.getName());
             }
         });
-        return results[0];
+        return result.getValue();
     }
 
     public void saveServiceConfiguration(final ServiceConfiguration configuration) throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
-
         final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = new OptionRepresentation();
-        optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        optionRepresentation.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        optionRepresentation.setValue(configurationJson);
-
+        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(
+                OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION, configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
@@ -108,26 +106,26 @@ public class ServiceConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        ServiceConfiguration[] results = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
+            ServiceConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
                 final ServiceConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
                         ServiceConfiguration.class);
                 log.debug("Returning service configuration found: {}:", configuration.logPayload);
-                results[0] = configuration;
+                rt = configuration;
+                log.info("Found connection configuration: {}", rt);
             } catch (SDKException exception) {
                 log.warn("No configuration found, returning empty element!");
-                results[0] = new ServiceConfiguration();
                 // exception.printStackTrace();
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
-            log.info("Found connection configuration: {}", results[0]);
+            return rt;
         });
-        return results[0];
+        return result;
     }
 
     public void deleteAllConfiguration() {

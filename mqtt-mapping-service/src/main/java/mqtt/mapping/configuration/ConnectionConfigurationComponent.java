@@ -41,7 +41,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConnectionConfigurationComponent {
     private static final String OPTION_CATEGORY_CONFIGURATION = "mqtt.dynamic.service";
-
     private static final String OPTION_KEY_CONNECTION_CONFIGURATION = "credentials.connection.configuration";
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
 
@@ -73,11 +72,7 @@ public class ConnectionConfigurationComponent {
         }
 
         final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = new OptionRepresentation();
-        optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        optionRepresentation.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
-        optionRepresentation.setValue(configurationJson);
-
+        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION, configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
@@ -85,40 +80,37 @@ public class ConnectionConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
-        ConfigurationConnection[] results = { null };
-        subscriptionsService.runForTenant(tenant, () -> {
+        ConfigurationConnection result =  subscriptionsService.callForTenant(tenant, () -> {
+            ConfigurationConnection rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
                 final ConfigurationConnection configuration = new ObjectMapper().readValue(
                         optionRepresentation.getValue(),
                         ConfigurationConnection.class);
                 log.debug("Returning connection configuration found: {}:", configuration.mqttHost);
-                results[0] = configuration;
+                rt = configuration;
             } catch (SDKException exception) {
                 log.warn("No configuration found, returning empty element!");
-                results[0] = new ConfigurationConnection();
+                rt = new ConfigurationConnection();
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
+            return rt;
         });
-        return results[0];
+        return result;
     }
 
     public void deleteAllConfiguration() {
-        final OptionPK optionPK = new OptionPK();
-        optionPK.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        optionPK.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
+        final OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
         optionPK.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
     }
 
     public ConfigurationConnection enableConnection(boolean enabled) {
-        final OptionPK option = new OptionPK();
-        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        option.setKey(OPTION_KEY_CONNECTION_CONFIGURATION);
+        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_CONNECTION_CONFIGURATION);
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final ConfigurationConnection configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
