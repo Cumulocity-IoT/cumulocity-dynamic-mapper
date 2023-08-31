@@ -51,6 +51,7 @@ import mqtt.mapping.model.API;
 import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
@@ -99,7 +100,8 @@ public class MappingComponent {
 
     @Getter
     @Setter
-    // cache of outbound mappings stored by mapping.filterOundbound used for resolving
+    // cache of outbound mappings stored by mapping.filterOundbound used for
+    // resolving
     private Map<String, List<Mapping>> resolverMappingOutbound = new HashMap<String, List<Mapping>>();
 
     @Getter
@@ -394,7 +396,7 @@ public class MappingComponent {
         return in;
     }
 
-    public List<Mapping>  rebuildMappingInboundCache(List<Mapping> updatedMappings) {
+    public List<Mapping> rebuildMappingInboundCache(List<Mapping> updatedMappings) {
         log.info("Loaded mappings inbound: {} to cache", updatedMappings.size());
         setCacheMappingInbound(updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
@@ -407,7 +409,7 @@ public class MappingComponent {
         List<Mapping> updatedMappings = getMappings().stream()
                 .filter(m -> !Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        return rebuildMappingInboundCache (updatedMappings);
+        return rebuildMappingInboundCache(updatedMappings);
     }
 
     public void setActivationMapping(String id, Boolean active) throws Exception {
@@ -416,7 +418,7 @@ public class MappingComponent {
         Mapping mapping = getMapping(id);
         mapping.setActive(active);
         // step 2. retrieve collected snoopedTemplates
-        mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates()); 
+        mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates());
         // step 3. update mapping in inventory
         updateMapping(mapping, true);
         // step 4. delete mapping from update cache
@@ -449,6 +451,13 @@ public class MappingComponent {
 
     public void addDirtyMapping(Mapping mapping) {
         dirtyMappings.add(mapping);
+    }
+
+    public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
+        List<TreeNode> resolvedMappings = getResolverMappingInbound()
+                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
+        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
+                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
     }
 
 }
