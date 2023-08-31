@@ -69,7 +69,7 @@ public class SynchronousDispatcher implements MqttCallback {
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
     @Autowired
-    MappingComponent mappingStatusComponent;
+    MappingComponent mappingComponent;
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
@@ -84,21 +84,21 @@ public class SynchronousDispatcher implements MqttCallback {
 
     public List<ProcessingContext<?>> processMessage(String topic, MqttMessage mqttMessage, boolean sendPayload)
             throws Exception {
-        MappingStatus mappingStatusUnspecified = mappingStatusComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
         List<ProcessingContext<?>> processingResult = new ArrayList<ProcessingContext<?>>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
             if (mqttMessage.getPayload() != null) {
                 List<Mapping> resolvedMappings = new ArrayList<>();
                 try {
-                    resolvedMappings = mqttClient.resolveMappingInbound(topic);
+                    resolvedMappings = mappingComponent.resolveMappingInbound(topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!", e);
                     mappingStatusUnspecified.errors++;
                 }
 
                 resolvedMappings.forEach(mapping -> {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
+                    MappingStatus mappingStatus = mappingComponent.getMappingStatus(mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -145,7 +145,7 @@ public class SynchronousDispatcher implements MqttCallback {
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(mapping);
+                                    mappingComponent.addDirtyMapping(mapping);
                                 } else {
                                     log.warn(
                                             "Message could NOT be parsed, ignoring this message, as class is not valid: {}",

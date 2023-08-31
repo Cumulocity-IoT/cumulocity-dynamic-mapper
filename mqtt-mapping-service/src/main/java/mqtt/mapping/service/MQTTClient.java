@@ -197,7 +197,7 @@ public class MQTTClient {
         return true;
     }
 
-    public void reloadConfiguration() {
+    private void reloadConfiguration() {
         connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
     }
 
@@ -448,13 +448,6 @@ public class MQTTClient {
         MqttMessage mqttMessage = new MqttMessage();
         mqttMessage.setPayload(payloadMessage.getBytes());
         return dispatcher.processMessage(topic, mqttMessage, send).get();
-    }
-
-    public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = mappingComponent.getResolverMappingInbound()
-                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
-        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
-                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
     }
 
     public void reconnect() {
