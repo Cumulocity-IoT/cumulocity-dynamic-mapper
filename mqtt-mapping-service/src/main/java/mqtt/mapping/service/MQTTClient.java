@@ -67,7 +67,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -77,8 +76,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
-import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceStatus;
@@ -102,21 +99,12 @@ public class MQTTClient {
     private ConfigurationConnection connectionConfiguration;
     private Certificate cert;
 
-    @Getter
-    private ServiceConfiguration serviceConfiguration;
 
     private ConnectionConfigurationComponent connectionConfigurationComponent;
 
     @Autowired
     public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
         this.connectionConfigurationComponent = connectionConfigurationComponent;
-    }
-
-    private ServiceConfigurationComponent serviceConfigurationComponent;
-
-    @Autowired
-    public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
     }
 
     private MappingComponent mappingComponent;
@@ -209,8 +197,7 @@ public class MQTTClient {
         return true;
     }
 
-    public void reloadConfiguration() {
-        serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+    private void reloadConfiguration() {
         connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
     }
 
@@ -326,7 +313,7 @@ public class MQTTClient {
                                 e.getMessage(), e);
                     }
 
-                    mappingComponent.rebuildOutboundMappingCache();
+                    mappingComponent.rebuildMappingOutboundCache();
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // reviously used updatedMappings
@@ -454,9 +441,6 @@ public class MQTTClient {
         return serviceStatus;
     }
 
-    public TreeNode getActiveMappingTree() {
-        return mappingComponent.getCacheMappingInbound();
-    }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
             throws Exception {
@@ -464,18 +448,6 @@ public class MQTTClient {
         MqttMessage mqttMessage = new MqttMessage();
         mqttMessage.setPayload(payloadMessage.getBytes());
         return dispatcher.processMessage(topic, mqttMessage, send).get();
-    }
-
-    public void saveServiceConfiguration(ServiceConfiguration configuration) throws JsonProcessingException {
-        serviceConfiguration = configuration;
-        serviceConfigurationComponent.saveServiceConfiguration(configuration);
-    }
-
-    public List<Mapping> resolveMappings(String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getActiveMappingTree()
-                .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
-        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
-                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
     }
 
     public void reconnect() {
@@ -507,7 +479,7 @@ public class MQTTClient {
         Mapping activeMapping = null;
         Boolean create = true;
         Boolean subscriptionTopicChanged = false;
-        Optional<Mapping> activeMappingOptional = mappingComponent.getActiveMappingInbound().values().stream()
+        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().values().stream()
                 .filter(m -> m.id.equals(mapping.id))
                 .findFirst();
 

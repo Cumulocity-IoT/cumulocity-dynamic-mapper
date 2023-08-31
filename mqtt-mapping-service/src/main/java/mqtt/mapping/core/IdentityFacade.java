@@ -29,7 +29,10 @@ import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.mock.MockIdentity;
+import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
+
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -65,17 +68,18 @@ public class IdentityFacade {
         }
     }
 
-    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
+            ProcessingContext<?> context) {
         if (context == null || context.isSendPayload()) {
-            ExternalIDRepresentation[] result = { null };
+            MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
             ExternalIDCollection collection = identityApi.getExternalIdsOfGlobalId(gid);
             for (ExternalIDRepresentation externalId : collection.get(PAGE_SIZE).allPages()) {
                 if (externalId.getType().equals(externalIdType)) {
-                    result[0] = externalId;
+                    result.setValue(externalId);
                     break;
                 }
             }
-            return result[0];
+            return result.getValue();
         } else {
             return identityMock.getExternalIdsOfGlobalId(gid);
         }
