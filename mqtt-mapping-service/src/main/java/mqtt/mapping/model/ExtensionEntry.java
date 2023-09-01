@@ -43,7 +43,7 @@ public class ExtensionEntry implements Serializable {
 
     @NotNull
     @JsonIgnore
-    private ProcessorExtensionInbound extensionImplementation;
+    private ProcessorExtensionInbound<?> extensionImplementation;
 
     @NotNull
     public boolean loaded;

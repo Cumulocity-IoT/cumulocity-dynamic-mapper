@@ -110,6 +110,11 @@ public class MappingComponent {
     private TreeNode resolverMappingInbound = InnerNode.createRootNode();
 
     private void initializeMappingStatus() {
+        log.info("Initializing status: {}, {} ", mappingServiceRepresentation.getMappingStatus(),
+                (mappingServiceRepresentation.getMappingStatus() == null
+                        || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
+                                : mappingServiceRepresentation.getMappingStatus().size()));
+
         if (mappingServiceRepresentation.getMappingStatus() != null) {
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 statusMapping.put(ms.ident, ms);

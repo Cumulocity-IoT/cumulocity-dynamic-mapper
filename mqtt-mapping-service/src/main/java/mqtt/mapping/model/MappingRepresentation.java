@@ -243,7 +243,7 @@ public class MappingRepresentation implements Serializable {
   private static Collection<ValidationError> areJSONTemplatesValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     try {
-      Object json = new JSONTokener(mapping.source).nextValue();
+      new JSONTokener(mapping.source).nextValue();
     } catch (JSONException e) {
       result.add(ValidationError.Source_Template_Must_Be_Valid_JSON);
     }
