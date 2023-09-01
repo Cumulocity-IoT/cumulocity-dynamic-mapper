@@ -80,9 +80,6 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
 
