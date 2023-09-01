@@ -411,7 +411,6 @@ public class C8YAPISubscriber {
     }
 
     public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
-        final GId sourceId = GId.asGId(mor.getId());
         final String subscriptionName = DEVICE_SUBSCRIPTION;
 
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi

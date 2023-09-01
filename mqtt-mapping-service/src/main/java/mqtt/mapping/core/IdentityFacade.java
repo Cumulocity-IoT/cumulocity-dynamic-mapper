@@ -27,16 +27,13 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
-import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.mock.MockIdentity;
-import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
 
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Slf4j
 @Service
 public class IdentityFacade {
 
