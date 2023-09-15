@@ -21,10 +21,15 @@
 import { Injectable } from "@angular/core";
 import { AlertService } from "@c8y/ngx-components";
 import * as _ from "lodash";
-import { API, Mapping, RepairStrategy } from "../../shared/mapping.model";
+import {
+  API,
+  Mapping,
+  MappingType,
+  RepairStrategy,
+} from "../../shared/mapping.model";
 import { findDeviceIdentifier, MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
 import { getTypedValue } from "../shared/util";
-import { C8YClient } from "../core/c8y-client.service";
+import { C8YAgent } from "../core/c8y-agent.service";
 import {
   ProcessingContext,
   SubstituteValue,
@@ -33,7 +38,7 @@ import {
 
 @Injectable({ providedIn: "root" })
 export abstract class PayloadProcessorInbound {
-  constructor(private alert: AlertService, private c8yClient: C8YClient) {}
+  constructor(private alert: AlertService, private c8yClient: C8YAgent) {}
 
   public abstract deserializePayload(
     context: ProcessingContext,
@@ -109,8 +114,8 @@ export abstract class PayloadProcessorInbound {
         }
 
         if (mapping.targetAPI != API.INVENTORY.name) {
-          if (pathTarget == API[mapping.targetAPI].identifier) {
-            let sourceId: string = await this.c8yClient.resolveExternalId(
+          if (pathTarget == findDeviceIdentifier(mapping).pathTarget) {
+            let sourceId: string = await this.c8yClient.resolveExternalId2GlobalId(
               {
                 externalId: substituteValue.value.toString(),
                 type: mapping.externalIdType,
@@ -165,25 +170,9 @@ export abstract class PayloadProcessorInbound {
               substituteValue.value = sourceId.toString();
             }
           }
-          if (
-            (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
-          ) {
-            _.unset(payloadTarget, pathTarget);
-          } else {
-            _.set(payloadTarget, pathTarget, getTypedValue(substituteValue));
-          }
+          this.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
         } else if (pathTarget != API[mapping.targetAPI].identifier) {
-          if (
-            (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_MISSING && !substituteValue.value )|| (substituteValue.repairStrategy ==
-              RepairStrategy.REMOVE_IF_NULL && substituteValue.value == null) 
-          ) {
-            _.unset(payloadTarget, pathTarget);
-          } else {
-            _.set(payloadTarget, pathTarget, getTypedValue(substituteValue));
-          }
+          this.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
         }
       }
       /*
@@ -236,6 +225,34 @@ export abstract class PayloadProcessorInbound {
         `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
       );
       i++;
+    }
+  }
+
+  public substituteValueInObject(
+    type: MappingType,
+    sub: SubstituteValue,
+    jsonObject: JSON,
+    keys: string
+  ) {
+    let subValueMissing: boolean = sub.value == null;
+    let subValueNull: boolean =
+      sub.value == null || (sub.value != null && sub.value != undefined);
+
+    if (
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
+        subValueMissing) ||
+      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+    ) {
+      _.unset(jsonObject, keys);
+    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+      let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+      if (pathIsNested) {
+        throw new Error("Can only crrate new nodes ion the root level!");
+      }
+      //jsonObject.put("$", keys, sub.typedValue());
+      _.set(jsonObject, keys, getTypedValue(sub));
+    } else {
+      _.set(jsonObject, keys, getTypedValue(sub));
     }
   }
 }

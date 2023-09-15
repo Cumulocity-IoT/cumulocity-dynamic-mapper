@@ -19,7 +19,13 @@
  * @authors Christof Strack
  */
 import { Injectable } from "@angular/core";
-import { FetchClient, InventoryService, QueriesUtil } from "@c8y/client";
+import {
+  FetchClient,
+  IFetchResponse,
+  IIdentified,
+  InventoryService,
+  QueriesUtil,
+} from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
@@ -48,12 +54,12 @@ import {
 
 @Injectable({ providedIn: "root" })
 export class MappingService {
-
   _feature: Feature;
   constructor(
     private inventory: InventoryService,
     private configurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
+    private jsonProcessorOutbound: JSONProcessorOutbound,
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
@@ -129,12 +135,28 @@ export class MappingService {
     return m;
   }
 
-  async getSubscriptions(): Promise<C8YAPISubscription > {
+  async deleteSubscriptions(device: IIdentified): Promise<any> {
+    let response = this.client.fetch(
+      `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "DELETE",
+      }
+    );
+    let data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    let m = await data.text();
+    return m;
+  }
+
+  async getSubscriptions(): Promise<C8YAPISubscription> {
     if (!this._feature) {
       this._feature = await this.configurationService.getFeatures();
     }
     if (this._feature.outputMappingEnabled) {
-      let response = this.client.fetch(
+      const res: IFetchResponse = await this.client.fetch(
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
         {
           headers: {
@@ -143,9 +165,8 @@ export class MappingService {
           method: "GET",
         }
       );
-      let data = await response;
-      let sub = await data.json();
-      return sub;
+      const data = await res.json();
+      return data;
     } else {
       //return Promise.resolve();
       return null;
@@ -231,15 +252,15 @@ export class MappingService {
     sendPayload: boolean
   ): Promise<ProcessingContext> {
     let context = this.initializeContext(mapping, sendPayload);
-    // if (mapping.direction == Direction.INBOUND) {
-    this.jsonProcessorInbound.deserializePayload(context, mapping);
-    this.jsonProcessorInbound.extractFromSource(context);
-    await this.jsonProcessorInbound.substituteInTargetAndSend(context);
-    // } else {
-    //   this.jsonProcessorOuting.deserializePayload(context, mapping);
-    //   this.jsonProcessorOuting.extractFromSource(context);
-    //   await this.jsonProcessorOuting.substituteInTargetAndSend(context);
-    // }
+    if (mapping.direction == Direction.INBOUND) {
+      this.jsonProcessorInbound.deserializePayload(context, mapping);
+      this.jsonProcessorInbound.extractFromSource(context);
+      await this.jsonProcessorInbound.substituteInTargetAndSend(context);
+    } else {
+      this.jsonProcessorOutbound.deserializePayload(context, mapping);
+      this.jsonProcessorOutbound.extractFromSource(context);
+      await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
+    }
 
     // The producing code (this may take some time)
     return context;

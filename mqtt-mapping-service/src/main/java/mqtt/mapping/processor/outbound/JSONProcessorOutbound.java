@@ -25,11 +25,16 @@ import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
+
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingSubstitution;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
@@ -68,16 +73,17 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
         Map<String, List<SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         String payload = payloadJsonNode.toPrettyString();
-        //log.info("Patched payload: {}", payload);
+        // log.info("Patched payload: {}", payload);
 
         for (MappingSubstitution substitution : mapping.substitutions) {
             JsonNode extractedSourceContent = null;
+
             /*
              * step 1 extract content from inbound payload
              */
+            var ps = substitution.pathSource;
             try {
-                var p = substitution.pathSource;
-                Expressions expr = Expressions.parse(p);
+                Expressions expr = Expressions.parse(ps);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
                 log.error("Exception for: {}, {}", substitution.pathSource,
@@ -126,6 +132,21 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
+                    if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
+                            && substitution.resolve2ExternalId) {
+                        log.info("Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}", ps, extractedSourceContent.toPrettyString(), extractedSourceContent.asText());
+                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(
+                                new GId(extractedSourceContent.asText()), mapping.externalIdType,
+                                context);
+                        if (externalId == null && context.isSendPayload()) {
+                            throw new RuntimeException("External id " + extractedSourceContent.asText() + " for type "
+                                    + mapping.externalIdType + " not found!");
+                        } else if (externalId == null) {
+                            extractedSourceContent = null;
+                        } else {
+                            extractedSourceContent= new TextNode(externalId.getExternalId());
+                        }
+                    }
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry.add(
                             new SubstituteValue(extractedSourceContent, TYPE.TEXTUAL, substitution.repairStrategy));
@@ -143,7 +164,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                             .add(new SubstituteValue(extractedSourceContent, TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (mqttClient.getServiceConfiguration().logSubstitution) {
+                if (c8yAgent.getServiceConfiguration().logSubstitution) {
                     log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }

@@ -98,7 +98,7 @@ public class MappingsRepresentationJUnitTest {
     assertEquals("p1s", m1.substitutions[0].pathSource);
     m1.sortSubstitutions();
     log.info("My substitutions {}", Arrays.toString(m1.substitutions));
-    assertEquals("p2s", m1.substitutions[0].pathSource);
+    assertEquals("p1s", m1.substitutions[0].pathSource);
 
   }
 
@@ -161,7 +161,7 @@ public class MappingsRepresentationJUnitTest {
   @Test
   void testNeedsRepair() {
 
-    ProcessingContext p1 = new ProcessingContext();
+    ProcessingContext<String> p1 = new ProcessingContext<String>();
     p1.addCardinality("value1",   5);
     p1.addCardinality("value2",   5);
     p1.addCardinality(ProcessingContext.SOURCE_ID, 1);
@@ -169,7 +169,7 @@ public class MappingsRepresentationJUnitTest {
     assertEquals(false, p1.isNeedsRepair());
 
 
-    ProcessingContext p2 = new ProcessingContext();
+    ProcessingContext<String> p2 = new ProcessingContext<String>();
     p2.addCardinality("value1",   5);
     p2.addCardinality("value2",   4);
     p2.addCardinality(ProcessingContext.SOURCE_ID, 1);

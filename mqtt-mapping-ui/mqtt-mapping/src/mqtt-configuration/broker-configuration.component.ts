@@ -29,6 +29,7 @@ import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import {
   ConnectionConfiguration as ConnectionConfiguration,
+  Feature,
   Operation,
   ServiceConfiguration,
   ServiceStatus,
@@ -49,6 +50,7 @@ export class BokerConfigurationComponent implements OnInit {
   subscription: any;
   connectionForm: FormGroup;
   serviceForm: FormGroup;
+  feature: Feature;
 
   connectionConfiguration: ConnectionConfiguration = {
     mqttHost: "",
@@ -74,7 +76,7 @@ export class BokerConfigurationComponent implements OnInit {
     public alertservice: AlertService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     console.log("Running version", this.version);
     this.initForms();
     this.loadData();
@@ -84,6 +86,7 @@ export class BokerConfigurationComponent implements OnInit {
     )
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
+    this.feature = await this.configurationService.getFeatures();
   }
 
   private async initializeMonitoringService(): Promise<void> {
@@ -152,6 +155,18 @@ export class BokerConfigurationComponent implements OnInit {
     this.updateServiceConfiguration();
   }
 
+  async clickedReconnect2NotificationEnpoint() {
+    const response1 = await this.configurationService.runOperation(
+      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS
+    );
+    console.log("Details reconnect2NotificationEnpoint", response1);
+    if (response1.status === 201) {
+      this.alertservice.success(gettext("Reconnect successful!"));
+    } else {
+      this.alertservice.danger(gettext("Failed to reconnect."));
+    }
+  }
+
   private async updateConnectionConfiguration() {
     let conn: ConnectionConfiguration = {
       ...this.connectionConfiguration,
@@ -160,7 +175,7 @@ export class BokerConfigurationComponent implements OnInit {
     const response =
       await this.configurationService.updateConnectionConfiguration(conn);
     if (response.status < 300) {
-      this.alertservice.success(gettext("Update successful"));
+      this.alertservice.success(gettext("Update successful."));
     } else {
       this.alertservice.danger(gettext("Failed to update connection"));
     }

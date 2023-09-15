@@ -38,10 +38,6 @@ import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Subject } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
-  JsonEditorComponent,
-  JsonEditorOptions,
-} from "../../shared/editor/jsoneditor.component";
-import {
   API,
   Direction,
   Extension,
@@ -73,6 +69,7 @@ import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
 import { SubstitutionRendererComponent } from "./substitution/substitution-renderer.component";
 import { isDisabled } from "./util";
+import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
 
 @Component({
   selector: "mapping-stepper",
@@ -118,25 +115,28 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
+  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(
+    0
+  );
   sourceSystem: string;
   targetSystem: string;
 
-  editorOptionsSource: JsonEditorOptions = new JsonEditorOptions();
-  editorOptionsTarget: JsonEditorOptions = new JsonEditorOptions();
-  editorOptionsTesting: JsonEditorOptions = new JsonEditorOptions();
+  editorOptionsSource: any = {};
+  editorOptionsTarget: any = {};
+  editorOptionsTesting: any = {};
 
   selectedSubstitution: number = -1;
   snoopedTemplateCounter: number = 0;
   step: any;
 
   @ViewChild("editorSource", { static: false })
-  editorSource: JsonEditorComponent;
+  editorSource: JsonEditor2Component;
   @ViewChild("editorTarget", { static: false })
-  editorTarget: JsonEditorComponent;
+  editorTarget: JsonEditor2Component;
   @ViewChild("editorTestingRequest", { static: false })
-  editorTestingRequest: JsonEditorComponent;
+  editorTestingRequest: JsonEditor2Component;
   @ViewChild("editorTestingResponse", { static: false })
-  editorTestingResponse: JsonEditorComponent;
+  editorTestingResponse: JsonEditor2Component;
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
   @ViewChild(C8yStepper, { static: false }) stepper: C8yStepper;
@@ -320,7 +320,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           disabled:
             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
           description:
-            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is applied.",
+            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value",
           required: this.stepperConfiguration.direction == Direction.OUTBOUND,
         },
         hideExpression:
@@ -686,7 +686,34 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-4",
+            className: "col-lg-3",
+            key: "currentSubstitution.resolve2ExternalId",
+            type: "switch",
+            wrappers: ["c8y-form-field"],
+            templateOptions: {
+              label: "Resolve to externalId",
+              description: `Resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.`,
+              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              readonly: true,
+              switchMode: true,
+              indeterminate: false,
+            },
+            hideExpression:
+            (model) => {
+              const d1 = model.mapping.direction  == Direction.INBOUND;
+              const d2 = model.mapping.direction  == Direction.OUTBOUND;
+              const d3 = definesDeviceIdentifier(
+                model.mapping.targetAPI,
+                model?.currentSubstitution,
+                model.mapping.direction
+              );
+              const r = d1 || (d2 && !d3) 
+              //console.log("WWWWW", c, model?.currentSubstitution)
+              return r;
+            }
+          },
+          {
+            className: "col-lg-2",
             key: "currentSubstitution.repairStrategy",
             type: "select",
             wrappers: ["c8y-form-field"],
@@ -723,7 +750,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-3 pull-right p-t-24",
+            className: "col-lg-1  p-t-24",
             type: "button",
             templateOptions: {
               text: "Upsert substitution",
@@ -746,30 +773,28 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.setTemplateForm();
     this.editorOptionsSource = {
       ...this.editorOptionsSource,
-      modes: ["tree", "code"],
-      statusBar: false,
+      mode: "tree",
+      mainMenuBar: true,
       navigationBar: false,
-      enableSort: false,
-      enableTransform: false,
+      statusBar: false,
       name: "message",
     };
 
     this.editorOptionsTarget = {
       ...this.editorOptionsTarget,
-      modes: ["tree", "code"],
-      statusBar: false,
+      mode: "tree",
+      mainMenuBar: true,
       navigationBar: false,
-      enableSort: false,
-      enableTransform: false,
+      statusBar: true,
     };
 
     this.editorOptionsTesting = {
       ...this.editorOptionsTesting,
-      modes: ["form"],
-      statusBar: false,
+      mode: "tree",
+      mainMenuBar: true,
       navigationBar: false,
-      enableSort: false,
-      enableTransform: false,
+      statusBar: false,
+      readOnly:true
     };
 
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
@@ -777,17 +802,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.extensionEvents$.subscribe((events) => {
       console.log("New events from extension", events);
     });
-  }
-
-  ngAfterContentChecked(): void {
-    // if json source editor is displayed then choose the first selection
-    const editorSourceRef =
-      this.elementRef.nativeElement.querySelector("#editorSource");
-    if (editorSourceRef != null && !editorSourceRef.getAttribute("listener")) {
-      this.selectedSubstitution = 0;
-      this.onSelectSubstitution(this.selectedSubstitution);
-      editorSourceRef.setAttribute("listener", "true");
-    }
   }
 
   private setTemplateForm(): void {
@@ -808,6 +822,57 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.mapping.extension.name = this.templateForm.controls["exName"].value;
       this.mapping.extension.event =
         this.templateForm.controls["exEvent"].value;
+    }
+  }
+
+  ngAfterContentChecked(): void {
+    // if json source editor is displayed then choose the first selection
+    const editorSourceRef =
+      this.elementRef.nativeElement.querySelector("#editorSource");
+    if (editorSourceRef != null && !editorSourceRef.getAttribute("schema")) {
+      //set schema for editors
+      if (this.stepperConfiguration.showEditorSource) {
+        this.editorSource.setSchema(
+          getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+        );
+        editorSourceRef.setAttribute("schema", "true");
+      }
+    }
+    const editorTargetRef =
+      this.elementRef.nativeElement.querySelector("#editorTarget");
+    if (editorTargetRef != null && !editorTargetRef.getAttribute("schema")) {
+      //set schema for editors
+      this.editorTarget.setSchema(
+        getSchema(API.MEASUREMENT.name, Direction.INBOUND, true)
+      );
+      editorTargetRef.setAttribute("schema", "true");
+    }
+
+    const editorTestingResponseRef =
+      this.elementRef.nativeElement.querySelector("#editorTestingResponse");
+    if (
+      editorTestingResponseRef != null &&
+      !editorTestingResponseRef.getAttribute("schema")
+    ) {
+      //set schema for editors
+      this.editorTestingResponse.setSchema(
+        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+      );
+      editorTestingResponseRef.setAttribute("schema", "true");
+    }
+
+    const editorTestingRequestRef = this.elementRef.nativeElement.querySelector(
+      "#editorTestingRequestRef"
+    );
+    if (
+      editorTestingRequestRef != null &&
+      !editorTestingRequestRef.getAttribute("schema")
+    ) {
+      //set schema for editors
+      this.editorTestingRequest.setSchema(
+        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+      );
+      editorTestingRequestRef.setAttribute("schema", "true");
     }
   }
 
@@ -924,6 +989,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
+    this.selectedResult$.next(this.testingModel.selectedResult);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length
@@ -937,8 +1003,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           this.testingModel.results[this.testingModel.selectedResult].targetAPI,
           this.mapping.direction,
           true
-        ),
-        null
+        )
       );
       this.testingModel.errorMsg =
         this.testingModel.results[this.testingModel.selectedResult].error;
@@ -998,25 +1063,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         this.mapping.source
       );
       this.enrichTemplates();
-      // set schema for editors
-      this.editorTarget.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true),
-        null
-      );
-      if (this.stepperConfiguration.showEditorSource) {
-        this.editorSource.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, false),
-          null
-        );
-      }
-      this.editorTestingRequest.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true),
-        null
-      );
-      this.editorTestingResponse.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true),
-        null
-      );
       this.extensions =
         (await this.configurationService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
