@@ -19,11 +19,8 @@
  * @authors Christof Strack
  */
 import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
-import {
-  JsonEditorComponent,
-  JsonEditorOptions,
-} from "../shared/editor/jsoneditor.component";
 import { MappingTreeService } from "./tree.service";
+import { JsonEditor2Component } from "src/shared/editor2/jsoneditor2.component";
 
 @Component({
   selector: "mapping-tree-grid",
@@ -34,20 +31,18 @@ import { MappingTreeService } from "./tree.service";
 })
 export class MappingTreeComponent implements OnInit {
   constructor(private service: MappingTreeService) {}
-  @ViewChild("editorTree", { static: false }) editorTree: JsonEditorComponent;
+  @ViewChild("editorTree", { static: false }) editorTree: JsonEditor2Component;
   templateTree: any;
-  editorOptionsTree: JsonEditorOptions = new JsonEditorOptions();
+  editorOptionsTree: any = {};
 
   ngOnInit(): void {
     this.editorOptionsTree = {
       ...this.editorOptionsTree,
-      modes: ["tree"],
-      statusBar: true,
-      navigationBar: true,
-      enableSort: true,
-      enableTransform: false,
+      mode: "tree",
       mainMenuBar: true,
-      search: true,
+      navigationBar: false,
+      statusBar: false,
+      readOnly:true,
       name: 'root'
     };
     this.loadMappingTree();

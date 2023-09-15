@@ -22,7 +22,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormGroup } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
 import { IManagedObject } from "@c8y/client";
-import { gettext } from "@c8y/ngx-components";
+import { gettext, throttle } from "@c8y/ngx-components";
 
 import { ExtensionService } from "../share/extension.service";
 
@@ -35,17 +35,19 @@ export class ExtensionPropertiesComponent implements OnInit {
   extension: IManagedObject;
 
   isLoading: boolean = true;
-  isCollapsed: any = {};
+
 
   breadcrumbConfig: { icon: string; label: string; path: string };
 
   constructor(
     private activatedRoute: ActivatedRoute,
     private extensionService: ExtensionService
-  ) {}
+  ) {
+    this.refresh();
+  }
 
   async ngOnInit() {
-    await this.refresh();
+    //await this.refresh();
   }
 
   async refresh() {
@@ -63,15 +65,6 @@ export class ExtensionPropertiesComponent implements OnInit {
     const { id } = this.activatedRoute.snapshot.params;
     let result = await this.extensionService.getExtensionsEnriched(id);
     this.extension = result[0];
-    // let copy = {
-    //   name: this.extension.extensionEntries[0].name + "copy",
-    //   event: this.extension.extensionEntries[0].event + "copy",
-    //   message: this.extension.extensionEntries[0].message + "copy"
-    // };
-    // this.extension.extensionEntries.push(copy);
-    this.extension.extensionEntries?.forEach((entry) => {
-      this.isCollapsed[entry.name] = true;
-    });
   }
 
   private setBreadcrumbConfig() {

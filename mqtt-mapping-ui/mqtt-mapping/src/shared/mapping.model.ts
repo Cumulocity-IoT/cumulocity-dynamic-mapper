@@ -44,6 +44,7 @@ export interface MappingSubstitution {
   pathTarget: string;
   repairStrategy: RepairStrategy;
   expandArray: boolean;
+  resolve2ExternalId: boolean;
 }
 
 export interface Mapping {
@@ -179,8 +180,8 @@ export enum ValidationError {
   TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
   TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
   PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name
-
+  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  FilterOutbound_Must_Be_Unique
 }
 
 export const ValidationFormlyError = {
@@ -241,6 +242,11 @@ export const ValidationFormlyError = {
       message:
         "PublishTopic and TemplateTopicSample do not have same structure in the Topic Name.",
     },
+  FilterOutbound_Must_Be_Unique:
+    {
+      message:
+        "FilterOutbound must be unique within all outbound mappings.",
+    },
 };
 
 export enum QOS {
@@ -264,6 +270,7 @@ export enum Operation {
   RELOAD_EXTENSIONS,
   RELOAD_MAPPINGS,
   RESET_STATUS_MAPPING,
+  REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
 }
 
 export enum MappingType {
@@ -286,5 +293,5 @@ export enum RepairStrategy {
 
 export class C8YAPISubscription {
   api: string;
-  devices: IIdentified;
+  devices: IIdentified[];
 }
