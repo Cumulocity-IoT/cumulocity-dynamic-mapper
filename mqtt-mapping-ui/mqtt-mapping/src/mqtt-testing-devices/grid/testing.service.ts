@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Injectable, OnInit } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { transform } from "lodash-es";
 
 import {
@@ -212,8 +212,9 @@ export class TestingDeviceService {
 
   /** Returns a query string based on columns setup. */
   private getQueryString(columns: Column[]): string {
-    const fullQuery = this.getQueryObj(columns);
-    return this.queriesUtil.buildQuery(fullQuery);
+    // const fullQuery = this.getQueryObj(columns);
+    // return this.queriesUtil.buildQuery(fullQuery);
+    return this.getQueryObj(columns);
   }
 
   /** Returns a query object based on columns setup. */
