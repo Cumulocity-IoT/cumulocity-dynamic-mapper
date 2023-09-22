@@ -40,3 +40,4 @@ mqtt-mapping-ui/mqtt-mapping/node_modules/*
 mqtt-mapping-extension/.factorypath
 mqtt-mapping-interface/.factorypath
 mqtt-mapping-service/.factorypath
+set.sh
