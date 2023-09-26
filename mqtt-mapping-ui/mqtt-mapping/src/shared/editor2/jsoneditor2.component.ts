@@ -46,6 +46,7 @@ import {
   JSONContent,
   isMultiSelection,
   createMultiSelection,
+  TextContent,
 } from "vanilla-jsoneditor";
 
 @Component({
@@ -177,9 +178,14 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   public get(): JSON {
     const content: Content = this.editor.get();
     if (isJSONContent(content)) {
-      const c: any = (this.editor.get() as JSONContent).json;
-      return c;
+      const j: any = (this.editor.get() as JSONContent).json;
+      return j;
+    } else {
+      const t: any = (this.editor.get() as TextContent).text;
+      const j: JSON = JSON.parse(t)
+      return j
     }
+    
   }
 
   public set(json: any) {
