@@ -1140,6 +1140,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.editorTestingRequest.set(
         this.editorSource ? this.editorSource.get() : ({} as JSON)
       );
+      this.editorTestingResponse.set( {} as JSON );
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
