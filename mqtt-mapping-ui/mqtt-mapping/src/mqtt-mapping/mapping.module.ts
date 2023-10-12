@@ -57,6 +57,7 @@ import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
 import { SelectComponent } from "./shared/formly/select/select.type.component";
 import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
 import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
+import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
 
 @NgModule({
   declarations: [
@@ -70,6 +71,7 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
+    StatusActivationRendererComponent,
     APIRendererComponent,
     ActiveRendererComponent,
     SnoopingModalComponent,
@@ -100,6 +102,7 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     SubstitutionRendererComponent,
     APIRendererComponent,
     ActiveRendererComponent,
+    StatusActivationRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
   ],
