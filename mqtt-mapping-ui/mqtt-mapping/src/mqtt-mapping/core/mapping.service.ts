@@ -266,7 +266,7 @@ export class MappingService {
     return context;
   }
 
-  public evaluateExpression(json: JSON, path: string): JSON {
+  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = "";
     if (path != undefined && path != "" && json != undefined) {
       const expression = this.JSONATA(path);
