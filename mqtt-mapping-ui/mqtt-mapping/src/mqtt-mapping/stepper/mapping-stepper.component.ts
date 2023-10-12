@@ -691,26 +691,27 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             type: "switch",
             wrappers: ["c8y-form-field"],
             templateOptions: {
-              label: "Resolve to externalId",
+              label: " to externalId",
               description: `Resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.`,
-              disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               readonly: true,
               switchMode: true,
               indeterminate: false,
             },
-            hideExpression:
-            (model) => {
-              const d1 = model.mapping.direction  == Direction.INBOUND;
-              const d2 = model.mapping.direction  == Direction.OUTBOUND;
-              const d3 = definesDeviceIdentifier(
-                model.mapping.targetAPI,
-                model?.currentSubstitution,
-                model.mapping.direction
-              );
-              const r = d1 || (d2 && !d3) 
-              //console.log("WWWWW", c, model?.currentSubstitution)
-              return r;
-            }
+            expressionProperties: {
+              "templateOptions.disabled": () => {
+                const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+                const d1 = this.mapping.direction  == Direction.INBOUND;
+                const d2 = this.mapping.direction  == Direction.OUTBOUND;
+                const d3 = definesDeviceIdentifier(
+                  this.mapping.targetAPI,
+                  this.templateModel.currentSubstitution,
+                  this.mapping.direction
+                );
+                const r = d0 || d1 || (d2 && !d3) 
+                //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
+                return r;
+              }
+            },
           },
           {
             className: "col-lg-2",
@@ -881,9 +882,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateModel.currentSubstitution.pathSource = path;
   }
 
-  public updateSourceExpressionResult(path: string) {
+  public async updateSourceExpressionResult(path: string) {
     try {
-      let r: JSON = this.mappingService.evaluateExpression(
+      let r: JSON = await this.mappingService.evaluateExpression(
         this.editorSource?.get(),
         path
       );
@@ -907,9 +908,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateModel.currentSubstitution.pathTarget = path;
   }
 
-  public updateTargetExpressionResult(path: string) {
+  public async updateTargetExpressionResult(path: string) {
     try {
-      let r: JSON = this.mappingService.evaluateExpression(
+      let r: JSON = await this.mappingService.evaluateExpression(
         this.editorTarget?.get(),
         path
       );
