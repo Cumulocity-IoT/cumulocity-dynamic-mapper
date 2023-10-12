@@ -68,6 +68,7 @@ import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
 import { Dir } from "@angular/cdk/bidi";
+import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -185,7 +186,8 @@ export class MappingComponent implements OnInit {
       path: "active",
       filterable: true,
       sortable: true,
-      cellRendererComponent: ActiveRendererComponent,
+      // cellRendererComponent: ActiveRendererComponent,
+      cellRendererComponent: StatusActivationRendererComponent,
       gridTrackSize: "7%",
     },
   ];
@@ -273,6 +275,12 @@ export class MappingComponent implements OnInit {
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMapping.bind(this),
+      },
+      {
+        type: "ACTIVATE",
+        text: "Toogle Activation",
+        icon:'toggle-on',
+        callback: this.activateMapping.bind(this),
       }
     );
     this.actionControlSubscription.push({
@@ -443,6 +451,16 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
+  async activateMapping(mapping: Mapping) {
+    let newActive = !mapping.active;
+    let action = newActive ? "Activate" : "Deactivate";
+    this.alertService.success(action + " mapping: " + mapping.id + "!");
+    let parameter = { id: mapping.id, active: newActive };
+    await this.mappingService.changeActivationMapping(parameter);
+    this.loadMappings();
+    this.refresh.emit();
+  }
+
   async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping);
     try {
@@ -472,11 +490,10 @@ export class MappingComponent implements OnInit {
 
     if (
       (mapping.direction == Direction.INBOUND &&
-        isTemplateTopicUnique(mapping, this.mappings)) 
-        // test if we can attach multiple outbound mappings to the same filterOutbound
-        || (mapping.direction == Direction.OUTBOUND 
-        //  && isFilterOutboundUnique(mapping, this.mappings)
-        )
+        isTemplateTopicUnique(mapping, this.mappings)) ||
+      // test if we can attach multiple outbound mappings to the same filterOutbound
+      mapping.direction == Direction.OUTBOUND
+      //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);
