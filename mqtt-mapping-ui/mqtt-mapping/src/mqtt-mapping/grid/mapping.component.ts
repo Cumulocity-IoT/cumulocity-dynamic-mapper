@@ -126,14 +126,14 @@ export class MappingComponent implements OnInit {
       name: "subscriptionTopic",
       path: "subscriptionTopic",
       filterable: true,
-      gridTrackSize: "12.5%",
+      // gridTrackSize: "12.5%",
     },
     {
       header: "Template Topic",
       name: "templateTopic",
       path: "templateTopic",
       filterable: true,
-      gridTrackSize: "12.5%",
+      // gridTrackSize: "12.5%",
     },
     {
       name: "targetAPI",
@@ -143,23 +143,25 @@ export class MappingComponent implements OnInit {
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
-      gridTrackSize: "5%",
+      gridTrackSize: "7%",
     },
     {
       header: "Sample payload",
       name: "source",
       path: "source",
       filterable: true,
+      sortable: false,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: "20%",
+      // gridTrackSize: "20%",
     },
     {
       header: "Target",
       name: "target",
       path: "target",
       filterable: true,
+      sortable: false,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: "20%",
+      // gridTrackSize: "20%",
     },
     {
       header: "Test/Snoop",
@@ -169,7 +171,7 @@ export class MappingComponent implements OnInit {
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: "text-align-center",
-      gridTrackSize: "8%",
+      gridTrackSize: "7%",
     },
     {
       header: "QOS",
@@ -178,13 +180,13 @@ export class MappingComponent implements OnInit {
       filterable: true,
       sortable: false,
       cellRendererComponent: QOSRendererComponent,
-      gridTrackSize: "5%",
+      // gridTrackSize: "5%",
     },
     {
       header: "Active",
       name: "active",
       path: "active",
-      filterable: true,
+      filterable: false,
       sortable: true,
       // cellRendererComponent: ActiveRendererComponent,
       cellRendererComponent: StatusActivationRendererComponent,
@@ -241,14 +243,14 @@ export class MappingComponent implements OnInit {
         name: "publishTopic",
         path: "publishTopic",
         filterable: true,
-        gridTrackSize: "12.5%",
+        // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
         header: "Template Topic Sample",
         name: "templateTopicSample",
         path: "templateTopicSample",
         filterable: true,
-        gridTrackSize: "12.5%",
+        // gridTrackSize: "12.5%",
       };
     }
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction}`;
