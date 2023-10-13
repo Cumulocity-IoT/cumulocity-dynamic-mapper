@@ -18,16 +18,8 @@
  *
  * @authors Christof Strack
  */
-.substitution-list {
-  font-family: inherit;
-  padding: var(--form-control-padding-base-vertical, 5px)
-    var(--form-control-padding-base-horizontal, 8px)
-    var(--form-control-padding-base-vertical, 5px);
-  background-color: #fff;
-  border: 1px solid rgb(170, 170, 170);
-  font-size: smaller !important;
-  /* min-height: 32px; */
-  /* max-height: 33px; */
-  height: 5em;
-  overflow: auto;
+
+.c8y-list__item__body {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }

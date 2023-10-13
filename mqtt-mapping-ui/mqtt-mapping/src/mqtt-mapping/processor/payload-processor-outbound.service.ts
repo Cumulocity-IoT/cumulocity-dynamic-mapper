@@ -183,4 +183,13 @@ export abstract class PayloadProcessorOutbound {
       _.set(jsonObject, keys, getTypedValue(sub));
     }
   }
+
+  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+    let result: any = "";
+    if (path != undefined && path != "" && json != undefined) {
+      const expression = this.JSONATA(path);
+      result = await expression.evaluate(json) as JSON;
+    }
+    return result;
+  }
 }

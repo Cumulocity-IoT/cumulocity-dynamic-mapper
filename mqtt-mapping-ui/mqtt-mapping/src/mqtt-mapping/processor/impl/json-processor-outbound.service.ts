@@ -35,6 +35,7 @@ import {
   SubstituteValueType,
 } from "../prosessor.model";
 import { Injectable } from "@angular/core";
+import { map } from "rxjs/operators";
 
 @Injectable({ providedIn: "root" })
 export class JSONProcessorOutbound extends PayloadProcessorOutbound {
@@ -46,7 +47,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
     return context;
   }
 
-  public extractFromSource(context: ProcessingContext) {
+  public async extractFromSource(context: ProcessingContext) {
     let mapping: Mapping = context.mapping;
     let payloadJsonNode: JSON = context.payload;
     let postProcessingCache: Map<string, SubstituteValue[]> =
@@ -57,11 +58,13 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
     let payload: string = JSON.stringify(payloadJsonNode, null, 4);
     let substitutionTimeExists: boolean = false;
 
-    mapping.substitutions.forEach( async (substitution) => {
+    // iterate over substitutions BEGIN
+    // mapping.substitutions.forEach(async (substitution) => {
+    for (const substitution of mapping.substitutions) {
       let extractedSourceContent: any;
       try {
         // step 1 extract content from inbound payload
-        extractedSourceContent = this.evaluateExpression(
+        extractedSourceContent = await this.evaluateExpression(
           JSON.parse(mapping.source),
           substitution.pathSource
         );
@@ -138,29 +141,44 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 postProcessingCacheEntry
               );
             }
-          } else if (isNumeric(JSON.stringify(extractedSourceContent))) {
+          } else if (isNumeric(extractedSourceContent)) {
             context.cardinality.set(substitution.pathTarget, 1);
 
-            if (substitution.pathSource == (findDeviceIdentifier(mapping).pathSource)
-                    && substitution.resolve2ExternalId) {
-                let externalId : string = await this.c8yAgent.resolveGlobalId2ExternalId(
-                  JSON.stringify(extractedSourceContent), mapping.externalIdType,
-                        context);
-                if (externalId == null && context.sendPayload) {
-                    throw new Error("External id " + JSON.stringify(extractedSourceContent) + " for type "
-                            + mapping.externalIdType + " not found!");
-                } else if (externalId == null) {
-                    extractedSourceContent = null;
-                } else {
-                    extractedSourceContent= externalId;
-                }
+            if (
+              substitution.pathSource ==
+                findDeviceIdentifier(mapping).pathSource &&
+              substitution.resolve2ExternalId
+            ) {
+              let externalId: string =
+                await this.c8yAgent.resolveGlobalId2ExternalId(
+                  extractedSourceContent,
+                  mapping.externalIdType,
+                  context
+                );
+              if ((!externalId || externalId == null) && context.sendPayload) {
+                throw new Error(
+                  "External id " +
+                    extractedSourceContent +
+                    " for type " +
+                    mapping.externalIdType +
+                    " not found!"
+                );
+              } else if (!externalId || externalId == null) {
+                externalId = extractedSourceContent;
+              }
+              extractedSourceContent = `${externalId}_${mapping.externalIdType}`;
+              postProcessingCacheEntry.push({
+                value: extractedSourceContent,
+                type: SubstituteValueType.TEXTUAL,
+                repairStrategy: substitution.repairStrategy,
+              });
+            } else {
+              postProcessingCacheEntry.push({
+                value: extractedSourceContent,
+                type: SubstituteValueType.NUMBER,
+                repairStrategy: substitution.repairStrategy,
+              });
             }
-
-            postProcessingCacheEntry.push({
-              value: extractedSourceContent,
-              type: SubstituteValueType.NUMBER,
-              repairStrategy: substitution.repairStrategy,
-            });
             postProcessingCache.set(
               substitution.pathTarget,
               postProcessingCacheEntry
@@ -168,19 +186,30 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
           } else if (whatIsIt(extractedSourceContent) == "String") {
             context.cardinality.set(substitution.pathTarget, 1);
 
-            if (substitution.pathSource == (findDeviceIdentifier(mapping).pathSource)
-                    && substitution.resolve2ExternalId) {
-                let externalId : string = await this.c8yAgent.resolveGlobalId2ExternalId(
-                  JSON.stringify(extractedSourceContent), mapping.externalIdType,
-                        context);
-                if (externalId == null && context.sendPayload) {
-                    throw new Error("External id " + JSON.stringify(extractedSourceContent) + " for type "
-                            + mapping.externalIdType + " not found!");
-                } else if (externalId == null) {
-                    extractedSourceContent = null;
-                } else {
-                    extractedSourceContent= externalId;
-                }
+            if (
+              substitution.pathSource ==
+                findDeviceIdentifier(mapping).pathSource &&
+              substitution.resolve2ExternalId
+            ) {
+              let externalId: string =
+                await this.c8yAgent.resolveGlobalId2ExternalId(
+                  extractedSourceContent,
+                  mapping.externalIdType,
+                  context
+                );
+              if ((!externalId || externalId == null) && context.sendPayload) {
+                throw new Error(
+                  "External id " +
+                    extractedSourceContent +
+                    " for type " +
+                    mapping.externalIdType +
+                    " not found!"
+                );
+              } else if (!externalId || externalId == null) {
+                extractedSourceContent = null;
+              } else {
+                extractedSourceContent = externalId;
+              }
             }
 
             postProcessingCacheEntry.push({
@@ -217,7 +246,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
       } catch (error) {
         context.errors.push(error.message);
       }
-    });
+    }
+    // iterate over substitutions END
+    // });
 
     // no substitution for the time property exists, then use the system time
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name) {
@@ -234,14 +265,5 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
       postProcessingCache.set(TIME, postProcessingCacheEntry);
     }
-  }
-
-  public evaluateExpression(json: JSON, path: string): JSON {
-    let result: any = "";
-    if (path != undefined && path != "" && json != undefined) {
-      const expression = this.JSONATA(path);
-      result = expression.evaluate(json) as JSON;
-    }
-    return result;
   }
 }
