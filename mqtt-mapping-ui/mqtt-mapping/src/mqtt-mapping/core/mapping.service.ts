@@ -254,11 +254,11 @@ export class MappingService {
     let context = this.initializeContext(mapping, sendPayload);
     if (mapping.direction == Direction.INBOUND) {
       this.jsonProcessorInbound.deserializePayload(context, mapping);
-      this.jsonProcessorInbound.extractFromSource(context);
+      await this.jsonProcessorInbound.extractFromSource(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     } else {
       this.jsonProcessorOutbound.deserializePayload(context, mapping);
-      this.jsonProcessorOutbound.extractFromSource(context);
+      await this.jsonProcessorOutbound.extractFromSource(context);
       await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
     }
 
