@@ -19,7 +19,15 @@
  * @authors Christof Strack
  */
 
-.c8y-list__item__body {
+/* not working
+div:has(>c8y-li-body ) {
   padding-top: 4px !important;
   padding-bottom: 4px !important;
-}
+} */
+
+ .c8y-list__item__body:has(>c8y-li-body ) {
+  padding-top: 6px;
+  padding-bottom: 4px;
+} 
+
+
