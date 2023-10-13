@@ -45,7 +45,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
     return context;
   }
 
-  public extractFromSource(context: ProcessingContext) {
+  public async extractFromSource(context: ProcessingContext) {
     let mapping: Mapping = context.mapping;
     let payloadJsonNode: JSON = context.payload;
     let postProcessingCache: Map<string, SubstituteValue[]> =
@@ -56,11 +56,13 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
     let payload: string = JSON.stringify(payloadJsonNode, null, 4);
     let substitutionTimeExists: boolean = false;
 
-    mapping.substitutions.forEach((substitution) => {
+    // iterate over substitutions BEGIN
+    // mapping.substitutions.forEach(async (substitution) => {
+    for (const substitution of mapping.substitutions) {
       let extractedSourceContent: JSON;
       try {
         // step 1 extract content from inbound payload
-        extractedSourceContent = this.evaluateExpression(
+        extractedSourceContent = await this.evaluateExpression(
           JSON.parse(mapping.source),
           substitution.pathSource
         );
@@ -184,7 +186,9 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
       } catch (error) {
         context.errors.push(error.message);
       }
-    });
+    }
+    // iterate over substitutions END
+        // });
 
     // no substitution for the time property exists, then use the system time
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name) {
@@ -201,14 +205,5 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
 
       postProcessingCache.set(TIME, postProcessingCacheEntry);
     }
-  }
-
-  public evaluateExpression(json: JSON, path: string): JSON {
-    let result: any = "";
-    if (path != undefined && path != "" && json != undefined) {
-      const expression = this.JSONATA(path);
-      result = expression.evaluate(json) as JSON;
-    }
-    return result;
   }
 }

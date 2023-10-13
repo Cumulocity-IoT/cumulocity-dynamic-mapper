@@ -635,7 +635,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
             expressionProperties: {
               "templateOptions.label": (label) =>
-                `Result Type [${this.templateModel.currentSubstitution.sourceExpression.resultType}]`,
+                `Result Type [${this.templateModel.currentSubstitution.sourceExpression?.resultType}]`,
             },
           },
           {
@@ -650,7 +650,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
             expressionProperties: {
               "templateOptions.label": (label) =>
-                `Result Type [${this.templateModel.currentSubstitution.targetExpression.resultType}]`,
+                `Result Type [${this.templateModel.currentSubstitution.targetExpression?.resultType}]`,
             },
           },
         ],
@@ -667,7 +667,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            className: "col-lg-3 col-lg-offset-1",
+            className: "col-lg-2 col-lg-offset-1",
             key: "currentSubstitution.expandArray",
             type: "switch",
             wrappers: ["c8y-form-field"],
@@ -686,7 +686,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-3",
+            className: "col-lg-2 col-lg-offset-1",
             key: "currentSubstitution.resolve2ExternalId",
             type: "switch",
             wrappers: ["c8y-form-field"],
@@ -751,7 +751,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               !this.stepperConfiguration.allowDefiningSubstitutions,
           },
           {
-            className: "col-lg-1  p-t-24",
+            className: "col-lg-2  col-lg-offset-1 p-t-24",
             type: "button",
             templateOptions: {
               text: "Upsert substitution",
