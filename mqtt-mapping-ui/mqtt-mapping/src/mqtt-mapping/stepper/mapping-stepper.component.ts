@@ -115,9 +115,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(
-    0
-  );
+  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
 
@@ -216,8 +214,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           ],
         },
+        fieldGroupClassName: "row",
         fieldGroup: [
           {
+            className: "col-lg-6",
             key: "name",
             wrappers: ["c8y-form-field"],
             type: "input",
@@ -229,6 +229,32 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
+            className: "col-lg-6",
+            key: "templateTopic",
+            type: "input",
+            wrappers: ["c8y-form-field"],
+            templateOptions: {
+              label: "Template Topic",
+              placeholder: "Template Topic ...",
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                "The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.",
+              required:
+                this.stepperConfiguration.direction == Direction.INBOUND,
+            },
+            hideExpression:
+              this.stepperConfiguration.direction == Direction.OUTBOUND,
+          },
+          // filler when template topic is not shown
+          {
+            className: "col-lg-6",
+            type: "filler",
+            hideExpression:
+              this.stepperConfiguration.direction != Direction.OUTBOUND,
+          },
+          {
+            className: "col-lg-6",
             key: "subscriptionTopic",
             wrappers: ["c8y-form-field"],
             type: "input",
@@ -254,6 +280,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               this.stepperConfiguration.direction == Direction.OUTBOUND,
           },
           {
+            className: "col-lg-6",
             key: "publishTopic",
             type: "input",
             templateOptions: {
@@ -277,23 +304,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               this.stepperConfiguration.direction != Direction.OUTBOUND,
           },
           {
-            key: "templateTopic",
-            type: "input",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: "Template Topic",
-              placeholder: "Template Topic ...",
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description:
-                "The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.",
-              required:
-                this.stepperConfiguration.direction == Direction.INBOUND,
-            },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND,
-          },
-          {
+            className: "col-lg-6",
             key: "templateTopicSample",
             type: "input",
             wrappers: ["c8y-form-field"],
@@ -308,29 +319,30 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               required: true,
             },
           },
+          {
+            className: "col-lg-12",
+            key: "filterOutbound",
+            type: "input",
+            templateOptions: {
+              label: "Filter Outbound",
+              placeholder: "e.g. custom_OperationFragment",
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value",
+              required:
+                this.stepperConfiguration.direction == Direction.OUTBOUND,
+            },
+            hideExpression:
+              this.stepperConfiguration.direction != Direction.OUTBOUND,
+          },
         ],
-      },
-
-      {
-        key: "filterOutbound",
-        type: "input",
-        templateOptions: {
-          label: "Filter Outbound",
-          placeholder: "e.g. custom_OperationFragment",
-          disabled:
-            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-          description:
-            "The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value",
-          required: this.stepperConfiguration.direction == Direction.OUTBOUND,
-        },
-        hideExpression:
-          this.stepperConfiguration.direction != Direction.OUTBOUND,
       },
       {
         fieldGroupClassName: "row",
         fieldGroup: [
           {
-            className: "col-lg-6 p-l-0",
+            className: "col-lg-6",
             key: "targetAPI",
             type: "select",
             wrappers: ["c8y-form-field"],
@@ -413,7 +425,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroupClassName: "row",
         fieldGroup: [
           {
-            className: "col-lg-6 p-l-0",
+            className: "col-lg-6",
             key: "qos",
             type: "select",
             wrappers: ["c8y-form-field"],
@@ -428,7 +440,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: "col-lg-6 p-l-0",
+            className: "col-lg-6",
             key: "snoopStatus",
             type: "select",
             wrappers: ["c8y-form-field"],
@@ -468,7 +480,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className: "col-lg-6 p-l-0",
+            className: "col-lg-6",
             key: "externalIdType",
             type: "input",
             templateOptions: {
@@ -699,18 +711,19 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
             expressionProperties: {
               "templateOptions.disabled": () => {
-                const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
-                const d1 = this.mapping.direction  == Direction.INBOUND;
-                const d2 = this.mapping.direction  == Direction.OUTBOUND;
+                const d0 =
+                  this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
+                const d1 = this.mapping.direction == Direction.INBOUND;
+                const d2 = this.mapping.direction == Direction.OUTBOUND;
                 const d3 = definesDeviceIdentifier(
                   this.mapping.targetAPI,
                   this.templateModel.currentSubstitution,
                   this.mapping.direction
                 );
-                const r = d0 || d1 || (d2 && !d3) 
+                const r = d0 || d1 || (d2 && !d3);
                 //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
                 return r;
-              }
+              },
             },
           },
           {
@@ -795,7 +808,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
-      readOnly:true
+      readOnly: true,
     };
 
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
@@ -1141,7 +1154,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.editorTestingRequest.set(
         this.editorSource ? this.editorSource.get() : ({} as JSON)
       );
-      this.editorTestingResponse.set( {} as JSON );
+      this.editorTestingResponse.set({} as JSON);
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
