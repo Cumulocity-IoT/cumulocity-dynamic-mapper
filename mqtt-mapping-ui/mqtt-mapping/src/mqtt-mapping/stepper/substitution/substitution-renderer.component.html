@@ -40,51 +40,73 @@
 }" -->
 
 <div style="height: 200px; overflow: auto">
-  <c8y-list-group>
-    <c8y-li
-      *ngFor="let sub of substitutions; let i = index"
-      id="{{ 'sub-' + id + '-' + i }}"
-      [style.background]="
-        i == settings.selectedSubstitutionIndex ? settings.color : 'none'
-      "
-      (click)="onSubstitutionSelect(i)"
-    >
-      <c8y-li-icon
-        icon="replace"
-        style="padding-bottom: 4px; padding-top: 0px"
-      ></c8y-li-icon>
-      <c8y-li-body>
-        <div class="d-flex">
-          <div class="flex-grow text-truncate">
-            <span *ngIf="!sub.registeredType" class="text-12"
-              >{{
-                (i | number : "2.0-0") +
-                  ". [ " +
-                  (definesDeviceIdentifier(targetAPI, sub, direction)
-                    ? "* "
-                    : "") +
-                  sub.pathSource +
-                  " -> " +
-                  sub.pathTarget +
-                  " ]"
-              }}
-            </span>
-          </div>
-          <div class="m-l-8">
-            <button
-              title="{{ 'Remove' | translate }}"
-              class="btn btn-icon btn-clean"
-              (click)="onSubstitutionDelete(i)"
-              [attr.disabled]="
-                isDisabled(settings.editorMode == EditorMode.READ_ONLY)
-              "
-            >
-              <i c8yIcon="minus-circle" class="text-danger"></i>
-              <span class="sr-only" translate>Remove</span>
-            </button>
-          </div>
-        </div>
-      </c8y-li-body>
-    </c8y-li>
-  </c8y-list-group>
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>Substitution</th>
+        <th>Expand as array</th>
+        <th>Resolve to externalId</th>
+        <th>Respair strategy</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let sub of substitutions; let i = index"
+        id="{{ 'sub-' + id + '-' + i }}"
+        [style.background]="
+          i == settings.selectedSubstitutionIndex ? settings.color : 'none'
+        "
+        (click)="onSubstitutionSelect(i)"
+      >
+        <td>
+          <span *ngIf="!sub.registeredType" class="text-12"
+            >{{
+              "[ " +
+                (definesDeviceIdentifier(targetAPI, sub, direction)
+                  ? "* "
+                  : "") +
+                sub.pathSource +
+                " -> " +
+                sub.pathTarget +
+                " ]"
+            }}
+          </span>
+        </td>
+        <td>
+          {{ sub.expandArray }}
+        </td>
+        <td>
+          {{ sub.resolve2ExternalId }}
+        </td>
+        <td>
+          {{ sub.repairStrategy }}
+        </td>
+        <td>
+          <button
+            title="{{ 'Edit' | translate }}"
+            class="btn btn-icon btn-clean"
+            (click)="onSubstitutionEdit(i)"
+            [attr.disabled]="
+              isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+            "
+          >
+            <i c8yIcon="pencil" class="text-danger"></i>
+            <span class="sr-only" translate>Remove</span>
+          </button>
+          <button
+            title="{{ 'Remove' | translate }}"
+            class="btn btn-icon btn-clean"
+            (click)="onSubstitutionDelete(i)"
+            [attr.disabled]="
+              isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+            "
+          >
+            <i c8yIcon="minus-circle" class="text-danger"></i>
+            <span class="sr-only" translate>Remove</span>
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
