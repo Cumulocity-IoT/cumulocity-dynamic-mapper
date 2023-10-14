@@ -43,7 +43,7 @@
         <div class="col-lg-4 col-lg-offset-4">
           <h4 class="text-medium">
             <div class="text-center">
-              Mapping Type: {{mapping.mappingType}}&nbsp;
+              Mapping Type: {{ mapping.mappingType }}&nbsp;
               <span
                 *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
                 class="label label-primary"
@@ -137,7 +137,7 @@
                           <i c8yIcon="enter-left"></i>Use Source Templates
                           <span
                             *ngIf="mapping.snoopedTemplates.length > 0"
-                            class="badge animated flash infinite animation-slow "
+                            class="badge animated flash infinite animation-slow"
                           >
                             {{ mapping.snoopedTemplates.length }}</span
                           >
@@ -334,7 +334,7 @@
             </div>
             <div [formGroup]="templateForm">
               <div class="row">
-                <div class="legend form-block col-lg-10 col-lg-offset-1">
+                <!-- <div class="legend form-block col-lg-10 col-lg-offset-1">
                   Defined Substitutions
                   <span class="hidden-xs hidden-sm m-l-4">
                     <ng-template #popTemplateSub
@@ -352,6 +352,41 @@
                       <i c8yIcon="question-circle-o"></i>
                     </button>
                   </span>
+                </div> -->
+                <div class=" col-lg-10 col-lg-offset-1">
+                  <label>Manage Substitutions</label>
+                  <span class="hidden-xs hidden-sm m-l-4">
+                    <ng-template #popTemplateSub> Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.
+                    </ng-template>
+                    <button
+                      class="btn-clean text-primary"
+                      [popover]="popTemplateSub"
+                      popoverTitle="Defined substitutions"
+                      placement="right"
+                      triggers="focus"
+                      type="button"
+                    >
+                      <i c8yIcon="question-circle-o"></i>
+                    </button>
+                  </span>
+                  <div>
+                    <button
+                      type="button"
+                      name="addSubstitution"
+                      class="btn btn-default btn-xs"
+                      (click)="onAddSubstitution()"
+                      translate
+                      title="Add substitution"
+                      [disabled]="
+                        isDisabled(
+                          stepperConfiguration.showEditorSource ||
+                            stepperConfiguration.editorMode ==
+                              EditorMode.READ_ONLY
+                        )"
+                    >
+                      <i c8yIcon="enter-left"></i>Add substitution
+                    </button>
+                  </div>
                 </div>
                 <div class="col-lg-10 col-lg-offset-1">
                   <div style="min-height: 32px">
@@ -366,6 +401,7 @@
                       [direction]="mapping.direction"
                       (onSelect)="onSelectSubstitution($event)"
                       (onDelete)="onDeleteSubstitution($event)"
+                      (onEdit)="onEditSubstitution($event)"
                     >
                     </mapping-substitution-renderer>
                   </div>
@@ -417,12 +453,15 @@
             <div class="row">
               <div class="col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  
-                  <div style="display:flex">
+                  <div style="display: flex">
                     <label for="testResult" translate
                       >Testing - {{ targetSystem }} Request&nbsp;</label
                     >
-                    <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
+                    <h6>
+                      <span class="badge badge-success">{{
+                        selectedResult$ | async
+                      }}</span>
+                    </h6>
                   </div>
 
                   <mapping-json-editor2
@@ -444,11 +483,15 @@
             <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
               <div class="col-lg-10 col-lg-offset-1">
                 <div class="form-group">
-                  <div style="display:flex">
+                  <div style="display: flex">
                     <label for="testResult" translate
                       >Testing - {{ targetSystem }} Response&nbsp;</label
                     >
-                    <h6><span class="badge badge-success">{{selectedResult$ | async }}</span></h6>
+                    <h6>
+                      <span class="badge badge-success">{{
+                        selectedResult$ | async
+                      }}</span>
+                    </h6>
                   </div>
                   <mapping-json-editor2
                     [options]="editorOptionsTesting"
