@@ -1156,6 +1156,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         expandArray: false,
       };
       this.templateForm.updateValueAndValidity({ emitEvent: true });
+    } else {
+      this.alertService.warning("Please select two nodes: one node in the template source, one node in the template target to define a substitution.")
     }
   }
 
