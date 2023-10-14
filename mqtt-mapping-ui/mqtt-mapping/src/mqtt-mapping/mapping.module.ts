@@ -58,6 +58,7 @@ import { SelectComponent } from "./shared/formly/select/select.type.component";
 import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
 import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
 import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
+import { FormlyFiller } from "./shared/formly/filler";
 
 @NgModule({
   declarations: [
@@ -148,6 +149,7 @@ import { StatusActivationRendererComponent } from "./renderer/status-activation-
         ],
         types: [
           { name: "text", component: FormlyTextField },
+          { name: "filler", component: FormlyFiller },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },
           { name: "c8y-switch", component: C8YSwitchField },
