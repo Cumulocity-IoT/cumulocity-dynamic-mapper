@@ -18,6 +18,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
     (onDismiss)="onDismiss($event)"
     [labels]="labels"
     [disabled]="disabled$ | async"
+    [headerClasses]="'modal-header dialog-header'"
   >
     <div>
       <c8y-form-group *ngIf="duplicate">
