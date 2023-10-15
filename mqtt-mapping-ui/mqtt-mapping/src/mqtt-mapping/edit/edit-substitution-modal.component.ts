@@ -24,7 +24,8 @@ import { definesDeviceIdentifier } from "../../shared/util";
       <c8y-form-group *ngIf="duplicate">
         <div>
           <span>{{
-            "You are about to overwrite an exting substitution:" | translate
+            "You are about to overwrite the existing substitution: #" +
+              existingSubstitution | translate
           }}</span>
         </div>
         <br />
@@ -58,7 +59,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
           type="text"
           class="form-control"
           readOnly
-          [(ngModel)]="editSubstitution.pathSource"
+          [(ngModel)]="editedSubstitution.pathSource"
         />
       </c8y-form-group>
       <c8y-form-group>
@@ -71,7 +72,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
           <input
             type="text"
             readOnly
-            [(ngModel)]="editSubstitution.pathTarget"
+            [(ngModel)]="editedSubstitution.pathTarget"
             class="form-control"
           />
         </c8y-field-input>
@@ -84,7 +85,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
         >
           <input
             type="checkbox"
-            [(ngModel)]="editSubstitution.expandArray"
+            [(ngModel)]="editedSubstitution.expandArray"
             [disabled]="isExpandToArrayDisabled()"
           />
           <span></span>
@@ -120,7 +121,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
         >
           <input
             type="checkbox"
-            [(ngModel)]="editSubstitution.resolve2ExternalId"
+            [(ngModel)]="editedSubstitution.resolve2ExternalId"
             [disabled]="isResolve2ExternalIdDisabled()"
           />
           <span></span>
@@ -167,7 +168,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
         <div class="c8y-select-wrapper">
           <select
             class="form-control"
-            [(ngModel)]="editSubstitution.repairStrategy"
+            [(ngModel)]="editedSubstitution.repairStrategy"
             name="repairStrategy"
           >
             <option [value]="t.value" *ngFor="let t of repairStrategyOptions">
@@ -184,17 +185,17 @@ export class EditSubstitutionComponent implements OnInit {
   labels: ModalLabels = { ok: "Save", cancel: "Dismiss" };
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: boolean;
-  override: boolean = false;
+  @Input() existingSubstitution: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
-  something: string;
+  override: boolean = false;
   repairStrategyOptions: any[];
   substitutionText: string;
-  editSubstitution: MappingSubstitution;
+  editedSubstitution: MappingSubstitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   ngOnInit(): void {
-    this.editSubstitution = this.substitution;
+    this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != "IGNORE" && key != "CREATE_IF_MISSING")
       .map((key) => {
@@ -219,7 +220,8 @@ export class EditSubstitutionComponent implements OnInit {
       : "";
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
     this.disabled$.next(this.duplicate);
-    console.log("Repair Options:", this.repairStrategyOptions);
+    //console.log("Repair Options:", this.repairStrategyOptions);
+    console.log("Existing substitution:", this.existingSubstitution);
   }
 
   onDismiss(event) {
@@ -229,7 +231,7 @@ export class EditSubstitutionComponent implements OnInit {
 
   onSave(event) {
     console.log("Save");
-    this.closeSubject.next(this.editSubstitution);
+    this.closeSubject.next(this.editedSubstitution);
   }
 
   onOverrideChanged() {

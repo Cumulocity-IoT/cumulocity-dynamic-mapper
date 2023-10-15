@@ -1219,6 +1219,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     });
     const initialState = {
       duplicate: existingSubstitution != -1,
+      existingSubstitution: existingSubstitution,
       substitution: sub,
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration,
