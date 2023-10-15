@@ -19,30 +19,11 @@
   ~ @authors Christof Strack
   -->
 
-<!-- <div class="substitution-list font-smaller">
-  <div class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" id="{{'sub-' + id +'-' + i}}"
-    [ngStyle]="{'background': ( i == settings.selectedSubstitutionIndex ? settings.color : 'none')}"
-    (click)="onSubstitutionSelected(i)"><span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-    ' -> ' + sub.pathTarget + ' ]'}}</span>
-  </div>
-</div> -->
-
-<!-- <div class="substitution-list font-smaller">
-  <div class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" id="{{'sub-' + id +'-' + i}}"
-    [ngStyle]="{'background': ( i == settings.selectedSubstitutionIndex ? settings.color : 'none')}"
-    (click)="onSubstitutionSelected(i)"><span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-    ' -> ' + sub.pathTarget + ' ]'}}</span>
-  </div>
-</div> -->
-<!-- [ngStyle]="{
-  background:
-    i == settings.selectedSubstitutionIndex ? settings.color : 'none'
-}" -->
-
 <div style="height: 200px; overflow: auto">
   <table class="table table-condensed table-striped">
     <thead>
       <tr>
+        <th>#</th>
         <th>
           <div>
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
@@ -80,6 +61,9 @@
         "
         (click)="onSubstitutionSelect(i)"
       >
+      <td width="4%">
+        {{ i }}
+      </td>
         <td>
           <span *ngIf="!sub.registeredType" class="text-12"
             >{{
