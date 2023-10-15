@@ -45,7 +45,7 @@
       <tr>
         <th>
           <div>
-            <span>Substitution</span>
+            <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
             <span class="hidden-xs hidden-sm m-l-4">
               <ng-template #popTemplateSub>
                 Substitutions defining the device identifier are marked with an
@@ -88,22 +88,22 @@
                   ? "* "
                   : "") +
                 sub.pathSource +
-                " -> " +
+                " &#8212;> " +
                 sub.pathTarget +
                 " ]"
             }}
           </span>
         </td>
-        <td>
+        <td width="8%">
           {{ sub.expandArray }}
         </td>
-        <td>
+        <td width="8%">
           {{ sub.resolve2ExternalId }}
         </td>
         <td>
           {{ sub.repairStrategy }}
         </td>
-        <td>
+        <td width="8%">
           <button
             title="{{ 'Edit' | translate }}"
             class="btn btn-icon btn-clean"

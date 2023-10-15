@@ -63,7 +63,6 @@ import {
   whatIsIt,
 } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
-import { OverwriteSubstitutionModalComponent } from "../overwrite/overwrite-substitution-modal.component";
 import { C8YRequest } from "../processor/prosessor.model";
 import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
@@ -1157,7 +1156,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       };
       this.templateForm.updateValueAndValidity({ emitEvent: true });
     } else {
-      this.alertService.warning("Please select two nodes: one node in the template source, one node in the template target to define a substitution.")
+      this.alertService.warning(
+        "Please select two nodes: one node in the template source, one node in the template target to define a substitution."
+      );
     }
   }
 
