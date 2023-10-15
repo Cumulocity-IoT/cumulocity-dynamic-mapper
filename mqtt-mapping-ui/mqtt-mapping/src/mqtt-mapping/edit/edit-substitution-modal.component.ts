@@ -257,7 +257,7 @@ export class EditSubstitutionComponent implements OnInit {
   isResolve2ExternalIdDisabled() {
     const r =
       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.OUTBOUND;
+      this.stepperConfiguration.direction == Direction.INBOUND;
     //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
