@@ -23,7 +23,9 @@ import { definesDeviceIdentifier } from "../../shared/util";
     <div>
       <c8y-form-group *ngIf="duplicate">
         <div>
-          <span>{{ 'You are about to overwrite an exting substitution:' | translate }}</span>
+          <span>{{
+            "You are about to overwrite an exting substitution:" | translate
+          }}</span>
         </div>
         <br />
         <!--   <div style = "text-align: center;"><span>{{ substitutionText }}</span></div> -->
@@ -32,10 +34,14 @@ import { definesDeviceIdentifier } from "../../shared/util";
         </div>
         <br />
         <div>
-          <span>{{ 'Do you want to proceed?' | translate }}</span>
+          <span>{{ "Do you want to proceed?" | translate }}</span>
         </div>
         <label class="c8y-switch">
-          <input type="checkbox" [(ngModel)]="override" (change)="onOverrideChanged()" />
+          <input
+            type="checkbox"
+            [(ngModel)]="override"
+            (change)="onOverrideChanged()"
+          />
           <span></span>
           <span>
             {{ "Overwrite existing subscription" | translate }}
@@ -50,9 +56,9 @@ import { definesDeviceIdentifier } from "../../shared/util";
         </label>
         <input
           type="text"
+          class="form-control"
           readOnly
           [(ngModel)]="editSubstitution.pathSource"
-          style="width: -webkit-fill-available"
         />
       </c8y-form-group>
       <c8y-form-group>
@@ -61,15 +67,21 @@ import { definesDeviceIdentifier } from "../../shared/util";
             {{ "Path target" | translate }}
           </span>
         </label>
-        <input
-          type="text"
-          readOnly
-          [(ngModel)]="editSubstitution.pathTarget"
-          style="width: -webkit-fill-available"
-        />
+        <c8y-field-input>
+          <input
+            type="text"
+            readOnly
+            [(ngModel)]="editSubstitution.pathTarget"
+            class="form-control"
+          />
+        </c8y-field-input>
       </c8y-form-group>
       <c8y-form-group>
-        <label class="c8y-switch">
+        <label
+          class="c8y-switch d-inline"
+          title="Expand as array"
+          style="padding-top: 6px"
+        >
           <input
             type="checkbox"
             [(ngModel)]="editSubstitution.expandArray"
@@ -77,14 +89,34 @@ import { definesDeviceIdentifier } from "../../shared/util";
           />
           <span></span>
           <span>
-            {{ "Expand to array" | translate }}
+            {{ "Expand as array" | translate }}
           </span>
         </label>
+        <div class="d-inline">
+          <ng-template #popTemplateExpandAsArray>
+            Current expression extracts an array. Consider to use the option
+            &quot;Expand Array&quot; if you want to create multiple
+            measurements, alarms, events or devices, i.e.
+            &quot;multi-device&quot; or &quot;multi-value&quot;
+          </ng-template>
+          <button
+            class="btn-clean text-primary"
+            [popover]="popTemplateExpandAsArray"
+            popoverTitle="Expand as array"
+            placement="right"
+            triggers="focus"
+            type="button"
+          >
+            <i c8yIcon="question-circle-o"></i>
+          </button>
+        </div>
       </c8y-form-group>
-      <c8y-from-group>
+
+      <c8y-form-group>
         <label
-          class="c8y-switch"
-          title="Resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings."
+          class="c8y-switch d-inline"
+          title="Resolve to externalId"
+          style="padding-top: 6px"
         >
           <input
             type="checkbox"
@@ -96,9 +128,42 @@ import { definesDeviceIdentifier } from "../../shared/util";
             {{ "Resolve to externalId" | translate }}
           </span>
         </label>
-      </c8y-from-group>
+        <div class="d-inline">
+          <ng-template #popTemplateResolve>
+            Resolve system Cumulocity Id to externalId using externalIdType.
+            This can onlybe used for OUTBOUND mappings.
+          </ng-template>
+          <button
+            class="btn-clean text-primary"
+            [popover]="popTemplateResolve"
+            popoverTitle="Resolve to externalId"
+            placement="right"
+            triggers="focus"
+            type="button"
+          >
+            <i c8yIcon="question-circle-o"></i>
+          </button>
+        </div>
+      </c8y-form-group>
       <c8y-form-group>
-        <label><span>RepairStrategy</span></label>
+        <label
+          ><span>RepairStrategy</span>
+          <span></span>
+          <ng-template #popTemplateRepair>
+            Strategy defining what should happen when extracted arrays in
+            different expressions do not have the same size. How are missing
+            values handled?
+          </ng-template>
+          <button
+            class="btn-clean text-primary"
+            [popover]="popTemplateRepair"
+            popoverTitle="Resolve to externalId"
+            placement="right"
+            triggers="focus"
+            type="button"
+          >
+            <i c8yIcon="question-circle-o"></i></button
+        ></label>
         <div class="c8y-select-wrapper">
           <select
             class="form-control"
@@ -145,16 +210,15 @@ export class EditSubstitutionComponent implements OnInit {
         };
       });
 
-      
     let marksDeviceIdentifier = definesDeviceIdentifier(
-        this.mapping.targetAPI,
-        this.substitution,
-        this.stepperConfiguration.direction
-      )
-        ? "* "
-        : "";
-      this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
-      this.disabled$.next(this.duplicate);
+      this.mapping.targetAPI,
+      this.substitution,
+      this.stepperConfiguration.direction
+    )
+      ? "* "
+      : "";
+    this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
+    this.disabled$.next(this.duplicate);
     console.log("Repair Options:", this.repairStrategyOptions);
   }
 
@@ -169,7 +233,7 @@ export class EditSubstitutionComponent implements OnInit {
   }
 
   onOverrideChanged() {
-    let result = this.duplicate  && !this.override;
+    let result = this.duplicate && !this.override;
     console.log("Override:", result);
     this.disabled$.next(result);
   }
