@@ -28,22 +28,19 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import c8y.IsDevice;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.model.*;
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.google.j2objc.annotations.AutoreleasePool;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.client.ClientRegistry;
-import mqtt.mapping.client.ConnectorClient;
+import mqtt.mapping.connector.client.ConnectorRegistry;
+import mqtt.mapping.connector.client.ConnectorRegistryException;
+import mqtt.mapping.connector.client.IConnectorClient;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.*;
-import mqtt.mapping.model.extension.ExtensionsComponent;
 import mqtt.mapping.notification.C8YAPISubscriber;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -110,7 +107,7 @@ public class App {
     C8YAPISubscriber notificationSubscriber;
 
     @Autowired
-    ClientRegistry clientRegistry;
+    ConnectorRegistry connectorRegistry;
 
     @Autowired
     C8YAgent c8YAgent;
@@ -269,14 +266,15 @@ public class App {
     }
 
     @EventListener
-    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+    public void destroy(MicroserviceSubscriptionRemovedEvent event)  {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
         String tenant = event.getTenant();
         notificationSubscriber.disconnect(null);
-        HashMap<String, ConnectorClient> clients = clientRegistry.getAllClients();
-        clients.values().forEach(client -> {
-            client.disconnect();
-        });
+        try {
+            connectorRegistry.unregisterAllClientsForTenant(tenant);
+        } catch (ConnectorRegistryException e) {
+            log.error("Error on cleaning up connector clients");
+        }
     }
 
     @EventListener
@@ -294,9 +292,11 @@ public class App {
         mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
 
         try {
-            if (serviceConfigurationComponent != null) {
-
+            if (serviceConfiguration != null) {
+                //TODO Add other clients - maybe dynamically per tenant
                 MQTTClient mqttClient = new MQTTClient();
+                mqttClient.setTenantId(tenant);
+                connectorRegistry.registerClient(tenant, mqttClient);
                 mqttClient.submitInitialize();
                 mqttClient.submitConnect();
                 mqttClient.runHouskeeping();

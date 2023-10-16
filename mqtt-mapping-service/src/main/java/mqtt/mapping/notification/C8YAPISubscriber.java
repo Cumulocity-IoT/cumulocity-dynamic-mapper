@@ -110,6 +110,7 @@ public class C8YAPISubscriber {
     private int deviceWSStatusCode = 0;
 
     public void init() {
+        //TODO This must be changed to Tenant Option for each Tenant
         logger.info("OutputMapping Config: " + outputMappingEnabled);
         if (outputMappingEnabled) {
             initTenantClient();

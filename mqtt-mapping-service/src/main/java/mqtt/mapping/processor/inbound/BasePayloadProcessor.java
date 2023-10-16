@@ -42,7 +42,6 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
