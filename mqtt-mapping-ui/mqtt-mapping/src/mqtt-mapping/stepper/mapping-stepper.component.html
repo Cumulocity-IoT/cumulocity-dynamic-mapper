@@ -333,11 +333,9 @@
               </div>
             </div>
             <div [formGroup]="templateForm">
+              <div class="legend form-block col-lg-10 col-lg-offset-1">Substitutions</div>
               <div class="row">
-                <div class="col-lg-1 col-lg-offset-1">
-                  <label> Substitutions </label>
-                </div>
-                <div class="col-lg-2">
+                <div class="col-lg-2 col-lg-offset-1">
                   <button
                     type="button"
                     name="addSubstitution"
@@ -345,12 +343,10 @@
                     (click)="onAddSubstitution()"
                     translate
                     title="Add substitution"
-                    [disabled]="
-                      isDisabled(
-                        stepperConfiguration.showEditorSource ||
+                    [attr.disabled]="isDisabled(
+                        !stepperConfiguration.showEditorSource ||
                           stepperConfiguration.editorMode ==
-                            EditorMode.READ_ONLY
-                      )
+                            EditorMode.READ_ONLY)
                     "
                   >
                     <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution

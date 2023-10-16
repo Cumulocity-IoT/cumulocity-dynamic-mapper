@@ -61,6 +61,7 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
 import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
 import { FormlyFiller } from "./shared/formly/filler";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
+import { FieldInputSmall } from "./shared/formly/input-small-field";
 
 @NgModule({
   declarations: [
@@ -86,6 +87,7 @@ import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.compon
     C8YSwitchField,
     SelectComponent,
     FieldCheckbox,
+    FieldInputSmall,
   ],
   imports: [
     CoreModule,
@@ -155,6 +157,7 @@ import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.compon
         types: [
           { name: "text", component: FormlyTextField },
           { name: "filler", component: FormlyFiller },
+          { name: "input-sm", component: FieldInputSmall },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },
           { name: "c8y-switch", component: C8YSwitchField },
