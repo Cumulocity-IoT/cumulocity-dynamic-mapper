@@ -7,7 +7,7 @@
     "url": "git@github.com:SoftwareAG/cumulocity-dynamic-mqtt-mapper.git"
   },
   "scripts": {
-    "start": "c8ycli server -u https://ck2.eu-latest.cumulocity.com",
+    "start": "c8ycli server",
     "start:admin": "npm start -- --shell administration-1017",
     "build": "c8ycli build",
     "deploy": "c8ycli deploy",
