@@ -24,15 +24,34 @@ package mqtt.mapping;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import c8y.IsDevice;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
+import com.cumulocity.model.*;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.google.j2objc.annotations.AutoreleasePool;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.client.ClientRegistry;
+import mqtt.mapping.client.ConnectorClient;
+import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.model.*;
+import mqtt.mapping.model.extension.ExtensionsComponent;
+import mqtt.mapping.notification.C8YAPISubscriber;
 import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -42,9 +61,6 @@ import org.svenson.converter.DefaultTypeConverterRepository;
 
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.cumulocity.model.DateTimeConverter;
-import com.cumulocity.model.IDTypeConverter;
-import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.cumulocity.rest.representation.BaseResourceRepresentation;
@@ -72,12 +88,6 @@ import com.fasterxml.jackson.datatype.joda.JodaModule;
 
 import lombok.SneakyThrows;
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.model.InnerNode;
-import mqtt.mapping.model.InnerNodeSerializer;
-import mqtt.mapping.model.MappingNode;
-import mqtt.mapping.model.MappingNodeSerializer;
-import mqtt.mapping.model.TreeNode;
-import mqtt.mapping.model.TreeNodeSerializer;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.inbound.FlatFileProcessor;
@@ -93,7 +103,23 @@ import mqtt.mapping.service.MQTTClient;
 @EnableContextSupport
 @SpringBootApplication
 @EnableAsync
+@Slf4j
 public class App {
+
+    @Autowired
+    C8YAPISubscriber notificationSubscriber;
+
+    @Autowired
+    ClientRegistry clientRegistry;
+
+    @Autowired
+    C8YAgent c8YAgent;
+
+    @Autowired
+    private MappingComponent mappingComponent;
+
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
     @Bean
     public TaskExecutor taskExecutor() {
@@ -241,6 +267,48 @@ public class App {
         @JsonAnySetter
         void setProperty(String name, Object value);
     }
+
+    @EventListener
+    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+        log.info("Microservice unsubscribed for tenant {}", event.getTenant());
+        String tenant = event.getTenant();
+        notificationSubscriber.disconnect(null);
+        HashMap<String, ConnectorClient> clients = clientRegistry.getAllClients();
+        clients.values().forEach(client -> {
+            client.disconnect();
+        });
+    }
+
+    @EventListener
+    public void initialize(MicroserviceSubscriptionAddedEvent event) {
+        String tenant = event.getCredentials().getTenant();
+        MicroserviceCredentials credentials = event.getCredentials();
+        log.info("Event received for Tenant {}", tenant);
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
+        ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingObject(tenant);
+        c8YAgent.checkExtensions();
+        notificationSubscriber.init();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+        //loadProcessorExtensions();
+        MappingServiceRepresentation mappingServiceRepresentation = baseObjectMapper().convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
+        mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
+
+        try {
+            if (serviceConfigurationComponent != null) {
+
+                MQTTClient mqttClient = new MQTTClient();
+                mqttClient.submitInitialize();
+                mqttClient.submitConnect();
+                mqttClient.runHouskeeping();
+            }
+
+        } catch (Exception e) {
+            log.error("Error on MQTT Connection: ", e);
+            //mqttClient.submitConnect();
+        }
+    }
+
+
 
     public static void main(String[] args) {
         SpringApplication.run(App.class, args);

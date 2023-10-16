@@ -48,6 +48,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import mqtt.mapping.client.ConnectorClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -87,7 +88,7 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Configuration
 @EnableScheduling
 @Service
-public class MQTTClient {
+public class MQTTClient implements ConnectorClient {
 
     private static final int WAIT_PERIOD_MS = 10000;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
@@ -145,8 +146,8 @@ public class MQTTClient {
         this.cachedThreadPool = cachedThreadPool;
     }
 
-    private Future<Boolean> connectTask;
-    private Future<Boolean> initializeTask;
+    private Future<?> connectTask;
+    private Future<?> initializeTask;
 
     @Getter
     @Setter
@@ -208,7 +209,7 @@ public class MQTTClient {
         }
     }
 
-    private boolean connect() throws Exception {
+    public void connect() {
         reloadConfiguration();
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
@@ -281,7 +282,6 @@ public class MQTTClient {
                             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                                     | KeyManagementException e) {
                                 log.error("Exception when configuring socketFactory for TLS!", e);
-                                throw new Exception(e);
                             }
                         }
                         mqttClient.connect(connOpts);
@@ -326,7 +326,6 @@ public class MQTTClient {
             }
 
         }
-        return true;
     }
 
     private boolean canConnect() {
@@ -569,7 +568,7 @@ public class MQTTClient {
         return updatedMappings;
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
+    public AbstractExtensibleRepresentation publish(ProcessingContext<?> context)
             throws MqttPersistenceException, MqttException {
         MqttMessage mqttMessage = new MqttMessage();
         String payload = context.getCurrentRequest().getRequest();

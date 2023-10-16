@@ -190,10 +190,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
-    @Getter
-    @Setter
-    private String tenant = null;
-
     private MicroserviceCredentials credentials;
 
     @Getter
@@ -203,91 +199,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
-    @EventListener
-    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
-        log.info("Microservice unsubscribed for tenant {}", event.getTenant());
-        // this.createEvent("MQTT Mapper Microservice terminated",
-        // "mqtt_microservice_stopevent", DateTime.now(), null);
-        notificationSubscriber.disconnect(null);
-        if (mqttClient != null)
-            mqttClient.disconnect();
-    }
 
-    @EventListener
-    public void initialize(MicroserviceSubscriptionAddedEvent event) {
-        tenant = event.getCredentials().getTenant();
-        mappingComponent.setTenant(tenant);
-        serviceConfigurationComponent.setTenant(tenant);
-        connectionConfigurationComponent.setTenant(tenant);
-
-        credentials = event.getCredentials();
-        log.info("Event received for Tenant {}", tenant);
-        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        // register agent
-        mappingServiceMOR = subscriptionsService.callForTenant(tenant, () -> {
-            ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(
-                        new ID(null, MappingServiceRepresentation.AGENT_ID),
-                        null);;
-            ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
-
-            if (mappingServiceIdRepresentation != null) {
-                amo =  inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-                log.info("Agent with ID {} already exists {} , {}", MappingServiceRepresentation.AGENT_ID,
-                        mappingServiceIdRepresentation, amo);
-            } else {
-                amo.setName(MappingServiceRepresentation.AGENT_NAME);
-                amo.set(new Agent());
-                amo.set(new IsDevice());
-                amo.setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT,
-                        new ArrayList<>());
-                amo = inventoryApi.create(amo, null);
-                log.info("Agent has been created with ID {}", amo.getId());
-                ExternalIDRepresentation externalAgentId = identityApi.create(amo,
-                        new ID("c8y_Serial",
-                                MappingServiceRepresentation.AGENT_ID),
-                        null);
-                log.debug("ExternalId created: {}", externalAgentId.getExternalId());
-            }
-            extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
-                    .get(MappingType.PROCESSOR_EXTENSION);
-
-            // test if managedObject for internal mapping extension exists
-            List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
-            ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
-            if (internalExtension == null || internalExtension.size() == 0 ) {
-                Map<String, ?> props = Map.of("name",
-                        ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                        "external", false);
-                ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
-                        props);
-                ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
-                ie = inventoryApi.create(ie, null);
-            } else {
-                ie = internalExtension.get(0);
-            }
-            log.info("Internal extension: {} registered: {}",
-                    ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
-                    ie.getId().getValue(), ie);
-            notificationSubscriber.init();
-            // notificationSubscriber.subscribeTenant(tenant);
-            // notificationSubscriber.subscribeAllDevices();
-            return amo;
-
-        });
-        serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
-        loadProcessorExtensions();
-        mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-        mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
-
-        try {
-            mqttClient.submitInitialize();
-            mqttClient.submitConnect();
-            mqttClient.runHouskeeping();
-        } catch (Exception e) {
-            log.error("Error on MQTT Connection: ", e);
-            mqttClient.submitConnect();
-        }
-    }
 
     public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
             String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
@@ -311,7 +223,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return measurementRepresentation;
     }
 
-    public ExternalIDRepresentation resolveExternalId2GlobalId(ID identity, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity, ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
@@ -326,7 +238,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String idType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType, ProcessingContext<?> context) {
         if (idType == null) {
             idType = "c8y_Serial";
         }
@@ -647,5 +559,55 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             notificationSubscriber.disconnect(false);
             notificationSubscriber.init();
         });
+    }
+
+    public ManagedObjectRepresentation createMappingObject(String tenant) {
+        ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
+                new ID(null, MappingServiceRepresentation.AGENT_ID),
+                null);;
+        ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
+
+        if (mappingServiceIdRepresentation != null) {
+            amo =  inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
+            log.info("Agent with ID {} already exists {} , {}", MappingServiceRepresentation.AGENT_ID,
+                    mappingServiceIdRepresentation, amo);
+        } else {
+            amo.setName(MappingServiceRepresentation.AGENT_NAME);
+            amo.set(new Agent());
+            amo.set(new IsDevice());
+            amo.setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT,
+                    new ArrayList<>());
+            amo = inventoryApi.create(amo, null);
+            log.info("Agent has been created with ID {}", amo.getId());
+            ExternalIDRepresentation externalAgentId = identityApi.create(amo,
+                    new ID("c8y_Serial",
+                            MappingServiceRepresentation.AGENT_ID),
+                    null);
+            log.debug("ExternalId created: {}", externalAgentId.getExternalId());
+        }
+        return amo;
+    }
+
+    public void checkExtensions() {
+        extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
+                .get(MappingType.PROCESSOR_EXTENSION);
+
+        // test if managedObject for internal mapping extension exists
+        List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
+        ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
+        if (internalExtension == null || internalExtension.size() == 0 ) {
+            Map<String, ?> props = Map.of("name",
+                    ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                    "external", false);
+            ie.setProperty(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE,
+                    props);
+            ie.setName(ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME);
+            ie = inventoryApi.create(ie, null);
+        } else {
+            ie = internalExtension.get(0);
+        }
+        log.info("Internal extension: {} registered: {}",
+                ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
+                ie.getId().getValue(), ie);
     }
 }

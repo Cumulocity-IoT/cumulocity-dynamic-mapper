@@ -53,10 +53,6 @@ public class ServiceConfigurationComponent {
 
     private final TenantOptionApi tenantOptionApi;
 
-    @Getter
-    @Setter
-    private String tenant = null;
-
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
@@ -106,7 +102,7 @@ public class ServiceConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
+        ServiceConfiguration result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
             ServiceConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
