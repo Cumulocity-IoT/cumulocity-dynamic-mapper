@@ -20,7 +20,7 @@
  */
 
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { TestingComponent } from "./grid/testing.component";
 import { TypeCellRendererComponent } from "./grid/type-data-grid-column/type.cell-renderer.component";
 import { TypeFilteringFormRendererComponent } from "./grid/type-data-grid-column/type.filtering-form-renderer.component";
@@ -41,16 +41,9 @@ import { TypeHeaderCellRendererComponent } from "./grid/type-data-grid-column/ty
   ],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/testing",
-          component: TestingComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/testing",
+    }),
   ],
 })
 export class TestingModule {}

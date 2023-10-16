@@ -19,26 +19,15 @@
  * @authors Christof Strack
  */
 
-import { NgModule } from "@angular/core";
-import { CoreModule, hookRoute } from "@c8y/ngx-components";
-import { BokerConfigurationComponent } from "./broker-configuration.component";
-import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
-import { AdminGuard } from "../shared/admin.guard";
+import { Component } from "@angular/core";
+import { FieldType } from "@ngx-formly/core";
 
-@NgModule({
-  declarations: [
-    BokerConfigurationComponent,
-    TerminateBrokerConnectionModalComponent,
-  ],
-  imports: [CoreModule],
-  entryComponents: [TerminateBrokerConnectionModalComponent],
-  exports: [],
-  providers: [
-    hookRoute({
-      path: "sag-ps-pkg-mqtt-mapping/configuration",
-      component: BokerConfigurationComponent,
-      canActivate: [AdminGuard],
-    }),
-  ],
+@Component({
+  selector: "formly-filler",
+  template: `
+    <div class="form-group row" style="height:80px">
+
+    </div>
+  `,
 })
-export class ConfigurationModule {}
+export class FormlyFiller extends FieldType {}

@@ -19,66 +19,99 @@
   ~ @authors Christof Strack
   -->
 
-<!-- <div class="substitution-list font-smaller">
-  <div class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" id="{{'sub-' + id +'-' + i}}"
-    [ngStyle]="{'background': ( i == settings.selectedSubstitutionIndex ? settings.color : 'none')}"
-    (click)="onSubstitutionSelected(i)"><span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-    ' -> ' + sub.pathTarget + ' ]'}}</span>
-  </div>
-</div> -->
-
-<!-- <div class="substitution-list font-smaller">
-  <div class="text-monospace m-r-8" *ngFor="let sub of substitutions; let i = index" id="{{'sub-' + id +'-' + i}}"
-    [ngStyle]="{'background': ( i == settings.selectedSubstitutionIndex ? settings.color : 'none')}"
-    (click)="onSubstitutionSelected(i)"><span *ngIf="!sub.registeredType">{{ (i | number : '2.0-0') + '. [ ' + (definesDeviceIdentifier(targetAPI,sub) ? "* " : "") + sub.pathSource +
-    ' -> ' + sub.pathTarget + ' ]'}}</span>
-  </div>
-</div> -->
-
-<div style="height:200px;overflow:auto">
-  <c8y-list-group>
-    <c8y-li
-      *ngFor="let sub of substitutions; let i = index"
-      id="{{ 'sub-' + id + '-' + i }}"
-      [ngStyle]="{
-        background:
+<div style="height: 200px; overflow: auto">
+  <table class="table table-condensed table-striped">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>
+          <div>
+            <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
+            <span class="hidden-xs hidden-sm m-l-4">
+              <ng-template #popTemplateSub>
+                Substitutions defining the device identifier are marked with an
+                "*". Before adding a substitution target and source property in
+                templates have to be selected.
+              </ng-template>
+              <button
+                class="btn-clean text-primary"
+                [popover]="popTemplateSub"
+                popoverTitle="Defined substitutions"
+                placement="right"
+                triggers="focus"
+                type="button"
+              >
+                <i c8yIcon="question-circle-o"></i>
+              </button>
+            </span>
+          </div>
+        </th>
+        <th>Expand as array</th>
+        <th>Resolve to externalId</th>
+        <th>Respair strategy</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let sub of substitutions; let i = index"
+        id="{{ 'sub-' + id + '-' + i }}"
+        [style.background]="
           i == settings.selectedSubstitutionIndex ? settings.color : 'none'
-      }"
-      (click)="onSubstitutionSelect(i)"
-    >
-      <c8y-li-icon icon="replace"></c8y-li-icon>
-      <c8y-li-body>
-        <div class="d-flex">
-          <div class="flex-grow text-truncate">
-            <div class="text-truncate">
-              <span *ngIf="!sub.registeredType" class="text-12"
-                >{{
-                  (i | number : "2.0-0") +
-                    ". [ " +
-                    (definesDeviceIdentifier(targetAPI, sub, direction) ? "* " : "") +
-                    sub.pathSource +
-                    " -> " +
-                    sub.pathTarget +
-                    " ]"
-                }}
-              </span>
-            </div>
-          </div>
-          <div class="m-l-8">
-            <button
-              title="{{ 'Remove' | translate }}"
-              class="btn btn-icon btn-clean"
-              (click)="onSubstitutionDelete(i)"
-              [attr.disabled]="
-                isDisabled(settings.editorMode == EditorMode.READ_ONLY)
-              "
-            >
-              <i c8yIcon="minus-circle" class="text-danger"></i>
-              <span class="sr-only" translate>Remove</span>
-            </button>
-          </div>
-        </div>
-      </c8y-li-body>
-    </c8y-li>
-  </c8y-list-group>
+        "
+        (click)="onSubstitutionSelect(i)"
+      >
+      <td width="4%">
+        {{ i }}
+      </td>
+        <td>
+          <span *ngIf="!sub.registeredType" class="text-12"
+            >{{
+              "[ " +
+                (definesDeviceIdentifier(targetAPI, sub, direction)
+                  ? "* "
+                  : "") +
+                sub.pathSource +
+                " &#8212;> " +
+                sub.pathTarget +
+                " ]"
+            }}
+          </span>
+        </td>
+        <td width="8%">
+          {{ sub.expandArray }}
+        </td>
+        <td width="8%">
+          {{ sub.resolve2ExternalId }}
+        </td>
+        <td>
+          {{ sub.repairStrategy }}
+        </td>
+        <td width="8%">
+          <button
+            title="{{ 'Edit' | translate }}"
+            class="btn btn-icon btn-clean"
+            (click)="onSubstitutionEdit(i)"
+            [attr.disabled]="
+              isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+            "
+          >
+            <i c8yIcon="pencil" class="text-danger"></i>
+            <span class="sr-only" translate>Remove</span>
+          </button>
+          <button
+            title="{{ 'Remove' | translate }}"
+            class="btn btn-icon btn-clean"
+            (click)="onSubstitutionDelete(i)"
+            [attr.disabled]="
+              isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+            "
+          >
+            <i c8yIcon="minus-circle" class="text-danger"></i>
+            <span class="sr-only" translate>Remove</span>
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>

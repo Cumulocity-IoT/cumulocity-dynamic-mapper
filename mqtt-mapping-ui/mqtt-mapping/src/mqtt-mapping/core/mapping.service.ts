@@ -254,11 +254,11 @@ export class MappingService {
     let context = this.initializeContext(mapping, sendPayload);
     if (mapping.direction == Direction.INBOUND) {
       this.jsonProcessorInbound.deserializePayload(context, mapping);
-      this.jsonProcessorInbound.extractFromSource(context);
+      await this.jsonProcessorInbound.extractFromSource(context);
       await this.jsonProcessorInbound.substituteInTargetAndSend(context);
     } else {
       this.jsonProcessorOutbound.deserializePayload(context, mapping);
-      this.jsonProcessorOutbound.extractFromSource(context);
+      await this.jsonProcessorOutbound.extractFromSource(context);
       await this.jsonProcessorOutbound.substituteInTargetAndSend(context);
     }
 
@@ -266,7 +266,7 @@ export class MappingService {
     return context;
   }
 
-  public evaluateExpression(json: JSON, path: string): JSON {
+  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = "";
     if (path != undefined && path != "" && json != undefined) {
       const expression = this.JSONATA(path);

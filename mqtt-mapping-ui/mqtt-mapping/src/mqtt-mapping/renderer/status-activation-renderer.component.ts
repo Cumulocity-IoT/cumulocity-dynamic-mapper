@@ -18,27 +18,27 @@
  *
  * @authors Christof Strack
  */
+import { Component, Inject, ViewEncapsulation } from "@angular/core";
+import { CellRendererContext } from "@c8y/ngx-components";
 
-import { NgModule } from "@angular/core";
-import { CoreModule, hookRoute } from "@c8y/ngx-components";
-import { BokerConfigurationComponent } from "./broker-configuration.component";
-import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
-import { AdminGuard } from "../shared/admin.guard";
-
-@NgModule({
-  declarations: [
-    BokerConfigurationComponent,
-    TerminateBrokerConnectionModalComponent,
-  ],
-  imports: [CoreModule],
-  entryComponents: [TerminateBrokerConnectionModalComponent],
-  exports: [],
-  providers: [
-    hookRoute({
-      path: "sag-ps-pkg-mqtt-mapping/configuration",
-      component: BokerConfigurationComponent,
-      canActivate: [AdminGuard],
-    }),
-  ],
+/**
+ * The example component for custom cell renderer.
+ * It gets `context` with the current row item and the column.
+ * Additionally, a service is injected to provide a helper method.
+ * The template displays the icon and the label with additional styling.
+ */
+@Component({
+  encapsulation: ViewEncapsulation.None,
+  template: `
+    <span [title]="context.item.active">
+      <i style= "text-align:center; width: 100%;" [c8yIcon]="!context.value ? 'circle-o' : 'plus-circle-o'" class="m-r-5"></i>
+    </span>
+  `,
 })
-export class ConfigurationModule {}
+export class StatusActivationRendererComponent {
+  constructor(
+    public context: CellRendererContext,
+  ) {
+    //console.log("Status", context, context.value)
+  }
+}

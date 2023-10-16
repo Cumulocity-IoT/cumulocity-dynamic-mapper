@@ -22,13 +22,12 @@ import { NgModule } from "@angular/core";
 import {
   CoreModule,
   DynamicFormsModule,
-  HOOK_ROUTE,
-  Route,
+  hookRoute,
+  ModalModule,
 } from "@c8y/ngx-components";
 import { PopoverModule } from "ngx-bootstrap/popover";
 import { MappingComponent } from "./grid/mapping.component";
 import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
-import { OverwriteDeviceIdentifierModalComponent } from "./overwrite/overwrite-device-identifier-modal.component";
 import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
 import { APIRendererComponent } from "./renderer/api.renderer.component";
 import { QOSRendererComponent } from "./renderer/qos-cell.renderer.component";
@@ -57,6 +56,10 @@ import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
 import { SelectComponent } from "./shared/formly/select/select.type.component";
 import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
 import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
+import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
+import { FormlyFiller } from "./shared/formly/filler";
+import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
+import { FieldInputSmall } from "./shared/formly/input-small-field";
 
 @NgModule({
   declarations: [
@@ -64,12 +67,13 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     MappingStepperComponent,
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
+    EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
+    StatusActivationRendererComponent,
     APIRendererComponent,
     ActiveRendererComponent,
     SnoopingModalComponent,
@@ -80,6 +84,7 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     C8YSwitchField,
     SelectComponent,
     FieldCheckbox,
+    FieldInputSmall,
   ],
   imports: [
     CoreModule,
@@ -88,11 +93,12 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     PopoverModule,
     ConfigurationModule,
     DynamicFormsModule,
+    ModalModule,
   ],
   entryComponents: [
     MappingComponent,
     OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
+    EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -100,31 +106,20 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
     SubstitutionRendererComponent,
     APIRendererComponent,
     ActiveRendererComponent,
+    StatusActivationRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
   ],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
-          component: MappingComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
-          component: MappingComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
+      component: MappingComponent,
+    }),
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
+      component: MappingComponent,
+    }),
     {
       provide: FORMLY_CONFIG,
       multi: true,
@@ -145,6 +140,8 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
         ],
         types: [
           { name: "text", component: FormlyTextField },
+          { name: "filler", component: FormlyFiller },
+          { name: "input-sm", component: FieldInputSmall },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },
           { name: "c8y-switch", component: C8YSwitchField },

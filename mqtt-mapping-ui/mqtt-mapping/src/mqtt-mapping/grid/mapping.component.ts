@@ -68,6 +68,7 @@ import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
 import { Dir } from "@angular/cdk/bidi";
+import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -125,14 +126,14 @@ export class MappingComponent implements OnInit {
       name: "subscriptionTopic",
       path: "subscriptionTopic",
       filterable: true,
-      gridTrackSize: "12.5%",
+      // gridTrackSize: "12.5%",
     },
     {
       header: "Template Topic",
       name: "templateTopic",
       path: "templateTopic",
       filterable: true,
-      gridTrackSize: "12.5%",
+      // gridTrackSize: "12.5%",
     },
     {
       name: "targetAPI",
@@ -142,23 +143,25 @@ export class MappingComponent implements OnInit {
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
-      gridTrackSize: "5%",
+      gridTrackSize: "7%",
     },
     {
       header: "Sample payload",
       name: "source",
       path: "source",
       filterable: true,
+      sortable: false,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: "20%",
+      // gridTrackSize: "20%",
     },
     {
       header: "Target",
       name: "target",
       path: "target",
       filterable: true,
+      sortable: false,
       cellRendererComponent: TemplateRendererComponent,
-      gridTrackSize: "20%",
+      // gridTrackSize: "20%",
     },
     {
       header: "Test/Snoop",
@@ -168,7 +171,7 @@ export class MappingComponent implements OnInit {
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
       cellCSSClassName: "text-align-center",
-      gridTrackSize: "8%",
+      gridTrackSize: "7%",
     },
     {
       header: "QOS",
@@ -177,15 +180,16 @@ export class MappingComponent implements OnInit {
       filterable: true,
       sortable: false,
       cellRendererComponent: QOSRendererComponent,
-      gridTrackSize: "5%",
+      // gridTrackSize: "5%",
     },
     {
       header: "Active",
       name: "active",
       path: "active",
-      filterable: true,
+      filterable: false,
       sortable: true,
-      cellRendererComponent: ActiveRendererComponent,
+      // cellRendererComponent: ActiveRendererComponent,
+      cellRendererComponent: StatusActivationRendererComponent,
       gridTrackSize: "7%",
     },
   ];
@@ -239,14 +243,14 @@ export class MappingComponent implements OnInit {
         name: "publishTopic",
         path: "publishTopic",
         filterable: true,
-        gridTrackSize: "12.5%",
+        // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
         header: "Template Topic Sample",
         name: "templateTopicSample",
         path: "templateTopicSample",
         filterable: true,
-        gridTrackSize: "12.5%",
+        // gridTrackSize: "12.5%",
       };
     }
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction}`;
@@ -273,6 +277,12 @@ export class MappingComponent implements OnInit {
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMapping.bind(this),
+      },
+      {
+        type: "ACTIVATE",
+        text: "Toogle Activation",
+        icon:'toggle-on',
+        callback: this.activateMapping.bind(this),
       }
     );
     this.actionControlSubscription.push({
@@ -443,6 +453,16 @@ export class MappingComponent implements OnInit {
     this.showConfigMapping = true;
   }
 
+  async activateMapping(mapping: Mapping) {
+    let newActive = !mapping.active;
+    let action = newActive ? "Activate" : "Deactivate";
+    this.alertService.success(action + " mapping: " + mapping.id + "!");
+    let parameter = { id: mapping.id, active: newActive };
+    await this.mappingService.changeActivationMapping(parameter);
+    this.loadMappings();
+    this.refresh.emit();
+  }
+
   async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping);
     try {
@@ -472,11 +492,10 @@ export class MappingComponent implements OnInit {
 
     if (
       (mapping.direction == Direction.INBOUND &&
-        isTemplateTopicUnique(mapping, this.mappings)) 
-        // test if we can attach multiple outbound mappings to the same filterOutbound
-        || (mapping.direction == Direction.OUTBOUND 
-        //  && isFilterOutboundUnique(mapping, this.mappings)
-        )
+        isTemplateTopicUnique(mapping, this.mappings)) ||
+      // test if we can attach multiple outbound mappings to the same filterOutbound
+      mapping.direction == Direction.OUTBOUND
+      //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
         console.log("Update existing mapping:", mapping);

@@ -422,8 +422,10 @@ public class MappingComponent {
         log.info("Setting active: {} got mapping: {}", id, active);
         Mapping mapping = getMapping(id);
         mapping.setActive(active);
-        // step 2. retrieve collected snoopedTemplates
-        mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates());
+        if  (Direction.INBOUND.equals(mapping.direction)) {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates());
+        }
         // step 3. update mapping in inventory
         updateMapping(mapping, true);
         // step 4. delete mapping from update cache
