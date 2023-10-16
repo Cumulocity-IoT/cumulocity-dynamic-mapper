@@ -1186,7 +1186,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onEditSubstitution(selected: number) {
     console.log("Edit selected substitution", selected);
     const initialState = {
-      substitution: cloneSubstitution(this.mapping.substitutions[selected]),
+      substitution: _.clone(this.mapping.substitutions[selected]),
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration,
     };
@@ -1209,7 +1209,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   private addSubstitution(st: MappingSubstitution) {
-    let sub: MappingSubstitution = cloneSubstitution(st);
+    let sub: MappingSubstitution = _.clone(st);
     let existingSubstitution = -1;
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
@@ -1249,7 +1249,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
-      this.templateModel.currentSubstitution = cloneSubstitution(
+      this.templateModel.currentSubstitution = _.clone(
         this.mapping.substitutions[selected]
       );
       this.editorSource?.setSelectionToPath(
