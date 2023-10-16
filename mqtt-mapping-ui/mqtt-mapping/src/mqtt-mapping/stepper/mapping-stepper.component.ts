@@ -49,6 +49,7 @@ import {
   ValidationError,
 } from "../../shared/mapping.model";
 import {
+  cloneSubstitution,
   COLOR_HIGHLIGHTED,
   countDeviceIdentifiers,
   definesDeviceIdentifier,
@@ -528,18 +529,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                   this.templateFormly.get("currentSubstitution.pathSource")
                     .value
                 );
-                if (
-                  this.templateModel.currentSubstitution.sourceExpression
-                    .errorMsg != ""
-                ) {
-                  this.templateFormly
-                    .get("currentSubstitution.pathSource")
-                    .setErrors({
-                      evalError:
-                        this.templateModel.currentSubstitution.sourceExpression
-                          .errorMsg,
-                    });
-                }
               },
               required: false,
             },
@@ -554,21 +543,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               change: (field: FormlyFieldConfig, event?: any) => {
-                this.templateFormly
-                  .get("currentSubstitution.pathTarget")
-                  .setErrors(null);
-                if (
-                  this.templateModel.currentSubstitution.targetExpression
-                    .errorMsg != ""
-                ) {
-                  this.templateFormly
-                    .get("currentSubstitution.pathTarget")
-                    .setErrors({
-                      evalError:
-                        this.templateModel.currentSubstitution.targetExpression
-                          .errorMsg,
-                    });
-                }
+                this.updateTargetExpressionResult(
+                  this.templateFormly.get("currentSubstitution.pathTarget")
+                    .value
+                );
               },
               required: false,
             },
@@ -581,39 +559,24 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className:
               "col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24",
             type: "message-field",
-            templateOptions: {
-              textClass: "text-warning",
-            },
             expressionProperties: {
               "templateOptions.content": (model) =>
-                'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"',
-              "templateOptions.enabled": (model) =>
-                model?.sourceExpression?.resultType == "Array" &&
-                !model.currentSubstitution.expandArray,
+                model.currentSubstitution.sourceExpression?.msgTxt,
+              "templateOptions.textClass": (model) =>
+                model.currentSubstitution.sourceExpression?.severity,
+              "templateOptions.enabled": (model) => true,
             },
           },
           {
+            // message field target
             className: "col-lg-5 reduced-top column-left-border not-p-b-24",
             type: "message-field",
-            templateOptions: {
-              textClass: "text-info",
-            },
             expressionProperties: {
               "templateOptions.content": (model) =>
-                API[model.mapping.targetAPI].identifier +
-                ` is resolved using the external Id ` +
-                model.mapping.externalIdType +
-                ` defined in the
-                          previous step.`,
-              "templateOptions.enabled": (model) => {
-                const c = definesDeviceIdentifier(
-                  model.mapping.targetAPI,
-                  model?.currentSubstitution,
-                  model.mapping.direction
-                );
-                //console.log("WWWWW", c, model?.currentSubstitution)
-                return c;
-              },
+                model.currentSubstitution.targetExpression?.msgTxt,
+              "templateOptions.textClass": (model) =>
+                model.currentSubstitution.targetExpression?.severity,
+              "templateOptions.enabled": (model) => true,
             },
           },
         ],
@@ -622,7 +585,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       {
         fieldGroup: [
           {
-            //dummy row tostart new row
+            //dummy row to start new row
             className: "row",
             key: "textField",
             type: "text",
@@ -769,12 +732,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onSelectedSourcePathChanged(path: string) {
-    this.updateSourceExpressionResult(path);
     this.templateModel.currentSubstitution.pathSource = path;
+    this.updateSourceExpressionResult(path);
   }
 
   public async updateSourceExpressionResult(path: string) {
     try {
+      this.templateModel.currentSubstitution.sourceExpression = { msgTxt: "", severity:"text-info" };
+      this.templateFormly.get("currentSubstitution.pathSource").setErrors(null);
+
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorSource?.get(),
         path
@@ -782,15 +748,26 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateModel.currentSubstitution.sourceExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
-        errorMsg: "",
       };
 
-      //this.templateFormly.get("currentSubstitution.pathSource").reset();
-      this.templateFormly.get("currentSubstitution.pathSource").setErrors(null);
+      if (
+        this.templateModel.currentSubstitution.sourceExpression == "Array" &&
+        !this.templateModel.currentSubstitution.sourceExpression.expandArray
+      ) {
+        this.templateModel.currentSubstitution.sourceExpression.msgTxt =
+          'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
+        this.templateModel.currentSubstitution.sourceExpression.severity =
+          "text-warning";
+      }
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
-      this.templateModel.currentSubstitution.sourceExpression.errorMsg =
-        error.message;
+      this.templateModel.currentSubstitution.sourceExpression = {
+        msgTxt: error.message,
+        severity: "text-danger",
+      };
+      this.templateFormly
+        .get("currentSubstitution.pathSource")
+        .setErrors({ error: error.message });
     }
     this.templateModel = {
       ...this.templateModel,
@@ -798,12 +775,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   public onSelectedTargetPathChanged(path: string) {
-    this.updateTargetExpressionResult(path);
     this.templateModel.currentSubstitution.pathTarget = path;
+    this.updateTargetExpressionResult(path);
   }
 
   public async updateTargetExpressionResult(path: string) {
     try {
+      this.templateModel.currentSubstitution.targetExpression = { msgTxt: "", severity:"text-info" };
+      this.templateFormly.get("currentSubstitution.pathTarget").setErrors(null);
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorTarget?.get(),
         path
@@ -811,14 +790,31 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateModel.currentSubstitution.targetExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
-        errorMsg: "",
       };
-      this.templateFormly.get("currentSubstitution.pathTarget").setErrors(null);
 
+      const definesDI = definesDeviceIdentifier(
+        this.mapping.targetAPI,
+        this.templateModel.currentSubstitution,
+        this.mapping.direction
+      );
+      if (definesDI) {
+        this.templateModel.currentSubstitution.targetExpression.msgTxt =
+          API[this.mapping.targetAPI].identifier +
+          ` is resolved using the external Id ` +
+          this.mapping.externalIdType +
+          ` defined s in the previous step.`;
+        this.templateModel.currentSubstitution.targetExpression.severity =
+          "text-info";
+      }
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
-      this.templateModel.currentSubstitution.targetExpression.errorMsg =
-        error.message;
+      this.templateModel.currentSubstitution.targetExpression = {
+        msgTxt: error.message,
+        severity: "text-danger",
+      };
+      this.templateFormly
+        .get("currentSubstitution.pathTarget")
+        .setErrors({ error: error.message });
     }
     this.templateModel = {
       ...this.templateModel,
@@ -1190,10 +1186,15 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onEditSubstitution(selected: number) {
     console.log("Edit selected substitution", selected);
     const initialState = {
-      substitution: _.clone(this.mapping.substitutions[selected]),
+      substitution: cloneSubstitution(this.mapping.substitutions[selected]),
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration,
     };
+    if ( this.templateModel.currentSubstitution.sourceExpression?.severity != "text-danger" &&
+    this.templateModel.currentSubstitution.targetExpression?.severity != "text-danger") {
+      initialState.substitution.pathSource = this.templateModel.currentSubstitution.pathSource;
+      initialState.substitution.pathTarget = this.templateModel.currentSubstitution.pathTarget;
+    }
     const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
       initialState,
     });
@@ -1208,7 +1209,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   private addSubstitution(st: MappingSubstitution) {
-    let sub: MappingSubstitution = _.clone(st);
+    let sub: MappingSubstitution = cloneSubstitution(st);
     let existingSubstitution = -1;
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
@@ -1248,7 +1249,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
-      this.templateModel.currentSubstitution = _.clone(
+      this.templateModel.currentSubstitution = cloneSubstitution(
         this.mapping.substitutions[selected]
       );
       this.editorSource?.setSelectionToPath(

@@ -143,11 +143,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   private onSelect(selection: JSONEditorSelection | undefined) {
     if (isKeySelection(selection) || isValueSelection(selection)) {
       let st = stringifyJSONPath((selection as any).path);
-      this.onPathChanged.emit(st);
+      //this.onPathChanged.emit(st);
       console.log("Selected path:", st);
     } else if (isMultiSelection(selection)){
       let st = stringifyJSONPath((selection as any).anchorPath);
-      this.onPathChanged.emit(st);
+      //this.onPathChanged.emit(st);
       console.log("Selected anchorPath:", st);
     }
 

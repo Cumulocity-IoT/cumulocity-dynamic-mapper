@@ -894,3 +894,24 @@ export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
     return null;
   }
 }
+
+
+export function cloneSubstitution(sub: MappingSubstitution): MappingSubstitution {
+  return {
+  pathSource: sub.pathSource,
+  pathTarget: sub.pathTarget,
+  repairStrategy: sub.repairStrategy,
+  expandArray: sub.expandArray,
+  resolve2ExternalId: sub.resolve2ExternalId,
+  }
+}
+
+
+
+// export interface MappingSubstitution {
+//   pathSource: string;
+//   pathTarget: string;
+//   repairStrategy: RepairStrategy;
+//   expandArray: boolean;
+//   resolve2ExternalId: boolean;
+// }
