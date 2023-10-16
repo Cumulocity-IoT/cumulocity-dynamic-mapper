@@ -51,6 +51,7 @@ export class SubstitutionRendererComponent implements OnInit {
 
   @Output() onSelect = new EventEmitter<number>();
   @Output() onDelete = new EventEmitter<number>();
+  @Output() onEdit = new EventEmitter<number>();
 
   public id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
@@ -84,5 +85,11 @@ export class SubstitutionRendererComponent implements OnInit {
     console.log("Delete substitution:", index);
     this.settings.selectedSubstitutionIndex = index;
     this.onDelete.emit(index);
+  }
+
+  public onSubstitutionEdit(index: number) {
+    console.log("Edit substitution:", index);
+    this.settings.selectedSubstitutionIndex = index;
+    this.onEdit.emit(index);
   }
 }
