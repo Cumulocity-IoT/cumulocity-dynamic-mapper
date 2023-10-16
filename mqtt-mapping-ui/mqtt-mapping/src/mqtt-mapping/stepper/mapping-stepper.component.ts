@@ -524,9 +524,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
               change: (field: FormlyFieldConfig, event?: any) => {
-                this.templateFormly
-                  .get("currentSubstitution.pathSource")
-                  .setErrors(null);
                 this.updateSourceExpressionResult(
                   this.templateFormly.get("currentSubstitution.pathSource")
                     .value
@@ -548,8 +545,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className:
-              "col-lg-5 text-monospace column-left-border",
+            className: "col-lg-5 text-monospace column-left-border",
             key: "currentSubstitution.pathTarget",
             type: "input-sm",
             wrappers: ["custom-form-field"],
@@ -561,10 +557,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.templateFormly
                   .get("currentSubstitution.pathTarget")
                   .setErrors(null);
-                this.updateTargetExpressionResult(
-                  this.templateFormly.get("currentSubstitution.pathTarget")
-                    .value
-                );
                 if (
                   this.templateModel.currentSubstitution.targetExpression
                     .errorMsg != ""
@@ -792,6 +784,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: "",
       };
+
+      //this.templateFormly.get("currentSubstitution.pathSource").reset();
+      this.templateFormly.get("currentSubstitution.pathSource").setErrors(null);
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
       this.templateModel.currentSubstitution.sourceExpression.errorMsg =
@@ -818,6 +813,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: "",
       };
+      this.templateFormly.get("currentSubstitution.pathTarget").setErrors(null);
+
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
       this.templateModel.currentSubstitution.targetExpression.errorMsg =
