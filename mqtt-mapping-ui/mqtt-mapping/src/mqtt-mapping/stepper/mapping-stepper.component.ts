@@ -63,13 +63,13 @@ import {
   whatIsIt,
 } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
-import { OverwriteSubstitutionModalComponent } from "../overwrite/overwrite-substitution-modal.component";
 import { C8YRequest } from "../processor/prosessor.model";
 import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
 import { SubstitutionRendererComponent } from "./substitution/substitution-renderer.component";
 import { isDisabled } from "./util";
 import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
+import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
 
 @Component({
   selector: "mapping-stepper",
@@ -499,9 +499,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroup: [
           {
             className:
-              "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
+              "col-lg-5 col-lg-offset-1 text-monospace column-right-border",
             key: "currentSubstitution.pathSource",
-            type: "input",
+            type: "input-sm",
             wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Source",
@@ -524,9 +524,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
               change: (field: FormlyFieldConfig, event?: any) => {
-                this.templateFormly
-                  .get("currentSubstitution.pathSource")
-                  .setErrors(null);
                 this.updateSourceExpressionResult(
                   this.templateFormly.get("currentSubstitution.pathSource")
                     .value
@@ -548,10 +545,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
           },
           {
-            className:
-              "col-lg-5 text-monospace font-smaller column-left-border",
+            className: "col-lg-5 text-monospace column-left-border",
             key: "currentSubstitution.pathTarget",
-            type: "input",
+            type: "input-sm",
+            wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Target",
               disabled:
@@ -560,10 +557,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
                 this.templateFormly
                   .get("currentSubstitution.pathTarget")
                   .setErrors(null);
-                this.updateTargetExpressionResult(
-                  this.templateFormly.get("currentSubstitution.pathTarget")
-                    .value
-                );
                 if (
                   this.templateModel.currentSubstitution.targetExpression
                     .errorMsg != ""
@@ -593,7 +586,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             },
             expressionProperties: {
               "templateOptions.content": (model) =>
-                'Current expression extracts an array. Consider to use the option "Expand Array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"',
+                'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"',
               "templateOptions.enabled": (model) =>
                 model?.sourceExpression?.resultType == "Array" &&
                 !model.currentSubstitution.expandArray,
@@ -638,7 +631,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.sourceExpression.result",
-            type: "input",
+            type: "input-sm",
             templateOptions: {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
@@ -654,7 +647,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className:
               "col-lg-5 text-monospace font-smaller column-left-border",
             key: "currentSubstitution.targetExpression.result",
-            type: "input",
+            type: "input-sm",
             templateOptions: {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
@@ -664,121 +657,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
               "templateOptions.label": (label) =>
                 `Result Type [${this.templateModel.currentSubstitution.targetExpression?.resultType}]`,
             },
-          },
-        ],
-      },
-      {
-        className: "legend form-block col-lg-10 col-lg-offset-1",
-        key: "textField",
-        type: "text",
-        templateOptions: {
-          label: "Add new or show details of current substitution",
-        },
-        hideExpression: !this.stepperConfiguration.allowDefiningSubstitutions,
-      },
-      {
-        fieldGroup: [
-          {
-            className: "col-lg-2 col-lg-offset-1",
-            key: "currentSubstitution.expandArray",
-            type: "switch",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: "Expand Array",
-              description: `Expand items of array to allow MULTI_VALUE or MULTI_DEVICE
-              substitutions.`,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                this.stepperConfiguration.direction == Direction.OUTBOUND,
-              readonly: true,
-              switchMode: true,
-              indeterminate: false,
-            },
-            hideExpression:
-              !this.stepperConfiguration.allowDefiningSubstitutions,
-          },
-          {
-            className: "col-lg-2 col-lg-offset-1",
-            key: "currentSubstitution.resolve2ExternalId",
-            type: "switch",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: " to externalId",
-              description: `Resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.`,
-              readonly: true,
-              switchMode: true,
-              indeterminate: false,
-            },
-            expressionProperties: {
-              "templateOptions.disabled": () => {
-                const d0 =
-                  this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
-                const d1 = this.mapping.direction == Direction.INBOUND;
-                const d2 = this.mapping.direction == Direction.OUTBOUND;
-                const d3 = definesDeviceIdentifier(
-                  this.mapping.targetAPI,
-                  this.templateModel.currentSubstitution,
-                  this.mapping.direction
-                );
-                const r = d0 || d1 || (d2 && !d3);
-                //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
-                return r;
-              },
-            },
-          },
-          {
-            className: "col-lg-2",
-            key: "currentSubstitution.repairStrategy",
-            type: "select",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: "Repair strategy",
-              description: `Strategy defining what should happen when extracted arrays in
-              different expressions do not have the same size. How are missing values handled?`,
-              options: Object.keys(RepairStrategy)
-                .filter((key) => key != "IGNORE" && key != "CREATE_IF_MISSING")
-                .map((key) => {
-                  return {
-                    label: key,
-                    value: key,
-                    disabled:
-                      (!this.templateModel.currentSubstitution.expandArray &&
-                        (key == "USE_FIRST_VALUE_OF_ARRAY" ||
-                          key == "USE_LAST_VALUE_OF_ARRAY")) ||
-                      this.stepperConfiguration.editorMode ==
-                        EditorMode.READ_ONLY,
-                  };
-                }),
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                this.stepperConfiguration.direction == Direction.OUTBOUND,
-              readonly: true,
-            },
-            expressionProperties: {
-              "templateOptions.label": (label) =>
-                "Result Type " +
-                this.templateModel.currentSubstitution.targetExpression
-                  .resultType,
-            },
-            hideExpression:
-              !this.stepperConfiguration.allowDefiningSubstitutions,
-          },
-          {
-            className: "col-lg-2  col-lg-offset-1 p-t-24",
-            type: "button",
-            templateOptions: {
-              text: "Upsert substitution",
-              description: `Upsert substitution. Before target and source property in
-              templates
-              have to be selected.`,
-              onClick: ($event) => this.onAddSubstitution(),
-              disabled:
-                !this.stepperConfiguration.showEditorSource ||
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              readonly: true,
-            },
-            hideExpression:
-              !this.stepperConfiguration.allowDefiningSubstitutions,
           },
         ],
       },
@@ -906,6 +784,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: "",
       };
+
+      //this.templateFormly.get("currentSubstitution.pathSource").reset();
+      this.templateFormly.get("currentSubstitution.pathSource").setErrors(null);
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
       this.templateModel.currentSubstitution.sourceExpression.errorMsg =
@@ -932,6 +813,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         result: JSON.stringify(r, null, 4),
         errorMsg: "",
       };
+      this.templateFormly.get("currentSubstitution.pathTarget").setErrors(null);
+
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
       this.templateModel.currentSubstitution.targetExpression.errorMsg =
@@ -1252,6 +1135,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.templateModel.currentSubstitution.pathSource != "" &&
       this.templateModel.currentSubstitution.pathTarget != ""
     ) {
+      this.templateModel.currentSubstitution.resolve2ExternalId = false;
+      this.templateModel.currentSubstitution.expandArray = false;
+      this.templateModel.currentSubstitution.repairStrategy =
+        RepairStrategy.DEFAULT;
       this.addSubstitution(this.templateModel.currentSubstitution);
       this.selectedSubstitution = -1;
       console.log(
@@ -1266,6 +1153,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         expandArray: false,
       };
       this.templateForm.updateValueAndValidity({ emitEvent: true });
+    } else {
+      this.alertService.warning(
+        "Please select two nodes: one node in the template source, one node in the template target to define a substitution."
+      );
     }
   }
 
@@ -1296,6 +1187,26 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     console.log("Deleted substitution", this.mapping.substitutions.length);
   }
 
+  public onEditSubstitution(selected: number) {
+    console.log("Edit selected substitution", selected);
+    const initialState = {
+      substitution: _.clone(this.mapping.substitutions[selected]),
+      mapping: this.mapping,
+      stepperConfiguration: this.stepperConfiguration,
+    };
+    const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
+      initialState,
+    });
+    modalRef.content.closeSubject.subscribe((editedSub) => {
+      console.log("Mapping after edit:", editedSub);
+      if (editedSub) {
+        this.mapping.substitutions[selected] = editedSub;
+      }
+    });
+    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    console.log("Edited substitution", this.mapping.substitutions.length);
+  }
+
   private addSubstitution(st: MappingSubstitution) {
     let sub: MappingSubstitution = _.clone(st);
     let existingSubstitution = -1;
@@ -1304,39 +1215,25 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         existingSubstitution = index;
       }
     });
-
-    if (existingSubstitution != -1) {
-      const initialState = {
-        substitution: this.mapping.substitutions[existingSubstitution],
-        targetAPI: this.mapping.targetAPI,
-        direction: this.mapping.direction,
-      };
-      const modalRef: BsModalRef = this.bsModalService.show(
-        OverwriteSubstitutionModalComponent,
-        { initialState }
-      );
-      modalRef.content.closeSubject.subscribe((overwrite: boolean) => {
-        console.log(
-          "Overwriting substitution I:",
-          overwrite,
-          this.mapping.substitutions
-        );
-        if (overwrite) {
-          // when overwritting substitution then copy deviceIdentifier property
-          this.mapping.substitutions[existingSubstitution] = sub;
-        }
-        this.templateForm.updateValueAndValidity({ emitEvent: true });
-        console.log(
-          "Overwriting substitution II:",
-          overwrite,
-          this.mapping.substitutions
-        );
-        modalRef.hide();
-      });
-    } else {
-      this.mapping.substitutions.push(sub);
-    }
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    const initialState = {
+      duplicate: existingSubstitution != -1,
+      existingSubstitution: existingSubstitution,
+      substitution: sub,
+      mapping: this.mapping,
+      stepperConfiguration: this.stepperConfiguration,
+    };
+    const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
+      initialState,
+    });
+    modalRef.content.closeSubject.subscribe((result) => {
+      console.log("results:", result);
+    });
+    modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
+      console.log("About to add new substitution:", newSub);
+      if (newSub) {
+        this.mapping.substitutions.push(newSub);
+      }
+    });
   }
 
   public onNextSubstitution() {

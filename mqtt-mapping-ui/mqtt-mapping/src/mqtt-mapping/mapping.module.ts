@@ -23,6 +23,7 @@ import {
   CoreModule,
   DynamicFormsModule,
   HOOK_ROUTE,
+  ModalModule,
   Route,
 } from "@c8y/ngx-components";
 import { PopoverModule } from "ngx-bootstrap/popover";
@@ -59,6 +60,8 @@ import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component"
 import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
 import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
 import { FormlyFiller } from "./shared/formly/filler";
+import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
+import { FieldInputSmall } from "./shared/formly/input-small-field";
 
 @NgModule({
   declarations: [
@@ -67,6 +70,7 @@ import { FormlyFiller } from "./shared/formly/filler";
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
+    EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -83,6 +87,7 @@ import { FormlyFiller } from "./shared/formly/filler";
     C8YSwitchField,
     SelectComponent,
     FieldCheckbox,
+    FieldInputSmall,
   ],
   imports: [
     CoreModule,
@@ -91,11 +96,13 @@ import { FormlyFiller } from "./shared/formly/filler";
     PopoverModule,
     ConfigurationModule,
     DynamicFormsModule,
+    ModalModule
   ],
   entryComponents: [
     MappingComponent,
     OverwriteSubstitutionModalComponent,
     OverwriteDeviceIdentifierModalComponent,
+    EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -150,6 +157,7 @@ import { FormlyFiller } from "./shared/formly/filler";
         types: [
           { name: "text", component: FormlyTextField },
           { name: "filler", component: FormlyFiller },
+          { name: "input-sm", component: FieldInputSmall },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },
           { name: "c8y-switch", component: C8YSwitchField },
