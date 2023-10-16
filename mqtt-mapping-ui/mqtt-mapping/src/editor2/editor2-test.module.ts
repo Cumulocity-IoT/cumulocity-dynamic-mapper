@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { Editor2TestComponent } from "./editor2-test.component";
 import { SharedModule } from "../shared/shared.module";
 
@@ -29,16 +29,10 @@ import { SharedModule } from "../shared/shared.module";
   entryComponents: [Editor2TestComponent],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/editor2-test",
-          component: Editor2TestComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/editor2-test",
+      component: Editor2TestComponent,
+    }),
   ],
 })
 export class Editor2TestModule {}

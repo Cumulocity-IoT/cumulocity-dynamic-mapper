@@ -20,7 +20,7 @@
  */
 
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { AddExtensionComponent } from "./extension-modal/add-extension.component";
 import { ExtensionCardComponent } from "./extension-card/extension-card.component";
 import { ExtensionComponent } from "./grid/extension.component";
@@ -29,23 +29,6 @@ import { CollapseModule } from "ngx-bootstrap/collapse";
 import { ExtensionPropertiesComponent } from "./properties/extension-properties.component";
 import { AdminGuard } from "../shared/admin.guard";
 
-const extensionRoutes: Route[] = [
-  {
-    path: "sag-ps-pkg-mqtt-mapping/extensions",
-    children: [
-      {
-        path: "",
-        pathMatch: "full",
-        component: ExtensionComponent,
-        canActivate: [AdminGuard],
-      },
-      {
-        path: "properties/:id",
-        component: ExtensionPropertiesComponent,
-      },
-    ],
-  },
-];
 
 @NgModule({
   declarations: [
@@ -64,11 +47,21 @@ const extensionRoutes: Route[] = [
   ],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: extensionRoutes,
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/extensions",
+      children: [
+        {
+          path: "",
+          pathMatch: "full",
+          component: ExtensionComponent,
+          canActivate: [AdminGuard],
+        },
+        {
+          path: "properties/:id",
+          component: ExtensionPropertiesComponent,
+        },
+      ],
+    }),
   ],
 })
 export class ExtensionModule {}

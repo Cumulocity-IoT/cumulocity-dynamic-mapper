@@ -35,18 +35,16 @@ import {
   stringifyJSONPath,
   Content,
   MenuItem,
-  createKeySelection,
   createAjvValidator,
   parseJSONPath,
-  createInsideSelection,
   JSONEditorSelection,
   isKeySelection,
-  KeySelection,
   isJSONContent,
   JSONContent,
   isMultiSelection,
   createMultiSelection,
   TextContent,
+  isValueSelection,
 } from "vanilla-jsoneditor";
 
 @Component({
@@ -143,7 +141,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
-    if (isKeySelection(selection)) {
+    if (isKeySelection(selection) || isValueSelection(selection)) {
       let st = stringifyJSONPath((selection as any).path);
       this.onPathChanged.emit(st);
       console.log("Selected path:", st);
@@ -153,7 +151,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       console.log("Selected anchorPath:", st);
     }
 
-    console.log("Validation:",this.editor.validate(), selection);
+    console.log("Selection:", selection);
   }
 
   public setSchema(schema: any) {
