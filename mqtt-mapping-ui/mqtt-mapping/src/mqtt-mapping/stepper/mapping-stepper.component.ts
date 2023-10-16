@@ -499,9 +499,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
         fieldGroup: [
           {
             className:
-              "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
+              "col-lg-5 col-lg-offset-1 text-monospace column-right-border",
             key: "currentSubstitution.pathSource",
-            type: "input",
+            type: "input-sm",
             wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Source",
@@ -549,9 +549,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
           },
           {
             className:
-              "col-lg-5 text-monospace font-smaller column-left-border",
+              "col-lg-5 text-monospace column-left-border",
             key: "currentSubstitution.pathTarget",
-            type: "input",
+            type: "input-sm",
+            wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Target",
               disabled:
@@ -638,7 +639,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.sourceExpression.result",
-            type: "input",
+            type: "input-sm",
             templateOptions: {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
@@ -654,7 +655,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
             className:
               "col-lg-5 text-monospace font-smaller column-left-border",
             key: "currentSubstitution.targetExpression.result",
-            type: "input",
+            type: "input-sm",
             templateOptions: {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
