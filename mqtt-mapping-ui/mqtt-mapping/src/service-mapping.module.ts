@@ -21,11 +21,7 @@
 import { NgModule } from "@angular/core";
 import { Route, RouterModule as NgRouterModule } from "@angular/router";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
-import {
-  CoreModule,
-  HOOK_NAVIGATOR_NODES,
-  HOOK_TABS,
-} from "@c8y/ngx-components";
+import { CoreModule, hookNavigator, hookTab } from "@c8y/ngx-components";
 import { ConfigurationModule } from "./mqtt-configuration/configuration.module";
 import { ExtensionModule } from "./mqtt-extension/extension.module";
 import { MappingTreeModule } from "./mqtt-mapping-tree/tree.module";
@@ -81,12 +77,8 @@ const extensionRoutes: Route[] = [
   providers: [
     OverviewGuard,
     BsModalService,
-    {
-      provide: HOOK_NAVIGATOR_NODES,
-      useClass: MappingNavigationFactory,
-      multi: true,
-    },
-    { provide: HOOK_TABS, useClass: MappingTabFactory, multi: true },
+    hookNavigator(MappingNavigationFactory),
+    hookTab(MappingTabFactory),
   ],
 })
 export class MQTTMappingModule {
