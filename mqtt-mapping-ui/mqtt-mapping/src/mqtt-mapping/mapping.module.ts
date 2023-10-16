@@ -22,9 +22,8 @@ import { NgModule } from "@angular/core";
 import {
   CoreModule,
   DynamicFormsModule,
-  HOOK_ROUTE,
+  hookRoute,
   ModalModule,
-  Route,
 } from "@c8y/ngx-components";
 import { PopoverModule } from "ngx-bootstrap/popover";
 import { MappingComponent } from "./grid/mapping.component";
@@ -94,7 +93,7 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
     PopoverModule,
     ConfigurationModule,
     DynamicFormsModule,
-    ModalModule
+    ModalModule,
   ],
   entryComponents: [
     MappingComponent,
@@ -113,26 +112,14 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
   ],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
-          component: MappingComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
-          component: MappingComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
+      component: MappingComponent,
+    }),
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
+      component: MappingComponent,
+    }),
     {
       provide: FORMLY_CONFIG,
       multi: true,

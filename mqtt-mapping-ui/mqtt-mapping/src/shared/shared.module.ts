@@ -20,16 +20,15 @@
  */
 import { NgModule } from "@angular/core";
 import { CoreModule } from "@c8y/ngx-components";
-import { JsonEditorComponent } from "./editor/jsoneditor.component";
 import { JsonEditor2Component } from "./editor2/jsoneditor2.component";
 import { BsDatepickerModule } from "ngx-bootstrap/datepicker";
 import { PaginationModule } from "ngx-bootstrap/pagination";
 
 @NgModule({
-  declarations: [JsonEditorComponent, JsonEditor2Component],
+  declarations: [JsonEditor2Component],
   imports: [CoreModule, BsDatepickerModule, PaginationModule],
-  entryComponents: [JsonEditorComponent, JsonEditor2Component],
-  exports: [JsonEditorComponent, JsonEditor2Component],
+  entryComponents: [JsonEditor2Component],
+  exports: [JsonEditor2Component],
   providers: [],
 })
 export class SharedModule {}

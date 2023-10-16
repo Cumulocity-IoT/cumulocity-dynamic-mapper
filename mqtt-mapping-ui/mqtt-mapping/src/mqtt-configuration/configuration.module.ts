@@ -20,7 +20,7 @@
  */
 
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { BokerConfigurationComponent } from "./broker-configuration.component";
 import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { AdminGuard } from "../shared/admin.guard";
@@ -34,17 +34,11 @@ import { AdminGuard } from "../shared/admin.guard";
   entryComponents: [TerminateBrokerConnectionModalComponent],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/configuration",
-          component: BokerConfigurationComponent,
-          canActivate: [AdminGuard],
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/configuration",
+      component: BokerConfigurationComponent,
+      canActivate: [AdminGuard],
+    }),
   ],
 })
 export class ConfigurationModule {}
