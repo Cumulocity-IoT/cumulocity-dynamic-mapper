@@ -29,7 +29,6 @@ import {
 import { PopoverModule } from "ngx-bootstrap/popover";
 import { MappingComponent } from "./grid/mapping.component";
 import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
-import { OverwriteDeviceIdentifierModalComponent } from "./overwrite/overwrite-device-identifier-modal.component";
 import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
 import { APIRendererComponent } from "./renderer/api.renderer.component";
 import { QOSRendererComponent } from "./renderer/qos-cell.renderer.component";
@@ -69,7 +68,6 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
     MappingStepperComponent,
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
     EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
@@ -101,7 +99,6 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
   entryComponents: [
     MappingComponent,
     OverwriteSubstitutionModalComponent,
-    OverwriteDeviceIdentifierModalComponent,
     EditSubstitutionComponent,
     StatusRendererComponent,
     QOSRendererComponent,
