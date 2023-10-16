@@ -51,7 +51,6 @@ import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 
 @Slf4j

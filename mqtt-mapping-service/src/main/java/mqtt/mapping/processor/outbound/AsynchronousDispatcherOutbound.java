@@ -41,7 +41,6 @@ import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 import org.apache.commons.codec.binary.Hex;
 import org.springframework.beans.factory.annotation.Autowired;

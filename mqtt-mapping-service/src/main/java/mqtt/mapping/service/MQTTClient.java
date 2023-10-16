@@ -48,7 +48,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
-import mqtt.mapping.client.ConnectorClient;
+import mqtt.mapping.connector.client.IConnectorClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -88,9 +88,14 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Configuration
 @EnableScheduling
 @Service
-public class MQTTClient implements ConnectorClient {
+public class MQTTClient implements IConnectorClient {
 
     private static final int WAIT_PERIOD_MS = 10000;
+
+    private static final String CONNECTOR_ID = "MQTT";
+
+
+    private String tenantId = null;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
@@ -166,6 +171,9 @@ public class MQTTClient implements ConnectorClient {
         private String certInPemFormat;
     }
 
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Called initialize(): {}", initializeTask == null || initializeTask.isDone());
@@ -288,7 +296,7 @@ public class MQTTClient implements ConnectorClient {
                         log.info("Successfully connected to broker {}", mqttClient.getServerURI());
                         c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
                                 STATUS_MQTT_EVENT_TYPE,
-                                DateTime.now(), null);
+                                DateTime.now(), null, tenantId);
 
                     }
                 } catch (MqttException e) {
@@ -372,6 +380,11 @@ public class MQTTClient implements ConnectorClient {
         }
     }
 
+    @Override
+    public String getConntectorId() {
+        return CONNECTOR_ID;
+    }
+
     public void disconnectFromBroker() {
         connectionConfiguration = connectionConfigurationComponent.enableConnection(false);
         disconnect();
@@ -387,7 +400,7 @@ public class MQTTClient implements ConnectorClient {
     public void subscribe(String topic, Integer qos) throws MqttException {
 
         log.debug("Subscribing on topic: {}", topic);
-        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
+        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
@@ -398,7 +411,7 @@ public class MQTTClient implements ConnectorClient {
 
     private void unsubscribe(String topic) throws MqttException {
         log.info("Unsubscribing from topic: {}", topic);
-        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null);
+        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
         mqttClient.unsubscribe(topic);
     }
 

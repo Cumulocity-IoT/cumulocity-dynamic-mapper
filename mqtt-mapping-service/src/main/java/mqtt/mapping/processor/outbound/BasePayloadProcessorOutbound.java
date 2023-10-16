@@ -21,9 +21,7 @@
 
 package mqtt.mapping.processor.outbound;
 
-import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
@@ -40,7 +38,6 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.processor.system.SysHandler;
 import mqtt.mapping.service.MQTTClient;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
