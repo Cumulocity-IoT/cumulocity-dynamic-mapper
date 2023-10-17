@@ -134,7 +134,7 @@
                             )
                           "
                         >
-                          <i c8yIcon="enter-left"></i>Use Source Templates
+                          <i c8yIcon="enter-left"></i>updateButton Templates
                           <span
                             *ngIf="mapping.snoopedTemplates.length > 0"
                             class="badge animated flash infinite animation-slow"
@@ -366,7 +366,7 @@
                             EditorMode.READ_ONLY || selectedSubstitution == -1)
                     "
                   >
-                    <i c8yIcon="plus-circle-o"></i>&nbsp;Update substitution 
+                    <i c8yIcon="plus-circle-o"></i><span id="updateButton">{{'Update substitution'}} </span>
                   </button>
                 </div>
               </div>
@@ -384,7 +384,7 @@
                       [direction]="mapping.direction"
                       (onSelect)="onSelectSubstitution($event)"
                       (onDelete)="onDeleteSubstitution($event)"
-                      (onEdit)="onUpdateSubstitution($event)"
+                      (onEdit)="onUpdateSubstitution()"
                     >
                     </mapping-substitution-renderer>
                   </div>
