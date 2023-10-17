@@ -84,8 +84,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   content: Content = {
     text: undefined,
     json: {
-      greeting: 'Hello World'
-    }
+      greeting: "Hello World",
+    },
   };
   ngOnInit() {
     if (!this.jsonEditorContainer.nativeElement) {
@@ -141,30 +141,35 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
-    if (isKeySelection(selection) || isValueSelection(selection)) {
-      let st = stringifyJSONPath((selection as any).path);
-      //this.onPathChanged.emit(st);
-      console.log("Selected path:", st);
-    } else if (isMultiSelection(selection)){
-      let st = stringifyJSONPath((selection as any).anchorPath);
-      //this.onPathChanged.emit(st);
-      console.log("Selected anchorPath:", st);
+    const c: any = selection;
+    // ignore emitting change events when the path was set progamatically to avoid circles
+    if (! c?.triggeredSelection) {
+      if (isKeySelection(selection) || isValueSelection(selection)) {
+        let st = stringifyJSONPath((selection as any).path);
+        this.onPathChanged.emit(st);
+        console.log("Selected path:", st);
+      } else if (isMultiSelection(selection)) {
+        let st = stringifyJSONPath((selection as any).anchorPath);
+        this.onPathChanged.emit(st);
+        console.log("Selected anchorPath:", st);
+      }
+    } else {
+      console.log("Ignoring selection as is was triggered:", selection);
     }
-
-    console.log("Selection:", selection);
   }
 
   public setSchema(schema: any) {
     const validator = createAjvValidator({ schema });
-    this.editor.updateProps({ validator: validator });
+    this.editor?.updateProps({ validator: validator });
   }
 
   public setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     console.log("Set selection to path:", pathString, path);
-    // const selection = createKeySelection(path, false);
-    const selection = createMultiSelection(path, path);
-    
+    const selection: any = createMultiSelection(path, path);
+    // marker to ignore emitting change events when the path was set progamatically
+    selection.triggeredSelection = true;
+
     try {
       this.editor.select(selection);
     } catch (error) {
@@ -180,10 +185,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       return j;
     } else {
       const t: any = (this.editor.get() as TextContent).text;
-      const j: JSON = JSON.parse(t)
-      return j
+      const j: JSON = JSON.parse(t);
+      return j;
     }
-    
   }
 
   public set(json: any) {
