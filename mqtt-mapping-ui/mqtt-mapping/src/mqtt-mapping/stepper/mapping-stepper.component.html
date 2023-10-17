@@ -352,6 +352,23 @@
                     <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
                   </button>
                 </div>
+                <div class="col-lg-2 p-l-0">
+                  <button
+                    type="button"
+                    name="updateSubstitution"
+                    class="btn btn-default btn-sm"
+                    (click)="onUpdateSubstitution()"
+                    translate
+                    title="Update substitution"
+                    [attr.disabled]="isDisabled(
+                        !stepperConfiguration.showEditorSource ||
+                          stepperConfiguration.editorMode ==
+                            EditorMode.READ_ONLY || selectedSubstitution == -1)
+                    "
+                  >
+                    <i c8yIcon="plus-circle-o"></i>&nbsp;Update substitution 
+                  </button>
+                </div>
               </div>
               <div class="row">
                 <div class="col-lg-10 col-lg-offset-1">
@@ -367,7 +384,7 @@
                       [direction]="mapping.direction"
                       (onSelect)="onSelectSubstitution($event)"
                       (onDelete)="onDeleteSubstitution($event)"
-                      (onEdit)="onEditSubstitution($event)"
+                      (onEdit)="onUpdateSubstitution($event)"
                     >
                     </mapping-substitution-renderer>
                   </div>

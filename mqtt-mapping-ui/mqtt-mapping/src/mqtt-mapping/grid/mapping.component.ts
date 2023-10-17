@@ -481,7 +481,7 @@ export class MappingComponent implements OnInit {
     this.mappings = await this.mappingService.loadMappings(
       this.stepperConfiguration.direction
     );
-    console.log("Updated mappings", this.mappings);
+    //console.log("Updated mappings", this.mappings);
   }
 
   async onCommitMapping(mapping: Mapping) {
