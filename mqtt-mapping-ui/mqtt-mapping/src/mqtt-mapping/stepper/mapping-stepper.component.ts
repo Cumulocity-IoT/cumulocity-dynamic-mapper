@@ -49,7 +49,6 @@ import {
   ValidationError,
 } from "../../shared/mapping.model";
 import {
-  cloneSubstitution,
   COLOR_HIGHLIGHTED,
   countDeviceIdentifiers,
   definesDeviceIdentifier,
@@ -97,6 +96,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateForm: FormGroup;
   templateFormlyFields: FormlyFieldConfig[];
   testForm: FormGroup;
+  editorTestingRequestContent: any;
 
   templateModel: any = {};
   templateSource: any;
@@ -133,9 +133,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   editorSource: JsonEditor2Component;
   @ViewChild("editorTarget", { static: false })
   editorTarget: JsonEditor2Component;
-  @ViewChild("editorTestingRequest", { static: false })
-  editorTestingRequest: JsonEditor2Component;
-  @ViewChild("editorTestingResponse", { static: false })
   editorTestingResponse: JsonEditor2Component;
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
@@ -713,33 +710,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       );
       editorTargetRef.setAttribute("schema", "true");
     }
-
-    const editorTestingResponseRef =
-      this.elementRef.nativeElement.querySelector("#editorTestingResponse");
-    if (
-      editorTestingResponseRef != null &&
-      !editorTestingResponseRef.getAttribute("schema")
-    ) {
-      //set schema for editors
-      this.editorTestingResponse.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      );
-      editorTestingResponseRef.setAttribute("schema", "true");
-    }
-
-    const editorTestingRequestRef = this.elementRef.nativeElement.querySelector(
-      "#editorTestingRequestRef"
-    );
-    if (
-      editorTestingRequestRef != null &&
-      !editorTestingRequestRef.getAttribute("schema")
-    ) {
-      //set schema for editors
-      this.editorTestingRequest.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      );
-      editorTestingRequestRef.setAttribute("schema", "true");
-    }
   }
 
   public onSelectedPathSourceChanged(path: string) {
@@ -796,8 +766,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     const r3 = this.templateModel.currentSubstitution.pathSource != "";
     const r4 = this.templateModel.currentSubstitution.pathTarget != "";
     let result = r1 && r2 && r3 && r4;
-    //console.log("Valid substitution 1", r1, r2, r3, r4, result, this.templateModel.currentSubstitution.sourceExpression.severity, this.templateModel.currentSubstitution.pathSource )
-    //console.log("Valid substitution 2", r1, r2, r3, r4, result )
     return result;
   }
 
@@ -848,90 +816,20 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     this.templateModel = { ... this.templateModel}
   }
 
-  private getCurrentMapping(patched: boolean): Mapping {
+  public getCurrentMapping(patched: boolean): Mapping {
     return {
       ...this.mapping,
       source: this.reduceSourceTemplate(
         this.editorSource ? this.editorSource.get() : {},
         patched
       ), //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
-      target: this.reduceTargetTemplate(this.editorTarget.get(), patched), //remove dummy field "_DEVICE_IDENT_", since it should not be stored
+      target: this.reduceTargetTemplate(this.editorTarget?.get(), patched), //remove dummy field "_DEVICE_IDENT_", since it should not be stored
       lastUpdate: Date.now(),
     };
   }
 
   async onCommitButton() {
     this.onCommit.emit(this.getCurrentMapping(false));
-  }
-
-  async onTestTransformation() {
-    let testProcessingContext = await this.mappingService.testResult(
-      this.getCurrentMapping(true),
-      false
-    );
-    this.testingModel.results = testProcessingContext.requests;
-    if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successful!");
-      testProcessingContext.errors.forEach((msg) => {
-        this.alertService.danger(msg);
-      });
-    } else {
-      this.alertService.success("Testing tranformation was successful!");
-    }
-    this.onNextTestResult();
-  }
-
-  async onSendTest() {
-    let testProcessingContext = await this.mappingService.testResult(
-      this.getCurrentMapping(true),
-      true
-    );
-    this.testingModel.results = testProcessingContext.requests;
-    if (testProcessingContext.errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successful!");
-      testProcessingContext.errors.forEach((msg) => {
-        this.alertService.danger(msg);
-      });
-    } else {
-      this.alertService.info(
-        `Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`
-      );
-      //console.log("RES", testProcessingContext.requests[0].response);
-    }
-    this.onNextTestResult();
-  }
-
-  public onNextTestResult() {
-    if (
-      this.testingModel.selectedResult >=
-      this.testingModel.results.length - 1
-    ) {
-      this.testingModel.selectedResult = -1;
-    }
-    this.testingModel.selectedResult++;
-    this.selectedResult$.next(this.testingModel.selectedResult);
-    if (
-      this.testingModel.selectedResult >= 0 &&
-      this.testingModel.selectedResult < this.testingModel.results.length
-    ) {
-      this.testingModel.request =
-        this.testingModel.results[this.testingModel.selectedResult].request;
-      this.testingModel.response =
-        this.testingModel.results[this.testingModel.selectedResult].response;
-      this.editorTestingRequest.setSchema(
-        getSchema(
-          this.testingModel.results[this.testingModel.selectedResult].targetAPI,
-          this.mapping.direction,
-          true
-        )
-      );
-      this.testingModel.errorMsg =
-        this.testingModel.results[this.testingModel.selectedResult].error;
-    } else {
-      this.testingModel.request = JSON.parse("{}");
-      this.testingModel.response = JSON.parse("{}");
-      this.testingModel.errorMsg = undefined;
-    }
   }
 
   async onSampleTargetTemplatesButton() {
@@ -1057,10 +955,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       }
     } else if (this.step == "Define templates and substitutions") {
       this.getTemplateForm();
-      this.editorTestingRequest.set(
-        this.editorSource ? this.editorSource.get() : ({} as JSON)
-      );
-      this.editorTestingResponse.set({} as JSON);
+      this.editorTestingRequestContent = this.editorSource ? this.editorSource.get() : {}
       this.onSelectSubstitution(0);
       event.stepper.next();
     }

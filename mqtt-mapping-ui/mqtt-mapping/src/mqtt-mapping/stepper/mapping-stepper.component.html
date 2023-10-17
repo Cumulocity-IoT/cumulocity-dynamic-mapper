@@ -432,108 +432,11 @@
     stepLabel="step3"
     label="Test mapping"
   >
-    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-      <div class="row">
-        <div class="col-lg-4 col-lg-offset-4">
-          <h4 class="text-center text-medium">Test mapping</h4>
-        </div>
-      </div>
-    </div>
-    <div class="col-xs-12 flex-grow no-gutter">
-      <div class="card-inner-scroll fit-h">
-        <div class="card-block p-b-0">
-          <div class="container">
-            <div class="row">
-              <div class="col-lg-10 col-lg-offset-1">
-                <div class="form-group">
-                  <div style="display: flex">
-                    <label for="testResult" translate
-                      >Testing - {{ targetSystem }} Request&nbsp;</label
-                    >
-                    <h6>
-                      <span class="badge badge-success">{{
-                        selectedResult$ | async
-                      }}</span>
-                    </h6>
-                  </div>
-
-                  <mapping-json-editor2
-                    [options]="editorOptionsTesting"
-                    [data]="testingModel.request"
-                    #editorTestingRequest
-                  >
-                  </mapping-json-editor2>
-                  <c8y-messages>
-                    <c8y-message *ngIf="testingModel.errorMsg" translate
-                      ><span class="text-warning">{{
-                        testingModel.errorMsg
-                      }}</span>
-                    </c8y-message>
-                  </c8y-messages>
-                </div>
-              </div>
-            </div>
-            <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
-              <div class="col-lg-10 col-lg-offset-1">
-                <div class="form-group">
-                  <div style="display: flex">
-                    <label for="testResult" translate
-                      >Testing - {{ targetSystem }} Response&nbsp;</label
-                    >
-                    <h6>
-                      <span class="badge badge-success">{{
-                        selectedResult$ | async
-                      }}</span>
-                    </h6>
-                  </div>
-                  <mapping-json-editor2
-                    [options]="editorOptionsTesting"
-                    [data]="testingModel.response"
-                    #editorTestingResponse
-                  >
-                  </mapping-json-editor2>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-6 col-lg-offset-3 text-center">
-      <button
-        type="button"
-        class="btn btn-default"
-        (click)="onTestTransformation()"
-        [attr.disabled]="
-          isDisabled(!stepperConfiguration.allowTestTransformation)
-        "
-      >
-        Transform Test Message
-      </button>
-      <button
-        type="button"
-        class="btn btn-default"
-        (click)="onNextTestResult()"
-        [attr.disabled]="
-          isDisabled(!stepperConfiguration.allowTestTransformation)
-        "
-      >
-        Show Next Test Result&nbsp;<span
-          *ngIf="testingModel.results.length > 0"
-          class="badge badge-success"
-        >
-          {{ testingModel.results.length }}</span
-        >
-      </button>
-      <button
-        type="button"
-        class="btn btn-default"
-        [attr.disabled]="isDisabled(!stepperConfiguration.allowTestSending)"
-        (click)="onSendTest()"
-      >
-        Send Test Message
-      </button>
-    </div>
+    <mapping-testing *ngIf="editorTestingRequestContent"
+      [editorTestingRequestContent]="editorTestingRequestContent"
+      [mapping]="getCurrentMapping(true)"
+      [stepperConfiguration]="stepperConfiguration"
+    ></mapping-testing>
     <c8y-stepper-buttons
       class="col-xs-12 d-block card-footer p-24 separator"
       (onCustom)="onCommitButton()"
