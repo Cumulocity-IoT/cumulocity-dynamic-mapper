@@ -139,7 +139,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   editorTestingResponse: JsonEditor2Component;
   @ViewChild(SubstitutionRendererComponent, { static: false })
   substitutionChild: SubstitutionRendererComponent;
-  @ViewChild(C8yStepper, { static: false }) stepper: C8yStepper;
 
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
@@ -1255,18 +1254,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     });
   }
 
-  public onNextSubstitution() {
-    this.substitutionChild.scrollToSubstitution(this.selectedSubstitution);
-    if (this.selectedSubstitution >= this.mapping.substitutions.length - 1) {
-      this.selectedSubstitution = -1;
-    }
-    this.selectedSubstitution++;
-    this.onSelectSubstitution(this.selectedSubstitution);
-  }
-
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
+
       this.templateFormly
         .get("pathSource")
         .setValue(this.mapping.substitutions[selected].pathSource);

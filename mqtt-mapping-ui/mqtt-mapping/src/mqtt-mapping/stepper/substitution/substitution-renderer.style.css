@@ -30,4 +30,14 @@ div:has(>c8y-li-body ) {
   padding-bottom: 4px;
 } 
 
+.fixTableHead { 
+  overflow-y: auto; 
+  /* height: 110px;  */
+} 
+.fixTableHead thead tr th { 
+  background-color: white;
+  position: sticky; 
+  top: 0; 
+} 
+
 
