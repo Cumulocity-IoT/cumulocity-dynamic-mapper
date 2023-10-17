@@ -134,7 +134,7 @@
                             )
                           "
                         >
-                          <i c8yIcon="enter-left"></i>updateButton Templates
+                          <i c8yIcon="enter-left"></i>Use Source Templates
                           <span
                             *ngIf="mapping.snoopedTemplates.length > 0"
                             class="badge animated flash infinite animation-slow"
@@ -161,7 +161,7 @@
                     </div>
                     <mapping-json-editor2
                       [options]="editorOptionsSource"
-                      (onPathChanged)="onSelectedSourcePathChanged($event)"
+                      (onPathChanged)="onSelectedPathSourceChanged($event)"
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
@@ -302,7 +302,7 @@
                     </div>
                     <mapping-json-editor2
                       [options]="editorOptionsTarget"
-                      (onPathChanged)="onSelectedTargetPathChanged($event)"
+                      (onPathChanged)="onSelectedPathTargetChanged($event)"
                       [data]="templateTarget"
                       #editorTarget
                       id="editorTarget"
@@ -333,7 +333,9 @@
               </div>
             </div>
             <div [formGroup]="templateForm">
-              <div class="legend form-block col-lg-10 col-lg-offset-1">Substitutions</div>
+              <div class="legend form-block col-lg-10 col-lg-offset-1">
+                Substitutions
+              </div>
               <div class="row">
                 <div class="col-lg-2 col-lg-offset-1">
                   <button
@@ -343,10 +345,13 @@
                     (click)="onAddSubstitution()"
                     translate
                     title="Add substitution"
-                    [attr.disabled]="isDisabled(
+                    [attr.disabled]="
+                      isDisabled(
                         !stepperConfiguration.showEditorSource ||
                           stepperConfiguration.editorMode ==
-                            EditorMode.READ_ONLY)
+                            EditorMode.READ_ONLY ||
+                          !isSubstitutionValid()
+                      )
                     "
                   >
                     <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
@@ -360,13 +365,18 @@
                     (click)="onUpdateSubstitution()"
                     translate
                     title="Update substitution"
-                    [attr.disabled]="isDisabled(
+                    [attr.disabled]="
+                      isDisabled(
                         !stepperConfiguration.showEditorSource ||
                           stepperConfiguration.editorMode ==
-                            EditorMode.READ_ONLY || selectedSubstitution == -1)
+                            EditorMode.READ_ONLY ||
+                          selectedSubstitution == -1 ||
+                          !isSubstitutionValid()
+                      )
                     "
                   >
-                    <i c8yIcon="plus-circle-o"></i><span id="updateButton">{{'Update substitution'}} </span>
+                    <i c8yIcon="plus-circle-o"></i
+                    ><span id="updateButton">{{ "Update substitution" }} </span>
                   </button>
                 </div>
               </div>
