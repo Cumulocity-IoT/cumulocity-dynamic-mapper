@@ -60,11 +60,13 @@ import { StatusActivationRendererComponent } from "./renderer/status-activation-
 import { FormlyFiller } from "./shared/formly/filler";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
 import { FieldInputSmall } from "./shared/formly/input-small-field";
+import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
+    MappingStepTestingComponent,
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
@@ -97,6 +99,7 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
   ],
   entryComponents: [
     MappingComponent,
+    MappingStepTestingComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
     StatusRendererComponent,
