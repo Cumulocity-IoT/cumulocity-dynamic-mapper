@@ -75,7 +75,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   @Output()
   change: EventEmitter<any> = new EventEmitter<any>();
   @Output()
-  onPathChanged: EventEmitter<string> = new EventEmitter<string>();
+  pathChanged: EventEmitter<string> = new EventEmitter<string>();
 
   constructor(private elementRef: ElementRef) {}
 
@@ -146,11 +146,11 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     if (! c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
         let st = stringifyJSONPath((selection as any).path);
-        this.onPathChanged.emit(st);
+        this.pathChanged.emit(st);
         console.log("Selected path:", st);
       } else if (isMultiSelection(selection)) {
         let st = stringifyJSONPath((selection as any).anchorPath);
-        this.onPathChanged.emit(st);
+        this.pathChanged.emit(st);
         console.log("Selected anchorPath:", st);
       }
     } else {
@@ -175,7 +175,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     } catch (error) {
       console.warn("Set selection to path not possible:", pathString, error);
     }
-    this.onPathChanged.emit(pathString);
+    this.pathChanged.emit(pathString);
   }
 
   public get(): JSON {

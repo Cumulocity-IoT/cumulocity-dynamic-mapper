@@ -20,6 +20,9 @@
  */
 import {
   AfterContentChecked,
+  AfterContentInit,
+  AfterViewChecked,
+  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -83,6 +86,32 @@ export class MappingStepTestingComponent
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}
+  // ngAfterViewInit(): void {
+  //   console.log(
+  //     "ngAfterViewInit:",
+  //     this.mapping,
+  //     this.stepperConfiguration,
+  //     this.editorTestingRequestContent
+  //   );
+  // }
+
+  // ngAfterContentInit(): void {
+  //   console.log(
+  //     "ngAfterContentInit:",
+  //     this.mapping,
+  //     this.stepperConfiguration,
+  //     this.editorTestingRequestContent
+  //   );
+  // }
+
+  // ngAfterViewChecked(): void {
+  //   console.log(
+  //     "ngAfterViewChecked:",
+  //     this.mapping,
+  //     this.stepperConfiguration,
+  //     this.editorTestingRequestContent
+  //   );
+  // }
 
   ngOnInit() {
     // set value for backward compatiblility
@@ -118,7 +147,7 @@ export class MappingStepTestingComponent
       this.elementRef.nativeElement.querySelector("#editorTestingResponse");
     if (
       editorTestingResponseRef != null &&
-      !editorTestingResponseRef.getAttribute("schema")&&
+      !editorTestingResponseRef.getAttribute("schema") &&
       this.editorTestingResponse
     ) {
       //set schema for editors
@@ -141,7 +170,8 @@ export class MappingStepTestingComponent
       this.editorTestingRequest.setSchema(
         getSchema(this.mapping.targetAPI, this.mapping.direction, true)
       );
-      this.editorTestingRequest.set(this.editorTestingRequestContent);
+      this.testingModel.request = this.editorTestingRequestContent;
+      //this.editorTestingRequest.set(this.editorTestingRequestContent);
       editorTestingRequestRef.setAttribute("schema", "true");
     }
   }
