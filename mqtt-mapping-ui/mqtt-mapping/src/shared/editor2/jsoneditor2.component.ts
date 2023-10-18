@@ -76,6 +76,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   change: EventEmitter<any> = new EventEmitter<any>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
+  @Input()
+  schemaUpdate: EventEmitter<string>;
 
   constructor(private elementRef: ElementRef) {}
 
@@ -134,6 +136,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
         },
       },
     });
+    this.schemaUpdate?.subscribe((schema) => {
+      this.editor.setSchema(schema);
+    });
   }
 
   ngOnDestroy() {
@@ -143,7 +148,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   private onSelect(selection: JSONEditorSelection | undefined) {
     const c: any = selection;
     // ignore emitting change events when the path was set progamatically to avoid circles
-    if (! c?.triggeredSelection) {
+    if (!c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
         let st = stringifyJSONPath((selection as any).path);
         this.pathChanged.emit(st);
