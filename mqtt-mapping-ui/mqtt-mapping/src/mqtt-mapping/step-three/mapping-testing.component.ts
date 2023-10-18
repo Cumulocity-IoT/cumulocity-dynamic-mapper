@@ -49,12 +49,11 @@ import { StepperConfiguration } from "../stepper/stepper-model";
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-export class MappingStepTestingComponent
-  implements OnInit, AfterContentChecked
+export class MappingStepTestingComponent implements OnInit
 {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() editorTestingRequestContent: JSON;
+  @Input() editorTestingRequestTemplateEmitter: EventEmitter<any>;
 
   Direction = Direction;
   isDisabled = isDisabled;
@@ -91,7 +90,7 @@ export class MappingStepTestingComponent
   //     "ngAfterViewInit:",
   //     this.mapping,
   //     this.stepperConfiguration,
-  //     this.editorTestingRequestContent
+  //     this.editorTestingRequestTemplate
   //   );
   // }
 
@@ -100,7 +99,7 @@ export class MappingStepTestingComponent
   //     "ngAfterContentInit:",
   //     this.mapping,
   //     this.stepperConfiguration,
-  //     this.editorTestingRequestContent
+  //     this.editorTestingRequestTemplate
   //   );
   // }
 
@@ -109,7 +108,7 @@ export class MappingStepTestingComponent
   //     "ngAfterViewChecked:",
   //     this.mapping,
   //     this.stepperConfiguration,
-  //     this.editorTestingRequestContent
+  //     this.editorTestingRequestTemplate
   //   );
   // }
 
@@ -128,7 +127,6 @@ export class MappingStepTestingComponent
       "Mapping to be tested:",
       this.mapping,
       this.stepperConfiguration,
-      this.editorTestingRequestContent
     );
 
     this.editorOptionsTesting = {
@@ -139,41 +137,27 @@ export class MappingStepTestingComponent
       statusBar: false,
       readOnly: true,
     };
-  }
 
-  ngAfterContentChecked(): void {
-    // if json source editor is displayed then choose the first selection
-    const editorTestingResponseRef =
-      this.elementRef.nativeElement.querySelector("#editorTestingResponse");
-    if (
-      editorTestingResponseRef != null &&
-      !editorTestingResponseRef.getAttribute("schema") &&
-      this.editorTestingResponse
-    ) {
-      //set schema for editors
-      this.editorTestingResponse.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      );
-      this.editorTestingResponse.set({} as JSON);
-      editorTestingResponseRef.setAttribute("schema", "true");
-    }
+    this.editorTestingRequestTemplateEmitter.subscribe((template) => {
+      const editorTestingResponseRef =
+        this.elementRef.nativeElement.querySelector("#editorTestingResponse");
+      if (editorTestingResponseRef != null) {
+        //set schema for editors
+        this.editorTestingResponse.set({} as JSON);
+        editorTestingResponseRef.setAttribute("schema", "true");
+      }
 
-    const editorTestingRequestRef = this.elementRef.nativeElement.querySelector(
-      "#editorTestingRequest"
-    );
-    if (
-      editorTestingRequestRef != null &&
-      !editorTestingRequestRef.getAttribute("schema") &&
-      this.editorTestingRequest
-    ) {
-      //set schema for editors
-      this.editorTestingRequest.setSchema(
-        getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      );
-      this.testingModel.request = this.editorTestingRequestContent;
-      //this.editorTestingRequest.set(this.editorTestingRequestContent);
-      editorTestingRequestRef.setAttribute("schema", "true");
-    }
+      const editorTestingRequestRef =
+        this.elementRef.nativeElement.querySelector("#editorTestingRequest");
+      if (editorTestingRequestRef != null) {
+        //set schema for editors
+        this.editorTestingRequest.setSchema(
+          getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+        );
+        this.testingModel.request = template;
+      }
+      console.log("New test template:", template);
+    });
   }
 
   async onTestTransformation() {

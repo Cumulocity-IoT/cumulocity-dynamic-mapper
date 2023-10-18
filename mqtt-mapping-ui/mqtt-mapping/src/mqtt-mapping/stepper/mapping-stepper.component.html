@@ -31,13 +31,14 @@
     'flex-no-shrink'
   ]"
   linear
+  (onStepChange)="onStepChange($event)"
 >
   <!-- override icons -->
   <ng-template c8yStepperIcon="final">
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
 
-  <cdk-step label="Define topic" [stepControl]="templateFormly">
+  <cdk-step label="Define topic">
     <mapping-properties
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"
@@ -53,10 +54,7 @@
     </c8y-stepper-buttons>
   </cdk-step>
 
-  <cdk-step
-    [stepControl]="templateFormly"
-    label="Define templates and substitutions"
-  >
+  <cdk-step label="Define templates and substitutions">
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12"></div>
     <div class="col-lg-12 flex-grow no-gutter">
       <div class="card-inner-scroll fit-h">
@@ -116,6 +114,7 @@
                       </div>
                     </div>
                     <mapping-json-editor2
+                      [schemaUpdate] = "schemaUpdateSource"
                       [options]="editorOptionsSource"
                       (pathChanged)="onSelectedPathSourceChanged($event)"
                       [data]="templateSource"
@@ -257,6 +256,7 @@
                       </div>
                     </div>
                     <mapping-json-editor2
+                      [schemaUpdate] = "schemaUpdateTarget"
                       [options]="editorOptionsTarget"
                       (pathChanged)="onSelectedPathTargetChanged($event)"
                       [data]="templateTarget"
@@ -385,8 +385,7 @@
 
   <cdk-step state="final" stepLabel="step3" label="Test mapping">
     <mapping-testing
-      *ngIf="editorTestingRequestContent"
-      [editorTestingRequestContent]="editorTestingRequestContent"
+      [editorTestingRequestTemplateEmitter]="editorTestingRequestTemplateEmitter"
       [mapping]="getCurrentMapping(true)"
       [stepperConfiguration]="stepperConfiguration"
     ></mapping-testing>

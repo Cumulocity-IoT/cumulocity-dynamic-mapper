@@ -91,7 +91,9 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
   templateFormlyFields: FormlyFieldConfig[];
-  editorTestingRequestContent: any;
+  editorTestingRequestTemplateEmitter = new EventEmitter<any>();
+  schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
+  schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
 
   templateModel: any = {};
   templateSource: any;
@@ -392,14 +394,14 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   }
 
   ngAfterContentChecked(): void {
-    // if json source editor is displayed then choose the first selection
+    //if json source editor is displayed then choose the first selection
     const editorSourceRef =
       this.elementRef.nativeElement.querySelector("#editorSource");
     if (editorSourceRef != null && !editorSourceRef.getAttribute("schema")) {
       //set schema for editors
       if (this.stepperConfiguration.showEditorSource) {
-        this.editorSource.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+        this.schemaUpdateSource.emit(
+          getSchema(this.mapping.targetAPI, Direction.INBOUND, true)
         );
         editorSourceRef.setAttribute("schema", "true");
       }
@@ -408,8 +410,8 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       this.elementRef.nativeElement.querySelector("#editorTarget");
     if (editorTargetRef != null && !editorTargetRef.getAttribute("schema")) {
       //set schema for editors
-      this.editorTarget.setSchema(
-        getSchema(API.MEASUREMENT.name, Direction.INBOUND, true)
+      this.schemaUpdateTarget.emit(
+        getSchema(this.mapping.targetAPI, Direction.INBOUND, true)
       );
       editorTargetRef.setAttribute("schema", "true");
     }
@@ -564,6 +566,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     );
   }
 
+  public async onStepChange(event): Promise<void> {
+    console.log("OnStepChange", event);
+  }
+
   public async onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
@@ -657,9 +663,10 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       }
     } else if (this.step == "Define templates and substitutions") {
       this.getTemplateForm();
-      this.editorTestingRequestContent = this.editorSource
+      const testSourceTemplate = this.editorSource
         ? this.editorSource.get()
         : {};
+      this.editorTestingRequestTemplateEmitter.emit(testSourceTemplate);
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
@@ -672,7 +679,6 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     console.log("onBackStep", event.step.label, this.mapping);
     this.step = event.step.label;
     if (this.step == "Test mapping") {
-      this.editorTestingRequestContent = undefined;
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector("#editorTestingRequest");
       if (editorTestingRequestRef != null) {
