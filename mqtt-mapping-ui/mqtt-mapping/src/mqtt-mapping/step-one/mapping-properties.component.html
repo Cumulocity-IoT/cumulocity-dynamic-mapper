@@ -1,0 +1,72 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+
+  <div class="p-16 p-t-0 flex-no-shrink separator-bottom">
+    <div class="row">
+      <div class="col-lg-4 col-lg-offset-4">
+        <h4 class="text-medium">
+          <div class="text-center">
+            Mapping Type: {{ mapping.mappingType }}&nbsp;
+            <span
+              *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
+              class="label label-primary"
+              >{{ "Read Only" }}</span
+            >
+            <span
+              class="hidden-xs hidden-sm m-l-4"
+              *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
+            >
+              <ng-template #popReadOnly
+                >To edit this mapping deactivate the mapping first in mapping
+                list.
+              </ng-template>
+              <button
+                class="btn-clean text-primary"
+                [popover]="popReadOnly"
+                popoverTitle="Read Only"
+                placement="right"
+                triggers="focus"
+                type="button"
+              >
+                <i c8yIcon="question-circle-o"></i>
+              </button>
+            </span>
+          </div>
+        </h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-xs-12 flex-grow no-gutter">
+    <div class="card-inner-scroll fit-h">
+      <div class="card-block p-b-0">
+        <form [formGroup]="propertyFormly">
+          <div class="col-md-6 col-md-offset-3 col-lg-8 col-lg-offset-2">
+            <formly-form
+              [form]="propertyFormly"
+              [fields]="propertyFormlyFields"
+              [model]="mapping"
+            ></formly-form>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>

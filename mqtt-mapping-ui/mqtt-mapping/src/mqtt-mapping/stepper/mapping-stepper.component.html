@@ -37,57 +37,13 @@
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
 
-  <cdk-step [stepControl]="propertyFormly" label="Define topic">
-    <div class="p-16 p-t-0 flex-no-shrink separator-bottom">
-      <div class="row">
-        <div class="col-lg-4 col-lg-offset-4">
-          <h4 class="text-medium">
-            <div class="text-center">
-              Mapping Type: {{ mapping.mappingType }}&nbsp;
-              <span
-                *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
-                class="label label-primary"
-                >{{ "Read Only" }}</span
-              >
-              <span
-                class="hidden-xs hidden-sm m-l-4"
-                *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
-              >
-                <ng-template #popReadOnly
-                  >To edit this mapping deactivate the mapping first in mapping
-                  list.
-                </ng-template>
-                <button
-                  class="btn-clean text-primary"
-                  [popover]="popReadOnly"
-                  popoverTitle="Read Only"
-                  placement="right"
-                  triggers="focus"
-                  type="button"
-                >
-                  <i c8yIcon="question-circle-o"></i>
-                </button>
-              </span>
-            </div>
-          </h4>
-        </div>
-      </div>
-    </div>
-    <div class="col-xs-12 flex-grow no-gutter">
-      <div class="card-inner-scroll fit-h">
-        <div class="card-block p-b-0">
-          <div [formGroup]="propertyFormly">
-            <div class="col-md-6 col-md-offset-3 col-lg-8 col-lg-offset-2">
-              <formly-form
-                [form]="propertyFormly"
-                [fields]="propertyFormlyFields"
-                [model]="mapping"
-              ></formly-form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <cdk-step label="Define topic" [stepControl]="templateFormly">
+    <mapping-properties
+      [mapping]="mapping"
+      [stepperConfiguration]="stepperConfiguration"
+      (targetTemplateChanged)="onTemplateChanged($event)"
+    >
+    </mapping-properties>
     <c8y-stepper-buttons
       class="d-block card-footer p-24 separator"
       (onCancel)="onCancel.emit()"
@@ -161,7 +117,7 @@
                     </div>
                     <mapping-json-editor2
                       [options]="editorOptionsSource"
-                      (onPathChanged)="onSelectedPathSourceChanged($event)"
+                      (pathChanged)="onSelectedPathSourceChanged($event)"
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
@@ -302,7 +258,7 @@
                     </div>
                     <mapping-json-editor2
                       [options]="editorOptionsTarget"
-                      (onPathChanged)="onSelectedPathTargetChanged($event)"
+                      (pathChanged)="onSelectedPathTargetChanged($event)"
                       [data]="templateTarget"
                       #editorTarget
                       id="editorTarget"
@@ -422,17 +378,14 @@
       class="col-xs-12 d-block card-footer p-24 separator"
       (onCancel)="onCancel.emit()"
       (onNext)="onNextStep($event)"
+      (onBack)="onBackStep($event)"
       [labels]="{ next: 'Next', cancel: 'Cancel' }"
     ></c8y-stepper-buttons>
   </cdk-step>
 
-  <cdk-step
-    state="final"
-    [stepControl]="testForm"
-    stepLabel="step3"
-    label="Test mapping"
-  >
-    <mapping-testing *ngIf="editorTestingRequestContent"
+  <cdk-step state="final" stepLabel="step3" label="Test mapping">
+    <mapping-testing
+      *ngIf="editorTestingRequestContent"
       [editorTestingRequestContent]="editorTestingRequestContent"
       [mapping]="getCurrentMapping(true)"
       [stepperConfiguration]="stepperConfiguration"
@@ -440,6 +393,7 @@
     <c8y-stepper-buttons
       class="col-xs-12 d-block card-footer p-24 separator"
       (onCustom)="onCommitButton()"
+      (onBack)="onBackStep($event)"
       [labels]="{ custom: 'Confirm' }"
     >
     </c8y-stepper-buttons>

@@ -61,12 +61,14 @@ import { FormlyFiller } from "./shared/formly/filler";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
 import { FieldInputSmall } from "./shared/formly/input-small-field";
 import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
+import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
     MappingStepTestingComponent,
+    MappingStepPropertiesComponent,
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
@@ -100,6 +102,7 @@ import { MappingStepTestingComponent } from "./step-three/mapping-testing.compon
   entryComponents: [
     MappingComponent,
     MappingStepTestingComponent,
+    MappingStepPropertiesComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
     StatusRendererComponent,
