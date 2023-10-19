@@ -863,6 +863,8 @@ export function whatIsIt(object) {
     return "Array";
   } else if (object.constructor === objectConstructor) {
     return "Object";
+  } else if (typeof object === 'number') {
+    return "number";
   } else {
     return "don't know";
   }

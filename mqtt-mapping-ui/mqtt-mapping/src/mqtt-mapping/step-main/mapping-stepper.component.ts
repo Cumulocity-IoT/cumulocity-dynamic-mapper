@@ -90,7 +90,7 @@ export class MappingStepperComponent implements OnInit {
   templateFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
   templateFormlyFields: FormlyFieldConfig[];
-editorTestingRequestTemplateEmitter = new EventEmitter<any>();
+  editorTestingRequestTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
 
@@ -307,10 +307,9 @@ editorTestingRequestTemplateEmitter = new EventEmitter<any>();
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.sourceExpression.result",
             type: "input-sm",
+            wrappers: ["custom-form-field"],
             templateOptions: {
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions,
+              disabled: true,
               readonly: true,
             },
             expressionProperties: {
@@ -323,9 +322,9 @@ editorTestingRequestTemplateEmitter = new EventEmitter<any>();
               "col-lg-5 text-monospace font-smaller column-left-border",
             key: "currentSubstitution.targetExpression.result",
             type: "input-sm",
+            wrappers: ["custom-form-field"],
             templateOptions: {
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              disabled: true,
               readonly: true,
             },
             expressionProperties: {
@@ -396,7 +395,6 @@ editorTestingRequestTemplateEmitter = new EventEmitter<any>();
     this.templateFormly.get("currentSubstitution.pathSource").setValue(path);
   }
 
-
   public onEditorSourceInitialized(state: string) {
     this.schemaUpdateSource.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, false)
@@ -410,8 +408,7 @@ editorTestingRequestTemplateEmitter = new EventEmitter<any>();
   }
 
   public async updateSourceExpressionResult(path: string) {
-
-    this.editorSource.schemaUpdate
+    this.editorSource.schemaUpdate;
     try {
       this.templateModel.currentSubstitution.sourceExpression = {
         msgTxt: "",
@@ -653,7 +650,7 @@ editorTestingRequestTemplateEmitter = new EventEmitter<any>();
       }
     } else if (this.step == "Define templates and substitutions") {
       this.getTemplateForm();
-const testSourceTemplate = this.editorSource
+      const testSourceTemplate = this.editorSource
         ? this.editorSource.get()
         : {};
       this.editorTestingRequestTemplateEmitter.emit(testSourceTemplate);
@@ -669,11 +666,11 @@ const testSourceTemplate = this.editorSource
     console.log("onBackStep", event.step.label, this.mapping);
     this.step = event.step.label;
     if (this.step == "Test mapping") {
-    const editorTestingRequestRef =
-    this.elementRef.nativeElement.querySelector("#editorTestingRequest");
-    if (editorTestingRequestRef != null) {
-    editorTestingRequestRef.setAttribute("schema", undefined);
-    }
+      const editorTestingRequestRef =
+        this.elementRef.nativeElement.querySelector("#editorTestingRequest");
+      if (editorTestingRequestRef != null) {
+        editorTestingRequestRef.setAttribute("schema", undefined);
+      }
     }
     event.stepper.previous();
   }
