@@ -10,8 +10,8 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * Unless required by applicable law or agreed to in writing, software
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -20,7 +20,6 @@
  */
 import { CdkStep } from "@angular/cdk/stepper";
 import {
-  AfterContentChecked,
   Component,
   ElementRef,
   EventEmitter,
@@ -75,7 +74,7 @@ import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.compo
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-export class MappingStepperComponent implements OnInit, AfterContentChecked {
+export class MappingStepperComponent implements OnInit {
   @Input() mapping: Mapping;
   @Input() mappings: Mapping[];
   @Input() stepperConfiguration: StepperConfiguration;
@@ -91,7 +90,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
   templateFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
   templateFormlyFields: FormlyFieldConfig[];
-  editorTestingRequestTemplateEmitter = new EventEmitter<any>();
+editorTestingRequestTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
 
@@ -393,35 +392,26 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     }
   }
 
-  ngAfterContentChecked(): void {
-    //if json source editor is displayed then choose the first selection
-    const editorSourceRef =
-      this.elementRef.nativeElement.querySelector("#editorSource");
-    if (editorSourceRef != null && !editorSourceRef.getAttribute("schema")) {
-      //set schema for editors
-      if (this.stepperConfiguration.showEditorSource) {
-        this.schemaUpdateSource.emit(
-          getSchema(this.mapping.targetAPI, Direction.INBOUND, true)
-        );
-        editorSourceRef.setAttribute("schema", "true");
-      }
-    }
-    const editorTargetRef =
-      this.elementRef.nativeElement.querySelector("#editorTarget");
-    if (editorTargetRef != null && !editorTargetRef.getAttribute("schema")) {
-      //set schema for editors
-      this.schemaUpdateTarget.emit(
-        getSchema(this.mapping.targetAPI, Direction.INBOUND, true)
-      );
-      editorTargetRef.setAttribute("schema", "true");
-    }
-  }
-
   public onSelectedPathSourceChanged(path: string) {
     this.templateFormly.get("currentSubstitution.pathSource").setValue(path);
   }
 
+
+  public onEditorSourceInitialized(state: string) {
+    this.schemaUpdateSource.emit(
+      getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+    );
+  }
+
+  public onEditorTargetInitialized(state: string) {
+    this.schemaUpdateTarget.emit(
+      getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+    );
+  }
+
   public async updateSourceExpressionResult(path: string) {
+
+    this.editorSource.schemaUpdate
     try {
       this.templateModel.currentSubstitution.sourceExpression = {
         msgTxt: "",
@@ -663,7 +653,7 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
       }
     } else if (this.step == "Define templates and substitutions") {
       this.getTemplateForm();
-      const testSourceTemplate = this.editorSource
+const testSourceTemplate = this.editorSource
         ? this.editorSource.get()
         : {};
       this.editorTestingRequestTemplateEmitter.emit(testSourceTemplate);
@@ -679,11 +669,11 @@ export class MappingStepperComponent implements OnInit, AfterContentChecked {
     console.log("onBackStep", event.step.label, this.mapping);
     this.step = event.step.label;
     if (this.step == "Test mapping") {
-      const editorTestingRequestRef =
-        this.elementRef.nativeElement.querySelector("#editorTestingRequest");
-      if (editorTestingRequestRef != null) {
-        editorTestingRequestRef.setAttribute("schema", undefined);
-      }
+    const editorTestingRequestRef =
+    this.elementRef.nativeElement.querySelector("#editorTestingRequest");
+    if (editorTestingRequestRef != null) {
+    editorTestingRequestRef.setAttribute("schema", undefined);
+    }
     }
     event.stepper.previous();
   }

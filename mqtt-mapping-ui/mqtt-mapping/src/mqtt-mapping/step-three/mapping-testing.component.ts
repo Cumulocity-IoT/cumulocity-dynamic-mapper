@@ -19,16 +19,11 @@
  * @authors Christof Strack
  */
 import {
-  AfterContentChecked,
-  AfterContentInit,
-  AfterViewChecked,
-  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
   Input,
   OnInit,
-  Output,
   ViewChild,
   ViewEncapsulation,
 } from "@angular/core";
@@ -49,8 +44,7 @@ import { StepperConfiguration } from "../stepper/stepper-model";
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-export class MappingStepTestingComponent implements OnInit
-{
+export class MappingStepTestingComponent implements OnInit {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() editorTestingRequestTemplateEmitter: EventEmitter<any>;
@@ -85,32 +79,6 @@ export class MappingStepTestingComponent implements OnInit
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}
-  // ngAfterViewInit(): void {
-  //   console.log(
-  //     "ngAfterViewInit:",
-  //     this.mapping,
-  //     this.stepperConfiguration,
-  //     this.editorTestingRequestTemplate
-  //   );
-  // }
-
-  // ngAfterContentInit(): void {
-  //   console.log(
-  //     "ngAfterContentInit:",
-  //     this.mapping,
-  //     this.stepperConfiguration,
-  //     this.editorTestingRequestTemplate
-  //   );
-  // }
-
-  // ngAfterViewChecked(): void {
-  //   console.log(
-  //     "ngAfterViewChecked:",
-  //     this.mapping,
-  //     this.stepperConfiguration,
-  //     this.editorTestingRequestTemplate
-  //   );
-  // }
 
   ngOnInit() {
     // set value for backward compatiblility
@@ -126,7 +94,7 @@ export class MappingStepTestingComponent implements OnInit
     console.log(
       "Mapping to be tested:",
       this.mapping,
-      this.stepperConfiguration,
+      this.stepperConfiguration
     );
 
     this.editorOptionsTesting = {
@@ -144,7 +112,7 @@ export class MappingStepTestingComponent implements OnInit
       if (editorTestingResponseRef != null) {
         //set schema for editors
         this.editorTestingResponse.set({} as JSON);
-        editorTestingResponseRef.setAttribute("schema", "true");
+        editorTestingResponseRef.setAttribute("initialized", "true");
       }
 
       const editorTestingRequestRef =

@@ -114,9 +114,10 @@
                       </div>
                     </div>
                     <mapping-json-editor2
-                      [schemaUpdate] = "schemaUpdateSource"
+                      [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
                       (pathChanged)="onSelectedPathSourceChanged($event)"
+                      (initialized)="onEditorSourceInitialized($event)"
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
@@ -256,9 +257,10 @@
                       </div>
                     </div>
                     <mapping-json-editor2
-                      [schemaUpdate] = "schemaUpdateTarget"
+                      [schemaUpdate]="schemaUpdateTarget"
                       [options]="editorOptionsTarget"
                       (pathChanged)="onSelectedPathTargetChanged($event)"
+                      (initialized)="onEditorTargetInitialized($event)"
                       [data]="templateTarget"
                       #editorTarget
                       id="editorTarget"
@@ -385,7 +387,9 @@
 
   <cdk-step state="final" stepLabel="step3" label="Test mapping">
     <mapping-testing
-      [editorTestingRequestTemplateEmitter]="editorTestingRequestTemplateEmitter"
+      [editorTestingRequestTemplateEmitter]="
+        editorTestingRequestTemplateEmitter
+      "
       [mapping]="getCurrentMapping(true)"
       [stepperConfiguration]="stepperConfiguration"
     ></mapping-testing>
