@@ -76,6 +76,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   change: EventEmitter<any> = new EventEmitter<any>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
+  @Output()
+  initialized: EventEmitter<string> = new EventEmitter<string>();
   @Input()
   schemaUpdate: EventEmitter<string>;
 
@@ -137,8 +139,9 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       },
     });
     this.schemaUpdate?.subscribe((schema) => {
-      this.editor.setSchema(schema);
+      this.setSchema(schema);
     });
+    this.initialized.emit("Ready");
   }
 
   ngOnDestroy() {
