@@ -46,8 +46,8 @@ import {
   SAMPLE_TEMPLATES_C8Y,
 } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
-import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
-import { isDisabled } from "../stepper/util";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
+import { isDisabled } from "../step-main/util";
 
 @Component({
   selector: "mapping-properties",

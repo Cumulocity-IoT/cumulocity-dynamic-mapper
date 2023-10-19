@@ -36,8 +36,8 @@ import { StatusRendererComponent } from "./renderer/status-cell.renderer.compone
 import { ActiveRendererComponent } from "./renderer/active.renderer.component";
 import { TemplateRendererComponent } from "./renderer/template.renderer.component";
 import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
-import { MappingStepperComponent } from "./stepper/mapping-stepper.component";
-import { SubstitutionRendererComponent } from "./stepper/substitution/substitution-renderer.component";
+import { MappingStepperComponent } from "./step-main/mapping-stepper.component";
+import { SubstitutionRendererComponent } from "./step-main/substitution/substitution-renderer.component";
 import { SharedModule } from "../shared/shared.module";
 import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";

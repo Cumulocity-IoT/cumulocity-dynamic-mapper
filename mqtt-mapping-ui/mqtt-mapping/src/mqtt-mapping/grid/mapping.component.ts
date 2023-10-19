@@ -63,7 +63,7 @@ import { ActiveRendererComponent } from "../renderer/active.renderer.component";
 import { MappingService } from "../core/mapping.service";
 import { BsModalService } from "ngx-bootstrap/modal";
 import { Observable, Subject, from } from "rxjs";
-import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
