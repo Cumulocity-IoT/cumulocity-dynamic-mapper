@@ -29,7 +29,7 @@ import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
 import { Subject } from "rxjs";
 import { Direction, MappingType } from "../../shared/mapping.model";
-import { isDisabled } from "../stepper/util";
+import { isDisabled } from "../step-main/util";
 
 @Component({
   selector: "mapping-type",

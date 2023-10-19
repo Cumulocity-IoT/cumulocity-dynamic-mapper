@@ -34,9 +34,9 @@ import { Direction, Mapping } from "../../shared/mapping.model";
 import { getSchema } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
 import { C8YRequest } from "../processor/prosessor.model";
-import { isDisabled } from "../stepper/util";
+import { isDisabled } from "../step-main/util";
 import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
-import { StepperConfiguration } from "../stepper/stepper-model";
+import { StepperConfiguration } from "../step-main/stepper-model";
 
 @Component({
   selector: "mapping-testing",
