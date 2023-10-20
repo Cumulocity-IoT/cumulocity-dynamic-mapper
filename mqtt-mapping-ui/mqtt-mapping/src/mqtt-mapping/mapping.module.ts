@@ -44,7 +44,6 @@ import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
 import {
-  checkSubstitutionIsValid,
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid,
 } from "../shared/util";
@@ -138,10 +137,6 @@ import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.co
           {
             name: "checkTopicsOutboundAreValid",
             validation: checkTopicsOutboundAreValid,
-          },
-          {
-            name: "checkSubstitutionIsValid",
-            validation: checkSubstitutionIsValid,
           },
         ],
         types: [
