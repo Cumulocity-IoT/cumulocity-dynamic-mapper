@@ -38,10 +38,11 @@
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
 
-  <cdk-step label="Define topic">
+  <cdk-step label="Define topic" [stepControl]="propertyFormly">
     <mapping-properties
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"
+      [propertyFormly]="propertyFormly"
       (targetTemplateChanged)="onTemplateChanged($event)"
     >
     </mapping-properties>

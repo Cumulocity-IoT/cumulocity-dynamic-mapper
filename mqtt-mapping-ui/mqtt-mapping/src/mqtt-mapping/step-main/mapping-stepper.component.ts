@@ -113,6 +113,7 @@ export class MappingStepperComponent implements OnInit {
     0
   );
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
+  propertyFormly: FormGroup = new FormGroup({});
   sourceSystem: string;
   targetSystem: string;
 
@@ -156,6 +157,7 @@ export class MappingStepperComponent implements OnInit {
         ? "Cumulocity"
         : "MQTT Broker";
     this.templateModel = {
+      stepperConfiguration: this.stepperConfiguration,
       mapping: this.mapping,
       currentSubstitution: {
         pathSource: "",
@@ -234,11 +236,12 @@ export class MappingStepperComponent implements OnInit {
             expressionProperties: {
               "templateOptions.class": (model) => {
                 //console.log("Logging class:", t)
-                if (model.currentSubstitution.pathSource =='') {
+                if (
+                  model.currentSubstitution.pathTarget == "" &&
+                  model.stepperConfiguration.allowDefiningSubstitutions
+                ) {
                   return "input-sm animate-background";
-
                 } else {
-
                   return "input-sm";
                 }
               },
@@ -259,7 +262,8 @@ export class MappingStepperComponent implements OnInit {
             templateOptions: {
               label: "Evaluate Expression on Target",
               disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+                !this.stepperConfiguration.allowDefiningSubstitutions,
               change: (field: FormlyFieldConfig, event?: any) => {
                 this.updateTargetExpressionResult(
                   this.templateFormly.get("currentSubstitution.pathTarget")
@@ -271,11 +275,12 @@ export class MappingStepperComponent implements OnInit {
             expressionProperties: {
               "templateOptions.class": (model) => {
                 //console.log("Logging class:", t)
-                if (model.currentSubstitution.pathTarget =='') {
+                if (
+                  model.currentSubstitution.pathTarget == "" &&
+                  model.stepperConfiguration.allowDefiningSubstitutions
+                ) {
                   return "input-sm animate-background";
-
                 } else {
-
                   return "input-sm";
                 }
               },
