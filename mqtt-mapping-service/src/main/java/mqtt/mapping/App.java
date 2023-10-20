@@ -34,9 +34,8 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRe
 import com.cumulocity.model.*;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.client.ConnectorRegistry;
-import mqtt.mapping.connector.client.ConnectorRegistryException;
-import mqtt.mapping.connector.client.IConnectorClient;
+import mqtt.mapping.connector.ConnectorRegistry;
+import mqtt.mapping.connector.ConnectorRegistryException;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.core.MappingComponent;
@@ -94,7 +93,7 @@ import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
 import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
 import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
-import mqtt.mapping.service.MQTTClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
 
 @MicroserviceApplication
 @EnableContextSupport

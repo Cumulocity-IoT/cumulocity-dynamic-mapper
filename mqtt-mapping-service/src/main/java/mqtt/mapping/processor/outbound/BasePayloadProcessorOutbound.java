@@ -38,7 +38,7 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.service.MQTTClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,9 +65,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     protected ObjectMapper objectMapper;
 
     protected MQTTClient mqttClient;
-
-    @Autowired
-    SysHandler sysHandler;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
@@ -142,7 +139,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                attocRequest = mqttClient.createMEAO(context);
+                attocRequest = c8yAgent.createMEAO(context);
 
                 var response = objectMapper.writeValueAsString(attocRequest);
                 context.getCurrentRequest().setResponse(response);

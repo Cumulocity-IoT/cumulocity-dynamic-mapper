@@ -28,6 +28,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import mqtt.mapping.connector.ConnectorRegistry;
+import mqtt.mapping.connector.client.ConnectorRegistry;
+import mqtt.mapping.connector.IConnectorClient;
 import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -51,7 +54,6 @@ import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.service.MQTTClient;
 
 @Slf4j
 @Service
@@ -180,12 +182,10 @@ public class AsynchronousDispatcher implements MqttCallback {
         this.c8yAgent = c8yAgent;
     }
 
-    private MQTTClient mqttClient;
+    private IConnectorClient connectorClient;
 
     @Autowired
-    public void setMQTTClient(@Lazy MQTTClient mqttClient) {
-        this.mqttClient = mqttClient;
-    }
+    ConnectorRegistry connectorRegistry;
 
     private ObjectMapper objectMapper;
 
@@ -195,15 +195,13 @@ public class AsynchronousDispatcher implements MqttCallback {
     }
 
     @Autowired
-    SysHandler sysHandler;
-
-    @Autowired
     Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
     @Autowired
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
 
+    //TODO No Autowiring Multi Instances for each tenant
     @Autowired
     MappingComponent mappingComponent;
 
@@ -238,7 +236,6 @@ public class AsynchronousDispatcher implements MqttCallback {
                 return futureProcessingResult;
             }
         } else {
-            sysHandler.handleSysPayload(topic, mqttMessage.getPayload());
             return futureProcessingResult;
         }
 
@@ -256,8 +253,8 @@ public class AsynchronousDispatcher implements MqttCallback {
         log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
         log.info("Stacktrace: ", throwable);
         throwable.printStackTrace();
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null);
-        mqttClient.submitConnect();
+        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null, connectorClient.getTenantId());
+        connectorClient.connect();
     }
 
     @Override

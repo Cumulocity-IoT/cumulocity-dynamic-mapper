@@ -21,6 +21,8 @@
 
 package mqtt.mapping.rest;
 
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.connector.*;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.Operation;
@@ -36,7 +39,6 @@ import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.*;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.service.MQTTClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -47,6 +49,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +58,7 @@ import java.util.Map;
 public class MQTTMappingRestController {
 
     @Autowired
-    MQTTClient mqttClient;
+    ConnectorRegistry connectorRegistry;
 
     @Autowired
     C8YAgent c8yAgent;
@@ -65,13 +68,16 @@ public class MQTTMappingRestController {
 
 
     @Autowired
-    ConnectionConfigurationComponent connectionConfigurationComponent;
+    ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
     @Autowired
     private RoleService roleService;
+
+    @Autowired
+    private ContextService<UserCredentials> contextService;
 
     @Autowired
     private MappingComponent mappingStatusComponent;
@@ -85,11 +91,11 @@ public class MQTTMappingRestController {
     @Value("${APP.userRolesEnabled}")
     private Boolean userRolesEnabled;
 
-    @Value("${APP.mqttMappingAdminRole}")
-    private String mqttMappingAdminRole;
+    @Value("${APP.mappingAdminRole}")
+    private String mappingAdminRole;
 
-    @Value("${APP.mqttMappingCreateRole}")
-    private String mqttMappingCreateRole;
+    @Value("${APP.mappingCreateRole}")
+    private String mappingCreateRole;
 
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
@@ -98,12 +104,66 @@ public class MQTTMappingRestController {
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMQTTMappingCreateRole(userHasMQTTMappingCreateRole());
-        feature.setUserHasMQTTMappingAdminRole(userHasMQTTMappingAdminRole());
+        feature.setUserHasMQTTMappingAdminRole(userHasMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
+    @RequestMapping(value = "/configuration/connectionPropertyConfig", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectionConfiugration() {
+        HashMap<String, IConnectorClient> clients = null;
+        List<ConnectorPropertyConfiguration> connectorConfigurations = null;
+        try {
+             clients = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+        } catch (ConnectorRegistryException e) {
+            log.error("Could not get Configuration Properties:", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+        log.info("Get connection Properties");
+        for (IConnectorClient client : clients.values()) {
+            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorId(), client.getConfigProperties());
+            connectorConfigurations.add(config);
+        }
+        return ResponseEntity.ok(connectorConfigurations);
+    }
+
+    @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> configureConnectionToBroker(
+            @Valid @RequestBody ConnectorConfiguration configuration) {
+
+        if (!userHasMappingAdminRole()) {
+            log.error("Insufficient Permission, user does not have required permission to access this API");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
+
+        //Remove sensitive data before printing to log
+        ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
+        for (String property : clonedConfig.getProperties().keySet()) {
+            try {
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), clonedConfig.getConnectorId());
+                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property)) {
+                    clonedConfig.getProperties().replace(property, "****");
+                }
+            } catch (ConnectorRegistryException e) {
+                log.error("Could not get Configuration Properties:", e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+            }
+        }
+        log.info("Post Connector configuration: {}", configuration.toString());
+        try {
+
+            connectorConfigurationComponent.saveConnectionConfiguration(configuration);
+            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), configuration.getConnectorId());
+            client.reconnect();
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception ex) {
+            log.error("Error getting mqtt broker configuration {}", ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+    }
+
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConfigurationConnection> getConnectionConfiguration() {
+    public ResponseEntity<List<ConfigurationConnection>> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
             ConfigurationConnection configuration = connectionConfigurationComponent
@@ -123,29 +183,7 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(
-            @Valid @RequestBody ConfigurationConnection configuration) {
 
-        if (!userHasMQTTMappingAdminRole()) {
-            log.error("Insufficient Permission, user does not have required permission to access this API");
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Insufficient Permission, user does not have required permission to access this API");
-        }
-
-        // don't modify original copy
-        ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
-        configurationClone.setPassword("");
-        log.info("Post MQTT broker configuration: {}", configurationClone.toString());
-        try {
-            connectionConfigurationComponent.saveConnectionConfiguration(configuration);
-            mqttClient.reconnect();
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception ex) {
-            log.error("Error getting mqtt broker configuration {}", ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        }
-    }
 
     @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceConfiguration> getServiceConfiguration() {
@@ -212,7 +250,7 @@ public class MQTTMappingRestController {
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-                c8yAgent.notificationSubscriberReconnect();
+                c8yAgent.notificationSubscriberReconnect(contextService.getContext().getTenant());
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -388,7 +426,7 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    private boolean userHasMQTTMappingAdminRole() {
+    private boolean userHasMappingAdminRole() {
         return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
     }
 
