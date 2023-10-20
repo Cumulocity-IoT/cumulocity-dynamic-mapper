@@ -7,7 +7,7 @@ import {
   MappingSubstitution,
   RepairStrategy,
 } from "../../shared/mapping.model";
-import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
@@ -68,14 +68,12 @@ import { definesDeviceIdentifier } from "../../shared/util";
             {{ "Path target" | translate }}
           </span>
         </label>
-        <c8y-field-input>
-          <input
-            type="text"
-            readOnly
-            [(ngModel)]="editedSubstitution.pathTarget"
-            class="form-control"
-          />
-        </c8y-field-input>
+        <input
+          type="text"
+          readOnly
+          [(ngModel)]="editedSubstitution.pathTarget"
+          class="form-control"
+        />
       </c8y-form-group>
       <c8y-form-group>
         <label

@@ -20,7 +20,7 @@
  */
 
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { MonitoringComponent } from "./grid/monitoring.component";
 import { IdRendererComponent } from "./renderer/id-cell.renderer.component";
 
@@ -30,16 +30,10 @@ import { IdRendererComponent } from "./renderer/id-cell.renderer.component";
   entryComponents: [IdRendererComponent],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
-          path: "sag-ps-pkg-mqtt-mapping/monitoring",
-          component: MonitoringComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+    hookRoute({
+      path: "sag-ps-pkg-mqtt-mapping/monitoring",
+      component: MonitoringComponent,
+    }),
   ],
 })
 export class MonitoringModule {}

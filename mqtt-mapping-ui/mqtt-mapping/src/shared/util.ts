@@ -523,35 +523,33 @@ export function isSubstituionValid(mapping: Mapping): boolean {
   );
 }
 
-export function checkSubstitutionIsValid(control: AbstractControl) {
-  let errors = {};
+// export function checkSubstitutionIsValid(control: AbstractControl) {
+//   let errors = {};
+// let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
+//   return previousValue + currentValue;
+// }, 0)
 
-  // let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
-  //   return previousValue + currentValue;
-  // }, 0)
+// let count = countDeviceIdentifiers(mapping);
 
-  // let count = countDeviceIdentifiers(mapping);
-
-  // if (!stepperConfiguration.allowNoDefinedIdentifier && mapping.direction != Direction.OUTBOUND) {
-  //   if (count > 1) {
-  //     errors = {
-  //       ...errors,
-  //       Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
-  //         ...ValidationFormlyError['Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used'],
-  //         errorPath: 'templateTopic'
-  //       }
-  //     };
-  //   }
-  //   if (count < 1) {
-  //     errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
-  //   }
-  // } else {
-
-  // }
-  //console.log(stepperConfiguration, mapping.mappingType)
-  //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
-  return Object.keys(errors).length > 0 ? errors : null;
-}
+// if (!stepperConfiguration.allowNoDefinedIdentifier && mapping.direction != Direction.OUTBOUND) {
+//   if (count > 1) {
+//     errors = {
+//       ...errors,
+//       Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
+//         ...ValidationFormlyError['Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used'],
+//         errorPath: 'templateTopic'
+//       }
+//     };
+//   }
+//   if (count < 1) {
+//     errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
+//   }
+// } else {
+// }
+//console.log(stepperConfiguration, mapping.mappingType)
+//   //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
+//   return Object.keys(errors).length > 0 ? errors : null;
+// }
 
 export function countDeviceIdentifiers(mapping: Mapping): number {
   return mapping.substitutions.filter((sub) =>
@@ -563,23 +561,19 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   let errors = {};
   let error: boolean = false;
 
-  {
-    const { templateTopic, templateTopicSample, subscriptionTopic } =
-      control["controls"];
-    templateTopic.setErrors(null);
-    templateTopicSample.setErrors(null);
-    subscriptionTopic.setErrors(null);
-  }
-
   const { templateTopic, templateTopicSample, subscriptionTopic } =
-    control.value;
+    control["controls"];
+  templateTopic.setErrors(null);
+  templateTopicSample.setErrors(null);
+  subscriptionTopic.setErrors(null);
+
   // avoid displaying the message error when values are empty
   if (
-    templateTopic == "" ||
-    templateTopicSample == "" ||
-    subscriptionTopic == ""
+    templateTopic.value == "" ||
+    templateTopicSample.value == "" ||
+    subscriptionTopic.value == ""
   ) {
-    return null;
+    return { required: false };
   }
 
   // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
@@ -600,7 +594,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     new RegExp(
       s.concat("@").split("+").join("[^/]+").split("#").join(".+")
     ).test(t.concat("@"));
-  error = !f(templateTopic)(subscriptionTopic);
+  error = !f(templateTopic.value)(subscriptionTopic.value);
   if (error) {
     errors = {
       ...errors,
@@ -614,7 +608,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   }
 
   // count number of "#" in subscriptionTopic
-  let count_multi = (subscriptionTopic.match(/\#/g) || []).length;
+  let count_multi = (subscriptionTopic.value.match(/\#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
@@ -626,7 +620,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   }
 
   // count number of "+" in subscriptionTopic
-  let count_single = (subscriptionTopic.match(/\+/g) || []).length;
+  let count_single = (subscriptionTopic.value.match(/\+/g) || []).length;
   if (count_single > 1) {
     errors = {
       ...errors,
@@ -640,8 +634,8 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   // wildcard "#" can only appear at the end in subscriptionTopic
   if (
     count_multi >= 1 &&
-    subscriptionTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
-      subscriptionTopic.length
+    subscriptionTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+      subscriptionTopic.value.length
   ) {
     errors = {
       ...errors,
@@ -653,7 +647,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   }
 
   // count number of "#" in templateTopic
-  count_multi = (templateTopic.match(/\#/g) || []).length;
+  count_multi = (templateTopic.value.match(/\#/g) || []).length;
   if (count_multi >= 1) {
     errors = {
       ...errors,
@@ -666,8 +660,10 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     };
   }
 
-  let splitTT: String[] = splitTopicExcludingSeparator(templateTopic);
-  let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+  let splitTT: String[] = splitTopicExcludingSeparator(templateTopic.value);
+  let splitTTS: String[] = splitTopicExcludingSeparator(
+    templateTopicSample.value
+  );
   if (splitTT.length != splitTTS.length) {
     errors = {
       ...errors,
@@ -734,20 +730,17 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
 
-  {
-    const { publishTopic, templateTopicSample } = control["controls"];
-    publishTopic.setErrors(null);
-    templateTopicSample.setErrors(null);
-  }
+  const { publishTopic, templateTopicSample } = control["controls"];
+  publishTopic.setErrors(null);
+  templateTopicSample.setErrors(null);
 
-  const { publishTopic, templateTopicSample } = control.value;
   // avoid displaying the message error when values are empty
-  if (publishTopic == "" || templateTopicSample == "") {
+  if (publishTopic.value == "" || templateTopicSample.value == "") {
     return null;
   }
 
   // count number of "#" in publishTopic
-  let count_multi = (publishTopic.match(/\#/g) || []).length;
+  let count_multi = (publishTopic.value.match(/\#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
@@ -759,7 +752,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   }
 
   // count number of "+" in publishTopic
-  let count_single = (publishTopic.match(/\+/g) || []).length;
+  let count_single = (publishTopic.value.match(/\+/g) || []).length;
   if (count_single > 1) {
     errors = {
       ...errors,
@@ -773,7 +766,8 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   // wildcard "#" can only appear at the end in subscriptionTopic
   if (
     count_multi >= 1 &&
-    publishTopic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != publishTopic.length
+    publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+      publishTopic.value.length
   ) {
     errors = {
       ...errors,
@@ -784,8 +778,10 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     };
   }
 
-  let splitPT: String[] = splitTopicExcludingSeparator(publishTopic);
-  let splitTTS: String[] = splitTopicExcludingSeparator(templateTopicSample);
+  let splitPT: String[] = splitTopicExcludingSeparator(publishTopic.value);
+  let splitTTS: String[] = splitTopicExcludingSeparator(
+    templateTopicSample.value
+  );
   if (splitPT.length != splitTTS.length) {
     errors = {
       ...errors,
@@ -863,6 +859,8 @@ export function whatIsIt(object) {
     return "Array";
   } else if (object.constructor === objectConstructor) {
     return "Object";
+  } else if (typeof object === "number") {
+    return "number";
   } else {
     return "don't know";
   }
@@ -893,4 +891,16 @@ export function findDeviceIdentifier(mapping: Mapping): MappingSubstitution {
   } else {
     return null;
   }
+}
+
+export function cloneSubstitution(
+  sub: MappingSubstitution
+): MappingSubstitution {
+  return {
+    pathSource: sub.pathSource,
+    pathTarget: sub.pathTarget,
+    repairStrategy: sub.repairStrategy,
+    expandArray: sub.expandArray,
+    resolve2ExternalId: sub.resolve2ExternalId,
+  };
 }

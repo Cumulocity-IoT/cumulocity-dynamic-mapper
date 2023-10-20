@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { NgModule } from "@angular/core";
-import { CoreModule, HOOK_ROUTE, Route } from "@c8y/ngx-components";
+import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { MappingTreeComponent } from "./tree.component";
 import { SharedModule } from "../shared/shared.module";
 
@@ -29,16 +29,11 @@ import { SharedModule } from "../shared/shared.module";
   entryComponents: [MappingTreeComponent],
   exports: [],
   providers: [
-    {
-      provide: HOOK_ROUTE,
-      useValue: [
-        {
+
+      hookRoute({
           path: "sag-ps-pkg-mqtt-mapping/tree",
           component: MappingTreeComponent,
-        },
-      ] as Route[],
-      multi: true,
-    },
+        }),
   ],
 })
 export class MappingTreeModule {}

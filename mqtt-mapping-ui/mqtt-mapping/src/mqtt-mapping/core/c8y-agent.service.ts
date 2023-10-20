@@ -164,8 +164,8 @@ export class C8YAgent {
       const { data, res } = await this.identity.resolveExternalId2GlobalId(identity, context);
       return data.managedObject.id as string;
     } catch (e) {
-      console.log(`External id ${identity.externalId} doesn't exist!`);
-      return;
+      console.log(`External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `);
+      return identity.externalId;
     }
   }
 
@@ -178,8 +178,8 @@ export class C8YAgent {
       const  data = await this.identity.resolveGlobalId2ExternalId(identity, externalIdType, context);
       return data.managedObject.id as string;
     } catch (e) {
-      console.log(`External id ${identity}, ${externalIdType}  doesn't exist!`);
-      return;
+      console.log(`External id ${identity}, ${externalIdType} doesn't exist! Just return original id ${identity}`);
+      return identity;
     }
   }
 }
