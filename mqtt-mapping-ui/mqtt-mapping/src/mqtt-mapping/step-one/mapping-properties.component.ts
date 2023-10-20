@@ -58,6 +58,7 @@ import { isDisabled } from "../step-main/util";
 export class MappingStepPropertiesComponent implements OnInit {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
+  @Input() propertyFormly: FormGroup;
   @Output() targetTemplateChanged = new EventEmitter<any>();
 
   ValidationError = ValidationError;
@@ -65,7 +66,6 @@ export class MappingStepPropertiesComponent implements OnInit {
   EditorMode = EditorMode;
   isDisabled = isDisabled;
 
-  propertyFormly: FormGroup = new FormGroup({});
   propertyFormlyFields: FormlyFieldConfig[];
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
@@ -104,7 +104,6 @@ export class MappingStepPropertiesComponent implements OnInit {
           " templates exist. In the next step you an stop the snooping process and use the templates. Click on Next"
       );
     }
-
     this.propertyFormlyFields = [
       {
         validators: {
@@ -170,6 +169,7 @@ export class MappingStepPropertiesComponent implements OnInit {
           {
             className: "col-lg-6",
             key: "publishTopic",
+            wrappers: ["c8y-form-field"],
             type: "input",
             templateOptions: {
               label: "Publish Topic",
@@ -271,7 +271,7 @@ export class MappingStepPropertiesComponent implements OnInit {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               change: (field: FormlyFieldConfig, event?: any) => {
-                console.log("Changes:", field, event, this.mapping);
+                console.log("Changes:", field, event, this.mapping,this.propertyFormly.valid);
                 this.onTargetAPIChanged(
                   this.propertyFormly.get("targetAPI").value
                 );
