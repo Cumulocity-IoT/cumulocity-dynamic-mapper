@@ -200,15 +200,16 @@ export class MappingStepperComponent implements OnInit {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace column-right-border",
             key: "currentSubstitution.pathSource",
-            type: "input-sm",
+            type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Source",
+              class: "input-sm animate-background",
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder:
-                "e.g. $join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
+                "$join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
@@ -230,6 +231,18 @@ export class MappingStepperComponent implements OnInit {
               },
               required: false,
             },
+            expressionProperties: {
+              "templateOptions.class": (model) => {
+                //console.log("Logging class:", t)
+                if (model.currentSubstitution.pathSource =='') {
+                  return "input-sm animate-background";
+
+                } else {
+
+                  return "input-sm";
+                }
+              },
+            },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 field.formControl.valueChanges.subscribe((value) => {
@@ -241,7 +254,7 @@ export class MappingStepperComponent implements OnInit {
           {
             className: "col-lg-5 text-monospace column-left-border",
             key: "currentSubstitution.pathTarget",
-            type: "input-sm",
+            type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
               label: "Evaluate Expression on Target",
@@ -254,6 +267,18 @@ export class MappingStepperComponent implements OnInit {
                 );
               },
               required: false,
+            },
+            expressionProperties: {
+              "templateOptions.class": (model) => {
+                //console.log("Logging class:", t)
+                if (model.currentSubstitution.pathTarget =='') {
+                  return "input-sm animate-background";
+
+                } else {
+
+                  return "input-sm";
+                }
+              },
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
@@ -306,9 +331,10 @@ export class MappingStepperComponent implements OnInit {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.sourceExpression.result",
-            type: "input-sm",
+            type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
+              class: "input-sm",
               disabled: true,
               readonly: true,
             },
@@ -321,9 +347,10 @@ export class MappingStepperComponent implements OnInit {
             className:
               "col-lg-5 text-monospace font-smaller column-left-border",
             key: "currentSubstitution.targetExpression.result",
-            type: "input-sm",
+            type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
+              class: "input-sm",
               disabled: true,
               readonly: true,
             },

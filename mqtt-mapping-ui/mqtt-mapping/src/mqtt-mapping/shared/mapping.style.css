@@ -79,3 +79,22 @@ json-editor > div {
 .animation-slow {
   animation-duration: 2s;
 }
+
+
+.animate-background {
+  animation-name: background-color;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate-reverse;
+  animation-timing-function: ease;
+}
+
+
+@keyframes background-color {
+from {
+ background-color: white;
+}
+to {
+background-color: #8adbd5;
+}
+}
