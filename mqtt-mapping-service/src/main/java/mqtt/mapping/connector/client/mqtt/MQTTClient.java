@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.service;
+package mqtt.mapping.connector.client.mqtt;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -48,7 +48,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
-import mqtt.mapping.connector.client.IConnectorClient;
+import mqtt.mapping.connector.IConnectorClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -174,6 +174,12 @@ public class MQTTClient implements IConnectorClient {
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
+
+    @Override
+    public String getTenantId() {
+        return this.tenantId;
+    }
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Called initialize(): {}", initializeTask == null || initializeTask.isDone());
@@ -465,6 +471,12 @@ public class MQTTClient implements IConnectorClient {
         connectionConfiguration = null;
         submitInitialize();
         submitConnect();
+    }
+
+    @Override
+    public Map<String, String> getConfigProperties() {
+        Map<String, String> configProps = new HashMap<>();
+        return configProps;
     }
 
     public void deleteActiveSubscriptionMappingInbound(Mapping mapping) {

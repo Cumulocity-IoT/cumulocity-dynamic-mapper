@@ -34,7 +34,7 @@ import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.service.MQTTClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;

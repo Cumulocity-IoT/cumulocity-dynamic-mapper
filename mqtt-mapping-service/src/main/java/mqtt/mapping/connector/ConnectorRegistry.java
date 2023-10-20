@@ -1,4 +1,4 @@
-package mqtt.mapping.connector.client;
+package mqtt.mapping.connector;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

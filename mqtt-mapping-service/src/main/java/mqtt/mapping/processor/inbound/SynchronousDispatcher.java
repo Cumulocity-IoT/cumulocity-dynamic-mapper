@@ -33,7 +33,7 @@ import mqtt.mapping.model.SnoopStatus;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.service.MQTTClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.apache.commons.codec.binary.Hex;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;

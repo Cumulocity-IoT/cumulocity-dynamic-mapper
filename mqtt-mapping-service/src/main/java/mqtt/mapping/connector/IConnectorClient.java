@@ -1,13 +1,18 @@
-package mqtt.mapping.connector.client;
+package mqtt.mapping.connector;
 
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import mqtt.mapping.processor.model.ProcessingContext;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public interface IConnectorClient {
 
     String tenantId = null;
 
     public void setTenantId(String tenantId);
+
+    public String getTenantId();
 
     public AbstractExtensibleRepresentation publish(ProcessingContext<?> context) throws Exception;
 
@@ -18,4 +23,10 @@ public interface IConnectorClient {
     public void disconnect();
 
     public String getConntectorId();
+
+    public boolean isConnected();
+
+    public void reconnect();
+
+    public Map<String, ConnectorProperty> getConfigProperties();
 }

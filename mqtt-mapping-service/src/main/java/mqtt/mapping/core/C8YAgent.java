@@ -32,24 +32,21 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.TimeZone;
+
 
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
-import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
-import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
@@ -94,7 +91,7 @@ import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.service.MQTTClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
 
 @Slf4j
 @Service
@@ -285,6 +282,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ar.setDateTime(alarmTime);
             ar.setStatus("ACTIVE");
             ar.setType(type);
+
             return this.alarmApi.create(ar);
         });
         return alarmRepresentation;
