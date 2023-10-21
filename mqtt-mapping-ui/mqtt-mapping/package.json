@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "c8ycli server",
-    "start:admin": "npm start -- --shell administration-1017 ",
+    "start:admin": "npm start -- --shell administration",
     "build": "c8ycli build",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"

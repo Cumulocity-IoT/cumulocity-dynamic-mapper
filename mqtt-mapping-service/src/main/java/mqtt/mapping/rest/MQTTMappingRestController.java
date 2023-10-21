@@ -389,7 +389,7 @@ public class MQTTMappingRestController {
     }
 
     private boolean userHasMQTTMappingAdminRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingAdminRole));
     }
 
     private boolean userHasMQTTMappingCreateRole() {
