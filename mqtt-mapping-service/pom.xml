@@ -129,19 +129,16 @@
                             <goal>repackage</goal>
                         </goals>
                         <configuration>
-                            <!-- <classifier>exec</classifier> -->
                         </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
-                    <!-- <classifier>exec</classifier> -->
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-package-maven-plugin</artifactId>
-                <!-- <version>1015.334.0</version> -->
                 <version>1018.0.220</version>
                 <executions>
                     <execution>
