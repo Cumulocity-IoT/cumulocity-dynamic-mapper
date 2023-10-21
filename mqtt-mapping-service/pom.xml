@@ -142,7 +142,7 @@
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-package-maven-plugin</artifactId>
                 <!-- <version>1015.334.0</version> -->
-                <version>1018.0.206</version>
+                <version>1018.0.220</version>
                 <executions>
                     <execution>
                         <id>package</id>
