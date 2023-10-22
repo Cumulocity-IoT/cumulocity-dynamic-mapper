@@ -237,7 +237,7 @@ export class MappingStepperComponent implements OnInit {
               "templateOptions.class": (model) => {
                 //console.log("Logging class:", t)
                 if (
-                  model.currentSubstitution.pathTarget == "" &&
+                  model.currentSubstitution.pathSource == "" &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
                   return "input-sm animate-background";
