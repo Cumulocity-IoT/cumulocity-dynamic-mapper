@@ -234,7 +234,7 @@ public abstract class BasePayloadProcessor<T> {
         } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING) ) {
             boolean pathIsNested =  keys.contains(".") ||  keys.contains("[") ;
             if (pathIsNested) {
-                throw new JSONException ("Can only crrate new nodes ion the root level!");
+                throw new JSONException ("Can only create new nodes ion the root level!");
             }
             jsonObject.put("$", keys, sub.typedValue());
         } else {

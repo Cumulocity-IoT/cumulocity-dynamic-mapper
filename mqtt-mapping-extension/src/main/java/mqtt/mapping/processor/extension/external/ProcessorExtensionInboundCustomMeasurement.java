@@ -77,9 +77,11 @@ public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExte
                                                                 TYPE.TEXTUAL,
                                                                 RepairStrategy.DEFAULT))));
 
-                ObjectNode fragment = objectMapper.createObjectNode();
-                fragment.set("value", new FloatNode(jsonNode.get("temperature").floatValue()));
-                fragment.set("unit", new TextNode(jsonNode.get("unit").textValue()));
+                ObjectNode fragmentTemperature = objectMapper.createObjectNode();
+                ObjectNode fragmentTemperatureSeries = objectMapper.createObjectNode();
+                fragmentTemperature.set("T", fragmentTemperatureSeries);
+                fragmentTemperatureSeries.set("value", new FloatNode(jsonNode.get("temperature").floatValue()));
+                fragmentTemperatureSeries.set("unit", new TextNode(jsonNode.get("unit").textValue()));
 
                 postProcessingCache.put("c8y_Fragment_to_remove",
                                 new ArrayList<SubstituteValue>(Arrays.asList(
@@ -89,7 +91,7 @@ public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExte
 
                 postProcessingCache.put("c8y_Temperature",
                                 new ArrayList<SubstituteValue>(Arrays.asList(
-                                                new SubstituteValue(fragment,
+                                                new SubstituteValue(fragmentTemperature,
                                                                 TYPE.OBJECT,
                                                                 RepairStrategy.DEFAULT))));
 
@@ -104,12 +106,16 @@ public class ProcessorExtensionInboundCustomMeasurement implements ProcessorExte
                 if (jsonNode.get("unexpected") != null) {
                         // it is important to use RepairStrategy.CREATE_IF_MISSING as the node
                         // "unexpected" does not yet exists in the target payload
-                        postProcessingCache.put("c8y_Unexpected",
+                                        ObjectNode fragmentUnexpected = objectMapper.createObjectNode();
+                                        ObjectNode fragmentUnexpectedSeries = objectMapper.createObjectNode();
+                                        fragmentUnexpected.set("U", fragmentUnexpectedSeries);
+                                        fragmentUnexpectedSeries.set("value", new FloatNode(jsonNode.get("unexpected").floatValue()));
+                                        fragmentUnexpectedSeries.set("unit", new TextNode("unknown"));
+                                        postProcessingCache.put("c8y_Unexpected",
                                         new ArrayList<SubstituteValue>(
                                                         Arrays.asList(new SubstituteValue(
-                                                                        new FloatNode(jsonNode.get("unexpected")
-                                                                                        .floatValue()),
-                                                                        TYPE.NUMBER,
+                                                                        fragmentUnexpected,
+                                                                        TYPE.OBJECT,
                                                                         RepairStrategy.CREATE_IF_MISSING))));
                         unexpected = jsonNode.get("unexpected").floatValue();
 
