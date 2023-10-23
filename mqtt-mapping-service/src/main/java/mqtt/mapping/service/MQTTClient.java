@@ -575,7 +575,7 @@ public class MQTTClient {
         String payload = context.getCurrentRequest().getRequest();
         mqttMessage.setPayload(payload.getBytes());
         mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
-        log.info("Published outbound message: {} for mapping: {} ", payload, context.getMapping().name);
+        log.info("Published outbound message: {} for mapping: {} on topic: {}", payload, context.getMapping().name, context.getResolvedPublishTopic());
         return null;
     }
 

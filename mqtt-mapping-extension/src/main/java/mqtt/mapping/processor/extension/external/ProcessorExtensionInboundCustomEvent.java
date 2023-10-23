@@ -50,8 +50,15 @@ public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionI
             throws ProcessingException {
         CustomEventOuter.CustomEvent payloadProtobuf;
         try {
-            payloadProtobuf = CustomEventOuter.CustomEvent
-                    .parseFrom(context.getPayload());
+                byte[] payload = context.getPayload();
+                if (payload == null) {
+                   log.info("Preparing new event failed, payload == null");
+
+                } else {
+                   log.info("Preparing new event: {}", new String(payload));
+                }
+                payloadProtobuf = CustomEventOuter.CustomEvent
+                    .parseFrom(payload);
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
