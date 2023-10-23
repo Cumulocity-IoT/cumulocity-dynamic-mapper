@@ -171,7 +171,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
         }
 
         // no substitution for the time property exists, then use the system time
-        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY) {
+        if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
             List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
                     new ArrayList<SubstituteValue>());
             postProcessingCacheEntry.add(

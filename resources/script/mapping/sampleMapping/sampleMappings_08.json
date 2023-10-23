@@ -1,0 +1,1017 @@
+[
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "/plant1/line1/device1_measure1_Type",
+    "ident": "627EA012-9D07-4E60-B0AC-0D830C30F0E3",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"value\":100}",
+    "target": "{\"measure1_Type\":{\"V\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "/plant1/+/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[0]&\"_\"&_TOPIC_LEVEL_[1]&\"_\"&$substringBefore(_TOPIC_LEVEL_[2],\"_\")",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$substringAfter(_TOPIC_LEVEL_[2],\"_\")",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "value",
+        "pathTarget": "measure1_Type.V.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1697997974250,
+    "name": "Mapping - 1",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "6257070629",
+    "subscriptionTopic": "/plant1/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "devices/device_best_01",
+    "ident": "05241eba-e0c5-4c77-a723-15511dee8709",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"mea\":[{\"tid\":\"uuid_01\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":4.6,\"timestamp\":1648562285347}]},{\"tid\":\"uuid_02\",\"psid\":\"Crest\",\"devicePath\":\"path01_80_X03_VVB001StatusB_Crest\",\"values\":[{\"value\":5.6,\"timestamp\":1648563285347}]}]}",
+    "target": "{\"c8y_ProcessLoadMeasurement\":{\"L\":{\"value\":110,\"unit\":\"%\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_ProcessLoadMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "devices/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "mea.values[0].value",
+        "pathTarget": "c8y_ProcessLoadMeasurement.L.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$map($map(mea.values[0].timestamp, $number), function($v, $i, $a) { $fromMillis($v) })",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1697998478652,
+    "name": "Mapping - 2",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "3357069773",
+    "subscriptionTopic": "devices/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "extension": null,
+    "templateTopicSample": "device/express/berlin_01",
+    "ident": "38c5ebbd-990c-4eeb-b556-75109b37c904",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "INVENTORY",
+    "source": "{\"line\":\"Bus-Berlin-Rom\",\"operator\":\"EuroBus\",\"customFragment\":{\"customFragmentValue\":\"Express\"},\"capacity\":64,\"customArray\":[\"ArrayValue1\",\"ArrayValue2\"],\"customType\":\"type_International\"}",
+    "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\",\"capacity\":77}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "device/express/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[2]",
+        "pathTarget": "_DEVICE_IDENT_",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "capacity",
+        "pathTarget": "capacity",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "customType",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "operator&\"-\"&line",
+        "pathTarget": "name",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1669530606363,
+    "name": "Mapping - 3",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "3157072891",
+    "subscriptionTopic": "device/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "event/berlin_01",
+    "ident": "9109c667-16a3-486f-babf-9d01afdf1d2b",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{\"msg_type\":\"c8y_BusStopEvent\",\"txt\":\"Bus stopped at petrol station today!\",\"td\":\"2022-09-08T16:21:53.389+02:00\",\"ts\":\"1665473038000\"}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "event/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "txt",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "msg_type",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1693234426310,
+    "name": "Mapping - 4",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "4357071507",
+    "subscriptionTopic": "event/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "measurement/berlin_01/gazoline",
+    "ident": "2b295739-c1c4-4c2c-ae9e-2f04dc8313f6",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"fuel\":65,\"ts\":\"2022-08-05T00:14:49.389+02:00\",\"mea\":\"c8y_FuelMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "target": "{\"c8y_FuelMeasurement\":{\"Tank\":{\"value\":110,\"unit\":\"l\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_FuelMeasurement\"}",
+    "templateTopic": "measurement/+/gazoline",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "mea",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "fuel*3.78541",
+        "pathTarget": "c8y_FuelMeasurement.Tank.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "lastUpdate": 1667758218993,
+    "mappingType": "JSON",
+    "name": "Mapping - 5",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "subscriptionTopic": "measurement/#",
+    "id": "1657071508",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "multiarray/devices",
+    "ident": "e87a10ad-c223-4bd7-bd91-9df23e2bd3cf",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "INVENTORY",
+    "source": "{\"device\":[\"d1_id\",\"d2_id\"],\"types\":{\"type_A\":\"type_A\",\"type_B\":\"type_B\"},\"used_name\":[\"Pressure_d1\",\"Pressure_d2\"]}",
+    "target": "{\"c8y_IsDevice\":{},\"name\":\"Vibration Sensor\",\"type\":\"maker_Vibration_Sensor\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "multiarray/devices",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "device",
+        "pathTarget": "_DEVICE_IDENT_",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "types.type_A",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$map(used_name, function($v, $i, $a) { $contains($v,'d1') ? $join(['Special_i0', $string($i)]) : $join([$string($v), $string($i)]) } )",
+        "pathTarget": "name",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1693233101650,
+    "name": "Mapping - 6",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "9757072892",
+    "subscriptionTopic": "multiarray/devices",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "arrayType/devices",
+    "ident": "c35424fc-aa6e-42f9-8434-66444e68d2aa",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "[{\"tid\":\"5e4bac9f-b47a-499e-8601-68fc16a9847c\",\"psid\":\"Crest\",\"devicePath\":\"c2818e07-4c09-42f0-ba24-ddb712573ab5_AL1352_192168221_80_X03_VVB001StatusB_Crest\",\"processDataUnit\":\"20\",\"values\":[{\"value\":4.6,\"timestamp\":1648562285347}]},{\"tid\":\"5e4bac9f-b47a-499e-8601-68fc16a9847c\",\"psid\":\"Crest\",\"devicePath\":\"c2818e07-4c09-42f0-ba24-ddb712573ab5_AL1352_192168221_80_X03_VVB001StatusB_Crest\",\"processDataUnit\":\"20\",\"values\":[{\"value\":5.6,\"timestamp\":1648562285347}]}]",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "arrayType/devices",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$substringBefore($[0].devicePath,\"_AL\")",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$[].values[0].value",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$map($map($[].values[0].timestamp, $number), function($v) { $fromMillis($v)})",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": true
+      }
+    ],
+    "updateExistingDevice": true,
+    "mappingType": "JSON",
+    "lastUpdate": 1698005167190,
+    "name": "Mapping - 7",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "8357070630",
+    "subscriptionTopic": "arrayType/devices",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "eventObject/berlin_01",
+    "ident": "def10a25-d11e-4201-b454-48b54ba8cd5e",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{\"msg_type\":\"c8y_BusStopEvent\",\"txt\":\"Bus stopped at petrol station today!\",\"td\":\"2022-09-08T16:21:53.389+02:00\",\"model\":{\"name\":\"MAN e-Bus\"}}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\",\"customProperties\":\"dummy\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "eventObject/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "txt",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "msg_type",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "model",
+        "pathTarget": "customProperties",
+        "repairStrategy": "REMOVE_IF_MISSING",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1688650122303,
+    "name": "Mapping - 8",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "3957072893",
+    "subscriptionTopic": "eventObject/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "measurementObject/berlin_01/gazoline",
+    "ident": "15699050-545d-41d1-a523-acf6de778739",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"fuel\":65,\"oil\":4.5,\"ts\":\"2022-08-05T00:14:49.389+02:00\",\"mea\":\"c8y_FuelMeasurement\"}",
+    "target": "{\"c8y_FuelMeasurement\":{\"Tank\":{\"value\":110,\"unit\":\"l\"}},\"c8y_OilMeasurement\":\"Motor\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_FuelMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "measurementObject/+/gazoline",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "mea",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "fuel*3.78541",
+        "pathTarget": "c8y_FuelMeasurement.Tank.value",
+        "repairStrategy": "REMOVE_IF_MISSING",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "(oil?{\"Motor\": {\"value\":oil, \"unit\":\"l\"}}:null)",
+        "pathTarget": "c8y_OilMeasurement",
+        "repairStrategy": "REMOVE_IF_MISSING",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1698005734224,
+    "name": "Mapping - 9",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "7757070631",
+    "subscriptionTopic": "measurementObject/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "STARTED",
+    "templateTopicSample": "binary/berlin_01",
+    "ident": "5c5d2ea9-b0ce-4237-ad23-be5b393ca14c",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{}",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "binary/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [],
+    "updateExistingDevice": false,
+    "mappingType": "GENERIC_BINARY",
+    "lastUpdate": 1698005911395,
+    "name": "Mapping - 13",
+    "snoopedTemplates": [
+      "{\"message\":\"57652077696c6c20616c77617973206170707265636961746520746865206e6578742072656c656173652031302e313721\"}",
+      "{\"message\":\"57652063616e2074727920746f20636f6e76657274207468697320207465787420746f2062696e6172792068657821\"}",
+      "{\"message\":\"35373635323036333631366532303734373237393230373436663230363336663665373636353732373432303734363836393733323032303734363537383734323037343666323036323639366536313732373932303638363537383231\"}",
+      "{\"message\":\"5a75207370c3a47420303821\"}"
+    ],
+    "createNonExistingDevice": false,
+    "id": "9557072895",
+    "subscriptionTopic": "binary/+",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "operation/berlin_01",
+    "ident": "ef19e1db-fd9a-481c-aa83-ee000eb2ed5e",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "OPERATION",
+    "source": "{\"text\":\"Special operation\"}",
+    "target": "{\"deviceId\":\"909090\",\"description\":\"New camera operation!\",\"type\":\"maintenance_operation\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "operation/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "deviceId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$join([text,\"_\",$now()])",
+        "pathTarget": "description",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1698009557391,
+    "name": "Mapping - 14",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "3857069775",
+    "subscriptionTopic": "operation/+",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "STOPPED",
+    "templateTopicSample": "binaryEvent/berlin_01",
+    "ident": "df794b94-7921-42de-b612-aa7951b1410b",
+    "tested": true,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{\"message\":\"5a75207370c3a47420303821\"}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "binaryEvent/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "\"Temp: \"&$parseInteger($string(\"0x\"&$substring(message,0,2)),\"0\")&\" C\"",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "GENERIC_BINARY",
+    "lastUpdate": 1698007842317,
+    "name": "Mapping - 15",
+    "snoopedTemplates": [
+      "{\"message\":\"5a75207370c3a47420303821\"}",
+      "{\"message\":\"5a75207370c3a47420303921\"}",
+      "{\"message\":\"5a75207370c3a47420303921\"}",
+      "{\"message\":\"5a75207370c3a47420313921\"}"
+    ],
+    "createNonExistingDevice": false,
+    "id": "3657069776",
+    "subscriptionTopic": "binaryEvent/+",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "device/update/berlin_01",
+    "ident": "4e62d9df-7eb0-4ee5-92f6-8a7a93cbd99b",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "INVENTORY",
+    "source": "{\"customType\":\"type_Overnight\"}",
+    "target": "{\"type\":\"type\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "device/update/+",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[2]",
+        "pathTarget": "_DEVICE_IDENT_",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "customType",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": true,
+    "mappingType": "JSON",
+    "lastUpdate": 1667839346115,
+    "name": "Mapping - 17",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "4257072086",
+    "subscriptionTopic": "device/update/+",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "protobuf/measurement",
+    "ident": "7b97922b-7229-4620-bc7c-19cf55f1b5f3",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{}",
+    "target": "{\"c8y_GenericMeasurement\":{\"Module\":{\"value\":110,\"unit\":\"l\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_GenericMeasurement_type\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "protobuf/measurement",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [],
+    "updateExistingDevice": false,
+    "mappingType": "PROTOBUF_STATIC",
+    "lastUpdate": 1698010580152,
+    "name": "Mapping - 18",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "3757070633",
+    "subscriptionTopic": "protobuf/measurement",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "extension": {
+      "loaded": false,
+      "name": "mqtt-mapping-extension",
+      "event": "CustomEvent"
+    },
+    "templateTopicSample": "protobuf/event",
+    "ident": "93c93bb2-2ea3-4e7b-9f36-3b4a028ccc7b",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "protobuf/event",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [],
+    "updateExistingDevice": false,
+    "mappingType": "PROCESSOR_EXTENSION",
+    "lastUpdate": 1698010885933,
+    "name": "Mapping - 19",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "1457072087",
+    "subscriptionTopic": "protobuf/event",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "panel",
+    "ident": "a01a32d1-5624-4ee3-b40d-e2f58eb4e0b9",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": false,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"deviceId\":\"863859042393327\",\"version\":\"1\",\"deviceType\":\"20\",\"deviceTimestamp\":\"1665473038000\",\"deviceStatus\":\"BTR\",\"temperature\":90}",
+    "target": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_TemperatureMeasurement\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "panel",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "deviceId",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$number(deviceTimestamp)~>$fromMillis()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "temperature",
+        "pathTarget": "c8y_TemperatureMeasurement.T.value",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1688655410990,
+    "name": "Mapping - 20",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "9757072088",
+    "subscriptionTopic": "panel",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "panel",
+    "ident": "cb008729-93ed-4156-9e4f-7dc9d7f09f04",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "EVENT",
+    "source": "{\"deviceId\":\"863859042393327\",\"version\":\"1\",\"deviceType\":\"20\",\"deviceTimestamp\":\"1665473038000\",\"deviceStatus\":\"BTR\",\"temperature\":90}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "panel",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "deviceId",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "'New device status: ' & deviceStatus & '!'",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1669281630110,
+    "name": "Mapping - 21",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "1457070634",
+    "subscriptionTopic": "panel",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "flexM/berlin_01/gazoline",
+    "ident": "a8dfc9d7-65f6-4e43-b1db-3029b7efe236",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{\"Measurementname\":\"Airsensor\",\"Seriesname\":\"Humidity\",\"value\":10,\"unit\":\"%\"}",
+    "target": "{\"Airsensor\":\"dummy\",\"Liquidsensor\":\"dummy\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"source\":{\"id\":\"909090\"},\"type\":\"c8y_measurementtype\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "flexM/+/gazoline",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "pathSource": "_TOPIC_LEVEL_[1]",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "Measurementname & \"_type\"",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "pathSource": "Measurementname = \"Airsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
+        "pathTarget": "Airsensor",
+        "repairStrategy": "REMOVE_IF_NULL",
+        "expandArray": false
+      },
+      {
+        "pathSource": "Measurementname = \"Liquidsensor\" ? {Seriesname:{\"value\": value, \"unit\": unit}} : null",
+        "pathTarget": "Liquidsensor",
+        "repairStrategy": "REMOVE_IF_NULL",
+        "expandArray": false
+      },
+      {
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1689013437492,
+    "name": "Mapping - 23",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "3757096788",
+    "subscriptionTopic": "flexM/#",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "templateTopicSample": "alarm/tires",
+    "ident": "3612278e-be55-4531-a878-03563ddd3f3b",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "ALARM",
+    "source": "{\"msg_type\":\"c8y_FlatTireAlarm\",\"tx\":\"Left rear tire loses air!\",\"bus_id\":\"berlin_01\"}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"type\":\"c8y_FlatTireAlarm\",\"text\":\"Left rear tire loses air!\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"time\":\"2022-03-19T12:03:27.845Z\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "alarm/tires",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "bus_id",
+        "pathTarget": "source.id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "msg_type",
+        "pathTarget": "type",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "tx",
+        "pathTarget": "text",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1698050412756,
+    "name": "Mapping - 24",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": true,
+    "id": "1757101144",
+    "subscriptionTopic": "alarm/tires",
+    "direction": "INBOUND"
+  },
+  {
+    "snoopStatus": "NONE",
+    "extension": {
+      "loaded": false,
+      "name": "mqtt-mapping-extension",
+      "event": "CustomMeasurement"
+    },
+    "templateTopicSample": "measurementExt",
+    "ident": "464f3925-883c-41ee-b885-f39cc338202b",
+    "tested": false,
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "autoAckOperation": true,
+    "targetAPI": "MEASUREMENT",
+    "source": "{}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_Temperature\",\"c8y_Temperature\":\"dummy\",\"c8y_Fragment_to_remove\":\"remove_me\"}",
+    "externalIdType": "c8y_Serial",
+    "templateTopic": "measurementExt",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [],
+    "updateExistingDevice": false,
+    "mappingType": "PROCESSOR_EXTENSION",
+    "lastUpdate": 1690318558279,
+    "name": "Mapping - 25",
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "4857522418",
+    "subscriptionTopic": "measurementExt",
+    "direction": "INBOUND"
+  },
+  {
+    "templateTopicSample": "evt/outbound/berlin_01",
+    "ident": "7eaad46b-6e2e-47b0-ad96-73f042d4945d",
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"source\":{\"id\":\"2557498674\"},\"type\":\"c8y_BusEvent\",\"text\":\"Bus was stopped\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"bus_event\":\"stop_event\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": true,
+        "pathSource": "source.id",
+        "pathTarget": "_TOPIC_LEVEL_[2]",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "type",
+        "pathTarget": "eventType",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "$now()",
+        "pathTarget": "time",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "bus_event",
+        "pathTarget": "bus_event",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "source.id",
+        "pathTarget": "deviceId",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "2157069777",
+    "subscriptionTopic": "",
+    "direction": "OUTBOUND",
+    "snoopStatus": "NONE",
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "targetAPI": "EVENT",
+    "filterOutbound": "bus_event",
+    "publishTopic": "evt/outbound/#",
+    "target": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\",\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"berlin_01\"]}",
+    "templateTopic": "evt/outbound/+",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1698055678488,
+    "name": "Mapping - 51"
+  },
+  {
+    "templateTopicSample": "opp/outbound/berlin_01",
+    "ident": "5a2665a2-60c4-449e-a041-e343db9c3f57",
+    "tested": false,
+    "autoAckOperation": true,
+    "source": "{\"deviceId\":\"909090\",\"bus_opp\":\"New engine restart operation!\"}",
+    "externalIdType": "c8y_Serial",
+    "qos": "AT_LEAST_ONCE",
+    "substitutions": [
+      {
+        "resolve2ExternalId": true,
+        "pathSource": "deviceId",
+        "pathTarget": "_TOPIC_LEVEL_[2]",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "bus_opp",
+        "pathTarget": "decription",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      },
+      {
+        "resolve2ExternalId": false,
+        "pathSource": "deviceId",
+        "pathTarget": "c8y_Id",
+        "repairStrategy": "DEFAULT",
+        "expandArray": false
+      }
+    ],
+    "snoopedTemplates": [],
+    "createNonExistingDevice": false,
+    "id": "2558069177",
+    "subscriptionTopic": "",
+    "direction": "OUTBOUND",
+    "snoopStatus": "NONE",
+    "mapDeviceIdentifier": true,
+    "active": true,
+    "targetAPI": "OPERATION",
+    "filterOutbound": "bus_opp",
+    "publishTopic": "opp/outbound/#",
+    "target": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation!\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
+    "templateTopic": "",
+    "updateExistingDevice": false,
+    "mappingType": "JSON",
+    "lastUpdate": 1698057693638,
+    "name": "Mapping - 52"
+  }
+]
