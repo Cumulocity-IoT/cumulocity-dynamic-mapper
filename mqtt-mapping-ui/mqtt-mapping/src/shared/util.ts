@@ -904,3 +904,41 @@ export function cloneSubstitution(
     resolve2ExternalId: sub.resolve2ExternalId,
   };
 }
+
+export function expandExternalTemplate(
+  t: object,
+  m: Mapping,
+  levels: String[]
+): object {
+  if (Array.isArray(t)) {
+    return t;
+  } else {
+    return {
+      ...t,
+      _TOPIC_LEVEL_: levels,
+    };
+  }
+}
+
+export function expandC8YTemplate(t: object, m: Mapping): object {
+  if (m.targetAPI == API.INVENTORY.name) {
+    return {
+      ...t,
+      _DEVICE_IDENT_: "909090",
+    };
+  } else {
+    return t;
+  }
+}
+
+export function reduceSourceTemplate(t: object, patched: boolean): string {
+  if (!patched) delete t[TOKEN_TOPIC_LEVEL];
+  let tt = JSON.stringify(t);
+  return tt;
+}
+
+export function reduceTargetTemplate(t: object, patched: boolean): string {
+  if (!patched) delete t[TOKEN_DEVICE_TOPIC];
+  let tt = JSON.stringify(t);
+  return tt;
+}
