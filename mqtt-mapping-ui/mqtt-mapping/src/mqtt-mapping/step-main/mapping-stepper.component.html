@@ -392,6 +392,7 @@
         editorTestingRequestTemplateEmitter
       "
       [mapping]="getCurrentMapping(true)"
+      (testResult)="updateTestResult($event)"
       [stepperConfiguration]="stepperConfiguration"
     ></mapping-testing>
     <c8y-stepper-buttons

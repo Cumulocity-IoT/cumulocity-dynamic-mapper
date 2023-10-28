@@ -37,6 +37,7 @@ import { FacadeAlarmService } from "./facade-alarm.service";
 import { FacadeEventService } from "./facade-event.service";
 import { FacadeMeasurementService } from "./facade-measurement.service";
 import { FacadeOperationService } from "./facade-operation.service";
+import { TOKEN_DEVICE_TOPIC } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
 export class C8YAgent {
@@ -56,6 +57,9 @@ export class C8YAgent {
     let currentRequest = context.requests[context.requests.length - 1].request;
     if (context.mapping.targetAPI == API.EVENT.name) {
       let p: IEvent = currentRequest as any;
+      // remove device identifier
+      delete p[TOKEN_DEVICE_TOPIC];
+
       if (p != null) {
         result = this.event.create(p, context);
       } else {
@@ -124,7 +128,15 @@ export class C8YAgent {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IManagedObject> {
-    let deviceId: string = await this.resolveExternalId2GlobalId(identity, context);
+    let deviceId: string;
+    try {
+      deviceId = await this.resolveExternalId2GlobalId(identity, context);
+    } catch (e) {
+      console.log(
+        `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
+      );
+    }
+
     let currentRequest = context.requests[context.requests.length - 1].request;
     let device: Partial<IManagedObject> = {
       ...currentRequest,
@@ -132,8 +144,11 @@ export class C8YAgent {
       c8y_mqttMapping_TestDevice: {},
       com_cumulocity_model_Agent: {},
     };
+    // remove device identifier
+    delete device[TOKEN_DEVICE_TOPIC];
 
     if (deviceId) {
+      device.id = deviceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context
@@ -160,13 +175,11 @@ export class C8YAgent {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<string> {
-    try {
-      const { data, res } = await this.identity.resolveExternalId2GlobalId(identity, context);
-      return data.managedObject.id as string;
-    } catch (e) {
-      console.log(`External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `);
-      return identity.externalId;
-    }
+    const { data, res } = await this.identity.resolveExternalId2GlobalId(
+      identity,
+      context
+    );
+    return data.managedObject.id as string;
   }
 
   async resolveGlobalId2ExternalId(
@@ -174,12 +187,11 @@ export class C8YAgent {
     externalIdType: string,
     context: ProcessingContext
   ): Promise<string> {
-    try {
-      const  data = await this.identity.resolveGlobalId2ExternalId(identity, externalIdType, context);
-      return data.managedObject.id as string;
-    } catch (e) {
-      console.log(`External id ${identity}, ${externalIdType} doesn't exist! Just return original id ${identity}`);
-      return identity;
-    }
+    const data = await this.identity.resolveGlobalId2ExternalId(
+      identity,
+      externalIdType,
+      context
+    );
+    return data.managedObject.id as string;
   }
 }

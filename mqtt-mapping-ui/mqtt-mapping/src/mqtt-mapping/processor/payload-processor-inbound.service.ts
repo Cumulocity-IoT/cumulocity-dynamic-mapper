@@ -115,13 +115,14 @@ export abstract class PayloadProcessorInbound {
 
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (pathTarget == findDeviceIdentifier(mapping).pathTarget) {
-            let sourceId: string = await this.c8yClient.resolveExternalId2GlobalId(
-              {
-                externalId: substituteValue.value.toString(),
-                type: mapping.externalIdType,
-              },
-              context
-            );
+            let sourceId: string =
+              await this.c8yClient.resolveExternalId2GlobalId(
+                {
+                  externalId: substituteValue.value.toString(),
+                  type: mapping.externalIdType,
+                },
+                context
+              );
             if (!sourceId && mapping.createNonExistingDevice) {
               let request = {
                 c8y_IsDevice: {},
@@ -170,9 +171,20 @@ export abstract class PayloadProcessorInbound {
               substituteValue.value = sourceId.toString();
             }
           }
-          this.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
-        } else if (pathTarget != API[mapping.targetAPI].identifier) {
-          this.substituteValueInObject(mapping.mappingType, substituteValue, payloadTarget, pathTarget);
+          this.substituteValueInObject(
+            mapping.mappingType,
+            substituteValue,
+            payloadTarget,
+            pathTarget
+          );
+          //} else if (pathTarget != API[mapping.targetAPI].identifier) {
+        } else {
+          this.substituteValueInObject(
+            mapping.mappingType,
+            substituteValue,
+            payloadTarget,
+            pathTarget
+          );
         }
       }
       /*
