@@ -37,7 +37,6 @@ import { FacadeAlarmService } from "./facade-alarm.service";
 import { FacadeEventService } from "./facade-event.service";
 import { FacadeMeasurementService } from "./facade-measurement.service";
 import { FacadeOperationService } from "./facade-operation.service";
-import { TOKEN_DEVICE_TOPIC } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
 export class C8YAgent {
@@ -57,9 +56,6 @@ export class C8YAgent {
     let currentRequest = context.requests[context.requests.length - 1].request;
     if (context.mapping.targetAPI == API.EVENT.name) {
       let p: IEvent = currentRequest as any;
-      // remove device identifier
-      delete p[TOKEN_DEVICE_TOPIC];
-
       if (p != null) {
         result = this.event.create(p, context);
       } else {
@@ -145,16 +141,16 @@ export class C8YAgent {
       com_cumulocity_model_Agent: {},
     };
     // remove device identifier
-    delete device[TOKEN_DEVICE_TOPIC];
-
+    
     if (deviceId) {
       device.id = deviceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context
-      );
-      return response.data;
-    } else {
+        );
+        return response.data;
+      } else {
+      delete device[API.INVENTORY.identifier];
       const response: IResult<IManagedObject> = await this.inventory.create(
         device,
         context

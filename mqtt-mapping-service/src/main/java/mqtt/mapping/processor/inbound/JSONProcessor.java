@@ -81,7 +81,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
         List<String> splitTopicAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
         splitTopicAsList.forEach(s -> topicLevels.add(s));
         if (payloadJsonNode instanceof ObjectNode) {
-            ((ObjectNode) payloadJsonNode).set(TOKEN_TOPIC_LEVEL, topicLevels);
+            ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
         } else {
             log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
         }
@@ -165,18 +165,18 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
                 }
             }
 
-            if (substitution.pathTarget.equals(TIME)) {
+            if (substitution.pathTarget.equals(Mapping.TIME)) {
                 substitutionTimeExists = true;
             }
         }
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(TIME,
+            List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(Mapping.TIME,
                     new ArrayList<SubstituteValue>());
             postProcessingCacheEntry.add(
                     new SubstituteValue(new TextNode(new DateTime().toString()), TYPE.TEXTUAL, RepairStrategy.DEFAULT));
-            postProcessingCache.put(TIME, postProcessingCacheEntry);
+            postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
         }
     }
 

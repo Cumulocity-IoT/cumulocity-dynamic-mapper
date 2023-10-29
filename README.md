@@ -247,13 +247,13 @@ Mappings are persisted as Managed Objects and can be easily changed, deleted or 
 In addition to using plain properties of the source payload, you can apply functions on the payload properties. This covers a scenario where a device name should be a combination of a generic name and an external device Id.
 Complex mapping expressions are supported by using [JSONata](https://jsonata.org). \
 In this case the following function could be used:
-```$join([device_name, _DEVICE_IDENT_])```. 
+```$join([device_name, id])```. 
 
 Further example for JSONata expressions are:
 * to convert a UNIX timestamp to ISO date format use:
       <code>$fromMillis($number(deviceTimestamp))</code>
 * to join substring starting at position 5 of property <code>txt</code> with device
-      identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code>
+      identifier use: <code>$join([$substring(txt,5), "-", id])</code>
 
 >**_NOTE:_**
 > * escape properties with special characters with <code>`</code>. The property

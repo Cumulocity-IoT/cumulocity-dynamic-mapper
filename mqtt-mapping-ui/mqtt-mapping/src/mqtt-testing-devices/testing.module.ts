@@ -43,6 +43,8 @@ import { TypeHeaderCellRendererComponent } from "./grid/type-data-grid-column/ty
   providers: [
     hookRoute({
       path: "sag-ps-pkg-mqtt-mapping/testing",
+      component: TestingComponent,
+
     }),
   ],
 })

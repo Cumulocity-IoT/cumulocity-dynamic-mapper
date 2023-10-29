@@ -30,7 +30,7 @@ public enum API {
     ALARM("ALARM", "source.id", "alarms"),
     EVENT("EVENT", "source.id", "events"),
     MEASUREMENT("MEASUREMENT", "source.id", "measurements"),
-    INVENTORY("INVENTORY", "_DEVICE_IDENT_", "managedObjects"),
+    INVENTORY("INVENTORY", "id", "managedObjects"),
     OPERATION("OPERATION", "deviceId", "operations"),
     EMPTY("NN", "nn", "nn"),
 
