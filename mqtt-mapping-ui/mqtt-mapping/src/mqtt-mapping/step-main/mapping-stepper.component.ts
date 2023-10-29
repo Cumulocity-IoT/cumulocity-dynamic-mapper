@@ -59,7 +59,6 @@ import {
   reduceTargetTemplate,
   SAMPLE_TEMPLATES_C8Y,
   splitTopicExcludingSeparator,
-  TOKEN_DEVICE_TOPIC,
   TOKEN_TOPIC_LEVEL,
   whatIsIt,
 } from "../../shared/util";
@@ -215,7 +214,7 @@ export class MappingStepperComponent implements OnInit {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               placeholder:
-                "$join([$substring(txt,5), _DEVICE_IDENT_]) or $number(_DEVICE_IDENT_)/10",
+                "$join([$substring(txt,5), id]) or $number(id)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
@@ -224,7 +223,7 @@ export class MappingStepperComponent implements OnInit {
                 </li>
                 <li>to join substring starting at position 5 of property <code>txt</code> with
                   device
-                  identifier use: <code>$join([$substring(txt,5), "-", _DEVICE_IDENT_])</code></li>
+                  identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
                 <li>function chaining using <code>~</code> is not supported, instead use function
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
@@ -550,8 +549,8 @@ export class MappingStepperComponent implements OnInit {
       source: reduceSourceTemplate(
         this.editorSource ? this.editorSource.get() : {},
         patched
-      ), //remove dummy field "_DEVICE_IDENT_", array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTarget?.get(), patched), //remove dummy field "_DEVICE_IDENT_", since it should not be stored
+      ), //remove array "_TOPIC_LEVEL_" since it should not be stored
+      target: reduceTargetTemplate(this.editorTarget?.get(), patched), //remove pachted attributes, since it should not be stored
       lastUpdate: Date.now(),
     };
   }

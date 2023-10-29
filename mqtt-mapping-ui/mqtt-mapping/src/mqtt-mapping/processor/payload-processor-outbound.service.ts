@@ -28,7 +28,6 @@ import {
   RepairStrategy,
 } from "../../shared/mapping.model";
 import {
-  findDeviceIdentifier,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
   TOKEN_TOPIC_LEVEL,
