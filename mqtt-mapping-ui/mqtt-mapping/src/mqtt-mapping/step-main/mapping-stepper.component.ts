@@ -518,7 +518,7 @@ export class MappingStepperComponent implements OnInit {
 
       const definesDI = definesDeviceIdentifier(
         this.mapping.targetAPI,
-        this.templateModel,
+        this.templateModel.currentSubstitution,
         this.mapping.direction
       );
       if (definesDI) {
