@@ -54,7 +54,7 @@ import java.util.Map;
 @Service
 public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
 
-    public JSONProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
+    public JSONProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
         super(objectMapper, mqttClient, c8yAgent);
     }
 
@@ -85,7 +85,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
         } else {
             log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
         }
-        String  payload = payloadJsonNode.toPrettyString();
+        String payload = payloadJsonNode.toPrettyString();
         log.info("Patched payload: {}", payload);
 
         boolean substitutionTimeExists = false;
@@ -127,18 +127,25 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
                             } else if (jn.isNumber()) {
                                 postProcessingCacheEntry
                                         .add(new SubstituteValue(jn, TYPE.NUMBER, substitution.repairStrategy));
+                            } else if (jn.isArray()) {
+                                postProcessingCacheEntry
+                                        .add(new SubstituteValue(jn, TYPE.ARRAY, substitution.repairStrategy));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}",
-                                        jn.asText());
+                                // log.warn("Since result is not textual or number it is ignored: {}",
+                                // jn.asText());
+                                postProcessingCacheEntry
+                                        .add(new SubstituteValue(jn, TYPE.OBJECT, substitution.repairStrategy));
                             }
                         }
                         context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     } else {
-                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE substitution
+                        // treat this extracted enry as single value, no MULTI_VALUE or MULTI_DEVICE
+                        // substitution
                         context.addCardinality(substitution.pathTarget, 1);
                         postProcessingCacheEntry
-                                .add(new SubstituteValue(extractedSourceContent, TYPE.ARRAY, substitution.repairStrategy));
+                                .add(new SubstituteValue(extractedSourceContent, TYPE.ARRAY,
+                                        substitution.repairStrategy));
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
