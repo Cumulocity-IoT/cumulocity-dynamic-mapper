@@ -32,6 +32,8 @@ import mqtt.mapping.processor.model.RepairStrategy;
 
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @ToString()
@@ -57,18 +59,26 @@ public class MappingSubstitution implements Serializable {
         }
 
         public Object typedValue() {
-            Object result;
             DocumentContext dc;
             switch (type) {
                 case OBJECT:
-                case ARRAY:
+                    Map <String,Object> ro = null;
                     if (value != null && !value.isNull()) {
                         dc = JsonPath.parse(value.toString());
-                        result = dc.read("$");
+                        ro = dc.read("$");
                     } else {
-                        result= value;
+                        ro= null;
                     }
-                    return result;
+                    return ro;
+                case ARRAY:
+                    List<Map <String,Object>> ra = null;
+                    if (value != null && !value.isNull()) {
+                        dc = JsonPath.parse(value.toString());
+                        ra = dc.read("$");
+                    } else {
+                        ra= null;
+                    }
+                    return ra;
                 case IGNORE:
                     return null;
                 case NUMBER:

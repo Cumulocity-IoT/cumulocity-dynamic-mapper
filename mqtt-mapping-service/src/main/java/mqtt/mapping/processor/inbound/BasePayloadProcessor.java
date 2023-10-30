@@ -157,8 +157,9 @@ public abstract class BasePayloadProcessor<T> {
                                 context.getCurrentRequest().setError(e);
                             }
                         } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + substituteValue.typedValue().toString() + " for type "
-                                    + mapping.externalIdType + " not found!");
+                            throw new RuntimeException(
+                                    "External id " + substituteValue.typedValue().toString() + " for type "
+                                            + mapping.externalIdType + " not found!");
                         } else if (sourceId == null) {
                             substituteValue.value = null;
                         } else {
@@ -217,23 +218,37 @@ public abstract class BasePayloadProcessor<T> {
     public void substituteValueInObject(MappingType type, SubstituteValue sub, DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
-        boolean subValueNull =  (sub.value == null) || ( sub.value != null && sub.value.isNull());
-        // variant where the default strategy for PROCESSOR_EXTENSION is REMOVE_IF_MISSING
-        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+        boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
+        // variant where the default strategy for PROCESSOR_EXTENSION is
+        // REMOVE_IF_MISSING
+        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) &&
+        // subValueMissing) ||
         // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-        // ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
-        //         && (subValueMissing || subValueNull)))
-        if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-            jsonObject.delete(keys);
-        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING) ) {
-            boolean pathIsNested =  keys.contains(".") ||  keys.contains("[") ;
-            if (pathIsNested) {
-                throw new JSONException ("Can only create new nodes ion the root level!");
+        // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
+        // type.equals(MappingType.PROTOBUF_STATIC))
+        // && (subValueMissing || subValueNull)))
+
+        if ("$".equals(keys)) {
+            Object replacement = sub.typedValue();
+            if (replacement instanceof Map<?, ?>) {
+                Map<String, Object> rm = (Map<String, Object>) replacement;
+                for (Map.Entry<String, Object> entry : rm.entrySet()) {
+                    jsonObject.put("$",entry.getKey(), entry.getValue());
+                }
             }
-            jsonObject.put("$", keys, sub.typedValue());
         } else {
-            jsonObject.set(keys, sub.typedValue());
+            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+                jsonObject.delete(keys);
+            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                if (pathIsNested) {
+                    throw new JSONException("Can only create new nodes ion the root level!");
+                }
+                jsonObject.put("$", keys, sub.typedValue());
+            } else {
+                jsonObject.set(keys, sub.typedValue());
+            }
         }
     }
 
