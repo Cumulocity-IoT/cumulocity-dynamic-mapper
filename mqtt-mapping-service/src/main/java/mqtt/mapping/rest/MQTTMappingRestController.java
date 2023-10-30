@@ -319,7 +319,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            mapping = mappingComponent.updateMapping(mapping, false);
+            mapping = mappingComponent.updateMapping(mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache();
             } else {

@@ -243,7 +243,8 @@ public class MappingComponent {
         return result;
     }
 
-    public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive) throws Exception {
+    public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive, boolean ignoreValidation)
+            throws Exception {
         // test id the mapping is active, we don't delete or modify active mappings
         MutableObject<Exception> exception = new MutableObject<Exception>(null);
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
@@ -255,7 +256,7 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings();
             List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
-            if (errors.size() == 0) {
+            if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
                 mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
@@ -422,12 +423,15 @@ public class MappingComponent {
         log.info("Setting active: {} got mapping: {}", id, active);
         Mapping mapping = getMapping(id);
         mapping.setActive(active);
-        if  (Direction.INBOUND.equals(mapping.direction)) {
+        if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
-        updateMapping(mapping, true);
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        boolean ignoreValidation = !active;
+        updateMapping(mapping, true, ignoreValidation);
         // step 4. delete mapping from update cache
         removeDirtyMapping(mapping);
         // step 5. update caches
@@ -446,7 +450,7 @@ public class MappingComponent {
         for (Mapping mapping : dirtyMappings) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
-            updateMapping(mapping, true);
+            updateMapping(mapping, true, false);
         }
         // reset dirtySet
         dirtyMappings = new HashSet<Mapping>();
