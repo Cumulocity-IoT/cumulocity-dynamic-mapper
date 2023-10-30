@@ -55,8 +55,8 @@ export class MonitoringService {
     );
   }
 
-  unsubscribeFromMonitoringChannel(subscription: object): object {
-    return this.realtime.unsubscribe(subscription);
+  unsubscribeFromMonitoringChannel(subscription: object) {
+    this.realtime.unsubscribe(subscription);
   }
 
   private updateStatus(p: object): void {
