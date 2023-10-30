@@ -43,7 +43,11 @@ import { MQTTClient } from "../core/mqtt-client.service";
 
 @Injectable({ providedIn: "root" })
 export abstract class PayloadProcessorOutbound {
-  constructor(private alert: AlertService, public c8yAgent: C8YAgent,  private mqttClient: MQTTClient) {}
+  constructor(
+    private alert: AlertService,
+    public c8yAgent: C8YAgent,
+    private mqttClient: MQTTClient
+  ) {}
 
   public abstract deserializePayload(
     context: ProcessingContext,
@@ -90,7 +94,7 @@ export abstract class PayloadProcessorOutbound {
       if (postProcessingCache.get(pathTarget).length > 0) {
         substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
       }
-      
+
       this.substituteValueInObject(
         mapping.mappingType,
         substituteValue,
@@ -104,28 +108,31 @@ export abstract class PayloadProcessorOutbound {
      */
 
     if (mapping.targetAPI != API.INVENTORY.name) {
-
-      let topicLevels : string [] = payloadTarget[TOKEN_TOPIC_LEVEL];
-      if ( !topicLevels && topicLevels.length > 0) {
-          // now merge the replaced topic levels
-          let c : number = 0;
-          let splitTopicInAsList :  string[] = splitTopicIncludingSeparator(context.topic);
-          topicLevels.forEach(tl => {
-              while (c  < splitTopicInAsList.length
-                      && ("/" == (splitTopicInAsList[c]))) {
-                  c++;
-              }
-              splitTopicInAsList[c] = tl;
-              c++;
-          });
-
-          let resolvedPublishTopic: string = '';
-          for ( let d: number = 0; d < splitTopicInAsList.length; d++) {
-              resolvedPublishTopic.concat(splitTopicInAsList[d]);
+      let topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
+      if (!topicLevels && topicLevels.length > 0) {
+        // now merge the replaced topic levels
+        let c: number = 0;
+        let splitTopicInAsList: string[] = splitTopicIncludingSeparator(
+          context.topic
+        );
+        topicLevels.forEach((tl) => {
+          while (
+            c < splitTopicInAsList.length &&
+            "/" == splitTopicInAsList[c]
+          ) {
+            c++;
           }
-          context.resolvedPublishTopic = resolvedPublishTopic.toString();
+          splitTopicInAsList[c] = tl;
+          c++;
+        });
+
+        let resolvedPublishTopic: string = "";
+        for (let d: number = 0; d < splitTopicInAsList.length; d++) {
+          resolvedPublishTopic.concat(splitTopicInAsList[d]);
+        }
+        context.resolvedPublishTopic = resolvedPublishTopic.toString();
       } else {
-          context.resolvedPublishTopic = context.mapping.publishTopic;
+        context.resolvedPublishTopic = context.mapping.publishTopic;
       }
 
       // leave the topic for debugging purposes
@@ -165,21 +172,27 @@ export abstract class PayloadProcessorOutbound {
     let subValueNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
-    if (
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-        subValueMissing) ||
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-    ) {
-      _.unset(jsonObject, keys);
-    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
-      if (pathIsNested) {
-        throw new Error("Can only crrate new nodes ion the root level!");
-      }
-      //jsonObject.put("$", keys, sub.typedValue());
-      _.set(jsonObject, keys, getTypedValue(sub));
+    if (keys == "$") {
+      Object.keys(getTypedValue(sub)).forEach((key) => {
+        jsonObject[key] = getTypedValue(sub)[key as keyof Object];
+      });
     } else {
-      _.set(jsonObject, keys, getTypedValue(sub));
+      if (
+        (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
+          subValueMissing) ||
+        (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+      ) {
+        _.unset(jsonObject, keys);
+      } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+        let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+        if (pathIsNested) {
+          throw new Error("Can only crrate new nodes ion the root level!");
+        }
+        //jsonObject.put("$", keys, sub.typedValue());
+        _.set(jsonObject, keys, getTypedValue(sub));
+      } else {
+        _.set(jsonObject, keys, getTypedValue(sub));
+      }
     }
   }
 
@@ -187,7 +200,7 @@ export abstract class PayloadProcessorOutbound {
     let result: any = "";
     if (path != undefined && path != "" && json != undefined) {
       const expression = this.JSONATA(path);
-      result = await expression.evaluate(json) as JSON;
+      result = (await expression.evaluate(json)) as JSON;
     }
     return result;
   }

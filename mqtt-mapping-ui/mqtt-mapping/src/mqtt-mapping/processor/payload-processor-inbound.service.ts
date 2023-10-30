@@ -115,14 +115,21 @@ export abstract class PayloadProcessorInbound {
 
         if (mapping.targetAPI != API.INVENTORY.name) {
           if (pathTarget == findDeviceIdentifier(mapping).pathTarget) {
-            let sourceId: string =
-              await this.c8yClient.resolveExternalId2GlobalId(
-                {
-                  externalId: substituteValue.value.toString(),
-                  type: mapping.externalIdType,
-                },
+            let sourceId: string;
+            const identity = {
+              externalId: substituteValue.value.toString(),
+              type: mapping.externalIdType,
+            };
+            try {
+              sourceId = await this.c8yClient.resolveExternalId2GlobalId(
+                identity,
                 context
               );
+            } catch (e) {
+              console.log(
+                `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
+              );
+            }
             if (!sourceId && mapping.createNonExistingDevice) {
               let request = {
                 c8y_IsDevice: {},
@@ -157,7 +164,7 @@ export abstract class PayloadProcessorInbound {
                 context.requests[newPredecessor - 1].error = e;
               }
               predecessor = newPredecessor;
-            } else if (sourceId == null && context.sendPayload) {
+            } else if (!sourceId && context.sendPayload) {
               throw new Error(
                 "External id " +
                   substituteValue +
@@ -165,8 +172,8 @@ export abstract class PayloadProcessorInbound {
                   mapping.externalIdType +
                   " not found!"
               );
-            } else if (sourceId == null) {
-              substituteValue.value = null;
+            } else if (!sourceId) {
+              substituteValue.value = substituteValue.value.toString();
             } else {
               substituteValue.value = sourceId.toString();
             }
@@ -250,21 +257,27 @@ export abstract class PayloadProcessorInbound {
     let subValueNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
-    if (
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
-        subValueMissing) ||
-      (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
-    ) {
-      _.unset(jsonObject, keys);
-    } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-      let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
-      if (pathIsNested) {
-        throw new Error("Can only crrate new nodes ion the root level!");
-      }
-      //jsonObject.put("$", keys, sub.typedValue());
-      _.set(jsonObject, keys, getTypedValue(sub));
+    if (keys == "$") {
+      Object.keys(getTypedValue(sub)).forEach((key) => {
+        jsonObject[key] = getTypedValue(sub)[key as keyof Object];
+      });
     } else {
-      _.set(jsonObject, keys, getTypedValue(sub));
+      if (
+        (sub.repairStrategy == RepairStrategy.REMOVE_IF_MISSING &&
+          subValueMissing) ||
+        (sub.repairStrategy == RepairStrategy.REMOVE_IF_NULL && subValueNull)
+      ) {
+        _.unset(jsonObject, keys);
+      } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
+        let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+        if (pathIsNested) {
+          throw new Error("Can only crrate new nodes ion the root level!");
+        }
+        //jsonObject.put("$", keys, sub.typedValue());
+        _.set(jsonObject, keys, getTypedValue(sub));
+      } else {
+        _.set(jsonObject, keys, getTypedValue(sub));
+      }
     }
   }
 
