@@ -44,17 +44,12 @@ const extensionRoutes: Route[] = [
     pathMatch: "full",
     children: [
       {
-        // path: 'sag-ps-pkg-mqtt-mapping/extensions/properties/50051686',
         path: "properties/:id",
         component: ExtensionPropertiesComponent,
       },
     ],
     //canActivate: [ExtensionGuard],
   },
-  // {
-  //   path: 'sag-ps-pkg-mqtt-mapping/extensions/properties/:id',
-  //   component: ExtensionPropertiesComponent,
-  // }
 ];
 
 @NgModule({
@@ -66,7 +61,6 @@ const extensionRoutes: Route[] = [
     MonitoringModule,
     ConfigurationModule,
     ExtensionModule,
-    Editor2TestModule,
     FormsModule,
     ModalModule,
     ReactiveFormsModule,

@@ -7,7 +7,7 @@ import {
   MappingSubstitution,
   RepairStrategy,
 } from "../../shared/mapping.model";
-import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
@@ -68,14 +68,12 @@ import { definesDeviceIdentifier } from "../../shared/util";
             {{ "Path target" | translate }}
           </span>
         </label>
-        <c8y-field-input>
-          <input
-            type="text"
-            readOnly
-            [(ngModel)]="editedSubstitution.pathTarget"
-            class="form-control"
-          />
-        </c8y-field-input>
+        <input
+          type="text"
+          readOnly
+          [(ngModel)]="editedSubstitution.pathTarget"
+          class="form-control"
+        />
       </c8y-form-group>
       <c8y-form-group>
         <label
@@ -242,14 +240,14 @@ export class EditSubstitutionComponent implements OnInit {
 
   isExpandToArrayDisabled() {
     const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
-    const d1 = this.mapping.direction == Direction.INBOUND;
-    const d2 = this.mapping.direction == Direction.OUTBOUND;
-    const d3 = definesDeviceIdentifier(
+    const d1 = this.mapping.direction == Direction.OUTBOUND;
+    const d2 = definesDeviceIdentifier(
       this.mapping.targetAPI,
       this.substitution,
       this.mapping.direction
     );
-    const r = d0 || d1 || (d2 && !d3);
+    //const r = d0 || d1 || (!d1 && d2);
+    const r = d0 || d1;
     //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }

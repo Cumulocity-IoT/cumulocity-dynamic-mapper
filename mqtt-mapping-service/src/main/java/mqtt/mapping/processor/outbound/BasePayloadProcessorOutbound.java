@@ -21,7 +21,9 @@
 
 package mqtt.mapping.processor.outbound;
 
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
@@ -93,7 +95,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * is required in the payload for a substitution
          */
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        payloadTarget.set(TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        payloadTarget.set(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
 
         String deviceSource = "undefined";
 
@@ -109,7 +111,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * step 4 prepare target payload for sending to mqttBroker
          */
         if (!mapping.targetAPI.equals(API.INVENTORY)) {
-            List<String> topicLevels = payloadTarget.read(TOKEN_TOPIC_LEVEL);
+            List<String> topicLevels = payloadTarget.read(Mapping.TOKEN_TOPIC_LEVEL);
             if (topicLevels != null && topicLevels.size() > 0) {
                 // now merge the replaced topic levels
                 MutableInt c = new MutableInt(0);
@@ -133,7 +135,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
             }
             AbstractExtensibleRepresentation attocRequest = null;
             // remove TOPIC_LEVEL
-            payloadTarget.delete(TOKEN_TOPIC_LEVEL);
+            payloadTarget.delete(Mapping.TOKEN_TOPIC_LEVEL);
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
                             payloadTarget.jsonString(),

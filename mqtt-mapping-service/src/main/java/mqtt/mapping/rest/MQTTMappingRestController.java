@@ -242,7 +242,7 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping();
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
-                mappingComponent.resetMappingStatus();
+                mappingComponent.initializeMappingStatus(true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 c8yAgent.reloadExtensions();
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
@@ -357,7 +357,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            mapping = mappingComponent.updateMapping(mapping, false);
+            mapping = mappingComponent.updateMapping(mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache();
             } else {
@@ -426,8 +426,8 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    private boolean userHasMappingAdminRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
+    private boolean userHasMQTTMappingAdminRole() {
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingAdminRole));
     }
 
     private boolean userHasMQTTMappingCreateRole() {

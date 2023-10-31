@@ -69,7 +69,7 @@ export class Editor2TestComponent implements OnInit, AfterViewInit {
     );
   }
 
-  onSelectedSourcePathChanged(event) {
+  onSelectedPathSourceChanged(event) {
     console.log("Something happend in the editor: ", event);
   }
 

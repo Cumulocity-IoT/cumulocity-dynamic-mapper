@@ -51,7 +51,6 @@ import {
 } from "../../shared/mapping.model";
 import {
   getExternalTemplate,
-  isFilterOutboundUnique,
   isTemplateTopicUnique,
   SAMPLE_TEMPLATES_C8Y,
 } from "../../shared/util";
@@ -59,15 +58,13 @@ import { APIRendererComponent } from "../renderer/api.renderer.component";
 import { QOSRendererComponent } from "../renderer/qos-cell.renderer.component";
 import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
 import { TemplateRendererComponent } from "../renderer/template.renderer.component";
-import { ActiveRendererComponent } from "../renderer/active.renderer.component";
 import { MappingService } from "../core/mapping.service";
 import { BsModalService } from "ngx-bootstrap/modal";
-import { Observable, Subject, from } from "rxjs";
-import { EditorMode, StepperConfiguration } from "../stepper/stepper-model";
+import { Subject } from "rxjs";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
-import { Dir } from "@angular/cdk/bidi";
 import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
 
 @Component({
@@ -481,7 +478,7 @@ export class MappingComponent implements OnInit {
     this.mappings = await this.mappingService.loadMappings(
       this.stepperConfiguration.direction
     );
-    console.log("Updated mappings", this.mappings);
+    //console.log("Updated mappings", this.mappings);
   }
 
   async onCommitMapping(mapping: Mapping) {

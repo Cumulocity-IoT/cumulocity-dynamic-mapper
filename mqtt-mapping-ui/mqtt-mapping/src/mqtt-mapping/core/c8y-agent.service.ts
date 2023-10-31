@@ -124,7 +124,15 @@ export class C8YAgent {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IManagedObject> {
-    let deviceId: string = await this.resolveExternalId2GlobalId(identity, context);
+    let deviceId: string;
+    try {
+      deviceId = await this.resolveExternalId2GlobalId(identity, context);
+    } catch (e) {
+      console.log(
+        `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
+      );
+    }
+
     let currentRequest = context.requests[context.requests.length - 1].request;
     let device: Partial<IManagedObject> = {
       ...currentRequest,
@@ -132,14 +140,17 @@ export class C8YAgent {
       c8y_mqttMapping_TestDevice: {},
       com_cumulocity_model_Agent: {},
     };
-
+    // remove device identifier
+    
     if (deviceId) {
+      device.id = deviceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context
-      );
-      return response.data;
-    } else {
+        );
+        return response.data;
+      } else {
+      delete device[API.INVENTORY.identifier];
       const response: IResult<IManagedObject> = await this.inventory.create(
         device,
         context
@@ -160,13 +171,11 @@ export class C8YAgent {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<string> {
-    try {
-      const { data, res } = await this.identity.resolveExternalId2GlobalId(identity, context);
-      return data.managedObject.id as string;
-    } catch (e) {
-      console.log(`External id ${identity.externalId} doesn't exist!`);
-      return;
-    }
+    const { data, res } = await this.identity.resolveExternalId2GlobalId(
+      identity,
+      context
+    );
+    return data.managedObject.id as string;
   }
 
   async resolveGlobalId2ExternalId(
@@ -174,12 +183,11 @@ export class C8YAgent {
     externalIdType: string,
     context: ProcessingContext
   ): Promise<string> {
-    try {
-      const  data = await this.identity.resolveGlobalId2ExternalId(identity, externalIdType, context);
-      return data.managedObject.id as string;
-    } catch (e) {
-      console.log(`External id ${identity}, ${externalIdType}  doesn't exist!`);
-      return;
-    }
+    const data = await this.identity.resolveGlobalId2ExternalId(
+      identity,
+      externalIdType,
+      context
+    );
+    return data.managedObject.id as string;
   }
 }

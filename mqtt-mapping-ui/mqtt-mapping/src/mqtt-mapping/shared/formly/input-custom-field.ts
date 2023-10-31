@@ -23,12 +23,12 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: 'formly-field-input-sm',
+  selector: 'formly-field-input-custom',
   template: `<input
   *ngIf="type !== 'number'; else numberTmp"
   [type]="type"
   [formControl]="formControl"
-  class="form-control input-sm"
+  [class]="class"
   [formlyAttributes]="field"
   [required]="to.required"
   [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
@@ -38,7 +38,7 @@ import { FieldType } from '@ngx-formly/core';
   <input
     type="number"
     [formControl]="formControl"
-    class="form-control input-sm"
+    [class]="class"
     [formlyAttributes]="field"
     [required]="to.required"
     [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
@@ -47,7 +47,13 @@ import { FieldType } from '@ngx-formly/core';
 </ng-template>`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FieldInputSmall extends FieldType {
+export class FieldInputCustom extends FieldType {
+  get type() {
+    return this.to.type || 'text';
+  }
 
+  get class() {
+    return `form-control ${this.to.class}`;
+  }
 }
 

@@ -25,11 +25,10 @@ import {
   Input,
   OnInit,
   Output,
-  ViewChild,
   ViewEncapsulation,
 } from "@angular/core";
 import { definesDeviceIdentifier } from "../../../shared/util";
-import { Direction, Mapping, MappingSubstitution } from "../../../shared/mapping.model";
+import { Direction, MappingSubstitution } from "../../../shared/mapping.model";
 import { isDisabled } from "../util";
 import { EditorMode } from "../stepper-model";
 
