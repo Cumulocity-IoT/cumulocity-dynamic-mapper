@@ -109,16 +109,18 @@ public class MappingComponent {
     // cache of inbound mappings stored in a tree used for resolving
     private TreeNode resolverMappingInbound = InnerNode.createRootNode();
 
-    private void initializeMappingStatus() {
-        log.info("Initializing status: {}, {} ", mappingServiceRepresentation.getMappingStatus(),
-                (mappingServiceRepresentation.getMappingStatus() == null
-                        || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
-                                : mappingServiceRepresentation.getMappingStatus().size()));
+    public void initializeMappingStatus(boolean reset) {
 
-        if (mappingServiceRepresentation.getMappingStatus() != null) {
+        if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
+            log.info("Initializing status: {}, {} ", mappingServiceRepresentation.getMappingStatus(),
+                    (mappingServiceRepresentation.getMappingStatus() == null
+                            || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
+                                    : mappingServiceRepresentation.getMappingStatus().size()));
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 statusMapping.put(ms.ident, ms);
             });
+        } else {
+            statusMapping = new HashMap<String, MappingStatus>();
         }
         if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
@@ -128,7 +130,7 @@ public class MappingComponent {
 
     public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
         this.mappingServiceRepresentation = mappingServiceRepresentation;
-        initializeMappingStatus();
+        initializeMappingStatus(false);
     }
 
     public void sendStatusMapping() {
@@ -144,7 +146,8 @@ public class MappingComponent {
                 updateMor.setAttrs(service);
                 this.inventoryApi.update(updateMor);
             } else {
-                log.debug("Ignoring mapping monitoring: {}, intialized: {}", statusMapping.values().size(), intialized);
+                log.debug("Ignoring mapping monitoring: {}, initialized: {}", statusMapping.values().size(),
+                        intialized);
             }
         });
     }
@@ -178,12 +181,6 @@ public class MappingComponent {
 
     public List<MappingStatus> getMappingStatus() {
         return new ArrayList<MappingStatus>(statusMapping.values());
-    }
-
-    public List<MappingStatus> resetMappingStatus() {
-        ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
-        msl.forEach(ms -> ms.reset());
-        return msl;
     }
 
     public void saveMappings(List<Mapping> mappings) {
@@ -264,6 +261,7 @@ public class MappingComponent {
                 mr.setId(mapping.id);
                 ManagedObjectRepresentation mor = toManagedObject(mr);
                 mor.setId(GId.asGId(mapping.id));
+                mor.setName(mapping.name);
                 inventoryApi.update(mor);
                 return mapping;
             } else {
@@ -302,7 +300,7 @@ public class MappingComponent {
             mr.getC8yMQTTMapping().setId(mapping.id);
             mor = toManagedObject(mr);
             mor.setId(GId.asGId(mapping.id));
-
+            mor.setName(mapping.name);
             inventoryApi.update(mor);
             log.info("Created mapping: {}", mor);
             return mapping;

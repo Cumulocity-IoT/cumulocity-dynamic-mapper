@@ -131,7 +131,7 @@ public abstract class BasePayloadProcessor<T> {
                 }
 
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
-                    if (pathTarget.equals(deviceIdentifierMapped2PathTarget2)) {
+                    if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.mapDeviceIdentifier) {
 
                         ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
