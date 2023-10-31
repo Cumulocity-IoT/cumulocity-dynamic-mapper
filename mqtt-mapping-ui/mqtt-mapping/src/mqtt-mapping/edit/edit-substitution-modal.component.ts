@@ -156,7 +156,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
           <button
             class="btn-clean text-primary"
             [popover]="popTemplateRepair"
-            popoverTitle="Resolve to externalId"
+            popoverTitle="Repair Strategy"
             placement="right"
             triggers="focus"
             type="button"
@@ -240,14 +240,14 @@ export class EditSubstitutionComponent implements OnInit {
 
   isExpandToArrayDisabled() {
     const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
-    const d1 = this.mapping.direction == Direction.INBOUND;
-    const d2 = this.mapping.direction == Direction.OUTBOUND;
-    const d3 = definesDeviceIdentifier(
+    const d1 = this.mapping.direction == Direction.OUTBOUND;
+    const d2 = definesDeviceIdentifier(
       this.mapping.targetAPI,
       this.substitution,
       this.mapping.direction
     );
-    const r = d0 || d1 || (d2 && !d3);
+    //const r = d0 || d1 || (!d1 && d2);
+    const r = d0 || d1;
     //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }

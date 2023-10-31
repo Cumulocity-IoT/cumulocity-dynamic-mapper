@@ -153,7 +153,7 @@ export const API = {
   },
   INVENTORY: {
     name: "INVENTORY",
-    identifier: "_DEVICE_IDENT_",
+    identifier: "id",
     notificationFilter: "managedObjects",
   },
   OPERATION: {

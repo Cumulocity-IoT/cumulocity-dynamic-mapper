@@ -463,6 +463,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // append external id to name
                     mor.setName(mor.getName());
                     mor.set(new IsDevice());
+                    // remove id
+                    mor.setId(null);
+
                     mor = inventoryApi.create(mor, context);
                     log.info("New device created: {}", mor);
                     identityApi.create(mor, identity, context);

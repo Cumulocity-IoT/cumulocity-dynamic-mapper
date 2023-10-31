@@ -112,9 +112,15 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
                     type: SubstituteValueType.ARRAY,
                     repairStrategy: substitution.repairStrategy,
                   });
+                } else if (whatIsIt(jn) == "Object") {
+                  postProcessingCacheEntry.push({
+                    value: jn,
+                    type: SubstituteValueType.OBJECT,
+                    repairStrategy: substitution.repairStrategy,
+                  });
                 } else {
                   console.warn(
-                    `Since result is not textual or number it is ignored: ${jn}`
+                    `Since result is not (number, array, textual, object), it is ignored: ${jn}`
                   );
                 }
               });
@@ -188,7 +194,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
       }
     }
     // iterate over substitutions END
-        // });
+    // });
 
     // no substitution for the time property exists, then use the system time
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name) {
