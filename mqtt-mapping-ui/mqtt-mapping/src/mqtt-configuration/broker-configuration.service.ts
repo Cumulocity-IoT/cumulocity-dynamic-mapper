@@ -58,6 +58,7 @@ export class BrokerConfigurationService {
     status: Status.NOT_READY,
   });
   private _currentServiceStatus = this.serviceStatus.asObservable();
+  private _feature: Feature;
   private realtime: Realtime;
 
   async initializeMQTTAgent(): Promise<string> {
@@ -158,14 +159,16 @@ export class BrokerConfigurationService {
   }
 
   async getFeatures(): Promise<Feature> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-      {
-        method: "GET",
-      }
-    );
-    const result = await response.json();
-    return result;
+    if (!this._feature) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+        {
+          method: "GET",
+        }
+      );
+      this._feature = await response.json();
+    }
+    return this._feature;
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
@@ -181,7 +184,7 @@ export class BrokerConfigurationService {
   }
 
   unsubscribeFromMonitoringChannel(subscription: object) {
-     this.realtime.unsubscribe(subscription);
+    this.realtime.unsubscribe(subscription);
   }
 
   private updateStatus(p: object): void {

@@ -61,6 +61,7 @@ import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.compon
 import { FieldInputCustom } from "./shared/formly/input-custom-field";
 import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
 import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
+import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
 
 @NgModule({
   declarations: [
@@ -142,6 +143,7 @@ import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.co
         types: [
           { name: "text", component: FormlyTextField },
           { name: "filler", component: FormlyFiller },
+          { name: "textarea-custom", component: FieldTextareaCustom },
           { name: "input-custom", component: FieldInputCustom },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },

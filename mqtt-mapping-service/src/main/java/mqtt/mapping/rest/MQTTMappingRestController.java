@@ -204,7 +204,7 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping();
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
-                mappingComponent.resetMappingStatus();
+                mappingComponent.initializeMappingStatus(true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 c8yAgent.reloadExtensions();
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {

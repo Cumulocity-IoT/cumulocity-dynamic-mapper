@@ -213,8 +213,7 @@ export class MappingStepperComponent implements OnInit {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
-              placeholder:
-                "$join([$substring(txt,5), id]) or $number(id)/10",
+              placeholder: "$join([$substring(txt,5), id]) or $number(id)/10",
               description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
               in your expressions:
               <ol>
@@ -238,7 +237,6 @@ export class MappingStepperComponent implements OnInit {
             },
             expressionProperties: {
               "templateOptions.class": (model) => {
-                //console.log("Logging class:", t)
                 if (
                   model.currentSubstitution.pathSource == "" &&
                   model.stepperConfiguration.allowDefiningSubstitutions
@@ -273,6 +271,10 @@ export class MappingStepperComponent implements OnInit {
                     .value
                 );
               },
+              description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
+              expressions as in the source template. In adddtion you can use <code>$</code> to merge the 
+              result of the source expression with the existing target template. Special care is 
+              required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code> as this can result inAPI calls that are rejected by the Cumulocity backend!`,
               required: false,
             },
             expressionProperties: {
@@ -339,7 +341,7 @@ export class MappingStepperComponent implements OnInit {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
             key: "currentSubstitution.sourceExpression.result",
-            type: "input-custom",
+            type: "textarea-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
               class: "input-sm",
@@ -347,15 +349,18 @@ export class MappingStepperComponent implements OnInit {
               readonly: true,
             },
             expressionProperties: {
-              "templateOptions.label": (label) =>
+              "templateOptions.label": (model) =>
                 `Result Type [${this.templateModel.currentSubstitution.sourceExpression.resultType}]`,
+              "templateOptions.value": (model) => {
+                return `${this.templateModel.currentSubstitution.sourceExpression.result}`;
+              },
             },
           },
           {
             className:
               "col-lg-5 text-monospace font-smaller column-left-border",
             key: "currentSubstitution.targetExpression.result",
-            type: "input-custom",
+            type: "textarea-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
               class: "input-sm",
@@ -363,8 +368,11 @@ export class MappingStepperComponent implements OnInit {
               readonly: true,
             },
             expressionProperties: {
-              "templateOptions.label": (label) =>
+              "templateOptions.label": (model) =>
                 `Result Type [${this.templateModel.currentSubstitution.targetExpression.resultType}]`,
+              "templateOptions.value": (model) => {
+                return `${this.templateModel.currentSubstitution.targetExpression.result}`;
+              },
             },
           },
         ],
@@ -529,6 +537,11 @@ export class MappingStepperComponent implements OnInit {
           ` defined s in the previous step.`;
         this.templateModel.currentSubstitution.targetExpression.severity =
           "text-info";
+      } else if (path == "$") {
+        this.templateModel.currentSubstitution.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
+        template and this rersults in merging the source expression with the target template.`;
+        this.templateModel.currentSubstitution.targetExpression.severity =
+          "text-warning";
       }
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
