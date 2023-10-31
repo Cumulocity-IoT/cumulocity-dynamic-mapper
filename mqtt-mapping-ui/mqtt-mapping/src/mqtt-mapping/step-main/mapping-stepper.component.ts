@@ -272,9 +272,9 @@ export class MappingStepperComponent implements OnInit {
                 );
               },
               description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
-              expressions as in the source template. In adddtion you can use <code>$</code> to merge the 
+              expressions as in the source template. In addition you can use <code>$</code> to merge the 
               result of the source expression with the existing target template. Special care is 
-              required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code> as this can result inAPI calls that are rejected by the Cumulocity backend!`,
+              required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
               required: false,
             },
             expressionProperties: {
