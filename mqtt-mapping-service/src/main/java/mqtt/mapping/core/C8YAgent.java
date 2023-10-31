@@ -371,6 +371,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // append external id to name
                     mor.setName(mor.getName());
                     mor.set(new IsDevice());
+                    // remove id
+                    mor.setId(null);
+
                     mor = inventoryApi.create(mor, context);
                     log.info("New device created: {}", mor);
                     identityApi.create(mor, identity, context);
@@ -401,7 +404,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
-            log.info("Trying to load extension id: {}, name: {}, ", extension.getId().getValue(), extName);
+            log.info("Trying to load extension id: {}, name: {}", extension.getId().getValue(), extName);
 
             try {
                 if (external) {

@@ -367,4 +367,28 @@
       </div>
     </div>
   </div>
+  <div class="col-lg-6">
+    <div class="card" *ngIf="feature?.outputMappingEnabled">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Mapping Monitoring" | translate }}
+        </h4>
+      </div>
+      <div class="inner-scroll">
+        <div class="card-footer">
+          <div class="form-group">
+            <button
+              type="button"
+              name="update"
+              class="btn btn-primary"
+              (click)="resetMonitoring()"
+              translate
+            >
+              Reset Statistic
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

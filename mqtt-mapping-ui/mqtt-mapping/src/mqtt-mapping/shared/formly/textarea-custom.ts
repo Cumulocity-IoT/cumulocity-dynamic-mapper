@@ -19,15 +19,30 @@
  * @authors Christof Strack
  */
 
-/* not working
-div:has(>c8y-li-body ) {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-} */
+import { ChangeDetectionStrategy, Component, OnInit } from "@angular/core";
+import { FieldType, FieldTypeConfig, FormlyFieldProps } from "@ngx-formly/core";
 
- .c8y-list__item__body:has(>c8y-li-body ) {
-  padding-top: 6px;
-  padding-bottom: 4px;
-} 
+interface TextAreaProps extends FormlyFieldProps {
+  cols?: number;
+  rows?: number;
+}
 
-
+@Component({
+  selector: "formly-field-textarea-custom",
+  template: `
+    <textarea
+      [class]="class"
+      [class.is-invalid]="showError"
+      [attr.aria-describedby]="id + '-formly-validation-error'"
+      [attr.aria-invalid]="showError"
+    >
+ {{ to.value }}
+</textarea>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class FieldTextareaCustom extends FieldType {
+  get class() {
+    return `form-control ${this.to.class}`;
+  }
+}

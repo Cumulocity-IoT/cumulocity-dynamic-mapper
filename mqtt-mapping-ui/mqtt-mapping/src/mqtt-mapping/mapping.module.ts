@@ -36,15 +36,14 @@ import { StatusRendererComponent } from "./renderer/status-cell.renderer.compone
 import { ActiveRendererComponent } from "./renderer/active.renderer.component";
 import { TemplateRendererComponent } from "./renderer/template.renderer.component";
 import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
-import { MappingStepperComponent } from "./stepper/mapping-stepper.component";
-import { SubstitutionRendererComponent } from "./stepper/substitution/substitution-renderer.component";
+import { MappingStepperComponent } from "./step-main/mapping-stepper.component";
+import { SubstitutionRendererComponent } from "./step-main/substitution/substitution-renderer.component";
 import { SharedModule } from "../shared/shared.module";
 import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
 import {
-  checkSubstitutionIsValid,
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid,
 } from "../shared/util";
@@ -59,12 +58,17 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
 import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
 import { FormlyFiller } from "./shared/formly/filler";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
-import { FieldInputSmall } from "./shared/formly/input-small-field";
+import { FieldInputCustom } from "./shared/formly/input-custom-field";
+import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
+import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
+import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
+    MappingStepTestingComponent,
+    MappingStepPropertiesComponent,
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
@@ -84,7 +88,7 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
     C8YSwitchField,
     SelectComponent,
     FieldCheckbox,
-    FieldInputSmall,
+    FieldInputCustom,
   ],
   imports: [
     CoreModule,
@@ -97,6 +101,8 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
   ],
   entryComponents: [
     MappingComponent,
+    MappingStepTestingComponent,
+    MappingStepPropertiesComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
     StatusRendererComponent,
@@ -133,15 +139,12 @@ import { FieldInputSmall } from "./shared/formly/input-small-field";
             name: "checkTopicsOutboundAreValid",
             validation: checkTopicsOutboundAreValid,
           },
-          {
-            name: "checkSubstitutionIsValid",
-            validation: checkSubstitutionIsValid,
-          },
         ],
         types: [
           { name: "text", component: FormlyTextField },
           { name: "filler", component: FormlyFiller },
-          { name: "input-sm", component: FieldInputSmall },
+          { name: "textarea-custom", component: FieldTextareaCustom },
+          { name: "input-custom", component: FieldInputCustom },
           { name: "button", component: FormlyFieldButton },
           { name: "message-field", component: MessageField },
           { name: "c8y-switch", component: C8YSwitchField },
