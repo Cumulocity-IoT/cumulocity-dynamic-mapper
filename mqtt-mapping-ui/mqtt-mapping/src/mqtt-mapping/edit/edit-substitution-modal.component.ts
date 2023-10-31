@@ -156,7 +156,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
           <button
             class="btn-clean text-primary"
             [popover]="popTemplateRepair"
-            popoverTitle="Resolve to externalId"
+            popoverTitle="Repair Strategy"
             placement="right"
             triggers="focus"
             type="button"
