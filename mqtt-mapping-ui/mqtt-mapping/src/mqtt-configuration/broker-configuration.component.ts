@@ -228,14 +228,25 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   private async disconnectFromMQTT() {
-    const response = await this.configurationService.runOperation(
+    const res = await this.configurationService.runOperation(
       Operation.DISCONNECT
     );
-    console.log("Details disconnectFromMQTT", response);
-    if (response.status < 300) {
+    console.log("Details disconnectFromMQTT", res);
+    if (res.status < 300) {
       this.alertservice.success(gettext("Successfully disconnected"));
     } else {
       this.alertservice.danger(gettext("Failed to disconnect"));
+    }
+  }
+
+  public async resetMonitoring() {
+    const res =  await this.configurationService.runOperation(
+      Operation.RESET_STATUS_MAPPING
+    );
+    if (res.status < 300) {
+      this.alertservice.success(gettext("Successfully rreset"));
+    } else {
+      this.alertservice.danger(gettext("Failed to rest statistic."));
     }
   }
 

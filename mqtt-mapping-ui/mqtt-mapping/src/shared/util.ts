@@ -95,7 +95,8 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
  }`,
   INVENTORY: `{ 
     \"name\": \"Vibration Sensor\",
-    \"type\": \"maker_Vibration_Sensor\"
+    \"type\": \"maker_Vibration_Sensor\",
+    \"id\": \"909090\"
  }`,
   OPERATION: `{ 
    \"deviceId\": \"909090\",
@@ -237,7 +238,7 @@ export const SCHEMA_INVENTORY = {
   $id: "http://example.com/root.json",
   type: "object",
   title: "INVENTORY",
-  required: ["c8y_IsDevice", "type", "name"],
+  required: ["c8y_IsDevice", "type", "name", "id"],
   properties: {
     c8y_IsDevice: {
       $id: "#/properties/c8y_IsDevice",
@@ -254,6 +255,11 @@ export const SCHEMA_INVENTORY = {
       $id: "#/properties/name",
       type: "string",
       title: "Name of the device.",
+    },
+    id: {
+      $id: "#/properties/id",
+      type: "string",
+      title: "Cumulocity id of the device.",
     },
   },
 };
@@ -289,7 +295,6 @@ export const SCHEMA_PAYLOAD = {
   required: [],
 };
 
-export const TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
 export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
 
@@ -903,4 +908,41 @@ export function cloneSubstitution(
     expandArray: sub.expandArray,
     resolve2ExternalId: sub.resolve2ExternalId,
   };
+}
+
+export function expandExternalTemplate(
+  t: object,
+  m: Mapping,
+  levels: String[]
+): object {
+  if (Array.isArray(t)) {
+    return t;
+  } else {
+    return {
+      ...t,
+      _TOPIC_LEVEL_: levels,
+    };
+  }
+}
+
+export function expandC8YTemplate(t: object, m: Mapping): object {
+  if (m.targetAPI == API.INVENTORY.name) {
+    return {
+      ...t,
+      id: "909090",
+    };
+  } else {
+    return t;
+  }
+}
+
+export function reduceSourceTemplate(t: object, patched: boolean): string {
+  if (!patched) delete t[TOKEN_TOPIC_LEVEL];
+  let tt = JSON.stringify(t);
+  return tt;
+}
+
+export function reduceTargetTemplate(t: object, patched: boolean): string {
+  let tt = JSON.stringify(t);
+  return tt;
 }

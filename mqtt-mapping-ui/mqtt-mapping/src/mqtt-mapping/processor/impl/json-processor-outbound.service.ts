@@ -149,21 +149,27 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 findDeviceIdentifier(mapping).pathSource &&
               substitution.resolve2ExternalId
             ) {
-              let externalId: string =
-                await this.c8yAgent.resolveGlobalId2ExternalId(
+              let externalId: string;
+              try {
+                externalId = await this.c8yAgent.resolveGlobalId2ExternalId(
                   extractedSourceContent,
                   mapping.externalIdType,
                   context
                 );
-              if ((!externalId || externalId == null) && context.sendPayload) {
-                throw new Error(
-                  "External id " +
-                    extractedSourceContent +
-                    " for type " +
-                    mapping.externalIdType +
-                    " not found!"
+                externalId = extractedSourceContent;
+              } catch (e) {
+                console.log(
+                  `External id ${extractedSourceContent}, ${mapping.externalIdType} doesn't exist! Just return original id ${extractedSourceContent}`
                 );
-              } else if (!externalId || externalId == null) {
+                if (context.sendPayload) {
+                  throw new Error(
+                    "External id " +
+                      extractedSourceContent +
+                      " for type " +
+                      mapping.externalIdType +
+                      " not found!"
+                  );
+                } 
                 externalId = extractedSourceContent;
               }
               extractedSourceContent = `${externalId}_${mapping.externalIdType}`;

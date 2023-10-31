@@ -109,16 +109,18 @@ public class MappingComponent {
     // cache of inbound mappings stored in a tree used for resolving
     private TreeNode resolverMappingInbound = InnerNode.createRootNode();
 
-    private void initializeMappingStatus() {
-        log.info("Initializing status: {}, {} ", mappingServiceRepresentation.getMappingStatus(),
-                (mappingServiceRepresentation.getMappingStatus() == null
-                        || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
-                                : mappingServiceRepresentation.getMappingStatus().size()));
+    public void initializeMappingStatus(boolean reset) {
 
-        if (mappingServiceRepresentation.getMappingStatus() != null) {
+        if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
+            log.info("Initializing status: {}, {} ", mappingServiceRepresentation.getMappingStatus(),
+                    (mappingServiceRepresentation.getMappingStatus() == null
+                            || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
+                                    : mappingServiceRepresentation.getMappingStatus().size()));
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 statusMapping.put(ms.ident, ms);
             });
+        } else {
+            statusMapping = new HashMap<String, MappingStatus>();
         }
         if (!statusMapping.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
             statusMapping.put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
@@ -128,7 +130,7 @@ public class MappingComponent {
 
     public void initializeMappingComponent(MappingServiceRepresentation mappingServiceRepresentation) {
         this.mappingServiceRepresentation = mappingServiceRepresentation;
-        initializeMappingStatus();
+        initializeMappingStatus(false);
     }
 
     public void sendStatusMapping() {
@@ -144,7 +146,8 @@ public class MappingComponent {
                 updateMor.setAttrs(service);
                 this.inventoryApi.update(updateMor);
             } else {
-                log.debug("Ignoring mapping monitoring: {}, intialized: {}", statusMapping.values().size(), intialized);
+                log.debug("Ignoring mapping monitoring: {}, initialized: {}", statusMapping.values().size(),
+                        intialized);
             }
         });
     }
@@ -178,12 +181,6 @@ public class MappingComponent {
 
     public List<MappingStatus> getMappingStatus() {
         return new ArrayList<MappingStatus>(statusMapping.values());
-    }
-
-    public List<MappingStatus> resetMappingStatus() {
-        ArrayList<MappingStatus> msl = new ArrayList<MappingStatus>(statusMapping.values());
-        msl.forEach(ms -> ms.reset());
-        return msl;
     }
 
     public void saveMappings(List<Mapping> mappings) {
@@ -243,7 +240,8 @@ public class MappingComponent {
         return result;
     }
 
-    public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive) throws Exception {
+    public Mapping updateMapping(Mapping mapping, boolean allowUpdateWhenActive, boolean ignoreValidation)
+            throws Exception {
         // test id the mapping is active, we don't delete or modify active mappings
         MutableObject<Exception> exception = new MutableObject<Exception>(null);
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
@@ -255,7 +253,7 @@ public class MappingComponent {
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings();
             List<ValidationError> errors = MappingRepresentation.isMappingValid(mappings, mapping);
-            if (errors.size() == 0) {
+            if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
                 mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
@@ -263,6 +261,7 @@ public class MappingComponent {
                 mr.setId(mapping.id);
                 ManagedObjectRepresentation mor = toManagedObject(mr);
                 mor.setId(GId.asGId(mapping.id));
+                mor.setName(mapping.name);
                 inventoryApi.update(mor);
                 return mapping;
             } else {
@@ -301,7 +300,7 @@ public class MappingComponent {
             mr.getC8yMQTTMapping().setId(mapping.id);
             mor = toManagedObject(mr);
             mor.setId(GId.asGId(mapping.id));
-
+            mor.setName(mapping.name);
             inventoryApi.update(mor);
             log.info("Created mapping: {}", mor);
             return mapping;
@@ -422,12 +421,15 @@ public class MappingComponent {
         log.info("Setting active: {} got mapping: {}", id, active);
         Mapping mapping = getMapping(id);
         mapping.setActive(active);
-        if  (Direction.INBOUND.equals(mapping.direction)) {
+        if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(getCacheMappingInbound().get(id).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
-        updateMapping(mapping, true);
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        boolean ignoreValidation = !active;
+        updateMapping(mapping, true, ignoreValidation);
         // step 4. delete mapping from update cache
         removeDirtyMapping(mapping);
         // step 5. update caches
@@ -446,7 +448,7 @@ public class MappingComponent {
         for (Mapping mapping : dirtyMappings) {
             log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
             // no reload required
-            updateMapping(mapping, true);
+            updateMapping(mapping, true, false);
         }
         // reset dirtySet
         dirtyMappings = new HashSet<Mapping>();

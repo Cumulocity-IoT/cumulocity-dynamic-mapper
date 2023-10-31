@@ -24,6 +24,7 @@ import {
   EventEmitter,
   Input,
   OnInit,
+  Output,
   ViewChild,
   ViewEncapsulation,
 } from "@angular/core";
@@ -46,6 +47,7 @@ import { StepperConfiguration } from "../step-main/stepper-model";
 })
 export class MappingStepTestingComponent implements OnInit {
   @Input() mapping: Mapping;
+  @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() editorTestingRequestTemplateEmitter: EventEmitter<any>;
 
@@ -134,7 +136,13 @@ export class MappingStepTestingComponent implements OnInit {
       false
     );
     this.testingModel.results = testProcessingContext.requests;
-    if (testProcessingContext.errors.length > 0) {
+    const errors = [];
+    testProcessingContext.requests?.forEach((r) => {
+      if (r?.error) {
+        errors.push(r?.error);
+      }
+    });
+    if (testProcessingContext.errors.length > 0 || errors.length > 0) {
       this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
@@ -151,15 +159,23 @@ export class MappingStepTestingComponent implements OnInit {
       true
     );
     this.testingModel.results = testProcessingContext.requests;
-    if (testProcessingContext.errors.length > 0) {
+    const errors = [];
+    testProcessingContext.requests?.forEach((r) => {
+      if (r?.error) {
+        errors.push(r?.error);
+      }
+    });
+    if (testProcessingContext.errors.length > 0 || errors.length > 0) {
       this.alertService.warning("Test tranformation was not successful!");
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
+      this.testResult.emit(false);
     } else {
       this.alertService.info(
         `Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`
       );
+      this.testResult.emit(true);
       //console.log("RES", testProcessingContext.requests[0].response);
     }
     this.onNextTestResult();
