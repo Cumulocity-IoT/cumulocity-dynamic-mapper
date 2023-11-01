@@ -47,6 +47,10 @@ export abstract class PayloadProcessorInbound {
 
   public abstract extractFromSource(context: ProcessingContext): void;
 
+  public initializeCache(): void {
+    this.c8yClient.initializeCache();
+  }
+
   protected JSONATA = require("jsonata");
 
   public async substituteInTargetAndSend(context: ProcessingContext) {
@@ -114,7 +118,10 @@ export abstract class PayloadProcessorInbound {
         }
 
         if (mapping.targetAPI != API.INVENTORY.name) {
-          if (pathTarget == findDeviceIdentifier(mapping).pathTarget && mapping.mapDeviceIdentifier) {
+          if (
+            pathTarget == findDeviceIdentifier(mapping).pathTarget &&
+            mapping.mapDeviceIdentifier
+          ) {
             let sourceId: string;
             const identity = {
               externalId: substituteValue.value.toString(),
