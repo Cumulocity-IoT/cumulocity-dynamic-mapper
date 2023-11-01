@@ -31,13 +31,33 @@
     <div class="card-block p-b-0">
       <div class="container">
         <div class="row">
-          <div class="col-lg-10 col-lg-offset-1">
+          <div class="col-lg-5 col-lg-offset-1 column-right-border">
             <div class="form-group">
               <div style="display: flex">
-                <span>{{ currentSystem }} Payload&nbsp;</span>
-                <!-- <label for="testResult" translate
-                  >{{ currentSystem$| async }} Request&nbsp;</label
-                > -->
+                <label for="testResult" translate
+                  >{{ sourceSystem }} Payload&nbsp;</label
+                >
+              </div>
+              <mapping-json-editor2
+                [options]="editorOptionsTesting"
+                [data]="testingModel.payload"
+                #editorTestingPayload
+                id="editorTestingPayload"
+              >
+              </mapping-json-editor2>
+              <c8y-messages>
+                <c8y-message *ngIf="testingModel.errorMsg" translate
+                  ><span class="text-warning">{{ testingModel.errorMsg }}</span>
+                </c8y-message>
+              </c8y-messages>
+            </div>
+          </div>
+          <div class="col-lg-5 column-left-border">
+            <div class="form-group">
+              <div style="display: flex">
+                <label for="testResult" translate
+                  >{{ targetSystem }} Request&nbsp;</label
+                >
                 <h6>
                   <span class="badge badge-success">{{
                     selectedResult$ | async
@@ -61,12 +81,11 @@
           </div>
         </div>
         <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
-          <div class="col-lg-10 col-lg-offset-1">
+          <div class="col-lg-5 col-lg-offset-1 column-right-border"></div>
+          <div class="col-lg-5 column-left-border">
             <div class="form-group">
               <div style="display: flex">
-                <span
-                  >{{ currentSystem }} Response&nbsp;</span
-                >
+                <label>{{ targetSystem }} Response&nbsp;</label>
                 <h6>
                   <span class="badge badge-success">{{
                     selectedResult$ | async

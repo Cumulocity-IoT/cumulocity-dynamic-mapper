@@ -50,6 +50,12 @@ export class C8YAgent {
     private alert: AlertService
   ) {}
 
+
+  public initializeCache(): void {
+    this.inventory.initializeCache();
+    this.identity.initializeCache();
+  }
+
   async createMEAO(context: ProcessingContext) {
     let result: any;
     let error: string = "";

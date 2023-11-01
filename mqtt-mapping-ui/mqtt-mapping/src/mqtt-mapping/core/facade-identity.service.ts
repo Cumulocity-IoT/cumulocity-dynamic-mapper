@@ -24,7 +24,6 @@ import {
   IExternalIdentity,
   IIdentified,
   IResult,
-  IResultList,
 } from "@c8y/client";
 import * as _ from "lodash";
 import { ProcessingContext } from "../processor/prosessor.model";
@@ -38,6 +37,10 @@ export class FacadeIdentityService {
     private mockIdentity: MockIdentityService,
     private identity: IdentityService
   ) {}
+
+  public initializeCache(): void {
+    this.mockIdentity.initializeCache();
+  }
 
   public async resolveGlobalId2ExternalId(
     managedObjectId: string,
