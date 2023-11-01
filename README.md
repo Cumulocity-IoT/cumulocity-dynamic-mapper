@@ -398,9 +398,8 @@ Connected devices send their data using an external device identifier, e.g. IMEI
 #### Define templates and substitutions for source and target payload
 
 In the second wizard step, shown on the screenshot below the mapping is further defined:
-1. Editing the source template directly or use a snooped template by pressing button ```<-```, arrow left
-2. Editing the target template directly or use a sample template by pressing button ```->```, arrow right
-3. Adding substitutions
+1. Editing the source template directly
+2. Editing the target template directly
 
 
 <p align="center">
@@ -408,11 +407,10 @@ In the second wizard step, shown on the screenshot below the mapping is further 
 </p>
 <br/>
 
-In order to define a substitution ( substitute values in the target payload with values extracted at runtime from the source payload), the UI offers the following features:
-1. Add mapping (button with "+" sign)
-2. Show & Select already defined substitutions (button with skip symbol). A selected substitution is colored and can be deleted by pressing the button with "-" sign
-3. Delete mapping (button with one "-" sign), the selected substitution is deleted
-4. Delete all mappings (button with two "--" signs). In this case the substitution to define the deviceIdentifier is automatically added again. This is the case when a template topic contains a wildcard, either "+"- single level or "#" - multi level
+In order to define a substitution (a substitution substitutes values in the target payload with values extracted at runtime from the source payload), the UI offers the following feaoptionstures:
+1. Add new substitution by pressing button "Add substitution". Further details for the substitution can be defined in the next modal dialog. See as well the next paragraph.
+2. Update an existing substitution, by selecting the substitution in the table of substitutions in the lower section of the wizard. Then press button  "Update substitution" 
+3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
 <img src="resources/image/Generic_MQTT_MappingTemplate_annnotated.png"  style="width: 70%;" />
@@ -420,20 +418,29 @@ In order to define a substitution ( substitute values in the target payload with
 <br/>
 
 To define a new substitution the following steps have to be performed:
-1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate expression on source```
-2. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Substitute in target```
-3. Select  ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
-  * ```multi-device-single-value```
-  * ```multi-device-multi-value```
-  * ```single-device-multi-value```\
+1. Select a property in the source JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate Expression on Source```
+1. Select a property in the target JSON payload by click on the respective property. Then the JSONpath is appears in the field with the label ```Evaluate Expression on Target```
+>**_NOTE:_** Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
+              expressions as in the source template. In addition you can use <code>$</code> to merge the 
+              result of the source expression with the existing target template. Special care is 
+              required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!
+
+3. Press the button "Add substitution". In the next modal dialog the following details can be specified:
+   1. Select option ```Expand Array``` if the result of the source expression is an array and you want to generate any of the following substitutions:
+      * ```multi-device-single-value```
+      * ```multi-device-multi-value```
+      * ```single-device-multi-value```\
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
-4. Select a repair strategy that determines how the mapping is applied:
-  *  ```DEFAULT```: Map the extracted values to the attribute addressed on right side
-  *  ```USE_FIRST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
-  *  ```USE_LAST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
-  *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
-  *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
-5. Press the add button with the ```+``` sign, to add the substitution to the list of substitutions.
+   1. Select option ```Resolve to externalId``` if you want to resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.
+   1. Select a ```Reapir Strategy``` that determines how the mapping is applied:
+      *  ```DEFAULT```: Map the extracted values to the attribute addressed on right side
+      *  ```USE_FIRST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side
+      *  ```USE_LAST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
+      *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+      *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTemplate_EditModal.png"  style="width: 70%;" />
+</p>
 <br/>
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
@@ -441,9 +448,9 @@ To define a new substitution the following steps have to be performed:
 >2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 
-To avoid inconsistent JSON being sent to the Cumulocity API schemas are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
+To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
 
-In the sample below, e.g. a warning is shown since the required property ```c8y_IsDevice``` is  missing in the payload.
+In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
 
 
 <p align="center">
