@@ -34,9 +34,10 @@
           <div class="col-lg-10 col-lg-offset-1">
             <div class="form-group">
               <div style="display: flex">
-                <label for="testResult" translate
-                  >Testing - {{ targetSystem }} Request&nbsp;</label
-                >
+                <span>{{ currentSystem }} Payload&nbsp;</span>
+                <!-- <label for="testResult" translate
+                  >{{ currentSystem$| async }} Request&nbsp;</label
+                > -->
                 <h6>
                   <span class="badge badge-success">{{
                     selectedResult$ | async
@@ -63,8 +64,8 @@
           <div class="col-lg-10 col-lg-offset-1">
             <div class="form-group">
               <div style="display: flex">
-                <label for="testResult" translate
-                  >Testing - {{ targetSystem }} Response&nbsp;</label
+                <span
+                  >{{ currentSystem }} Response&nbsp;</span
                 >
                 <h6>
                   <span class="badge badge-success">{{
@@ -86,7 +87,7 @@
     </div>
   </div>
 </div>
-<div class="col-lg-6 col-lg-offset-3 text-center">
+<div class="col-lg-8 col-lg-offset-2 text-center p-b-24">
   <button
     type="button"
     class="btn btn-default"
@@ -107,6 +108,14 @@
     >
       {{ testingModel.results.length }}</span
     >
+  </button>
+  <button
+    type="button"
+    class="btn btn-default"
+    (click)="onResetTransformation()"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)"
+  >
+    Reset Transform
   </button>
   <button
     type="button"
