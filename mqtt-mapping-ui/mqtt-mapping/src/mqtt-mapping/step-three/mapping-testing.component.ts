@@ -67,7 +67,9 @@ export class MappingStepTestingComponent implements OnInit {
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
+  currentSystem: string;
   targetSystem: string;
+  currentSourceTemplate: any;
 
   editorOptionsTesting: any = {};
 
@@ -108,7 +110,9 @@ export class MappingStepTestingComponent implements OnInit {
       readOnly: true,
     };
 
+    this.currentSystem = this.sourceSystem;
     this.editorTestingRequestTemplateEmitter.subscribe((template) => {
+      this.currentSourceTemplate = template;
       const editorTestingResponseRef =
         this.elementRef.nativeElement.querySelector("#editorTestingResponse");
       if (editorTestingResponseRef != null) {
@@ -122,15 +126,19 @@ export class MappingStepTestingComponent implements OnInit {
       if (editorTestingRequestRef != null) {
         //set schema for editors
         this.editorTestingRequest.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+          getSchema(this.mapping.targetAPI, this.mapping.direction, false)
         );
-        this.testingModel.request = template;
+        this.testingModel.request = this.currentSourceTemplate;
       }
-      console.log("New test template:", template);
+      console.log("New test template:", this.currentSourceTemplate);
     });
   }
 
   async onTestTransformation() {
+    this.currentSystem = this.targetSystem;
+    this.editorTestingRequest.setSchema(
+      getSchema(this.mapping.targetAPI, this.mapping.direction, true)
+    );
     let testProcessingContext = await this.mappingService.testResult(
       this.mapping,
       false
@@ -181,6 +189,15 @@ export class MappingStepTestingComponent implements OnInit {
     this.onNextTestResult();
   }
 
+  async onResetTransformation() {
+    this.currentSystem = this.sourceSystem;
+    this.testingModel.request = this.currentSourceTemplate;
+    this.editorTestingRequest.setSchema(
+      getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+    );
+    this.editorTestingResponse.set({} as JSON);
+  }
+
   public onNextTestResult() {
     if (
       this.testingModel.selectedResult >=
@@ -189,7 +206,7 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
-    this.selectedResult$.next(this.testingModel.selectedResult);
+    this.selectedResult$.next(this.testingModel.selectedResult+1);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length
