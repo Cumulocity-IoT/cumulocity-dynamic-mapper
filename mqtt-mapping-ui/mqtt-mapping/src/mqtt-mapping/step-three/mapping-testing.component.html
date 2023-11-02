@@ -80,7 +80,14 @@
             </div>
           </div>
         </div>
-        <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
+        <div class="legend form-block col-lg-10 col-lg-offset-1"></div>
+        <div
+          class="row"
+          [hidden]="mapping.direction == Direction.OUTBOUND"
+        >
+          <!-- <div class="legend form-block col-lg-10 col-lg-offset-1">
+            Substitutions
+          </div> -->
           <div class="col-lg-5 col-lg-offset-1 column-right-border"></div>
           <div class="col-lg-5 column-left-border">
             <div class="form-group">
@@ -106,7 +113,7 @@
     </div>
   </div>
 </div>
-<div class="col-lg-8 col-lg-offset-2 text-center p-b-24">
+<div class="col-lg-8 col-lg-offset-2 text-center p-b-24 p-t-24">
   <button
     type="button"
     class="btn btn-default"

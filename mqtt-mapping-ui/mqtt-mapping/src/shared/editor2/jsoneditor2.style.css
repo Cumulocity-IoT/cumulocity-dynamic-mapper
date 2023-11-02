@@ -34,3 +34,7 @@ svg {
   --jse-font-size:   var(--c8y-font-size-small);
   --jse-font-size-mono: var(--c8y-font-size-small);
 }
+
+.jse-main {
+  max-height: 300px;
+}
