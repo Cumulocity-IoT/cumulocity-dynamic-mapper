@@ -93,7 +93,7 @@ export class MappingStepperComponent implements OnInit {
   templateFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
   templateFormlyFields: FormlyFieldConfig[];
-  editorTestingRequestTemplateEmitter = new EventEmitter<any>();
+  editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
 
@@ -705,7 +705,7 @@ export class MappingStepperComponent implements OnInit {
       const testSourceTemplate = this.editorSource
         ? this.editorSource.get()
         : {};
-      this.editorTestingRequestTemplateEmitter.emit(testSourceTemplate);
+      this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
       this.onSelectSubstitution(0);
       event.stepper.next();
     }
