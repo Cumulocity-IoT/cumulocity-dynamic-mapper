@@ -23,6 +23,8 @@ package mqtt.mapping.processor.extension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
@@ -44,14 +46,14 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessor<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorInbound(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
-        super(objectMapper, mqttClient, c8yAgent);
+    public ExtensibleProcessorInbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+        super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, MqttMessage mqttMessage)
+    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, ConnectorMessage message)
             throws IOException {
-        context.setPayload(mqttMessage.getPayload());
+        context.setPayload(message.getPayload());
         return context;
     }
 

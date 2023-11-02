@@ -26,27 +26,31 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
 import java.util.Map;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ServiceOperation {
+    private String tenantId;
     @NotNull
     private Operation operation;
     @NotNull
     private Map<String, String> parameter;
 
-    public static ServiceOperation reloadMappings() {
-        return new ServiceOperation(Operation.RELOAD_MAPPINGS, null);
+    public static ServiceOperation reloadMappings(String tenantId) {
+        return new ServiceOperation(tenantId, Operation.RELOAD_MAPPINGS, null);
     }   
-    public static ServiceOperation connect() {
-        return new ServiceOperation(Operation.CONNECT, null);
+    public static ServiceOperation connect(String tenantId, String connectorId) {
+        HashMap<String, String> params = new HashMap<>();
+        params.put("connectorId", connectorId);
+        return new ServiceOperation(tenantId, Operation.CONNECT, params);
     }
-    public static ServiceOperation reloadExtensions() {
-        return new ServiceOperation(Operation.RELOAD_EXTENSIONS, null);
+    public static ServiceOperation reloadExtensions(String tenantId) {
+        return new ServiceOperation(tenantId, Operation.RELOAD_EXTENSIONS, null);
     } 
-    public static ServiceOperation refreshNotificationSubscription() {
-        return new ServiceOperation(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
+    public static ServiceOperation refreshNotificationSubscription(String tenantId) {
+        return new ServiceOperation(tenantId, Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
     }
 }

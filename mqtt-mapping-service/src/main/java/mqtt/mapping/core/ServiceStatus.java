@@ -28,6 +28,8 @@ import lombok.Data;
 // @AllArgsConstructor
 public class ServiceStatus {
     private Status status;
+    private String tenantId;
+    private String connectorId;
 
     public ServiceStatus(Status status){
         this.status = status;
