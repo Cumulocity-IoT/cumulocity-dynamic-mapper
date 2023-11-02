@@ -31,11 +31,32 @@
     <div class="card-block p-b-0">
       <div class="container">
         <div class="row">
-          <div class="col-lg-10 col-lg-offset-1">
+          <div class="col-lg-5 col-lg-offset-1 column-right-border">
             <div class="form-group">
               <div style="display: flex">
                 <label for="testResult" translate
-                  >Testing - {{ targetSystem }} Request&nbsp;</label
+                  >{{ sourceSystem }} Payload&nbsp;</label
+                >
+              </div>
+              <mapping-json-editor2
+                [options]="editorOptionsTesting"
+                [data]="testingModel.payload"
+                #editorTestingPayload
+                id="editorTestingPayload"
+              >
+              </mapping-json-editor2>
+              <c8y-messages>
+                <c8y-message *ngIf="testingModel.errorMsg" translate
+                  ><span class="text-warning">{{ testingModel.errorMsg }}</span>
+                </c8y-message>
+              </c8y-messages>
+            </div>
+          </div>
+          <div class="col-lg-5 column-left-border">
+            <div class="form-group">
+              <div style="display: flex">
+                <label for="testResult" translate
+                  >{{ targetSystem }} Request&nbsp;</label
                 >
                 <h6>
                   <span class="badge badge-success">{{
@@ -59,13 +80,19 @@
             </div>
           </div>
         </div>
-        <div class="row" [hidden]="mapping.direction == Direction.OUTBOUND">
-          <div class="col-lg-10 col-lg-offset-1">
+        <div class="legend form-block col-lg-10 col-lg-offset-1"></div>
+        <div
+          class="row"
+          [hidden]="mapping.direction == Direction.OUTBOUND"
+        >
+          <!-- <div class="legend form-block col-lg-10 col-lg-offset-1">
+            Substitutions
+          </div> -->
+          <div class="col-lg-5 col-lg-offset-1 column-right-border"></div>
+          <div class="col-lg-5 column-left-border">
             <div class="form-group">
               <div style="display: flex">
-                <label for="testResult" translate
-                  >Testing - {{ targetSystem }} Response&nbsp;</label
-                >
+                <label>{{ targetSystem }} Response&nbsp;</label>
                 <h6>
                   <span class="badge badge-success">{{
                     selectedResult$ | async
@@ -86,7 +113,7 @@
     </div>
   </div>
 </div>
-<div class="col-lg-6 col-lg-offset-3 text-center">
+<div class="col-lg-8 col-lg-offset-2 text-center p-b-24 p-t-24">
   <button
     type="button"
     class="btn btn-default"
@@ -107,6 +134,14 @@
     >
       {{ testingModel.results.length }}</span
     >
+  </button>
+  <button
+    type="button"
+    class="btn btn-default"
+    (click)="onResetTransformation()"
+    [attr.disabled]="isDisabled(!stepperConfiguration.allowTestTransformation)"
+  >
+    Reset Transform
   </button>
   <button
     type="button"

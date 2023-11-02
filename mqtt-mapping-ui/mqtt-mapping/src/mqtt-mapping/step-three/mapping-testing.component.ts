@@ -49,12 +49,13 @@ export class MappingStepTestingComponent implements OnInit {
   @Input() mapping: Mapping;
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() editorTestingRequestTemplateEmitter: EventEmitter<any>;
+  @Input() editorTestingPayloadTemplateEmitter: EventEmitter<any>;
 
   Direction = Direction;
   isDisabled = isDisabled;
 
   testingModel: {
+    payload?: any;
     results: C8YRequest[];
     errorMsg?: string;
     request?: any;
@@ -68,9 +69,11 @@ export class MappingStepTestingComponent implements OnInit {
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
-
+  currentSourceTemplate: any;
   editorOptionsTesting: any = {};
 
+  @ViewChild("editorTestingPayload", { static: false })
+  editorTestingPayload: JsonEditor2Component;
   @ViewChild("editorTestingRequest", { static: false })
   editorTestingRequest: JsonEditor2Component;
   @ViewChild("editorTestingResponse", { static: false })
@@ -108,15 +111,8 @@ export class MappingStepTestingComponent implements OnInit {
       readOnly: true,
     };
 
-    this.editorTestingRequestTemplateEmitter.subscribe((template) => {
-      const editorTestingResponseRef =
-        this.elementRef.nativeElement.querySelector("#editorTestingResponse");
-      if (editorTestingResponseRef != null) {
-        //set schema for editors
-        this.editorTestingResponse.set({} as JSON);
-        editorTestingResponseRef.setAttribute("initialized", "true");
-      }
-
+    this.editorTestingPayloadTemplateEmitter.subscribe((template) => {
+      this.currentSourceTemplate = template;
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector("#editorTestingRequest");
       if (editorTestingRequestRef != null) {
@@ -124,9 +120,15 @@ export class MappingStepTestingComponent implements OnInit {
         this.editorTestingRequest.setSchema(
           getSchema(this.mapping.targetAPI, this.mapping.direction, true)
         );
-        this.testingModel.request = template;
+        this.testingModel = {
+          payload: this.currentSourceTemplate,
+          results: [],
+          selectedResult: -1,
+          request: {},
+          response: {},
+        };
       }
-      console.log("New test template:", template);
+      console.log("New test template:", this.currentSourceTemplate);
     });
   }
 
@@ -181,6 +183,17 @@ export class MappingStepTestingComponent implements OnInit {
     this.onNextTestResult();
   }
 
+  onResetTransformation() {
+    this.testingModel = {
+      payload: this.currentSourceTemplate,
+      results: [],
+      request: {},
+      response: {},
+      selectedResult: -1,
+    };
+    this.mappingService.initializeCache(this.mapping.direction);
+  }
+
   public onNextTestResult() {
     if (
       this.testingModel.selectedResult >=
@@ -189,7 +202,7 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
-    this.selectedResult$.next(this.testingModel.selectedResult);
+    this.selectedResult$.next(this.testingModel.selectedResult + 1);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length
