@@ -28,13 +28,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import mqtt.mapping.connector.ConnectorRegistry;
-import mqtt.mapping.connector.client.ConnectorRegistry;
+
+import mqtt.mapping.connector.callback.ConnectorMessage;
+import mqtt.mapping.connector.callback.GenericMessageCallback;
+
 import mqtt.mapping.connector.IConnectorClient;
 import org.apache.commons.codec.binary.Hex;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -57,30 +57,33 @@ import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Service
-public class AsynchronousDispatcher implements MqttCallback {
-
+public class AsynchronousDispatcher implements GenericMessageCallback {
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
+        String tenant;
+        String connectorId;
         Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound;
         boolean sendPayload;
-        MqttMessage mqttMessage;
+        ConnectorMessage message;
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
-                String topic,
+                String topic, String tenant, String connectorId,
                 Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound, boolean sendPayload,
-                MqttMessage mqttMessage, ObjectMapper objectMapper) {
+                ConnectorMessage message, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
             this.topic = topic;
+            this.tenant = tenant;
+            this.connectorId = connectorId;
             this.payloadProcessorsInbound = payloadProcessorsInbound;
             this.sendPayload = sendPayload;
-            this.mqttMessage = mqttMessage;
+            this.message = message;
             this.objectMapper = objectMapper;
         }
 
@@ -88,11 +91,11 @@ public class AsynchronousDispatcher implements MqttCallback {
         public List<ProcessingContext<?>> call() throws Exception {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingStatusComponent
-                    .getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+                    .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.isActive()) {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
+                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -110,7 +113,7 @@ public class AsynchronousDispatcher implements MqttCallback {
 
                     if (processor != null) {
                         try {
-                            processor.deserializePayload(context, mqttMessage);
+                            processor.deserializePayload(context, message);
                             if (c8yAgent.getServiceConfiguration().logPayload) {
                                 log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
                                         context.getPayload().toString());
@@ -139,7 +142,7 @@ public class AsynchronousDispatcher implements MqttCallback {
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(mapping);
+                                    mappingStatusComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
@@ -184,9 +187,6 @@ public class AsynchronousDispatcher implements MqttCallback {
 
     private IConnectorClient connectorClient;
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -201,31 +201,26 @@ public class AsynchronousDispatcher implements MqttCallback {
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
 
-    //TODO No Autowiring Multi Instances for each tenant
     @Autowired
     MappingComponent mappingComponent;
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
-            // REPORT MAINTENANCE METRIC
-        } else {
-            processMessage(topic, mqttMessage, true);
-        }
+    public AsynchronousDispatcher(IConnectorClient connectorClient)  {
+        this.connectorClient = connectorClient;
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(String topic, MqttMessage mqttMessage,
+    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorId, String topic, ConnectorMessage message,
             boolean sendPayload) throws Exception {
-        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
-            if (mqttMessage.getPayload() != null) {
+            if (message.getPayload() != null) {
                 try {
-                    resolvedMappings = mappingComponent.resolveMappingInbound(topic);
+                    resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                 } catch (Exception e) {
                     log.warn("Error resolving appropriate map for topic \"" + topic
                             + "\". Could NOT be parsed. Ignoring this message!");
@@ -240,25 +235,42 @@ public class AsynchronousDispatcher implements MqttCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic,
+                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic, tenant, connectorId,
                         payloadProcessorsInbound,
-                        sendPayload, mqttMessage, objectMapper));
+                        sendPayload, message, objectMapper));
 
         return futureProcessingResult;
 
     }
 
     @Override
-    public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost to MQTT broker: ", throwable.getMessage());
-        log.info("Stacktrace: ", throwable);
-        throwable.printStackTrace();
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null, connectorClient.getTenantId());
+    public void onClose( String closeMessage, Throwable closeException) {
+        String tenant = connectorClient.getTenantId();
+        String connectorId = connectorClient.getConntectorId();
+        if (closeException != null)
+            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorId, closeException.getMessage());
+        closeException.printStackTrace();
+        if(closeMessage != null)
+            log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
+
+        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null, tenant);
         connectorClient.connect();
     }
 
     @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+    public void onMessage(String topic, ConnectorMessage message) throws Exception {
+        String tenant = connectorClient.getTenantId();
+        String connectorId = connectorClient.getConntectorId();
+        if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
+            // REPORT MAINTENANCE METRIC
+        } else {
+            processMessage(tenant, connectorId, topic, message, true);
+        }
+    }
+
+    @Override
+    public void onError( Throwable errorException) {
+
     }
 
 }

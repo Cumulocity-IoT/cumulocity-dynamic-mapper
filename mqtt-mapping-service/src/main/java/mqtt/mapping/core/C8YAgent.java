@@ -311,7 +311,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return new MQTTClient.Certificate(result.getFingerprint(), cert.toString());
     }
 
-    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context, String tenant) throws ProcessingException {
+    public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context) throws ProcessingException {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
@@ -357,7 +357,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ManagedObjectRepresentation upsertDevice(ID identity, ProcessingContext<?> context, String tenant)
+    public ManagedObjectRepresentation upsertDevice(String tenant, ID identity, ProcessingContext<?> context)
             throws ProcessingException {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();

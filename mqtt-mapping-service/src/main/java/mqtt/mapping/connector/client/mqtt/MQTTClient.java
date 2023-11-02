@@ -33,21 +33,21 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.google.protobuf.Internal;
+import lombok.*;
+import mqtt.mapping.connector.ConnectorProperty;
 import mqtt.mapping.connector.IConnectorClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -70,10 +70,6 @@ import org.springframework.stereotype.Service;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConfigurationConnection;
 import mqtt.mapping.configuration.ConnectionConfigurationComponent;
@@ -90,9 +86,15 @@ import mqtt.mapping.processor.model.ProcessingContext;
 @Service
 public class MQTTClient implements IConnectorClient {
 
+    public MQTTClient() {
+        setConfigProperties();
+    }
+
     private static final int WAIT_PERIOD_MS = 10000;
 
     private static final String CONNECTOR_ID = "MQTT";
+
+    private Map<String, ConnectorProperty> configProps = new HashMap<>();
 
 
     private String tenantId = null;
@@ -104,6 +106,8 @@ public class MQTTClient implements IConnectorClient {
 
 
     private ConnectionConfigurationComponent connectionConfigurationComponent;
+
+    private MQTTCallback mqttCallback = null;
 
     @Autowired
     public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
@@ -131,10 +135,10 @@ public class MQTTClient implements IConnectorClient {
 
     private AsynchronousDispatcher dispatcher;
 
-    @Autowired
-    public void setDispatcher(AsynchronousDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-    }
+    //@Autowired
+    //public void setDispatcher(AsynchronousDispatcher dispatcher) {
+    //    this.dispatcher = dispatcher;
+    //}
 
     private ObjectMapper objectMapper;
 
@@ -157,7 +161,7 @@ public class MQTTClient implements IConnectorClient {
     @Getter
     @Setter
     // keeps track of number of active mappings per subscriptionTopic
-    private Map<String, MutableInt> activeSubscriptionMappingInbound;
+    private Map<String, Map<String, Integer>> activeSubscriptions;
 
     private Instant start = Instant.now();
 
@@ -209,6 +213,24 @@ public class MQTTClient implements IConnectorClient {
         return true;
     }
 
+
+    private void setConfigProperties() {
+        this.configProps.put("mqttHost", ConnectorProperty.STRING_PROPERTY);
+        this.configProps.put("mqttPort", ConnectorProperty.NUMERIC_PROPERTY);
+        this.configProps.put("user", ConnectorProperty.STRING_PROPERTY);
+        this.configProps.put("password", ConnectorProperty.SENSITIVE_STRING_PROPERTY);
+        this.configProps.put("clientId", ConnectorProperty.STRING_PROPERTY);
+        this.configProps.put("useTLS", ConnectorProperty.BOOLEAN_PROPERTY);
+        this.configProps.put("useSelfSignedCertificate", ConnectorProperty.BOOLEAN_PROPERTY);
+        this.configProps.put("fingerprintSelfSignedCertificate", ConnectorProperty.STRING_PROPERTY);
+        this.configProps.put("nameCertificate", ConnectorProperty.STRING_PROPERTY);
+    }
+
+    @Override
+    public Map<String, ConnectorProperty> getConfigProperties() {
+        return this.configProps;
+    }
+
     private void reloadConfiguration() {
         connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
     }
@@ -224,6 +246,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void connect() {
+        this.
         reloadConfiguration();
         log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
                 shouldConnect());
@@ -258,11 +281,13 @@ public class MQTTClient implements IConnectorClient {
                         if (mqttClient != null) {
                             mqttClient.close(true);
                         }
-
+                        if(dispatcher == null)
+                            this.dispatcher = new AsynchronousDispatcher(this);
                         mqttClient = new MqttClient(broker,
                                 connectionConfiguration.getClientId() + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
-                        mqttClient.setCallback(dispatcher);
+                        mqttCallback = new MQTTCallback(dispatcher, tenantId, getConntectorId());
+                        mqttClient.setCallback(mqttCallback);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
@@ -324,12 +349,12 @@ public class MQTTClient implements IConnectorClient {
                                 e.getMessage(), e);
                     }
 
-                    mappingComponent.rebuildMappingOutboundCache();
+                    mappingComponent.rebuildMappingOutboundCache(tenantId);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // reviously used updatedMappings
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
-                    updateActiveSubscriptionMappingInbound(updatedMappings, true);
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenantId);
+                    updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
                 log.info("Subscribing to topics was successful: {}", successful);
@@ -364,10 +389,10 @@ public class MQTTClient implements IConnectorClient {
         try {
             if (isConnected()) {
                 log.debug("Disconnected from MQTT broker I: {}", mqttClient.getServerURI());
-                getActiveSubscriptionMappingInbound().entrySet().forEach(entry -> {
+                activeSubscriptions.get(tenantId).entrySet().forEach(entry -> {
                     // only unsubscribe if still active subscriptions exist
                     String topic = entry.getKey();
-                    MutableInt activeSubs = entry.getValue();
+                    Integer activeSubs = entry.getValue();
                     if (activeSubs.intValue() > 0) {
                         try {
                             mqttClient.unsubscribe(topic);
@@ -394,13 +419,13 @@ public class MQTTClient implements IConnectorClient {
     public void disconnectFromBroker() {
         connectionConfiguration = connectionConfigurationComponent.enableConnection(false);
         disconnect();
-        mappingComponent.sendStatusService(getServiceStatus());
+        mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }
 
     public void connectToBroker() {
         connectionConfiguration = connectionConfigurationComponent.enableConnection(true);
         submitConnect();
-        mappingComponent.sendStatusService(getServiceStatus());
+        mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }
 
     public void subscribe(String topic, Integer qos) throws MqttException {
@@ -415,7 +440,7 @@ public class MQTTClient implements IConnectorClient {
 
     }
 
-    private void unsubscribe(String topic) throws MqttException {
+    public void unsubscribe(String topic) throws MqttException {
         log.info("Unsubscribing from topic: {}", topic);
         c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
         mqttClient.unsubscribe(topic);
@@ -434,14 +459,15 @@ public class MQTTClient implements IConnectorClient {
                 log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
                         statusInitializeTask, isConnected());
             }
-            mappingComponent.cleanDirtyMappings();
-            mappingComponent.sendStatusMapping();
-            mappingComponent.sendStatusService(getServiceStatus());
+            mappingComponent.cleanDirtyMappings(tenantId);
+            mappingComponent.sendStatusMapping(tenantId);
+            mappingComponent.sendStatusService(tenantId, getServiceStatus());
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
     }
 
+    @Override
     public ServiceStatus getServiceStatus() {
         ServiceStatus serviceStatus;
         if (isConnected()) {
@@ -473,18 +499,15 @@ public class MQTTClient implements IConnectorClient {
         submitConnect();
     }
 
-    @Override
-    public Map<String, String> getConfigProperties() {
-        Map<String, String> configProps = new HashMap<>();
-        return configProps;
-    }
 
-    public void deleteActiveSubscriptionMappingInbound(Mapping mapping) {
-        if (getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
-            MutableInt activeSubs = getActiveSubscriptionMappingInbound()
+
+    @Override
+    public void deleteActiveSubscription(Mapping mapping) {
+        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+            Integer activeSubs = getActiveSubscriptions().get(tenantId)
                     .get(mapping.subscriptionTopic);
-            activeSubs.subtract(1);
-            if (activeSubs.intValue() <= 0) {
+            activeSubs--;
+            if (activeSubs <= 0) {
                 try {
                     mqttClient.unsubscribe(mapping.subscriptionTopic);
                 } catch (MqttException e) {
@@ -495,12 +518,13 @@ public class MQTTClient implements IConnectorClient {
         }
     }
 
-    public void upsertActiveSubscriptionMappingInbound(Mapping mapping) {
-        // test if subsctiptionTopic has changed
+    @Override
+    public void upsertActiveSubscription(Mapping mapping) {
+        // test if subscriptionTopic has changed
         Mapping activeMapping = null;
         Boolean create = true;
         Boolean subscriptionTopicChanged = false;
-        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().values().stream()
+        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenantId).values().stream()
                 .filter(m -> m.id.equals(mapping.id))
                 .findFirst();
 
@@ -510,15 +534,15 @@ public class MQTTClient implements IConnectorClient {
             subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
         }
 
-        if (!getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
-            getActiveSubscriptionMappingInbound().put(mapping.subscriptionTopic, new MutableInt(0));
+        if (!getActiveSubscriptions().get(tenantId).containsKey(mapping.subscriptionTopic)) {
+            getActiveSubscriptions().get(tenantId).put(mapping.subscriptionTopic, Integer.valueOf(0));
         }
-        MutableInt updatedMappingSubs = getActiveSubscriptionMappingInbound()
+        Integer updatedMappingSubs = getActiveSubscriptions().get(tenantId)
                 .get(mapping.subscriptionTopic);
 
         // consider unsubscribing from previous subscription topic if it has changed
         if (create) {
-            updatedMappingSubs.add(1);
+            updatedMappingSubs++;
             log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
             try {
                 subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
@@ -526,9 +550,9 @@ public class MQTTClient implements IConnectorClient {
                 log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
             }
         } else if (subscriptionTopicChanged && activeMapping != null) {
-            MutableInt activeMappingSubs = getActiveSubscriptionMappingInbound()
+            Integer activeMappingSubs = getActiveSubscriptions().get(0)
                     .get(activeMapping.subscriptionTopic);
-            activeMappingSubs.subtract(1);
+            activeMappingSubs--;
             if (activeMappingSubs.intValue() <= 0) {
                 try {
                     mqttClient.unsubscribe(mapping.subscriptionTopic);
@@ -536,8 +560,8 @@ public class MQTTClient implements IConnectorClient {
                     log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
                 }
             }
-            updatedMappingSubs.add(1);
-            if (!getActiveSubscriptionMappingInbound().containsKey(mapping.subscriptionTopic)) {
+            updatedMappingSubs++;
+            if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                 log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
@@ -549,21 +573,22 @@ public class MQTTClient implements IConnectorClient {
 
     }
 
-    public List<Mapping> updateActiveSubscriptionMappingInbound(List<Mapping> updatedMappings, boolean reset) {
+    @Override
+    public List<Mapping> updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
-            activeSubscriptionMappingInbound = new HashMap<String, MutableInt>();
+            activeSubscriptions.replace(tenantId, new HashMap<String, Integer>());
         }
-        Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
+        Map<String, Integer> updatedSubscriptionCache = new HashMap<String, Integer>();
         updatedMappings.forEach(mapping -> {
             if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
+                updatedSubscriptionCache.put(mapping.subscriptionTopic, Integer.valueOf(0));
             }
-            MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
-            activeSubs.add(1);
+            Integer activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
+            activeSubs++;
         });
 
         // unsubscribe topics not used
-        getActiveSubscriptionMappingInbound().keySet().forEach((topic) -> {
+        getActiveSubscriptions().get(tenantId).keySet().forEach((topic) -> {
             if (!updatedSubscriptionCache.containsKey(topic)) {
                 log.info("Unsubscribe from topic: {}", topic);
                 try {
@@ -577,7 +602,7 @@ public class MQTTClient implements IConnectorClient {
 
         // subscribe to new topics
         updatedSubscriptionCache.keySet().forEach((topic) -> {
-            if (!getActiveSubscriptionMappingInbound().containsKey(topic)) {
+            if (!getActiveSubscriptions().containsKey(topic)) {
                 int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                         .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                 log.info("Subscribing to topic: {}, qos: {}", topic, qos);
@@ -589,7 +614,7 @@ public class MQTTClient implements IConnectorClient {
                 }
             }
         });
-        activeSubscriptionMappingInbound = updatedSubscriptionCache;
+        activeSubscriptions.replace(tenantId,updatedSubscriptionCache);
         return updatedMappings;
     }
 
@@ -603,10 +628,12 @@ public class MQTTClient implements IConnectorClient {
         return null;
     }
 
-    public Map<String, Integer> getActiveSubscriptions() {
-        return getActiveSubscriptionMappingInbound().entrySet().stream()
-                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
-                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    @Override
+    public Map<String, Integer> getActiveSubscriptions(String tenant) {
+        return activeSubscriptions.get(tenant);
+        //return getActiveSubscriptionMappingInbound().entrySet().stream()
+        //        .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
+        //        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
 }

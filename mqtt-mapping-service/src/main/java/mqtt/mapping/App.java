@@ -278,6 +278,7 @@ public class App {
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
+        //Executed for each tenant subscribed
         String tenant = event.getCredentials().getTenant();
         MicroserviceCredentials credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
@@ -288,7 +289,7 @@ public class App {
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
         //loadProcessorExtensions();
         MappingServiceRepresentation mappingServiceRepresentation = baseObjectMapper().convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
-        mappingComponent.initializeMappingComponent(mappingServiceRepresentation);
+        mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
 
         try {
             if (serviceConfiguration != null) {

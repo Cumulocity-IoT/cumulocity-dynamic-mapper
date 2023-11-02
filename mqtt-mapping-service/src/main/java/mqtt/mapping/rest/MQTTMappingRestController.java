@@ -26,18 +26,12 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.connector.*;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.Operation;
-import mqtt.mapping.core.ServiceOperation;
-import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.*;
+import mqtt.mapping.core.*;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.*;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,7 +42,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +99,7 @@ public class MQTTMappingRestController {
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
-        feature.setUserHasMQTTMappingCreateRole(userHasMQTTMappingCreateRole());
+        feature.setUserHasMQTTMappingCreateRole(userHasMappingCreateRole());
         feature.setUserHasMQTTMappingAdminRole(userHasMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
@@ -111,7 +107,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/configuration/connectionPropertyConfig", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectionConfiugration() {
         HashMap<String, IConnectorClient> clients = null;
-        List<ConnectorPropertyConfiguration> connectorConfigurations = null;
+        List<ConnectorPropertyConfiguration> connectorConfigurations = new ArrayList<>();
         try {
              clients = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
         } catch (ConnectorRegistryException e) {
@@ -139,7 +135,7 @@ public class MQTTMappingRestController {
         //Remove sensitive data before printing to log
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
         for (String property : clonedConfig.getProperties().keySet()) {
-            try {
+                try {
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), clonedConfig.getConnectorId());
                 if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property)) {
                     clonedConfig.getProperties().replace(property, "****");
@@ -149,7 +145,7 @@ public class MQTTMappingRestController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
             }
         }
-        log.info("Post Connector configuration: {}", configuration.toString());
+        log.info("Post Connector configuration: {}", clonedConfig.toString());
         try {
 
             connectorConfigurationComponent.saveConnectionConfiguration(configuration);
@@ -163,20 +159,30 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConfigurationConnection>> getConnectionConfiguration() {
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            ConfigurationConnection configuration = connectionConfigurationComponent
-                    .loadConnectionConfiguration();
-            if (configuration == null) {
-                // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MQTT connection not
-                // available");
-                configuration = new ConfigurationConnection();
+            List<ConnectorConfiguration> configurations = connectorConfigurationComponent.loadAllConnectorConfiguration();
+            List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
+
+            //Remove sensitive data before sending to UI
+            for (ConnectorConfiguration config : configurations) {
+                ConnectorConfiguration clonedConfig = (ConnectorConfiguration) config.clone();
+                for (String property : clonedConfig.getProperties().keySet()) {
+                    try {
+                        IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), clonedConfig.getConnectorId());
+                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property)) {
+                            clonedConfig.getProperties().replace(property, "");
+                        }
+
+                    } catch (ConnectorRegistryException e) {
+                        log.error("Could not get Configuration Properties:", e);
+                        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+                    }
+                }
+                modifiedConfigs.add(clonedConfig);
             }
-            // don't modify original copy
-            ConfigurationConnection configurationClone = (ConfigurationConnection) configuration.clone();
-            configurationClone.setPassword("");
-            return new ResponseEntity<ConfigurationConnection>(configurationClone, HttpStatus.OK);
+            return ResponseEntity.ok(modifiedConfigs);
         } catch (Exception ex) {
             log.error("Error on loading configuration {}", ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -209,7 +215,7 @@ public class MQTTMappingRestController {
         // don't modify original copy
         log.info("Post service configuration: {}", configuration.toString());
 
-        if (!userHasMQTTMappingAdminRole()) {
+        if (!userHasMappingAdminRole()) {
             log.error("Insufficient Permission, user does not have required permission to access this API");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -228,27 +234,33 @@ public class MQTTMappingRestController {
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
         log.info("Post operation: {}", operation.toString());
         try {
+            String tenant = contextService.getContext().getTenant();
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
-                mappingComponent.rebuildMappingOutboundCache();
+                mappingComponent.rebuildMappingOutboundCache(tenant);
                 // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                 // sync, the ActiveSubscriptionMappingInbound is build on the
-                // reviously used updatedMappings
-                List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache();
-                mqttClient.updateActiveSubscriptionMappingInbound(updatedMappings, false);
+                // previously used updatedMappings
+
+                List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+                //TODO Move to Mapping Component
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
+                client.updateActiveSubscriptions(updatedMappings, false);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
-                mqttClient.connectToBroker();
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
+                client.connect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
-                mqttClient.disconnectFromBroker();
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
+                client.disconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
-                mappingComponent.sendStatusMapping();
+                mappingComponent.sendStatusMapping(tenant);
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
-                mappingComponent.initializeMappingStatus(true);
+                mappingComponent.initializeMappingStatus(tenant, true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 c8yAgent.reloadExtensions();
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
-                mappingComponent.setActivationMapping(id, activeBoolean);
+                mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
                 c8yAgent.notificationSubscriberReconnect(contextService.getContext().getTenant());
             }
@@ -259,45 +271,61 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/monitoring/status/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ServiceStatus> getServiceStatus() {
-        ServiceStatus st = mqttClient.getServiceStatus();
-        log.info("Get status: {}", st);
-        return new ResponseEntity<>(st, HttpStatus.OK);
+    @RequestMapping(value = "/monitoring/status/service/{connectorId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ServiceStatus> getServiceStatus(@PathVariable @NotNull String connectorId) {
+        try {
+            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
+            ServiceStatus st = client.getServiceStatus();
+            log.info("Get status for connector {}: {}",connectorId, st);
+            return new ResponseEntity<>(st, HttpStatus.OK);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @RequestMapping(value = "/monitoring/status/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MappingStatus>> getMappingStatus() {
-        List<MappingStatus> ms = mappingStatusComponent.getMappingStatus();
+        String tenant = contextService.getContext().getTenant();
+        List<MappingStatus> ms = mappingStatusComponent.getMappingStatus(tenant);
         log.info("Get mapping status: {}", ms);
         return new ResponseEntity<List<MappingStatus>>(ms, HttpStatus.OK);
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TreeNode> getInboundMappingTree() {
-        TreeNode result = mappingComponent.getResolverMappingInbound();
+        String tenant = contextService.getContext().getTenant();
+        TreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
         log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/monitoring/subscription", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions() {
-        Map<String, Integer> result = mqttClient.getActiveSubscriptions();
-        log.info("Get active subscriptions!");
-        return ResponseEntity.status(HttpStatus.OK).body(result);
+    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(String connectorId) {
+        String tenant = contextService.getContext().getTenant();
+        IConnectorClient client = null;
+        try {
+            client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
+            //TODO Add this to the interface of the connector
+            Map<String, Integer> result = client.getActiveSubscriptions(tenant);
+            log.info("Get active subscriptions!");
+            return ResponseEntity.status(HttpStatus.OK).body(result);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings() {
         log.info("Get mappings");
-        List<Mapping> result = mappingComponent.getMappings();
+        List<Mapping> result = mappingComponent.getMappings(contextService.getContext().getTenant());
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> getMapping(@PathVariable String id) {
         log.info("Get mapping: {}", id);
-        Mapping result = mappingComponent.getMapping(id);
+        Mapping result = mappingComponent.getMapping(contextService.getContext().getTenant(), id);
         if (result == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
         }
@@ -308,17 +336,22 @@ public class MQTTMappingRestController {
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         log.info("Delete mapping: {}", id);
         Mapping mapping = null;
-
+        String tenant = contextService.getContext().getTenant();
         try {
-            mapping = mappingComponent.deleteMapping(id);
-            if (mapping == null)
+            final Mapping deletedMapping = mappingComponent.deleteMapping(tenant, id);
+            if (deletedMapping == null)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Mapping with id " + id + " could not be found.");
 
-            mappingComponent.deleteFromMappingCache(mapping);
+            mappingComponent.deleteFromMappingCache(tenant, deletedMapping);
 
-            if (!Direction.OUTBOUND.equals(mapping.direction)) {
-                mqttClient.deleteActiveSubscriptionMappingInbound(mapping);
+            if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
+                //TODO Move this to mapping component, call unsubscribe on client
+                //FIXME Currently we create mappings in ALL connectors assuming they could occur in all of them.
+                HashMap<String, IConnectorClient> clients  = connectorRegistry.getClientsForTenant(tenant);
+                clients.keySet().stream().forEach(connector -> {
+                    clients.get(connector).deleteActiveSubscription(deletedMapping);
+                });
             }
         } catch (Exception ex) {
             log.error("Deleting active mappings is not allowed {}", ex);
@@ -333,16 +366,21 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             log.info("Add mapping: {}", mapping);
-            mapping = mappingComponent.createMapping(mapping);
-            if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache();
+            String tenant = contextService.getContext().getTenant();
+            final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
+            if (Direction.OUTBOUND.equals(createdMapping.direction)) {
+                mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
-                mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
-                mappingComponent.deleteFromCacheMappingInbound(mapping);
-                mappingComponent.addToCacheMappingInbound(mapping);
-                mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
+                //FIXME Currently we create mappings in ALL connectors assuming they could occur in all of them.
+                HashMap<String, IConnectorClient> clients  = connectorRegistry.getClientsForTenant(tenant);
+                clients.keySet().stream().forEach(connector -> {
+                    clients.get(connector).upsertActiveSubscription(createdMapping);
+                });
+                mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
+                mappingComponent.getCacheMappingInbound().get(tenant).put(createdMapping.id, mapping);
             }
-            return ResponseEntity.status(HttpStatus.OK).body(mapping);
+            return ResponseEntity.status(HttpStatus.OK).body(createdMapping);
         } catch (Exception ex) {
             if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
@@ -357,14 +395,16 @@ public class MQTTMappingRestController {
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
-            mapping = mappingComponent.updateMapping(mapping, false, false);
+            String tenant = contextService.getContext().getTenant();
+            mapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
-                mappingComponent.rebuildMappingOutboundCache();
+                mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
+                //TODO Move this to mapping component, call unsubscribe on client
                 mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
-                mappingComponent.deleteFromCacheMappingInbound(mapping);
-                mappingComponent.addToCacheMappingInbound(mapping);
-                mappingComponent.getCacheMappingInbound().put(mapping.id, mapping);
+                mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
+                mappingComponent.addToCacheMappingInbound(tenant, mapping);
+                mappingComponent.getCacheMappingInbound().get(tenant).put(mapping.id, mapping);
             }
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {
@@ -388,6 +428,7 @@ public class MQTTMappingRestController {
         log.info("Test payload: {}, {}, {}", path, method, payload);
         try {
             boolean send = ("send").equals(method);
+            //TODO Add this to the interface
             List<ProcessingContext<?>> result = mqttClient.test(path, send, payload);
             return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
         } catch (Exception ex) {
@@ -414,7 +455,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
 
-        if (!userHasMQTTMappingAdminRole()) {
+        if (!userHasMappingAdminRole()) {
             log.error("Insufficient Permission, user does not have required permission to access this API");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
@@ -426,13 +467,13 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    private boolean userHasMQTTMappingAdminRole() {
-        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingAdminRole));
+    private boolean userHasMappingAdminRole() {
+        return !userRolesEnabled || (userRolesEnabled && roleService.getUserRoles().contains(mappingAdminRole));
     }
 
-    private boolean userHasMQTTMappingCreateRole() {
-        return !userRolesEnabled || userHasMQTTMappingAdminRole()
-                || (userRolesEnabled && roleService.getUserRoles().contains(mqttMappingCreateRole));
+    private boolean userHasMappingCreateRole() {
+        return !userRolesEnabled || userHasMappingAdminRole()
+                || (userRolesEnabled && roleService.getUserRoles().contains(mappingCreateRole));
     }
 
 }

@@ -31,6 +31,8 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -57,22 +59,21 @@ import java.util.Map.Entry;
 @Service
 public abstract class BasePayloadProcessor<T> {
 
-    public BasePayloadProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public BasePayloadProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
         this.objectMapper = objectMapper;
-        this.mqttClient = mqttClient;
+        this.connectorClient = connectorClient;
+        this.tenant = tenant;
         this.c8yAgent = c8yAgent;
     }
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
+    protected IConnectorClient connectorClient;
 
-    protected MQTTClient mqttClient;
+    protected String tenant;
 
-    @Autowired
-    SysHandler sysHandler;
-
-    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, MqttMessage mqttMessage)
+    public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
             throws IOException;
 
     public abstract void extractFromSource(ProcessingContext<T> context) throws ProcessingException;
@@ -132,7 +133,7 @@ public abstract class BasePayloadProcessor<T> {
                 if (!mapping.targetAPI.equals(API.INVENTORY)) {
                     if (pathTarget.equals(deviceIdentifierMapped2PathTarget2) && mapping.mapDeviceIdentifier) {
 
-                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(
+                        ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant,
                                 new ID(mapping.externalIdType, substituteValue.typedValue().toString()), context);
                         if (sourceId == null && mapping.createNonExistingDevice) {
                             ManagedObjectRepresentation attocDevice = null;
@@ -146,7 +147,7 @@ public abstract class BasePayloadProcessor<T> {
                                 var newPredecessor = context.addRequest(
                                         new C8YRequest(predecessor, RequestMethod.PATCH, device.value.asText(),
                                                 mapping.externalIdType, requestString, null, API.INVENTORY, null));
-                                attocDevice = c8yAgent.upsertDevice(
+                                attocDevice = c8yAgent.upsertDevice(tenant,
                                         new ID(mapping.externalIdType, substituteValue.value.asText()), context);
                                 var response = objectMapper.writeValueAsString(attocDevice);
                                 context.getCurrentRequest().setResponse(response);
@@ -181,7 +182,7 @@ public abstract class BasePayloadProcessor<T> {
                                 payloadTarget.jsonString(),
                                 null, API.INVENTORY, null));
                 try {
-                    attocDevice = c8yAgent.upsertDevice(
+                    attocDevice = c8yAgent.upsertDevice(tenant,
                             new ID(mapping.externalIdType, device.value.asText()), context);
                     var response = objectMapper.writeValueAsString(attocDevice);
                     context.getCurrentRequest().setResponse(response);
@@ -196,7 +197,7 @@ public abstract class BasePayloadProcessor<T> {
                                 payloadTarget.jsonString(),
                                 null, mapping.targetAPI, null));
                 try {
-                    attocRequest = c8yAgent.createMEAO(context);
+                    attocRequest = c8yAgent.createMEAO(tenant, context);
                     var response = objectMapper.writeValueAsString(attocRequest);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {
