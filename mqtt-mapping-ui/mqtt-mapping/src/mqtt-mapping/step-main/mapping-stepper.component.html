@@ -387,8 +387,8 @@
 
   <cdk-step state="final" stepLabel="step3" label="Test mapping">
     <mapping-testing
-      [editorTestingRequestTemplateEmitter]="
-        editorTestingRequestTemplateEmitter
+      [editorTestingPayloadTemplateEmitter]="
+        editorTestingPayloadTemplateEmitter
       "
       [mapping]="getCurrentMapping(true)"
       (testResult)="updateTestResult($event)"
