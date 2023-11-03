@@ -117,6 +117,7 @@
                     <mapping-json-editor2
                       [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
+                      [class]="'jse-main-small'"
                       (pathChanged)="onSelectedPathSourceChanged($event)"
                       (initialized)="onEditorSourceInitialized($event)"
                       [data]="templateSource"
@@ -259,6 +260,7 @@
                     <mapping-json-editor2
                       [schemaUpdate]="schemaUpdateTarget"
                       [options]="editorOptionsTarget"
+                      [class]="'jse-main-small'"
                       (pathChanged)="onSelectedPathTargetChanged($event)"
                       (initialized)="onEditorTargetInitialized($event)"
                       [data]="templateTarget"

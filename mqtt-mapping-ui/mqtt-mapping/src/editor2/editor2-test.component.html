@@ -41,6 +41,7 @@
     <div class="form-group">
       <mapping-json-editor2
         [options]="options"
+        [class]="'jse-main-small'"
         (pathChanged)="onSelectedPathSourceChanged($event)"
         [data]="templateSource"
         #editor2Test
