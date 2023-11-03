@@ -48,7 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectionConfigurationComponent;
+
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.configuration.TrustedCertificateRepresentation;
@@ -117,12 +117,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.objectMapper = objectMapper;
     }
 
-    private ConnectionConfigurationComponent connectionConfigurationComponent;
-
-    @Autowired
-    public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
-        this.connectionConfigurationComponent = connectionConfigurationComponent;
-    }
 
     private ServiceConfigurationComponent serviceConfigurationComponent;
 
