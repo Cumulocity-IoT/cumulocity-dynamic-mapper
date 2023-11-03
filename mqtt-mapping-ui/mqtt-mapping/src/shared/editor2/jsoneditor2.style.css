@@ -35,6 +35,23 @@ svg {
   --jse-font-size-mono: var(--c8y-font-size-small);
 }
 
-.jse-main {
+/* .jse-main {
   max-height: 300px;
+} */
+
+
+.jse-main-small {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.jse-main-tiny {
+  max-height: 250px;
+  overflow: auto;
+}
+
+.jse-main-large {
+  max-height: 600px;
+  overflow: auto;
+
 }
