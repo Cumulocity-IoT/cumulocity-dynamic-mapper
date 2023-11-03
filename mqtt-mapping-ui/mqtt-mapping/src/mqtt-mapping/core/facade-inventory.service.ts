@@ -32,6 +32,10 @@ export class FacadeInventoryService {
     private inventory: InventoryService
   ) {}
 
+  public initializeCache(): void {
+    this.mockInventory.initializeCache();
+  }
+
   public update(
     managedObject: Partial<IManagedObject>,
     context: ProcessingContext

@@ -42,7 +42,6 @@ export class AddExtensionComponent {
   isLoading: boolean;
   isAppCreated: boolean;
   createdApp: Partial<IManagedObject>;
-  canOpenInBrowser: boolean = false;
   errorMessage: string;
   private uploadCanceled: boolean = false;
   closeSubject: Subject<boolean> = new Subject();
@@ -79,7 +78,7 @@ export class AddExtensionComponent {
         },
         name: nameUpload,
       };
-      await this.uploadExtension(file, this.createdApp);
+      this.createdApp = await this.uploadExtension(file, this.createdApp);
       this.isAppCreated = true;
     } catch (ex) {
       this.extensionService.cancelExtensionCreation(this.createdApp);

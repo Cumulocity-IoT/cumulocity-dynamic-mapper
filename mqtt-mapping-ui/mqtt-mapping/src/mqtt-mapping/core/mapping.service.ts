@@ -118,6 +118,12 @@ export class MappingService {
     return this.reload$;
   }
 
+  initializeCache(dir: Direction): void{
+    if (dir == Direction.INBOUND) {
+      this.jsonProcessorInbound.initializeCache();
+    }
+  }
+
   async updateSubscriptions(sub: C8YAPISubscription): Promise<any> {
     let response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,

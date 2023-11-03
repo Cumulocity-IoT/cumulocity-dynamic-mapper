@@ -78,6 +78,7 @@ export interface Mapping {
 
 export interface MappingStatus {
   id: number;
+  name: string;
   ident: string;
   subscriptionTopic: string;
   errors: number;
