@@ -18,23 +18,18 @@
  *
  * @authors Christof Strack
  */
-svg {
-  width: unset !important;
-  height: unset !important;
-}
+import { Component } from "@angular/core";
+import { CellRendererContext } from "@c8y/ngx-components";
 
-.jsoneditor2 {
-  /* --jse-theme-color: var(--brand-primary); */
-  --jse-theme-color: var(
-    --navigator-bg-color,
-    var(--navigator-dark-bg-color, var(--brand-primary,  rgb(134, 134, 134)))
-  );
-  /* --jse-theme-color-highlight: #f553b5; */
-  /* --jse-font-size: var(--c8y-font-size-xs, 8px); */
-  --jse-font-size:   var(--c8y-font-size-small);
-  --jse-font-size-mono: var(--c8y-font-size-small);
-}
-
-.jse-main {
-  max-height: 300px;
+@Component({
+  template: `
+    <span title="{{ context.item.id }}">{{
+      context.value
+    }}</span>
+  `,
+})
+export class NameRendererComponent {
+  constructor(public context: CellRendererContext) {
+    //console.log("Context:", context.item, context)
+  }
 }

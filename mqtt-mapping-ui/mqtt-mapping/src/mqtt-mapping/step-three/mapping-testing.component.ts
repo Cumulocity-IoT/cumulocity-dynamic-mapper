@@ -49,12 +49,13 @@ export class MappingStepTestingComponent implements OnInit {
   @Input() mapping: Mapping;
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Input() stepperConfiguration: StepperConfiguration;
-  @Input() editorTestingRequestTemplateEmitter: EventEmitter<any>;
+  @Input() editorTestingPayloadTemplateEmitter: EventEmitter<any>;
 
   Direction = Direction;
   isDisabled = isDisabled;
 
   testingModel: {
+    payload?: any;
     results: C8YRequest[];
     errorMsg?: string;
     request?: any;
@@ -67,12 +68,12 @@ export class MappingStepTestingComponent implements OnInit {
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
-  currentSystem: string;
   targetSystem: string;
   currentSourceTemplate: any;
-
   editorOptionsTesting: any = {};
 
+  @ViewChild("editorTestingPayload", { static: false })
+  editorTestingPayload: JsonEditor2Component;
   @ViewChild("editorTestingRequest", { static: false })
   editorTestingRequest: JsonEditor2Component;
   @ViewChild("editorTestingResponse", { static: false })
@@ -110,35 +111,28 @@ export class MappingStepTestingComponent implements OnInit {
       readOnly: true,
     };
 
-    this.currentSystem = this.sourceSystem;
-    this.editorTestingRequestTemplateEmitter.subscribe((template) => {
+    this.editorTestingPayloadTemplateEmitter.subscribe((template) => {
       this.currentSourceTemplate = template;
-      const editorTestingResponseRef =
-        this.elementRef.nativeElement.querySelector("#editorTestingResponse");
-      if (editorTestingResponseRef != null) {
-        //set schema for editors
-        this.editorTestingResponse.set({} as JSON);
-        editorTestingResponseRef.setAttribute("initialized", "true");
-      }
-
       const editorTestingRequestRef =
         this.elementRef.nativeElement.querySelector("#editorTestingRequest");
       if (editorTestingRequestRef != null) {
         //set schema for editors
         this.editorTestingRequest.setSchema(
-          getSchema(this.mapping.targetAPI, this.mapping.direction, false)
+          getSchema(this.mapping.targetAPI, this.mapping.direction, true)
         );
-        this.testingModel.request = this.currentSourceTemplate;
+        this.testingModel = {
+          payload: this.currentSourceTemplate,
+          results: [],
+          selectedResult: -1,
+          request: {},
+          response: {},
+        };
       }
       console.log("New test template:", this.currentSourceTemplate);
     });
   }
 
   async onTestTransformation() {
-    this.currentSystem = this.targetSystem;
-    this.editorTestingRequest.setSchema(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-    );
     let testProcessingContext = await this.mappingService.testResult(
       this.mapping,
       false
@@ -189,13 +183,15 @@ export class MappingStepTestingComponent implements OnInit {
     this.onNextTestResult();
   }
 
-  async onResetTransformation() {
-    this.currentSystem = this.sourceSystem;
-    this.testingModel.request = this.currentSourceTemplate;
-    this.editorTestingRequest.setSchema(
-      getSchema(this.mapping.targetAPI, this.mapping.direction, false)
-    );
-    this.editorTestingResponse.set({} as JSON);
+  onResetTransformation() {
+    this.testingModel = {
+      payload: this.currentSourceTemplate,
+      results: [],
+      request: {},
+      response: {},
+      selectedResult: -1,
+    };
+    this.mappingService.initializeCache(this.mapping.direction);
   }
 
   public onNextTestResult() {
@@ -206,7 +202,7 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.selectedResult = -1;
     }
     this.testingModel.selectedResult++;
-    this.selectedResult$.next(this.testingModel.selectedResult+1);
+    this.selectedResult$.next(this.testingModel.selectedResult + 1);
     if (
       this.testingModel.selectedResult >= 0 &&
       this.testingModel.selectedResult < this.testingModel.results.length

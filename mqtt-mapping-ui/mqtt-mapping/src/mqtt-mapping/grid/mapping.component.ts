@@ -66,6 +66,7 @@ import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
 import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
+import { NameRendererComponent } from "../renderer/name.renderer.component";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -110,12 +111,21 @@ export class MappingComponent implements OnInit {
   };
 
   columnsMappings: Column[] = [
+    // {
+    //   name: "id",
+    //   header: "System ID",
+    //   path: "id",
+    //   filterable: false,
+    //   dataType: ColumnDataType.TextShort,
+    //   visible: true,
+    // },
     {
-      name: "id",
-      header: "System ID",
-      path: "id",
+      name: "name",
+      header: "Name",
+      path: "name",
       filterable: false,
       dataType: ColumnDataType.TextShort,
+      cellRendererComponent: NameRendererComponent,
       visible: true,
     },
     {

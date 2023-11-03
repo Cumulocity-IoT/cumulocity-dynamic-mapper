@@ -34,7 +34,7 @@
     <div class="modal-body">
       <c8y-form-group
         *ngIf="!isAppCreated; else appCreated"
-        [hasError]="errorMessage"
+        [hasError]="!!errorMessage"
         class="m-auto"
         style="max-width: 285px"
       >
@@ -67,19 +67,5 @@
         </div>
       </ng-template>
     </div>
-  </div>
-
-  <div>
-    <a
-      (click)="$event.stopPropagation()"
-      *ngIf="isAppCreated && canOpenInBrowser"
-      [href]="getHref(createdApp)"
-      target="_blank"
-      class="btn btn-primary"
-      title="{{ 'Open' | translate }}"
-    >
-      <i c8yIcon="external-link" class="m-r-4"></i>
-      {{ "Open" | translate }}
-    </a>
   </div>
 </c8y-modal>

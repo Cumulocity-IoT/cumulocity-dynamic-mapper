@@ -118,8 +118,17 @@ public class MappingComponent {
             if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
                 log.debug("Sending monitoring: {}", statusMapping.values().size());
                 Map<String, Object> service = new HashMap<String, Object>();
-                MappingStatus[] array = statusMapping.values().toArray(new MappingStatus[0]);
-                service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, array);
+                MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
+                // add current name of mappings to the status messages
+                for (int index = 0; index < ms.length; index++) {
+                    ms[index].name = "#";
+                    if (cacheMappingInbound.containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingInbound.get(ms[index].id).name;
+                    } else if (cacheMappingOutbound.containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingOutbound.get(ms[index].id).name;
+                    }
+                }
+                service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, ms);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);
@@ -155,7 +164,7 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Tenant {} - Adding: {}", tenant, m.ident);
-            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.name, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
