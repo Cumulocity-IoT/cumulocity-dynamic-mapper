@@ -232,9 +232,11 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
+        //TODO ConnectorId must be added to the Parameter of the Operations from the UI.
         log.info("Post operation: {}", operation.toString());
         try {
             String tenant = contextService.getContext().getTenant();
+            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
                 // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
@@ -242,14 +244,10 @@ public class MQTTMappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                //TODO Move to Mapping Component
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
                 client.updateActiveSubscriptions(updatedMappings, false);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
                 client.connect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
                 client.disconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping(tenant);
@@ -299,13 +297,12 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @RequestMapping(value = "/monitoring/subscription", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(String connectorId) {
+    @RequestMapping(value = "/monitoring/subscription/{connectorId}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorId) {
         String tenant = contextService.getContext().getTenant();
         IConnectorClient client = null;
         try {
             client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
-            //TODO Add this to the interface of the connector
             Map<String, Integer> result = client.getActiveSubscriptions(tenant);
             log.info("Get active subscriptions!");
             return ResponseEntity.status(HttpStatus.OK).body(result);
@@ -396,12 +393,14 @@ public class MQTTMappingRestController {
         try {
             log.info("Update mapping: {}, {}", mapping, id);
             String tenant = contextService.getContext().getTenant();
-            mapping = mappingComponent.updateMapping(tenant, mapping, false, false);
+            final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
-                //TODO Move this to mapping component, call unsubscribe on client
-                mqttClient.upsertActiveSubscriptionMappingInbound(mapping);
+                HashMap<String, IConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                clients.keySet().stream().forEach(connector -> {
+                    clients.get(connector).upsertActiveSubscription(updatedMapping);
+                });
                 mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
                 mappingComponent.addToCacheMappingInbound(tenant, mapping);
                 mappingComponent.getCacheMappingInbound().get(tenant).put(mapping.id, mapping);
@@ -425,11 +424,26 @@ public class MQTTMappingRestController {
             @RequestParam URI topic,
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
+        List<ProcessingContext<?>> result = null;
         log.info("Test payload: {}, {}, {}", path, method, payload);
         try {
             boolean send = ("send").equals(method);
-            //TODO Add this to the interface
-            List<ProcessingContext<?>> result = mqttClient.test(path, send, payload);
+            Map<String,IConnectorClient> connectorClients = null;
+            try {
+                connectorClients = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+            } catch (ConnectorRegistryException e) {
+                throw new RuntimeException(e);
+            }
+            //TODO For multiple connectors this would lead to only the result of the last one will be returned
+            //TODO As an alternative we can expose the connector ID to the UI and the user can select to which connector he wants to test
+            for (String connector : connectorClients.keySet()) {
+                try {
+                    result = connectorClients.get(connector).test(path, send, payload);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            //List<ProcessingContext<?>> result = mqttClient.test(path, send, payload);
             return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error transforming payload: {}", ex);

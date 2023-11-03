@@ -21,31 +21,7 @@
 
 package mqtt.mapping.core;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-
-import org.apache.commons.io.IOUtils;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.svenson.JSONParser;
-
+import c8y.IsDevice;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
@@ -69,8 +45,6 @@ import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import c8y.IsDevice;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +52,7 @@ import mqtt.mapping.configuration.ConnectionConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.configuration.TrustedCertificateRepresentation;
+import mqtt.mapping.connector.IConnectorClient;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
@@ -91,7 +66,18 @@ import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
+import org.apache.commons.io.IOUtils;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.svenson.JSONParser;
+
+import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -123,14 +109,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    //private MQTTClient mqttClient;
-
-    /*@Autowired
-    public void setMQTTClient(@Lazy MQTTClient mqttClient) {
-        this.mqttClient = mqttClient;
-    }
-
-     */
 
     private ObjectMapper objectMapper;
 
@@ -299,7 +277,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public MQTTClient.Certificate loadCertificateByName(String fingerprint) {
+    public IConnectorClient.Certificate loadCertificateByName(String fingerprint) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
             return serviceConfigurationComponent.loadCertificateByName(fingerprint, credentials);
         });
@@ -308,7 +286,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 .append(result.getCertInPemFormat())
                 .append("\n").append("-----END CERTIFICATE-----");
 
-        return new MQTTClient.Certificate(result.getFingerprint(), cert.toString());
+        return new IConnectorClient.Certificate(result.getFingerprint(), cert.toString());
     }
 
     public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context) throws ProcessingException {
@@ -537,7 +515,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return device;
     }
 
-    public void updateOperationStatus(OperationRepresentation op, OperationStatus status, String failureReason, String tenant) {
+    public void updateOperationStatus(String tenant, OperationRepresentation op, OperationStatus status, String failureReason) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 op.setStatus(status.toString());

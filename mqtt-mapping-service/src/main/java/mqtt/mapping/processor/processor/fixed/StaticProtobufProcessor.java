@@ -26,6 +26,8 @@ import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
@@ -34,8 +36,6 @@ import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
@@ -49,14 +49,14 @@ import java.util.Map;
 @Service
 public class StaticProtobufProcessor extends BasePayloadProcessor<byte[]> {
 
-    public StaticProtobufProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
-        super(objectMapper, mqttClient, c8yAgent);
+    public StaticProtobufProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+        super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
     @Override
-    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, MqttMessage mqttMessage)
+    public ProcessingContext<byte[]> deserializePayload(ProcessingContext<byte[]> context, ConnectorMessage message)
             throws IOException {
-        context.setPayload(mqttMessage.getPayload());
+        context.setPayload(message.getPayload());
         return context;
     }
 

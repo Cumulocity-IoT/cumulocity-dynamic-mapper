@@ -1,7 +1,6 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;

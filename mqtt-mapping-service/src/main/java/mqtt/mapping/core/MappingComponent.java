@@ -122,10 +122,10 @@ public class MappingComponent {
                 // add current name of mappings to the status messages
                 for (int index = 0; index < ms.length; index++) {
                     ms[index].name = "#";
-                    if (cacheMappingInbound.containsKey(ms[index].id)) {
-                        ms[index].name = cacheMappingInbound.get(ms[index].id).name;
-                    } else if (cacheMappingOutbound.containsKey(ms[index].id)) {
-                        ms[index].name = cacheMappingOutbound.get(ms[index].id).name;
+                    if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
+                    } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
                     }
                 }
                 service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, ms);

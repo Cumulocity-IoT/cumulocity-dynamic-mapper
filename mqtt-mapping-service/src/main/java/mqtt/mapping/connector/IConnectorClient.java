@@ -1,23 +1,21 @@
 package mqtt.mapping.connector;
 
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public interface IConnectorClient {
 
-    String tenantId = null;
-
     public void setTenantId(String tenantId);
 
     public String getTenantId();
 
-    public AbstractExtensibleRepresentation publish(ProcessingContext<?> context) throws Exception;
+    public void publishMEAO(ProcessingContext<?> context);
 
     public void subscribe(String topic, Integer qos) throws Exception;
 
@@ -35,6 +33,8 @@ public interface IConnectorClient {
 
     public void disconnect();
 
+    public List<ProcessingContext<?>>  test(String topic, boolean send, Map<String, Object> payload) throws Exception;
+
     public String getConntectorId();
 
     public boolean isConnected();
@@ -44,6 +44,13 @@ public interface IConnectorClient {
     public Map<String, ConnectorProperty> getConfigProperties();
 
     public ServiceStatus getServiceStatus();
+
+    @Data
+    @AllArgsConstructor
+    public static class Certificate {
+        private String fingerprint;
+        private String certInPemFormat;
+    }
 
 
 }

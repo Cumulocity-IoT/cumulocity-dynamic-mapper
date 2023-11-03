@@ -21,6 +21,44 @@
 
 package mqtt.mapping.connector.client.mqtt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectionConfigurationComponent;
+import mqtt.mapping.connector.ConnectorProperty;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.model.Mapping;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.ProcessingContext;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -39,46 +77,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
-import com.google.protobuf.Internal;
-import lombok.*;
-import mqtt.mapping.connector.ConnectorProperty;
-import mqtt.mapping.connector.IConnectorClient;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.configuration.ConnectionConfigurationComponent;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.Mapping;
-import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
-import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 @Configuration
@@ -102,7 +100,7 @@ public class MQTTClient implements IConnectorClient {
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
     private ConfigurationConnection connectionConfiguration;
-    private Certificate cert;
+    private IConnectorClient.Certificate cert;
 
 
     private ConnectionConfigurationComponent connectionConfigurationComponent;
@@ -297,7 +295,7 @@ public class MQTTClient implements IConnectorClient {
                             connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
                         }
                         if (connectionConfiguration.useSelfSignedCertificate) {
-                            log.debug("Using certificate: {}", cert.certInPemFormat);
+                            log.debug("Using certificate: {}", cert.getCertInPemFormat());
 
                             try {
                                 KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -305,7 +303,7 @@ public class MQTTClient implements IConnectorClient {
                                 trustStore.setCertificateEntry("Custom CA",
                                         (X509Certificate) CertificateFactory.getInstance("X509")
                                                 .generateCertificate(new ByteArrayInputStream(
-                                                        cert.certInPemFormat.getBytes(Charset.defaultCharset()))));
+                                                        cert.getCertInPemFormat().getBytes(Charset.defaultCharset()))));
 
                                 TrustManagerFactory tmf = TrustManagerFactory
                                         .getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -483,12 +481,15 @@ public class MQTTClient implements IConnectorClient {
     }
 
 
+    @Override
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
-        MqttMessage mqttMessage = new MqttMessage();
-        mqttMessage.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(topic, mqttMessage, send).get();
+        ConnectorMessage message = new ConnectorMessage();
+        message.setPayload(payloadMessage.getBytes());
+        if(dispatcher == null)
+            dispatcher = new AsynchronousDispatcher(this);
+        return dispatcher.processMessage(tenantId, getConntectorId(), topic, message, send).get();
     }
 
     public void reconnect() {
@@ -618,14 +619,18 @@ public class MQTTClient implements IConnectorClient {
         return updatedMappings;
     }
 
-    public AbstractExtensibleRepresentation publish(ProcessingContext<?> context)
-            throws MqttPersistenceException, MqttException {
+    @Override
+    public void publishMEAO(ProcessingContext<?> context) {
         MqttMessage mqttMessage = new MqttMessage();
-        String payload = context.getCurrentRequest().getRequest();
+        C8YRequest currentRequest = context.getCurrentRequest();
+        String payload = currentRequest.getRequest();
         mqttMessage.setPayload(payload.getBytes());
-        mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
+        try {
+            mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
+        } catch (MqttException e) {
+            throw new RuntimeException(e);
+        }
         log.info("Published outbound message: {} for mapping: {} on topic: {}", payload, context.getMapping().name, context.getResolvedPublishTopic());
-        return null;
     }
 
     @Override

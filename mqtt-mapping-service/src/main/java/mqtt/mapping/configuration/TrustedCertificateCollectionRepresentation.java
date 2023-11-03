@@ -1,12 +1,13 @@
 package mqtt.mapping.configuration;
 
 import com.cumulocity.rest.representation.BaseCollectionRepresentation;
-import java.util.Iterator;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.svenson.JSONTypeHint;
+
+import java.util.Iterator;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor

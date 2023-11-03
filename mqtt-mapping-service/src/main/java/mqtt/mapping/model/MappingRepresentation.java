@@ -21,6 +21,16 @@
 
 package mqtt.mapping.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import mqtt.mapping.processor.model.MappingType;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,19 +38,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.regex.Pattern;
-
-import javax.validation.constraints.NotNull;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import mqtt.mapping.processor.model.MappingType;
 
 @Data
 @NoArgsConstructor

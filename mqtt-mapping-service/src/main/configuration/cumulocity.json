@@ -4,7 +4,7 @@
   "provider": {
     "name":"Software AG"
   },
-  "isolation":"PER_TENANT",
+  "isolation":"MULTI_TENANT",
   "requiredRoles": [
     "ROLE_INVENTORY_READ",
     "ROLE_INVENTORY_ADMIN",
@@ -24,8 +24,8 @@
     "ROLE_MEASUREMENT_READ",
     "ROLE_NOTIFICATION_2_ADMIN",
     "ROLE_USER_MANAGEMENT_READ",
-		"ROLE_USER_MANAGEMENT_CREATE",
-		"ROLE_USER_MANAGEMENT_ADMIN"
+    "ROLE_USER_MANAGEMENT_CREATE",
+	"ROLE_USER_MANAGEMENT_ADMIN"
   ],
   "roles":[
     "ROLE_MAPPING_ADMIN",

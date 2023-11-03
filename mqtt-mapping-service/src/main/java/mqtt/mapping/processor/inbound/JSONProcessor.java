@@ -31,6 +31,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -40,8 +42,6 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
@@ -54,14 +54,14 @@ import java.util.Map;
 @Service
 public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
 
-    public JSONProcessor(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
-        super(objectMapper, mqttClient, c8yAgent);
+    public JSONProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+        super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
     @Override
     public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
-            MqttMessage mqttMessage) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(mqttMessage.getPayload());
+                                                          ConnectorMessage message) throws IOException {
+        JsonNode jsonNode = objectMapper.readTree(message.getPayload());
         context.setPayload(jsonNode);
         return context;
     }

@@ -29,7 +29,6 @@ import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import mqtt.mapping.core.mock.MockIdentity;
 import mqtt.mapping.processor.model.ProcessingContext;
-
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

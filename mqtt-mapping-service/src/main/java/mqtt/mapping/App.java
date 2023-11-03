@@ -21,26 +21,50 @@
 
 package mqtt.mapping;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
+import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
-import com.cumulocity.model.*;
+import com.cumulocity.model.DateTimeConverter;
+import com.cumulocity.model.IDTypeConverter;
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.BaseResourceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.deser.Deserializers;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.Serializers;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.ConnectorRegistry;
-import mqtt.mapping.connector.ConnectorRegistryException;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.connector.ConnectorRegistry;
+import mqtt.mapping.connector.ConnectorRegistryException;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.client.mqtt.MQTTClient;
+import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.*;
 import mqtt.mapping.notification.C8YAPISubscriber;
+import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
+import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.FlatFileProcessor;
+import mqtt.mapping.processor.inbound.GenericBinaryProcessor;
+import mqtt.mapping.processor.inbound.JSONProcessor;
+import mqtt.mapping.processor.model.MappingType;
+import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
+import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
+import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -55,45 +79,13 @@ import org.svenson.AbstractDynamicProperties;
 import org.svenson.JSONParser;
 import org.svenson.converter.DefaultTypeConverterRepository;
 
-import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
-import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.BaseResourceRepresentation;
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationConfig;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.Deserializers;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.ser.Serializers;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
+import java.io.IOException;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import lombok.SneakyThrows;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
-import mqtt.mapping.processor.inbound.BasePayloadProcessor;
-import mqtt.mapping.processor.inbound.FlatFileProcessor;
-import mqtt.mapping.processor.inbound.GenericBinaryProcessor;
-import mqtt.mapping.processor.inbound.JSONProcessor;
-import mqtt.mapping.processor.model.MappingType;
-import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
-import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
-import mqtt.mapping.processor.processor.fixed.StaticProtobufProcessor;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 @MicroserviceApplication
 @EnableContextSupport
@@ -145,22 +137,21 @@ public class App {
 
     @Bean("payloadProcessorsInbound")
     public Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound(ObjectMapper objectMapper,
-            @Lazy MQTTClient mqttClient,
-            @Lazy C8YAgent c8yAgent) {
+                                                                              @Lazy IConnectorClient connectorClient,
+                                                                              @Lazy C8YAgent c8yAgent, String tenant) {
         return Map.of(
-                MappingType.JSON, new JSONProcessor(objectMapper, mqttClient, c8yAgent),
-                MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, mqttClient, c8yAgent),
-                MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, mqttClient, c8yAgent),
-                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, mqttClient, c8yAgent),
-                MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessorInbound(objectMapper, mqttClient, c8yAgent));
+                MappingType.JSON, new JSONProcessor(objectMapper, connectorClient, c8yAgent, tenant),
+                MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, connectorClient, c8yAgent, tenant),
+                MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, connectorClient, c8yAgent, tenant),
+                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, connectorClient, c8yAgent, tenant),
+                MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessorInbound(objectMapper, connectorClient, c8yAgent, tenant));
     }
 
     @Bean("payloadProcessorsOutbound")
-    public Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound(ObjectMapper objectMapper,
-            MQTTClient mqttClient,
-            C8YAgent c8yAgent) {
+    public Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient,
+                                                                                       C8YAgent c8yAgent, String tenant) {
         return Map.of(
-                MappingType.JSON, new JSONProcessorOutbound(objectMapper, mqttClient, c8yAgent));
+                MappingType.JSON, new JSONProcessorOutbound(objectMapper, connectorClient, c8yAgent, tenant));
     }
 
     public static ObjectMapper baseObjectMapper() {
@@ -185,7 +176,7 @@ public class App {
 
         class SvensonDeserializers extends Deserializers.Base {
             public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config,
-                    BeanDescription beanDesc) {
+                                                            BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // base resource representation is deserialized using svenson
@@ -207,7 +198,7 @@ public class App {
         class SvensonSerializers extends Serializers.Base {
             @Override
             public JsonSerializer<?> findSerializer(final SerializationConfig config, final JavaType type,
-                    BeanDescription beanDesc) {
+                                                    BeanDescription beanDesc) {
                 final Class<?> rawClass = type.getRawClass();
 
                 // gid is serialized using svenson
@@ -215,7 +206,7 @@ public class App {
                     return new JsonSerializer<Object>() {
                         @SneakyThrows
                         public void serialize(Object value, final JsonGenerator gen,
-                                final SerializerProvider serializers) {
+                                              final SerializerProvider serializers) {
                             final GId representation = (GId) value;
                             gen.writeString(representation.getValue());
                         }
@@ -265,7 +256,7 @@ public class App {
     }
 
     @EventListener
-    public void destroy(MicroserviceSubscriptionRemovedEvent event)  {
+    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
         String tenant = event.getTenant();
         notificationSubscriber.disconnect(null);
@@ -307,7 +298,6 @@ public class App {
             //mqttClient.submitConnect();
         }
     }
-
 
 
     public static void main(String[] args) {
