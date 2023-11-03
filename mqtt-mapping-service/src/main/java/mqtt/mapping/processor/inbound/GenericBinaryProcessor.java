@@ -23,12 +23,12 @@ package mqtt.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.model.PayloadWrapper;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.apache.commons.codec.binary.Hex;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -36,13 +36,13 @@ import java.io.IOException;
 @Service
 public class GenericBinaryProcessor extends JSONProcessor {
 
-    public GenericBinaryProcessor ( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
-        super(objectMapper, mqttClient, c8yAgent);
+    public GenericBinaryProcessor (ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant){
+        super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException{
-        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(Hex.encodeHexString(mqttMessage.getPayload())));
+    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, ConnectorMessage message) throws IOException{
+        JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(Hex.encodeHexString(message.getPayload())));
         context.setPayload(payloadJsonNode);
         return context;
     }

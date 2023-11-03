@@ -21,14 +21,13 @@
 
 package mqtt.mapping.processor.outbound;
 
-import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -40,10 +39,8 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -56,17 +53,20 @@ import java.util.Set;
 @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent) {
+    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
         this.objectMapper = objectMapper;
-        this.mqttClient = mqttClient;
+        this.connectorClient = connectorClient;
         this.c8yAgent = c8yAgent;
+        this.tenant = tenant;
     }
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
 
-    protected MQTTClient mqttClient;
+    protected IConnectorClient connectorClient;
+
+    protected String tenant;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
@@ -141,10 +141,9 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                attocRequest = c8yAgent.createMEAO(context);
-
-                var response = objectMapper.writeValueAsString(attocRequest);
-                context.getCurrentRequest().setResponse(response);
+                connectorClient.publishMEAO(context);
+                //var response = objectMapper.writeValueAsString(attocRequest);
+                //context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
             }

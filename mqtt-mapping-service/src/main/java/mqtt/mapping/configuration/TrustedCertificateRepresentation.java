@@ -1,13 +1,13 @@
 package mqtt.mapping.configuration;
 
 
-
 import com.cumulocity.model.DateTimeConverter;
 import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import lombok.*;
-import static lombok.EqualsAndHashCode.*;
 import org.joda.time.DateTime;
 import org.svenson.converter.JSONConverter;
+
+import static lombok.EqualsAndHashCode.Include;
 
 @Getter
 @Setter

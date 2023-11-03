@@ -23,11 +23,11 @@ package mqtt.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.model.PayloadWrapper;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -37,14 +37,14 @@ import java.nio.charset.Charset;
 public class FlatFileProcessor extends JSONProcessor {
 
 
-    public FlatFileProcessor( ObjectMapper objectMapper, MQTTClient mqttClient, C8YAgent c8yAgent){
-        super(objectMapper, mqttClient, c8yAgent);
+    public FlatFileProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant){
+        super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
     @Override
-    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, MqttMessage mqttMessage) throws IOException {
-        String payloadMessage  = (mqttMessage.getPayload() != null
-                    ? new String(mqttMessage.getPayload(), Charset.defaultCharset())
+    public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context, ConnectorMessage message) throws IOException {
+        String payloadMessage  = (message.getPayload() != null
+                    ? new String(message.getPayload(), Charset.defaultCharset())
                     : "");
         JsonNode payloadJsonNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));
         context.setPayload(payloadJsonNode);

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.connector.ConnectorRegistry;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
@@ -41,7 +42,6 @@ import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import mqtt.mapping.connector.client.mqtt.MQTTClient;
 import org.apache.commons.codec.binary.Hex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -82,11 +82,11 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
             log.info("Notification received: <{}>", notification.getMessage());
             log.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
+            String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
             C8YMessage message = new C8YMessage();
             message.setPayload(notification.getMessage());
             message.setApi(notification.getApi());
-            processMessage(message, true);
+            processMessage(tenant, message, true);
         }
     }
 
@@ -104,6 +104,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             operationSubscriber.setDeviceConnectionStatus(0);
     }
 
+    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
+        return notificationHeaders.get(0).split("/")[0];
+    }
+
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
@@ -114,10 +118,11 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
+        String tenant;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound, boolean sendPayload,
-                C8YMessage c8yMessage, ObjectMapper objectMapper) {
+                C8YMessage c8yMessage, ObjectMapper objectMapper, String tenant) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = c8yAgent;
@@ -125,17 +130,18 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             this.sendPayload = sendPayload;
             this.c8yMessage = c8yMessage;
             this.objectMapper = objectMapper;
+            this.tenant = tenant;
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingStatusComponent
-                    .getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+                    .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.isActive()) {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(mapping);
+                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -182,7 +188,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                     log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(mapping);
+                                    mappingStatusComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
@@ -221,13 +227,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     protected C8YAgent c8yAgent;
 
     @Autowired
-    protected MQTTClient mqttClient;
+    protected ConnectorRegistry connectorRegistry;
 
     @Autowired
     protected ObjectMapper objectMapper;
-
-    @Autowired
-    SysHandler sysHandler;
 
     @Autowired
     Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
@@ -242,9 +245,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage,
+    public Future<List<ProcessingContext<?>>> processMessage(String tenant, C8YMessage c8yMessage,
             boolean sendPayload) {
-        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(Mapping.UNSPECIFIED_MAPPING);
+        MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
 
@@ -254,17 +257,17 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         //
         if (c8yMessage.getApi().equals(API.OPERATION)) {
             op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
-            c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
+            c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
         }
         if (c8yMessage.getPayload() != null) {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
-                resolvedMappings = mappingComponent.resolveMappingOutbound(message, c8yMessage.getApi());
+                resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, message, c8yMessage.getApi());
             } catch (Exception e) {
                 log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
                 log.debug(e.getMessage(), e);
                 if (op != null)
-                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                    c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
@@ -273,7 +276,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessorsOutbound,
-                        sendPayload, c8yMessage, objectMapper));
+                        sendPayload, c8yMessage, objectMapper, tenant));
 
         if (op != null) {
             // Blocking for Operations to receive the processing result to update operation
@@ -282,21 +285,21 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                 List<ProcessingContext<?>> results = futureProcessingResult.get();
                 if (results.size() > 0) {
                     if (results.get(0).hasError()) {
-                        c8yAgent.updateOperationStatus(op, OperationStatus.FAILED,
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
                                 results.get(0).getErrors().toString());
                     } else {
-                        c8yAgent.updateOperationStatus(op, OperationStatus.SUCCESSFUL, null);
+                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
                     }
                 } else {
                     // No Mapping found
-                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED,
+                    c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
                             "No Mapping found for operation " + op.toJSON());
 
                 }
             } catch (InterruptedException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
             } catch (ExecutionException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
             }
         }
         return futureProcessingResult;
