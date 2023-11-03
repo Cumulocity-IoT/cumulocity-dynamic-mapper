@@ -27,8 +27,8 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
-import mqtt.mapping.configuration.ConnectionConfigurationComponent;
+import mqtt.mapping.connector.ConnectorConfiguration;
+import mqtt.mapping.connector.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.ConnectorProperty;
 import mqtt.mapping.connector.IConnectorClient;
 import mqtt.mapping.connector.callback.ConnectorMessage;
@@ -99,18 +99,9 @@ public class MQTTClient implements IConnectorClient {
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
-    private ConfigurationConnection connectionConfiguration;
     private IConnectorClient.Certificate cert;
 
-
-    private ConnectionConfigurationComponent connectionConfigurationComponent;
-
     private MQTTCallback mqttCallback = null;
-
-    @Autowired
-    public void setConnectionConfigurationComponent(ConnectionConfigurationComponent connectionConfigurationComponent) {
-        this.connectionConfigurationComponent = connectionConfigurationComponent;
-    }
 
     private MappingComponent mappingComponent;
 
@@ -118,6 +109,9 @@ public class MQTTClient implements IConnectorClient {
     public void setMappingComponent(MappingComponent mappingStatusComponent) {
         this.mappingComponent = mappingStatusComponent;
     }
+
+    @Autowired
+    public ConnectorConfigurationComponent connectorConfigurationComponent;
 
     private MqttClient mqttClient;
 
@@ -163,6 +157,8 @@ public class MQTTClient implements IConnectorClient {
 
     private Instant start = Instant.now();
 
+    private ConnectorConfiguration configuration;
+
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
@@ -193,6 +189,7 @@ public class MQTTClient implements IConnectorClient {
     private boolean initialize() {
         var firstRun = true;
         while (!canConnect()) {
+            //this.configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId());
             if (!firstRun) {
                 try {
                     log.info("Retrieving MQTT configuration in {}s ...",
@@ -203,8 +200,11 @@ public class MQTTClient implements IConnectorClient {
                 }
             }
             reloadConfiguration();
-            if (connectionConfiguration.useSelfSignedCertificate) {
-                cert = c8yAgent.loadCertificateByName(connectionConfiguration.nameCertificate);
+
+            boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
+            String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
+            if (useSelfSignedCertificate) {
+                cert = c8yAgent.loadCertificateByName(nameCertificate);
             }
             firstRun = false;
         }
@@ -230,7 +230,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private void reloadConfiguration() {
-        connectionConfiguration = connectionConfigurationComponent.loadConnectionConfiguration();
+        configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId());
     }
 
     public void submitConnect() {
@@ -256,8 +256,7 @@ public class MQTTClient implements IConnectorClient {
         while (!successful) {
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Establishing the MQTT connection now - phase II: {}, {}",
-                        ConfigurationConnection.isValid(connectionConfiguration), canConnect());
+                log.info("Establishing the MQTT connection now - phase II: {}, {}", isConfigValid(configuration), canConnect());
                 if (!firstRun) {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
@@ -268,9 +267,16 @@ public class MQTTClient implements IConnectorClient {
                 }
                 try {
                     if (canConnect()) {
-                        String prefix = connectionConfiguration.useTLS ? "ssl://" : "tcp://";
-                        String broker = prefix + connectionConfiguration.mqttHost + ":"
-                                + connectionConfiguration.mqttPort;
+                        boolean useTLS = (Boolean) configuration.getProperties().get("useTLS");
+                        boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
+                        String prefix = useTLS ? "ssl://" : "tcp://";
+                        String mqttHost = (String) configuration.getProperties().get("mqttHost");
+                        String clientId = (String) configuration.getProperties().get("clientId");
+                        int mqttPort = (Integer) configuration.getProperties().get("mqttPort");
+                        String user = (String) configuration.getProperties().get("user");
+                        String password = (String) configuration.getProperties().get("password");
+                        String broker = prefix + mqttHost + ":"
+                                + mqttPort;
                         // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
                         // MemoryPersistence());
 
@@ -282,19 +288,19 @@ public class MQTTClient implements IConnectorClient {
                         if(dispatcher == null)
                             this.dispatcher = new AsynchronousDispatcher(this);
                         mqttClient = new MqttClient(broker,
-                                connectionConfiguration.getClientId() + additionalSubscriptionIdTest,
+                                clientId + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
                         mqttCallback = new MQTTCallback(dispatcher, tenantId, getConntectorId());
                         mqttClient.setCallback(mqttCallback);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
-                        if (!StringUtils.isEmpty(connectionConfiguration.user)
-                                && !StringUtils.isEmpty(connectionConfiguration.password)) {
-                            connOpts.setUserName(connectionConfiguration.getUser());
-                            connOpts.setPassword(connectionConfiguration.getPassword().toCharArray());
+                        if (!StringUtils.isEmpty(user)
+                                && !StringUtils.isEmpty(password)) {
+                            connOpts.setUserName(user);
+                            connOpts.setPassword(password.toCharArray());
                         }
-                        if (connectionConfiguration.useSelfSignedCertificate) {
+                        if (useSelfSignedCertificate) {
                             log.debug("Using certificate: {}", cert.getCertInPemFormat());
 
                             try {
@@ -366,15 +372,15 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private boolean canConnect() {
-        return ConfigurationConnection.isEnabled(connectionConfiguration)
-                && (!connectionConfiguration.useSelfSignedCertificate
-                        || (connectionConfiguration.useSelfSignedCertificate &&
+        boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
+        return configuration.isEnabled()
+                && (!useSelfSignedCertificate
+                        || (useSelfSignedCertificate &&
                                 cert != null));
     }
 
     private boolean shouldConnect() {
-        return !ConfigurationConnection.isValid(connectionConfiguration)
-                || ConfigurationConnection.isEnabled(connectionConfiguration);
+        return !isConfigValid(configuration) || configuration.isEnabled();
     }
 
     public boolean isConnected() {
@@ -415,13 +421,13 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void disconnectFromBroker() {
-        connectionConfiguration = connectionConfigurationComponent.enableConnection(false);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorId(), false);
         disconnect();
         mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }
 
     public void connectToBroker() {
-        connectionConfiguration = connectionConfigurationComponent.enableConnection(true);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorId(), true);
         submitConnect();
         mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }
@@ -472,7 +478,7 @@ public class MQTTClient implements IConnectorClient {
             serviceStatus = ServiceStatus.connected();
         } else if (canConnect()) {
             serviceStatus = ServiceStatus.activated();
-        } else if (ConfigurationConnection.isValid(connectionConfiguration)) {
+        } else if (isConfigValid(configuration)) {
             serviceStatus = ServiceStatus.configured();
         } else {
             serviceStatus = ServiceStatus.notReady();
@@ -480,6 +486,17 @@ public class MQTTClient implements IConnectorClient {
         return serviceStatus;
     }
 
+    @Override
+    public boolean isConfigValid(ConnectorConfiguration configuration) {
+        if (configuration == null)
+            return false;
+        String host = (String) configuration.getProperties().get("mqttHost");
+        int port = (Integer) configuration.getProperties().get("mqttPort");
+        String clientId = (String) configuration.getProperties().get("clientId");
+        return !StringUtils.isEmpty(host) &&
+                !(port == 0) &&
+                !StringUtils.isEmpty(clientId);
+    }
 
     @Override
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
@@ -495,7 +512,7 @@ public class MQTTClient implements IConnectorClient {
     public void reconnect() {
         disconnect();
         // invalidate broker client
-        connectionConfiguration = null;
+        configuration = null;
         submitInitialize();
         submitConnect();
     }

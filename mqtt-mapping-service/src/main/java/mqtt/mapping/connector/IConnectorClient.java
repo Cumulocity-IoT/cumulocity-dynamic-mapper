@@ -45,6 +45,8 @@ public interface IConnectorClient {
 
     public ServiceStatus getServiceStatus();
 
+    public boolean isConfigValid(ConnectorConfiguration configuration);
+
     @Data
     @AllArgsConstructor
     public static class Certificate {
