@@ -1,4 +1,4 @@
-package mqtt.mapping.connector.callback;
+package mqtt.mapping.connector.core.callback;
 
 public class ConnectorMessage {
     byte[] payload;

@@ -1,7 +1,7 @@
-package mqtt.mapping.connector.client.mqtt;
+package mqtt.mapping.connector.mqtt;
 
-import mqtt.mapping.connector.callback.ConnectorMessage;
-import mqtt.mapping.connector.callback.GenericMessageCallback;
+import mqtt.mapping.connector.core.callback.ConnectorMessage;
+import mqtt.mapping.connector.core.callback.GenericMessageCallback;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;

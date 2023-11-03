@@ -1,7 +1,10 @@
-package mqtt.mapping.connector;
+package mqtt.mapping.connector.core.client;
+
+import mqtt.mapping.connector.core.ConnectorProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;

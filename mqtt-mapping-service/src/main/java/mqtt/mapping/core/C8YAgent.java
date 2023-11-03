@@ -52,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.configuration.TrustedCertificateRepresentation;
-import mqtt.mapping.connector.IConnectorClient;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;

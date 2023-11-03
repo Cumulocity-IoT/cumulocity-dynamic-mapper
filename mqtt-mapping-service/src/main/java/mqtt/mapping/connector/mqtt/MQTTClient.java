@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.connector.client.mqtt;
+package mqtt.mapping.connector.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -27,11 +27,11 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.ConnectorConfiguration;
-import mqtt.mapping.connector.ConnectorConfigurationComponent;
-import mqtt.mapping.connector.ConnectorProperty;
-import mqtt.mapping.connector.IConnectorClient;
-import mqtt.mapping.connector.callback.ConnectorMessage;
+import mqtt.mapping.configuration.ConnectorConfiguration;
+import mqtt.mapping.configuration.ConnectorConfigurationComponent;
+import mqtt.mapping.connector.core.ConnectorProperty;
+import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceStatus;
