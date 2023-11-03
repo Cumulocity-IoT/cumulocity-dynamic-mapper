@@ -496,8 +496,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         loadProcessorExtensions();
     }
 
-    public ManagedObjectRepresentation getManagedObjectForId(String deviceId) {
-        ManagedObjectRepresentation device = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId) {
+        ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 return inventoryApi.get(GId.asGId(deviceId));
             } catch (SDKException exception) {
