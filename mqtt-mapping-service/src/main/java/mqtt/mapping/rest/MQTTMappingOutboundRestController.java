@@ -1,5 +1,7 @@
 package mqtt.mapping.rest;
 
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.core.C8YAgent;
@@ -28,6 +30,9 @@ public class MQTTMappingOutboundRestController {
     @Autowired
     C8YAPISubscriber c8yApiSubscriber;
 
+    @Autowired
+    private ContextService<UserCredentials> contextService;
+
     @Value("${APP.outputMappingEnabled}")
     private boolean outputMappingEnabled;
 
@@ -37,7 +42,7 @@ public class MQTTMappingOutboundRestController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             for (Device device : subscription.getDevices()) {
-                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
                     c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
                 } else {
@@ -56,8 +61,9 @@ public class MQTTMappingOutboundRestController {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
+            String tenant = contextService.getContext().getTenant();
             //List<NotificationSubscriptionRepresentation> deviceSubscriptions = c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
-            C8YAPISubscription c8ySubscription = c8yApiSubscriber.getDeviceSubscriptions(null, null);
+            C8YAPISubscription c8ySubscription = c8yApiSubscriber.getDeviceSubscriptions(tenant, null, null);
             //3 cases -
             // 1. Device exists in subscription and active subscription --> Do nothing
             // 2. Device exists in subscription and does not have an active subscription --> create subscription
@@ -73,7 +79,7 @@ public class MQTTMappingOutboundRestController {
             c8ySubscription.getDevices().forEach(entity -> toBeCreatedSub.removeIf(x -> x.getId().equals(entity.getId())));
 
             for (Device device : toBeCreatedSub) {
-                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
                         c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
@@ -86,7 +92,7 @@ public class MQTTMappingOutboundRestController {
             }
 
             for (Device device : toBeRemovedSub) {
-                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(device.getId());
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
                         c8yApiSubscriber.unsubscribeDevice(mor);
@@ -109,7 +115,7 @@ public class MQTTMappingOutboundRestController {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            C8YAPISubscription c8YAPISubscription = c8yApiSubscriber.getDeviceSubscriptions(deviceId, subscriptionName);
+            C8YAPISubscription c8YAPISubscription = c8yApiSubscriber.getDeviceSubscriptions(contextService.getContext().getTenant(), deviceId, subscriptionName);
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -121,7 +127,7 @@ public class MQTTMappingOutboundRestController {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(deviceId);
+                ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), deviceId);
                 if (mor != null) {
                     c8yApiSubscriber.unsubscribeDevice(mor);
                 } else {

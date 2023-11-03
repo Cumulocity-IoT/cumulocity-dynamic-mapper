@@ -196,7 +196,7 @@ public class C8YAPISubscriber {
         return notificationFut;
     }
 
-    public C8YAPISubscription getDeviceSubscriptions(String deviceId, String deviceSubscription) {
+    public C8YAPISubscription getDeviceSubscriptions(String tenant, String deviceId, String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -212,7 +212,7 @@ public class C8YAPISubscriber {
         NotificationSubscriptionFilter finalFilter = filter;
         C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
         List<Device> devices = new ArrayStack();
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+        subscriptionsService.runForTenant(tenant, () -> {
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
                     .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
@@ -223,7 +223,7 @@ public class C8YAPISubscriber {
                     Device device = new Device();
                     device.setId(notification.getSource().getId().getValue());
                     ManagedObjectRepresentation mor = c8YAgent
-                            .getManagedObjectForId(notification.getSource().getId().getValue());
+                            .getManagedObjectForId(tenant, notification.getSource().getId().getValue());
                     if (mor != null)
                         device.setName(mor.getName());
                     else
@@ -274,6 +274,10 @@ public class C8YAPISubscriber {
         return deviceSubListFut;
     }
 
+    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
+        return notificationHeaders.get(0).split("/")[0];
+    }
+
     public void subscribeTenant(String tenant) {
         logger.info("Creating new Subscription for Tenant " + tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
@@ -294,7 +298,7 @@ public class C8YAPISubscriber {
                     try {
                         logger.info("Tenant Notification received: <{}>", notification.getMessage());
                         logger.info("Notification headers: <{}>", notification.getNotificationHeaders());
-
+                        String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
                         ManagedObjectRepresentation mor = JSONBase.getJSONParser()
                                 .parse(ManagedObjectRepresentation.class, notification.getMessage());
                         /*
@@ -312,7 +316,7 @@ public class C8YAPISubscriber {
 
                             logger.info("Device deleted with name {} and id {}", mor.getName(), mor.getId().getValue());
                             final ManagedObjectRepresentation morRetrieved = c8YAgent
-                                    .getManagedObjectForId(mor.getId().getValue());
+                                    .getManagedObjectForId(tenant, mor.getId().getValue());
                             if (morRetrieved != null) {
                                 unsubscribeDevice(morRetrieved);
                             }
