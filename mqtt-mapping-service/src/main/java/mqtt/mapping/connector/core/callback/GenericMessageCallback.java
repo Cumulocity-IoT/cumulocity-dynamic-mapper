@@ -1,4 +1,4 @@
-package mqtt.mapping.connector.callback;
+package mqtt.mapping.connector.core.callback;
 
 public interface GenericMessageCallback {
     void onClose(String closeMessage, Throwable closeException);

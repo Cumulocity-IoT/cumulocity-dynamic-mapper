@@ -1,6 +1,7 @@
-package mqtt.mapping.connector;
+package mqtt.mapping.connector.core.registry;
 
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;

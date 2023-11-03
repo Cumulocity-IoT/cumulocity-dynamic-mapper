@@ -1,4 +1,4 @@
-package mqtt.mapping.connector;
+package mqtt.mapping.configuration;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
@@ -12,16 +12,22 @@ import java.util.Map;
 @Data
 @ToString()
 @AllArgsConstructor
-public class ConnectorPropertyConfiguration implements Cloneable {
+public class ConnectorConfiguration implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String connectorId;
 
     @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Map<String, ConnectorProperty> properties;
+    public boolean enabled;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Map<String, Object> properties;
+
+    public boolean isEnabled() {
+        return this.enabled;
+    }
     public Object clone()
     {
         try {

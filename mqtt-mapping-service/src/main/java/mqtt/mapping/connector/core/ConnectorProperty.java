@@ -1,4 +1,4 @@
-package mqtt.mapping.connector;
+package mqtt.mapping.connector.core;
 
 public enum ConnectorProperty {
     STRING_PROPERTY,

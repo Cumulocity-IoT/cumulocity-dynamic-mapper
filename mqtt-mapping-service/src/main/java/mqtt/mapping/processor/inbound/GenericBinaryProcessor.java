@@ -23,8 +23,8 @@ package mqtt.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mqtt.mapping.connector.IConnectorClient;
-import mqtt.mapping.connector.callback.ConnectorMessage;
+import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.model.PayloadWrapper;
 import mqtt.mapping.processor.model.ProcessingContext;

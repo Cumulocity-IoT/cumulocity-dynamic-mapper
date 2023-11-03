@@ -1,4 +1,4 @@
-package mqtt.mapping.connector;
+package mqtt.mapping.connector.core.registry;
 
 public class ConnectorRegistryException extends Exception {
         public ConnectorRegistryException(String errorMessage) {
