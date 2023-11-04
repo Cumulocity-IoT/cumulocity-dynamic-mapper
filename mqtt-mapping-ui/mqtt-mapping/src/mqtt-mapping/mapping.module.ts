@@ -63,6 +63,7 @@ import { SubstitutionRendererComponent } from "./step-main/substitution/substitu
 import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
 import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
+import { ImportMappingsComponent } from "./import-modal/import.component";
 
 @NgModule({
   declarations: [
@@ -73,6 +74,7 @@ import { MappingSubscriptionComponent } from "./subscription/mapping-subscriptio
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
+    ImportMappingsComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -107,6 +109,7 @@ import { MappingSubscriptionComponent } from "./subscription/mapping-subscriptio
     MappingStepPropertiesComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
+    ImportMappingsComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,

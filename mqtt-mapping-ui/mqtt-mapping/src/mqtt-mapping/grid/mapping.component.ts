@@ -36,6 +36,7 @@ import {
   Row,
 } from "@c8y/ngx-components";
 import { v4 as uuidv4 } from "uuid";
+import { saveAs } from "file-saver";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
   API,
@@ -67,6 +68,7 @@ import { IIdentified } from "@c8y/client";
 import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
 import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
 import { NameRendererComponent } from "../renderer/name.renderer.component";
+import { ImportMappingsComponent } from "../import-modal/import.component";
 
 @Component({
   selector: "mapping-mapping-grid",
@@ -288,7 +290,7 @@ export class MappingComponent implements OnInit {
       {
         type: "ACTIVATE",
         text: "Toogle Activation",
-        icon:'toggle-on',
+        icon: "toggle-on",
         callback: this.activateMapping.bind(this),
       }
     );
@@ -303,7 +305,7 @@ export class MappingComponent implements OnInit {
   }
 
   onRowClick(mapping: Row) {
-    console.log("Row clicked:");
+    console.log("Row :");
     this.updateMapping(mapping as Mapping);
   }
 
@@ -575,8 +577,29 @@ export class MappingComponent implements OnInit {
     this.showConfigSubscription = false;
   }
 
-  async onReloadClicked() {
+  async onReload() {
     this.reloadMappings();
+  }
+
+  async onExport() {
+    const mappings2Export = this.mappings.filter(
+      (m) => m.direction == this.stepperConfiguration.direction
+    );
+    const json = JSON.stringify(mappings2Export, undefined, 2);
+    const blob = new Blob([json]);
+    saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
+  }
+
+  async onImport() {
+    const initialState = {};
+    const modalRef = this.bsModalService.show(ImportMappingsComponent, {
+      initialState,
+    });
+    modalRef.content.closeSubject.subscribe(() => {
+      this.loadMappings();
+      this.refresh.emit();
+      modalRef.hide();
+    });
   }
 
   private async reloadMappings() {

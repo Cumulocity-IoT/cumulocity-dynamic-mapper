@@ -43,7 +43,7 @@
   <button
     class="btn btn-link"
     title="{{ 'Reload mappings' | translate }}"
-    (click)="onReloadClicked()"
+    (click)="onReload()"
   >
     <i c8yIcon="c8y-connector-out"></i>
     {{ "Reload mappings" | translate }}
@@ -57,55 +57,67 @@
     <i c8yIcon="subscription"></i>
     {{ "Manage subscriptions" | translate }}
   </button>
-</c8y-action-bar-item>
-  <div class="card">
-    <div class="card-block">
-      <c8y-data-grid
-        [title]="titleMapping | translate"
-        [columns]="columnsMappings"
-        [rows]="mappings"
-        [pagination]="pagination"
-        [actionControls]="actionControlMapping"
-        [refresh]="refresh"
-      >
-      </c8y-data-grid>
-    </div>
-    <div class="card-block col-md-offset-5 bg-white">
-      <div class="c8y-empty-state" *ngIf="mappings.length === 0">
-        <h1 [c8yIcon]="'file-text'"></h1>
-        <p>
-          <strong>No mappings available.</strong><br />
-          <small translate>Add a new mapping by clicking below.</small><br />
-          <button
-            class="btn btn-primary"
-            title="Add record"
-            (click)="onAddMapping()"
-            translate
-          >
-            Add mapping
-          </button>
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <div
-    class="card"
-    *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
+  <button
+    class="btn btn-link"
+    title="{{ 'Export mappings' | translate }}"
+    (click)="onExport()"
   >
-    <div class="card-block">
-      <c8y-data-grid
-        [title]="titleSubsription | translate"
-        [columns]="columnsSubscriptions"
-        [rows]="subscription?.devices"
-        [pagination]="pagination"
-        [actionControls]="actionControlSubscription"
-        [refresh]="refresh"
-      >
-      </c8y-data-grid>
+    <i c8yIcon="export"></i>
+    {{ "Export mappings" | translate }}
+  </button>
+  <button
+    class="btn btn-link"
+    title="{{ 'Import mappings' | translate }}"
+    (click)="onImport()"
+  >
+    <i c8yIcon="import"></i>
+    {{ "Import mappings" | translate }}
+  </button>
+</c8y-action-bar-item>
+<div class="card">
+  <div class="card-block">
+    <c8y-data-grid
+      [title]="titleMapping | translate"
+      [columns]="columnsMappings"
+      [rows]="mappings"
+      [pagination]="pagination"
+      [actionControls]="actionControlMapping"
+      [refresh]="refresh"
+    >
+    </c8y-data-grid>
+  </div>
+  <div class="card-block col-md-offset-5 bg-white">
+    <div class="c8y-empty-state" *ngIf="mappings.length === 0">
+      <h1 [c8yIcon]="'file-text'"></h1>
+      <p>
+        <strong>No mappings available.</strong><br />
+        <small translate>Add a new mapping by clicking below.</small><br />
+        <button
+          class="btn btn-primary"
+          title="Add record"
+          (click)="onAddMapping()"
+          translate
+        >
+          Add mapping
+        </button>
+      </p>
     </div>
   </div>
+</div>
 
+<div class="card" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
+  <div class="card-block">
+    <c8y-data-grid
+      [title]="titleSubsription | translate"
+      [columns]="columnsSubscriptions"
+      [rows]="subscription?.devices"
+      [pagination]="pagination"
+      [actionControls]="actionControlSubscription"
+      [refresh]="refresh"
+    >
+    </c8y-data-grid>
+  </div>
+</div>
 
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
