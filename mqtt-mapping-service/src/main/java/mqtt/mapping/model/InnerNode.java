@@ -173,17 +173,25 @@ public class InnerNode extends TreeNode {
                     currentPathMonitoring, branchingLevel, mapping.id);
             // find child and remove
             getChildNodes().entrySet().removeIf(tn -> {
-                if (tn.getValue().get(0) instanceof MappingNode) {
-                    if (((MappingNode) tn.getValue().get(0)).getMapping().id.equals(mapping.id)) {
-                        log.info(
-                                "Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
-                                currentPathMonitoring, branchingLevel, mapping.id);
-                        foundMapping.setTrue();
-                        return true;
+                tn.getValue().removeIf(tnn -> {
+                    if (tnn instanceof MappingNode) {
+                        MappingNode mn = (MappingNode) tnn;
+                        if (mn.getMapping().id.equals(mapping.id)) {
+                            log.info(
+                                    "Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
+                                    currentPathMonitoring, branchingLevel, mapping.id);
+                            // foundMapping.setTrue();
+                            return true;
+                        } else
+                            return false;
                     } else
                         return false;
+                });
+                if (tn.getValue().size() == 0) {
+                    foundMapping.setTrue();
+                    return true;
                 } else
-                    return false;
+                    return false; // DUMMY
             });
             return foundMapping.booleanValue();
         } else if (currentLevel < levels.size() - 1 && hasChildren) {
@@ -194,7 +202,7 @@ public class InnerNode extends TreeNode {
                 List<TreeNode> list = getChildNodes().get(levels.get(currentLevel));
                 list.removeIf(tn -> {
                     boolean bm = false;
-                    if (tn instanceof InnerNode && ! foundMapping.booleanValue()) {
+                    if (tn instanceof InnerNode && !foundMapping.booleanValue()) {
                         if (getChildNodes().size() > 1) {
                             branchingLevel.setValue(currentLevel);
                         }
