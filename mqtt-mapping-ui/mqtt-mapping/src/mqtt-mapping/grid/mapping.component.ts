@@ -292,6 +292,12 @@ export class MappingComponent implements OnInit {
         text: "Toogle Activation",
         icon: "toggle-on",
         callback: this.activateMapping.bind(this),
+      },
+      {
+        type: "EXPORT",
+        text: "Export Mapping",
+        icon: "export",
+        callback: this.onExportSingle.bind(this),
       }
     );
     this.actionControlSubscription.push({
@@ -581,13 +587,21 @@ export class MappingComponent implements OnInit {
     this.reloadMappings();
   }
 
-  async onExport() {
-    const mappings2Export = this.mappings.filter(
-      (m) => m.direction == this.stepperConfiguration.direction
-    );
+  private exportMappings(mappings2Export: Mapping[]){
     const json = JSON.stringify(mappings2Export, undefined, 2);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
+
+  }
+  async onExportAll() {
+    const mappings2Export = this.mappings.filter(
+      (m) => m.direction == this.stepperConfiguration.direction
+    );
+    this.exportMappings(mappings2Export);
+  }
+  async onExportSingle(mappping:Mapping) {
+    const mappings2Export = [mappping];
+    this.exportMappings(mappings2Export);
   }
 
   async onImport() {
