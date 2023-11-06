@@ -31,7 +31,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.model.*;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,8 +88,7 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    //private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
-    private InnerNode resolverMappingInbound = InnerNode.createRootNode();
+    private Map<String, InnerNode> resolverMappingInbound = new HashMap<>();
 
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
@@ -463,8 +461,8 @@ public class MappingComponent {
         dirtyMappings.get(tenant).add(mapping);
     }
 
-    public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
-        List<InnerNode> resolvedMappings = getResolverMappingInbound()
+    public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
+        List<InnerNode> resolvedMappings = getResolverMappingInbound().get(tenant)
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
                 .map(mn -> mn.getMapping()).collect(Collectors.toList());

@@ -22,7 +22,8 @@
 package mqtt.mapping.model;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConfigurationConnection;
+import mqtt.mapping.configuration.ConnectorConfiguration;
+import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.junit.jupiter.api.Test;
 
@@ -152,10 +153,9 @@ public class MappingsRepresentationJUnitTest {
 
   @Test
   void testMQTTConfigurationIsEnabled() {
-    ConfigurationConnection conf = null;
-
-    log.info("My configuration is active: {}", ConfigurationConnection.isEnabled(conf));
-    assertEquals(false, ConfigurationConnection.isEnabled(conf));
+    ConnectorConfiguration conf = null;
+    log.info("My configuration is active: {}", conf.isEnabled());
+    assertEquals(false, conf.isEnabled());
   }
 
   @Test
