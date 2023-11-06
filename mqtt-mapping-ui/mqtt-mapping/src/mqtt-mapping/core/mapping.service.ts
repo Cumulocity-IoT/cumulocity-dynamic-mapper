@@ -52,6 +52,8 @@ import {
   SubstituteValue,
 } from "../processor/prosessor.model";
 
+
+
 @Injectable({ providedIn: "root" })
 export class MappingService {
   _feature: Feature;
@@ -67,6 +69,7 @@ export class MappingService {
 
   queriesUtil: QueriesUtil;
   protected JSONATA = require("jsonata");
+
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
   public async changeActivationMapping(parameter: any) {
