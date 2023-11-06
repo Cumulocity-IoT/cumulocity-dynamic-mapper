@@ -37,6 +37,7 @@ import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
 import mqtt.mapping.core.*;
 import mqtt.mapping.model.*;
+import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -295,7 +296,7 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getInboundMappingTree() {
+    public ResponseEntity<InnerNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
         InnerNode result = mappingComponent.getResolverMappingInbound().get(tenant);
         log.info("Get mapping tree!");
