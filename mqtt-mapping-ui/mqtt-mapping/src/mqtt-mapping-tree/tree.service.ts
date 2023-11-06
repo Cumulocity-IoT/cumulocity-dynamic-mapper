@@ -60,12 +60,12 @@ export class MappingTreeService {
   clean(tree: JSON, removeSet: string[]): void {
     let t = whatIsIt(tree);
 
-
     // remove properties that should not be displayed
     if (t == "Object") {
       removeSet.forEach((property) => {
         _.unset(tree, property);
       });
+      // if tree contains childNodes as a property, promote the childes one hierarchie up
       if ( 'childNodes' in tree) {
         const childNodes = tree['childNodes'] as any
         _.unset(tree, 'childNodes');
