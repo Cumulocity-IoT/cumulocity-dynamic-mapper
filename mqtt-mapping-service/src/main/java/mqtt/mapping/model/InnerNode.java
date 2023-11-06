@@ -155,7 +155,7 @@ public class InnerNode {
             InnerNode child;
             if (getChildNodes().containsKey(levels.get(currentLevel))) {
                 if (specificChildren.size() == 1) {
-                    if (specificChildren.get(0) instanceof InnerNode) {
+                    if (!specificChildren.get(0).isMappingNode()) {
                         child = specificChildren.get(0);
                     } else {
                         throw new ResolveException(
