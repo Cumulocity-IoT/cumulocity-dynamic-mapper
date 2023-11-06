@@ -25,7 +25,6 @@ import { BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Observable } from "rxjs";
 import { shareReplay, switchMap, tap } from "rxjs/operators";
 import { ExtensionService } from "../share/extension.service";
-import { ModalOptions } from "ngx-bootstrap/modal";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import { Operation } from "../../shared/mapping.model";
 import { AddExtensionComponent } from "../extension-modal/add-extension.component";
@@ -77,7 +76,6 @@ export class ExtensionComponent implements OnInit {
 
   addExtension() {
     const initialState = {};
-
     const modalRef = this.bsModalService.show(AddExtensionComponent, {
       initialState,
     });

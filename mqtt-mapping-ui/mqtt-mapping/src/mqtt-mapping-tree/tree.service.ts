@@ -53,20 +53,41 @@ export class MappingTreeService {
     if (tree?.["childNodes"]) {
       tree = tree?.["childNodes"];
     }
-    this.clean(tree, ["level", "depthIndex", "parentNode"]);
+    this.clean(tree, ["level", "depthIndex", "parentNode", , "absolutePath"]);
     return tree;
   }
 
   clean(tree: JSON, removeSet: string[]): void {
     let t = whatIsIt(tree);
+
+    // remove properties that should not be displayed
     if (t == "Object") {
+      let absolutePath;
+      if ("absolutePath" in tree) {
+        absolutePath = tree["absolutePath"] as any;
+      }
       removeSet.forEach((property) => {
         _.unset(tree, property);
       });
+      // if tree contains childNodes as a property, promote the childes one hierarchie up
+      if ("childNodes" in tree) {
+        const childNodes = tree["childNodes"] as any;
+        _.unset(tree, "childNodes");
+        for (const key in childNodes) {
+          if (Object.prototype.hasOwnProperty.call(childNodes, key)) {
+            _.set(tree, key, childNodes[key]);
+          }
+        }
+      }
+
       for (const key in tree) {
         if (Object.prototype.hasOwnProperty.call(tree, key)) {
-          const element = tree[key];
-          this.clean(tree[key], removeSet);
+          if (absolutePath) {
+            const temp = tree[key];
+            _.unset(tree, key);
+            tree[absolutePath] = temp;
+            this.clean(tree[absolutePath], removeSet);
+          } else this.clean(tree[key], removeSet);
         }
       }
     } else if (t == "Array") {
