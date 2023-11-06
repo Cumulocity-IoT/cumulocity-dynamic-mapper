@@ -33,8 +33,12 @@ import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.Operation;
 import mqtt.mapping.core.ServiceOperation;
 import mqtt.mapping.core.ServiceStatus;
-import mqtt.mapping.model.*;
 import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.Feature;
+import mqtt.mapping.model.InnerNode;
+import mqtt.mapping.model.Extension;
+import mqtt.mapping.model.Direction;
+import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.service.MQTTClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +66,6 @@ public class MQTTMappingRestController {
 
     @Autowired
     MappingComponent mappingComponent;
-
 
     @Autowired
     ConnectionConfigurationComponent connectionConfigurationComponent;
@@ -236,8 +239,8 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getInboundMappingTree() {
-        TreeNode result = mappingComponent.getResolverMappingInbound();
+    public ResponseEntity<InnerNode> getInboundMappingTree() {
+        InnerNode result = mappingComponent.getResolverMappingInbound();
         log.info("Get mapping tree!");
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
