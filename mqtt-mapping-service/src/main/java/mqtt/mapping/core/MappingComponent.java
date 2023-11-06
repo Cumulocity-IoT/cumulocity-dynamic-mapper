@@ -41,6 +41,15 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import mqtt.mapping.model.API;
+import mqtt.mapping.model.Direction;
+import mqtt.mapping.model.InnerNode;
+import mqtt.mapping.model.Mapping;
+import mqtt.mapping.model.MappingRepresentation;
+import mqtt.mapping.model.MappingServiceRepresentation;
+import mqtt.mapping.model.MappingStatus;
+import mqtt.mapping.model.ResolveException;
+import mqtt.mapping.model.ValidationError;
 
 @Slf4j
 @Component
@@ -80,7 +89,8 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
+    //private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
+    private InnerNode resolverMappingInbound = InnerNode.createRootNode();
 
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
@@ -378,7 +388,7 @@ public class MappingComponent {
         }
     }
 
-    public TreeNode rebuildMappingTree(List<Mapping> mappings) {
+    public InnerNode rebuildMappingTree(List<Mapping> mappings) {
         InnerNode in = InnerNode.createRootNode();
         mappings.forEach(m -> {
             try {
@@ -453,11 +463,11 @@ public class MappingComponent {
         dirtyMappings.get(tenant).add(mapping);
     }
 
-    public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = resolverMappingInbound.get(tenant)
+    public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
+        List<InnerNode> resolvedMappings = getResolverMappingInbound()
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
-        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
-                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
+        return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
+                .map(mn -> mn.getMapping()).collect(Collectors.toList());
     }
 
 }

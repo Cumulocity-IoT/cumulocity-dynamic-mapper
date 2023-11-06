@@ -56,6 +56,8 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.*;
 import mqtt.mapping.notification.C8YAPISubscriber;
+import mqtt.mapping.model.InnerNode;
+import mqtt.mapping.model.InnerNodeSerializer;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.inbound.FlatFileProcessor;
@@ -128,9 +130,7 @@ public class App {
         ObjectMapper objectMapper = baseObjectMapper();
         objectMapper.registerModule(cumulocityModule());
         SimpleModule module = new SimpleModule();
-        module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         module.addSerializer(InnerNode.class, new InnerNodeSerializer());
-        module.addSerializer(MappingNode.class, new MappingNodeSerializer());
         objectMapper.registerModule(module);
         return objectMapper;
     }

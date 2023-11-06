@@ -45,11 +45,12 @@ import {
   createMultiSelection,
   TextContent,
   isValueSelection,
+  RenderMenuContext,
 } from "vanilla-jsoneditor";
 
 @Component({
   selector: "mapping-json-editor2",
-  template: `<div class="jsoneditor2" [id]="id" #jsonEditorContainer></div>`,
+  template: `<div [class]="class" [id]="id" #jsonEditorContainer></div>`,
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ["./jsoneditor2.style.css"],
@@ -80,6 +81,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   initialized: EventEmitter<string> = new EventEmitter<string>();
   @Input()
   schemaUpdate: EventEmitter<string>;
+  @Input()
+  class: string;
 
   constructor(private elementRef: ElementRef) {}
 
@@ -88,7 +91,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   content: Content = {
     text: undefined,
     json: {
-      greeting: "Hello World",
+      greeting: "no content",
     },
   };
   ngOnInit() {
@@ -118,7 +121,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
         onSelect: this.onSelect.bind(this),
         onRenderMenu(
           items: MenuItem[],
-          context: { mode: "tree" | "text" | "table"; modal: boolean }
+          context: RenderMenuContext
         ): MenuItem[] | undefined {
           //console.log("MenuItems:", items);
           // remove buttons for table-mode, transform, sort
@@ -130,14 +133,16 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             items.findIndex((i) => i["className"] === "jse-sort"),
             1
           );
-          items.splice(
-            items.findIndex((i) => i["className"] === "jse-transform"),
-            1
-          );
+          // items.splice(
+          //   items.findIndex((i) => i["className"] === "jse-transform"),
+          //   1
+          // );
           return items;
         },
       },
     });
+
+    this.class = `jsoneditor2 ${this.class}`
     this.schemaUpdate?.subscribe((schema) => {
       this.setSchema(schema);
     });
