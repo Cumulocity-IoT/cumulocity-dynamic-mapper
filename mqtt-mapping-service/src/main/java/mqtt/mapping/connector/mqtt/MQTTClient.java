@@ -21,6 +21,7 @@
 
 package mqtt.mapping.connector.mqtt;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,8 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorProperty;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ServiceStatus;
@@ -46,14 +47,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -79,23 +74,34 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-@Configuration
-@EnableScheduling
-@Service
+//@Configuration
+//@EnableScheduling
+//@Service
+//This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient implements IConnectorClient {
 
-    public MQTTClient() {
+    public MQTTClient(MicroserviceCredentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, C8YAgent c8YAgent, ExecutorService cachedThreadPool) {
         setConfigProperties();
+        this.credentials = credentials;
+        this.tenantId = tenantId;
+        this.mappingComponent = mappingComponent;
+        this.connectorConfigurationComponent = connectorConfigurationComponent;
+        this.c8yAgent = c8YAgent;
+        this.cachedThreadPool = cachedThreadPool;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
+
+    @Getter
+    @Setter
+    private MicroserviceCredentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
 
     private Map<String, ConnectorProperty> configProps = new HashMap<>();
 
 
-    private String tenantId = null;
+    private String tenantId;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
@@ -103,28 +109,36 @@ public class MQTTClient implements IConnectorClient {
 
     private MQTTCallback mqttCallback = null;
 
+    @Getter
+    @Setter
     private MappingComponent mappingComponent;
 
-    @Autowired
-    public void setMappingComponent(MappingComponent mappingStatusComponent) {
-        this.mappingComponent = mappingStatusComponent;
-    }
+    //@Autowired
+    //public void setMappingComponent(MappingComponent mappingStatusComponent) {
+    //    this.mappingComponent = mappingStatusComponent;
+    //}
 
-    @Autowired
+    //@Autowired
+    @Getter
+    @Setter
     public ConnectorConfigurationComponent connectorConfigurationComponent;
 
     private MqttClient mqttClient;
 
+    @Getter
+    @Setter
     private C8YAgent c8yAgent;
 
-    @Autowired
-    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-        this.c8yAgent = c8yAgent;
-    }
+    //@Autowired
+    //public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
+    //    this.c8yAgent = c8yAgent;
+    //}
 
     // @Autowired
     // private SynchronousDispatcher dispatcher;
 
+    @Getter
+    @Setter
     private AsynchronousDispatcher dispatcher;
 
     //@Autowired
@@ -134,18 +148,20 @@ public class MQTTClient implements IConnectorClient {
 
     private ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    //@Autowired
+    //public void setObjectMapper(ObjectMapper objectMapper) {
+    //    this.objectMapper = objectMapper;
+    //}
 
-    @Qualifier("cachedThreadPool")
+    //@Qualifier("cachedThreadPool")
+    @Getter
+    @Setter
     private ExecutorService cachedThreadPool;
 
-    @Autowired
-    public void setCachedThreadPool(ExecutorService cachedThreadPool) {
-        this.cachedThreadPool = cachedThreadPool;
-    }
+    //@Autowired
+    //public void setCachedThreadPool(ExecutorService cachedThreadPool) {
+    //    this.cachedThreadPool = cachedThreadPool;
+    //}
 
     private Future<?> connectTask;
     private Future<?> initializeTask;
@@ -153,7 +169,7 @@ public class MQTTClient implements IConnectorClient {
     @Getter
     @Setter
     // keeps track of number of active mappings per subscriptionTopic
-    private Map<String, Map<String, Integer>> activeSubscriptions;
+    private Map<String, Map<String, Integer>> activeSubscriptions = new HashMap<>();;
 
     private Instant start = Instant.now();
 
@@ -180,7 +196,7 @@ public class MQTTClient implements IConnectorClient {
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
-        log.info("Called initialize(): {}", initializeTask == null || initializeTask.isDone());
+        log.info("Tenant {} - Called initialize(): {}", initializeTask == null || initializeTask.isDone(), tenantId);
         if ((initializeTask == null || initializeTask.isDone())) {
             initializeTask = cachedThreadPool.submit(() -> initialize());
         }
@@ -192,7 +208,7 @@ public class MQTTClient implements IConnectorClient {
             //this.configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId());
             if (!firstRun) {
                 try {
-                    log.info("Retrieving MQTT configuration in {}s ...",
+                    log.info("Tenant {} - Retrieving MQTT configuration in {}s ...", tenantId,
                             WAIT_PERIOD_MS / 1000);
                     Thread.sleep(WAIT_PERIOD_MS);
                 } catch (InterruptedException e) {
@@ -204,7 +220,7 @@ public class MQTTClient implements IConnectorClient {
             boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
             String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
             if (useSelfSignedCertificate) {
-                cert = c8yAgent.loadCertificateByName(nameCertificate);
+                cert = c8yAgent.loadCertificateByName(nameCertificate, this.credentials);
             }
             firstRun = false;
         }
@@ -230,13 +246,13 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private void reloadConfiguration() {
-        configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId());
+        configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId(), tenantId);
     }
 
     public void submitConnect() {
         // test if connect task is still running, then we don't need to start another
         // task
-        log.info("Called connect(): connectTask.isDone() {}",
+        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenantId,
                 connectTask == null || connectTask.isDone());
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
@@ -244,9 +260,8 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void connect() {
-        this.
         reloadConfiguration();
-        log.info("Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", isConnected(),
+        log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})", tenantId, isConnected(),
                 shouldConnect());
         if (isConnected()) {
             disconnect();
@@ -256,7 +271,7 @@ public class MQTTClient implements IConnectorClient {
         while (!successful) {
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Establishing the MQTT connection now - phase II: {}, {}", isConfigValid(configuration), canConnect());
+                log.info("Tenant {} - Establishing the MQTT connection now - phase II: {}, {}", tenantId, isConfigValid(configuration), canConnect());
                 if (!firstRun) {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
@@ -286,7 +301,7 @@ public class MQTTClient implements IConnectorClient {
                             mqttClient.close(true);
                         }
                         if(dispatcher == null)
-                            this.dispatcher = new AsynchronousDispatcher(this);
+                            this.dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
@@ -328,7 +343,7 @@ public class MQTTClient implements IConnectorClient {
                             }
                         }
                         mqttClient.connect(connOpts);
-                        log.info("Successfully connected to broker {}", mqttClient.getServerURI());
+                        log.info("Tenant {} - Successfully connected to broker {}", tenantId, mqttClient.getServerURI());
                         c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
                                 STATUS_MQTT_EVENT_TYPE,
                                 DateTime.now(), null, tenantId);
@@ -361,7 +376,7 @@ public class MQTTClient implements IConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
-                log.info("Subscribing to topics was successful: {}", successful);
+                log.info("Tenant {} - Subscribing to topics was successful: {}", tenantId, successful);
             } catch (Exception e) {
                 log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
                 log.debug("Stacktrace:", e);
@@ -372,6 +387,8 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private boolean canConnect() {
+        if(configuration == null)
+            return false;
         boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
         return configuration.isEnabled()
                 && (!useSelfSignedCertificate
@@ -380,7 +397,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private boolean shouldConnect() {
-        return !isConfigValid(configuration) || configuration.isEnabled();
+        return isConfigValid(configuration) && configuration.isEnabled();
     }
 
     public boolean isConnected() {
@@ -388,7 +405,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void disconnect() {
-        log.info("Disconnecting from MQTT broker: {}",
+        log.info("Tenant {} - isconnecting from MQTT broker: {}", tenantId,
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
             if (isConnected()) {
@@ -445,7 +462,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void unsubscribe(String topic) throws MqttException {
-        log.info("Unsubscribing from topic: {}", topic);
+        log.info("Tenant {} - Unsubscribing from topic: {}", tenantId, topic);
         c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
         mqttClient.unsubscribe(topic);
     }
@@ -460,7 +477,7 @@ public class MQTTClient implements IConnectorClient {
                         : connectTask.isDone() ? "stopped" : "running");
                 String statusInitializeTask = (initializeTask == null ? "stopped"
                         : initializeTask.isDone() ? "stopped" : "running");
-                log.info("Status: connectTask: {}, initializeTask: {}, isConnected: {}", statusConnectTask,
+                log.info("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}", tenantId, statusConnectTask,
                         statusInitializeTask, isConnected());
             }
             mappingComponent.cleanDirtyMappings(tenantId);
@@ -505,7 +522,7 @@ public class MQTTClient implements IConnectorClient {
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
         if(dispatcher == null)
-            dispatcher = new AsynchronousDispatcher(this);
+            dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
         return dispatcher.processMessage(tenantId, getConntectorId(), topic, message, send).get();
     }
 
@@ -561,7 +578,7 @@ public class MQTTClient implements IConnectorClient {
         // consider unsubscribing from previous subscription topic if it has changed
         if (create) {
             updatedMappingSubs++;
-            log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
+            log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, mapping.subscriptionTopic, mapping.qos.ordinal());
             try {
                 subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
             } catch (MqttException e1) {
@@ -580,7 +597,7 @@ public class MQTTClient implements IConnectorClient {
             }
             updatedMappingSubs++;
             if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                log.info("Subscribing to topic: {}, qos: {}", mapping.subscriptionTopic, mapping.qos.ordinal());
+                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, mapping.subscriptionTopic, mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (MqttException e1) {
@@ -594,7 +611,7 @@ public class MQTTClient implements IConnectorClient {
     @Override
     public List<Mapping> updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
-            activeSubscriptions.replace(tenantId, new HashMap<String, Integer>());
+            activeSubscriptions.put(tenantId, new HashMap<String, Integer>());
         }
         Map<String, Integer> updatedSubscriptionCache = new HashMap<String, Integer>();
         updatedMappings.forEach(mapping -> {
@@ -608,7 +625,7 @@ public class MQTTClient implements IConnectorClient {
         // unsubscribe topics not used
         getActiveSubscriptions().get(tenantId).keySet().forEach((topic) -> {
             if (!updatedSubscriptionCache.containsKey(topic)) {
-                log.info("Unsubscribe from topic: {}", topic);
+                log.info("Tenant {} - Unsubscribe from topic: {}", tenantId, topic);
                 try {
                     unsubscribe(topic);
                 } catch (MqttException e1) {
@@ -623,7 +640,7 @@ public class MQTTClient implements IConnectorClient {
             if (!getActiveSubscriptions().containsKey(topic)) {
                 int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                         .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-                log.info("Subscribing to topic: {}, qos: {}", topic, qos);
+                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, topic, qos);
                 try {
                     subscribe(topic, qos);
                 } catch (MqttException e1) {
@@ -647,7 +664,7 @@ public class MQTTClient implements IConnectorClient {
         } catch (MqttException e) {
             throw new RuntimeException(e);
         }
-        log.info("Published outbound message: {} for mapping: {} on topic: {}", payload, context.getMapping().name, context.getResolvedPublishTopic());
+        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenantId, payload, context.getMapping().name, context.getResolvedPublishTopic());
     }
 
     @Override

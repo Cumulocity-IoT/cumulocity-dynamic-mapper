@@ -24,24 +24,20 @@ package mqtt.mapping.processor.inbound;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.callback.GenericMessageCallback;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
+import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +47,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-@Service
 public class AsynchronousDispatcher implements GenericMessageCallback {
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
@@ -175,35 +170,39 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
 
     private C8YAgent c8yAgent;
 
-    @Autowired
-    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-        this.c8yAgent = c8yAgent;
-    }
+    //@Autowired
+    //public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
+    //    this.c8yAgent = c8yAgent;
+    //}
 
     private IConnectorClient connectorClient;
 
     private ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(@Lazy ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    //@Autowired
+    //public void setObjectMapper(@Lazy ObjectMapper objectMapper) {
+    //    this.objectMapper = objectMapper;
+    //}
 
-    @Autowired
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
+    //@Autowired
+    //Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
 
-    @Autowired
-    @Qualifier("cachedThreadPool")
+    //@Autowired
+    //@Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
 
-    @Autowired
+    //@Autowired
     MappingComponent mappingComponent;
 
-    @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
+    //@Autowired
+    //ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public AsynchronousDispatcher(IConnectorClient connectorClient)  {
+    public AsynchronousDispatcher(IConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
         this.connectorClient = connectorClient;
+        this.c8yAgent = c8YAgent;
+        this.objectMapper = objectMapper;
+        this.cachedThreadPool = cachedThreadPool;
+        this.mappingComponent = mappingComponent;
     }
 
     public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorId, String topic, ConnectorMessage message,
@@ -228,10 +227,11 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
+        PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic, tenant, connectorId,
-                        payloadProcessorsInbound,
+                        payloadProcessor.getPayloadProcessorsInbound(),
                         sendPayload, message, objectMapper));
 
         return futureProcessingResult;

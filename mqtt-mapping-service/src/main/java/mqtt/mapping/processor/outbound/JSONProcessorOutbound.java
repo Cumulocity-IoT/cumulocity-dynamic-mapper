@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Service
+//@Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
     public JSONProcessorOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {

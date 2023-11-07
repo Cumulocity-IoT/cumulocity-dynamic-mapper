@@ -47,10 +47,6 @@ public class ConnectorConfigurationComponent {
 
     private final TenantOptionApi tenantOptionApi;
 
-    @Getter
-    @Setter
-    private String tenant = null;
-
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
@@ -81,7 +77,7 @@ public class ConnectorConfigurationComponent {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public ConnectorConfiguration loadConnectorConfiguration(String connectorId) {
+    public ConnectorConfiguration loadConnectorConfiguration(String connectorId, String tenant) {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(getConnectorOptionKey(connectorId));
@@ -107,7 +103,7 @@ public class ConnectorConfigurationComponent {
         return result;
     }
 
-    public List<ConnectorConfiguration> loadAllConnectorConfiguration() {
+    public List<ConnectorConfiguration> loadAllConnectorConfiguration(String tenant) {
         final OptionPK option = new OptionPK();
         final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
         subscriptionsService.runForTenant(tenant, () -> {
@@ -115,7 +111,8 @@ public class ConnectorConfigurationComponent {
                 final List<OptionRepresentation> optionRepresentationList = tenantOptionApi.getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
                 for (OptionRepresentation optionRepresentation : optionRepresentationList) {
                     //Just Connector Config --> Ignoring Service Configuration
-                    if (optionRepresentation.getKey().startsWith(OPTION_KEY_CONNECTION_CONFIGURATION)) {
+                    String optionKey = OPTION_KEY_CONNECTION_CONFIGURATION.replace("credentials.", "");
+                    if (optionRepresentation.getKey().startsWith(optionKey)) {
                         final ConnectorConfiguration configuration = new ObjectMapper().readValue(
                                 optionRepresentation.getValue(),
                                 ConnectorConfiguration.class);
@@ -134,8 +131,8 @@ public class ConnectorConfigurationComponent {
         return connectorConfigurations;
     }
 
-    public void deleteAllConfiguration() {
-        List<ConnectorConfiguration> configs = loadAllConnectorConfiguration();
+    public void deleteAllConfiguration(String tenant) {
+        List<ConnectorConfiguration> configs = loadAllConnectorConfiguration(tenant);
         for (ConnectorConfiguration config : configs) {
             OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(config.getConnectorId()));
             tenantOptionApi.delete(optionPK);

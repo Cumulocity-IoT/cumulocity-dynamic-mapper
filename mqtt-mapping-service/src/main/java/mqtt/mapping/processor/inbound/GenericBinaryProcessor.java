@@ -33,11 +33,11 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
-@Service
+//@Service
 public class GenericBinaryProcessor extends JSONProcessor {
 
-    public GenericBinaryProcessor (ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant){
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+    public GenericBinaryProcessor (ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
+        super(objectMapper, c8yAgent, tenant);
     }
 
     @Override

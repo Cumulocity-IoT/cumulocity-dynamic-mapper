@@ -50,7 +50,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-@Service
+//@Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
     public BasePayloadProcessorOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {

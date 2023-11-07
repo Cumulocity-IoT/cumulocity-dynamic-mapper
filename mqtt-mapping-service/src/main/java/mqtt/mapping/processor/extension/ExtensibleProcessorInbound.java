@@ -39,13 +39,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-@Service
+//@Service
 public class ExtensibleProcessorInbound extends BasePayloadProcessor<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorInbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+    public ExtensibleProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
+        super(objectMapper, c8yAgent, tenant);
     }
 
     @Override
