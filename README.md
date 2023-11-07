@@ -23,6 +23,7 @@
   * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
   * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
   * [Update existing Mapping](#update-existing-mapping)
+  * [Import & Export Mappings](#import--export-mappings)
 - [Processing Extensions (Protobuf, ...)](#processing-extensions)
 - [Monitoring](#monitoring)
 - [Mapping Tree](#mapping-tree)
@@ -564,6 +565,19 @@ To allow updating an activated mapping it has to be deactivated in the list of a
 <img src="resources/image/Generic_MQTT_MappingTable_annotated.png"  style="width: 70%;" />
 </p>
 <br/>
+
+### Import & Export Mappings
+
+On the tag with `Ìnbound Mappings` and `Outbound Mappings` you can import mappings from a JSON file. A Sample cane be found [here - Inbound](resources/script/mapping/sampleMapping/mappings-INBOUND.json) and [here - Outbound](resources/script/mapping/sampleMapping/mappings-OUTBOUND.json).
+You can as well export all or a single mapping.
+The import dialog can be seen on the following screenshot:
+
+<p align="center">
+<img src="resources/image/Generic_MQTT_MappingTable_Import.png"  style="width: 70%;" />
+</p>
+<br/>
+
+
 
 ### Processing Extensions
 

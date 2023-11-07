@@ -32,6 +32,7 @@ import { BrokerConfigurationService } from "../../mqtt-configuration/broker-conf
 import { MappingStatus, Operation } from "../../shared/mapping.model";
 import { IdRendererComponent } from "../renderer/id-cell.renderer.component";
 import { MonitoringService } from "../shared/monitoring.service";
+import { NameRendererComponent } from "../../mqtt-mapping/renderer/name.renderer.component";
 
 @Component({
   selector: "mapping-monitoring-grid",
@@ -51,15 +52,24 @@ export class MonitoringComponent implements OnInit {
   };
 
   columns: Column[] = [
+    // {
+    //   name: "id",
+    //   header: "System ID",
+    //   path: "id",
+    //   filterable: false,
+    //   dataType: ColumnDataType.TextShort,
+    //   sortOrder: "asc",
+    //   gridTrackSize: "10%",
+    //   cellRendererComponent: IdRendererComponent,
+    // },
     {
-      name: "id",
-      header: "System ID",
-      path: "id",
+      name: "name",
+      header: "Name",
+      path: "name",
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      sortOrder: "asc",
-      gridTrackSize: "10%",
-      cellRendererComponent: IdRendererComponent,
+      cellRendererComponent: NameRendererComponent,
+      visible: true,
     },
     {
       name: "subscriptionTopic",

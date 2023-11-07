@@ -16,39 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ * @authors Christof Strack
  */
-
-package mqtt.mapping.model;
-
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-
-import java.io.Serializable;
-import java.util.List;
-
-@ToString()
-public abstract class TreeNode implements Serializable {
-
-    @Setter
-    @Getter
-    private long depthIndex;
-    
-    @Setter
-    @Getter
-    private TreeNode parentNode;
-
-    @Setter
-    @Getter
-    private String absolutePath;
-
-    @Setter
-    @Getter
-    private String level;
-
-    abstract public boolean isMappingNode();
-
-    abstract public List<TreeNode> resolveTopicPath(List<String> tp) throws ResolveException;
-
+[class="modal-header"] {
+  display: none;
 }

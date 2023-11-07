@@ -20,7 +20,7 @@
   -->
 <div class="modal-header dialog-header animated fadeIn">
   <h1 c8yIcon="plugin"></h1>
-  <h4>Add Processor Extension</h4>
+  <h4>Add Mappings</h4>
 </div>
 
 <c8y-modal
@@ -40,10 +40,10 @@
       >
         <c8y-drop-area
           (dropped)="onFileDroppedEvent($event)"
-          [accept]="'.jar'"
+          [accept]="'.json'"
           [loading]="isLoading"
           [maxAllowedFiles]="1"
-          [message]="'Upload a *.jar file' | translate"
+          [message]="'Upload a JSON file' | translate"
           [progress]="progress | async"
           class="drop-area"
         >
