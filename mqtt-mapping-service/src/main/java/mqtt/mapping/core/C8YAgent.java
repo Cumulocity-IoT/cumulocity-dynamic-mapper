@@ -50,6 +50,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ServiceConfiguration;
+import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import mqtt.mapping.configuration.TrustedCertificateRepresentation;
 import mqtt.mapping.connector.core.client.IConnectorClient;
@@ -138,7 +139,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
-
 
     private ExtensibleProcessorInbound extensibleProcessor;
 

@@ -1,5 +1,6 @@
 package mqtt.mapping.connector.core.client;
 
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.connector.core.ConnectorProperty;
 
 import lombok.AllArgsConstructor;

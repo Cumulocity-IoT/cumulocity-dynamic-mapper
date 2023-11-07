@@ -21,6 +21,7 @@ import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.MappingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -62,6 +63,10 @@ public class BootstrapService {
         this.cachedThreadPool = cachedThreadPool;
     }
 
+    @Value("${APP.additionalSubscriptionIdTest}")
+    private String additionalSubscriptionIdTest;
+
+
     @EventListener
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
@@ -85,6 +90,7 @@ public class BootstrapService {
         PayloadProcessor processor = new PayloadProcessor(objectMapper, c8YAgent, tenant, null);
         c8YAgent.checkExtensions(processor);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+        c8YAgent.setServiceConfiguration(serviceConfiguration);
         //loadProcessorExtensions();
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
@@ -93,7 +99,7 @@ public class BootstrapService {
         try {
             if (serviceConfiguration != null) {
                 //TODO Add other clients - maybe dynamically per tenant
-                MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent, connectorConfigurationComponent, c8YAgent, cachedThreadPool);
+                MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent, connectorConfigurationComponent, c8YAgent, cachedThreadPool, objectMapper, additionalSubscriptionIdTest);
                 //mqttClient.setTenantId(tenant);
                 //mqttClient.setCredentials(credentials);
                 connectorRegistry.registerClient(tenant, mqttClient);

@@ -110,6 +110,7 @@ public class MQTTMappingRestController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
+    //TODO Implement this in UI
     @RequestMapping(value = "/configuration/connectionPropertyConfig", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectionConfiugration() {
         HashMap<String, IConnectorClient> clients = null;
@@ -128,6 +129,7 @@ public class MQTTMappingRestController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
+    //TODO Adapt this in UI
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> configureConnectionToBroker(
             @Valid @RequestBody ConnectorConfiguration configuration) {
@@ -164,6 +166,7 @@ public class MQTTMappingRestController {
         }
     }
 
+    //TODO Adapt this structure in UI
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
         log.info("Get connection details");
@@ -194,7 +197,6 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-
 
 
     @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -276,6 +278,7 @@ public class MQTTMappingRestController {
         }
     }
 
+    //TODO Add this to UI
     @RequestMapping(value = "/monitoring/status/service/{connectorId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceStatus> getServiceStatus(@PathVariable @NotNull String connectorId) {
         try {

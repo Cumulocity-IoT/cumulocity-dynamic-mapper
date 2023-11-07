@@ -47,7 +47,6 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.net.ssl.SSLContext;
@@ -80,7 +79,7 @@ import java.util.concurrent.Future;
 //This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient implements IConnectorClient {
 
-    public MQTTClient(MicroserviceCredentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, C8YAgent c8YAgent, ExecutorService cachedThreadPool) {
+    public MQTTClient(MicroserviceCredentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, C8YAgent c8YAgent, ExecutorService cachedThreadPool, ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
         setConfigProperties();
         this.credentials = credentials;
         this.tenantId = tenantId;
@@ -88,20 +87,22 @@ public class MQTTClient implements IConnectorClient {
         this.connectorConfigurationComponent = connectorConfigurationComponent;
         this.c8yAgent = c8YAgent;
         this.cachedThreadPool = cachedThreadPool;
+        this.objectMapper = objectMapper;
+        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
 
     @Getter
-    @Setter
     private MicroserviceCredentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
 
     private Map<String, ConnectorProperty> configProps = new HashMap<>();
 
-
     private String tenantId;
+
+    private String additionalSubscriptionIdTest;
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
     private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
@@ -110,58 +111,24 @@ public class MQTTClient implements IConnectorClient {
     private MQTTCallback mqttCallback = null;
 
     @Getter
-    @Setter
     private MappingComponent mappingComponent;
 
-    //@Autowired
-    //public void setMappingComponent(MappingComponent mappingStatusComponent) {
-    //    this.mappingComponent = mappingStatusComponent;
-    //}
-
-    //@Autowired
     @Getter
-    @Setter
     public ConnectorConfigurationComponent connectorConfigurationComponent;
 
     private MqttClient mqttClient;
 
     @Getter
-    @Setter
     private C8YAgent c8yAgent;
 
-    //@Autowired
-    //public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-    //    this.c8yAgent = c8yAgent;
-    //}
-
-    // @Autowired
-    // private SynchronousDispatcher dispatcher;
 
     @Getter
-    @Setter
     private AsynchronousDispatcher dispatcher;
-
-    //@Autowired
-    //public void setDispatcher(AsynchronousDispatcher dispatcher) {
-    //    this.dispatcher = dispatcher;
-    //}
 
     private ObjectMapper objectMapper;
 
-    //@Autowired
-    //public void setObjectMapper(ObjectMapper objectMapper) {
-    //    this.objectMapper = objectMapper;
-    //}
-
-    //@Qualifier("cachedThreadPool")
     @Getter
-    @Setter
     private ExecutorService cachedThreadPool;
-
-    //@Autowired
-    //public void setCachedThreadPool(ExecutorService cachedThreadPool) {
-    //    this.cachedThreadPool = cachedThreadPool;
-    //}
 
     private Future<?> connectTask;
     private Future<?> initializeTask;
@@ -169,14 +136,12 @@ public class MQTTClient implements IConnectorClient {
     @Getter
     @Setter
     // keeps track of number of active mappings per subscriptionTopic
-    private Map<String, Map<String, Integer>> activeSubscriptions = new HashMap<>();;
+    private Map<String, Map<String, Integer>> activeSubscriptions = new HashMap<>();
+    ;
 
     private Instant start = Instant.now();
 
     private ConnectorConfiguration configuration;
-
-    @Value("${APP.additionalSubscriptionIdTest}")
-    private String additionalSubscriptionIdTest;
 
     @Data
     @AllArgsConstructor
@@ -300,7 +265,7 @@ public class MQTTClient implements IConnectorClient {
                         if (mqttClient != null) {
                             mqttClient.close(true);
                         }
-                        if(dispatcher == null)
+                        if (dispatcher == null)
                             this.dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
@@ -338,7 +303,7 @@ public class MQTTClient implements IConnectorClient {
                                 // where options is the MqttConnectOptions object
                                 connOpts.setSocketFactory(sslSocketFactory);
                             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
-                                    | KeyManagementException e) {
+                                     | KeyManagementException e) {
                                 log.error("Exception when configuring socketFactory for TLS!", e);
                             }
                         }
@@ -387,13 +352,13 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private boolean canConnect() {
-        if(configuration == null)
+        if (configuration == null)
             return false;
         boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
         return configuration.isEnabled()
                 && (!useSelfSignedCertificate
-                        || (useSelfSignedCertificate &&
-                                cert != null));
+                || (useSelfSignedCertificate &&
+                cert != null));
     }
 
     private boolean shouldConnect() {
@@ -521,7 +486,7 @@ public class MQTTClient implements IConnectorClient {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
-        if(dispatcher == null)
+        if (dispatcher == null)
             dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
         return dispatcher.processMessage(tenantId, getConntectorId(), topic, message, send).get();
     }
@@ -533,7 +498,6 @@ public class MQTTClient implements IConnectorClient {
         submitInitialize();
         submitConnect();
     }
-
 
 
     @Override
@@ -649,7 +613,7 @@ public class MQTTClient implements IConnectorClient {
                 }
             }
         });
-        activeSubscriptions.replace(tenantId,updatedSubscriptionCache);
+        activeSubscriptions.replace(tenantId, updatedSubscriptionCache);
         return updatedMappings;
     }
 
