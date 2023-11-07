@@ -23,7 +23,6 @@ import { FetchClient, InventoryService } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
 import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT, whatIsIt } from "../shared/util";
 import * as _ from "lodash";
-import jq from "node-jq";
 
 @Injectable({ providedIn: "root" })
 export class MappingTreeService {
