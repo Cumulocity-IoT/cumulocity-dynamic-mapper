@@ -51,12 +51,10 @@ import mqtt.mapping.model.API;
 import mqtt.mapping.model.Direction;
 import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingNode;
 import mqtt.mapping.model.MappingRepresentation;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.TreeNode;
 import mqtt.mapping.model.ValidationError;
 
 @Slf4j
@@ -107,7 +105,7 @@ public class MappingComponent {
     @Getter
     @Setter
     // cache of inbound mappings stored in a tree used for resolving
-    private TreeNode resolverMappingInbound = InnerNode.createRootNode();
+    private InnerNode resolverMappingInbound = InnerNode.createRootNode();
 
     public void initializeMappingStatus(boolean reset) {
 
@@ -139,8 +137,17 @@ public class MappingComponent {
             if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && intialized) {
                 log.debug("Sending monitoring: {}", statusMapping.values().size());
                 Map<String, Object> service = new HashMap<String, Object>();
-                MappingStatus[] array = statusMapping.values().toArray(new MappingStatus[0]);
-                service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, array);
+                MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
+                // add current name of mappings to the status messages
+                for (int index = 0; index < ms.length; index++) {
+                    ms[index].name = "#";
+                    if (cacheMappingInbound.containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingInbound.get(ms[index].id).name;
+                    } else if (cacheMappingOutbound.containsKey(ms[index].id)) {
+                        ms[index].name = cacheMappingOutbound.get(ms[index].id).name;
+                    }
+                }
+                service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, ms);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);
@@ -173,7 +180,7 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Adding: {}", m.ident);
-            ms = new MappingStatus(m.id, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.name, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
@@ -322,7 +329,7 @@ public class MappingComponent {
 
     public void addToCacheMappingInbound(Mapping mapping) {
         try {
-            ((InnerNode) getResolverMappingInbound()).addMapping(mapping);
+            getResolverMappingInbound().addMapping(mapping);
         } catch (ResolveException e) {
             log.error("Could not add mapping {}, ignoring mapping", mapping);
         }
@@ -330,7 +337,7 @@ public class MappingComponent {
 
     public void deleteFromCacheMappingInbound(Mapping mapping) {
         try {
-            ((InnerNode) getResolverMappingInbound()).deleteMapping(mapping);
+            (getResolverMappingInbound()).deleteMapping(mapping);
         } catch (ResolveException e) {
             log.error("Could not delete mapping {}, ignoring mapping", mapping);
         }
@@ -388,7 +395,7 @@ public class MappingComponent {
         }
     }
 
-    public TreeNode rebuildMappingTree(List<Mapping> mappings) {
+    public InnerNode rebuildMappingTree(List<Mapping> mappings) {
         InnerNode in = InnerNode.createRootNode();
         mappings.forEach(m -> {
             try {
@@ -463,10 +470,10 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getResolverMappingInbound()
+        List<InnerNode> resolvedMappings = getResolverMappingInbound()
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
-        return resolvedMappings.stream().filter(tn -> tn instanceof MappingNode)
-                .map(mn -> ((MappingNode) mn).getMapping()).collect(Collectors.toList());
+        return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
+                .map(mn -> mn.getMapping()).collect(Collectors.toList());
     }
 
 }

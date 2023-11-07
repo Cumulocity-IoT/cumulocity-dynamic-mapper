@@ -25,43 +25,45 @@ import {
   hookRoute,
   ModalModule,
 } from "@c8y/ngx-components";
-import { PopoverModule } from "ngx-bootstrap/popover";
-import { MappingComponent } from "./grid/mapping.component";
-import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
-import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
-import { APIRendererComponent } from "./renderer/api.renderer.component";
-import { QOSRendererComponent } from "./renderer/qos-cell.renderer.component";
-import { SnoopedTemplateRendererComponent } from "./renderer/snoopedTemplate.renderer.component";
-import { StatusRendererComponent } from "./renderer/status-cell.renderer.component";
-import { ActiveRendererComponent } from "./renderer/active.renderer.component";
-import { TemplateRendererComponent } from "./renderer/template.renderer.component";
-import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
-import { MappingStepperComponent } from "./step-main/mapping-stepper.component";
-import { SubstitutionRendererComponent } from "./step-main/substitution/substitution-renderer.component";
-import { SharedModule } from "../shared/shared.module";
-import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
-import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
+import { PopoverModule } from "ngx-bootstrap/popover";
+import { ConfigurationModule } from "../mqtt-configuration/configuration.module";
+import { SharedModule } from "../shared/shared.module";
 import {
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid,
 } from "../shared/util";
-import { FormlyTextField } from "./shared/formly/text-field";
-import { FormlyFieldButton } from "./shared/formly/button-type";
-import { MessageField } from "./shared/formly/message-field";
-import { FormlyHorizontalWrapper } from "./shared/formly/horizontal-wrapper";
-import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
-import { SelectComponent } from "./shared/formly/select/select.type.component";
-import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
-import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
-import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
-import { FormlyFiller } from "./shared/formly/filler";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
+import { MappingComponent } from "./grid/mapping.component";
+import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
+import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
+import { ActiveRendererComponent } from "./renderer/active.renderer.component";
+import { APIRendererComponent } from "./renderer/api.renderer.component";
+import { NameRendererComponent } from "./renderer/name.renderer.component";
+import { QOSRendererComponent } from "./renderer/qos-cell.renderer.component";
+import { SnoopedTemplateRendererComponent } from "./renderer/snoopedTemplate.renderer.component";
+import { StatusActivationRendererComponent } from "./renderer/status-activation-renderer.component";
+import { StatusRendererComponent } from "./renderer/status-cell.renderer.component";
+import { TemplateRendererComponent } from "./renderer/template.renderer.component";
+import { FormlyFieldButton } from "./shared/formly/button-type";
+import { C8YSwitchField } from "./shared/formly/c8y-switch-field";
+import { FieldCheckbox } from "./shared/formly/checkbox/checkbox.type.component";
+import { FormlyFiller } from "./shared/formly/filler";
+import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-field-wrapper";
+import { FormlyHorizontalWrapper } from "./shared/formly/horizontal-wrapper";
 import { FieldInputCustom } from "./shared/formly/input-custom-field";
-import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
-import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
+import { MessageField } from "./shared/formly/message-field";
+import { SelectComponent } from "./shared/formly/select/select.type.component";
+import { FormlyTextField } from "./shared/formly/text-field";
 import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
+import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
+import { MappingStepperComponent } from "./step-main/mapping-stepper.component";
+import { SubstitutionRendererComponent } from "./step-main/substitution/substitution-renderer.component";
+import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
+import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
+import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
+import { ImportMappingsComponent } from "./import-modal/import.component";
 
 @NgModule({
   declarations: [
@@ -72,6 +74,7 @@ import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
     MappingSubscriptionComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
+    ImportMappingsComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
@@ -79,6 +82,7 @@ import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
     SubstitutionRendererComponent,
     StatusActivationRendererComponent,
     APIRendererComponent,
+    NameRendererComponent,
     ActiveRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
@@ -105,12 +109,14 @@ import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
     MappingStepPropertiesComponent,
     OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
+    ImportMappingsComponent,
     StatusRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
     SubstitutionRendererComponent,
     APIRendererComponent,
+    NameRendererComponent,
     ActiveRendererComponent,
     StatusActivationRendererComponent,
     SnoopingModalComponent,

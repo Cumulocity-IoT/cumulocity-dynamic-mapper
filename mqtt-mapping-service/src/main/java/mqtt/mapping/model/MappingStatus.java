@@ -39,12 +39,15 @@ public class MappingStatus implements Serializable {
   public static String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
 
   static {
-    UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING, "#", "#", 0, 0, 0,
+    UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING, "#", "#", "#", 0, 0, 0,
         0);
   }
 
   @NotNull
   public String id;
+
+  @NotNull
+  public String name;
 
   @NotNull
   public String ident;
