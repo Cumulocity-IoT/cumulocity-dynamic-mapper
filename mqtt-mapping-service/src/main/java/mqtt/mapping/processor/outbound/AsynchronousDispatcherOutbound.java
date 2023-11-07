@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;

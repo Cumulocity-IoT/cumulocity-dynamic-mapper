@@ -24,6 +24,7 @@ package mqtt.mapping.processor.inbound;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.callback.GenericMessageCallback;
 import mqtt.mapping.connector.core.client.IConnectorClient;
@@ -53,7 +54,6 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         List<Mapping> resolvedMappings;
         String topic;
         String tenant;
-        String connectorId;
         Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound;
         boolean sendPayload;
         ConnectorMessage message;
@@ -62,7 +62,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         ObjectMapper objectMapper;
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
-                String topic, String tenant, String connectorId,
+                String topic, String tenant,
                 Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound, boolean sendPayload,
                 ConnectorMessage message, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
@@ -70,7 +70,6 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
             this.c8yAgent = c8yAgent;
             this.topic = topic;
             this.tenant = tenant;
-            this.connectorId = connectorId;
             this.payloadProcessorsInbound = payloadProcessorsInbound;
             this.sendPayload = sendPayload;
             this.message = message;
@@ -230,7 +229,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic, tenant, connectorId,
+                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic, tenant,
                         payloadProcessor.getPayloadProcessorsInbound(),
                         sendPayload, message, objectMapper));
 
