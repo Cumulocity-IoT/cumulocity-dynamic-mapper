@@ -51,11 +51,11 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Service
+//@Service
 public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
 
-    public JSONProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+    public JSONProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
+        super(objectMapper, c8yAgent, tenant);
     }
 
     @Override

@@ -37,6 +37,7 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
+import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
@@ -48,9 +49,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-
 import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import mqtt.mapping.configuration.TrustedCertificateRepresentation;
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.model.API;
@@ -59,6 +59,7 @@ import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.model.extension.ExtensionsComponent;
 import mqtt.mapping.notification.C8YAPISubscriber;
+import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
 import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
@@ -67,6 +68,7 @@ import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -74,6 +76,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
+import javax.ws.rs.core.MediaType;
 import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -107,6 +110,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private DeviceControlApi deviceControlApi;
 
     @Autowired
+    private Platform platform;
+
+    @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
 
@@ -118,20 +124,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
 
-    private ServiceConfigurationComponent serviceConfigurationComponent;
-
-    @Autowired
-    public void setServiceConfigurationComponent(ServiceConfigurationComponent serviceConfigurationComponent) {
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
-    }
-
-    private MappingComponent mappingComponent;
-
-    @Autowired
-    public void setMappingComponent(MappingComponent mappingComponent) {
-        this.mappingComponent = mappingComponent;
-    }
-
     private ExtensionsComponent extensions;
 
     @Autowired
@@ -139,27 +131,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.extensions = extensions;
     }
 
-    Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
-
-    @Autowired
-    public void setPayloadProcessorsInbound(Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound) {
-        this.payloadProcessorsInbound = payloadProcessorsInbound;
-    }
-
-    public C8YAPISubscriber notificationSubscriber;
+    @Getter
+    private C8YAPISubscriber notificationSubscriber;
 
     @Autowired
     public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
     }
 
+
     private ExtensibleProcessorInbound extensibleProcessor;
 
     private MappingServiceRepresentation mappingServiceRepresentation;
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
-
-    private MicroserviceCredentials credentials;
 
     @Getter
     @Setter
@@ -271,9 +256,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public IConnectorClient.Certificate loadCertificateByName(String fingerprint) {
+    public IConnectorClient.Certificate loadCertificateByName(String certificateName, MicroserviceCredentials credentials) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
-            return serviceConfigurationComponent.loadCertificateByName(fingerprint, credentials);
+            MutableObject<TrustedCertificateRepresentation> certResult = new MutableObject<TrustedCertificateRepresentation>(
+                    new TrustedCertificateRepresentation());
+            TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
+                    String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
+                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+            certificates.forEach(cert -> {
+                if (cert.getName().equals(certificateName)) {
+                    certResult.setValue(cert);
+                    log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(),
+                            cert.getName());
+                }
+            });
+            return certResult.getValue();
         });
         log.info("Found certificate with fingerprint: {}", result.getFingerprint());
         StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
@@ -523,14 +520,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public void notificationSubscriberReconnect(String tenant) {
+
+    public void notificationSubscriberReconnect(String tenant, IConnectorClient connectorClient) {
         subscriptionsService.runForTenant(tenant, () -> {
             // notificationSubscriber.disconnect(false);
             // notificationSubscriber.reconnect();
             notificationSubscriber.disconnect(false);
-            notificationSubscriber.init();
+            notificationSubscriber.init(connectorClient);
         });
     }
+
 
     public ManagedObjectRepresentation createMappingObject(String tenant) {
         ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
@@ -559,8 +558,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void checkExtensions() {
-        extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessorsInbound
+    public void checkExtensions(PayloadProcessor payloadProcessor) {
+        extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor.getPayloadProcessorsInbound()
                 .get(MappingType.PROCESSOR_EXTENSION);
 
         // test if managedObject for internal mapping extension exists

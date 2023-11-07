@@ -38,6 +38,7 @@ import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
 import mqtt.mapping.core.*;
 import mqtt.mapping.model.*;
 import mqtt.mapping.model.Mapping;
+
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,7 +68,6 @@ public class MQTTMappingRestController {
 
     @Autowired
     MappingComponent mappingComponent;
-
 
     @Autowired
     ConnectorConfigurationComponent connectorConfigurationComponent;
@@ -120,7 +120,7 @@ public class MQTTMappingRestController {
             log.error("Could not get Configuration Properties:", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
-        log.info("Get connection Properties");
+        log.info("Tenant {} - Getting connection properties...", contextService.getContext().getTenant());
         for (IConnectorClient client : clients.values()) {
             ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorId(), client.getConfigProperties());
             connectorConfigurations.add(config);
@@ -168,7 +168,7 @@ public class MQTTMappingRestController {
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
         log.info("Get connection details");
         try {
-            List<ConnectorConfiguration> configurations = connectorConfigurationComponent.loadAllConnectorConfiguration();
+            List<ConnectorConfiguration> configurations = connectorConfigurationComponent.loadAllConnectorConfiguration(contextService.getContext().getTenant());
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
 
             //Remove sensitive data before sending to UI
@@ -236,6 +236,7 @@ public class MQTTMappingRestController {
         }
     }
 
+    //TODO Change UI to add connectorId to the params section of the Operation at least for the operations where the connector is involved: connect, disconnect, subscriber reconnect
     @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
         //TODO ConnectorId must be added to the Parameter of the Operations from the UI.
@@ -266,7 +267,7 @@ public class MQTTMappingRestController {
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-                c8yAgent.notificationSubscriberReconnect(contextService.getContext().getTenant());
+                c8yAgent.notificationSubscriberReconnect(tenant, client);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {

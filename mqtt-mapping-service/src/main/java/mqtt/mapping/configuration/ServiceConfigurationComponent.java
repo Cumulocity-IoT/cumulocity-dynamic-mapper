@@ -51,8 +51,6 @@ public class ServiceConfigurationComponent {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    private final Platform platform;
-
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -61,26 +59,8 @@ public class ServiceConfigurationComponent {
     }
 
     @Autowired
-    public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi, Platform platform) {
+    public ServiceConfigurationComponent(TenantOptionApi tenantOptionApi) {
         this.tenantOptionApi = tenantOptionApi;
-        this.platform = platform;
-    }
-
-    public TrustedCertificateRepresentation loadCertificateByName(String certificateName,
-            MicroserviceCredentials credentials) {
-        MutableObject<TrustedCertificateRepresentation> result = new MutableObject<TrustedCertificateRepresentation>(
-                new TrustedCertificateRepresentation());
-        TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
-                String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
-                MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
-        certificates.forEach(cert -> {
-            if (cert.getName().equals(certificateName)) {
-                result.setValue(cert);
-                log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(),
-                        cert.getName());
-            }
-        });
-        return result.getValue();
     }
 
     public void saveServiceConfiguration(final ServiceConfiguration configuration) throws JsonProcessingException {

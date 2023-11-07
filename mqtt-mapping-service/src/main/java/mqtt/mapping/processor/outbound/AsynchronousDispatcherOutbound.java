@@ -26,26 +26,23 @@ import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.connector.core.registry.ConnectorRegistry;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.model.SnoopStatus;
-import mqtt.mapping.notification.C8YAPISubscriber;
 import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.processor.C8YMessage;
+import mqtt.mapping.processor.PayloadProcessor;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -57,23 +54,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-@Service
+//@Service
+//Not a service anymore, manually instantiated by the C8YSubscriber
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
-
-    C8YAPISubscriber operationSubscriber;
-
-    @Autowired
-    public void setOperationSubscriber(C8YAPISubscriber operationSubscriber) {
-        this.operationSubscriber = operationSubscriber;
-    }
-
-    @Autowired
-    C8YAgent c8YAgent;
 
     @Override
     public void onOpen(URI serverUri) {
         log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
-        operationSubscriber.setDeviceConnectionStatus(200);
+        c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(200);
     }
 
     @Override
@@ -99,9 +87,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("Connection was closed.");
         if (reason.contains("401"))
-            operationSubscriber.setDeviceConnectionStatus(401);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(401);
         else
-            operationSubscriber.setDeviceConnectionStatus(0);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(0);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
@@ -221,29 +209,40 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     }
 
+    protected IConnectorClient connectorClient;
+
+    //The Outbound Dispatcher is hardly connected to the Connector otherwise it is not possible to correlate messages received bei Notification API to the correct Connector
+    public AsynchronousDispatcherOutbound(IConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent) {
+        this.connectorClient = connectorClient;
+        this.c8yAgent = c8YAgent;
+        this.objectMapper = objectMapper;
+        this.cachedThreadPool = cachedThreadPool;
+        this.mappingComponent = mappingComponent;
+    }
     private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
-    @Autowired
+    //@Autowired
+    @Setter
     protected C8YAgent c8yAgent;
 
-    @Autowired
-    protected ConnectorRegistry connectorRegistry;
+    //@Autowired
+    //@Setter
+    //protected ConnectorRegistry connectorRegistry;
 
-    @Autowired
+    @Setter
     protected ObjectMapper objectMapper;
 
-    @Autowired
-    Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
+    //@Autowired
+    //Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
 
-    @Autowired
-    @Qualifier("cachedThreadPool")
+    //@Autowired
+    //@Qualifier("cachedThreadPool")
+    @Setter
     private ExecutorService cachedThreadPool;
 
-    @Autowired
+    //@Autowired
+    @Setter
     MappingComponent mappingComponent;
-
-    @Autowired
-    ServiceConfigurationComponent serviceConfigurationComponent;
 
     public Future<List<ProcessingContext<?>>> processMessage(String tenant, C8YMessage c8yMessage,
             boolean sendPayload) {
@@ -273,9 +272,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         } else {
             return futureProcessingResult;
         }
-
+        //Here we correlate the connector of the Dispatcher to the processor
+        PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessorsOutbound,
+                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessor.getPayloadProcessorsOutbound(),
                         sendPayload, c8yMessage, objectMapper, tenant));
 
         if (op != null) {

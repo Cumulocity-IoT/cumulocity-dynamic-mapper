@@ -4,10 +4,11 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
-import mqtt.mapping.notification.C8YAPISubscriber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -28,10 +29,10 @@ public class MQTTMappingOutboundRestController {
     C8YAgent c8yAgent;
 
     @Autowired
-    C8YAPISubscriber c8yApiSubscriber;
+    private ContextService<UserCredentials> contextService;
 
     @Autowired
-    private ContextService<UserCredentials> contextService;
+    private ConnectorRegistry connectorRegistry;
 
     @Value("${APP.outputMappingEnabled}")
     private boolean outputMappingEnabled;
@@ -44,7 +45,8 @@ public class MQTTMappingOutboundRestController {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
-                    c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
+                    IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), subscription.getConnectorId());
+                    c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi(), client);
                 } else {
                     log.warn("Could not subscribe device with id "+device.getId()+ ". Device does not exists!" );
                     //throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
@@ -63,7 +65,7 @@ public class MQTTMappingOutboundRestController {
         try {
             String tenant = contextService.getContext().getTenant();
             //List<NotificationSubscriptionRepresentation> deviceSubscriptions = c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
-            C8YAPISubscription c8ySubscription = c8yApiSubscriber.getDeviceSubscriptions(tenant, null, null);
+            C8YAPISubscription c8ySubscription = c8yAgent.getNotificationSubscriber().getDeviceSubscriptions(tenant, null, null);
             //3 cases -
             // 1. Device exists in subscription and active subscription --> Do nothing
             // 2. Device exists in subscription and does not have an active subscription --> create subscription
@@ -82,7 +84,8 @@ public class MQTTMappingOutboundRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        c8yApiSubscriber.subscribeDevice(mor, subscription.getApi());
+                        IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), subscription.getConnectorId());
+                        c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi(), client);
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -95,7 +98,7 @@ public class MQTTMappingOutboundRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        c8yApiSubscriber.unsubscribeDevice(mor);
+                        c8yAgent.getNotificationSubscriber().unsubscribeDevice(mor);
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -115,7 +118,7 @@ public class MQTTMappingOutboundRestController {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            C8YAPISubscription c8YAPISubscription = c8yApiSubscriber.getDeviceSubscriptions(contextService.getContext().getTenant(), deviceId, subscriptionName);
+            C8YAPISubscription c8YAPISubscription =c8yAgent.getNotificationSubscriber().getDeviceSubscriptions(contextService.getContext().getTenant(), deviceId, subscriptionName);
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
@@ -129,7 +132,7 @@ public class MQTTMappingOutboundRestController {
         try {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), deviceId);
                 if (mor != null) {
-                    c8yApiSubscriber.unsubscribeDevice(mor);
+                    c8yAgent.getNotificationSubscriber().unsubscribeDevice(mor);
                 } else {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not delete subscription for device with id "+deviceId+ ". Device not found" );
                 }

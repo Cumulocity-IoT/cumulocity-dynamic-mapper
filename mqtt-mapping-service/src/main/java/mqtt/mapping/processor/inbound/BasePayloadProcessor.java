@@ -53,12 +53,12 @@ import java.util.*;
 import java.util.Map.Entry;
 
 @Slf4j
-@Service
+//@Service
 public abstract class BasePayloadProcessor<T> {
 
-    public BasePayloadProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+    public BasePayloadProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
         this.objectMapper = objectMapper;
-        this.connectorClient = connectorClient;
+        //this.connectorClient = connectorClient;
         this.tenant = tenant;
         this.c8yAgent = c8yAgent;
     }
@@ -66,7 +66,7 @@ public abstract class BasePayloadProcessor<T> {
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
-    protected IConnectorClient connectorClient;
+    //protected IConnectorClient connectorClient;
 
     protected String tenant;
 

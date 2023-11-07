@@ -110,6 +110,10 @@ public class MappingComponent {
         }
         initialized.put(tenant, true);
         resolverMappingInbound.put(tenant,  InnerNode.createRootNode());
+        if(cacheMappingInbound.get(tenant) == null)
+            cacheMappingInbound.put(tenant, new HashMap<>());
+        if(cacheMappingOutbound.get(tenant) == null)
+            cacheMappingOutbound.put(tenant, new HashMap<>());
     }
 
     public void initializeMappingComponent(String tenant, MappingServiceRepresentation mappingServiceRepresentation) {
@@ -130,6 +134,7 @@ public class MappingComponent {
                 // add current name of mappings to the status messages
                 for (int index = 0; index < ms.length; index++) {
                     ms[index].name = "#";
+
                     if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
                         ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
                     } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
@@ -443,21 +448,27 @@ public class MappingComponent {
     public void cleanDirtyMappings(String tenant) throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
+        if(dirtyMappings.get(tenant) != null) {
+            for (Mapping mapping : dirtyMappings.get(tenant)) {
+                log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
+                // no reload required
+                updateMapping(tenant, mapping, true, false);
+            }
 
-        for (Mapping mapping : dirtyMappings.get(tenant)) {
-            log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
-            // no reload required
-            updateMapping(tenant, mapping, true, false);
         }
         // reset dirtySet
-        dirtyMappings.replace(tenant, new HashSet<Mapping>());
+        dirtyMappings.put(tenant, new HashSet<Mapping>());
     }
 
     private void removeDirtyMapping(String tenant, Mapping mapping) {
+        if(dirtyMappings.get(tenant) == null)
+            dirtyMappings.put(tenant, new HashSet<>());
         dirtyMappings.get(tenant).removeIf(m -> m.id.equals(mapping.id));
     }
 
     public void addDirtyMapping(String tenant, Mapping mapping) {
+        if(dirtyMappings.get(tenant) == null)
+            dirtyMappings.put(tenant, new HashSet<>());
         dirtyMappings.get(tenant).add(mapping);
     }
 

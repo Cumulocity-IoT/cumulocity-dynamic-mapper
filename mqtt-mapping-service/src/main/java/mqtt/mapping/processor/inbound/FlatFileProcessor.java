@@ -33,12 +33,12 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-@Service
+//@Service
 public class FlatFileProcessor extends JSONProcessor {
 
 
-    public FlatFileProcessor(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant){
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+    public FlatFileProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
+        super(objectMapper, c8yAgent, tenant);
     }
 
     @Override
