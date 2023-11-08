@@ -27,9 +27,15 @@ export enum ConnectorProperty {
   BOOLEAN_PROPERTY="BOOLEAN_PROPERTY",
 }
 
+
+export interface ConnectorPropertyDefinition {
+  required: boolean;
+  property:  ConnectorProperty ;
+}
+
 export interface ConnectorPropertyConfiguration {
   connectorId: string;
-  properties: { [name: string]: ConnectorProperty };
+  properties: { [name: string]: ConnectorPropertyDefinition };
 }
 
 export interface ConnectionConfiguration {

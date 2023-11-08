@@ -150,7 +150,7 @@ public class MQTTMappingRestController {
             try {
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                         clonedConfig.getConnectorId());
-                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property)) {
+                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property).property) {
                     clonedConfig.getProperties().replace(property, "****");
                 }
             } catch (ConnectorRegistryException e) {
@@ -190,7 +190,7 @@ public class MQTTMappingRestController {
                     try {
                         IConnectorClient client = connectorRegistry.getClientForTenant(
                                 contextService.getContext().getTenant(), clonedConfig.getConnectorId());
-                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property)) {
+                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property).property) {
                             clonedConfig.getProperties().replace(property, "");
                         }
 

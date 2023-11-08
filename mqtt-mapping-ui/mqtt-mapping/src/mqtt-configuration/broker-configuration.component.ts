@@ -136,7 +136,7 @@ export class BrokerConfigurationComponent implements OnInit {
     if (dynamicFields) {
       for (const key in dynamicFields.properties) {
         const property = dynamicFields.properties[key];
-        if (property == ConnectorProperty.NUMERIC_PROPERTY) {
+        if (property.property == ConnectorProperty.NUMERIC_PROPERTY) {
           this.dynamicFormlyFields.push({
             // fieldGroupClassName: "row",
             fieldGroup: [
@@ -148,12 +148,12 @@ export class BrokerConfigurationComponent implements OnInit {
                 templateOptions: {
                   type: "number",
                   label: key,
-                  required: true,
+                  required: property.required,
                 },
               },
             ],
           });
-        } else if (property == ConnectorProperty.STRING_PROPERTY) {
+        } else if (property.property == ConnectorProperty.STRING_PROPERTY) {
           this.dynamicFormlyFields.push({
             // fieldGroupClassName: "row",
             fieldGroup: [
@@ -164,12 +164,12 @@ export class BrokerConfigurationComponent implements OnInit {
                 wrappers: ["c8y-form-field"],
                 templateOptions: {
                   label: key,
-                  required: true,
+                  required: property.required,
                 },
               },
             ],
           });
-        } else if (property == ConnectorProperty.SENSITIVE_STRING_PROPERTY) {
+        } else if (property.property == ConnectorProperty.SENSITIVE_STRING_PROPERTY) {
           this.dynamicFormlyFields.push({
             // fieldGroupClassName: "row",
             fieldGroup: [
@@ -181,12 +181,12 @@ export class BrokerConfigurationComponent implements OnInit {
                 templateOptions: {
                   type: "password",
                   label: key,
-                  required: true,
+                  required: property.required,
                 },
               },
             ],
           });
-        } else if (property == ConnectorProperty.BOOLEAN_PROPERTY) {
+        } else if (property.property == ConnectorProperty.BOOLEAN_PROPERTY) {
           this.dynamicFormlyFields.push({
             //fieldGroupClassName: "row",
             fieldGroup: [
@@ -197,7 +197,7 @@ export class BrokerConfigurationComponent implements OnInit {
                 wrappers: ["c8y-form-field"],
                 templateOptions: {
                   label: key,
-                  required: true,
+                  required: property.required,
                 },
               },
             ],
