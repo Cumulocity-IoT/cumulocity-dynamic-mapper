@@ -21,7 +21,7 @@
 import { Injectable } from "@angular/core";
 import { FetchClient, InventoryService, Realtime } from "@c8y/client";
 import { BehaviorSubject, Observable } from "rxjs";
-import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
 import { MappingStatus } from "../../shared/mapping.model";
 
 @Injectable({ providedIn: "root" })
@@ -29,7 +29,7 @@ export class MonitoringService {
   constructor(
     private client: FetchClient,
     private inventory: InventoryService,
-    private configurationService: BrokerConfigurationService
+    private configurationService: EndpointConfigurationService
   ) {
     this.realtime = new Realtime(this.client);
   }
@@ -43,7 +43,7 @@ export class MonitoringService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.configurationService.initializeMQTTAgent();
+    this.agentId = await this.configurationService.initializeEndpointAgent();
     console.log("Start subscription for monitoring:", this.agentId);
 
     let { data, res } = await this.inventory.detail(this.agentId);

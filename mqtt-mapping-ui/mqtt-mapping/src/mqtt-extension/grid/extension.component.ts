@@ -25,7 +25,7 @@ import { BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Observable } from "rxjs";
 import { shareReplay, switchMap, tap } from "rxjs/operators";
 import { ExtensionService } from "../share/extension.service";
-import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
 import { Operation } from "../../shared/mapping.model";
 import { AddExtensionComponent } from "../extension-modal/add-extension.component";
 
@@ -52,7 +52,7 @@ export class ExtensionComponent implements OnInit {
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
-    private configurationService: BrokerConfigurationService
+    private configurationService: EndpointConfigurationService
   ) {}
 
   async ngOnInit() {

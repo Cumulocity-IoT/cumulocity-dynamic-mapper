@@ -39,7 +39,7 @@ import { TranslateService } from "@ngx-translate/core";
 import { BehaviorSubject } from "rxjs";
 import { ExtensionStatus } from "../../shared/mapping.model";
 import { PROCESSOR_EXTENSION_TYPE } from "../../shared/util";
-import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
 
 @Injectable({ providedIn: "root" })
 export class ExtensionService {
@@ -53,7 +53,7 @@ export class ExtensionService {
     private translateService: TranslateService,
     private inventoryService: InventoryService,
     private inventoryBinaryService: InventoryBinaryService,
-    private configurationService: BrokerConfigurationService
+    private configurationService: EndpointConfigurationService
   ) {}
 
   async getExtensions(extensionId: string): Promise<IManagedObject[]> {

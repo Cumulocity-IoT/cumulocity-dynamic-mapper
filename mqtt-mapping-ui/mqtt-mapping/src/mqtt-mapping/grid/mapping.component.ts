@@ -38,7 +38,7 @@ import {
 } from "@c8y/ngx-components";
 import { v4 as uuidv4 } from "uuid";
 import { saveAs } from "file-saver";
-import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
 import {
   API,
   C8YAPISubscription,
@@ -236,7 +236,7 @@ export class MappingComponent implements OnInit {
 
   constructor(
     public mappingService: MappingService,
-    public configurationService: BrokerConfigurationService,
+    public configurationService: EndpointConfigurationService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router

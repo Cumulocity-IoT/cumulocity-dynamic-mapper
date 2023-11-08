@@ -48,7 +48,7 @@ import {
 import { BehaviorSubject, Observable } from "rxjs";
 
 @Injectable({ providedIn: "root" })
-export class BrokerConfigurationService {
+export class EndpointConfigurationService {
   constructor(private client: FetchClient, private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
   }
@@ -61,7 +61,7 @@ export class BrokerConfigurationService {
   private _feature: Feature;
   private realtime: Realtime;
 
-  async initializeMQTTAgent(): Promise<string> {
+  async initializeEndpointAgent(): Promise<string> {
     if (!this.agentId) {
       const identity: IExternalIdentity = {
         type: "c8y_Serial",
@@ -71,7 +71,7 @@ export class BrokerConfigurationService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
-        console.log("MQTTConfigurationService: Found MQTTAgent", this.agentId);
+        console.log("EndpointConfigurationService: Found EndpointAgent", this.agentId);
       }
     }
     return this.agentId;
@@ -172,7 +172,7 @@ export class BrokerConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.initializeMQTTAgent();
+    this.agentId = await this.initializeEndpointAgent();
     console.log("Started subscription:", this.agentId);
     this.getConnectionStatus().then((status) => {
       this.serviceStatus.next(status);
