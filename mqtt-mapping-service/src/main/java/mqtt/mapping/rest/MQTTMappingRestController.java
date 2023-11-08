@@ -130,8 +130,8 @@ public class MQTTMappingRestController {
     }
 
     //TODO Adapt this in UI
-    @RequestMapping(value = "/configuration/connection", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectionToBroker(
+    @RequestMapping(value = "/configuration/connector/instance", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HttpStatus> configureConnectorInstance(
             @Valid @RequestBody ConnectorConfiguration configuration) {
 
         if (!userHasMappingAdminRole()) {
@@ -167,8 +167,8 @@ public class MQTTMappingRestController {
     }
 
     //TODO Adapt this structure in UI
-    @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
+    @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectorInstance() {
         log.info("Get connection details");
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent.loadAllConnectorConfiguration(contextService.getContext().getTenant());
@@ -245,7 +245,6 @@ public class MQTTMappingRestController {
         log.info("Post operation: {}", operation.toString());
         try {
             String tenant = contextService.getContext().getTenant();
-            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
                 // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
@@ -253,10 +252,16 @@ public class MQTTMappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+                String connectorId = operation.getParameter().get("connectorId");
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get(connectorId));
                 client.updateActiveSubscriptions(updatedMappings, false);
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
+                String connectorId = operation.getParameter().get("connectorId");
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get(connectorId));
                 client.connect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
+                String connectorId = operation.getParameter().get("connectorId");
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get(connectorId));
                 client.disconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping(tenant);
@@ -269,6 +274,8 @@ public class MQTTMappingRestController {
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
+                String connectorId = operation.getParameter().get("connectorId");
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get(connectorId));
                 c8yAgent.notificationSubscriberReconnect(tenant, client);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
