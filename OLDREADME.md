@@ -34,7 +34,6 @@
 
 ## Overview
 
-
 Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses
 this gap by providing the following artifcats:
 
