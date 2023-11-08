@@ -104,10 +104,10 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
                         try {
                             processor.deserializePayload(context, message);
                             if (c8yAgent.getServiceConfiguration().logPayload) {
-                                log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
+                                log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant, context.getTopic(),
                                         context.getPayload().toString());
                             } else {
-                                log.info("New message on topic: '{}'", context.getTopic());
+                                log.info("Tenant {} - New message on topic: '{}'", tenant, context.getTopic());
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -128,14 +128,14 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mappingStatus.snoopedTemplatesActive++;
 
-                                    log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant, mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
                                     mappingStatusComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
-                                            "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}", tenant,
                                             context.getPayload().getClass());
                                 }
                             } else {
@@ -148,13 +148,13 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
                                 }
                             }
                         } catch (Exception e) {
-                            log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
-                            log.info("Message Stacktrace:", e);
+                            log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant, e.getMessage());
+                            log.info("Tenant {} - Message Stacktrace: {}",tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {
                         mappingStatusUnspecified.errors++;
-                        log.error("No process for MessageType: {} registered, ignoring this message!", mappingType);
+                        log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!", tenant, mappingType);
                     }
                     processingResult.add(context);
                 }

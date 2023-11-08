@@ -91,7 +91,7 @@ public class ConnectorConfigurationComponent {
                 log.debug("Returning connection configuration found: {}:", configuration.getConnectorId());
                 rt = configuration;
             } catch (SDKException exception) {
-                log.warn("No configuration found, returning empty element!");
+                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
                 rt = null;
             } catch (JsonMappingException e) {
                 e.printStackTrace();
@@ -121,7 +121,7 @@ public class ConnectorConfigurationComponent {
                     }
                 }
             } catch (SDKException exception) {
-                log.warn("No configuration found, returning empty element!");
+                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (JsonProcessingException e) {
