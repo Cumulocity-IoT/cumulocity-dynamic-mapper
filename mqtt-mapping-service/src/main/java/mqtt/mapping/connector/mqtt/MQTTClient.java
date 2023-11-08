@@ -573,7 +573,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     @Override
-    public List<Mapping> updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
+    public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
             activeSubscriptions.put(tenantId, new HashMap<String, Integer>());
         }
@@ -583,7 +583,7 @@ public class MQTTClient implements IConnectorClient {
                 updatedSubscriptionCache.put(mapping.subscriptionTopic, Integer.valueOf(0));
             }
             Integer activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
-            activeSubs++;
+            updatedSubscriptionCache.put(mapping.subscriptionTopic, activeSubs++);
         });
 
         // unsubscribe topics not used
@@ -613,8 +613,7 @@ public class MQTTClient implements IConnectorClient {
                 }
             }
         });
-        activeSubscriptions.replace(tenantId, updatedSubscriptionCache);
-        return updatedMappings;
+        activeSubscriptions.put(tenantId, updatedSubscriptionCache);
     }
 
     @Override
