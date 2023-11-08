@@ -71,8 +71,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 
-    public static final String TIME = "time";
-
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
             throws IOException;
 

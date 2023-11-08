@@ -62,7 +62,7 @@
     title="{{ 'Export mappings' | translate }}"
     (click)="onExportAll()"
   >
-    <i c8yIcon="export"></i>
+    <i c8yIcon="download"></i>
     {{ "Export mappings" | translate }}
   </button>
   <button
@@ -70,7 +70,7 @@
     title="{{ 'Import mappings' | translate }}"
     (click)="onImport()"
   >
-    <i c8yIcon="import"></i>
+    <i c8yIcon="upload"></i>
     {{ "Import mappings" | translate }}
   </button>
 </c8y-action-bar-item>
@@ -78,10 +78,12 @@
   <div class="card-block">
     <c8y-data-grid
       [title]="titleMapping | translate"
+      [selectable]="'true'"
       [columns]="columnsMappings"
+      [bulkActionControls]="bulkActionControls"
       [rows]="mappings"
       [pagination]="pagination"
-      [actionControls]="actionControlMapping"
+      [actionControls]="actionControls"
       [refresh]="refresh"
     >
     </c8y-data-grid>
