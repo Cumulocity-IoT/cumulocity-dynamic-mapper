@@ -208,10 +208,10 @@ export class MappingService {
     return m;
   }
 
-  async deleteMapping(mapping: Mapping): Promise<string> {
+  async deleteMapping(id: string): Promise<string> {
     //let result = this.inventory.delete(mapping.id)
     let response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
       {
         headers: {
           "content-type": "application/json",
