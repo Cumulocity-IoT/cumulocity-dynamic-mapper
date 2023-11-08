@@ -28,6 +28,7 @@ import {
   ActionControl,
   AlertService,
   BuiltInActionType,
+  BulkActionControl,
   Column,
   ColumnDataType,
   DisplayOptions,
@@ -229,8 +230,9 @@ export class MappingComponent implements OnInit {
     pageSize: 3,
     currentPage: 1,
   };
-  actionControlMapping: ActionControl[] = [];
+  actionControls: ActionControl[] = [];
   actionControlSubscription: ActionControl[] = [];
+  bulkActionControls: BulkActionControl[] = [];
 
   constructor(
     public mappingService: MappingService,
@@ -270,9 +272,9 @@ export class MappingComponent implements OnInit {
     this.subscription = await this.mappingService.getSubscriptions();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.loadMappings();
-    this.actionControlMapping.push(
+    this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
         callback: this.updateMapping.bind(this),
@@ -297,7 +299,25 @@ export class MappingComponent implements OnInit {
         type: "EXPORT",
         text: "Export Mapping",
         icon: "export",
-        callback: this.onExportSingle.bind(this),
+        callback: this.exportSingle.bind(this),
+      }
+    );
+    this.bulkActionControls.push(
+      {
+        type: BuiltInActionType.Delete,
+        callback: this.deleteMappingBulk.bind(this),
+      },
+      {
+        type: "ACTIVATE",
+        text: "Toogle Activation",
+        icon: "toggle-on",
+        callback: this.activateMappingBulk.bind(this),
+      },
+      {
+        type: "EXPORT",
+        text: "Export Mapping",
+        icon: "export",
+        callback: this.exportMappingBulk.bind(this),
       }
     );
     this.actionControlSubscription.push({
@@ -481,7 +501,7 @@ export class MappingComponent implements OnInit {
   async deleteMapping(mapping: Mapping) {
     console.log("Deleting mapping:", mapping);
     try {
-      await this.mappingService.deleteMapping(mapping);
+      await this.mappingService.deleteMapping(mapping.id);
       this.alertService.success(gettext("Mapping deleted successfully"));
       this.isConnectionToMQTTEstablished = true;
       this.loadMappings();
@@ -587,19 +607,59 @@ export class MappingComponent implements OnInit {
     this.reloadMappings();
   }
 
-  private exportMappings(mappings2Export: Mapping[]){
+  private exportMappings(mappings2Export: Mapping[]) {
     const json = JSON.stringify(mappings2Export, undefined, 2);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
-
   }
+
+  private exportMappingBulk(ids: string[]) {
+    const mappings2Export = this.mappings.filter((m) => ids.includes(m.id));
+    this.exportMappings(mappings2Export);
+  }
+
+  private async activateMappingBulk(ids: string[]) {
+    for (let i = 0; i < this.mappings.length; i++) {
+      if (ids.includes(this.mappings[i].id)) {
+        let newActive = !this.mappings[i].active;
+        let action = newActive ? "Activate" : "Deactivate";
+        let parameter = { id: this.mappings[i].id, active: newActive };
+        await this.mappingService.changeActivationMapping(parameter);
+        this.alertService.success(
+          action + " mapping: " + this.mappings[i].id + "!"
+        );
+      }
+    }
+    this.loadMappings();
+    this.refresh.emit();
+  }
+
+  private async deleteMappingBulk(ids: string[]) {
+    for (let i = 0; i < this.mappings.length; i++) {
+      if (ids.includes(this.mappings[i].id)) {
+        try {
+          await this.mappingService.deleteMapping(this.mappings[i].id);
+          this.alertService.success(gettext("Mapping deleted successfully"));
+        } catch (error) {
+          this.alertService.danger(
+            gettext("Failed to delete mapping:") + error
+          );
+        }
+      }
+    }
+    this.isConnectionToMQTTEstablished = true;
+    this.loadMappings();
+    this.refresh.emit();
+  }
+
   async onExportAll() {
     const mappings2Export = this.mappings.filter(
       (m) => m.direction == this.stepperConfiguration.direction
     );
     this.exportMappings(mappings2Export);
   }
-  async onExportSingle(mappping:Mapping) {
+
+  async exportSingle(mappping: Mapping) {
     const mappings2Export = [mappping];
     this.exportMappings(mappings2Export);
   }
