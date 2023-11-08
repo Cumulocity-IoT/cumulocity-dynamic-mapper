@@ -41,11 +41,11 @@ import java.util.List;
 @ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
 
-  public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+  public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 
-  public static String TIME = "time";
+  public static final String TIME = "time";
   public static int SNOOP_TEMPLATES_MAX = 5;
-  public static String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
+  public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
   public static Mapping UNSPECIFIED_MAPPING;
 
   static {

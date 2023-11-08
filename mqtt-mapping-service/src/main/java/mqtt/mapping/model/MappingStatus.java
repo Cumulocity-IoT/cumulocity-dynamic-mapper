@@ -36,7 +36,7 @@ import java.io.Serializable;
 public class MappingStatus implements Serializable {
 
   public static MappingStatus UNSPECIFIED_MAPPING_STATUS;
-  public static String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
+  public static final String IDENT_UNSPECIFIED_MAPPING = "UNSPECIFIED";
 
   static {
     UNSPECIFIED_MAPPING_STATUS = new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING, "#", "#", "#", 0, 0, 0,
