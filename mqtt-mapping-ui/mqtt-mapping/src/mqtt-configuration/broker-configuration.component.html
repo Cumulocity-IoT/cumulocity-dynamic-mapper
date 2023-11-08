@@ -32,6 +32,85 @@
 </c8y-action-bar-item>
 
 <div class="d-flex flex-wrap">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Configured broker connectors" | translate }}
+        </h4>
+      </div>
+      <div class="card-block">
+        <div style="height: 200px; overflow-y: auto">
+          <table class="table table-condensed table-striped fixTableHead">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>
+                    <span>Connector Id</span>  
+                </th>
+                <th>Expand as array</th>
+                <th>Resolve to externalId</th>
+                <th>Respair strategy</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let sub of substitutions; let i = index"
+                id="{{ 'sub-' + id + '-' + i }}"
+                [style.background]="
+                  i == settings.selectedSubstitutionIndex
+                    ? settings.color
+                    : 'none'
+                "
+                (click)="onSubstitutionSelect(i)"
+              >
+                <td width="4%">
+                  {{ i }}
+                </td>
+                <td>
+                  <span *ngIf="!sub.registeredType" class="text-12"
+                    >{{
+                      "[ " +
+                        (definesDeviceIdentifier(targetAPI, sub, direction)
+                          ? "* "
+                          : "") +
+                        sub.pathSource +
+                        " &#8212;> " +
+                        sub.pathTarget +
+                        " ]"
+                    }}
+                  </span>
+                </td>
+                <td width="8%">
+                  {{ sub.expandArray }}
+                </td>
+                <td width="8%">
+                  {{ sub.resolve2ExternalId }}
+                </td>
+                <td>
+                  {{ sub.repairStrategy }}
+                </td>
+                <td width="8%">
+                  <button
+                    title="{{ 'Remove' | translate }}"
+                    class="btn btn-icon btn-clean"
+                    (click)="onSubstitutionDelete(i)"
+                    [attr.disabled]="
+                      isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+                    "
+                  >
+                    <i c8yIcon="minus-circle" class="text-danger"></i>
+                    <span class="sr-only" translate>Remove</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="col-lg-6">
     <div class="card">
@@ -42,21 +121,21 @@
       </div>
       <div class="card-block" [formGroup]="brokerFormly">
         <formly-form
-        [form]="brokerFormly"
-        [fields]="brokerFormlyFields"
-        [model]="brokerConfig1Model"
-      ></formly-form>
+          [form]="brokerFormly"
+          [fields]="brokerFormlyFields"
+          [model]="brokerConfig1Model"
+        ></formly-form>
       </div>
 
       <div class="card-block" [formGroup]="dynamicFormly">
         <formly-form
-        [form]="dynamicFormly"
-        [fields]="dynamicFormlyFields"
-        [model]="brokerConfig2Model"
-      ></formly-form>
+          [form]="dynamicFormly"
+          [fields]="dynamicFormlyFields"
+          [model]="brokerConfig2Model"
+        ></formly-form>
       </div>
     </div>
-  </div> 
+  </div>
   <!-- <div class="col-lg-6">
     <div class="card">
       <div class="card-header separator j-c-between">
