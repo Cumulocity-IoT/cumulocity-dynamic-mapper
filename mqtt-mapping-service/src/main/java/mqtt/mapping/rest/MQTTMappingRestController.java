@@ -369,6 +369,7 @@ public class MQTTMappingRestController {
 
     }
 
+    //TODO We might need to add the connector ID here to correlate mappings to excactly one connector
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
@@ -429,6 +430,7 @@ public class MQTTMappingRestController {
         }
     }
 
+    //TODO We should add the connectorId to the Request so the user can decide which connector he wants to test
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
             @RequestParam URI topic,
