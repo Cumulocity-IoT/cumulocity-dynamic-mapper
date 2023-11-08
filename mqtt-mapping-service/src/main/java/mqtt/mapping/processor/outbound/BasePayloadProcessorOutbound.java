@@ -70,8 +70,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     @Autowired
     SysHandler sysHandler;
 
-    public static final String TIME = "time";
-
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
             throws IOException;
 
