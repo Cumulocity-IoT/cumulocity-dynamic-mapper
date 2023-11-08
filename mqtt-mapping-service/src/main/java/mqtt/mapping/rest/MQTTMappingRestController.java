@@ -265,12 +265,12 @@ public class MQTTMappingRestController {
                 // sync, the ActiveSubscriptionMappingInbound is build on the
                 // previously used updatedMappings
 
-                // TODO iterate over all clients
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                String connectorId = operation.getParameter().get("connectorId");
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorId));
-                client.updateActiveSubscriptions(updatedMappings, false);
+                //String connectorId = operation.getParameter().get("connectorId");
+                HashMap<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+                for (IConnectorClient client : connectorMap.values()) {
+                    client.updateActiveSubscriptions(updatedMappings, false);
+                }
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 String connectorId = operation.getParameter().get("connectorId");
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
@@ -464,8 +464,6 @@ public class MQTTMappingRestController {
         }
     }
 
-    // TODO We should add the connectorId to the Request so the user can decide
-    // which connector he wants to test
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
             @RequestParam URI topic, @RequestParam String connectorId,
@@ -474,27 +472,15 @@ public class MQTTMappingRestController {
         List<ProcessingContext<?>> result = null;
         log.info("Tenant {} - Test payload: {}, {}, {}", contextService.getContext().getTenant(), path, method,
                 payload);
+
         try {
             boolean send = ("send").equals(method);
-            Map<String, IConnectorClient> connectorClients = null;
             try {
-                connectorClients = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+                IConnectorClient connectorClient = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
+                result = connectorClient.test(path, send, payload);
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);
             }
-            // TODO For multiple connectors this would lead to only the result of the last
-            // one will be returned
-            // TODO As an alternative we can expose the connector ID to the UI and the user
-            // can select to which connector he wants to test
-            // TODO replace for loop with connectorId
-            for (String connector : connectorClients.keySet()) {
-                try {
-                    result = connectorClients.get(connector).test(path, send, payload);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            // List<ProcessingContext<?>> result = mqttClient.test(path, send, payload);
             return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
         } catch (Exception ex) {
             log.error("Error transforming payload: {}", ex);
