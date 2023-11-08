@@ -83,10 +83,11 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
         if (payloadJsonNode instanceof ObjectNode) {
             ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
         } else {
-            log.warn("Parsing this message as JSONArray, no elements from the topic level can be used!");
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!", tenant);
         }
+
         String payload = payloadJsonNode.toPrettyString();
-        log.info("Patched payload: {}", payload);
+        log.info("Tenant {} - Patched payload: {}", tenant, payload);
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -110,7 +111,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
             List<SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
                     new ArrayList<SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("No substitution for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - No substitution for: {}, {}", substitution.pathSource, tenant,
                         payload);
                 postProcessingCacheEntry
                         .add(new SubstituteValue(extractedSourceContent, TYPE.IGNORE, substitution.repairStrategy));
@@ -159,7 +160,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
                             .add(new SubstituteValue(extractedSourceContent, TYPE.NUMBER, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
-                    log.info("This substitution, involves an objects for: {}, {}",
+                    log.info("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
                             substitution.pathSource, extractedSourceContent.toString());
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
@@ -167,7 +168,7 @@ public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
                 if (c8yAgent.getServiceConfiguration().logSubstitution) {
-                    log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                    log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})", tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
             }

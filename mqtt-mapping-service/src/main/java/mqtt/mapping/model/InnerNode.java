@@ -140,7 +140,7 @@ public class InnerNode {
                 new ArrayList<InnerNode>());
         String currentPathMonitoring = createPathMonitoring(levels, currentLevel);
         if (currentLevel == levels.size() - 1) {
-            log.info(
+            log.debug(
                     "Adding mappingNode : currentPathMonitoring: {}, currentNode.absolutePath: {}, mappingId : {}",
                     currentPathMonitoring, getAbsolutePath(), mapping.id);
             InnerNode child = InnerNode.createMappingNode(this, levels.get(currentLevel), mapping);
@@ -149,7 +149,7 @@ public class InnerNode {
             specificChildren.add(child);
             getChildNodes().put(levels.get(currentLevel), specificChildren);
         } else if (currentLevel < levels.size() - 1) {
-            log.info(
+            log.debug(
                     "Adding innerNode   : currentPathMonitoring: {}, currentNode.absolutePath: {}",
                     currentPathMonitoring, getLevel(), getAbsolutePath());
             InnerNode child;
@@ -208,7 +208,7 @@ public class InnerNode {
         boolean hasChildren = getChildNodes() != null && getChildNodes().size() > 0;
         if (hasChildren) {
             if (currentLevel == levels.size() - 1) {
-                log.info(
+                log.debug(
                         "Deleting mappingNode (?)      : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
                         currentPathMonitoring, branchingLevel, mapping.id);
                 // find child and remove
@@ -234,7 +234,7 @@ public class InnerNode {
                 });
                 return foundMapping.booleanValue();
             } else if (currentLevel < levels.size() - 1) {
-                log.info(
+                log.debug(
                         "Deleting innerNode  (?)       : currentPathMonitoring: {}, branchingLevel: {}",
                         currentPathMonitoring, branchingLevel);
                 if (getChildNodes().containsKey(levels.get(currentLevel))) {

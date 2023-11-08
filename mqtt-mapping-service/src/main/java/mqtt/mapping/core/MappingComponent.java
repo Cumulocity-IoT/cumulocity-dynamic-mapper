@@ -307,7 +307,7 @@ public class MappingComponent {
             mor.setId(GId.asGId(mapping.id));
             mor.setName(mapping.name);
             inventoryApi.update(mor);
-            log.info("Created mapping: {}", mor);
+            log.info("Tenant {} - Created mapping: {}", mor, tenant);
             return mapping;
         });
         return result;
@@ -329,7 +329,7 @@ public class MappingComponent {
         try {
             ((InnerNode) resolverMappingInbound.get(tenant)).addMapping(mapping);
         } catch (ResolveException e) {
-            log.error("Could not add mapping {}, ignoring mapping", mapping);
+            log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping);
         }
     }
 
@@ -337,7 +337,7 @@ public class MappingComponent {
         try {
             ((InnerNode) resolverMappingInbound.get(tenant)).deleteMapping(mapping);
         } catch (ResolveException e) {
-            log.error("Could not delete mapping {}, ignoring mapping", mapping);
+            log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping);
         }
     }
 
@@ -346,7 +346,7 @@ public class MappingComponent {
         List<Mapping> updatedMappings = getMappings(tenant).stream()
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
-        log.info("Loaded mappings outbound: {} to cache", updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
         cacheMappingOutbound.replace(tenant,updatedMappings.stream()
                         .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         resolverMappingOutbound.replace(tenant, updatedMappings.stream()
@@ -365,10 +365,10 @@ public class MappingComponent {
                 String key = "/" + m.getFilterOutbound().replace('.', '/');
                 JsonNode testNode = message.at(key);
                 if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
-                    log.info("Found mapping key fragment {} in C8Y message {}", key, message.get("id"));
+                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key, message.get("id"));
                     result.add(m);
                 } else {
-                    log.debug("Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", key,
+                    log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant, key,
                             m.getFilterOutbound(), message.get("id"), api, message.toPrettyString());
                 }
             }
@@ -421,7 +421,7 @@ public class MappingComponent {
 
     public void setActivationMapping(String tenant, String id, Boolean active) throws Exception {
         // step 1. update activation for mapping
-        log.info("Setting active: {} got mapping: {}", id, active);
+        log.info("Tenant {} - Setting active: {} got mapping: {}", tenant, id, active);
         Mapping mapping = getMapping(tenant, id);
         mapping.setActive(active);
         if (Direction.INBOUND.equals(mapping.direction)) {
@@ -450,7 +450,7 @@ public class MappingComponent {
         log.debug("Testing for dirty maps");
         if(dirtyMappings.get(tenant) != null) {
             for (Mapping mapping : dirtyMappings.get(tenant)) {
-                log.info("Found mapping to be saved: {}, {}", mapping.id, mapping.snoopStatus);
+                log.info("Tenant {} - Found mapping to be saved: {}, {}", tenant, mapping.id, mapping.snoopStatus);
                 // no reload required
                 updateMapping(tenant, mapping, true, false);
             }
