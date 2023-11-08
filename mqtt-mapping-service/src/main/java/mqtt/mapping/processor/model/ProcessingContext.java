@@ -70,7 +70,7 @@ public class ProcessingContext<O> {
 
     private boolean needsRepair = false;
 
-    public static String SOURCE_ID = "source.id";
+    public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {
         return errors != null && errors.size() > 0;

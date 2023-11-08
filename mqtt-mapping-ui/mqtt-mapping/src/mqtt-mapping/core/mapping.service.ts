@@ -52,6 +52,8 @@ import {
   SubstituteValue,
 } from "../processor/prosessor.model";
 
+
+
 @Injectable({ providedIn: "root" })
 export class MappingService {
   _feature: Feature;
@@ -67,6 +69,7 @@ export class MappingService {
 
   queriesUtil: QueriesUtil;
   protected JSONATA = require("jsonata");
+
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
   public async changeActivationMapping(parameter: any) {
@@ -205,10 +208,10 @@ export class MappingService {
     return m;
   }
 
-  async deleteMapping(mapping: Mapping): Promise<string> {
+  async deleteMapping(id: string): Promise<string> {
     //let result = this.inventory.delete(mapping.id)
     let response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
+      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
       {
         headers: {
           "content-type": "application/json",

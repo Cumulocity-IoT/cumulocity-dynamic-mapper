@@ -34,6 +34,8 @@ export class MappingTreeService {
     private client: FetchClient
   ) {}
 
+  protected JSONATA = require("jsonata");
+
   async loadMappingTree(): Promise<JSON> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_TREE_ENDPOINT}`,
@@ -50,51 +52,79 @@ export class MappingTreeService {
     }
     let tree = (await response.json()) as JSON;
     //ignore first level of the object, as it does not contain any information
-    if (tree?.["childNodes"]) {
-      tree = tree?.["childNodes"];
-    }
-    this.clean(tree, ["level", "depthIndex", "parentNode", , "absolutePath"]);
+    // if (tree?.["childNodes"]) {
+    //   tree = tree?.["childNodes"];
+    // }
+    // this.clean(tree, [
+    //   "level",
+    //   "depthIndex",
+    //   "parentNode",
+    //   "childNodes",
+    //   "absolutePath",
+    // ]);
+    tree = this.cleanJSONata(tree);
     return tree;
   }
 
   clean(tree: JSON, removeSet: string[]): void {
-    let t = whatIsIt(tree);
+    let typeTree = whatIsIt(tree);
 
     // remove properties that should not be displayed
-    if (t == "Object") {
-      let absolutePath;
+    if (typeTree == "Object") {
       if ("absolutePath" in tree) {
-        absolutePath = tree["absolutePath"] as any;
+        let absolutePath = tree["absolutePath"] as any;
+        _.unset(tree, "absolutePath");
+        tree[absolutePath] = tree["childNodes"];
       }
       removeSet.forEach((property) => {
         _.unset(tree, property);
       });
-      // if tree contains childNodes as a property, promote the childes one hierarchie up
-      if ("childNodes" in tree) {
-        const childNodes = tree["childNodes"] as any;
-        _.unset(tree, "childNodes");
-        for (const key in childNodes) {
-          if (Object.prototype.hasOwnProperty.call(childNodes, key)) {
-            _.set(tree, key, childNodes[key]);
-          }
-        }
-      }
+      // // if tree contains childNodes as a property, promote the childes one hierarchie up
+      // if ("childNodes" in tree) {
+      //   const childNodes = tree["childNodes"] as any;
+      //   _.unset(tree, "childNodes");
+      //   for (const key in childNodes) {
+      //     if (Object.prototype.hasOwnProperty.call(childNodes, key)) {
+      //       _.set(tree, key, childNodes[key]);
+      //     }
+      //   }
+      // }
 
       for (const key in tree) {
         if (Object.prototype.hasOwnProperty.call(tree, key)) {
-          if (absolutePath) {
-            const temp = tree[key];
+          let typeItem = whatIsIt(tree[key]);
+          const tempItem = tree[key];
+          if (typeItem == "Array" && (tempItem as any[]).length == 1) {
             _.unset(tree, key);
-            tree[absolutePath] = temp;
-            this.clean(tree[absolutePath], removeSet);
-          } else this.clean(tree[key], removeSet);
+            tree[key] = tempItem[0];
+            this.clean(tree[key], removeSet);
+          } else {
+            this.clean(tree[key], removeSet);
+          }
         }
       }
-    } else if (t == "Array") {
+    } else if (typeTree == "Array") {
       for (var item in tree) {
         //console.log("New items:", item, whatIsIt(item));
         this.clean(tree[item], removeSet);
       }
     }
+  }
+
+  cleanJSONata(tree: JSON): JSON {
+    const filter = `
+    (
+      $childNodes := function($node) {
+          $node.* ~> $map(function($v, $i) {
+               $exists($v.mapping)  ? {$v.absolutePath : $v.mapping} : { $v.absolutePath : $childNodes($v.childNodes) } 
+          }) 
+      };
+      childNodes ~> $childNodes($)
+  )
+    `;
+    //console.log("TREE:", JSON.stringify(tree, undefined, 2));
+
+    const expression = this.JSONATA(filter);
+    return expression.evaluate(tree) as JSON;
   }
 }

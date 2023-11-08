@@ -41,17 +41,16 @@ svg {
 
 
 .jse-main-small {
-  max-height: 300px;
+  height: 300px;
   overflow: auto;
 }
 
 .jse-main-tiny {
-  max-height: 250px;
+  height: 250px;
   overflow: auto;
 }
 
 .jse-main-large {
-  max-height: 600px;
+  height: 600px;
   overflow: auto;
-
 }
