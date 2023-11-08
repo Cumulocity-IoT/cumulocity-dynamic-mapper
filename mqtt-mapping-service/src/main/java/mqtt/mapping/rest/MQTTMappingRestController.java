@@ -112,8 +112,8 @@ public class MQTTMappingRestController {
     }
 
     //TODO Implement this in UI
-    @RequestMapping(value = "/configuration/connectionPropertyConfig", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectionConfigurationProperties() {
+    @RequestMapping(value = "/configuration/connector/specification", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectorSpecification() {
         HashMap<String, IConnectorClient> clients = null;
         String tenant = contextService.getContext().getTenant();
         List<ConnectorPropertyConfiguration> connectorConfigurations = new ArrayList<>();
@@ -172,6 +172,8 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/configuration/connection", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
         log.info("Get connection details");
+        String tenant = contextService.getContext().getTenant();
+
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent.loadAllConnectorConfiguration(contextService.getContext().getTenant());
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
@@ -248,8 +250,6 @@ public class MQTTMappingRestController {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Post operation: {}", tenant, operation.toString());
         try {
-            String tenant = contextService.getContext().getTenant();
-            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), operation.getParameter().get("connectorId"));
             if (operation.getOperation().equals(Operation.RELOAD_MAPPINGS)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
                 // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
