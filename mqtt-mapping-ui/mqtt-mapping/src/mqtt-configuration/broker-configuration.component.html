@@ -32,7 +32,32 @@
 </c8y-action-bar-item>
 
 <div class="d-flex flex-wrap">
+
   <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "List Specification" | translate }}
+        </h4>
+      </div>
+      <div class="card-block" [formGroup]="brokerFormly">
+        <formly-form
+        [form]="brokerFormly"
+        [fields]="brokerFormlyFields"
+        [model]="brokerConfig1Model"
+      ></formly-form>
+      </div>
+
+      <div class="card-block" [formGroup]="dynamicFormly">
+        <formly-form
+        [form]="dynamicFormly"
+        [fields]="dynamicFormlyFields"
+        [model]="brokerConfig2Model"
+      ></formly-form>
+      </div>
+    </div>
+  </div> 
+  <!-- <div class="col-lg-6">
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
@@ -390,5 +415,5 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 </div>

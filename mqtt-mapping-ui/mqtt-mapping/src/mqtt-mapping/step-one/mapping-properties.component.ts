@@ -31,7 +31,7 @@ import { AlertService } from "@c8y/ngx-components";
 import { FormlyFieldConfig } from "@ngx-formly/core";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
-import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
   API,
   Direction,
@@ -73,7 +73,7 @@ export class MappingStepPropertiesComponent implements OnInit {
 
   constructor(
     public mappingService: MappingService,
-    public configurationService: EndpointConfigurationService,
+    public configurationService: BrokerConfigurationService,
     private alertService: AlertService
   ) {}
 
