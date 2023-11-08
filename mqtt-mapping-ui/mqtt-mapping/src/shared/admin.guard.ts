@@ -20,14 +20,14 @@
  */
 import { Injectable } from "@angular/core";
 import { CanActivate } from "@angular/router";
-import { BrokerConfigurationService } from "../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../mqtt-configuration/endpoint-configuration.service";
 import { Feature } from "./mapping.model";
 
 @Injectable({ providedIn: "root" })
 export class AdminGuard implements CanActivate {
   private adminPromise: Promise<boolean>;
 
-  constructor(private configurationService: BrokerConfigurationService) {}
+  constructor(private configurationService: EndpointConfigurationService) {}
 
   canActivate(): Promise<boolean> {
     this.adminPromise = this.configurationService.getFeatures().then((conf) => {

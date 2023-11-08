@@ -21,22 +21,22 @@
 
 import { NgModule } from "@angular/core";
 import { CoreModule, hookRoute } from "@c8y/ngx-components";
-import { BokerConfigurationComponent } from "./broker-configuration.component";
-import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
+import { EndpointConfigurationComponent } from "./endpoint-configuration.component";
+import { TerminateEndpointConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { AdminGuard } from "../shared/admin.guard";
 
 @NgModule({
   declarations: [
-    BokerConfigurationComponent,
-    TerminateBrokerConnectionModalComponent,
+    EndpointConfigurationComponent,
+    TerminateEndpointConnectionModalComponent,
   ],
   imports: [CoreModule],
-  entryComponents: [TerminateBrokerConnectionModalComponent],
+  entryComponents: [TerminateEndpointConnectionModalComponent],
   exports: [],
   providers: [
     hookRoute({
       path: "sag-ps-pkg-mqtt-mapping/configuration",
-      component: BokerConfigurationComponent,
+      component: EndpointConfigurationComponent,
       canActivate: [AdminGuard],
     }),
   ],

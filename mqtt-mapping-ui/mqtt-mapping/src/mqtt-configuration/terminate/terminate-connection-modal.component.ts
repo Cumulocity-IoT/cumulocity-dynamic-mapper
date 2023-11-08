@@ -33,7 +33,7 @@ import { Subject } from "rxjs";
   selector: "mapping-terminate-connection",
   templateUrl: "terminate-connection-modal.component.html",
 })
-export class TerminateBrokerConnectionModalComponent implements OnInit {
+export class TerminateEndpointConnectionModalComponent implements OnInit {
   @ViewChild("modalRef", { static: false }) modalRef: ConfirmModalComponent;
   message: string;
   closeSubject: Subject<boolean> = new Subject();

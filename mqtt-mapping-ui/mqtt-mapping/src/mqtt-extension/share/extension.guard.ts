@@ -20,13 +20,13 @@
  */
 import { Injectable } from "@angular/core";
 import { CanActivate } from "@angular/router";
-import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
 
 @Injectable({ providedIn: "root" })
 export class ExtensionGuard implements CanActivate {
   private activateExtensionNavigationPromise: Promise<boolean>;
 
-  constructor(private configurationService: BrokerConfigurationService) {}
+  constructor(private configurationService: EndpointConfigurationService) {}
 
   canActivate(): Promise<boolean> {
     if (!this.activateExtensionNavigationPromise) {

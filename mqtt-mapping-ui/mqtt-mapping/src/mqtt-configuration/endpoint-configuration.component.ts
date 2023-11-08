@@ -20,10 +20,10 @@
  */
 import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup, Validators } from "@angular/forms";
-import { BrokerConfigurationService } from "./broker-configuration.service";
+import { EndpointConfigurationService } from "./endpoint-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
+import { TerminateEndpointConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { MappingService } from "../mqtt-mapping/core/mapping.service";
 import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
@@ -39,18 +39,19 @@ import packageJson from "../../package.json";
 
 @Component({
   selector: "mapping-broker-configuration",
-  templateUrl: "broker-configuration.component.html",
+  templateUrl: "endpoint-configuration.component.html",
 })
-export class BokerConfigurationComponent implements OnInit {
+export class EndpointConfigurationComponent implements OnInit {
   version: string = packageJson.version;
-  isBrokerConnected: boolean;
+  isEndpointConnected: boolean;
   isConnectionEnabled: boolean;
-  isBrokerAgentCreated$: Observable<boolean>;
+  isEndpointAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
   connectionForm: FormGroup;
   serviceForm: FormGroup;
   feature: Feature;
+  connectorId: String;
 
   connectionConfiguration: ConnectionConfiguration = {
     mqttHost: "",
@@ -71,7 +72,7 @@ export class BokerConfigurationComponent implements OnInit {
 
   constructor(
     public bsModalService: BsModalService,
-    public configurationService: BrokerConfigurationService,
+    public configurationService: EndpointConfigurationService,
     public mappingService: MappingService,
     public alertservice: AlertService
   ) {}
@@ -81,8 +82,8 @@ export class BokerConfigurationComponent implements OnInit {
     this.initForms();
     this.loadData();
     this.initializeMonitoringService();
-    this.isBrokerAgentCreated$ = from(
-      this.configurationService.initializeMQTTAgent()
+    this.isEndpointAgentCreated$ = from(
+      this.configurationService.initializeEndpointAgent()
     )
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
@@ -94,7 +95,7 @@ export class BokerConfigurationComponent implements OnInit {
       await this.configurationService.subscribeMonitoringChannel();
     this.monitorings$ = this.configurationService.getCurrentServiceStatus();
     this.monitorings$.subscribe((status) => {
-      this.isBrokerConnected = status.status === Status.CONNECTED;
+      this.isEndpointConnected = status.status === Status.CONNECTED;
       this.isConnectionEnabled =
         status.status === Status.ENABLED || status.status === Status.CONNECTED;
     });
@@ -102,10 +103,10 @@ export class BokerConfigurationComponent implements OnInit {
 
   async loadConnectionStatus(): Promise<void> {
     let status = await this.configurationService.getConnectionStatus();
-    this.isBrokerConnected = status.status === Status.CONNECTED;
+    this.isEndpointConnected = status.status === Status.CONNECTED;
     this.isConnectionEnabled =
       status.status === Status.ENABLED || status.status === Status.CONNECTED;
-    console.log("Retrieved status:", status, this.isBrokerConnected);
+    console.log("Retrieved status:", status, this.isEndpointConnected);
   }
 
   private initForms(): void {
@@ -140,7 +141,7 @@ export class BokerConfigurationComponent implements OnInit {
   }
 
   async clickedConnect() {
-    this.connectToBroker();
+    this.connectToEndpoint();
   }
 
   async clickedDisconnect() {
@@ -157,7 +158,8 @@ export class BokerConfigurationComponent implements OnInit {
 
   async clickedReconnect2NotificationEnpoint() {
     const response1 = await this.configurationService.runOperation(
-      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS
+      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
+      { connectorId: this.connectorId }
     );
     console.log("Details reconnect2NotificationEnpoint", response1);
     if (response1.status === 201) {
@@ -197,13 +199,14 @@ export class BokerConfigurationComponent implements OnInit {
     }
   }
 
-  private async connectToBroker() {
+  private async connectToEndpoint() {
     const response1 = await this.configurationService.runOperation(
-      Operation.CONNECT
+      Operation.CONNECT,
+      { connectorId: this.connectorId }
     );
     //const response2 = await this.mappingService.activateMappings();
-    //console.log("Details connectToMQTTBroker", response1, response2)
-    console.log("Details connectToMQTTBroker", response1);
+    //console.log("Details connectToEndpoint", response1, response2)
+    console.log("Details connectToEndpoint", response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext("Connection successful"));
@@ -214,22 +217,23 @@ export class BokerConfigurationComponent implements OnInit {
 
   private showTerminateConnectionModal() {
     const terminateExistingConnectionModalRef: BsModalRef =
-      this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
+      this.bsModalService.show(TerminateEndpointConnectionModalComponent, {});
     terminateExistingConnectionModalRef.content.closeSubject.subscribe(
       async (isTerminateConnection: boolean) => {
         console.log("Termination result:", isTerminateConnection);
         if (!isTerminateConnection) {
         } else {
-          await this.disconnectFromMQTT();
+          await this.disconnectFromEndpoint();
         }
         terminateExistingConnectionModalRef.hide();
       }
     );
   }
 
-  private async disconnectFromMQTT() {
+  private async disconnectFromEndpoint() {
     const res = await this.configurationService.runOperation(
-      Operation.DISCONNECT
+      Operation.DISCONNECT,
+      { connectorId: this.connectorId }
     );
     console.log("Details disconnectFromMQTT", res);
     if (res.status < 300) {
@@ -239,8 +243,8 @@ export class BokerConfigurationComponent implements OnInit {
     }
   }
 
-  public async resetMonitoring() {
-    const res =  await this.configurationService.runOperation(
+  public async resetStatusMapping() {
+    const res = await this.configurationService.runOperation(
       Operation.RESET_STATUS_MAPPING
     );
     if (res.status < 300) {

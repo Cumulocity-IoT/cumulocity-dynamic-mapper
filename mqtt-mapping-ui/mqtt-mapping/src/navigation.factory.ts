@@ -27,7 +27,7 @@ import {
   NavigatorNodeFactory,
 } from "@c8y/ngx-components";
 import { Feature } from "./shared/mapping.model";
-import { BrokerConfigurationService } from "./mqtt-configuration/broker-configuration.service";
+import { EndpointConfigurationService } from "./mqtt-configuration/endpoint-configuration.service";
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
@@ -45,7 +45,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
-    private configurationService: BrokerConfigurationService) {}
+    private configurationService: EndpointConfigurationService) {}
 
   async get() {
     if (!this._feature) {
