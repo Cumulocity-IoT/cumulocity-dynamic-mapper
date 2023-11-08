@@ -38,6 +38,7 @@ import {
 } from "../shared/util";
 import {
   ConnectionConfiguration,
+  ConnectorPropertyConfiguration,
   Extension,
   Feature,
   Operation,
@@ -48,7 +49,7 @@ import {
 import { BehaviorSubject, Observable } from "rxjs";
 
 @Injectable({ providedIn: "root" })
-export class EndpointConfigurationService {
+export class BrokerConfigurationService {
   constructor(private client: FetchClient, private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
   }
@@ -61,7 +62,7 @@ export class EndpointConfigurationService {
   private _feature: Feature;
   private realtime: Realtime;
 
-  async initializeEndpointAgent(): Promise<string> {
+  async initializeBrokerAgent(): Promise<string> {
     if (!this.agentId) {
       const identity: IExternalIdentity = {
         type: "c8y_Serial",
@@ -71,7 +72,7 @@ export class EndpointConfigurationService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
-        console.log("EndpointConfigurationService: Found EndpointAgent", this.agentId);
+        console.log("BrokerConfigurationService: Found BrokerAgent", this.agentId);
       }
     }
     return this.agentId;
@@ -105,6 +106,24 @@ export class EndpointConfigurationService {
         method: "POST",
       }
     );
+  }
+
+  async getConnectorSpecifications(): Promise<ConnectorPropertyConfiguration[]> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specification`,
+      {
+        headers: {
+          accept: "application/json",
+        },
+        method: "GET",
+      }
+    );
+
+    if (response.status != 200) {
+      return undefined;
+    }
+
+    return (await response.json()) as ConnectorPropertyConfiguration[];
   }
 
   async getConnectionConfiguration(): Promise<ConnectionConfiguration> {
@@ -172,7 +191,7 @@ export class EndpointConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.initializeEndpointAgent();
+    this.agentId = await this.initializeBrokerAgent();
     console.log("Started subscription:", this.agentId);
     this.getConnectionStatus().then((status) => {
       this.serviceStatus.next(status);

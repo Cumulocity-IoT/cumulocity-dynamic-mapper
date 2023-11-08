@@ -21,7 +21,7 @@
 import { Injectable } from "@angular/core";
 import { TabFactory, Tab } from "@c8y/ngx-components";
 import { Router } from "@angular/router";
-import { EndpointConfigurationService } from "./mqtt-configuration/endpoint-configuration.service";
+import { BrokerConfigurationService } from "./mqtt-configuration/broker-configuration.service";
 import { Feature } from "./shared/mapping.model";
 
 @Injectable()
@@ -29,7 +29,7 @@ export class MappingTabFactory implements TabFactory {
   _feature: Feature;
   constructor(
     public router: Router,
-    private configurationService: EndpointConfigurationService
+    private configurationService: BrokerConfigurationService
   ) {}
 
   async get() {

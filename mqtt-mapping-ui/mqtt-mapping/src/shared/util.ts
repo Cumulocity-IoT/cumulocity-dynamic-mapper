@@ -309,7 +309,7 @@ export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
 export const MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
 export const PATH_OPERATION_ENDPOINT = "operation";
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
-  "configuration/connection";
+  "configuration/connector";
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = "configuration/service";
 export const PATH_MAPPING_TREE_ENDPOINT = "monitoring/tree";
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = "monitoring/tree";

@@ -20,15 +20,17 @@
  */
 import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup, Validators } from "@angular/forms";
-import { EndpointConfigurationService } from "./endpoint-configuration.service";
+import { BrokerConfigurationService } from "./broker-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { TerminateEndpointConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
+import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { MappingService } from "../mqtt-mapping/core/mapping.service";
 import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import {
   ConnectionConfiguration as ConnectionConfiguration,
+  ConnectorProperty,
+  ConnectorPropertyConfiguration,
   Feature,
   Operation,
   ServiceConfiguration,
@@ -36,22 +38,24 @@ import {
   Status,
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
+import { FormlyFieldConfig } from "@ngx-formly/core";
 
 @Component({
   selector: "mapping-broker-configuration",
-  templateUrl: "endpoint-configuration.component.html",
+  templateUrl: "broker-configuration.component.html",
 })
-export class EndpointConfigurationComponent implements OnInit {
+export class BrokerConfigurationComponent implements OnInit {
   version: string = packageJson.version;
-  isEndpointConnected: boolean;
+  isBrokerConnected: boolean;
   isConnectionEnabled: boolean;
-  isEndpointAgentCreated$: Observable<boolean>;
+  isBrokerAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
   connectionForm: FormGroup;
   serviceForm: FormGroup;
   feature: Feature;
   connectorId: String;
+  specifications: ConnectorPropertyConfiguration[];
 
   connectionConfiguration: ConnectionConfiguration = {
     mqttHost: "",
@@ -72,22 +76,136 @@ export class EndpointConfigurationComponent implements OnInit {
 
   constructor(
     public bsModalService: BsModalService,
-    public configurationService: EndpointConfigurationService,
+    public configurationService: BrokerConfigurationService,
     public mappingService: MappingService,
     public alertservice: AlertService
   ) {}
 
+  brokerFormlyFields: FormlyFieldConfig[] = [];
+  brokerFormly: FormGroup = new FormGroup({});
+  dynamicFormlyFields: FormlyFieldConfig[] = [];
+  dynamicFormly: FormGroup = new FormGroup({});
+  brokerConfig1Model: any = {};
+  brokerConfig2Model: any = {};
+
   async ngOnInit() {
     console.log("Running version", this.version);
     this.initForms();
-    this.loadData();
+    await this.loadData();
+
+    this.brokerFormlyFields = [
+      {
+        fieldGroupClassName: "row",
+        fieldGroup: [
+          {
+            className: "col-lg-6",
+            key: "connectorId",
+            type: "select",
+            wrappers: ["c8y-form-field"],
+            templateOptions: {
+              label: "Connector Id",
+              options: this.specifications.map((sp) => {
+                return {
+                  label: sp.connectorId,
+                  value: sp.connectorId,
+                };
+              }),
+              change: (field: FormlyFieldConfig, event?: any) => {
+                this.createDynamicForm(
+                  this.brokerFormly.get("connectorId").value
+                );
+              },
+              required: true,
+            },
+          },
+        ],
+      },
+    ];
     this.initializeMonitoringService();
-    this.isEndpointAgentCreated$ = from(
-      this.configurationService.initializeEndpointAgent()
+    this.isBrokerAgentCreated$ = from(
+      this.configurationService.initializeBrokerAgent()
     )
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
     this.feature = await this.configurationService.getFeatures();
+  }
+
+  private async createDynamicForm(connectorId: string): Promise<void> {
+    const dynamicFields: ConnectorPropertyConfiguration =
+      this.specifications.find((c) => c.connectorId == connectorId);
+    if (dynamicFields) {
+      for (const key in dynamicFields.properties) {
+        const property = dynamicFields.properties[key];
+        if (property == ConnectorProperty.NUMERIC_PROPERTY) {
+          this.dynamicFormlyFields.push({
+            // fieldGroupClassName: "row",
+            fieldGroup: [
+              {
+                className: "col-lg-6",
+                key: key,
+                type: "input",
+                wrappers: ["c8y-form-field"],
+                templateOptions: {
+                  type: "number",
+                  label: key,
+                  required: true,
+                },
+              },
+            ],
+          });
+        } else if (property == ConnectorProperty.STRING_PROPERTY) {
+          this.dynamicFormlyFields.push({
+            // fieldGroupClassName: "row",
+            fieldGroup: [
+              {
+                className: "col-lg-6",
+                key: key,
+                type: "input",
+                wrappers: ["c8y-form-field"],
+                templateOptions: {
+                  label: key,
+                  required: true,
+                },
+              },
+            ],
+          });
+        } else if (property == ConnectorProperty.SENSITIVE_STRING_PROPERTY) {
+          this.dynamicFormlyFields.push({
+            // fieldGroupClassName: "row",
+            fieldGroup: [
+              {
+                className: "col-lg-6",
+                key: key,
+                type: "input",
+                wrappers: ["c8y-form-field"],
+                templateOptions: {
+                  type: "password",
+                  label: key,
+                  required: true,
+                },
+              },
+            ],
+          });
+        } else if (property == ConnectorProperty.BOOLEAN_PROPERTY) {
+          this.dynamicFormlyFields.push({
+            //fieldGroupClassName: "row",
+            fieldGroup: [
+              {
+                className: "col-lg-6",
+                key: key,
+                type: "switch",
+                wrappers: ["c8y-form-field"],
+                templateOptions: {
+                  label: key,
+                  required: true,
+                },
+              },
+            ],
+          });
+        }
+      }
+      this.dynamicFormlyFields = [...this.dynamicFormlyFields];
+    }
   }
 
   private async initializeMonitoringService(): Promise<void> {
@@ -95,7 +213,7 @@ export class EndpointConfigurationComponent implements OnInit {
       await this.configurationService.subscribeMonitoringChannel();
     this.monitorings$ = this.configurationService.getCurrentServiceStatus();
     this.monitorings$.subscribe((status) => {
-      this.isEndpointConnected = status.status === Status.CONNECTED;
+      this.isBrokerConnected = status.status === Status.CONNECTED;
       this.isConnectionEnabled =
         status.status === Status.ENABLED || status.status === Status.CONNECTED;
     });
@@ -103,10 +221,10 @@ export class EndpointConfigurationComponent implements OnInit {
 
   async loadConnectionStatus(): Promise<void> {
     let status = await this.configurationService.getConnectionStatus();
-    this.isEndpointConnected = status.status === Status.CONNECTED;
+    this.isBrokerConnected = status.status === Status.CONNECTED;
     this.isConnectionEnabled =
       status.status === Status.ENABLED || status.status === Status.CONNECTED;
-    console.log("Retrieved status:", status, this.isEndpointConnected);
+    console.log("Retrieved status:", status, this.isBrokerConnected);
   }
 
   private initForms(): void {
@@ -129,7 +247,9 @@ export class EndpointConfigurationComponent implements OnInit {
   private async loadData(): Promise<void> {
     let conn = await this.configurationService.getConnectionConfiguration();
     let conf = await this.configurationService.getServiceConfiguration();
-    console.log("Configuration:", conn, conf);
+    this.specifications =
+      await this.configurationService.getConnectorSpecifications();
+    console.log("Configuration:", conn, conf, this.specifications);
     if (conn) {
       this.connectionConfiguration = conn;
       this.isConnectionEnabled = conn.enabled;
@@ -141,7 +261,7 @@ export class EndpointConfigurationComponent implements OnInit {
   }
 
   async clickedConnect() {
-    this.connectToEndpoint();
+    this.connectToBroker();
   }
 
   async clickedDisconnect() {
@@ -199,14 +319,14 @@ export class EndpointConfigurationComponent implements OnInit {
     }
   }
 
-  private async connectToEndpoint() {
+  private async connectToBroker() {
     const response1 = await this.configurationService.runOperation(
       Operation.CONNECT,
       { connectorId: this.connectorId }
     );
     //const response2 = await this.mappingService.activateMappings();
-    //console.log("Details connectToEndpoint", response1, response2)
-    console.log("Details connectToEndpoint", response1);
+    //console.log("Details connectToBroker", response1, response2)
+    console.log("Details connectToBroker", response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
       this.alertservice.success(gettext("Connection successful"));
@@ -217,20 +337,20 @@ export class EndpointConfigurationComponent implements OnInit {
 
   private showTerminateConnectionModal() {
     const terminateExistingConnectionModalRef: BsModalRef =
-      this.bsModalService.show(TerminateEndpointConnectionModalComponent, {});
+      this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
     terminateExistingConnectionModalRef.content.closeSubject.subscribe(
       async (isTerminateConnection: boolean) => {
         console.log("Termination result:", isTerminateConnection);
         if (!isTerminateConnection) {
         } else {
-          await this.disconnectFromEndpoint();
+          await this.disconnectFromBroker();
         }
         terminateExistingConnectionModalRef.hide();
       }
     );
   }
 
-  private async disconnectFromEndpoint() {
+  private async disconnectFromBroker() {
     const res = await this.configurationService.runOperation(
       Operation.DISCONNECT,
       { connectorId: this.connectorId }

@@ -28,7 +28,7 @@ import {
   Pagination,
 } from "@c8y/ngx-components";
 import { Observable } from "rxjs";
-import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import { MappingStatus, Operation } from "../../shared/mapping.model";
 import { IdRendererComponent } from "../renderer/id-cell.renderer.component";
 import { MonitoringService } from "../shared/monitoring.service";
@@ -130,7 +130,7 @@ export class MonitoringComponent implements OnInit {
 
   constructor(
     public monitoringService: MonitoringService,
-    public configurationService: EndpointConfigurationService,
+    public configurationService: BrokerConfigurationService,
     public alertService: AlertService
   ) {}
 
