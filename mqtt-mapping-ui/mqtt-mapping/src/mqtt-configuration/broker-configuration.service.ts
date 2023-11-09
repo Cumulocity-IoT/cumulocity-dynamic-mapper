@@ -37,7 +37,7 @@ import {
   PATH_STATUS_SERVICE_ENDPOINT,
 } from "../shared/util";
 import {
-  ConnectionConfiguration,
+  ConnectorConfiguration,
   ConnectorPropertyConfiguration,
   Extension,
   Feature,
@@ -47,6 +47,7 @@ import {
   Status,
 } from "../shared/mapping.model";
 import { BehaviorSubject, Observable } from "rxjs";
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
@@ -78,11 +79,27 @@ export class BrokerConfigurationService {
     return this.agentId;
   }
 
-  updateConnectionConfiguration(
-    configuration: ConnectionConfiguration
+  async updateConnectionConfiguration(
+    configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
     return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.ident}`,
+      {
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(configuration),
+        method: "PUT",
+      }
+    );
+  }
+
+  async createConnectionConfiguration(
+    configuration: ConnectorConfiguration
+  ): Promise<IFetchResponse> {
+    configuration.ident = uuidv4();
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
       {
         headers: {
           "content-type": "application/json",
@@ -93,7 +110,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  updateServiceConfiguration(
+  async updateServiceConfiguration(
     configuration: ServiceConfiguration
   ): Promise<IFetchResponse> {
     return this.client.fetch(
@@ -110,7 +127,7 @@ export class BrokerConfigurationService {
 
   async getConnectorSpecifications(): Promise<ConnectorPropertyConfiguration[]> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specification`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
       {
         headers: {
           accept: "application/json",
@@ -126,9 +143,10 @@ export class BrokerConfigurationService {
     return (await response.json()) as ConnectorPropertyConfiguration[];
   }
 
-  async getConnectionConfiguration(): Promise<ConnectionConfiguration> {
+
+  async getConnectionConfigurations(): Promise<ConnectorConfiguration[]> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
       {
         headers: {
           accept: "application/json",
@@ -141,8 +159,9 @@ export class BrokerConfigurationService {
       return undefined;
     }
 
-    return (await response.json()) as ConnectionConfiguration;
+    return (await response.json()) as ConnectorConfiguration[];
   }
+
 
   async getServiceConfiguration(): Promise<ServiceConfiguration> {
     const response = await this.client.fetch(
