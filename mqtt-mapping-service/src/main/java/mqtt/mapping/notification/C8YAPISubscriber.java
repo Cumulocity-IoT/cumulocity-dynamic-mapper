@@ -47,7 +47,6 @@ import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import org.apache.commons.collections.ArrayStack;
-import org.glassfish.jersey.internal.inject.Custom;
 import org.java_websocket.enums.ReadyState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,8 +120,9 @@ public class C8YAPISubscriber {
     //List<CustomWebSocketClient> wsClientList = new ArrayList<>();
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
     private Map<String, CustomWebSocketClient> tenantClientMap = new HashMap<>();
-    private int tenantWSStatusCode = 0;
-    private int deviceWSStatusCode = 0;
+    private Map<String, Integer> tenantWSStatusCode = new HashMap<>();
+    private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
+    //private int deviceWSStatusCode = 0;
 
     public void init() {
         //Assuming this can be only changed for all tenants!
@@ -226,7 +226,7 @@ public class C8YAPISubscriber {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
             notificationFut.complete(notification);
-            if (deviceWSStatusCode != 200) {
+            if (deviceWSStatusCode.get(tenant) != 200) {
                 logger.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
 
                 try {
@@ -342,7 +342,7 @@ public class C8YAPISubscriber {
                 @Override
                 public void onOpen(URI uri) {
                     logger.info("Tenant {} - Connected to Cumulocity notification service over WebSocket {}", tenant, uri);
-                    tenantWSStatusCode = 200;
+                    tenantWSStatusCode.put(tenant, 200);
                 }
 
                 @Override
@@ -388,9 +388,9 @@ public class C8YAPISubscriber {
                 public void onClose(int statusCode, String reason) {
                     logger.info("Tenant ws connection closed.");
                     if (reason.contains("401"))
-                        tenantWSStatusCode = 401;
+                        tenantWSStatusCode.put(tenant, 401);
                     else
-                        tenantWSStatusCode = 0;
+                        tenantWSStatusCode.put(tenant,0);
                 }
             };
             CustomWebSocketClient tenant_client = connect(tenantToken, tenantCallback);
@@ -412,7 +412,7 @@ public class C8YAPISubscriber {
                         if (tenant_client != null) {
                             logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
                             if (!tenant_client.isOpen()) {
-                                if (tenantWSStatusCode == 401
+                                if (tenantWSStatusCode.get(tenant) == 401
                                         || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                     logger.info("Trying to reconnect ws tenant client... ");
                                     subscriptionsService.runForEachTenant(() -> {
@@ -431,7 +431,7 @@ public class C8YAPISubscriber {
                 for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                     if (device_client != null) {
                         if (!device_client.isOpen()) {
-                            if (deviceWSStatusCode == 401
+                            if (deviceWSStatusCode.get(tenant) == 401
                                     || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                 logger.info("Trying to reconnect ws device client... ");
                                 subscriptionsService.runForEachTenant(() -> {
@@ -570,8 +570,8 @@ public class C8YAPISubscriber {
 
     }
 
-    public void setDeviceConnectionStatus(int status) {
-        deviceWSStatusCode = status;
+    public void setDeviceConnectionStatus(String tenant, int status) {
+        deviceWSStatusCode.put(tenant, status);
     }
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
