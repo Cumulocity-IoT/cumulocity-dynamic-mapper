@@ -30,13 +30,13 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import com.cumulocity.rest.representation.reliable.notification.NotificationTokenRequestRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
-import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Setter;
 import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.registry.ConnectorRegistry;
+import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
@@ -47,13 +47,13 @@ import mqtt.mapping.notification.websocket.Notification;
 import mqtt.mapping.notification.websocket.NotificationCallback;
 import mqtt.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import org.apache.commons.collections.ArrayStack;
+import org.glassfish.jersey.internal.inject.Custom;
 import org.java_websocket.enums.ReadyState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -92,7 +92,10 @@ public class C8YAPISubscriber {
     @Autowired
     private MappingComponent mappingComponent;
 
-    private Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = new HashMap<>();
+    @Autowired
+    private ConnectorRegistry connectorRegistry;
+
+    private Map<String, Map<String, AsynchronousDispatcherOutbound>> dispatcherOutboundMap = new HashMap<>();
 
     //@Autowired
     //public void setDispatcherOutbound(@Lazy AsynchronousDispatcherOutbound dispatcherOutbound) {
@@ -115,23 +118,35 @@ public class C8YAPISubscriber {
     private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
 
-    List<CustomWebSocketClient> wsClientList = new ArrayList<>();
-
-    private CustomWebSocketClient device_client;
-    private CustomWebSocketClient tenant_client;
+    //List<CustomWebSocketClient> wsClientList = new ArrayList<>();
+    private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
+    private Map<String, CustomWebSocketClient> tenantClientMap = new HashMap<>();
     private int tenantWSStatusCode = 0;
     private int deviceWSStatusCode = 0;
 
-    public void init(IConnectorClient connectorClient) {
+    public void init() {
         //Assuming this can be only changed for all tenants!
         String tenant = subscriptionsService.getTenant();
-        AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
-        dispatcherOutboundMap.put(connectorClient.getConntectorId(), dispatcherOutbound);
-        logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
-        if (outputMappingEnabled) {
-            //initTenantClient();
-            initDeviceClient(connectorClient);
+        if(deviceClientMap.get(tenant) == null)
+            deviceClientMap.put(tenant, new HashMap<>());
+        if(dispatcherOutboundMap.get(tenant) == null)
+            dispatcherOutboundMap.put(tenant, new HashMap<>());
+        try {
+            HashMap<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
+            //For multiple connectors register for each a separate dispatcher
+            for (IConnectorClient connectorClient : connectorMap.values()) {
+                AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
+                dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorId(), dispatcherOutbound);
+            }
+            logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
+            if (outputMappingEnabled) {
+                initTenantClient();
+                initDeviceClient();
+            }
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
         }
+
     }
 
     public void initTenantClient() {
@@ -141,24 +156,29 @@ public class C8YAPISubscriber {
         subscribeTenant(subscriptionsService.getTenant());
     }
 
-    public void initDeviceClient(IConnectorClient connectorClient) {
+    public void initDeviceClient() {
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
         String tenant = subscriptionsService.getTenant();
-        try {
-            deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
 
+        try {
+            //Getting existing subscriptions
+            deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
             logger.info("Tenant {} - Subscribing to devices {}", tenant, deviceSubList);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
-        // When one subscription exsits, connect
+        // When one subscription exists, connect...
         if (deviceSubList.size() > 0) {
-            String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
             try {
-                AsynchronousDispatcherOutbound dispatcherOutbound = dispatcherOutboundMap.get(connectorClient.getConntectorId());
-                device_client = connect(token, dispatcherOutbound, connectorClient);
+                //For each dispatcher/connector create a new connection
+                for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
+                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient() + additionalSubscriptionIdTest);
+                    CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
+                }
+
             } catch (URISyntaxException e) {
                 logger.error("Tenant {} - Error connecting device subscription: {}", tenant, e.getLocalizedMessage());
             }
@@ -196,9 +216,8 @@ public class C8YAPISubscriber {
 
      */
 
-    //TODO Change UI that when subscribing it must be correlated to a Connector otherwise the messages cannot be correlated to the right connector anymore
     public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor,
-                                                                                     API api, IConnectorClient connectorClient) throws ExecutionException, InterruptedException {
+                                                                                     API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
         String tenant = subscriptionsService.getTenant();
         String deviceName = mor.getName();
@@ -209,16 +228,21 @@ public class C8YAPISubscriber {
             notificationFut.complete(notification);
             if (deviceWSStatusCode != 200) {
                 logger.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
-                String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + additionalSubscriptionIdTest);
+
                 try {
-                    AsynchronousDispatcherOutbound dispatcherOutbound = dispatcherOutboundMap.get(connectorClient.getConntectorId());
-                    device_client = connect(token, dispatcherOutbound, connectorClient);
+                    //Add Dispatcher for each Connector
+                    for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
+                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient()+ additionalSubscriptionIdTest);
+                        CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
+                    }
+
                 } catch (URISyntaxException e) {
                     logger.error("Error on connecting to Notification Service: {}", e.getLocalizedMessage());
                     throw new RuntimeException(e);
                 }
             }
-        });
+            });
         return notificationFut;
     }
 
@@ -305,6 +329,7 @@ public class C8YAPISubscriber {
         return notificationHeaders.get(0).split("/")[0];
     }
 
+
     public void subscribeTenant(String tenant) {
         logger.info("Creating new Subscription for Tenant " + tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
@@ -368,7 +393,8 @@ public class C8YAPISubscriber {
                         tenantWSStatusCode = 0;
                 }
             };
-            tenant_client = connect(tenantToken, tenantCallback, null);
+            CustomWebSocketClient tenant_client = connect(tenantToken, tenantCallback);
+            //tenantClientMap.put(tenant, tenant_client);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -376,39 +402,51 @@ public class C8YAPISubscriber {
     }
 
     // @Scheduled(fixedRate = 30000, initialDelay = 30000)
-    public void reconnect(IConnectorClient connectorClient) {
+    public void reconnect() {
         try {
-            if (tenant_client != null) {
-                logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
-                if (!tenant_client.isOpen()) {
-                    if (tenantWSStatusCode == 401
-                            || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        logger.info("Trying to reconnect ws tenant client... ");
-                        subscriptionsService.runForEachTenant(() -> {
-                            initTenantClient();
-                        });
-                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
-                            || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
-                        logger.info("Trying to reconnect ws tenant client... ");
-                        tenant_client.reconnect();
+            subscriptionsService.runForEachTenant(() -> {
+                String tenant = subscriptionsService.getTenant();
+                for(String currentTenant : tenantClientMap.keySet()) {
+                    if (currentTenant.equals(tenant)) {
+                        CustomWebSocketClient tenant_client = tenantClientMap.get(currentTenant);
+                        if (tenant_client != null) {
+                            logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
+                            if (!tenant_client.isOpen()) {
+                                if (tenantWSStatusCode == 401
+                                        || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                    logger.info("Trying to reconnect ws tenant client... ");
+                                    subscriptionsService.runForEachTenant(() -> {
+                                        initTenantClient();
+                                    });
+                                } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
+                                        || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                    logger.info("Trying to reconnect ws tenant client... ");
+                                    tenant_client.reconnect();
+                                }
+                            }
+                        }
                     }
                 }
-            }
-            if (device_client != null) {
-                if (!device_client.isOpen()) {
-                    if (deviceWSStatusCode == 401
-                            || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                        logger.info("Trying to reconnect ws device client... ");
-                        subscriptionsService.runForEachTenant(() -> {
-                            initDeviceClient(connectorClient);
-                        });
-                    } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
-                            || device_client.getReadyState().equals(ReadyState.CLOSED)) {
-                        logger.info("Trying to reconnect ws device client... ");
-                        device_client.reconnect();
+
+                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                    if (device_client != null) {
+                        if (!device_client.isOpen()) {
+                            if (deviceWSStatusCode == 401
+                                    || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                logger.info("Trying to reconnect ws device client... ");
+                                subscriptionsService.runForEachTenant(() -> {
+                                    initDeviceClient();
+                                });
+                            } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
+                                    || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                logger.info("Trying to reconnect ws device client... ");
+                                device_client.reconnect();
+                            }
+                        }
                     }
                 }
-            }
+            });
+
         } catch (Exception e) {
             logger.error("Error reconnecting to Notification Service: {}", e.getLocalizedMessage());
             e.printStackTrace();
@@ -492,31 +530,42 @@ public class C8YAPISubscriber {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             subscriptionApi.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
             if (!subscriptionApi.getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION)).get().allPages().iterator().hasNext()) {
-                disconnect(true);
+                disconnect(subscriptionsService.getTenant(),true);
             }
         });
     }
 
-    public void disconnect(Boolean onlyDeviceClient) {
+    public void disconnect(String tenant, Boolean onlyDeviceClient) {
         // Stop WS Reconnect Thread
         if (onlyDeviceClient != null && onlyDeviceClient) {
-            if (device_client != null && device_client.isOpen()) {
-                logger.info("Disconnecting WS Device Client {}", device_client.toString());
-                device_client.close();
-                device_client = null;
+            for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                if (device_client != null && device_client.isOpen()) {
+                    logger.info("Disconnecting WS Device Client {}", device_client.toString());
+                    device_client.close();
+
+                }
             }
+            deviceClientMap = new HashMap<>();
         } else {
             this.executorService.shutdownNow();
-            if (device_client != null && device_client.isOpen()) {
-                logger.info("Disconnecting WS Device Client {}", device_client.toString());
-                device_client.close();
-                device_client = null;
+            for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                if (device_client != null && device_client.isOpen()) {
+                    logger.info("Disconnecting WS Device Client {}", device_client.toString());
+                    device_client.close();
+                }
             }
-            if (tenant_client != null && tenant_client.isOpen()) {
-                logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
-                tenant_client.close();
-                tenant_client = null;
+            deviceClientMap = new HashMap<>();
+            for (String currentTenant : tenantClientMap.keySet()) {
+                if (currentTenant.equals(tenant)) {
+                    CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
+                    if (tenant_client != null && tenant_client.isOpen()) {
+                        logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
+                        tenant_client.close();
+                    }
+                }
+
             }
+            tenantClientMap = new HashMap<>();
         }
 
     }
@@ -525,19 +574,19 @@ public class C8YAPISubscriber {
         deviceWSStatusCode = status;
     }
 
-    public CustomWebSocketClient connect(String token, NotificationCallback callback, IConnectorClient connectorClient) throws URISyntaxException {
+    public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);
             client.setConnectionLostTimeout(30);
             client.connect();
-            wsClientList.add(client);
+            //wsClientList.add(client);
             // Only start it once
             if (this.executorService == null) {
                 this.executorService = Executors.newScheduledThreadPool(1);
                 this.executorService.scheduleAtFixedRate(() -> {
-                    reconnect(connectorClient);
+                    reconnect();
                 }, 30, 30, TimeUnit.SECONDS);
             }
             return client;

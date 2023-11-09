@@ -521,12 +521,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
 
-    public void notificationSubscriberReconnect(String tenant, IConnectorClient connectorClient) {
+    public void notificationSubscriberReconnect(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
             // notificationSubscriber.disconnect(false);
             // notificationSubscriber.reconnect();
-            notificationSubscriber.disconnect(false);
-            notificationSubscriber.init(connectorClient);
+            notificationSubscriber.disconnect(tenant, false);
+            notificationSubscriber.init();
         });
     }
 

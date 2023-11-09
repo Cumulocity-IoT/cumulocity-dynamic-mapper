@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -45,8 +46,10 @@ public class MQTTMappingOutboundRestController {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
-                    IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), subscription.getConnectorId());
-                    c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi(), client);
+                    Map<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+                    //Creates subscription for each connector
+                    c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+
                 } else {
                     log.warn("Could not subscribe device with id "+device.getId()+ ". Device does not exists!" );
                     //throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with id "+device.getId()+ " not found" );
@@ -84,8 +87,8 @@ public class MQTTMappingOutboundRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), subscription.getConnectorId());
-                        c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi(), client);
+                        //Creates subscription for each connector
+                        c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
