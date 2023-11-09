@@ -35,7 +35,7 @@ import { FormlyFieldConfig } from "@ngx-formly/core";
 import * as _ from "lodash";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Subject } from "rxjs";
-import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
   API,
   Direction,
@@ -143,7 +143,7 @@ export class MappingStepperComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
-    public configurationService: EndpointConfigurationService,
+    public configurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}

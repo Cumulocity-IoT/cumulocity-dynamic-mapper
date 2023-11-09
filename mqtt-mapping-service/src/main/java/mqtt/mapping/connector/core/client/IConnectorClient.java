@@ -2,7 +2,7 @@ package mqtt.mapping.connector.core.client;
 
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.connector.core.ConnectorProperty;
-
+import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import mqtt.mapping.configuration.ConnectorConfiguration;
@@ -97,7 +97,7 @@ public interface IConnectorClient {
     /***
      * Returning all needed configuration properties to configure the connection to the broker
      ***/
-    public Map<String, ConnectorProperty> getConfigProperties();
+    public Map<String, ConnectorPropertyDefinition> getConfigProperties();
 
     /***
      * Returning the status of the service based on the predefined ServiceStatus class
