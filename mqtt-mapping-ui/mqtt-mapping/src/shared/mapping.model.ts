@@ -20,6 +20,24 @@ import { IIdentified } from "@c8y/client";
  *
  * @authors Christof Strack
  */
+export enum ConnectorProperty {
+  STRING_PROPERTY ="STRING_PROPERTY",
+  SENSITIVE_STRING_PROPERTY ="SENSITIVE_STRING_PROPERTY",
+  NUMERIC_PROPERTY="NUMERIC_PROPERTY",
+  BOOLEAN_PROPERTY="BOOLEAN_PROPERTY",
+}
+
+
+export interface ConnectorPropertyDefinition {
+  required: boolean;
+  property:  ConnectorProperty ;
+}
+
+export interface ConnectorPropertyConfiguration {
+  connectorId: string;
+  properties: { [name: string]: ConnectorPropertyDefinition };
+}
+
 export interface ConnectionConfiguration {
   mqttHost: string;
   mqttPort: number;

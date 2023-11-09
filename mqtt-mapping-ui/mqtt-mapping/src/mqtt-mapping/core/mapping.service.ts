@@ -28,7 +28,7 @@ import {
 } from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
-import { EndpointConfigurationService } from "../../mqtt-configuration/endpoint-configuration.service";
+import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
   C8YAPISubscription,
   Direction,
@@ -59,7 +59,7 @@ export class MappingService {
   _feature: Feature;
   constructor(
     private inventory: InventoryService,
-    private configurationService: EndpointConfigurationService,
+    private configurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private client: FetchClient
