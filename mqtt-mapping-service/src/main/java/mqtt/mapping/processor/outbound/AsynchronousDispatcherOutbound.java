@@ -26,6 +26,7 @@ import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -209,7 +210,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
 
     }
-
+    @Getter
     protected IConnectorClient connectorClient;
 
     //The Outbound Dispatcher is hardly connected to the Connector otherwise it is not possible to correlate messages received bei Notification API to the correct Connector

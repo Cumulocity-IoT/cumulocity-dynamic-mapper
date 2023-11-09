@@ -112,7 +112,7 @@ public class MQTTMappingRestController {
     }
 
     // TODO Implement this in UI
-    @RequestMapping(value = "/configuration/connector/specification", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/configuration/connector/specifications", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectorSpecification() {
         HashMap<String, IConnectorClient> clients = null;
         String tenant = contextService.getContext().getTenant();
@@ -173,7 +173,7 @@ public class MQTTMappingRestController {
     }
 
     // TODO Adapt this structure in UI
-    @RequestMapping(value = "/configuration/connection/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
         log.info("Get connection details");
         String tenant = contextService.getContext().getTenant();
@@ -294,10 +294,7 @@ public class MQTTMappingRestController {
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
                 // TODO iterate over all clients
-                String connectorId = operation.getParameter().get("connectorId");
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorId));
-                c8yAgent.notificationSubscriberReconnect(tenant, client);
+                c8yAgent.notificationSubscriberReconnect(tenant);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {

@@ -71,7 +71,7 @@ public class BootstrapService {
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
         String tenant = event.getTenant();
-        c8YAgent.getNotificationSubscriber().disconnect(null);
+        c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
         } catch (ConnectorRegistryException e) {
@@ -106,7 +106,8 @@ public class BootstrapService {
                 mqttClient.submitInitialize();
                 mqttClient.submitConnect();
                 mqttClient.runHouskeeping();
-                c8YAgent.getNotificationSubscriber().init(mqttClient);
+                //Subscriptions are initiated for each tenant.
+                c8YAgent.getNotificationSubscriber().init();
             }
 
         } catch (Exception e) {
