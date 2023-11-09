@@ -174,7 +174,7 @@ public class C8YAPISubscriber {
             try {
                 //For each dispatcher/connector create a new connection
                 for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient() + additionalSubscriptionIdTest);
+                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorId() + additionalSubscriptionIdTest);
                     CustomWebSocketClient client = connect(token, dispatcherOutbound);
                     deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
                 }
@@ -232,7 +232,7 @@ public class C8YAPISubscriber {
                 try {
                     //Add Dispatcher for each Connector
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient()+ additionalSubscriptionIdTest);
+                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorId() + additionalSubscriptionIdTest);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
                     }
