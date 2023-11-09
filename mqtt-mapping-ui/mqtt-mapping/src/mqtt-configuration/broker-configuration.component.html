@@ -40,69 +40,77 @@
         </h4>
       </div>
       <div class="card-block">
+        <div class="row">
+          <div class="col-lg-2">
+            <button
+              type="button"
+              name="addConfiguration"
+              class="btn btn-default btn-sm"
+              (click)="onConfigurationAdd()"
+              translate
+              title="Add configuration"
+            >
+              <i c8yIcon="plus-circle-o"></i>&nbsp;Add configuration
+            </button>
+          </div>
+        </div>
+
         <div style="height: 200px; overflow-y: auto">
           <table class="table table-condensed table-striped fixTableHead">
             <thead>
               <tr>
                 <th>#</th>
-                <th>
-                    <span>Connector Id</span>  
-                </th>
-                <th>Expand as array</th>
-                <th>Resolve to externalId</th>
-                <th>Respair strategy</th>
+                <th>Connector Id</th>
+                <th>Name</th>
+                <th>Enabled</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                *ngFor="let sub of substitutions; let i = index"
-                id="{{ 'sub-' + id + '-' + i }}"
-                [style.background]="
-                  i == settings.selectedSubstitutionIndex
-                    ? settings.color
-                    : 'none'
-                "
-                (click)="onSubstitutionSelect(i)"
+                *ngFor="let con of configurations; let i = index"
+                (click)="onConfigurationSelect(i)"
               >
                 <td width="4%">
                   {{ i }}
                 </td>
                 <td>
-                  <span *ngIf="!sub.registeredType" class="text-12"
-                    >{{
-                      "[ " +
-                        (definesDeviceIdentifier(targetAPI, sub, direction)
-                          ? "* "
-                          : "") +
-                        sub.pathSource +
-                        " &#8212;> " +
-                        sub.pathTarget +
-                        " ]"
-                    }}
+                  <span class="text-12"
+                    >{{ con.connectorId}}
                   </span>
                 </td>
                 <td width="8%">
-                  {{ sub.expandArray }}
+                  {{ con.name}}
                 </td>
                 <td width="8%">
-                  {{ sub.resolve2ExternalId }}
-                </td>
-                <td>
-                  {{ sub.repairStrategy }}
+                  {{ con.enabled }}
                 </td>
                 <td width="8%">
                   <button
                     title="{{ 'Remove' | translate }}"
                     class="btn btn-icon btn-clean"
-                    (click)="onSubstitutionDelete(i)"
-                    [attr.disabled]="
-                      isDisabled(settings.editorMode == EditorMode.READ_ONLY)
-                    "
+                    (click)="onConfigurationDelete(i)"
+                    [attr.disabled]="con.enabled"
                   >
                     <i c8yIcon="minus-circle" class="text-danger"></i>
-                    <span class="sr-only" translate>Remove</span>
+                    <span class="sr-only" translate>Remove configuration</span>
                   </button>
+                  <button
+                    title="{{ 'Toggle Activation' | translate }}"
+                    class="btn btn-icon btn-clean"
+                    (click)="onConfigurationToogle(i)"
+                  >
+                    <i c8yIcon="toggle-on" class="text-danger"></i>
+                    <span class="sr-only" translate>Toogle activation</span>
+                  </button>
+                  <button
+                  title="{{ 'Update' | translate }}"
+                  class="btn btn-icon btn-clean"
+                  (click)="onConfigurationUpdate(i)"
+                >
+                  <i c8yIcon="pencil" class="text-danger"></i>
+                  <span class="sr-only" translate>Update configuration</span>
+                </button>
                 </td>
               </tr>
             </tbody>
@@ -112,30 +120,6 @@
     </div>
   </div>
 
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header separator j-c-between">
-        <h4 class="card-title">
-          {{ "List Specification" | translate }}
-        </h4>
-      </div>
-      <div class="card-block" [formGroup]="brokerFormly">
-        <formly-form
-          [form]="brokerFormly"
-          [fields]="brokerFormlyFields"
-          [model]="brokerConfig1Model"
-        ></formly-form>
-      </div>
-
-      <div class="card-block" [formGroup]="dynamicFormly">
-        <formly-form
-          [form]="dynamicFormly"
-          [fields]="dynamicFormlyFields"
-          [model]="brokerConfig2Model"
-        ></formly-form>
-      </div>
-    </div>
-  </div>
   <!-- <div class="col-lg-6">
     <div class="card">
       <div class="card-header separator j-c-between">

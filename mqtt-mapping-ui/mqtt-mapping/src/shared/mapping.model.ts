@@ -33,22 +33,19 @@ export interface ConnectorPropertyDefinition {
   property:  ConnectorProperty ;
 }
 
+export interface ConnectorConfiguration {
+  ident: string;
+  connectorId: string;
+  enabled: boolean;
+  name: string;
+  properties: { [name: string]: any };
+}
+
+
+
 export interface ConnectorPropertyConfiguration {
   connectorId: string;
   properties: { [name: string]: ConnectorPropertyDefinition };
-}
-
-export interface ConnectionConfiguration {
-  mqttHost: string;
-  mqttPort: number;
-  user: string;
-  password: string;
-  clientId: string;
-  useTLS: boolean;
-  enabled: boolean;
-  useSelfSignedCertificate: boolean;
-  fingerprintSelfSignedCertificate: string;
-  nameCertificate: string;
 }
 
 export interface ServiceConfiguration {

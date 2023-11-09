@@ -134,7 +134,7 @@ public class MQTTMappingRestController {
 
     // TODO Adapt this in UI
     @RequestMapping(value = "/configuration/connector/instance", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> configureConnectorInstance(
+    public ResponseEntity<HttpStatus> createConnectionConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
@@ -174,7 +174,7 @@ public class MQTTMappingRestController {
 
     // TODO Adapt this structure in UI
     @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfiguration() {
+    public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations() {
         log.info("Get connection details");
         String tenant = contextService.getContext().getTenant();
 
@@ -206,6 +206,20 @@ public class MQTTMappingRestController {
             log.error("Tenant {} - Error on loading configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
+    }
+
+    // TODO Implement this in backend
+    @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
+        log.info("Delete connection instance {}", ident);
+                return ResponseEntity.status(HttpStatus.OK).body(ident);
+    }
+
+    // TODO Implement this in backend
+    @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<String> updateConnectionConfiguration(@PathVariable String ident, @Valid @RequestBody ConnectorConfiguration configuration) {
+        log.info("Update connection instance {}", ident);
+                return ResponseEntity.status(HttpStatus.OK).body(ident);
     }
 
     @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)

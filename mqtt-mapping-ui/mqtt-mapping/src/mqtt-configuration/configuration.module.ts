@@ -24,14 +24,17 @@ import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { BrokerConfigurationComponent } from "./broker-configuration.component";
 import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { AdminGuard } from "../shared/admin.guard";
+import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 
 @NgModule({
   declarations: [
     BrokerConfigurationComponent,
     TerminateBrokerConnectionModalComponent,
+    EditConfigurationComponent
   ],
   imports: [CoreModule],
-  entryComponents: [TerminateBrokerConnectionModalComponent],
+  entryComponents: [TerminateBrokerConnectionModalComponent,
+    EditConfigurationComponent],
   exports: [],
   providers: [
     hookRoute({

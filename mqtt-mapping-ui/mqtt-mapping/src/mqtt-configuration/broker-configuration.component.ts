@@ -28,8 +28,7 @@ import { MappingService } from "../mqtt-mapping/core/mapping.service";
 import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import {
-  ConnectionConfiguration as ConnectionConfiguration,
-  ConnectorProperty,
+  ConnectorConfiguration,
   ConnectorPropertyConfiguration,
   Feature,
   Operation,
@@ -38,7 +37,7 @@ import {
   Status,
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
-import { FormlyFieldConfig } from "@ngx-formly/core";
+import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 
 @Component({
   selector: "mapping-broker-configuration",
@@ -51,24 +50,12 @@ export class BrokerConfigurationComponent implements OnInit {
   isBrokerAgentCreated$: Observable<boolean>;
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
-  connectionForm: FormGroup;
   serviceForm: FormGroup;
   feature: Feature;
   connectorId: String;
   specifications: ConnectorPropertyConfiguration[];
+  configurations: ConnectorConfiguration[];
 
-  connectionConfiguration: ConnectionConfiguration = {
-    mqttHost: "",
-    mqttPort: 0,
-    user: "",
-    password: "",
-    clientId: "",
-    useTLS: false,
-    enabled: false,
-    useSelfSignedCertificate: false,
-    fingerprintSelfSignedCertificate: "",
-    nameCertificate: "",
-  };
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
     logSubstitution: true,
@@ -78,49 +65,14 @@ export class BrokerConfigurationComponent implements OnInit {
     public bsModalService: BsModalService,
     public configurationService: BrokerConfigurationService,
     public mappingService: MappingService,
-    public alertservice: AlertService
+    public alert: AlertService
   ) {}
-
-  brokerFormlyFields: FormlyFieldConfig[] = [];
-  brokerFormly: FormGroup = new FormGroup({});
-  dynamicFormlyFields: FormlyFieldConfig[] = [];
-  dynamicFormly: FormGroup = new FormGroup({});
-  brokerConfig1Model: any = {};
-  brokerConfig2Model: any = {};
 
   async ngOnInit() {
     console.log("Running version", this.version);
     this.initForms();
     await this.loadData();
 
-    this.brokerFormlyFields = [
-      {
-        fieldGroupClassName: "row",
-        fieldGroup: [
-          {
-            className: "col-lg-6",
-            key: "connectorId",
-            type: "select",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: "Connector Id",
-              options: this.specifications.map((sp) => {
-                return {
-                  label: sp.connectorId,
-                  value: sp.connectorId,
-                };
-              }),
-              change: (field: FormlyFieldConfig, event?: any) => {
-                this.createDynamicForm(
-                  this.brokerFormly.get("connectorId").value
-                );
-              },
-              required: true,
-            },
-          },
-        ],
-      },
-    ];
     this.initializeMonitoringService();
     this.isBrokerAgentCreated$ = from(
       this.configurationService.initializeBrokerAgent()
@@ -128,84 +80,6 @@ export class BrokerConfigurationComponent implements OnInit {
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
     this.feature = await this.configurationService.getFeatures();
-  }
-
-  private async createDynamicForm(connectorId: string): Promise<void> {
-    const dynamicFields: ConnectorPropertyConfiguration =
-      this.specifications.find((c) => c.connectorId == connectorId);
-    if (dynamicFields) {
-      for (const key in dynamicFields.properties) {
-        const property = dynamicFields.properties[key];
-        if (property.property == ConnectorProperty.NUMERIC_PROPERTY) {
-          this.dynamicFormlyFields.push({
-            // fieldGroupClassName: "row",
-            fieldGroup: [
-              {
-                className: "col-lg-6",
-                key: key,
-                type: "input",
-                wrappers: ["c8y-form-field"],
-                templateOptions: {
-                  type: "number",
-                  label: key,
-                  required: property.required,
-                },
-              },
-            ],
-          });
-        } else if (property.property == ConnectorProperty.STRING_PROPERTY) {
-          this.dynamicFormlyFields.push({
-            // fieldGroupClassName: "row",
-            fieldGroup: [
-              {
-                className: "col-lg-6",
-                key: key,
-                type: "input",
-                wrappers: ["c8y-form-field"],
-                templateOptions: {
-                  label: key,
-                  required: property.required,
-                },
-              },
-            ],
-          });
-        } else if (property.property == ConnectorProperty.SENSITIVE_STRING_PROPERTY) {
-          this.dynamicFormlyFields.push({
-            // fieldGroupClassName: "row",
-            fieldGroup: [
-              {
-                className: "col-lg-6",
-                key: key,
-                type: "input",
-                wrappers: ["c8y-form-field"],
-                templateOptions: {
-                  type: "password",
-                  label: key,
-                  required: property.required,
-                },
-              },
-            ],
-          });
-        } else if (property.property == ConnectorProperty.BOOLEAN_PROPERTY) {
-          this.dynamicFormlyFields.push({
-            //fieldGroupClassName: "row",
-            fieldGroup: [
-              {
-                className: "col-lg-6",
-                key: key,
-                type: "switch",
-                wrappers: ["c8y-form-field"],
-                templateOptions: {
-                  label: key,
-                  required: property.required,
-                },
-              },
-            ],
-          });
-        }
-      }
-      this.dynamicFormlyFields = [...this.dynamicFormlyFields];
-    }
   }
 
   private async initializeMonitoringService(): Promise<void> {
@@ -228,16 +102,6 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   private initForms(): void {
-    this.connectionForm = new FormGroup({
-      mqttHost: new FormControl("", Validators.required),
-      mqttPort: new FormControl("", Validators.required),
-      user: new FormControl(""),
-      password: new FormControl(""),
-      clientId: new FormControl("", Validators.required),
-      useTLS: new FormControl(""),
-      useSelfSignedCertificate: new FormControl(""),
-      nameCertificate: new FormControl(""),
-    });
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(""),
       logSubstitution: new FormControl(""),
@@ -245,35 +109,17 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   private async loadData(): Promise<void> {
-    let conn = await this.configurationService.getConnectionConfiguration();
     let conf = await this.configurationService.getServiceConfiguration();
     this.specifications =
       await this.configurationService.getConnectorSpecifications();
-    console.log("Configuration:", conn, conf, this.specifications);
-    if (conn) {
-      this.connectionConfiguration = conn;
-      this.isConnectionEnabled = conn.enabled;
-    }
-
     if (conf) {
       this.serviceConfiguration = conf;
     }
   }
 
-  async clickedConnect() {
-    this.connectToBroker();
-  }
 
   async clickedDisconnect() {
     this.showTerminateConnectionModal();
-  }
-
-  async clickedSaveConnectionConfiguration() {
-    this.updateConnectionConfiguration();
-  }
-
-  async clickedSaveServiceConfiguration() {
-    this.updateServiceConfiguration();
   }
 
   async clickedReconnect2NotificationEnpoint() {
@@ -283,55 +129,81 @@ export class BrokerConfigurationComponent implements OnInit {
     );
     console.log("Details reconnect2NotificationEnpoint", response1);
     if (response1.status === 201) {
-      this.alertservice.success(gettext("Reconnect successful!"));
+      this.alert.success(gettext("Reconnect successful!"));
     } else {
-      this.alertservice.danger(gettext("Failed to reconnect."));
+      this.alert.danger(gettext("Failed to reconnect."));
     }
   }
 
-  private async updateConnectionConfiguration() {
-    let conn: ConnectionConfiguration = {
-      ...this.connectionConfiguration,
-      enabled: false,
+  public async onConfigurationUpdate(index) {
+    const configuration = this.configurations[index];
+
+    const initialState = {
+      add: false,
+      configuration: configuration,
+      specifications: this.specifications,
     };
-    const response =
-      await this.configurationService.updateConnectionConfiguration(conn);
-    if (response.status < 300) {
-      this.alertservice.success(gettext("Update successful."));
-    } else {
-      this.alertservice.danger(gettext("Failed to update connection"));
-    }
+    const modalRef = this.bsModalService.show(EditConfigurationComponent, {
+      initialState,
+    });
+    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
+      console.log("Configuration after edit:", editedConfiguration);
+      if (editedConfiguration) {
+        this.configurations[index] = editedConfiguration;
+        const response =
+          await this.configurationService.updateConnectionConfiguration(
+            editedConfiguration
+          );
+        if (response.status < 300) {
+          this.alert.success(gettext("Update successful"));
+        } else {
+          this.alert.danger(gettext("Failed to update service configuration"));
+        }
+      }
+    });
   }
 
-  private async updateServiceConfiguration() {
-    let conf: ServiceConfiguration = {
-      ...this.serviceConfiguration,
+  public async onConfigurationAdd() {
+    const configuration = {};
+    const initialState = {
+      add: true,
+      configuration: configuration,
+      specifications: this.specifications,
     };
-    const response = await this.configurationService.updateServiceConfiguration(
-      conf
-    );
-    if (response.status < 300) {
-      this.alertservice.success(gettext("Update successful"));
-    } else {
-      this.alertservice.danger(
-        gettext("Failed to update service configuration")
-      );
-    }
+    const modalRef = this.bsModalService.show(EditConfigurationComponent, {
+      initialState,
+    });
+    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
+      console.log("Configuration after edit:", addedConfiguration);
+      if (addedConfiguration) {
+        this.configurations.push(addedConfiguration);
+        const response =
+          await this.configurationService.createConnectionConfiguration(
+            addedConfiguration
+          );
+        if (response.status < 300) {
+          this.alert.success(gettext("Added successfully configuration"));
+        } else {
+          this.alert.danger(gettext("Failed to update connector configuration"));
+        }
+      }
+    });
   }
 
-  private async connectToBroker() {
+  public async onConfigurationToogle(index) {
+    const con = this.configurations[index];
     const response1 = await this.configurationService.runOperation(
-      Operation.CONNECT,
+      con.enabled ? Operation.DISCONNECT : Operation.CONNECT,
       { connectorId: this.connectorId }
     );
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToBroker", response1, response2)
-    console.log("Details connectToBroker", response1);
+    console.log("Details toogle activation to broker", response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
-      this.alertservice.success(gettext("Connection successful"));
+      this.alert.success(gettext("Connection successful"));
     } else {
-      this.alertservice.danger(gettext("Failed to establish connection"));
+      this.alert.danger(gettext("Failed to establish connection"));
     }
   }
 
@@ -357,9 +229,9 @@ export class BrokerConfigurationComponent implements OnInit {
     );
     console.log("Details disconnectFromMQTT", res);
     if (res.status < 300) {
-      this.alertservice.success(gettext("Successfully disconnected"));
+      this.alert.success(gettext("Successfully disconnected"));
     } else {
-      this.alertservice.danger(gettext("Failed to disconnect"));
+      this.alert.danger(gettext("Failed to disconnect"));
     }
   }
 
@@ -368,9 +240,9 @@ export class BrokerConfigurationComponent implements OnInit {
       Operation.RESET_STATUS_MAPPING
     );
     if (res.status < 300) {
-      this.alertservice.success(gettext("Successfully rreset"));
+      this.alert.success(gettext("Successfully rreset"));
     } else {
-      this.alertservice.danger(gettext("Failed to rest statistic."));
+      this.alert.danger(gettext("Failed to rest statistic."));
     }
   }
 
