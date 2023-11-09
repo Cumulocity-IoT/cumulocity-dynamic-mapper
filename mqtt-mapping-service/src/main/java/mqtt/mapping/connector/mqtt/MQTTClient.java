@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorProperty;
+import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
@@ -98,7 +99,7 @@ public class MQTTClient implements IConnectorClient {
 
     private static final String CONNECTOR_ID = "MQTT";
 
-    private Map<String, ConnectorProperty> configProps = new HashMap<>();
+    private Map<String, ConnectorPropertyDefinition> configProps = new HashMap<>();
 
     private String tenantId;
 
@@ -194,19 +195,19 @@ public class MQTTClient implements IConnectorClient {
 
 
     private void setConfigProperties() {
-        this.configProps.put("mqttHost", ConnectorProperty.STRING_PROPERTY);
-        this.configProps.put("mqttPort", ConnectorProperty.NUMERIC_PROPERTY);
-        this.configProps.put("user", ConnectorProperty.STRING_PROPERTY);
-        this.configProps.put("password", ConnectorProperty.SENSITIVE_STRING_PROPERTY);
-        this.configProps.put("clientId", ConnectorProperty.STRING_PROPERTY);
-        this.configProps.put("useTLS", ConnectorProperty.BOOLEAN_PROPERTY);
-        this.configProps.put("useSelfSignedCertificate", ConnectorProperty.BOOLEAN_PROPERTY);
-        this.configProps.put("fingerprintSelfSignedCertificate", ConnectorProperty.STRING_PROPERTY);
-        this.configProps.put("nameCertificate", ConnectorProperty.STRING_PROPERTY);
+        this.configProps.put("mqttHost", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
+        this.configProps.put("mqttPort", new ConnectorPropertyDefinition(true, ConnectorProperty.NUMERIC_PROPERTY));
+        this.configProps.put("user", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+        this.configProps.put("password", new ConnectorPropertyDefinition((false), ConnectorProperty.SENSITIVE_STRING_PROPERTY));
+        this.configProps.put("clientId", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
+        this.configProps.put("useTLS", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+        this.configProps.put("useSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+        this.configProps.put("fingerprintSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+        this.configProps.put("nameCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
     }
 
     @Override
-    public Map<String, ConnectorProperty> getConfigProperties() {
+    public Map<String, ConnectorPropertyDefinition> getConfigProperties() {
         return this.configProps;
     }
 
