@@ -212,7 +212,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private void reloadConfiguration() {
-        configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId(), tenantId);
+        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorId(), tenantId);
     }
 
     public void submitConnect() {

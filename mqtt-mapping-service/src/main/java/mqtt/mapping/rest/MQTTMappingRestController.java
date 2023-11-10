@@ -145,19 +145,7 @@ public class MQTTMappingRestController {
         }
 
         // Remove sensitive data before printing to log
-        ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
-        for (String property : clonedConfig.getProperties().keySet()) {
-            try {
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        clonedConfig.getConnectorId());
-                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property).property) {
-                    clonedConfig.getProperties().replace(property, "****");
-                }
-            } catch (ConnectorRegistryException e) {
-                log.error("Tenant {} - Could not get Configuration Properties:", tenant, e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
-            }
-        }
+        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
 
@@ -190,7 +178,8 @@ public class MQTTMappingRestController {
                     try {
                         IConnectorClient client = connectorRegistry.getClientForTenant(
                                 contextService.getContext().getTenant(), clonedConfig.getConnectorId());
-                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties().get(property).property) {
+                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties()
+                                .get(property).property) {
                             clonedConfig.getProperties().replace(property, "");
                         }
 
@@ -212,14 +201,72 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
         log.info("Delete connection instance {}", ident);
-                return ResponseEntity.status(HttpStatus.OK).body(ident);
+        String tenant = contextService.getContext().getTenant();
+        if (!userHasMappingAdminRole()) {
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
+        try {
+
+            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident, tenant);
+            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
+                    configuration.getConnectorId());
+            client.disconnect();
+        } catch (Exception ex) {
+            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(ident);
     }
 
-    // TODO Implement this in backend
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> updateConnectionConfiguration(@PathVariable String ident, @Valid @RequestBody ConnectorConfiguration configuration) {
+    public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String ident,
+            @Valid @RequestBody ConnectorConfiguration configuration) {
+        String tenant = contextService.getContext().getTenant();
         log.info("Update connection instance {}", ident);
-                return ResponseEntity.status(HttpStatus.OK).body(ident);
+        // make sure we are using the correct ident
+        configuration.ident = ident;
+
+        if (!userHasMappingAdminRole()) {
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Insufficient Permission, user does not have required permission to access this API");
+        }
+        // Remove sensitive data before printing to log
+        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
+        log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
+        try {
+
+            connectorConfigurationComponent.saveConnectionConfiguration(configuration);
+            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
+                    configuration.getConnectorId());
+            client.reconnect();
+        } catch (Exception ex) {
+            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
+    }
+
+    private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration, String tenant) {
+        ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
+        for (String property : clonedConfig.getProperties().keySet()) {
+            try {
+                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
+                        clonedConfig.getConnectorId());
+                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties()
+                        .get(property).property) {
+                    clonedConfig.getProperties().replace(property, "****");
+                }
+            } catch (ConnectorRegistryException e) {
+                log.error("Tenant {} - Could not get Configuration Properties:", tenant, e);
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+            }
+        }
+        return clonedConfig;
     }
 
     @RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -280,8 +327,9 @@ public class MQTTMappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                //String connectorId = operation.getParameter().get("connectorId");
-                HashMap<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+                // String connectorId = operation.getParameter().get("connectorId");
+                HashMap<String, IConnectorClient> connectorMap = connectorRegistry
+                        .getClientsForTenant(contextService.getContext().getTenant());
                 for (IConnectorClient client : connectorMap.values()) {
                     client.updateActiveSubscriptions(updatedMappings, false);
                 }
@@ -487,7 +535,8 @@ public class MQTTMappingRestController {
         try {
             boolean send = ("send").equals(method);
             try {
-                IConnectorClient connectorClient = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
+                IConnectorClient connectorClient = connectorRegistry
+                        .getClientForTenant(contextService.getContext().getTenant(), connectorId);
                 result = connectorClient.test(path, send, payload);
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);

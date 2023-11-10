@@ -62,26 +62,38 @@ public class ConnectorConfigurationComponent {
         this.tenantOptionApi = tenantOptionApi;
     }
 
-
     public String getConnectorOptionKey(String connectorId) {
-        return OPTION_KEY_CONNECTION_CONFIGURATION+"."+connectorId;
+        return OPTION_KEY_CONNECTION_CONFIGURATION + "." + connectorId;
     }
+
     public void saveConnectionConfiguration(final ConnectorConfiguration configuration)
             throws JsonProcessingException {
         if (configuration == null) {
             return;
         }
-        String connectorId = configuration.getConnectorId();
+        String ident = configuration.getIdent();
         final String configurationJson = objectMapper.writeValueAsString(configuration);
-        final OptionRepresentation optionRepresentation = OptionRepresentation.asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(connectorId), configurationJson);
+        final OptionRepresentation optionRepresentation = OptionRepresentation
+                .asOptionRepresentation(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(ident), configurationJson);
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public ConnectorConfiguration loadConnectorConfiguration(String connectorId, String tenant) {
+    public void deleteConnectionConfiguration(final String ident)
+            throws JsonProcessingException {
+        if (ident == null) {
+            return;
+        }
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
-        option.setKey(getConnectorOptionKey(connectorId));
-        ConnectorConfiguration result =  subscriptionsService.callForTenant(tenant, () -> {
+        option.setKey(getConnectorOptionKey(ident));
+        tenantOptionApi.delete(option);
+    }
+
+    public ConnectorConfiguration getConnectorConfiguration(String ident, String tenant) {
+        final OptionPK option = new OptionPK();
+        option.setCategory(OPTION_CATEGORY_CONFIGURATION);
+        option.setKey(getConnectorOptionKey(ident));
+        ConnectorConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
             ConnectorConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
@@ -108,9 +120,10 @@ public class ConnectorConfigurationComponent {
         final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                final List<OptionRepresentation> optionRepresentationList = tenantOptionApi.getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
+                final List<OptionRepresentation> optionRepresentationList = tenantOptionApi
+                        .getAllOptionsForCategory(OPTION_CATEGORY_CONFIGURATION);
                 for (OptionRepresentation optionRepresentation : optionRepresentationList) {
-                    //Just Connector Config --> Ignoring Service Configuration
+                    // Just Connector Config --> Ignoring Service Configuration
                     String optionKey = OPTION_KEY_CONNECTION_CONFIGURATION.replace("credentials.", "");
                     if (optionRepresentation.getKey().startsWith(optionKey)) {
                         final ConnectorConfiguration configuration = new ObjectMapper().readValue(
@@ -134,10 +147,11 @@ public class ConnectorConfigurationComponent {
     public void deleteAllConfiguration(String tenant) {
         List<ConnectorConfiguration> configs = loadAllConnectorConfiguration(tenant);
         for (ConnectorConfiguration config : configs) {
-            OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(config.getConnectorId()));
+            OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
+                    getConnectorOptionKey(config.getConnectorId()));
             tenantOptionApi.delete(optionPK);
         }
-        OptionPK optionPK= new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
+        OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION, OPTION_KEY_SERVICE_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
     }
 
