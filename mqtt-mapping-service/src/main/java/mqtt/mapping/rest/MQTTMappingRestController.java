@@ -40,6 +40,9 @@ import mqtt.mapping.core.*;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.*;
 import mqtt.mapping.processor.model.ProcessingContext;
+
+import org.apache.commons.lang3.mutable.Mutable;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -51,10 +54,13 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.net.URI;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -311,13 +317,19 @@ public class MQTTMappingRestController {
                 }
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
+                ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(connectorIdent, tenant);   
+                configuration.setEnabled(true);    
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorIdent));
+                        connectorIdent);
                 client.connect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
+                ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(connectorIdent, tenant);   
+                configuration.setEnabled(false);             
+                connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorIdent));
+                        connectorIdent);
                 client.disconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping(tenant);
@@ -376,7 +388,11 @@ public class MQTTMappingRestController {
         IConnectorClient client = null;
         try {
             client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorIdent);
-            Map<String, Integer> result = client.getActiveSubscriptions(tenant);
+            Map<String, MutableInt> as = client.getActiveSubscriptions();
+            Map<String, Integer> result = as.entrySet().stream()
+                .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
+                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+
             log.info("Tenant {} - Get active subscriptions!", tenant);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (ConnectorRegistryException e) {

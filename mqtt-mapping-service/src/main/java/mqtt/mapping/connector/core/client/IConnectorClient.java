@@ -11,6 +11,8 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.mutable.MutableInt;
+
 public interface IConnectorClient {
 
     /***
@@ -50,7 +52,7 @@ public interface IConnectorClient {
     /***
      * Returning all active Subscriptions in a Map of topics and an Integer indicating how many mappers are using it.
      ***/
-    public Map<String, Integer>  getActiveSubscriptions(String tenant);
+    public Map<String, MutableInt>  getActiveSubscriptions();
 
     /***
      * Adding/Updating a new subscription on the broker based on a provided mapping
