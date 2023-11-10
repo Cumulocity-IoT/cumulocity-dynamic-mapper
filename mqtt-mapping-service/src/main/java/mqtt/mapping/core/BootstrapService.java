@@ -109,7 +109,7 @@ public class BootstrapService {
             }
 
         } catch (Exception e) {
-            log.error("Error on MQTT Connection: ", e);
+            log.error("Error on initializing connectors: ", e);
             //mqttClient.submitConnect();
         }
     }
