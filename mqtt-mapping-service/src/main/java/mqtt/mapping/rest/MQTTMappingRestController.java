@@ -127,10 +127,12 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
         }
         log.info("Tenant {} - Getting connection properties...", tenant);
-        for (IConnectorClient client : clients.values()) {
-            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorIdent(),
-                    client.getConfigProperties());
-            connectorConfigurations.add(config);
+        if (clients != null) {
+            for (IConnectorClient client : clients.values()) {
+                ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorIdent(),
+                        client.getConfigProperties());
+                connectorConfigurations.add(config);
+            }
         }
         return ResponseEntity.ok(connectorConfigurations);
     }
@@ -145,7 +147,6 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }
-
         // Remove sensitive data before printing to log
         ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
@@ -206,7 +207,8 @@ public class MQTTMappingRestController {
                     "Insufficient Permission, user does not have required permission to access this API");
         }
         try {
-            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident, tenant);
+            ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident,
+                    tenant);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getIdent());
             client.disconnect();
@@ -251,7 +253,8 @@ public class MQTTMappingRestController {
 
     private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration, String tenant) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
-        //log.info("Tenant {} - Configuration Properties:{}, {}", tenant, configuration, clonedConfig);
+        // log.info("Tenant {} - Configuration Properties:{}, {}", tenant,
+        // configuration, clonedConfig);
         for (String property : clonedConfig.getProperties().keySet()) {
             try {
                 IConnectorClient client = connectorRegistry.getClientForTenant(tenant,
@@ -308,7 +311,6 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
-
 
     @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
