@@ -22,6 +22,7 @@
 package mqtt.mapping.core;
 
 import c8y.IsDevice;
+import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
@@ -256,7 +257,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public IConnectorClient.Certificate loadCertificateByName(String certificateName, MicroserviceCredentials credentials) {
+    public IConnectorClient.Certificate loadCertificateByName(String certificateName, Credentials credentials) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
             MutableObject<TrustedCertificateRepresentation> certResult = new MutableObject<TrustedCertificateRepresentation>(
                     new TrustedCertificateRepresentation());

@@ -545,27 +545,30 @@ public class C8YAPISubscriber {
 
                 }
             }
-            deviceClientMap = new HashMap<>();
+            deviceClientMap.put(tenant, new HashMap<>());
+            dispatcherOutboundMap.put(tenant, new HashMap<>());
         } else {
-            this.executorService.shutdownNow();
-            for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                if (device_client != null && device_client.isOpen()) {
-                    logger.info("Disconnecting WS Device Client {}", device_client.toString());
-                    device_client.close();
-                }
-            }
-            deviceClientMap = new HashMap<>();
-            for (String currentTenant : tenantClientMap.keySet()) {
-                if (currentTenant.equals(tenant)) {
-                    CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
-                    if (tenant_client != null && tenant_client.isOpen()) {
-                        logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
-                        tenant_client.close();
+            if (this.executorService != null)
+                this.executorService.shutdownNow();
+            if(deviceClientMap.get(tenant) != null) {
+                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                    if (device_client != null && device_client.isOpen()) {
+                        logger.info("Disconnecting WS Device Client {}", device_client.toString());
+                        device_client.close();
                     }
                 }
-
+                deviceClientMap.put(tenant, new HashMap<>());
             }
-            tenantClientMap = new HashMap<>();
+            dispatcherOutboundMap.put(tenant, new HashMap<>());
+            if(tenantClientMap.get(tenant) != null) {
+                CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
+                if (tenant_client != null && tenant_client.isOpen()) {
+                    logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
+                    tenant_client.close();
+                    tenantClientMap.remove(tenant_client);
+                }
+            }
+
         }
 
     }

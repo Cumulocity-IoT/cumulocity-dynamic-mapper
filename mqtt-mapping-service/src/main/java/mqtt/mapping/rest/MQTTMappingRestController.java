@@ -22,6 +22,7 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -74,6 +75,9 @@ public class MQTTMappingRestController {
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Autowired
+    BootstrapService bootstrapService;
 
     @Autowired
     private RoleService roleService;
@@ -147,9 +151,7 @@ public class MQTTMappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                    configuration.getIdent());
-            client.reconnect();
+            bootstrapService.initializeConnectorByConfiguration(configuration, contextService.getContext(), tenant);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
@@ -208,6 +210,7 @@ public class MQTTMappingRestController {
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getIdent());
             client.disconnect();
+            connectorRegistry.unregisterClient(tenant, ident);
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
