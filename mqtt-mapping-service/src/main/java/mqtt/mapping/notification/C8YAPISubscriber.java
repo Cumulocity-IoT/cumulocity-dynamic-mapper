@@ -408,41 +408,44 @@ public class C8YAPISubscriber {
         try {
             subscriptionsService.runForEachTenant(() -> {
                 String tenant = subscriptionsService.getTenant();
-                for(String currentTenant : tenantClientMap.keySet()) {
-                    if (currentTenant.equals(tenant)) {
-                        CustomWebSocketClient tenant_client = tenantClientMap.get(currentTenant);
-                        if (tenant_client != null) {
-                            logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
-                            if (!tenant_client.isOpen()) {
-                                if (tenantWSStatusCode.get(tenant) == 401
-                                        || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                    logger.info("Trying to reconnect ws tenant client... ");
-                                    subscriptionsService.runForEachTenant(() -> {
-                                        initTenantClient();
-                                    });
-                                } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
-                                        || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
-                                    logger.info("Trying to reconnect ws tenant client... ");
-                                    tenant_client.reconnect();
+                if(tenantClientMap != null) {
+                    for (String currentTenant : tenantClientMap.keySet()) {
+                        if (currentTenant.equals(tenant)) {
+                            CustomWebSocketClient tenant_client = tenantClientMap.get(currentTenant);
+                            if (tenant_client != null) {
+                                logger.debug("Running ws reconnect... tenant client: {}, tenant_isOpen: {}", tenant_client, tenant_client.isOpen());
+                                if (!tenant_client.isOpen()) {
+                                    if (tenantWSStatusCode.get(tenant) == 401
+                                            || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                        logger.info("Trying to reconnect ws tenant client... ");
+                                        subscriptionsService.runForEachTenant(() -> {
+                                            initTenantClient();
+                                        });
+                                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
+                                            || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                        logger.info("Trying to reconnect ws tenant client... ");
+                                        tenant_client.reconnect();
+                                    }
                                 }
                             }
                         }
                     }
                 }
-
-                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                    if (device_client != null) {
-                        if (!device_client.isOpen()) {
-                            if (deviceWSStatusCode.get(tenant) == 401
-                                    || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                logger.info("Trying to reconnect ws device client... ");
-                                subscriptionsService.runForEachTenant(() -> {
-                                    initDeviceClient();
-                                });
-                            } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
-                                    || device_client.getReadyState().equals(ReadyState.CLOSED)) {
-                                logger.info("Trying to reconnect ws device client... ");
-                                device_client.reconnect();
+                if(deviceClientMap.get(tenant) != null) {
+                    for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                        if (device_client != null) {
+                            if (!device_client.isOpen()) {
+                                if (deviceWSStatusCode.get(tenant) == 401
+                                        || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                    logger.info("Trying to reconnect ws device client... ");
+                                    subscriptionsService.runForEachTenant(() -> {
+                                        initDeviceClient();
+                                    });
+                                } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
+                                        || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                    logger.info("Trying to reconnect ws device client... ");
+                                    device_client.reconnect();
+                                }
                             }
                         }
                     }
