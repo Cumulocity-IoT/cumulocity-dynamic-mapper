@@ -21,6 +21,7 @@
 
 package mqtt.mapping.connector.mqtt;
 
+import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -80,12 +81,13 @@ import java.util.concurrent.Future;
 //This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient implements IConnectorClient {
 
-    public MQTTClient(MicroserviceCredentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, C8YAgent c8YAgent, ExecutorService cachedThreadPool, ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
+    public MQTTClient(Credentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool, ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
         setConfigProperties();
         this.credentials = credentials;
         this.tenantId = tenantId;
         this.mappingComponent = mappingComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
+        this.configuration = connectorConfiguration;
         this.c8yAgent = c8YAgent;
         this.cachedThreadPool = cachedThreadPool;
         this.objectMapper = objectMapper;
@@ -95,7 +97,7 @@ public class MQTTClient implements IConnectorClient {
     private static final int WAIT_PERIOD_MS = 10000;
 
     @Getter
-    private MicroserviceCredentials credentials = null;
+    private Credentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
 
@@ -642,6 +644,10 @@ public class MQTTClient implements IConnectorClient {
         //return getActiveSubscriptionMappingInbound().entrySet().stream()
         //        .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(), entry.getValue().getValue()))
         //        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    }
+
+    public static String getConnectorId() {
+        return CONNECTOR_ID;
     }
 
 }
