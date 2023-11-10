@@ -29,8 +29,6 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -144,7 +142,7 @@ public class ConnectorConfigurationComponent {
         return connectorConfigurations;
     }
 
-    public void deleteConcetorConfigurations(String tenant) {
+    public void deleteConnectorConfigurations(String tenant) {
         List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
         for (ConnectorConfiguration config : configs) {
             OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
