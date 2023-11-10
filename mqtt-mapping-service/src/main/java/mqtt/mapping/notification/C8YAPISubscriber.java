@@ -567,7 +567,7 @@ public class C8YAPISubscriber {
                 if (tenant_client != null && tenant_client.isOpen()) {
                     logger.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
                     tenant_client.close();
-                    tenantClientMap.remove(tenant_client);
+                    tenantClientMap.remove(tenant);
                 }
             }
 
