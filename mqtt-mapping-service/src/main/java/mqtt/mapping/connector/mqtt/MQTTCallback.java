@@ -9,12 +9,12 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 public class MQTTCallback implements MqttCallback {
     GenericMessageCallback genericMessageCallback;
     String tenant;
-    String connectorId;
+    String connectorIdent;
 
-    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorId) {
+    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdent) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
-        this.connectorId = connectorId;
+        this.connectorIdent = connectorIdent;
     }
     @Override
     public void connectionLost(Throwable throwable) {

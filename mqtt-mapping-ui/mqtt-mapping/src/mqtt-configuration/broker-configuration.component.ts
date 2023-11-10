@@ -192,7 +192,7 @@ export class BrokerConfigurationComponent implements OnInit {
     const configuration = this.configurations[index];
     const response1 = await this.configurationService.runOperation(
       configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorId: configuration.connectorId }
+      { connectorIdent: configuration.ident }
     );
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToBroker", response1, response2)

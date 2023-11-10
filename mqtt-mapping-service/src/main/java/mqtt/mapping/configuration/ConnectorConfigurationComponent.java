@@ -155,8 +155,8 @@ public class ConnectorConfigurationComponent {
         tenantOptionApi.delete(optionPK);
     }
 
-    public ConnectorConfiguration enableConnection(String connectorId, boolean enabled) {
-        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(connectorId));
+    public ConnectorConfiguration enableConnection(String connectorIdent, boolean enabled) {
+        final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(connectorIdent));
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final ConnectorConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
@@ -165,7 +165,7 @@ public class ConnectorConfigurationComponent {
             log.debug("Setting connection: {}:", configuration.enabled);
             final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
-            optionRepresentation.setKey(getConnectorOptionKey(connectorId));
+            optionRepresentation.setKey(getConnectorOptionKey(connectorIdent));
             optionRepresentation.setValue(configurationJson);
             tenantOptionApi.save(optionRepresentation);
             return configuration;

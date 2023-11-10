@@ -204,7 +204,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         this.mappingComponent = mappingComponent;
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorId, String topic, ConnectorMessage message,
+    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent, String topic, ConnectorMessage message,
             boolean sendPayload) throws Exception {
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
@@ -240,9 +240,9 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     @Override
     public void onClose( String closeMessage, Throwable closeException) {
         String tenant = connectorClient.getTenantId();
-        String connectorId = connectorClient.getConntectorId();
+        String connectorIdent = connectorClient.getConntectorIdent();
         if (closeException != null)
-            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorId, closeException.getMessage());
+            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent, closeException.getMessage());
         closeException.printStackTrace();
         if(closeMessage != null)
             log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
@@ -254,11 +254,11 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     @Override
     public void onMessage(String topic, ConnectorMessage message) throws Exception {
         String tenant = connectorClient.getTenantId();
-        String connectorId = connectorClient.getConntectorId();
+        String connectorIdent = connectorClient.getConntectorIdent();
         if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
             // REPORT MAINTENANCE METRIC
         } else {
-            processMessage(tenant, connectorId, topic, message, true);
+            processMessage(tenant, connectorIdent, topic, message, true);
         }
     }
 

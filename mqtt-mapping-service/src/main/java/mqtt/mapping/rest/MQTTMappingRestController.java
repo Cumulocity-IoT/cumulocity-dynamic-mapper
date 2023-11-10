@@ -124,7 +124,7 @@ public class MQTTMappingRestController {
         }
         log.info("Tenant {} - Getting connection properties...", tenant);
         for (IConnectorClient client : clients.values()) {
-            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorId(),
+            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorIdent(),
                     client.getConfigProperties());
             connectorConfigurations.add(config);
         }
@@ -148,7 +148,7 @@ public class MQTTMappingRestController {
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                    configuration.getConnectorId());
+                    configuration.getIdent());
             client.reconnect();
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -206,7 +206,7 @@ public class MQTTMappingRestController {
         try {
             ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident, tenant);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                    configuration.getConnectorId());
+                    configuration.getIdent());
             client.disconnect();
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
@@ -236,7 +236,7 @@ public class MQTTMappingRestController {
 
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                    configuration.getConnectorId());
+                    configuration.getIdent());
             client.reconnect();
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
@@ -324,14 +324,14 @@ public class MQTTMappingRestController {
                     client.updateActiveSubscriptions(updatedMappings, false);
                 }
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
-                String connectorId = operation.getParameter().get("connectorId");
+                String connectorIdent = operation.getParameter().get("connectorIdent");
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorId));
+                        operation.getParameter().get(connectorIdent));
                 client.connect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
-                String connectorId = operation.getParameter().get("connectorId");
+                String connectorIdent = operation.getParameter().get("connectorIdent");
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        operation.getParameter().get(connectorId));
+                        operation.getParameter().get(connectorIdent));
                 client.disconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping(tenant);
@@ -354,14 +354,14 @@ public class MQTTMappingRestController {
     }
 
     // TODO Add this to UI
-    @RequestMapping(value = "/monitoring/status/service/{connectorId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ServiceStatus> getServiceStatus(@PathVariable @NotNull String connectorId) {
+    @RequestMapping(value = "/monitoring/status/service/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ServiceStatus> getServiceStatus(@PathVariable @NotNull String connectorIdent) {
         try {
             String tenant = contextService.getContext().getTenant();
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                    connectorId);
+                    connectorIdent);
             ServiceStatus st = client.getServiceStatus();
-            log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorId, st);
+            log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
             return new ResponseEntity<>(st, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
@@ -384,12 +384,12 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
-    @RequestMapping(value = "/monitoring/subscription/{connectorId}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorId) {
+    @RequestMapping(value = "/monitoring/subscription/{connectorIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Integer>> getActiveSubscriptions(@PathVariable @NotNull String connectorIdent) {
         String tenant = contextService.getContext().getTenant();
         IConnectorClient client = null;
         try {
-            client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorId);
+            client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(), connectorIdent);
             Map<String, Integer> result = client.getActiveSubscriptions(tenant);
             log.info("Tenant {} - Get active subscriptions!", tenant);
             return ResponseEntity.status(HttpStatus.OK).body(result);
@@ -513,7 +513,7 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-            @RequestParam URI topic, @RequestParam String connectorId,
+            @RequestParam URI topic, @RequestParam String connectorIdent,
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         List<ProcessingContext<?>> result = null;
@@ -524,7 +524,7 @@ public class MQTTMappingRestController {
             boolean send = ("send").equals(method);
             try {
                 IConnectorClient connectorClient = connectorRegistry
-                        .getClientForTenant(contextService.getContext().getTenant(), connectorId);
+                        .getClientForTenant(contextService.getContext().getTenant(), connectorIdent);
                 result = connectorClient.test(path, send, payload);
             } catch (ConnectorRegistryException e) {
                 throw new RuntimeException(e);

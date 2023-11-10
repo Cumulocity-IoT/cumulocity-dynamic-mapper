@@ -16,7 +16,7 @@ public class C8YAPISubscription {
     private API api;
 
     //@NotNull
-    //private String connectorId;
+    //private String connectorIdent;
 
     private List<Device> devices;
 }

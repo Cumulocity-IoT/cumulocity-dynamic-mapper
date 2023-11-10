@@ -1,7 +1,5 @@
 package mqtt.mapping.connector.core.client;
 
-import mqtt.mapping.configuration.ServiceConfiguration;
-import mqtt.mapping.connector.core.ConnectorProperty;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -80,9 +78,15 @@ public interface IConnectorClient {
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload) throws Exception;
 
     /***
-     * Returning the unique ID identifying the connector instance
+     * Returning the unique ID identifying the connector type
      ***/
     public String getConntectorId();
+
+
+    /***
+     * Returning the unique ID identifying the connector instance
+     ***/
+    public String getConntectorIdent();
 
     /***
      * Returning the connection state to the broker
