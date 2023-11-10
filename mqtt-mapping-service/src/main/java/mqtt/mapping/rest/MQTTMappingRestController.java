@@ -210,7 +210,8 @@ public class MQTTMappingRestController {
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getIdent());
             client.disconnect();
-            connectorRegistry.unregisterClient(tenant, ident);
+            bootstrapService.shutdownConnector(tenant, ident);
+            connectorConfigurationComponent.deleteConnectionConfiguration(ident);
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
