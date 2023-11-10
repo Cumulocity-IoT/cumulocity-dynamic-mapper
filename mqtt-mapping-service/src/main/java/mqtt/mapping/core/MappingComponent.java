@@ -404,7 +404,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> rebuildMappingInboundCache(String tenant, List<Mapping> updatedMappings) {
-        log.info("Loaded mappings inbound: {} to cache", updatedMappings.size());
+        log.info("Tenant {} - Loaded mappings inbound: {} to cache", tenant, updatedMappings.size());
         cacheMappingInbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
