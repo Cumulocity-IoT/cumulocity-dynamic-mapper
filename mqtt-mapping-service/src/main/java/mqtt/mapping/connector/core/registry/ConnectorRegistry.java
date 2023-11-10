@@ -1,10 +1,13 @@
 package mqtt.mapping.connector.core.registry;
 
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -12,6 +15,20 @@ public class ConnectorRegistry {
 
     //Structure: Tenant, <Connector Ident, ConnectorInstance>
     protected HashMap<String, HashMap<String, IConnectorClient>> connectorTenantMap = new HashMap<>();
+    // ConnectorId, <Property, PropertyDefinition>
+    protected Map<String, Map<String, ConnectorPropertyDefinition>> connectorPropertyMap = new HashMap<>();
+
+    public void registerConnector(String connectorId, Map<String, ConnectorPropertyDefinition> properties) {
+        connectorPropertyMap.put(connectorId, properties);
+    }
+    public Map<String, ConnectorPropertyDefinition> getConnectorPropertyDefinition(String connectorId) {
+        return connectorPropertyMap.get(connectorId);
+    }
+
+    public Map<String, Map<String, ConnectorPropertyDefinition>> getAllConnectorPropertyDefinition() {
+        return connectorPropertyMap;
+    }
+
     public void registerClient(String tenantId, IConnectorClient client) throws ConnectorRegistryException {
         if(tenantId == null)
             throw new ConnectorRegistryException("TenantId is missing!");

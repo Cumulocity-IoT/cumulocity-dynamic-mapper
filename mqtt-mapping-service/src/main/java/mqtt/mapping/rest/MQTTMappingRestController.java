@@ -22,7 +22,6 @@
 package mqtt.mapping.rest;
 
 import com.cumulocity.microservice.context.ContextService;
-import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,15 +30,15 @@ import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.ConnectorProperty;
 import mqtt.mapping.connector.core.ConnectorPropertyConfiguration;
+import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
+import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
 import mqtt.mapping.core.*;
-import mqtt.mapping.model.*;
 import mqtt.mapping.model.Mapping;
-
+import mqtt.mapping.model.*;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -120,19 +119,13 @@ public class MQTTMappingRestController {
         HashMap<String, IConnectorClient> clients = null;
         String tenant = contextService.getContext().getTenant();
         List<ConnectorPropertyConfiguration> connectorConfigurations = new ArrayList<>();
-        try {
-            clients = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
-        } catch (ConnectorRegistryException e) {
-            log.error("Tenant {} - Could not get Configuration Properties:", tenant, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
-        }
         log.info("Tenant {} - Getting connection properties...", tenant);
-        if (clients != null) {
-            for (IConnectorClient client : clients.values()) {
-                ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(client.getConntectorIdent(),
-                        client.getConfigProperties());
-                connectorConfigurations.add(config);
-            }
+        Map<String, Map<String, ConnectorPropertyDefinition>> spec = connectorRegistry.getAllConnectorPropertyDefinition();
+        //Iterate over all connectors
+        for (String connectorId : spec.keySet()) {
+            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(connectorId,
+                    spec.get(connectorId));
+            connectorConfigurations.add(config);
         }
         return ResponseEntity.ok(connectorConfigurations);
     }
@@ -174,17 +167,9 @@ public class MQTTMappingRestController {
             for (ConnectorConfiguration config : configurations) {
                 ConnectorConfiguration clonedConfig = (ConnectorConfiguration) config.clone();
                 for (String property : clonedConfig.getProperties().keySet()) {
-                    try {
-                        IConnectorClient client = connectorRegistry.getClientForTenant(
-                                contextService.getContext().getTenant(), clonedConfig.getConnectorId());
-                        if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties()
-                                .get(property).property) {
-                            clonedConfig.getProperties().replace(property, "");
-                        }
-
-                    } catch (ConnectorRegistryException e) {
-                        log.error("Tenant {} - Could not get Configuration Properties:", tenant, e);
-                        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+                    Map<String, ConnectorPropertyDefinition> spec = connectorRegistry.getConnectorPropertyDefinition(config.getConnectorId());
+                    if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == spec.get(property).property) {
+                        clonedConfig.getProperties().replace(property, "");
                     }
                 }
                 modifiedConfigs.add(clonedConfig);
@@ -211,6 +196,8 @@ public class MQTTMappingRestController {
                     tenant);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getIdent());
+            if(client == null)
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident "+ident+ " not found");
             client.disconnect();
             bootstrapService.shutdownConnector(tenant, ident);
             connectorConfigurationComponent.deleteConnectionConfiguration(ident);
@@ -223,7 +210,7 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ConnectorConfiguration> updateConnectionConfiguration(@PathVariable String ident,
-            @Valid @RequestBody ConnectorConfiguration configuration) {
+                                                                                @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         log.info("Update connection instance {}", ident);
         // make sure we are using the correct ident
@@ -256,16 +243,9 @@ public class MQTTMappingRestController {
         // log.info("Tenant {} - Configuration Properties:{}, {}", tenant,
         // configuration, clonedConfig);
         for (String property : clonedConfig.getProperties().keySet()) {
-            try {
-                IConnectorClient client = connectorRegistry.getClientForTenant(tenant,
-                        clonedConfig.getIdent());
-                if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties()
-                        .get(property).property) {
-                    clonedConfig.getProperties().replace(property, "****");
-                }
-            } catch (ConnectorRegistryException e) {
-                log.error("Tenant {} - Could not get Configuration Properties:", tenant, e);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+            Map<String, ConnectorPropertyDefinition> connectorProperties = connectorRegistry.getConnectorPropertyDefinition(configuration.connectorId);
+            if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == connectorProperties.get(property).property) {
+                clonedConfig.getProperties().replace(property, "****");
             }
         }
         return clonedConfig;
@@ -519,8 +499,8 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-            @RequestParam URI topic, @RequestParam String connectorIdent,
-            @Valid @RequestBody Map<String, Object> payload) {
+                                                                     @RequestParam URI topic, @RequestParam String connectorIdent,
+                                                                     @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         List<ProcessingContext<?>> result = null;
         log.info("Tenant {} - Test payload: {}, {}, {}", contextService.getContext().getTenant(), path, method,

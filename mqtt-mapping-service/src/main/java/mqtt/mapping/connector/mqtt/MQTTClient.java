@@ -22,7 +22,6 @@
 package mqtt.mapping.connector.mqtt;
 
 import com.cumulocity.microservice.context.credentials.Credentials;
-import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -82,7 +81,7 @@ import java.util.concurrent.Future;
 public class MQTTClient implements IConnectorClient {
 
     public MQTTClient(Credentials credentials, String tenantId, MappingComponent mappingComponent, ConnectorConfigurationComponent connectorConfigurationComponent, ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool, ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
-        setConfigProperties();
+        //setConfigProperties();
         this.credentials = credentials;
         this.tenantId = tenantId;
         this.mappingComponent = mappingComponent;
@@ -101,7 +100,20 @@ public class MQTTClient implements IConnectorClient {
 
     private static final String CONNECTOR_ID = "MQTT";
 
-    private Map<String, ConnectorPropertyDefinition> configProps = new HashMap<>();
+    @Getter
+    public static Map<String, ConnectorPropertyDefinition> configProps;
+    static {
+        configProps = new HashMap<>();
+        configProps.put("mqttHost", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
+        configProps.put("mqttPort", new ConnectorPropertyDefinition(true, ConnectorProperty.NUMERIC_PROPERTY));
+        configProps.put("user", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+        configProps.put("password", new ConnectorPropertyDefinition((false), ConnectorProperty.SENSITIVE_STRING_PROPERTY));
+        configProps.put("clientId", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
+        configProps.put("useTLS", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+        configProps.put("useSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+        configProps.put("fingerprintSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+        configProps.put("nameCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+    }
 
     private String tenantId;
 
@@ -193,19 +205,6 @@ public class MQTTClient implements IConnectorClient {
             firstRun = false;
         }
         return true;
-    }
-
-
-    private void setConfigProperties() {
-        this.configProps.put("mqttHost", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
-        this.configProps.put("mqttPort", new ConnectorPropertyDefinition(true, ConnectorProperty.NUMERIC_PROPERTY));
-        this.configProps.put("user", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
-        this.configProps.put("password", new ConnectorPropertyDefinition((false), ConnectorProperty.SENSITIVE_STRING_PROPERTY));
-        this.configProps.put("clientId", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
-        this.configProps.put("useTLS", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
-        this.configProps.put("useSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
-        this.configProps.put("fingerprintSelfSignedCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
-        this.configProps.put("nameCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
     }
 
     @Override
