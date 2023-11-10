@@ -15,7 +15,7 @@ public class ConnectorConfiguration implements Cloneable {
         super();
     }
 
-        @NotNull
+    @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     @JsonProperty("ident")
     public String ident;

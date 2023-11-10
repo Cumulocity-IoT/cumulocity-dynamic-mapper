@@ -47,7 +47,6 @@ import {
   Status,
 } from "../shared/mapping.model";
 import { BehaviorSubject, Observable } from "rxjs";
-import { v4 as uuidv4 } from "uuid";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
@@ -97,7 +96,6 @@ export class BrokerConfigurationService {
   async createConnectionConfiguration(
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
-    configuration.ident = uuidv4();
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
       {
@@ -144,7 +142,7 @@ export class BrokerConfigurationService {
   }
 
 
-  async getConnectionConfigurations(): Promise<ConnectorConfiguration[]> {
+  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
       {

@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 import { Component, OnInit } from "@angular/core";
-import { FormControl, FormGroup, Validators } from "@angular/forms";
+import { FormControl, FormGroup } from "@angular/forms";
 import { BrokerConfigurationService } from "./broker-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
@@ -38,6 +38,7 @@ import {
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
+import { v4 as uuidv4 } from "uuid";
 
 @Component({
   selector: "mapping-broker-configuration",
@@ -52,9 +53,8 @@ export class BrokerConfigurationComponent implements OnInit {
   subscription: any;
   serviceForm: FormGroup;
   feature: Feature;
-  connectorId: String;
-  specifications: ConnectorPropertyConfiguration[];
-  configurations: ConnectorConfiguration[];
+  specifications: ConnectorPropertyConfiguration[] = [];
+  configurations: ConnectorConfiguration[] = [];
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -109,18 +109,19 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   private async loadData(): Promise<void> {
-    let conf = await this.configurationService.getServiceConfiguration();
+    let sc = await this.configurationService.getServiceConfiguration();
     this.specifications =
       await this.configurationService.getConnectorSpecifications();
-    if (conf) {
-      this.serviceConfiguration = conf;
+    this.configurations =
+      await this.configurationService.getConnectorConfigurations();
+    if (sc) {
+      this.serviceConfiguration = sc;
     }
   }
 
   async clickedReconnect2NotificationEnpoint() {
     const response1 = await this.configurationService.runOperation(
-      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
-      { connectorId: this.connectorId }
+      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS
     );
     console.log("Details reconnect2NotificationEnpoint", response1);
     if (response1.status === 201) {
@@ -159,7 +160,7 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async onConfigurationAdd() {
-    const configuration = {};
+    const configuration: Partial<ConnectorConfiguration> = { properties: {}, ident :uuidv4()};
     const initialState = {
       add: true,
       configuration: configuration,
@@ -188,10 +189,10 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async onConfigurationToogle(index) {
-    const con = this.configurations[index];
+    const configuration = this.configurations[index];
     const response1 = await this.configurationService.runOperation(
-      con.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorId: this.connectorId }
+      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
+      { connectorId: configuration.connectorId }
     );
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToBroker", response1, response2)
@@ -204,33 +205,20 @@ export class BrokerConfigurationComponent implements OnInit {
     }
   }
 
-  private showTerminateConnectionModal() {
-    const terminateExistingConnectionModalRef: BsModalRef =
-      this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
-    terminateExistingConnectionModalRef.content.closeSubject.subscribe(
-      async (isTerminateConnection: boolean) => {
-        console.log("Termination result:", isTerminateConnection);
-        if (!isTerminateConnection) {
-        } else {
-          await this.disconnectFromBroker();
-        }
-        terminateExistingConnectionModalRef.hide();
-      }
-    );
-  }
-
-  private async disconnectFromBroker() {
-    const res = await this.configurationService.runOperation(
-      Operation.DISCONNECT,
-      { connectorId: this.connectorId }
-    );
-    console.log("Details disconnectFromMQTT", res);
-    if (res.status < 300) {
-      this.alert.success(gettext("Successfully disconnected"));
-    } else {
-      this.alert.danger(gettext("Failed to disconnect"));
-    }
-  }
+  // private showTerminateConnectionModal() {
+  //   const terminateExistingConnectionModalRef: BsModalRef =
+  //     this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
+  //   terminateExistingConnectionModalRef.content.closeSubject.subscribe(
+  //     async (isTerminateConnection: boolean) => {
+  //       console.log("Termination result:", isTerminateConnection);
+  //       if (!isTerminateConnection) {
+  //       } else {
+  //         await this.disconnectFromBroker();
+  //       }
+  //       terminateExistingConnectionModalRef.hide();
+  //     }
+  //   );
+  // }
 
   public async resetStatusMapping() {
     const res = await this.configurationService.runOperation(
