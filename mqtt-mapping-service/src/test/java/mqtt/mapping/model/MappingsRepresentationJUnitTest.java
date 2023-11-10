@@ -152,13 +152,6 @@ public class MappingsRepresentationJUnitTest {
 
 
   @Test
-  void testMQTTConfigurationIsEnabled() {
-    ConnectorConfiguration conf = null;
-    log.info("My configuration is active: {}", conf.isEnabled());
-    assertEquals(false, conf.isEnabled());
-  }
-
-  @Test
   void testNeedsRepair() {
 
     ProcessingContext<String> p1 = new ProcessingContext<String>();
