@@ -47,7 +47,7 @@ export class BrokerConfigurationComponent implements OnInit {
   version: string = packageJson.version;
   isBrokerConnected: boolean;
   isConnectionEnabled: boolean;
-  isBrokerAgentCreated$: Observable<boolean>;
+  isBrokerAgentCreated$: Observable<boolean> = new Observable();
   monitorings$: Observable<ServiceStatus>;
   subscription: any;
   serviceForm: FormGroup;
@@ -117,11 +117,6 @@ export class BrokerConfigurationComponent implements OnInit {
     }
   }
 
-
-  async clickedDisconnect() {
-    this.showTerminateConnectionModal();
-  }
-
   async clickedReconnect2NotificationEnpoint() {
     const response1 = await this.configurationService.runOperation(
       Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
@@ -184,7 +179,9 @@ export class BrokerConfigurationComponent implements OnInit {
         if (response.status < 300) {
           this.alert.success(gettext("Added successfully configuration"));
         } else {
-          this.alert.danger(gettext("Failed to update connector configuration"));
+          this.alert.danger(
+            gettext("Failed to update connector configuration")
+          );
         }
       }
     });
@@ -251,5 +248,19 @@ export class BrokerConfigurationComponent implements OnInit {
     this.configurationService.unsubscribeFromMonitoringChannel(
       this.subscription
     );
+  }
+
+  async clickedSaveServiceConfiguration() {
+    let conf: ServiceConfiguration = {
+      ...this.serviceConfiguration,
+    };
+    const response = await this.configurationService.updateServiceConfiguration(
+      conf
+    );
+    if (response.status < 300) {
+      this.alert.success(gettext("Update successful"));
+    } else {
+      this.alert.danger(gettext("Failed to update service configuration"));
+    }
   }
 }
