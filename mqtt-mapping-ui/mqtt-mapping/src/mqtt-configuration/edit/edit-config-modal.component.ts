@@ -11,21 +11,21 @@ import {
 @Component({
   selector: "my-modal",
   template: ` <c8y-modal
-    title="Edit properties of configuration"
+    title="Edit properties broker configuration"
     (onClose)="onSave($event)"
     (onDismiss)="onDismiss($event)"
     [labels]="labels"
     [headerClasses]="'modal-header dialog-header'"
   >
     <div class="card-block">
-      <div  [formGroup]="brokerFormly" *ngIf="add">
+      <div [formGroup]="brokerFormly" *ngIf="add">
         <formly-form
           [form]="brokerFormly"
           [fields]="brokerFormlyFields"
           [model]="brokerConfigModel"
         ></formly-form>
       </div>
-      <div class="card-block" [formGroup]="dynamicFormly">
+      <div [formGroup]="dynamicFormly">
         <formly-form
           [form]="dynamicFormly"
           [fields]="dynamicFormlyFields"
