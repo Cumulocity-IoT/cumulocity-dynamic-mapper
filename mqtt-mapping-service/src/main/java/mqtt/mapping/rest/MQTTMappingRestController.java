@@ -254,8 +254,8 @@ public class MQTTMappingRestController {
         //log.info("Tenant {} - Configuration Properties:{}, {}", tenant, configuration, clonedConfig);
         for (String property : clonedConfig.getProperties().keySet()) {
             try {
-                IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
-                        clonedConfig.getConnectorId());
+                IConnectorClient client = connectorRegistry.getClientForTenant(tenant,
+                        clonedConfig.getIdent());
                 if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == client.getConfigProperties()
                         .get(property).property) {
                     clonedConfig.getProperties().replace(property, "****");
