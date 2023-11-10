@@ -111,7 +111,6 @@ public class MQTTMappingRestController {
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 
-    // TODO Implement this in UI
     @RequestMapping(value = "/configuration/connector/specifications", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectorSpecification() {
         HashMap<String, IConnectorClient> clients = null;
@@ -132,7 +131,6 @@ public class MQTTMappingRestController {
         return ResponseEntity.ok(connectorConfigurations);
     }
 
-    // TODO Adapt this in UI
     @RequestMapping(value = "/configuration/connector/instance", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> createConnectionConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
@@ -160,7 +158,6 @@ public class MQTTMappingRestController {
         }
     }
 
-    // TODO Adapt this structure in UI
     @RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations() {
         log.info("Get connection details");
@@ -197,7 +194,6 @@ public class MQTTMappingRestController {
         }
     }
 
-    // TODO Implement this in backend
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
         log.info("Delete connection instance {}", ident);
@@ -209,7 +205,6 @@ public class MQTTMappingRestController {
                     "Insufficient Permission, user does not have required permission to access this API");
         }
         try {
-
             ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(ident, tenant);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getConnectorId());
@@ -310,13 +305,9 @@ public class MQTTMappingRestController {
         }
     }
 
-    // TODO Change UI to add connectorId to the params section of the Operation at
-    // least for the operations where the connector is involved: connect,
-    // disconnect, subscriber reconnect
+
     @RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
-        // TODO ConnectorId must be added to the Parameter of the Operations from the
-        // UI.
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Post operation: {}", tenant, operation.toString());
         try {
@@ -327,7 +318,6 @@ public class MQTTMappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                // String connectorId = operation.getParameter().get("connectorId");
                 HashMap<String, IConnectorClient> connectorMap = connectorRegistry
                         .getClientsForTenant(contextService.getContext().getTenant());
                 for (IConnectorClient client : connectorMap.values()) {
@@ -352,10 +342,8 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
-                // TODO iterate over all clients
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-                // TODO iterate over all clients
                 c8yAgent.notificationSubscriberReconnect(tenant);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
