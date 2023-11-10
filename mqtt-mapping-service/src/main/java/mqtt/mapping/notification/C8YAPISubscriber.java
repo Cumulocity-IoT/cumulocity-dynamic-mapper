@@ -134,14 +134,16 @@ public class C8YAPISubscriber {
         try {
             HashMap<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
             //For multiple connectors register for each a separate dispatcher
-            for (IConnectorClient connectorClient : connectorMap.values()) {
-                AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
-                dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorIdent(), dispatcherOutbound);
-            }
-            logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
-            if (outputMappingEnabled) {
-                initTenantClient();
-                initDeviceClient();
+            if(connectorMap != null) {
+                for (IConnectorClient connectorClient : connectorMap.values()) {
+                    AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
+                    dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorIdent(), dispatcherOutbound);
+                }
+                logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
+                if (outputMappingEnabled) {
+                    initTenantClient();
+                    initDeviceClient();
+                }
             }
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
