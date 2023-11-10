@@ -62,11 +62,11 @@ public class ConnectorConfigurationComponent {
         this.tenantOptionApi = tenantOptionApi;
     }
 
-    public String getConnectorOptionKey(String connectorId) {
-        return OPTION_KEY_CONNECTION_CONFIGURATION + "." + connectorId;
+    public String getConnectorOptionKey(String ident) {
+        return OPTION_KEY_CONNECTION_CONFIGURATION + "." + ident;
     }
 
-    public void saveConnectionConfiguration(final ConnectorConfiguration configuration)
+    public void saveConnectorConfiguration(final ConnectorConfiguration configuration)
             throws JsonProcessingException {
         if (configuration == null) {
             return;
@@ -115,7 +115,7 @@ public class ConnectorConfigurationComponent {
         return result;
     }
 
-    public List<ConnectorConfiguration> loadAllConnectorConfiguration(String tenant) {
+    public List<ConnectorConfiguration> getConnectorConfigurations(String tenant) {
         final OptionPK option = new OptionPK();
         final List<ConnectorConfiguration> connectorConfigurations = new ArrayList<>();
         subscriptionsService.runForTenant(tenant, () -> {
@@ -144,8 +144,8 @@ public class ConnectorConfigurationComponent {
         return connectorConfigurations;
     }
 
-    public void deleteAllConfiguration(String tenant) {
-        List<ConnectorConfiguration> configs = loadAllConnectorConfiguration(tenant);
+    public void deleteConcetorConfigurations(String tenant) {
+        List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
         for (ConnectorConfiguration config : configs) {
             OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
                     getConnectorOptionKey(config.getConnectorId()));

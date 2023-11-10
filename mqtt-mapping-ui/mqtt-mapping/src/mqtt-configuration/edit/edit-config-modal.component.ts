@@ -4,8 +4,10 @@ import { Subject } from "rxjs";
 import { FormlyFieldConfig } from "@ngx-formly/core";
 import { FormGroup } from "@angular/forms";
 import {
+  ConnectorConfiguration,
   ConnectorProperty,
   ConnectorPropertyConfiguration,
+  ConnectorPropertyDefinition,
 } from "../../shared/mapping.model";
 
 @Component({
@@ -22,7 +24,7 @@ import {
         <formly-form
           [form]="brokerFormly"
           [fields]="brokerFormlyFields"
-          [model]="brokerConfigModel"
+          s
         ></formly-form>
       </div>
       <div [formGroup]="dynamicFormly">
@@ -38,7 +40,7 @@ import {
 export class EditConfigurationComponent implements OnInit {
   @Output() closeSubject: Subject<any> = new Subject();
   @Input() add: boolean;
-  @Input() configuration: any;
+  @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorPropertyConfiguration[];
   brokerFormlyFields: FormlyFieldConfig[] = [];
   brokerFormly: FormGroup = new FormGroup({});
@@ -48,28 +50,29 @@ export class EditConfigurationComponent implements OnInit {
 
   ngOnInit(): void {
     this.brokerFormlyFields = [
-          {
-            className: "col-lg-12",
-            key: "connectorId",
-            type: "select",
-            wrappers: ["c8y-form-field"],
-            templateOptions: {
-              label: "Connector Id",
-              options: this.specifications.map((sp) => {
-                return {
-                  label: sp.connectorId,
-                  value: sp.connectorId,
-                };
-              }),
-              change: (field: FormlyFieldConfig, event?: any) => {
-                this.createDynamicForm(
-                  this.brokerFormly.get("connectorId").value
-                );
-              },
-              required: true,
-            },
+      {
+        className: "col-lg-12",
+        key: "connectorId",
+        type: "select",
+        wrappers: ["c8y-form-field"],
+        templateOptions: {
+          label: "Connector Id",
+          options: this.specifications.map((sp) => {
+            return {
+              label: sp.connectorId,
+              value: sp.connectorId,
+            };
+          }),
+          change: (field: FormlyFieldConfig, event?: any) => {
+            this.createDynamicForm(this.brokerFormly.get("connectorId").value);
           },
+          required: true,
+        },
+      },
     ];
+    if (!this.add) {
+      this.createDynamicForm(this.configuration.connectorId);
+    }
   }
 
   onDismiss(event) {
@@ -85,6 +88,8 @@ export class EditConfigurationComponent implements OnInit {
   private async createDynamicForm(connectorId: string): Promise<void> {
     const dynamicFields: ConnectorPropertyConfiguration =
       this.specifications.find((c) => c.connectorId == connectorId);
+
+    this.configuration.connectorId = connectorId;
 
     this.dynamicFormlyFields.push({
       fieldGroup: [
@@ -109,7 +114,7 @@ export class EditConfigurationComponent implements OnInit {
             fieldGroup: [
               {
                 className: "col-lg-12",
-                key: key,
+                key: `properties.${key}`,
                 type: "input",
                 wrappers: ["c8y-form-field"],
                 templateOptions: {
@@ -126,7 +131,7 @@ export class EditConfigurationComponent implements OnInit {
             fieldGroup: [
               {
                 className: "col-lg-12",
-                key: key,
+                key: `properties.${key}`,
                 type: "input",
                 wrappers: ["c8y-form-field"],
                 templateOptions: {
@@ -144,7 +149,7 @@ export class EditConfigurationComponent implements OnInit {
             fieldGroup: [
               {
                 className: "col-lg-12",
-                key: key,
+                key: `properties.${key}`,
                 type: "input",
                 wrappers: ["c8y-form-field"],
                 templateOptions: {
@@ -161,7 +166,7 @@ export class EditConfigurationComponent implements OnInit {
             fieldGroup: [
               {
                 className: "col-lg-12",
-                key: key,
+                key: `properties.${key}`,
                 type: "switch",
                 wrappers: ["c8y-form-field"],
                 templateOptions: {

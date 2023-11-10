@@ -132,7 +132,7 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/connector/instance", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<HttpStatus> createConnectionConfiguration(
+    public ResponseEntity<HttpStatus> createConnectorConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
@@ -146,8 +146,7 @@ public class MQTTMappingRestController {
         ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-
-            connectorConfigurationComponent.saveConnectionConfiguration(configuration);
+            connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getConnectorId());
             client.reconnect();
@@ -165,7 +164,7 @@ public class MQTTMappingRestController {
 
         try {
             List<ConnectorConfiguration> configurations = connectorConfigurationComponent
-                    .loadAllConnectorConfiguration(contextService.getContext().getTenant());
+                    .getConnectorConfigurations(contextService.getContext().getTenant());
             List<ConnectorConfiguration> modifiedConfigs = new ArrayList<>();
 
             // Remove sensitive data before sending to UI
@@ -235,7 +234,7 @@ public class MQTTMappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
 
-            connectorConfigurationComponent.saveConnectionConfiguration(configuration);
+            connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     configuration.getConnectorId());
             client.reconnect();
@@ -248,6 +247,7 @@ public class MQTTMappingRestController {
 
     private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration, String tenant) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
+        //log.info("Tenant {} - Configuration Properties:{}, {}", tenant, configuration, clonedConfig);
         for (String property : clonedConfig.getProperties().keySet()) {
             try {
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),

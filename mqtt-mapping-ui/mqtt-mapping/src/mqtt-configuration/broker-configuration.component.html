@@ -77,16 +77,17 @@
                 <td>
                   <span class="text-12">{{ con.connectorId }} </span>
                 </td>
-                <td width="8%">
+                <td width="20%">
                   {{ con.name }}
                 </td>
-                <td width="8%">
+                <td width="10%">
                   {{ con.enabled }}
                 </td>
-                <td width="8%">
+                <td width="25%">
                   <button
                     title="{{ 'Remove' | translate }}"
                     class="btn btn-icon btn-clean"
+                    style="max-height:16px"
                     (click)="onConfigurationDelete(i)"
                     [attr.disabled]="con.enabled"
                   >
@@ -96,6 +97,7 @@
                   <button
                     title="{{ 'Toggle Activation' | translate }}"
                     class="btn btn-icon btn-clean"
+                    style="max-height:16px"
                     (click)="onConfigurationToogle(i)"
                   >
                     <i c8yIcon="toggle-on" class="text-danger"></i>
@@ -104,6 +106,7 @@
                   <button
                     title="{{ 'Update' | translate }}"
                     class="btn btn-icon btn-clean"
+                    style="max-height:16px"
                     (click)="onConfigurationUpdate(i)"
                   >
                     <i c8yIcon="pencil" class="text-danger"></i>
