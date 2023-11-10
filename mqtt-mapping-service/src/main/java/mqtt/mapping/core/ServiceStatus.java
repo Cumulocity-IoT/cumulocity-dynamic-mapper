@@ -29,7 +29,7 @@ import lombok.Data;
 public class ServiceStatus {
     private Status status;
     private String tenantId;
-    private String connectorId;
+    private String connectorIdent;
 
     public ServiceStatus(Status status){
         this.status = status;

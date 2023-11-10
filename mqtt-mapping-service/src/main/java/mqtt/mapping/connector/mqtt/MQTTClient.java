@@ -171,7 +171,7 @@ public class MQTTClient implements IConnectorClient {
     private boolean initialize() {
         var firstRun = true;
         while (!canConnect()) {
-            //this.configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorId());
+            //this.configuration = connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorIdent());
             if (!firstRun) {
                 try {
                     log.info("Tenant {} - Retrieving MQTT configuration in {}s ...", tenantId,
@@ -212,7 +212,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private void reloadConfiguration() {
-        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorId(), tenantId);
+        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenantId);
     }
 
     public void submitConnect() {
@@ -403,14 +403,19 @@ public class MQTTClient implements IConnectorClient {
         return CONNECTOR_ID;
     }
 
+    @Override
+    public String getConntectorIdent() {
+        return configuration.ident;
+    }
+
     public void disconnectFromBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorId(), false);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), false);
         disconnect();
         mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }
 
     public void connectToBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorId(), true);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), true);
         submitConnect();
         mappingComponent.sendStatusService(tenantId, getServiceStatus());
     }

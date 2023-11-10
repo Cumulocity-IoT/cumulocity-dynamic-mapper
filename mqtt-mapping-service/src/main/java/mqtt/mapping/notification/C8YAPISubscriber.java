@@ -136,7 +136,7 @@ public class C8YAPISubscriber {
             //For multiple connectors register for each a separate dispatcher
             for (IConnectorClient connectorClient : connectorMap.values()) {
                 AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
-                dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorId(), dispatcherOutbound);
+                dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorIdent(), dispatcherOutbound);
             }
             logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
             if (outputMappingEnabled) {
@@ -174,9 +174,9 @@ public class C8YAPISubscriber {
             try {
                 //For each dispatcher/connector create a new connection
                 for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorId() + additionalSubscriptionIdTest);
+                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorIdent() + additionalSubscriptionIdTest);
                     CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
+                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorIdent(), client);
                 }
 
             } catch (URISyntaxException e) {
@@ -232,9 +232,9 @@ public class C8YAPISubscriber {
                 try {
                     //Add Dispatcher for each Connector
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorId() + additionalSubscriptionIdTest);
+                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorIdent() + additionalSubscriptionIdTest);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorId(), client);
+                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorIdent(), client);
                     }
 
                 } catch (URISyntaxException e) {

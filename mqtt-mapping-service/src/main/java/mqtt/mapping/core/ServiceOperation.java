@@ -42,9 +42,9 @@ public class ServiceOperation {
     public static ServiceOperation reloadMappings(String tenantId) {
         return new ServiceOperation(tenantId, Operation.RELOAD_MAPPINGS, null);
     }   
-    public static ServiceOperation connect(String tenantId, String connectorId) {
+    public static ServiceOperation connect(String tenantId, String connectorIdent) {
         HashMap<String, String> params = new HashMap<>();
-        params.put("connectorId", connectorId);
+        params.put("connectorIdent", connectorIdent);
         return new ServiceOperation(tenantId, Operation.CONNECT, params);
     }
     public static ServiceOperation reloadExtensions(String tenantId) {
