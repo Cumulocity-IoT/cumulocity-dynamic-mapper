@@ -29,12 +29,13 @@ import {
 import {
   AGENT_ID,
   BASE_URL,
+  CONNECTOR_STATUS_FRAGMENT,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
-  PATH_STATUS_SERVICE_ENDPOINT,
+  PATH_STATUS_CONNECTOR_ENDPOINT,
 } from "../shared/util";
 import {
   ConnectorConfiguration,
@@ -43,7 +44,7 @@ import {
   Feature,
   Operation,
   ServiceConfiguration,
-  ServiceStatus,
+  ConnectorStatus,
   Status,
 } from "../shared/mapping.model";
 import { BehaviorSubject, Observable } from "rxjs";
@@ -55,10 +56,10 @@ export class BrokerConfigurationService {
   }
 
   private agentId: string;
-  private serviceStatus = new BehaviorSubject<ServiceStatus>({
+  private connectorStatus = new BehaviorSubject<ConnectorStatus>({
     status: Status.NOT_READY,
   });
-  private _currentServiceStatus = this.serviceStatus.asObservable();
+  private _currentConnectorStatus = this.connectorStatus.asObservable();
   private _feature: Feature;
   private realtime: Realtime;
 
@@ -179,9 +180,9 @@ export class BrokerConfigurationService {
     return (await response.json()) as ServiceConfiguration;
   }
 
-  async getConnectionStatus(): Promise<ServiceStatus> {
+  async getConnectionStatus(): Promise<ConnectorStatus> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_STATUS_SERVICE_ENDPOINT}`,
+      `${BASE_URL}/${PATH_STATUS_CONNECTOR_ENDPOINT}`,
       {
         method: "GET",
       }
@@ -190,8 +191,8 @@ export class BrokerConfigurationService {
     return result;
   }
 
-  public getCurrentServiceStatus(): Observable<ServiceStatus> {
-    return this._currentServiceStatus;
+  public getCurrentConnectorStatus(): Observable<ConnectorStatus> {
+    return this._currentConnectorStatus;
   }
 
   async getFeatures(): Promise<Feature> {
@@ -211,7 +212,7 @@ export class BrokerConfigurationService {
     this.agentId = await this.initializeBrokerAgent();
     console.log("Started subscription:", this.agentId);
     this.getConnectionStatus().then((status) => {
-      this.serviceStatus.next(status);
+      this.connectorStatus.next(status);
     });
     return this.realtime.subscribe(
       `/managedobjects/${this.agentId}`,
@@ -225,9 +226,9 @@ export class BrokerConfigurationService {
 
   private updateStatus(p: object): void {
     let payload = p["data"]["data"];
-    let status: ServiceStatus = payload["service_status"];
-    this.serviceStatus.next(status);
-    //console.log("New monitoring event", status);
+    let status: ConnectorStatus = payload[CONNECTOR_STATUS_FRAGMENT];
+    this.connectorStatus.next(status);
+    console.log("New monitoring event", status);
   }
 
   runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {

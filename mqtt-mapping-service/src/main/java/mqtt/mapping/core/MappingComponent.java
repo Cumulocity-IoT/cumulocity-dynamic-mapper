@@ -71,8 +71,11 @@ public class MappingComponent {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    private HashMap<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
-    private HashMap<String, Boolean> initialized = new HashMap<>();
+    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
+    private Map<String, Boolean> initialized = new HashMap<>();
+
+    @Getter
+    private Map<String, Map<String, String>> consolidatedConnectorStatus = new HashMap<>();
 
     // cache of inbound mappings stored by mapping.id
     @Getter
@@ -80,7 +83,6 @@ public class MappingComponent {
 
     // cache of outbound mappings stored by mapping.id
     private Map<String, Map<String, Mapping>> cacheMappingOutbound = new HashMap<>();
-
 
     // cache of outbound mappings stored by mapping.filterOundbound used for
     // resolving
@@ -93,26 +95,28 @@ public class MappingComponent {
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
-            log.info("Tenant {} - Initializing status: {}, {} ", tenant, mappingServiceRepresentation.getMappingStatus(),
+            log.info("Tenant {} - Initializing status: {}, {} ", tenant,
+                    mappingServiceRepresentation.getMappingStatus(),
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
-                            : mappingServiceRepresentation.getMappingStatus().size()));
+                                    : mappingServiceRepresentation.getMappingStatus().size()));
+            Map<String, MappingStatus> mappingStatus = new HashedMap();
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
-                Map<String, MappingStatus> mappingStatus = new HashedMap();
                 mappingStatus.put(ms.ident, ms);
-                tenantStatusMapping.put(tenant, mappingStatus);
             });
+            tenantStatusMapping.put(tenant, mappingStatus);
         } else {
-            tenantStatusMapping.replace(tenant, new HashMap<String, MappingStatus>());
+            tenantStatusMapping.put(tenant, new HashMap<String, MappingStatus>());
         }
         if (!tenantStatusMapping.get(tenant).containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
-            tenantStatusMapping.get(tenant).put(MappingStatus.IDENT_UNSPECIFIED_MAPPING, MappingStatus.UNSPECIFIED_MAPPING_STATUS);
+            tenantStatusMapping.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.ident,
+                    MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initialized.put(tenant, true);
-        resolverMappingInbound.put(tenant,  InnerNode.createRootNode());
-        if(cacheMappingInbound.get(tenant) == null)
+        resolverMappingInbound.put(tenant, InnerNode.createRootNode());
+        if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
-        if(cacheMappingOutbound.get(tenant) == null)
+        if (cacheMappingOutbound.get(tenant) == null)
             cacheMappingOutbound.put(tenant, new HashMap<>());
     }
 
@@ -121,7 +125,7 @@ public class MappingComponent {
         initializeMappingStatus(tenant, false);
     }
 
-    public void sendStatusMapping(String tenant) {
+    public void sendMappingStatus(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
             boolean initialized = this.initialized.get(tenant);
             Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
@@ -147,28 +151,25 @@ public class MappingComponent {
                 updateMor.setAttrs(service);
                 this.inventoryApi.update(updateMor);
             } else {
-                log.debug("Tenant {} - Ignoring mapping monitoring: {}, initialized: {}", tenant, statusMapping.values().size(),
+                log.debug("Tenant {} - Ignoring mapping monitoring: {}, initialized: {}", tenant,
+                        statusMapping.values().size(),
                         initialized);
             }
         });
     }
 
-    public void sendStatusService(String tenant, ServiceStatus serviceStatus) {
+    public void sendConnectorStatus(String tenant, ConnectorStatus connectorStatus, String connectorIdent) {
         subscriptionsService.runForTenant(tenant, () -> {
-            Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
             MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
-            if ((statusMapping.values().size() > 0) && mappingServiceRepresentation != null) {
-                log.debug("Tenant {} - Sending status configuration: {}", tenant, serviceStatus);
-                Map<String, String> entry = Map.of("status", serviceStatus.getStatus().name());
-                Map<String, Object> service = new HashMap<String, Object>();
-                service.put(MappingServiceRepresentation.SERVICE_STATUS_FRAGMENT, entry);
-                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-                updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
-                updateMor.setAttrs(service);
-                this.inventoryApi.update(updateMor);
-            } else {
-                log.debug("Ignoring status monitoring: {}", serviceStatus);
-            }
+            log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
+            Map<String, String> ccs = consolidatedConnectorStatus.getOrDefault(tenant, new HashMap<String, String>());
+            ccs.put(connectorIdent, connectorStatus.getStatus().name());
+            Map<String, Object> service = new HashMap<String, Object>();
+            service.put(MappingServiceRepresentation.CONNECTOR_STATUS_FRAGMENT, ccs);
+            ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+            updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+            updateMor.setAttrs(service);
+            this.inventoryApi.update(updateMor);
         });
     }
 
@@ -220,7 +221,8 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
             if (m.getC8yMQTTMapping().isActive()) {
-                throw new IllegalArgumentException("Tenant "+tenant+" - Mapping "+id+" is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + id
+                        + " is still active, deactivate mapping before deleting!");
             }
             // mapping is deactivated and we can delete it
             inventoryApi.delete(GId.asGId(id));
@@ -245,7 +247,8 @@ public class MappingComponent {
         return result;
     }
 
-    public Mapping updateMapping(String tenant, Mapping mapping, boolean allowUpdateWhenActive, boolean ignoreValidation)
+    public Mapping updateMapping(String tenant, Mapping mapping, boolean allowUpdateWhenActive,
+            boolean ignoreValidation)
             throws Exception {
         // test id the mapping is active, we don't delete or modify active mappings
         MutableObject<Exception> exception = new MutableObject<Exception>(null);
@@ -253,7 +256,8 @@ public class MappingComponent {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
-                throw new IllegalArgumentException("Tenant "+tenant+" - Mapping "+mapping.id+" is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + mapping.id
+                        + " is still active, deactivate mapping before deleting!");
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant);
@@ -347,10 +351,10 @@ public class MappingComponent {
                 .filter(m -> Direction.OUTBOUND.equals(m.direction))
                 .collect(Collectors.toList());
         log.info("Tenant {} - Loaded mappings outbound: {} to cache", tenant, updatedMappings.size());
-        cacheMappingOutbound.replace(tenant,updatedMappings.stream()
-                        .collect(Collectors.toMap(Mapping::getId, Function.identity())));
+        cacheMappingOutbound.replace(tenant, updatedMappings.stream()
+                .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         resolverMappingOutbound.replace(tenant, updatedMappings.stream()
-                        .collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
+                .collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
     }
 
     public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
@@ -365,10 +369,12 @@ public class MappingComponent {
                 String key = "/" + m.getFilterOutbound().replace('.', '/');
                 JsonNode testNode = message.at(key);
                 if (!testNode.isMissingNode() && m.targetAPI.equals(api)) {
-                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key, message.get("id"));
+                    log.info("Tenant {} - Found mapping key fragment {} in C8Y message {}", tenant, key,
+                            message.get("id"));
                     result.add(m);
                 } else {
-                    log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant, key,
+                    log.debug("Tenant {} - Not matching mapping key fragment {} in C8Y message {}, {}, {}, {}", tenant,
+                            key,
                             m.getFilterOutbound(), message.get("id"), api, message.toPrettyString());
                 }
             }
@@ -448,7 +454,7 @@ public class MappingComponent {
     public void cleanDirtyMappings(String tenant) throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Testing for dirty maps");
-        if(dirtyMappings.get(tenant) != null) {
+        if (dirtyMappings.get(tenant) != null) {
             for (Mapping mapping : dirtyMappings.get(tenant)) {
                 log.info("Tenant {} - Found mapping to be saved: {}, {}", tenant, mapping.id, mapping.snoopStatus);
                 // no reload required
@@ -461,13 +467,13 @@ public class MappingComponent {
     }
 
     private void removeDirtyMapping(String tenant, Mapping mapping) {
-        if(dirtyMappings.get(tenant) == null)
+        if (dirtyMappings.get(tenant) == null)
             dirtyMappings.put(tenant, new HashSet<>());
         dirtyMappings.get(tenant).removeIf(m -> m.id.equals(mapping.id));
     }
 
     public void addDirtyMapping(String tenant, Mapping mapping) {
-        if(dirtyMappings.get(tenant) == null)
+        if (dirtyMappings.get(tenant) == null)
             dirtyMappings.put(tenant, new HashSet<>());
         dirtyMappings.get(tenant).add(mapping);
     }

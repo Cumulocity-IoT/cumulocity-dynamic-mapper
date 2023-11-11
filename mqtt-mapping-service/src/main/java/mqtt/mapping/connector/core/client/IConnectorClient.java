@@ -4,7 +4,7 @@ import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import mqtt.mapping.configuration.ConnectorConfiguration;
-import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.core.ConnectorStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.model.ProcessingContext;
 
@@ -118,9 +118,9 @@ public interface IConnectorClient {
     public Map<String, ConnectorPropertyDefinition> getConfigProperties();
 
     /***
-     * Returning the status of the service based on the predefined ServiceStatus class
+     * Returning the status of the service based on the predefined ConnectorStatus class
      ***/
-    public ServiceStatus getServiceStatus();
+    public ConnectorStatus getConnectorStatus();
 
     /***
      * Checks if the provided configuration is valid

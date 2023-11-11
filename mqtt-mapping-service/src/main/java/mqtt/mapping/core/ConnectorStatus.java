@@ -21,37 +21,40 @@
 
 package mqtt.mapping.core;
 
+import java.io.Serializable;
+
+import javax.validation.constraints.NotNull;
+
 import lombok.Data;
 
 @Data
 // @NoArgsConstructor
 // @AllArgsConstructor
-public class ServiceStatus {
-    private Status status;
-    private String tenant;
-    private String connectorIdent;
+public class ConnectorStatus implements Serializable {
+    @NotNull
+    public Status status;
 
-    public ServiceStatus(Status status){
+    public ConnectorStatus(Status status) {
         this.status = status;
     }
 
-    public ServiceStatus(){
+    public ConnectorStatus() {
         this.status = Status.NOT_READY;
     }
-    
-    public static ServiceStatus connected() {
-        return new ServiceStatus(Status.CONNECTED);
-    }
-    
-    public static ServiceStatus activated() {
-        return new ServiceStatus(Status.ENABLED);
-    }
-    
-    public static ServiceStatus configured() {
-        return new ServiceStatus(Status.CONFIGURED);
+
+    public static ConnectorStatus connected() {
+        return new ConnectorStatus(Status.CONNECTED);
     }
 
-    public static ServiceStatus notReady() {
-        return new ServiceStatus(Status.NOT_READY);
+    public static ConnectorStatus activated() {
+        return new ConnectorStatus(Status.ENABLED);
+    }
+
+    public static ConnectorStatus configured() {
+        return new ConnectorStatus(Status.CONFIGURED);
+    }
+
+    public static ConnectorStatus notReady() {
+        return new ConnectorStatus(Status.NOT_READY);
     }
 }

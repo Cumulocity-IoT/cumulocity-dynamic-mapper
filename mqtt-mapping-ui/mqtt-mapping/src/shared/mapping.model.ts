@@ -102,7 +102,7 @@ export interface MappingStatus {
   snoopedTemplatesActive: number;
 }
 
-export interface ServiceStatus {
+export interface ConnectorStatus {
   status: Status;
 }
 

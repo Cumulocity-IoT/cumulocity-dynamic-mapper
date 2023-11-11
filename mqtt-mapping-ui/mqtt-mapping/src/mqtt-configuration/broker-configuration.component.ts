@@ -33,7 +33,7 @@ import {
   Feature,
   Operation,
   ServiceConfiguration,
-  ServiceStatus,
+  ConnectorStatus,
   Status,
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
@@ -49,7 +49,7 @@ export class BrokerConfigurationComponent implements OnInit {
   isBrokerConnected: boolean;
   isConnectionEnabled: boolean;
   isBrokerAgentCreated$: Observable<boolean> = new Observable();
-  monitorings$: Observable<ServiceStatus>;
+  monitorings$: Observable<ConnectorStatus>;
   subscription: any;
   serviceForm: FormGroup;
   feature: Feature;
@@ -85,7 +85,7 @@ export class BrokerConfigurationComponent implements OnInit {
   private async initializeMonitoringService(): Promise<void> {
     this.subscription =
       await this.configurationService.subscribeMonitoringChannel();
-    this.monitorings$ = this.configurationService.getCurrentServiceStatus();
+    this.monitorings$ = this.configurationService.getCurrentConnectorStatus();
     this.monitorings$.subscribe((status) => {
       this.isBrokerConnected = status.status === Status.CONNECTED;
       this.isConnectionEnabled =

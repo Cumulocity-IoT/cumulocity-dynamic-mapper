@@ -351,13 +351,13 @@ public class MQTTClient extends AConnectorClient {
     public void disconnectFromBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), false);
         disconnect();
-        mappingComponent.sendStatusService(tenant, getServiceStatus());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
     }
 
     public void connectToBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), true);
         submitConnect();
-        mappingComponent.sendStatusService(tenant, getServiceStatus());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
     }
 
     @Override

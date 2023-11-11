@@ -32,7 +32,7 @@ import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.core.ConnectorStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -170,25 +170,25 @@ public abstract class AConnectorClient {
                         statusInitializeTask, isConnected());
             }
             mappingComponent.cleanDirtyMappings(tenant);
-            mappingComponent.sendStatusMapping(tenant);
-            mappingComponent.sendStatusService(tenant, getServiceStatus());
+            mappingComponent.sendMappingStatus(tenant);
+            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
     }
 
-    public ServiceStatus getServiceStatus() {
-        ServiceStatus serviceStatus;
+    public ConnectorStatus getConnectorStatus() {
+        ConnectorStatus connectorStatus;
         if (isConnected()) {
-            serviceStatus = ServiceStatus.connected();
+            connectorStatus = ConnectorStatus.connected();
         } else if (canConnect()) {
-            serviceStatus = ServiceStatus.activated();
+            connectorStatus = ConnectorStatus.activated();
         } else if (isConfigValid(configuration)) {
-            serviceStatus = ServiceStatus.configured();
+            connectorStatus = ConnectorStatus.configured();
         } else {
-            serviceStatus = ServiceStatus.notReady();
+            connectorStatus = ConnectorStatus.notReady();
         }
-        return serviceStatus;
+        return connectorStatus;
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
