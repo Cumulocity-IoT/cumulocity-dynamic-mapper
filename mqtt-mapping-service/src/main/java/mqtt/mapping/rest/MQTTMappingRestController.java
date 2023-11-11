@@ -318,7 +318,9 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.CONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
                 ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(connectorIdent, tenant);   
-                configuration.setEnabled(true);    
+                configuration.setEnabled(true); 
+                connectorConfigurationComponent.saveConnectorConfiguration(configuration);
+   
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                         connectorIdent);
                 client.connect();
