@@ -81,7 +81,7 @@
                   {{ con.name }}
                 </td>
                 <td width="10%">
-                  {{ con.enabled }}
+                  <i style= "text-align:center; width: 100%;" [c8yIcon]="!con.enabled ? 'circle-o' : 'plus-circle-o'" class="m-r-5"></i>
                 </td>
                 <td width="25%">
                   <button
