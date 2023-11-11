@@ -10,11 +10,12 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Map;
 
 @Data
 @ToString()
-public class ConnectorConfiguration implements Cloneable {
+public class ConnectorConfiguration implements Cloneable, Serializable {
 
     public ConnectorConfiguration() {
         super();
@@ -75,6 +76,7 @@ public class ConnectorConfiguration implements Cloneable {
             return null;
         }
         return result;
+        // this way we don't get a deep clone
         // try {
         // return super.clone();
         // } catch (CloneNotSupportedException e) {
