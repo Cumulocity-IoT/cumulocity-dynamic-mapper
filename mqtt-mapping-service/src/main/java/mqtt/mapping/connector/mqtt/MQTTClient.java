@@ -213,7 +213,7 @@ public class MQTTClient extends AConnectorClient {
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
-                        log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenant, password);
+                        //log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenant, password);
                         if (!StringUtils.isEmpty(user)
                                 && !StringUtils.isEmpty(password)) {
                             connOpts.setUserName(user);

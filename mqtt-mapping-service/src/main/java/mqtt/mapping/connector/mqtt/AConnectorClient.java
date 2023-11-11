@@ -109,8 +109,8 @@ public abstract class AConnectorClient {
 
     public void reloadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenant);
-        log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant, configuration,
-                configuration.properties);
+        // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant, configuration,
+        //         configuration.properties);
     }
 
     public void submitConnect() {
