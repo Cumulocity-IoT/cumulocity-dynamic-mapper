@@ -16,6 +16,7 @@ import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.connector.mqtt.MQTTClient;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.processor.PayloadProcessor;
@@ -115,8 +116,8 @@ public class BootstrapService {
         }
     }
 
-    public IConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration, Credentials credentials, String tenant) throws ConnectorRegistryException {
-        IConnectorClient client = null;
+    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration, Credentials credentials, String tenant) throws ConnectorRegistryException {
+        AConnectorClient client = null;
 
 
         if (MQTTClient.getConnectorId().equals(connectorConfiguration.getConnectorId())) {

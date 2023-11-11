@@ -28,7 +28,7 @@ import lombok.Data;
 // @AllArgsConstructor
 public class ServiceStatus {
     private Status status;
-    private String tenantId;
+    private String tenant;
     private String connectorIdent;
 
     public ServiceStatus(Status status){

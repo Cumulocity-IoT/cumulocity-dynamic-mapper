@@ -2,11 +2,11 @@ package mqtt.mapping.connector.core.registry;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
+
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -14,7 +14,7 @@ import java.util.Map;
 public class ConnectorRegistry {
 
     //Structure: Tenant, <Connector Ident, ConnectorInstance>
-    protected HashMap<String, HashMap<String, IConnectorClient>> connectorTenantMap = new HashMap<>();
+    protected HashMap<String, HashMap<String, AConnectorClient>> connectorTenantMap = new HashMap<>();
     // ConnectorId, <Property, PropertyDefinition>
     protected Map<String, Map<String, ConnectorPropertyDefinition>> connectorPropertyMap = new HashMap<>();
 
@@ -29,77 +29,77 @@ public class ConnectorRegistry {
         return connectorPropertyMap;
     }
 
-    public void registerClient(String tenantId, IConnectorClient client) throws ConnectorRegistryException {
-        if(tenantId == null)
-            throw new ConnectorRegistryException("TenantId is missing!");
+    public void registerClient(String tenant, AConnectorClient client) throws ConnectorRegistryException {
+        if(tenant == null)
+            throw new ConnectorRegistryException("tenant is missing!");
         if(client.getConntectorIdent() == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
-        if (connectorTenantMap.get(tenantId) == null) {
-            HashMap<String, IConnectorClient> connectorMap = new HashMap<>();
+        if (connectorTenantMap.get(tenant) == null) {
+            HashMap<String, AConnectorClient> connectorMap = new HashMap<>();
             connectorMap.put(client.getConntectorIdent(), client);
-            connectorTenantMap.put(tenantId, connectorMap);
+            connectorTenantMap.put(tenant, connectorMap);
         } else {
-            HashMap<String, IConnectorClient> connectorMap = connectorTenantMap.get(tenantId);
+            HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if(connectorMap.get(client.getConntectorIdent()) == null) {
-                log.info("Adding new client for tenant {} with id {}...", tenantId, client.getConntectorIdent());
+                log.info("Adding new client for tenant {} with id {}...", tenant, client.getConntectorIdent());
                 connectorMap.put(client.getConntectorIdent(), client);
-                connectorTenantMap.put(tenantId, connectorMap);
+                connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.info("Client {} is already registered for tenant {}!", client.getConntectorIdent(), tenantId);
+                log.info("Client {} is already registered for tenant {}!", client.getConntectorIdent(), tenant);
             }
         }
 
     }
 
-    public HashMap<String, IConnectorClient> getClientsForTenant(String tenantId) throws ConnectorRegistryException {
-        if(tenantId == null)
-            throw new ConnectorRegistryException("TenantId is missing!");
-        if(connectorTenantMap.get(tenantId) != null) {
-            return connectorTenantMap.get(tenantId);
+    public HashMap<String, AConnectorClient> getClientsForTenant(String tenant) throws ConnectorRegistryException {
+        if(tenant == null)
+            throw new ConnectorRegistryException("tenant is missing!");
+        if(connectorTenantMap.get(tenant) != null) {
+            return connectorTenantMap.get(tenant);
         } else {
-            log.info("No Client is registered for tenant {}", tenantId);
+            log.info("No Client is registered for tenant {}", tenant);
             return null;
         }
     }
 
-    public IConnectorClient getClientForTenant(String tenantId, String ident) throws ConnectorRegistryException {
-        if(tenantId == null)
-            throw new ConnectorRegistryException("TenantId is missing!");
+    public AConnectorClient getClientForTenant(String tenant, String ident) throws ConnectorRegistryException {
+        if(tenant == null)
+            throw new ConnectorRegistryException("tenant is missing!");
         if(ident == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
-        if(connectorTenantMap.get(tenantId) != null) {
-            HashMap<String,IConnectorClient> connectorMap = connectorTenantMap.get(tenantId);
+        if(connectorTenantMap.get(tenant) != null) {
+            HashMap<String,AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if(connectorMap.get(ident) != null)
                 return connectorMap.get(ident);
             else {
-                log.info("No Client is registered for tenant {} and connector ident {}", tenantId, ident);
+                log.info("No Client is registered for tenant {} and connector ident {}", tenant, ident);
                 return null;
             }
         } else {
-            log.info("No Client is registered for tenant {}", tenantId);
+            log.info("No Client is registered for tenant {}", tenant);
             return null;
         }
     }
 
-    public void unregisterAllClientsForTenant(String tenantId) throws ConnectorRegistryException {
-        if(tenantId == null)
-            throw new ConnectorRegistryException("TenantId is missing!");
-        if(connectorTenantMap.get(tenantId) != null) {
-            HashMap<String, IConnectorClient> connectorMap = connectorTenantMap.get(tenantId);
-            for (IConnectorClient client : connectorMap.values()) {
-                this.unregisterClient(tenantId, client.getConntectorIdent());
+    public void unregisterAllClientsForTenant(String tenant) throws ConnectorRegistryException {
+        if(tenant == null)
+            throw new ConnectorRegistryException("tenant is missing!");
+        if(connectorTenantMap.get(tenant) != null) {
+            HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
+            for (AConnectorClient client : connectorMap.values()) {
+                this.unregisterClient(tenant, client.getConntectorIdent());
             }
         }
     }
 
-    public void unregisterClient(String tenantId, String ident) throws ConnectorRegistryException {
-        if(tenantId == null)
-            throw new ConnectorRegistryException("TenantId is missing!");
+    public void unregisterClient(String tenant, String ident) throws ConnectorRegistryException {
+        if(tenant == null)
+            throw new ConnectorRegistryException("tenant is missing!");
         if(ident == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
 
-        if(connectorTenantMap.get(tenantId) != null) {
-            HashMap<String, IConnectorClient> connectorMap = connectorTenantMap.get(tenantId);
+        if(connectorTenantMap.get(tenant) != null) {
+            HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if(connectorMap.get(ident) != null) {
                 connectorMap.get(ident).disconnect();
                 connectorMap.remove(ident);

@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -53,7 +53,7 @@ import java.util.Set;
 //@Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
         this.objectMapper = objectMapper;
         this.connectorClient = connectorClient;
         this.c8yAgent = c8yAgent;
@@ -64,7 +64,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
     protected ObjectMapper objectMapper;
 
-    protected IConnectorClient connectorClient;
+    protected AConnectorClient connectorClient;
 
     protected String tenant;
 

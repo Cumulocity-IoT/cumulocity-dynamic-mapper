@@ -28,6 +28,7 @@ import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.callback.GenericMessageCallback;
 import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
@@ -174,7 +175,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     //    this.c8yAgent = c8yAgent;
     //}
 
-    private IConnectorClient connectorClient;
+    private AConnectorClient connectorClient;
 
     private ObjectMapper objectMapper;
 
@@ -196,7 +197,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     //@Autowired
     //ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public AsynchronousDispatcher(IConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
+    public AsynchronousDispatcher(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
         this.connectorClient = connectorClient;
         this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;
@@ -239,7 +240,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
 
     @Override
     public void onClose( String closeMessage, Throwable closeException) {
-        String tenant = connectorClient.getTenantId();
+        String tenant = connectorClient.getTenant();
         String connectorIdent = connectorClient.getConntectorIdent();
         if (closeException != null)
             log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent, closeException.getMessage());
@@ -253,7 +254,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
 
     @Override
     public void onMessage(String topic, ConnectorMessage message) throws Exception {
-        String tenant = connectorClient.getTenantId();
+        String tenant = connectorClient.getTenant();
         String connectorIdent = connectorClient.getConntectorIdent();
         if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
             // REPORT MAINTENANCE METRIC

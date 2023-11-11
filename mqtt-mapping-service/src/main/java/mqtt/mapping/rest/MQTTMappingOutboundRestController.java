@@ -4,8 +4,8 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.C8YAPISubscription;
 import mqtt.mapping.model.Device;
@@ -46,7 +46,7 @@ public class MQTTMappingOutboundRestController {
             for (Device device : subscription.getDevices()) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
-                    Map<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
+                    Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(contextService.getContext().getTenant());
                     //Creates subscription for each connector
                     c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
 

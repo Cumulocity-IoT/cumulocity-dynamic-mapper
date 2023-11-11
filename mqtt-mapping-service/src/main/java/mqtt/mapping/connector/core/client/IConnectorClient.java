@@ -19,7 +19,7 @@ public interface IConnectorClient {
      * A connector instance should be correlated to exactly 1 tenant. Set the header on initialization.
      * This is needed to correlate messages received via connector to the correct tenant.
      ***/
-    public void setTenantId(String tenantId);
+    public void setTenantId(String tenant);
 
     /***
      * Retrieving the tenant from the connector
