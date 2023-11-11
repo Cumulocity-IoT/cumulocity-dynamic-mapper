@@ -35,7 +35,7 @@ import {
   PATH_EXTENSION_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
-  PATH_STATUS_CONNECTOR_ENDPOINT,
+  PATH_STATUS_CONNECTOR_ENDPOINT as PATH_STATUS_CONNECTORS_ENDPOINT,
 } from "../shared/util";
 import {
   ConnectorConfiguration,
@@ -182,7 +182,7 @@ export class BrokerConfigurationService {
 
   async getConnectionStatus(): Promise<ConnectorStatus> {
     const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_STATUS_CONNECTOR_ENDPOINT}`,
+      `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
       {
         method: "GET",
       }
