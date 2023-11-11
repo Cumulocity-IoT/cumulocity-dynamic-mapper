@@ -47,6 +47,10 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -68,8 +72,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 @Slf4j
+// @EnableScheduling 
 // @Configuration
-// @EnableScheduling
 // @Service
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
@@ -93,8 +97,7 @@ public class MQTTClient extends AConnectorClient {
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
-
-    @Getter
+  
     private Credentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
@@ -213,7 +216,7 @@ public class MQTTClient extends AConnectorClient {
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
-                        //log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenant, password);
+                        // log.info("Tenant {} - DANGEROUS-LOG password: {}", tenant, password);
                         if (!StringUtils.isEmpty(user)
                                 && !StringUtils.isEmpty(password)) {
                             connOpts.setUserName(user);
@@ -370,7 +373,6 @@ public class MQTTClient extends AConnectorClient {
             mqttClient.subscribe(topic);
         log.debug("Successfully subscribed on topic: {}", topic);
     }
-
 
     public void unsubscribe(String topic) throws Exception {
         log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);

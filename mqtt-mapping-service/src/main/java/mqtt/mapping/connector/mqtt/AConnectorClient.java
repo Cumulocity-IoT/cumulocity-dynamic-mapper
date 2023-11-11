@@ -21,8 +21,6 @@
 package mqtt.mapping.connector.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +36,6 @@ import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -47,12 +44,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
-// @Configuration
-// @EnableScheduling
-// @Service
 // This is instantiated manually not using Spring Boot anymore.
 public abstract class AConnectorClient {
 
@@ -82,6 +79,9 @@ public abstract class AConnectorClient {
     public ExecutorService cachedThreadPool;
 
     private Future<?> connectTask;
+    private ScheduledExecutorService housekeepingExecutor = Executors
+            .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
+
     private Future<?> initializeTask;
 
     // @Getter
@@ -109,8 +109,9 @@ public abstract class AConnectorClient {
 
     public void reloadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenant);
-        // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant, configuration,
-        //         configuration.properties);
+        // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
+        // configuration,
+        // configuration.properties);
     }
 
     public void submitConnect() {
@@ -126,11 +127,16 @@ public abstract class AConnectorClient {
     public void submitDisconnect() {
         // test if connect task is still running, then we don't need to start another
         // task
-        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
+        log.info("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
                 connectTask == null || connectTask.isDone());
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
+    }
+
+    public void submitHouskeeping() {
+        log.info("Tenant {} - Called submitHousekeeping()", tenant);
+        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30, TimeUnit.SECONDS);
     }
 
     public abstract void connect();
@@ -155,7 +161,6 @@ public abstract class AConnectorClient {
 
     public abstract void publishMEAO(ProcessingContext<?> context);
 
-    @Scheduled(fixedRate = 30000)
     public void runHouskeeping() {
         try {
             Instant now = Instant.now();
