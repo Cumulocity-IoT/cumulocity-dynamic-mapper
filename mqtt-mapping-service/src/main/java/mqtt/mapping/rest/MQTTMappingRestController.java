@@ -323,7 +323,7 @@ public class MQTTMappingRestController {
    
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                         connectorIdent);
-                client.connect();
+                client.submitConnect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
                 ConnectorConfiguration configuration = connectorConfigurationComponent.getConnectorConfiguration(connectorIdent, tenant);   
@@ -332,7 +332,7 @@ public class MQTTMappingRestController {
 
                 IConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                         connectorIdent);
-                client.disconnect();
+                client.submitDisconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
                 mappingComponent.sendStatusMapping(tenant);
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {

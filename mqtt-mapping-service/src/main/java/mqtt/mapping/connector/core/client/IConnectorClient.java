@@ -100,6 +100,18 @@ public interface IConnectorClient {
      ***/
     public void reconnect();
 
+
+    /***
+     * Submit non blocking connect to the broker
+     ***/
+    public void submitConnect();
+
+
+    /***
+     * Submit non blocking disconnect to the broker
+     ***/
+    public void submitDisconnect();
+
     /***
      * Returning all needed configuration properties to configure the connection to the broker
      ***/

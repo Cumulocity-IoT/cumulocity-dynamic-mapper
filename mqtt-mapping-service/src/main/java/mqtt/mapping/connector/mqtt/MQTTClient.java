@@ -219,13 +219,15 @@ public class MQTTClient implements IConnectorClient {
 
     @Override
     public Map<String, ConnectorPropertyDefinition> getConfigProperties() {
-        return this.configProps;
+        return MQTTClient.configProps;
     }
 
     private void reloadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenantId);
+        log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenantId, configuration, configuration.properties);
     }
 
+    @Override
     public void submitConnect() {
         // test if connect task is still running, then we don't need to start another
         // task
@@ -236,8 +238,18 @@ public class MQTTClient implements IConnectorClient {
         }
     }
 
+    @Override
+    public void submitDisconnect() {
+        // test if connect task is still running, then we don't need to start another
+        // task
+        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenantId,
+                connectTask == null || connectTask.isDone());
+        if (connectTask == null || connectTask.isDone()) {
+            connectTask = cachedThreadPool.submit(() -> disconnect());
+        }
+    }
+
     public void connect() {
-        reloadConfiguration();
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenantId, isConnected(),
                 shouldConnect());
@@ -247,6 +259,7 @@ public class MQTTClient implements IConnectorClient {
         // stay in the loop until successful
         boolean successful = false;
         while (!successful) {
+            reloadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
                 log.info("Tenant {} - Establishing the MQTT connection now - phase II: {}, {}", tenantId,
@@ -291,6 +304,7 @@ public class MQTTClient implements IConnectorClient {
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
+                        log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenantId, password);
                         if (!StringUtils.isEmpty(user)
                                 && !StringUtils.isEmpty(password)) {
                             connOpts.setUserName(user);
@@ -518,7 +532,7 @@ public class MQTTClient implements IConnectorClient {
     public void reconnect() {
         disconnect();
         // invalidate broker client
-        configuration = null;
+        reloadConfiguration();
         submitInitialize();
         submitConnect();
     }
