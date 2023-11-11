@@ -30,7 +30,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
@@ -63,7 +63,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     @Override
     public void onOpen(URI serverUri) {
         log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
-        c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenantId(), 200);
+        c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
 
     @Override
@@ -89,9 +89,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("Connection was closed.");
         if (reason.contains("401"))
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenantId(),401);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),401);
         else
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenantId(),0);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),0);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
@@ -211,10 +211,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     }
     @Getter
-    protected IConnectorClient connectorClient;
+    protected AConnectorClient connectorClient;
 
     //The Outbound Dispatcher is hardly connected to the Connector otherwise it is not possible to correlate messages received bei Notification API to the correct Connector
-    public AsynchronousDispatcherOutbound(IConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent) {
+    public AsynchronousDispatcherOutbound(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent) {
         this.connectorClient = connectorClient;
         this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;

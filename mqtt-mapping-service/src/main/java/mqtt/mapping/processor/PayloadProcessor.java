@@ -2,7 +2,7 @@ package mqtt.mapping.processor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
@@ -21,13 +21,13 @@ public class PayloadProcessor {
     private C8YAgent c8YAgent;
     private ObjectMapper mapper;
     private String tenant;
-    private IConnectorClient connectorClient;
+    private AConnectorClient connectorClient;
     @Getter
     private Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound = null;
     @Getter
     private Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound = null;
 
-    public PayloadProcessor(ObjectMapper mapper, C8YAgent c8YAgent, String tenant, IConnectorClient connectorClient) {
+    public PayloadProcessor(ObjectMapper mapper, C8YAgent c8YAgent, String tenant, AConnectorClient connectorClient) {
        this.payloadProcessorsInbound = payloadProcessorsInbound(mapper, c8YAgent, tenant);
        this.payloadProcessorsOutbound = payloadProcessorsOutbound(mapper, connectorClient, c8YAgent, tenant);
     }
@@ -42,7 +42,7 @@ public class PayloadProcessor {
                 MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessorInbound(objectMapper, c8yAgent, tenant));
     }
 
-    public Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient,
+    public Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient,
                                                                                        C8YAgent c8yAgent, String tenant) {
         return Map.of(
                 MappingType.JSON, new JSONProcessorOutbound(objectMapper, connectorClient, c8yAgent, tenant));

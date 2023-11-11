@@ -33,24 +33,24 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ServiceOperation {
-    private String tenantId;
+    private String tenant;
     @NotNull
     private Operation operation;
     @NotNull
     private Map<String, String> parameter;
 
-    public static ServiceOperation reloadMappings(String tenantId) {
-        return new ServiceOperation(tenantId, Operation.RELOAD_MAPPINGS, null);
+    public static ServiceOperation reloadMappings(String tenant) {
+        return new ServiceOperation(tenant, Operation.RELOAD_MAPPINGS, null);
     }   
-    public static ServiceOperation connect(String tenantId, String connectorIdent) {
+    public static ServiceOperation connect(String tenant, String connectorIdent) {
         HashMap<String, String> params = new HashMap<>();
         params.put("connectorIdent", connectorIdent);
-        return new ServiceOperation(tenantId, Operation.CONNECT, params);
+        return new ServiceOperation(tenant, Operation.CONNECT, params);
     }
-    public static ServiceOperation reloadExtensions(String tenantId) {
-        return new ServiceOperation(tenantId, Operation.RELOAD_EXTENSIONS, null);
+    public static ServiceOperation reloadExtensions(String tenant) {
+        return new ServiceOperation(tenant, Operation.RELOAD_EXTENSIONS, null);
     } 
-    public static ServiceOperation refreshNotificationSubscription(String tenantId) {
-        return new ServiceOperation(tenantId, Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
+    public static ServiceOperation refreshNotificationSubscription(String tenant) {
+        return new ServiceOperation(tenant, Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
     }
 }

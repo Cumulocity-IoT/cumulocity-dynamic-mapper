@@ -26,21 +26,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorProperty;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
-import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.core.ServiceStatus;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -49,7 +47,6 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -65,29 +62,25 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 @Slf4j
 // @Configuration
 // @EnableScheduling
 // @Service
 // This is instantiated manually not using Spring Boot anymore.
-public class MQTTClient implements IConnectorClient {
+public class MQTTClient extends AConnectorClient {
 
-    public MQTTClient(Credentials credentials, String tenantId, MappingComponent mappingComponent,
+    public MQTTClient(Credentials credentials, String tenant, MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
             ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool,
             ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
         // setConfigProperties();
         this.credentials = credentials;
-        this.tenantId = tenantId;
+        this.tenant = tenant;
         this.mappingComponent = mappingComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
         this.configuration = connectorConfiguration;
@@ -126,79 +119,22 @@ public class MQTTClient implements IConnectorClient {
         configProps.put("nameCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
     }
 
-    private String tenantId;
-
     private String additionalSubscriptionIdTest;
-    public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
-    private static final String STATUS_MQTT_EVENT_TYPE = "mqtt_status_event";
 
     private IConnectorClient.Certificate cert;
 
     private MQTTCallback mqttCallback = null;
 
-    @Getter
-    private MappingComponent mappingComponent;
-
-    @Getter
-    public ConnectorConfigurationComponent connectorConfigurationComponent;
-
     private MqttClient mqttClient;
 
-    @Getter
-    private C8YAgent c8yAgent;
-
-    @Getter
-    private AsynchronousDispatcher dispatcher;
-
-    private ObjectMapper objectMapper;
-
-    @Getter
-    private ExecutorService cachedThreadPool;
-
-    private Future<?> connectTask;
-    private Future<?> initializeTask;
-
-    // @Getter
-    // @Setter
-    // keeps track of number of active mappings per subscriptionTopic
-    private Map<String, MutableInt> activeSubscriptions = new HashMap<>();
-
-    private Instant start = Instant.now();
-
-    private ConnectorConfiguration configuration;
-
-    @Data
-    @AllArgsConstructor
-    public static class Certificate {
-        private String fingerprint;
-        private String certInPemFormat;
-    }
-
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
-    }
-
-    @Override
-    public String getTenantId() {
-        return this.tenantId;
-    }
-
-    public void submitInitialize() {
-        // test if init task is still running, then we don't need to start another task
-        log.info("Tenant {} - Called initialize(): {}", initializeTask == null || initializeTask.isDone(), tenantId);
-        if ((initializeTask == null || initializeTask.isDone())) {
-            initializeTask = cachedThreadPool.submit(() -> initialize());
-        }
-    }
-
-    private boolean initialize() {
+    public boolean initialize() {
         var firstRun = true;
         while (!canConnect()) {
             // this.configuration =
             // connectorConfigurationComponent.loadConnectorConfiguration(this.getConntectorIdent());
             if (!firstRun) {
                 try {
-                    log.info("Tenant {} - Retrieving MQTT configuration in {}s ...", tenantId,
+                    log.info("Tenant {} - Retrieving MQTT configuration in {}s ...", tenant,
                             WAIT_PERIOD_MS / 1000);
                     Thread.sleep(WAIT_PERIOD_MS);
                 } catch (InterruptedException e) {
@@ -222,36 +158,9 @@ public class MQTTClient implements IConnectorClient {
         return MQTTClient.configProps;
     }
 
-    private void reloadConfiguration() {
-        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenantId);
-        log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenantId, configuration, configuration.properties);
-    }
-
-    @Override
-    public void submitConnect() {
-        // test if connect task is still running, then we don't need to start another
-        // task
-        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenantId,
-                connectTask == null || connectTask.isDone());
-        if (connectTask == null || connectTask.isDone()) {
-            connectTask = cachedThreadPool.submit(() -> connect());
-        }
-    }
-
-    @Override
-    public void submitDisconnect() {
-        // test if connect task is still running, then we don't need to start another
-        // task
-        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenantId,
-                connectTask == null || connectTask.isDone());
-        if (connectTask == null || connectTask.isDone()) {
-            connectTask = cachedThreadPool.submit(() -> disconnect());
-        }
-    }
-
     public void connect() {
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
-                tenantId, isConnected(),
+                tenant, isConnected(),
                 shouldConnect());
         if (isConnected()) {
             disconnect();
@@ -262,19 +171,19 @@ public class MQTTClient implements IConnectorClient {
             reloadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Establishing the MQTT connection now - phase II: {}, {}", tenantId,
+                log.info("Tenant {} - Establishing the MQTT connection now - phase II: {}, {}", tenant,
                         isConfigValid(configuration), canConnect());
                 if (!firstRun) {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
-                        log.error("Error on reconnect: {}", e.getMessage());
+                        log.error("Teanant {} - Error on reconnect: {}", tenant, e.getMessage());
                         log.debug("Stacktrace:", e);
                     }
                 }
                 try {
                     if (canConnect()) {
-                        boolean useTLS = (Boolean) configuration.getProperties().getOrDefault("useTLS",false);
+                        boolean useTLS = (Boolean) configuration.getProperties().getOrDefault("useTLS", false);
                         boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
                                 .getOrDefault("useSelfSignedCertificate", false);
                         String prefix = useTLS ? "ssl://" : "tcp://";
@@ -299,12 +208,12 @@ public class MQTTClient implements IConnectorClient {
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
-                        mqttCallback = new MQTTCallback(dispatcher, tenantId, getConntectorId());
+                        mqttCallback = new MQTTCallback(dispatcher, tenant, getConntectorId());
                         mqttClient.setCallback(mqttCallback);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
                         connOpts.setAutomaticReconnect(false);
-                        log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenantId, password);
+                        log.info("Tenant {} -  DANGEROUS-LOG password: {}", tenant, password);
                         if (!StringUtils.isEmpty(user)
                                 && !StringUtils.isEmpty(password)) {
                             connOpts.setUserName(user);
@@ -338,11 +247,11 @@ public class MQTTClient implements IConnectorClient {
                             }
                         }
                         mqttClient.connect(connOpts);
-                        log.info("Tenant {} - Successfully connected to broker {}", tenantId,
+                        log.info("Tenant {} - Successfully connected to broker {}", tenant,
                                 mqttClient.getServerURI());
                         c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
                                 STATUS_MQTT_EVENT_TYPE,
-                                DateTime.now(), null, tenantId);
+                                DateTime.now(), null, tenant);
 
                     }
                 } catch (MqttException e) {
@@ -364,17 +273,17 @@ public class MQTTClient implements IConnectorClient {
                                 e.getMessage(), e);
                     }
 
-                    mappingComponent.rebuildMappingOutboundCache(tenantId);
+                    mappingComponent.rebuildMappingOutboundCache(tenant);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // reviously used updatedMappings
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenantId);
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
-                log.info("Tenant {} - Subscribing to topics was successful: {}", tenantId, successful);
+                log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
-                log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
+                log.error("Teanant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 log.debug("Stacktrace:", e);
                 successful = false;
             }
@@ -382,18 +291,18 @@ public class MQTTClient implements IConnectorClient {
         }
     }
 
-    private boolean canConnect() {
+    public boolean canConnect() {
         Map<String, Object> p = configuration.getProperties();
         if (configuration == null)
             return false;
-        Boolean useSelfSignedCertificate = (Boolean) p.getOrDefault("useSelfSignedCertificate",false);
+        Boolean useSelfSignedCertificate = (Boolean) p.getOrDefault("useSelfSignedCertificate", false);
         return configuration.isEnabled()
                 && (!useSelfSignedCertificate
                         || (useSelfSignedCertificate &&
                                 cert != null));
     }
 
-    private boolean shouldConnect() {
+    public boolean shouldConnect() {
         return isConfigValid(configuration) && configuration.isEnabled();
     }
 
@@ -402,7 +311,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void disconnect() {
-        log.info("Tenant {} - is connecting from MQTT broker: {}", tenantId,
+        log.info("Tenant {} - is connecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
             if (isConnected()) {
@@ -442,68 +351,31 @@ public class MQTTClient implements IConnectorClient {
     public void disconnectFromBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), false);
         disconnect();
-        mappingComponent.sendStatusService(tenantId, getServiceStatus());
+        mappingComponent.sendStatusService(tenant, getServiceStatus());
     }
 
     public void connectToBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), true);
         submitConnect();
-        mappingComponent.sendStatusService(tenantId, getServiceStatus());
+        mappingComponent.sendStatusService(tenant, getServiceStatus());
     }
 
+    @Override
     public void subscribe(String topic, Integer qos) throws MqttException {
-
         log.debug("Subscribing on topic: {}", topic);
-        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
+        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenant);
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
             mqttClient.subscribe(topic);
         log.debug("Successfully subscribed on topic: {}", topic);
-
     }
 
-    public void unsubscribe(String topic) throws MqttException {
-        log.info("Tenant {} - Unsubscribing from topic: {}", tenantId, topic);
-        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenantId);
+
+    public void unsubscribe(String topic) throws Exception {
+        log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenant);
         mqttClient.unsubscribe(topic);
-    }
-
-    @Scheduled(fixedRate = 30000)
-    public void runHouskeeping() {
-        try {
-            Instant now = Instant.now();
-            // only log this for the first 180 seconds to reduce log amount
-            if (Duration.between(start, now).getSeconds() < 1800) {
-                String statusConnectTask = (connectTask == null ? "stopped"
-                        : connectTask.isDone() ? "stopped" : "running");
-                String statusInitializeTask = (initializeTask == null ? "stopped"
-                        : initializeTask.isDone() ? "stopped" : "running");
-                log.info("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}", tenantId,
-                        statusConnectTask,
-                        statusInitializeTask, isConnected());
-            }
-            mappingComponent.cleanDirtyMappings(tenantId);
-            mappingComponent.sendStatusMapping(tenantId);
-            mappingComponent.sendStatusService(tenantId, getServiceStatus());
-        } catch (Exception ex) {
-            log.error("Error during house keeping execution: {}", ex);
-        }
-    }
-
-    @Override
-    public ServiceStatus getServiceStatus() {
-        ServiceStatus serviceStatus;
-        if (isConnected()) {
-            serviceStatus = ServiceStatus.connected();
-        } else if (canConnect()) {
-            serviceStatus = ServiceStatus.activated();
-        } else if (isConfigValid(configuration)) {
-            serviceStatus = ServiceStatus.configured();
-        } else {
-            serviceStatus = ServiceStatus.notReady();
-        }
-        return serviceStatus;
     }
 
     @Override
@@ -518,145 +390,10 @@ public class MQTTClient implements IConnectorClient {
                 !StringUtils.isEmpty(clientId);
     }
 
-    @Override
-    public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
-            throws Exception {
-        String payloadMessage = objectMapper.writeValueAsString(payload);
-        ConnectorMessage message = new ConnectorMessage();
-        message.setPayload(payloadMessage.getBytes());
-        if (dispatcher == null)
-            dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
-        return dispatcher.processMessage(tenantId, getConntectorId(), topic, message, send).get();
+    public static String getConnectorId() {
+        return CONNECTOR_ID;
     }
 
-    public void reconnect() {
-        disconnect();
-        // invalidate broker client
-        reloadConfiguration();
-        submitInitialize();
-        submitConnect();
-    }
-
-    @Override
-    public void deleteActiveSubscription(Mapping mapping) {
-        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-            MutableInt activeSubs = getActiveSubscriptions()
-                    .get(mapping.subscriptionTopic);
-            activeSubs.subtract(1);
-            if (activeSubs.intValue() <= 0) {
-                try {
-                    mqttClient.unsubscribe(mapping.subscriptionTopic);
-                } catch (MqttException e) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic,
-                            e);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void upsertActiveSubscription(Mapping mapping) {
-        // test if subscriptionTopic has changed
-        Mapping activeMapping = null;
-        Boolean create = true;
-        Boolean subscriptionTopicChanged = false;
-        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenantId).values()
-                .stream()
-                .filter(m -> m.id.equals(mapping.id))
-                .findFirst();
-
-        if (activeMappingOptional.isPresent()) {
-            create = false;
-            activeMapping = activeMappingOptional.get();
-            subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
-        }
-
-        if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-            getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
-        }
-        MutableInt updatedMappingSubs = getActiveSubscriptions()
-                .get(mapping.subscriptionTopic);
-
-        // consider unsubscribing from previous subscription topic if it has changed
-        if (create) {
-            updatedMappingSubs.add(1);;
-            log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, mapping.subscriptionTopic,
-                    mapping.qos.ordinal());
-            try {
-                subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-            } catch (MqttException e1) {
-                log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
-            }
-        } else if (subscriptionTopicChanged && activeMapping != null) {
-            MutableInt activeMappingSubs = getActiveSubscriptions()
-                    .get(activeMapping.subscriptionTopic);
-            activeMappingSubs.subtract(1);
-            if (activeMappingSubs.intValue() <= 0) {
-                try {
-                    mqttClient.unsubscribe(mapping.subscriptionTopic);
-                } catch (MqttException e) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
-                }
-            }
-            updatedMappingSubs.add(1);
-            if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, mapping.subscriptionTopic,
-                        mapping.qos.ordinal());
-                try {
-                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (MqttException e1) {
-                    log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
-                }
-            }
-        }
-
-    }
-
-    @Override
-    public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
-        if (reset) {
-            activeSubscriptions = new HashMap<String, MutableInt>();
-        }
-        Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
-        updatedMappings.forEach(mapping -> {
-            if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
-            }
-            MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
-            activeSubs.add(1);
-        });
-
-        // unsubscribe topics not used
-        getActiveSubscriptions().keySet().forEach((topic) -> {
-            if (!updatedSubscriptionCache.containsKey(topic)) {
-                log.info("Tenant {} - Unsubscribe from topic: {}", tenantId, topic);
-                try {
-                    unsubscribe(topic);
-                } catch (MqttException e1) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", topic, e1);
-                    throw new RuntimeException(e1);
-                }
-            }
-        });
-
-        // subscribe to new topics
-        updatedSubscriptionCache.keySet().forEach((topic) -> {
-            if (!getActiveSubscriptions().containsKey(topic)) {
-                int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
-                        .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenantId, topic, qos);
-                try {
-                    subscribe(topic, qos);
-                } catch (MqttException e1) {
-                    log.error("Exception when subscribing to topic: {}, {}", topic, e1);
-                    throw new RuntimeException(e1);
-                }
-            }
-        });
-        activeSubscriptions = updatedSubscriptionCache;
-    }
-
-    @Override
     public void publishMEAO(ProcessingContext<?> context) {
         MqttMessage mqttMessage = new MqttMessage();
         C8YRequest currentRequest = context.getCurrentRequest();
@@ -667,21 +404,8 @@ public class MQTTClient implements IConnectorClient {
         } catch (MqttException e) {
             throw new RuntimeException(e);
         }
-        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenantId, payload,
+        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenant, payload,
                 context.getMapping().name, context.getResolvedPublishTopic());
-    }
-
-    @Override
-    public Map<String, MutableInt> getActiveSubscriptions() {
-        return activeSubscriptions;
-        // return getActiveSubscriptionMappingInbound().entrySet().stream()
-        // .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
-        // entry.getValue().getValue()))
-        // .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    }
-
-    public static String getConnectorId() {
-        return CONNECTOR_ID;
     }
 
 }

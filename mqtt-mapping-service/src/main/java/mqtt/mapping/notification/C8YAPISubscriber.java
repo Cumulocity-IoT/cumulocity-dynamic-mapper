@@ -34,9 +34,9 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
@@ -132,10 +132,10 @@ public class C8YAPISubscriber {
         if(dispatcherOutboundMap.get(tenant) == null)
             dispatcherOutboundMap.put(tenant, new HashMap<>());
         try {
-            HashMap<String, IConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
+            HashMap<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
             //For multiple connectors register for each a separate dispatcher
             if(connectorMap != null) {
-                for (IConnectorClient connectorClient : connectorMap.values()) {
+                for (AConnectorClient connectorClient : connectorMap.values()) {
                     AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
                     dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorIdent(), dispatcherOutbound);
                 }

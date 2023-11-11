@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.MappingRepresentation;
@@ -41,7 +41,6 @@ import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.C8YMessage;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.model.ProcessingContext;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,7 +51,7 @@ import java.util.Map;
 //@Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
-    public JSONProcessorOutbound(ObjectMapper objectMapper, IConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+    public JSONProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
         super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
