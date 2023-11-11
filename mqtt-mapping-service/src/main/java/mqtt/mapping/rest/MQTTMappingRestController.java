@@ -334,7 +334,7 @@ public class MQTTMappingRestController {
                         connectorIdent);
                 client.submitDisconnect();
             } else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
-                mappingComponent.sendStatusMapping(tenant);
+                mappingComponent.sendMappingStatus(tenant);
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
                 mappingComponent.initializeMappingStatus(tenant, true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
@@ -354,13 +354,13 @@ public class MQTTMappingRestController {
     }
 
     // TODO Add this to UI
-    @RequestMapping(value = "/monitoring/status/service/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ServiceStatus> getServiceStatus(@PathVariable @NotNull String connectorIdent) {
+    @RequestMapping(value = "/monitoring/status/connector/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectorStatus> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
         try {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(contextService.getContext().getTenant(),
                     connectorIdent);
-            ServiceStatus st = client.getServiceStatus();
+            ConnectorStatus st = client.getConnectorStatus();
             log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
             return new ResponseEntity<>(st, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {

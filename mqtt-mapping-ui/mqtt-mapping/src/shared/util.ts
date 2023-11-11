@@ -297,7 +297,6 @@ export const SCHEMA_PAYLOAD = {
 
 export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
-
 export const MQTT_MAPPING_TYPE = "c8y_mqttMapping";
 export const PROCESSOR_EXTENSION_TYPE = "c8y_mqttMapping_Extension";
 export const MQTT_TEST_DEVICE_TYPE = "c8y_mqttMapping_TestDevice";
@@ -313,7 +312,7 @@ export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = "configuration/service";
 export const PATH_MAPPING_TREE_ENDPOINT = "monitoring/tree";
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = "monitoring/tree";
-export const PATH_STATUS_SERVICE_ENDPOINT = "monitoring/status/service";
+export const PATH_STATUS_CONNECTOR_ENDPOINT = "monitoring/status/connector";
 export const PATH_FEATURE_ENDPOINT = "feature";
 export const PATH_EXTENSION_ENDPOINT = "extension";
 export const PATH_SUBSCRIPTION_ENDPOINT = "subscription";
@@ -323,6 +322,9 @@ export const BASE_URL = "service/mqtt-mapping-service";
 export const AGENT_ID = "MQTT_MAPPING_SERVICE";
 export const MQTT_TEST_DEVICE_ID = "MQTT_MAPPING_TEST_DEVICE";
 export const COLOR_HIGHLIGHTED: string = "lightgrey"; //#5FAEEC';
+
+export const CONNECTOR_STATUS_FRAGMENT = "d11r_connector_status";
+export const MAPPING_STATUS_FRAGMENT = "d11r_mapping_status";
 
 export function getExternalTemplate(mapping: Mapping): any {
   if (

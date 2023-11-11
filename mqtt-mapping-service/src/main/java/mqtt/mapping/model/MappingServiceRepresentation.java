@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import mqtt.mapping.core.ServiceStatus;
+import mqtt.mapping.core.ConnectorStatus;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -35,8 +35,8 @@ import java.util.ArrayList;
 @AllArgsConstructor
 public class  MappingServiceRepresentation implements Serializable  {
 
-  public static final String SERVICE_STATUS_FRAGMENT = "service_status";
-  public static final String MAPPING_STATUS_FRAGMENT = "mapping_status";
+  public static final String CONNECTOR_STATUS_FRAGMENT = "d11r_connector_status";
+  public static final String MAPPING_STATUS_FRAGMENT = "d11r_mapping_status";
   public static final String AGENT_ID = "MQTT_MAPPING_SERVICE";
   public static final String AGENT_NAME = "MQTT Mapping Service";
 
@@ -55,7 +55,7 @@ public class  MappingServiceRepresentation implements Serializable  {
   @JsonProperty(value = MAPPING_STATUS_FRAGMENT)
   private ArrayList<MappingStatus> mappingStatus;
 
-  @JsonProperty(value = SERVICE_STATUS_FRAGMENT)
-  private ServiceStatus serviceStatus;
+  @JsonProperty(value = CONNECTOR_STATUS_FRAGMENT)
+  private ConnectorStatus connectorStatus;
 
 }

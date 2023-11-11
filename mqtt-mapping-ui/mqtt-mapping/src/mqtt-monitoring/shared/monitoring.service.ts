@@ -23,6 +23,7 @@ import { FetchClient, InventoryService, Realtime } from "@c8y/client";
 import { BehaviorSubject, Observable } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import { MappingStatus } from "../../shared/mapping.model";
+import { MAPPING_STATUS_FRAGMENT } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
 export class MonitoringService {
@@ -47,7 +48,7 @@ export class MonitoringService {
     console.log("Start subscription for monitoring:", this.agentId);
 
     let { data, res } = await this.inventory.detail(this.agentId);
-    let monitoring: MappingStatus[] = data["mapping_status"];
+    let monitoring: MappingStatus[] = data[MAPPING_STATUS_FRAGMENT];
     this.mappingStatus.next(monitoring);
     return this.realtime.subscribe(
       `/managedobjects/${this.agentId}`,
@@ -61,7 +62,7 @@ export class MonitoringService {
 
   private updateStatus(p: object): void {
     let payload = p["data"]["data"];
-    let monitoring: MappingStatus[] = payload["mapping_status"];
+    let monitoring: MappingStatus[] = payload[MAPPING_STATUS_FRAGMENT];
     this.mappingStatus.next(monitoring);
     console.log("New statusMonitoring event", monitoring);
   }
