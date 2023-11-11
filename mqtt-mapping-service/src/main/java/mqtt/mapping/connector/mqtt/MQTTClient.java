@@ -91,6 +91,8 @@ public class MQTTClient implements IConnectorClient {
         this.mappingComponent = mappingComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
         this.configuration = connectorConfiguration;
+        // ensure the client knows its identity even if configuration is set to null
+        this.connectorIdent = connectorConfiguration.ident;
         this.c8yAgent = c8YAgent;
         this.cachedThreadPool = cachedThreadPool;
         this.objectMapper = objectMapper;
@@ -103,6 +105,8 @@ public class MQTTClient implements IConnectorClient {
     private Credentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
+
+    private String connectorIdent = null;
 
     @Getter
     public static Map<String, ConnectorPropertyDefinition> configProps;
@@ -384,7 +388,7 @@ public class MQTTClient implements IConnectorClient {
     }
 
     public void disconnect() {
-        log.info("Tenant {} - isconnecting from MQTT broker: {}", tenantId,
+        log.info("Tenant {} - is connecting from MQTT broker: {}", tenantId,
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
             if (isConnected()) {
@@ -418,7 +422,7 @@ public class MQTTClient implements IConnectorClient {
 
     @Override
     public String getConntectorIdent() {
-        return configuration.ident;
+        return connectorIdent;
     }
 
     public void disconnectFromBroker() {
