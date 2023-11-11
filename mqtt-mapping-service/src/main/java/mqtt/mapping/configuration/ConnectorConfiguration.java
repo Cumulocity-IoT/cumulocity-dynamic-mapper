@@ -5,6 +5,11 @@ import lombok.Data;
 import lombok.ToString;
 
 import javax.validation.constraints.NotNull;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Map;
 
 @Data
@@ -55,10 +60,25 @@ public class ConnectorConfiguration implements Cloneable {
     }
 
     public Object clone() {
+        Object result = null;
         try {
-            return super.clone();
-        } catch (CloneNotSupportedException e) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(this);
+            oos.flush();
+            oos.close();
+            bos.close();
+            byte[] byteData = bos.toByteArray();
+            ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
+            result = new ObjectInputStream(bais).readObject();
+        } catch (Exception e) {
             return null;
         }
+        return result;
+        // try {
+        // return super.clone();
+        // } catch (CloneNotSupportedException e) {
+        // return null;
+        // }
     }
 }
