@@ -257,9 +257,9 @@ public class MQTTClient implements IConnectorClient {
                 }
                 try {
                     if (canConnect()) {
-                        boolean useTLS = (Boolean) configuration.getProperties().get("useTLS");
+                        boolean useTLS = (Boolean) configuration.getProperties().getOrDefault("useTLS",false);
                         boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                                .get("useSelfSignedCertificate");
+                                .getOrDefault("useSelfSignedCertificate", false);
                         String prefix = useTLS ? "ssl://" : "tcp://";
                         String mqttHost = (String) configuration.getProperties().get("mqttHost");
                         String clientId = (String) configuration.getProperties().get("clientId");
@@ -365,18 +365,10 @@ public class MQTTClient implements IConnectorClient {
     }
 
     private boolean canConnect() {
-        // log.info("Tenant {} - canConnect I: {}", tenantId, configuration);
-        // log.info("Tenant {} - canConnect II: {}", tenantId,
-        // configuration.getProperties());
         Map<String, Object> p = configuration.getProperties();
         if (configuration == null)
             return false;
-        Boolean useSelfSignedCertificate = false;
-        try {
-            useSelfSignedCertificate = (Boolean) p.get("useSelfSignedCertificate");
-        } catch (Exception e) {
-            log.error("Tenant {} - exception: {}", e);
-        }
+        Boolean useSelfSignedCertificate = (Boolean) p.getOrDefault("useSelfSignedCertificate",false);
         return configuration.isEnabled()
                 && (!useSelfSignedCertificate
                         || (useSelfSignedCertificate &&
