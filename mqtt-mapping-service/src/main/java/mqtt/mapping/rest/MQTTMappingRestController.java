@@ -372,7 +372,7 @@ public class MQTTMappingRestController {
         }
     }
 
-    @RequestMapping(value = "/monitoring/status/connectors/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, ConnectorStatus>> getConnectorsStatus() {
         HashMap<String, ConnectorStatus> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();

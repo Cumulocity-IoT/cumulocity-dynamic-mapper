@@ -25,7 +25,10 @@ import mqtt.mapping.processor.model.MappingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,9 +37,9 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
 @Service
+@EnableScheduling
 @Slf4j
 public class BootstrapService {
-
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -54,6 +57,7 @@ public class BootstrapService {
     ConnectorConfigurationComponent connectorConfigurationComponent;
 
     private ObjectMapper objectMapper;
+
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -70,7 +74,6 @@ public class BootstrapService {
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
-
     @EventListener
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Microservice unsubscribed for tenant {}", event.getTenant());
@@ -85,7 +88,7 @@ public class BootstrapService {
 
     @EventListener
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
-        //Executed for each tenant subscribed
+        // Executed for each tenant subscribed
         String tenant = event.getCredentials().getTenant();
         MicroserviceCredentials credentials = event.getCredentials();
         log.info("Event received for Tenant {}", tenant);
@@ -95,16 +98,18 @@ public class BootstrapService {
         c8YAgent.checkExtensions(processor);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
         c8YAgent.setServiceConfiguration(serviceConfiguration);
-        //loadProcessorExtensions();
-        MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR, MappingServiceRepresentation.class);
+        // loadProcessorExtensions();
+        MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
+                MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
-        //TODO Add other clients property definition here
+        // TODO Add other clients property definition here
         connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getConfigProps());
 
         try {
             if (serviceConfiguration != null) {
-                List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent.getConnectorConfigurations(tenant);
-                //For each connector configuration create a new instance of the connector
+                List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
+                        .getConnectorConfigurations(tenant);
+                // For each connector configuration create a new instance of the connector
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
                     initializeConnectorByConfiguration(connectorConfiguration, credentials, tenant);
                 }
@@ -112,32 +117,36 @@ public class BootstrapService {
 
         } catch (Exception e) {
             log.error("Error on initializing connectors: ", e);
-            //mqttClient.submitConnect();
+            // mqttClient.submitConnect();
         }
     }
 
-    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration, Credentials credentials, String tenant) throws ConnectorRegistryException {
+    public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
+            Credentials credentials, String tenant) throws ConnectorRegistryException {
         AConnectorClient client = null;
-
 
         if (MQTTClient.getConnectorId().equals(connectorConfiguration.getConnectorId())) {
             log.info("Initializing MQTT Connector with ident {}", connectorConfiguration.getIdent());
-            MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent, connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper, additionalSubscriptionIdTest);
+            MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent,
+                    connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
+                    additionalSubscriptionIdTest);
             connectorRegistry.registerClient(tenant, mqttClient);
             mqttClient.submitInitialize();
             mqttClient.submitConnect();
-            mqttClient.runHouskeeping();
+            mqttClient.submitHouskeeping();
             client = mqttClient;
         }
-        //Subscriber must be new initialized for the new added connector
+        // Subscriber must be new initialized for the new added connector
         c8YAgent.notificationSubscriberReconnect(tenant);
         return client;
     }
 
-    public void shutdownConnector( String tenant, String ident) throws ConnectorRegistryException {
+    public void shutdownConnector(String tenant, String ident) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, ident);
         if (connectorRegistry.getClientsForTenant(tenant).isEmpty())
             c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
 
     }
+
+
 }
