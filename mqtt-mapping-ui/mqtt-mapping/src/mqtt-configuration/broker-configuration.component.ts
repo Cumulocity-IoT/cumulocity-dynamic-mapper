@@ -144,7 +144,7 @@ export class BrokerConfigurationComponent implements OnInit {
             gettext("Failed to update connector configuration")
           );
         }
-        this.loadData();
+        await this.loadData();
       }
     });
   }
@@ -153,7 +153,7 @@ export class BrokerConfigurationComponent implements OnInit {
     const configuration = this.configurations[index].configuration;
 
     const response =
-      await this.configurationService.deleteConnectionConfiguration(
+      await this.configurationService.deleteConnectorConfiguration(
         configuration.ident
       );
     if (response.status < 300) {
@@ -161,7 +161,7 @@ export class BrokerConfigurationComponent implements OnInit {
     } else {
       this.alert.danger(gettext("Failed to delete connector configuration"));
     }
-    this.loadData();
+    await this.loadData();
   }
 
   public async onConfigurationAdd() {
@@ -192,7 +192,7 @@ export class BrokerConfigurationComponent implements OnInit {
             gettext("Failed to update connector configuration")
           );
         }
-        this.loadData();
+        await this.loadData();
       }
     });
   }
@@ -214,7 +214,7 @@ export class BrokerConfigurationComponent implements OnInit {
     } else {
       this.alert.danger(gettext("Failed to establish connection"));
     }
-    this.loadData();
+    await this.loadData();
   }
 
   // private showTerminateConnectionModal() {

@@ -103,7 +103,7 @@ public class ConnectorRegistry {
             if(connectorMap.get(ident) != null) {
                 AConnectorClient client= connectorMap.get(ident);
                 client.disconnect();
-                client.stopHouskeeping();
+                client.stopHouskeepingAndClose();
                 connectorMap.remove(ident);
             } else {
                 log.info("Client {} is not registered", ident);

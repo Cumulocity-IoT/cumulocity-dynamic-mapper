@@ -160,6 +160,7 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public void connect() {
+        reloadConfiguration();
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenant, isConnected(),
                 shouldConnect());
@@ -292,6 +293,16 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
+    public void close() {
+        if (mqttClient != null) {
+            try {
+                mqttClient.close();
+            } catch (MqttException e) {
+                log.error("Teanant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
+            }
+        }
+    }
+
     public boolean canConnect() {
         Map<String, Object> p = configuration.getProperties();
         if (configuration == null)
@@ -312,6 +323,7 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public void disconnect() {
+        reloadConfiguration();
         log.info("Tenant {} - is connecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
