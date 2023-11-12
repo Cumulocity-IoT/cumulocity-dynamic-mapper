@@ -46,6 +46,7 @@ import {
   ServiceConfiguration,
   ConnectorStatus,
   Status,
+  ConnectorConfigurationCombined,
 } from "../shared/mapping.model";
 import { BehaviorSubject, Observable } from "rxjs";
 
@@ -56,10 +57,11 @@ export class BrokerConfigurationService {
   }
 
   private agentId: string;
-  private connectorStatus = new BehaviorSubject<ConnectorStatus>({
-    status: Status.NOT_READY,
-  });
-  private _currentConnectorStatus = this.connectorStatus.asObservable();
+  // private connectorStatus = new BehaviorSubject<ConnectorStatus>({
+  //   status: Status.NOT_READY,
+  // });
+  private _connectorConfigurationCombined: ConnectorConfigurationCombined[] =
+    [];
   private _feature: Feature;
   private realtime: Realtime;
 
@@ -73,13 +75,16 @@ export class BrokerConfigurationService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
         this.agentId = data.managedObject.id.toString();
-        console.log("BrokerConfigurationService: Found BrokerAgent", this.agentId);
+        console.log(
+          "BrokerConfigurationService: Found BrokerAgent",
+          this.agentId
+        );
       }
     }
     return this.agentId;
   }
 
-  async updateConnectionConfiguration(
+  async updateConnectorConfiguration(
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
     return this.client.fetch(
@@ -94,7 +99,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  async createConnectionConfiguration(
+  async createConnectorConfiguration(
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
     return this.client.fetch(
@@ -124,7 +129,22 @@ export class BrokerConfigurationService {
     );
   }
 
-  async getConnectorSpecifications(): Promise<ConnectorPropertyConfiguration[]> {
+  async deleteConnectorConfiguration(ident: String): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance${ident}`,
+      {
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+        },
+        method: "DELETE",
+      }
+    );
+  }
+
+  async getConnectorSpecifications(): Promise<
+    ConnectorPropertyConfiguration[]
+  > {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
       {
@@ -141,7 +161,6 @@ export class BrokerConfigurationService {
 
     return (await response.json()) as ConnectorPropertyConfiguration[];
   }
-
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
     const response = await this.client.fetch(
@@ -161,6 +180,20 @@ export class BrokerConfigurationService {
     return (await response.json()) as ConnectorConfiguration[];
   }
 
+  async getConnectorConfigurationsCombined(): Promise<
+    ConnectorConfigurationCombined[]
+  > {
+    const configurations: ConnectorConfiguration[] =
+      await this.getConnectorConfigurations();
+    this._connectorConfigurationCombined = [];
+    configurations.forEach((conf) => {
+      this._connectorConfigurationCombined.push({
+        configuration: conf,
+        status$: new BehaviorSubject<string>(Status.UNKNOWN),
+      });
+    });
+    return this._connectorConfigurationCombined;
+  }
 
   async getServiceConfiguration(): Promise<ServiceConfiguration> {
     const response = await this.client.fetch(
@@ -180,7 +213,7 @@ export class BrokerConfigurationService {
     return (await response.json()) as ServiceConfiguration;
   }
 
-  async getConnectionStatus(): Promise<ConnectorStatus> {
+  async getConnectorStatus(): Promise<ConnectorStatus> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
       {
@@ -189,10 +222,6 @@ export class BrokerConfigurationService {
     );
     const result = await response.json();
     return result;
-  }
-
-  public getCurrentConnectorStatus(): Observable<ConnectorStatus> {
-    return this._currentConnectorStatus;
   }
 
   async getFeatures(): Promise<Feature> {
@@ -211,8 +240,17 @@ export class BrokerConfigurationService {
   async subscribeMonitoringChannel(): Promise<object> {
     this.agentId = await this.initializeBrokerAgent();
     console.log("Started subscription:", this.agentId);
-    this.getConnectionStatus().then((status) => {
-      this.connectorStatus.next(status);
+    this.getConnectorStatus().then((status) => {
+      //this.connectorStatus.next(status);
+      for (const [key, value] of Object.entries(status)) {
+        console.log(`${key}: ${value}`);
+      }
+      this._connectorConfigurationCombined.forEach((cc) => {
+        if (status[cc.configuration.ident]) {
+          cc.status$.next(status[cc.configuration.ident]);
+        }
+      });
+      console.log("New monitoring event", status);
     });
     return this.realtime.subscribe(
       `/managedobjects/${this.agentId}`,
@@ -227,8 +265,14 @@ export class BrokerConfigurationService {
   private updateStatus(p: object): void {
     let payload = p["data"]["data"];
     let status: ConnectorStatus = payload[CONNECTOR_STATUS_FRAGMENT];
-    this.connectorStatus.next(status);
-    console.log("New monitoring event", status);
+    for (const [key, value] of Object.entries(status)) {
+      console.log(`${key}: ${value}`);
+    }
+    this._connectorConfigurationCombined.forEach((cc) => {
+      if (status[cc.configuration.ident]) {
+        cc.status$.next(status[cc.configuration.ident]);
+      }
+    });
   }
 
   runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {

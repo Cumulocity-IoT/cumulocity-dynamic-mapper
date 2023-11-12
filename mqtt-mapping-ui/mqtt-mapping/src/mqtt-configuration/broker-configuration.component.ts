@@ -35,6 +35,7 @@ import {
   ServiceConfiguration,
   ConnectorStatus,
   Status,
+  ConnectorConfigurationCombined,
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
@@ -54,7 +55,7 @@ export class BrokerConfigurationComponent implements OnInit {
   serviceForm: FormGroup;
   feature: Feature;
   specifications: ConnectorPropertyConfiguration[] = [];
-  configurations: ConnectorConfiguration[] = [];
+  configurations: ConnectorConfigurationCombined[] = [];
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -85,20 +86,6 @@ export class BrokerConfigurationComponent implements OnInit {
   private async initializeMonitoringService(): Promise<void> {
     this.subscription =
       await this.configurationService.subscribeMonitoringChannel();
-    this.monitorings$ = this.configurationService.getCurrentConnectorStatus();
-    this.monitorings$.subscribe((status) => {
-      this.isBrokerConnected = status.status === Status.CONNECTED;
-      this.isConnectionEnabled =
-        status.status === Status.ENABLED || status.status === Status.CONNECTED;
-    });
-  }
-
-  async loadConnectionStatus(): Promise<void> {
-    let status = await this.configurationService.getConnectionStatus();
-    this.isBrokerConnected = status.status === Status.CONNECTED;
-    this.isConnectionEnabled =
-      status.status === Status.ENABLED || status.status === Status.CONNECTED;
-    console.log("Retrieved status:", status, this.isBrokerConnected);
   }
 
   private initForms(): void {
@@ -108,12 +95,12 @@ export class BrokerConfigurationComponent implements OnInit {
     });
   }
 
-  private async loadData(): Promise<void> {
+  public async loadData(): Promise<void> {
     let sc = await this.configurationService.getServiceConfiguration();
     this.specifications =
       await this.configurationService.getConnectorSpecifications();
     this.configurations =
-      await this.configurationService.getConnectorConfigurations();
+      await this.configurationService.getConnectorConfigurationsCombined();
     if (sc) {
       this.serviceConfiguration = sc;
     }
@@ -132,7 +119,7 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async onConfigurationUpdate(index) {
-    const configuration = this.configurations[index];
+    const configuration = this.configurations[index].configuration;
 
     const initialState = {
       add: false,
@@ -147,20 +134,41 @@ export class BrokerConfigurationComponent implements OnInit {
       if (editedConfiguration) {
         this.configurations[index] = editedConfiguration;
         const response =
-          await this.configurationService.updateConnectionConfiguration(
+          await this.configurationService.updateConnectorConfiguration(
             editedConfiguration
           );
         if (response.status < 300) {
           this.alert.success(gettext("Update successful"));
         } else {
-          this.alert.danger(gettext("Failed to update service configuration"));
+          this.alert.danger(
+            gettext("Failed to update connector configuration")
+          );
         }
+        this.loadData();
       }
     });
   }
 
+  public async onConfigurationDelete(index) {
+    const configuration = this.configurations[index].configuration;
+
+    const response =
+      await this.configurationService.deleteConnectionConfiguration(
+        configuration.ident
+      );
+    if (response.status < 300) {
+      this.alert.success(gettext("Deleted successful"));
+    } else {
+      this.alert.danger(gettext("Failed to delete connector configuration"));
+    }
+    this.loadData();
+  }
+
   public async onConfigurationAdd() {
-    const configuration: Partial<ConnectorConfiguration> = { properties: {}, ident :uuidv4()};
+    const configuration: Partial<ConnectorConfiguration> = {
+      properties: {},
+      ident: uuidv4(),
+    };
     const initialState = {
       add: true,
       configuration: configuration,
@@ -174,7 +182,7 @@ export class BrokerConfigurationComponent implements OnInit {
       if (addedConfiguration) {
         this.configurations.push(addedConfiguration);
         const response =
-          await this.configurationService.createConnectionConfiguration(
+          await this.configurationService.createConnectorConfiguration(
             addedConfiguration
           );
         if (response.status < 300) {
@@ -184,6 +192,7 @@ export class BrokerConfigurationComponent implements OnInit {
             gettext("Failed to update connector configuration")
           );
         }
+        this.loadData();
       }
     });
   }
@@ -191,8 +200,10 @@ export class BrokerConfigurationComponent implements OnInit {
   public async onConfigurationToogle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.configurationService.runOperation(
-      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorIdent: configuration.ident }
+      configuration.configuration.enabled
+        ? Operation.DISCONNECT
+        : Operation.CONNECT,
+      { connectorIdent: configuration.configuration.ident }
     );
     //const response2 = await this.mappingService.activateMappings();
     //console.log("Details connectToBroker", response1, response2)
@@ -203,6 +214,7 @@ export class BrokerConfigurationComponent implements OnInit {
     } else {
       this.alert.danger(gettext("Failed to establish connection"));
     }
+    this.loadData();
   }
 
   // private showTerminateConnectionModal() {

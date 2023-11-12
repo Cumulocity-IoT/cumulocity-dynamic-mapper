@@ -46,7 +46,7 @@ public class ConnectorStatus implements Serializable {
         return new ConnectorStatus(Status.CONNECTED);
     }
 
-    public static ConnectorStatus activated() {
+    public static ConnectorStatus enabled() {
         return new ConnectorStatus(Status.ENABLED);
     }
 

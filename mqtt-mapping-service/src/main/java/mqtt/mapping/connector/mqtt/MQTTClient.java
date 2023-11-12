@@ -23,8 +23,6 @@ package mqtt.mapping.connector.mqtt;
 
 import com.cumulocity.microservice.context.credentials.Credentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
@@ -72,7 +70,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 @Slf4j
-// @EnableScheduling 
+// @EnableScheduling
 // @Configuration
 // @Service
 // This is instantiated manually not using Spring Boot anymore.
@@ -97,7 +95,7 @@ public class MQTTClient extends AConnectorClient {
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
-  
+
     private Credentials credentials = null;
 
     private static final String CONNECTOR_ID = "MQTT";
@@ -112,7 +110,7 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("mqttPort", new ConnectorPropertyDefinition(true, ConnectorProperty.NUMERIC_PROPERTY));
         configProps.put("user", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
         configProps.put("password",
-                new ConnectorPropertyDefinition((false), ConnectorProperty.SENSITIVE_STRING_PROPERTY));
+                new ConnectorPropertyDefinition(false, ConnectorProperty.SENSITIVE_STRING_PROPERTY));
         configProps.put("clientId", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
         configProps.put("useTLS", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
         configProps.put("useSelfSignedCertificate",

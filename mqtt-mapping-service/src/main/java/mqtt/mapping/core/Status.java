@@ -25,5 +25,6 @@ public enum Status {
     CONNECTED,
     ENABLED,
     CONFIGURED,
-    NOT_READY
+    NOT_READY,
+    UNKNOWN
 }
