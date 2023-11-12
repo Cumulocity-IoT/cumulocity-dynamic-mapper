@@ -150,7 +150,9 @@ public abstract class AConnectorClient {
 
     public abstract boolean isConnected();
 
-    public abstract void disconnect();
+    public abstract void disconnect();   
+    
+    public abstract void close();
 
     public abstract String getConntectorId();
 
@@ -338,8 +340,10 @@ public abstract class AConnectorClient {
         return activeSubscriptions;
     }
 
-    public void stopHouskeeping() {
+    public void stopHouskeepingAndClose() {
         List<Runnable> stoppedTask = this.housekeepingExecutor.shutdownNow();
+        // release all resources
+        close();
         log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
     }
 }
