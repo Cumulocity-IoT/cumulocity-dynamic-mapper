@@ -50,7 +50,7 @@ import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { isDisabled } from "../step-main/util";
 
 @Component({
-  selector: "mapping-properties",
+  selector: "d11r-mapping-properties",
   templateUrl: "mapping-properties.component.html",
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,

@@ -39,13 +39,13 @@
   </ng-template>
 
   <cdk-step label="Define topic" [stepControl]="propertyFormly">
-    <mapping-properties
+    <d11r-mapping-properties
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"
       [propertyFormly]="propertyFormly"
       (targetTemplateChanged)="onTemplateChanged($event)"
     >
-    </mapping-properties>
+    </d11r-mapping-properties>
     <c8y-stepper-buttons
       class="d-block card-footer p-24 separator"
       (onCancel)="onCancel.emit()"
@@ -114,7 +114,7 @@
                         </span>
                       </div>
                     </div>
-                    <mapping-json-editor2
+                    <d11r-mapping-json-editor2
                       [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
                       [class]="'jse-main-small'"
@@ -123,7 +123,7 @@
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
-                    ></mapping-json-editor2>
+                    ></d11r-mapping-json-editor2>
                     <c8y-messages class="text-left">
                       <c8y-message
                         *ngIf="
@@ -257,7 +257,7 @@
                         </span>
                       </div>
                     </div>
-                    <mapping-json-editor2
+                    <d11r-mapping-json-editor2
                       [schemaUpdate]="schemaUpdateTarget"
                       [options]="editorOptionsTarget"
                       [class]="'jse-main-small'"
@@ -267,7 +267,7 @@
                       #editorTarget
                       id="editorTarget"
                     >
-                    </mapping-json-editor2>
+                    </d11r-mapping-json-editor2>
                     <c8y-messages class="text-right">
                       <c8y-message
                         *ngIf="
@@ -343,7 +343,7 @@
               <div class="row">
                 <div class="col-lg-10 col-lg-offset-1">
                   <div style="min-height: 32px">
-                    <mapping-substitution-renderer
+                    <d11r-mapping-substitution-renderer
                       [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
                       [settings]="{
@@ -356,7 +356,7 @@
                       (onDelete)="onDeleteSubstitution($event)"
                       (onEdit)="onUpdateSubstitution()"
                     >
-                    </mapping-substitution-renderer>
+                    </d11r-mapping-substitution-renderer>
                   </div>
                   <c8y-messages class="text-right">
                     <c8y-message
@@ -388,14 +388,14 @@
   </cdk-step>
 
   <cdk-step state="final" stepLabel="step3" label="Test mapping">
-    <mapping-testing
+    <d11r-mapping-testing
       [editorTestingPayloadTemplateEmitter]="
         editorTestingPayloadTemplateEmitter
       "
       [mapping]="getCurrentMapping(true)"
       (testResult)="updateTestResult($event)"
       [stepperConfiguration]="stepperConfiguration"
-    ></mapping-testing>
+    ></d11r-mapping-testing>
     <c8y-stepper-buttons
       class="col-xs-12 d-block card-footer p-24 separator"
       (onCustom)="onCommitButton()"

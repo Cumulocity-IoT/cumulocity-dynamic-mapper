@@ -33,7 +33,7 @@ import { isDisabled } from "../util";
 import { EditorMode } from "../stepper-model";
 
 @Component({
-  selector: "mapping-substitution-renderer",
+  selector: "d11r-mapping-substitution-renderer",
   templateUrl: "substitution-renderer.component.html",
   styleUrls: ["./substitution-renderer.style.css"],
   encapsulation: ViewEncapsulation.None,

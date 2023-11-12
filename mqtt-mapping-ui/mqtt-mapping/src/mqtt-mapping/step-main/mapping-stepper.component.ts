@@ -59,7 +59,6 @@ import {
   reduceTargetTemplate,
   SAMPLE_TEMPLATES_C8Y,
   splitTopicExcludingSeparator,
-  TOKEN_TOPIC_LEVEL,
   whatIsIt,
 } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
@@ -72,7 +71,7 @@ import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component
 import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
 
 @Component({
-  selector: "mapping-stepper",
+  selector: "d11r-mapping-stepper",
   templateUrl: "mapping-stepper.component.html",
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,

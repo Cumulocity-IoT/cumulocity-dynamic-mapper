@@ -23,7 +23,7 @@ import { Component } from "@angular/core";
 import { FieldType } from "@ngx-formly/core";
 
 @Component({
-  selector: "formly-field-message",
+  selector: "d11r-formly-field-message",
   template: `
     <c8y-messages>
       <c8y-message [class]="to.textClass" *ngIf="to.enabled">

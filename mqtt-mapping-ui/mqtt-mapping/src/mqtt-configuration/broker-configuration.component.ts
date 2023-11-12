@@ -22,7 +22,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup } from "@angular/forms";
 import { BrokerConfigurationService } from "./broker-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
-import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
+import { BsModalService } from "ngx-bootstrap/modal";
 import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
 import { MappingService } from "../mqtt-mapping/core/mapping.service";
 import { from, Observable } from "rxjs";
@@ -34,7 +34,6 @@ import {
   Operation,
   ServiceConfiguration,
   ConnectorStatus,
-  Status,
   ConnectorConfigurationCombined,
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
@@ -42,7 +41,7 @@ import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 import { v4 as uuidv4 } from "uuid";
 
 @Component({
-  selector: "mapping-broker-configuration",
+  selector: "d11r-mapping-broker-configuration",
   templateUrl: "broker-configuration.component.html",
 })
 export class BrokerConfigurationComponent implements OnInit {

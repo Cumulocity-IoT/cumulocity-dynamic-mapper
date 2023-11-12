@@ -7,11 +7,10 @@ import {
   ConnectorConfiguration,
   ConnectorProperty,
   ConnectorPropertyConfiguration,
-  ConnectorPropertyDefinition,
 } from "../../shared/mapping.model";
 
 @Component({
-  selector: "my-modal",
+  selector: "d11y-edit-connector-modal",
   template: ` <c8y-modal
     title="Edit properties broker configuration"
     (onClose)="onSave($event)"

@@ -31,7 +31,7 @@ import { Subject } from "rxjs";
 import { SnoopStatus } from "../../shared/mapping.model";
 
 @Component({
-  selector: "mapping-snooping-modal",
+  selector: "d11r-mapping-snooping-modal",
   templateUrl: "snooping-modal.component.html",
 })
 export class SnoopingModalComponent implements OnInit {

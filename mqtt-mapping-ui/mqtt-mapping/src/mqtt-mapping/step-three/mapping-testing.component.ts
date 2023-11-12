@@ -40,7 +40,7 @@ import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component
 import { StepperConfiguration } from "../step-main/stepper-model";
 
 @Component({
-  selector: "mapping-testing",
+  selector: "d11r-mapping-testing",
   templateUrl: "mapping-testing.component.html",
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,

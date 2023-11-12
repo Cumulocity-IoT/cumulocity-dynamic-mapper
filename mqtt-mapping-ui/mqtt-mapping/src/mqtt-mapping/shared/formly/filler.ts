@@ -23,11 +23,9 @@ import { Component } from "@angular/core";
 import { FieldType } from "@ngx-formly/core";
 
 @Component({
-  selector: "formly-filler",
+  selector: "d11r-formly-filler",
   template: `
-    <div class="form-group row" style="height:80px">
-
-    </div>
+    <div class="form-group row" style="height:80px"></div>
   `,
 })
 export class FormlyFiller extends FieldType {}

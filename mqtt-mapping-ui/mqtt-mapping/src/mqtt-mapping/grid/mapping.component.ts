@@ -72,7 +72,7 @@ import { NameRendererComponent } from "../renderer/name.renderer.component";
 import { ImportMappingsComponent } from "../import-modal/import.component";
 
 @Component({
-  selector: "mapping-mapping-grid",
+  selector: "d11r-mapping-mapping-grid",
   templateUrl: "mapping.component.html",
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,

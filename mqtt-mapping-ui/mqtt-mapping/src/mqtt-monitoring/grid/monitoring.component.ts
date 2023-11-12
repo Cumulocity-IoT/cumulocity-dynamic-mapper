@@ -30,12 +30,11 @@ import {
 import { Observable } from "rxjs";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import { MappingStatus, Operation } from "../../shared/mapping.model";
-import { IdRendererComponent } from "../renderer/id-cell.renderer.component";
 import { MonitoringService } from "../shared/monitoring.service";
 import { NameRendererComponent } from "../../mqtt-mapping/renderer/name.renderer.component";
 
 @Component({
-  selector: "mapping-monitoring-grid",
+  selector: "d11r-mapping-monitoring-grid",
   templateUrl: "monitoring.component.html",
   styleUrls: ["../../mqtt-mapping/shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,
