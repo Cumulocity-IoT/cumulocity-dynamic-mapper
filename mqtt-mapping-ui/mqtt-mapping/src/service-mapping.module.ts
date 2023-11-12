@@ -29,7 +29,6 @@ import { MappingModule } from "./mqtt-mapping/mapping.module";
 import { MonitoringModule } from "./mqtt-monitoring/monitoring.module";
 import { TestingModule } from "./mqtt-testing-devices/testing.module";
 import { MappingNavigationFactory } from "./navigation.factory";
-import { ServiceMappingComponent } from "./service-mapping.component";
 import { OverviewGuard } from "./shared/overview.guard";
 import { MappingTabFactory } from "./tab.factory";
 import { ExtensionComponent } from "./mqtt-extension/grid/extension.component";
@@ -65,9 +64,9 @@ const extensionRoutes: Route[] = [
     ModalModule,
     ReactiveFormsModule,
   ],
-  exports: [ServiceMappingComponent],
-  entryComponents: [ServiceMappingComponent],
-  declarations: [ServiceMappingComponent],
+  exports: [],
+  entryComponents: [],
+  declarations: [],
   providers: [
     OverviewGuard,
     BsModalService,

@@ -49,7 +49,7 @@ import {
 } from "vanilla-jsoneditor";
 
 @Component({
-  selector: "mapping-json-editor2",
+  selector: "d11r-mapping-json-editor2",
   template: `<div [class]="class" [id]="id" #jsonEditorContainer></div>`,
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -34,7 +34,7 @@ import {
 import { TestingDeviceService } from "./testing.service";
 
 @Component({
-  selector: "mapping-testing-grid",
+  selector: "d11r-mapping-testing-grid",
   templateUrl: "testing.component.html",
   styleUrls: ["../../mqtt-mapping/shared/mapping.style.css"],
 })

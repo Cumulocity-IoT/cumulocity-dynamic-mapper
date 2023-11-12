@@ -121,7 +121,6 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/configuration/connector/specifications", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectorSpecification() {
-        HashMap<String, AConnectorClient> clients = null;
         String tenant = contextService.getContext().getTenant();
         List<ConnectorPropertyConfiguration> connectorConfigurations = new ArrayList<>();
         log.info("Tenant {} - Getting connection properties...", tenant);
@@ -342,7 +341,7 @@ public class MQTTMappingRestController {
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
                 mappingComponent.initializeMappingStatus(tenant, true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
-                c8yAgent.reloadExtensions();
+                c8yAgent.reloadExtensions(tenant);
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
@@ -565,13 +564,15 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
-        Map<String, Extension> result = c8yAgent.getProcessorExtensions();
+        String tenant = contextService.getContext().getTenant();
+        Map<String, Extension> result = c8yAgent.getProcessorExtensions(tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extensionName) {
-        Extension result = c8yAgent.getProcessorExtension(extensionName);
+        String tenant = contextService.getContext().getTenant();
+        Extension result = c8yAgent.getProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
@@ -580,13 +581,13 @@ public class MQTTMappingRestController {
 
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
-
+        String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
             log.error("Insufficient Permission, user does not have required permission to access this API");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }
-        Extension result = c8yAgent.deleteProcessorExtension(extensionName);
+        Extension result = c8yAgent.deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");

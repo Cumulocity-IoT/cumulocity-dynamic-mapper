@@ -95,10 +95,10 @@ public class BootstrapService {
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingObject(tenant);
         PayloadProcessor processor = new PayloadProcessor(objectMapper, c8YAgent, tenant, null);
-        c8YAgent.checkExtensions(processor);
+        c8YAgent.checkExtensions(tenant, processor);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
         c8YAgent.setServiceConfiguration(serviceConfiguration);
-        // loadProcessorExtensions();
+        c8YAgent.loadProcessorExtensions(tenant);
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
                 MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);

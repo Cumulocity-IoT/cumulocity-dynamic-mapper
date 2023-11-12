@@ -11,7 +11,7 @@ import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
-  selector: "my-modal",
+  selector: "d11y-edit-substitution-modal",
   template: ` <c8y-modal
     title="Edit properties of substitution"
     (onClose)="onSave($event)"

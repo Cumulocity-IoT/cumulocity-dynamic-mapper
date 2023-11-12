@@ -30,7 +30,7 @@ import { Operation } from "../../shared/mapping.model";
 import { AddExtensionComponent } from "../extension-modal/add-extension.component";
 
 @Component({
-  selector: "mapping-extension",
+  selector: "d11r-mapping-extension",
   templateUrl: "./extension.component.html",
   styleUrls: ["../share/extension.component.css"],
 })

@@ -38,14 +38,14 @@
                   >{{ sourceSystem }} Payload&nbsp;</label
                 >
               </div>
-              <mapping-json-editor2
+              <d11r-mapping-json-editor2
                 [options]="editorOptionsTesting"
                 [data]="testingModel.payload"
                 [class]="'jse-main-tiny'"
                 #editorTestingPayload
                 id="editorTestingPayload"
               >
-              </mapping-json-editor2>
+              </d11r-mapping-json-editor2>
               <c8y-messages>
                 <c8y-message *ngIf="testingModel.errorMsg" translate
                   ><span class="text-warning">{{ testingModel.errorMsg }}</span>
@@ -66,14 +66,14 @@
                 </h6>
               </div>
 
-              <mapping-json-editor2
+              <d11r-mapping-json-editor2
                 [options]="editorOptionsTesting"
                 [data]="testingModel.request"
                 [class]="'jse-main-tiny'"
                 #editorTestingRequest
                 id="editorTestingRequest"
               >
-              </mapping-json-editor2>
+              </d11r-mapping-json-editor2>
               <c8y-messages>
                 <c8y-message *ngIf="testingModel.errorMsg" translate
                   ><span class="text-warning">{{ testingModel.errorMsg }}</span>
@@ -101,14 +101,14 @@
                   }}</span>
                 </h6>
               </div>
-              <mapping-json-editor2
+              <d11r-mapping-json-editor2
                 [options]="editorOptionsTesting"
                 [class]="'jse-main-tiny'"
                 [data]="testingModel.response"
                 #editorTestingResponse
                 id="editorTestingResponse"
               >
-              </mapping-json-editor2>
+              </d11r-mapping-json-editor2>
             </div>
           </div>
         </div>

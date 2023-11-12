@@ -23,7 +23,6 @@ package mqtt.mapping.processor.extension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.core.client.IConnectorClient;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.Extension;
@@ -32,7 +31,6 @@ import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.processor.ProcessingException;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;
 import mqtt.mapping.processor.model.ProcessingContext;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.HashMap;

@@ -26,7 +26,7 @@ import { ExtensionStatus } from "../../shared/mapping.model";
 import { ExtensionService } from "../share/extension.service";
 
 @Component({
-  selector: "mapping-extension-card",
+  selector: "d11r-mapping-extension-card",
   templateUrl: "./extension-card.component.html",
 })
 export class ExtensionCardComponent implements OnInit {

@@ -32,7 +32,7 @@ import { definesDeviceIdentifier } from "../../shared/util";
 import { Direction, MappingSubstitution } from "../../shared/mapping.model";
 
 @Component({
-  selector: "mapping-overwrite-substitution-modal",
+  selector: "d11r-mapping-overwrite-substitution-modal",
   templateUrl: "overwrite-substitution-modal.component.html",
 })
 export class OverwriteSubstitutionModalComponent implements OnInit {

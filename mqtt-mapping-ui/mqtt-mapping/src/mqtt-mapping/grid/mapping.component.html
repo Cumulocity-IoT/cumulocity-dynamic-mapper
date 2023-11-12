@@ -123,7 +123,7 @@
 
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer">
-    <mapping-stepper
+    <d11r-mapping-stepper
       *ngIf="showConfigMapping"
       (onCancel)="showConfigMapping = false"
       (onCommit)="onCommitMapping($event)"
@@ -131,18 +131,18 @@
       [mappings]="mappings"
       [stepperConfiguration]="stepperConfiguration"
     >
-    </mapping-stepper>
+    </d11r-mapping-stepper>
   </div>
 </div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription }">
   <div class="bottom-drawer">
-    <mapping-subscription
+    <d11r-mapping-subscription
       *ngIf="showConfigSubscription"
       (onCancel)="showConfigSubscription = false"
       (onCommit)="onCommitSubscriptions($event)"
       [deviceList]="subscription.devices"
     >
-    </mapping-subscription>
+    </d11r-mapping-subscription>
   </div>
 </div>

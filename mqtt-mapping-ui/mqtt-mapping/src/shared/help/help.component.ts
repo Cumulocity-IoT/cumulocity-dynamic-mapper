@@ -22,7 +22,7 @@ import { Component, Input } from "@angular/core";
 import { get, isUndefined } from "lodash-es";
 
 @Component({
-  selector: "mapping-help",
+  selector: "d11r-mapping-help",
   templateUrl: "./help.component.html",
 })
 export class HelpComponent {

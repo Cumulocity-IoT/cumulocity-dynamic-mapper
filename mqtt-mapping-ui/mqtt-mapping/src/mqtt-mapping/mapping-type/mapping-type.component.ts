@@ -32,7 +32,7 @@ import { Direction, MappingType } from "../../shared/mapping.model";
 import { isDisabled } from "../step-main/util";
 
 @Component({
-  selector: "mapping-type",
+  selector: "d11r-mapping-type",
   templateUrl: "./mapping-type.component.html",
   styleUrls: ["./mapping-type.style.css"],
   encapsulation: ViewEncapsulation.None,

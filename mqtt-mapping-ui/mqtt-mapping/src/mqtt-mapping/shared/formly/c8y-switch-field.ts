@@ -23,7 +23,7 @@ import { Component } from "@angular/core";
 import { FieldType } from "@ngx-formly/core";
 
 @Component({
-  selector: "formly-c8y-switch",
+  selector: "d11r-formly-switch",
   template: `
     <div class="form-group row">
       <label class="c8y-switch" *ngIf="to.label">

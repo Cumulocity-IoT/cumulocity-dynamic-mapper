@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
 import { FieldWrapper } from "@ngx-formly/core";
 
 @Component({
-  selector: "c8y-wrapper-form-field",
+  selector: "d11r-wrapper-form-field",
   templateUrl: "./custom-form-field.wrapper.component.html",
   // changeDetection: ChangeDetectionStrategy.OnPush
 })

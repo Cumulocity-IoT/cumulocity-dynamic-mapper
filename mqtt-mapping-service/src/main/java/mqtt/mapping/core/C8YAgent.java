@@ -138,9 +138,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.notificationSubscriber = notificationSubscriber;
     }
 
-    private ExtensibleProcessorInbound extensibleProcessor;
-
-    private MappingServiceRepresentation mappingServiceRepresentation;
+    private Map<String,ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
@@ -150,32 +148,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
-
-
-
-    /*
-    public MeasurementRepresentation storeMeasurement(ManagedObjectRepresentation mor,
-            String eventType, DateTime timestamp, Map<String, Object> attributes, Map<String, Object> fragments)
-            throws SDKException {
-
-        MeasurementRepresentation measurementRepresentation = subscriptionsService.callForTenant(tenant, () -> {
-            MeasurementRepresentation mr = new MeasurementRepresentation();
-            mr.setAttrs(attributes);
-            mr.setSource(mor);
-            mr.setType(eventType);
-            mr.setDateTime(timestamp);
-
-            // Step 3: Iterate over all fragments provided
-            Iterator<Map.Entry<String, Object>> fragmentKeys = fragments.entrySet().iterator();
-            while (fragmentKeys.hasNext()) {
-                Map.Entry<String, Object> currentFragment = fragmentKeys.next();
-                mr.set(currentFragment.getValue(), currentFragment.getKey());
-            }
-            return measurementApi.create(mr);
-        });
-        return measurementRepresentation;
-    }
-     */
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity, ProcessingContext<?> context) {
         if (identity.getType() == null) {
@@ -363,7 +335,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return device;
     }
 
-    private void loadProcessorExtensions() {
+    public void loadProcessorExtensions(String tenant) {
         ClassLoader inernalClassloader = C8YAgent.class.getClassLoader();
         ClassLoader externalClassLoader = null;
 
@@ -392,9 +364,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // step 3 parse list of extentions
                     URL[] urls = { tempFile.toURI().toURL() };
                     externalClassLoader = new URLClassLoader(urls, mqtt.mapping.App.class.getClassLoader());
-                    registerExtensionInProcessor(extension.getId().getValue(), extName, externalClassLoader, external);
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader, external);
                 } else {
-                    registerExtensionInProcessor(extension.getId().getValue(), extName, inernalClassloader, external);
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, inernalClassloader, external);
                 }
             } catch (IOException e) {
                 log.error("Exception occured, When loading extension, starting without extensions!", e);
@@ -403,8 +375,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    private void registerExtensionInProcessor(String id, String extName, ClassLoader dynamicLoader, boolean external)
+    private void registerExtensionInProcessor(String tenant, String id, String extName, ClassLoader dynamicLoader, boolean external)
             throws IOException {
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         extensibleProcessor.addExtension(id, extName, external);
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
@@ -468,15 +441,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         extensibleProcessor.updateStatusExtension(extName);
     }
 
-    public Map<String, Extension> getProcessorExtensions() {
+    public Map<String, Extension> getProcessorExtensions(String tenant) {
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         return extensibleProcessor.getExtensions();
     }
 
-    public Extension getProcessorExtension(String extension) {
+    public Extension getProcessorExtension(String tenant, String extension) {
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         return extensibleProcessor.getExtension(extension);
     }
 
-    public Extension deleteProcessorExtension(String extensionName) {
+    public Extension deleteProcessorExtension(String tenant, String extensionName) {
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         for (ManagedObjectRepresentation extensionRepresentation : extensions.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
@@ -486,9 +462,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return extensibleProcessor.deleteExtension(extensionName);
     }
 
-    public void reloadExtensions() {
+    public void reloadExtensions(String tenant) {
+        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         extensibleProcessor.deleteExtensions();
-        loadProcessorExtensions();
+        loadProcessorExtensions(tenant);
     }
 
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId) {
@@ -556,9 +533,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void checkExtensions(PayloadProcessor payloadProcessor) {
-        extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor.getPayloadProcessorsInbound()
+    public void checkExtensions(String tenant, PayloadProcessor payloadProcessor) {
+
+        ExtensibleProcessorInbound extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor.getPayloadProcessorsInbound()
                 .get(MappingType.PROCESSOR_EXTENSION);
+        extensibleProcessors.put(tenant, extensibleProcessor);
 
         // test if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();

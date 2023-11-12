@@ -29,7 +29,7 @@ import {
 import { IIdentified } from "@c8y/client";
 
 @Component({
-  selector: "mapping-subscription",
+  selector: "d11r-mapping-subscription",
   templateUrl: "mapping-subscription.component.html",
   styleUrls: ["../shared/mapping.style.css"],
   encapsulation: ViewEncapsulation.None,

@@ -69,9 +69,9 @@ export class ExtensionService {
     } else {
       result.push((await this.inventoryService.detail(extensionId)).data);
     }
-
     return result;
   }
+  
   async getExtensionsEnriched(
     extensionId: string
   ): Promise<IManagedObject[]> {

@@ -22,21 +22,17 @@ import { Component, OnInit } from "@angular/core";
 import { FormGroup } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
 import { IManagedObject } from "@c8y/client";
-import { gettext, throttle } from "@c8y/ngx-components";
-
+import { gettext } from "@c8y/ngx-components";
 import { ExtensionService } from "../share/extension.service";
 
 @Component({
-  selector: "mapping-extension-properties",
+  selector: "d11r-mapping-extension-properties",
   templateUrl: "./extension-properties.component.html",
 })
 export class ExtensionPropertiesComponent implements OnInit {
   extensionsEntryForm: FormGroup;
   extension: IManagedObject;
-
   isLoading: boolean = true;
-
-
   breadcrumbConfig: { icon: string; label: string; path: string };
 
   constructor(

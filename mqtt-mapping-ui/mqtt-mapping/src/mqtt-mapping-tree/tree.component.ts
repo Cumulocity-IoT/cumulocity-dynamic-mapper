@@ -23,7 +23,7 @@ import { MappingTreeService } from "./tree.service";
 import { JsonEditor2Component } from "src/shared/editor2/jsoneditor2.component";
 
 @Component({
-  selector: "mapping-tree-grid",
+  selector: "d11r-mapping-tree-grid",
   templateUrl: "tree.component.html",
   styleUrls: ["./tree.style.css"],
 

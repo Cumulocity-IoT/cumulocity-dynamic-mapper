@@ -28,7 +28,7 @@ interface TextAreaProps extends FormlyFieldProps {
 }
 
 @Component({
-  selector: "formly-field-textarea-custom",
+  selector: "d11r-formly-field-textarea",
   template: `
     <textarea
       [class]="class"

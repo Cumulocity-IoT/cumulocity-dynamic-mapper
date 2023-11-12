@@ -30,7 +30,7 @@ import { Mapping } from "src/shared/mapping.model";
 import { v4 as uuidv4 } from "uuid";
 
 @Component({
-  selector: "mapping-import-extension",
+  selector: "d11r-mapping-import-extension",
   templateUrl: "./import.component.html",
   styleUrls: ["./import.component.style.css"],
   encapsulation: ViewEncapsulation.None,

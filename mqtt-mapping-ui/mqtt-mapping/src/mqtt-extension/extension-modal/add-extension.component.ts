@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, ViewChild, ViewEncapsulation } from "@angular/core";
+import { Component, ViewChild, ViewEncapsulation } from "@angular/core";
 import { ApplicationService, IApplication, IManagedObject, IManagedObjectBinary } from "@c8y/client";
 import {
   AlertService,
@@ -30,7 +30,7 @@ import { ERROR_MESSAGES } from "../share/extension.constants";
 import { ExtensionService } from "../share/extension.service";
 
 @Component({
-  selector: "mapping-add-extension",
+  selector: "d11r-mapping-add-extension",
   templateUrl: "./add-extension.component.html",
   styleUrls: ["./add-extension.component.style.css"],
   encapsulation: ViewEncapsulation.None,
