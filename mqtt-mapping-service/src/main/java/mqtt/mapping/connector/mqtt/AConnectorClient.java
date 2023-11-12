@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -95,6 +96,8 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorConfiguration configuration;
 
+    private ScheduledFuture<?> housekeepingTask;
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Tenant {} - Called initialize(): {}", initializeTask == null || initializeTask.isDone(), tenant);
@@ -136,7 +139,7 @@ public abstract class AConnectorClient {
 
     public void submitHouskeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30, TimeUnit.SECONDS);
+        this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30, TimeUnit.SECONDS);
     }
 
     public abstract void connect();
@@ -187,7 +190,7 @@ public abstract class AConnectorClient {
         if (isConnected()) {
             connectorStatus = ConnectorStatus.connected();
         } else if (canConnect()) {
-            connectorStatus = ConnectorStatus.activated();
+            connectorStatus = ConnectorStatus.enabled();
         } else if (isConfigValid(configuration)) {
             connectorStatus = ConnectorStatus.configured();
         } else {
@@ -333,5 +336,10 @@ public abstract class AConnectorClient {
 
     public Map<String, MutableInt> getActiveSubscriptions() {
         return activeSubscriptions;
+    }
+
+    public void stopHouskeeping() {
+        List<Runnable> stoppedTask = this.housekeepingExecutor.shutdownNow();
+        log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
     }
 }

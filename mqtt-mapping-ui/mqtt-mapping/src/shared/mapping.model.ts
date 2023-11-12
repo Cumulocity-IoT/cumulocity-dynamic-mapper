@@ -1,4 +1,5 @@
 import { IIdentified } from "@c8y/client";
+import { Observable, Subject } from "rxjs";
 
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
@@ -41,7 +42,10 @@ export interface ConnectorConfiguration {
   properties: { [name: string]: any };
 }
 
-
+export interface ConnectorConfigurationCombined {
+  configuration: ConnectorConfiguration;
+  status$: Subject<string>;
+}
 
 export interface ConnectorPropertyConfiguration {
   connectorId: string;
@@ -144,6 +148,7 @@ export enum Status {
   ENABLED = "ACTIVATED",
   CONFIGURED = "CONFIGURED",
   NOT_READY = "NOT_READY",
+  UNKNOWN = "UNKNOWN",
 }
 
 export enum Direction {

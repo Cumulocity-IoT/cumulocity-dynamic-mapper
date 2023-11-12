@@ -101,7 +101,9 @@ public class ConnectorRegistry {
         if(connectorTenantMap.get(tenant) != null) {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if(connectorMap.get(ident) != null) {
-                connectorMap.get(ident).disconnect();
+                AConnectorClient client= connectorMap.get(ident);
+                client.disconnect();
+                client.stopHouskeeping();
                 connectorMap.remove(ident);
             } else {
                 log.info("Client {} is not registered", ident);

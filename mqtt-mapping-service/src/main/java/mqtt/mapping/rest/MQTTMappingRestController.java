@@ -41,7 +41,6 @@ import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.*;
 import mqtt.mapping.processor.model.ProcessingContext;
 
-import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -359,12 +358,12 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connector/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorStatus> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
+    public ResponseEntity<Status> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
         try {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     connectorIdent);
-            ConnectorStatus st = client.getConnectorStatus();
+            Status st = client.getConnectorStatus().getStatus();
             log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
             return new ResponseEntity<>(st, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
@@ -373,14 +372,14 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, ConnectorStatus>> getConnectorsStatus() {
-        HashMap<String, ConnectorStatus> connectorsStatus = new HashMap<>();
+    public ResponseEntity<Map<String, Status>> getConnectorsStatus() {
+        HashMap<String, Status> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             for (AConnectorClient client : connectorMap.values()) {
-                ConnectorStatus st = client.getConnectorStatus();
+                Status st = client.getConnectorStatus().getStatus();
                 connectorsStatus.put(client.getConntectorIdent(), st);
             }
             log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
@@ -544,7 +543,7 @@ public class MQTTMappingRestController {
             @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         List<ProcessingContext<?>> result = null;
-                String tenant = contextService.getContext().getTenant();
+        String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
                 payload);
 
