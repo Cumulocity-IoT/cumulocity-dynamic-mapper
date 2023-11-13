@@ -442,7 +442,6 @@ public class MQTTMappingRestController {
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Delete mapping: {}", id);
-        Mapping mapping = null;
         try {
             final Mapping deletedMapping = mappingComponent.deleteMapping(tenant, id);
             if (deletedMapping == null)
@@ -464,8 +463,7 @@ public class MQTTMappingRestController {
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
 
-        return ResponseEntity.status(HttpStatus.OK).body(mapping.id);
-
+        return ResponseEntity.status(HttpStatus.OK).body(id);
     }
 
     // TODO We might need to add the connector ID here to correlate mappings to

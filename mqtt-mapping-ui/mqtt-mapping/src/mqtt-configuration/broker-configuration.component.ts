@@ -22,8 +22,8 @@ import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup } from "@angular/forms";
 import { BrokerConfigurationService } from "./broker-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
-import { BsModalService } from "ngx-bootstrap/modal";
-import { TerminateBrokerConnectionModalComponent } from "./terminate/terminate-connection-modal.component";
+import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
+import { ConfirmationModalComponent } from "../shared/confirmation/confirmation-modal.component";
 import { MappingService } from "../mqtt-mapping/core/mapping.service";
 import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
@@ -151,16 +151,38 @@ export class BrokerConfigurationComponent implements OnInit {
   public async onConfigurationDelete(index) {
     const configuration = this.configurations[index].configuration;
 
-    const response =
-      await this.configurationService.deleteConnectorConfiguration(
-        configuration.ident
-      );
-    if (response.status < 300) {
-      this.alert.success(gettext("Deleted successful"));
-    } else {
-      this.alert.danger(gettext("Failed to delete connector configuration"));
-    }
-    await this.loadData();
+    const initialState = {
+      title: "Delete connector",
+      message: "You are about to delete a connector. Do you want to proceed?",
+      labels: {
+        ok: "Delete",
+        cancel: "Cancel",
+      },
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        console.log("Confirmation result:", result);
+        if (!!result) {
+          const response = 
+            await this.configurationService.deleteConnectorConfiguration(
+              configuration.ident
+            );
+          if (response.status < 300) {
+            this.alert.success(gettext("Deleted successful"));
+          } else {
+            this.alert.danger(
+              gettext("Failed to delete connector configuration")
+            );
+          }
+          await this.loadData();
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 
   public async onConfigurationAdd() {
