@@ -145,7 +145,7 @@ export abstract class PayloadProcessorInbound {
                   mapping.externalIdType +
                   "_" +
                   substituteValue.value,
-                c8y_mqttMapping_Generated_Type: {},
+                d11r_device_generatedType: {},
                 d11r_testDevice: {},
                 type: MAPPING_TEST_DEVICE_TYPE,
               };

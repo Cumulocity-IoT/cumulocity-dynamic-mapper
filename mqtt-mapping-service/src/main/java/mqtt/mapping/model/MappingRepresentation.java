@@ -46,7 +46,7 @@ public class MappingRepresentation implements Serializable {
 
   public static final String MAPPING_TYPE = "d11r_mapping";
   public static final String MAPPING_FRAGMENT = "d11r_mapping";
-  public static final String MAPPING_GENERATED_TEST_DEVICE = "c8y_mqttMapping_Generated_Type";
+  public static final String MAPPING_GENERATED_TEST_DEVICE = "d11r_device_generatedType";
   static final String REGEXP_REMOVE_TRAILING_SLASHES = "#\\/$";
   static final String REGEXP_REDUCE_LEADING_TRAILING_SLASHES = "(\\/{2,}$)|(^\\/{2,})";
   static String TOPIC_WILDCARD_MULTI = "#";

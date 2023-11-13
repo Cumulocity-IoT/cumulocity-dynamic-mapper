@@ -1,5 +1,5 @@
 import { IIdentified } from "@c8y/client";
-import { Observable, Subject } from "rxjs";
+import { Subject } from "rxjs";
 
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
