@@ -113,8 +113,8 @@ export interface ConnectorStatus {
 export interface Feature {
   outputMappingEnabled: boolean;
   externalExtensionsEnabled: boolean;
-  userHasMQTTMappingCreateRole: boolean;
-  userHasMQTTMappingAdminRole: boolean;
+  userHasMappingCreateRole: boolean;
+  userHasMappingAdminRole: boolean;
 }
 
 export interface PayloadWrapper {
