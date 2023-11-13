@@ -35,7 +35,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   _feature: Feature;
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext("Settings"),
-    label: gettext("MQTT Mapping"),
+    label: gettext("Dynamic Mapping"),
     icon: "ftp-server",
     path: "/sag-ps-pkg-mqtt-mapping/mappings/inbound",
     priority: 99,
