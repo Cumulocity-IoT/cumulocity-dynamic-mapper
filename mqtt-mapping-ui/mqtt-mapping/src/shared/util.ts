@@ -301,8 +301,8 @@ export const MAPPING_TYPE = "d11r_mapping";
 export const PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
 export const MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
 export const MAPPING_TEST_DEVICE_FRAGMENT = "d11r_testDevice";
-
 export const MAPPING_FRAGMENT = "d11r_mapping";
+export const MAPPING_GENERATED_TEST_DEVICE = "d11r_device_generatedType";
 export const PATH_OPERATION_ENDPOINT = "operation";
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
   "configuration/connector";
