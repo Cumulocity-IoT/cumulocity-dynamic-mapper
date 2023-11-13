@@ -33,14 +33,13 @@ import mqtt.mapping.configuration.ServiceConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorProperty;
 import mqtt.mapping.connector.core.ConnectorPropertyConfiguration;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.*;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.model.*;
 import mqtt.mapping.processor.model.ProcessingContext;
-
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,11 +52,7 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.net.URI;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -379,7 +374,7 @@ public class MQTTMappingRestController {
                     .getClientsForTenant(tenant);
             for (AConnectorClient client : connectorMap.values()) {
                 Status st = client.getConnectorStatus().getStatus();
-                connectorsStatus.put(client.getConntectorIdent(), st);
+                connectorsStatus.put(client.getConnectorIdent(), st);
             }
             log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);

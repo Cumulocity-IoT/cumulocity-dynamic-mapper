@@ -98,7 +98,7 @@ public class ConnectorConfigurationComponent {
                 final ConnectorConfiguration configuration = new ObjectMapper().readValue(
                         optionRepresentation.getValue(),
                         ConnectorConfiguration.class);
-                log.debug("Returning connection configuration found: {}:", configuration.getConnectorId());
+                log.debug("Tenant {} - Returning connection configuration found: {}:", tenant, configuration.getConnectorId());
                 rt = configuration;
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
@@ -128,7 +128,7 @@ public class ConnectorConfigurationComponent {
                                 optionRepresentation.getValue(),
                                 ConnectorConfiguration.class);
                         connectorConfigurations.add(configuration);
-                        log.debug("Connection configuration found: {}:", configuration.getConnectorId());
+                        log.debug("Tenant {} - Connection configuration found: {}:", tenant, configuration.getConnectorId());
                     }
                 }
             } catch (SDKException exception) {
@@ -155,12 +155,14 @@ public class ConnectorConfigurationComponent {
 
     public ConnectorConfiguration enableConnection(String connectorIdent, boolean enabled) {
         final OptionPK option = new OptionPK(OPTION_CATEGORY_CONFIGURATION, getConnectorOptionKey(connectorIdent));
+        String tenant = subscriptionsService.getTenant();
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
             final ConnectorConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
                     ConnectorConfiguration.class);
+
             configuration.enabled = enabled;
-            log.debug("Setting connection: {}:", configuration.enabled);
+            log.debug("Tenant {} - Setting connection: {}:", tenant, configuration.enabled);
             final String configurationJson = new ObjectMapper().writeValueAsString(configuration);
             optionRepresentation.setCategory(OPTION_CATEGORY_CONFIGURATION);
             optionRepresentation.setKey(getConnectorOptionKey(connectorIdent));
@@ -168,7 +170,7 @@ public class ConnectorConfigurationComponent {
             tenantOptionApi.save(optionRepresentation);
             return configuration;
         } catch (SDKException exception) {
-            log.warn("No configuration found, returning empty element!");
+            log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
             // exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();

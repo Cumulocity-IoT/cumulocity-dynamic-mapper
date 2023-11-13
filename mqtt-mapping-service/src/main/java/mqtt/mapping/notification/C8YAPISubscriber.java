@@ -34,9 +34,9 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.API;
@@ -137,7 +137,7 @@ public class C8YAPISubscriber {
             if(connectorMap != null) {
                 for (AConnectorClient connectorClient : connectorMap.values()) {
                     AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(connectorClient, c8YAgent, objectMapper, cachedThreadPool, mappingComponent);
-                    dispatcherOutboundMap.get(tenant).put(connectorClient.getConntectorIdent(), dispatcherOutbound);
+                    dispatcherOutboundMap.get(tenant).put(connectorClient.getConnectorIdent(), dispatcherOutbound);
                 }
                 logger.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
                 if (outputMappingEnabled) {
@@ -176,9 +176,9 @@ public class C8YAPISubscriber {
             try {
                 //For each dispatcher/connector create a new connection
                 for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorIdent() + additionalSubscriptionIdTest);
+                    String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent() + additionalSubscriptionIdTest);
                     CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorIdent(), client);
+                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), client);
                 }
 
             } catch (URISyntaxException e) {
@@ -234,9 +234,9 @@ public class C8YAPISubscriber {
                 try {
                     //Add Dispatcher for each Connector
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
-                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConntectorIdent() + additionalSubscriptionIdTest);
+                        String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent() + additionalSubscriptionIdTest);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConntectorIdent(), client);
+                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), client);
                     }
 
                 } catch (URISyntaxException e) {
@@ -350,8 +350,8 @@ public class C8YAPISubscriber {
                 @Override
                 public void onNotification(Notification notification) {
                     try {
-                        logger.info("Tenant {} - Tenant Notification received: <{}>", tenant, notification.getMessage());
-                        logger.info("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
+                        logger.debug("Tenant {} - Tenant Notification received: <{}>", tenant, notification.getMessage());
+                        logger.debug("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
                         String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
                         ManagedObjectRepresentation mor = JSONBase.getJSONParser()
                                 .parse(ManagedObjectRepresentation.class, notification.getMessage());
@@ -367,7 +367,6 @@ public class C8YAPISubscriber {
                          * }
                          */
                         if (notification.getNotificationHeaders().contains("DELETE")) {
-
                             logger.info("Tenant {} - Device deleted with name {} and id {}", tenant, mor.getName(), mor.getId().getValue());
                             final ManagedObjectRepresentation morRetrieved = c8YAgent
                                     .getManagedObjectForId(tenant, mor.getId().getValue());
@@ -388,7 +387,7 @@ public class C8YAPISubscriber {
 
                 @Override
                 public void onClose(int statusCode, String reason) {
-                    logger.info("Tenant ws connection closed.");
+                    logger.info("Tenant {} - Tenant ws connection closed.", tenant);
                     if (reason.contains("401"))
                         tenantWSStatusCode.put(tenant, 401);
                     else
@@ -417,13 +416,13 @@ public class C8YAPISubscriber {
                                 if (!tenant_client.isOpen()) {
                                     if (tenantWSStatusCode.get(tenant) == 401
                                             || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                        logger.info("Trying to reconnect ws tenant client... ");
+                                        logger.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
                                         subscriptionsService.runForEachTenant(() -> {
                                             initTenantClient();
                                         });
                                     } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
                                             || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
-                                        logger.info("Trying to reconnect ws tenant client... ");
+                                        logger.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
                                         tenant_client.reconnect();
                                     }
                                 }
@@ -437,13 +436,13 @@ public class C8YAPISubscriber {
                             if (!device_client.isOpen()) {
                                 if (deviceWSStatusCode.get(tenant) == 401
                                         || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                    logger.info("Trying to reconnect ws device client... ");
+                                    logger.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
                                     subscriptionsService.runForEachTenant(() -> {
                                         initDeviceClient();
                                     });
                                 } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
                                         || device_client.getReadyState().equals(ReadyState.CLOSED)) {
-                                    logger.info("Trying to reconnect ws device client... ");
+                                    logger.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
                                     device_client.reconnect();
                                 }
                             }
@@ -461,6 +460,7 @@ public class C8YAPISubscriber {
     public NotificationSubscriptionRepresentation createTenantSubscription() {
 
         final String subscriptionName = TENANT_SUBSCRIPTION;
+        String tenant = subscriptionsService.getTenant();
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
                 .getSubscriptionsByFilter(
                         new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
@@ -470,7 +470,7 @@ public class C8YAPISubscriber {
             notification = subIt.next();
             // Needed for 1015 releases
             if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
-                logger.info("Subscription with ID {} already exists.", notification.getId().getValue());
+                logger.info("Tenant {} - Subscription with ID {} already exists.", tenant, notification.getId().getValue());
                 return notification;
             }
         }

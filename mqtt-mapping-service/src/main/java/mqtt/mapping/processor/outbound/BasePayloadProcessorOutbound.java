@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.API;
 import mqtt.mapping.model.Mapping;
@@ -41,7 +41,6 @@ import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.json.JSONException;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
