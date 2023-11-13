@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild } from "@angular/core";
+import { Component, Input, OnInit, ViewChild } from "@angular/core";
 import {
   ConfirmModalComponent,
   gettext,
@@ -30,25 +30,26 @@ import { TranslateService } from "@ngx-translate/core";
 import { Subject } from "rxjs";
 
 @Component({
-  selector: "d11r-mapping-terminate-connection",
-  templateUrl: "terminate-connection-modal.component.html",
+  selector: "d11r-confirmation-modal",
+  templateUrl: "confirmation-modal.component.html",
 })
-export class TerminateBrokerConnectionModalComponent implements OnInit {
+export class ConfirmationModalComponent implements OnInit {
+  @Input() title: string;
+  @Input() message: string;
   @ViewChild("modalRef", { static: false }) modalRef: ConfirmModalComponent;
-  message: string;
+  messageTranslated: string;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = {
+  @Input() labels: ModalLabels = {
     ok: gettext("Disconnect"),
     cancel: gettext("Cancel"),
   };
-  title = gettext("Disconnect");
   status: StatusType = Status.WARNING;
 
   constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
-    this.message = this.translateService.instant(
-      gettext("You are about to diconnect. Do you want to proceed?")
+    this.messageTranslated = this.translateService.instant(
+      gettext(this.message)
     );
   }
 
