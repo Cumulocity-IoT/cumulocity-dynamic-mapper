@@ -441,7 +441,7 @@ public class MQTTMappingRestController {
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteMapping(@PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Delete mapping: {}", id);
+        log.info("Tenant {} - Delete mapping: {}", tenant, id);
         try {
             final Mapping deletedMapping = mappingComponent.deleteMapping(tenant, id);
             if (deletedMapping == null)
@@ -462,6 +462,7 @@ public class MQTTMappingRestController {
             log.error("Tenant {} - Deleting active mappings is not allowed {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
+        log.info("Tenant {} - After Delete mapping: {}", tenant, id);
 
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }
