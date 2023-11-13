@@ -181,24 +181,28 @@ public class InnerNode {
     }
 
     public void addMapping(Mapping mapping) throws ResolveException {
-        var path = mapping.templateTopic;
-        // if templateTopic is not set use topic instead
-        if (path == null || path.equals("")) {
-            path = mapping.subscriptionTopic;
+        if (mapping != null) {
+            var path = mapping.templateTopic;
+            // if templateTopic is not set use topic instead
+            if (path == null || path.equals("")) {
+                path = mapping.subscriptionTopic;
+            }
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
+            addMapping(mapping, levels, 0);
         }
-        List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
-        addMapping(mapping, levels, 0);
     }
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
-        var path = mapping.templateTopic;
-        // if templateTopic is not set use topic instead
-        if (path == null || path.equals("")) {
-            path = mapping.subscriptionTopic;
+        if (mapping != null) {
+            var path = mapping.templateTopic;
+            // if templateTopic is not set use topic instead
+            if (path == null || path.equals("")) {
+                path = mapping.subscriptionTopic;
+            }
+            List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
+            MutableInt branchingLevel = new MutableInt(0);
+            deleteMapping(mapping, levels, 0, branchingLevel);
         }
-        List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(path);
-        MutableInt branchingLevel = new MutableInt(0);
-        deleteMapping(mapping, levels, 0, branchingLevel);
     }
 
     private boolean deleteMapping(Mapping mapping, List<String> levels, int currentLevel, MutableInt branchingLevel)
