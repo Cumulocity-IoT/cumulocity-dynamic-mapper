@@ -61,7 +61,7 @@ import { QOSRendererComponent } from "../renderer/qos-cell.renderer.component";
 import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
 import { TemplateRendererComponent } from "../renderer/template.renderer.component";
 import { MappingService } from "../core/mapping.service";
-import { BsModalService } from "ngx-bootstrap/modal";
+import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { Subject } from "rxjs";
 import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 import { Router } from "@angular/router";
@@ -70,6 +70,7 @@ import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
 import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
 import { NameRendererComponent } from "../renderer/name.renderer.component";
 import { ImportMappingsComponent } from "../import-modal/import.component";
+import { ConfirmationModalComponent } from "../../shared/confirmation/confirmation-modal.component";
 
 @Component({
   selector: "d11r-mapping-mapping-grid",
@@ -287,7 +288,7 @@ export class MappingComponent implements OnInit {
       },
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMapping.bind(this),
+        callback: this.deleteMappingWithConfirmation.bind(this),
       },
       {
         type: "ACTIVATE",
@@ -305,7 +306,7 @@ export class MappingComponent implements OnInit {
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulk.bind(this),
+        callback: this.deleteMappingBulkWithConfirmation.bind(this),
       },
       {
         type: "ACTIVATE",
@@ -498,8 +499,53 @@ export class MappingComponent implements OnInit {
     this.refresh.emit();
   }
 
+  async deleteMappingWithConfirmation(
+    mapping: Mapping,
+    confirmation: boolean = true,
+    multiple: boolean = false
+  ): Promise<boolean> {
+    let result : boolean = false;
+    console.log("Deleting mapping before confirmation:", mapping);
+    if (confirmation) {
+      const initialState = {
+        title: multiple ? "Delete mappings" : "Delete mapping",
+        message: multiple
+          ? "You are about to delete mappings. Do you want to proceed to delete ALL?"
+          : "You are about to delete a mapping. Do you want to proceed?",
+        labels: {
+          ok: "Delete",
+          cancel: "Cancel",
+        },
+      };
+      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState }
+      );
+
+      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+      if (result) {
+          console.log("DELETE mapping:", mapping, result);
+          await this.deleteMapping(mapping);
+      } else {
+          console.log("Canceled DELETE mapping", mapping, result);
+      }
+      // confirmDeletionModalRef.content.closeSubject.subscribe(
+      //   async (result: boolean) => {
+      //     continueDelete = result;
+      //     console.log("Confirmation result:", result);
+      //     if (!!result) {
+      //       //await this.deleteMapping(mapping);
+      //     }
+      //     confirmDeletionModalRef.hide();
+      //   }
+      // );
+    } else {
+      // await this.deleteMapping(mapping);
+    }
+    return result;
+  }
+
   async deleteMapping(mapping: Mapping) {
-    console.log("Deleting mapping:", mapping);
     try {
       await this.mappingService.deleteMapping(mapping.id);
       this.alertService.success(gettext("Mapping deleted successfully"));
@@ -634,16 +680,18 @@ export class MappingComponent implements OnInit {
     this.refresh.emit();
   }
 
-  private async deleteMappingBulk(ids: string[]) {
+  private async deleteMappingBulkWithConfirmation(ids: string[]) {
+    let continueDelete : boolean = false;
     for (let i = 0; i < this.mappings.length; i++) {
       if (ids.includes(this.mappings[i].id)) {
-        try {
-          await this.mappingService.deleteMapping(this.mappings[i].id);
-          this.alertService.success(gettext("Mapping deleted successfully"));
-        } catch (error) {
-          this.alertService.danger(
-            gettext("Failed to delete mapping:") + error
+        if (i == 0) {
+          continueDelete = await this.deleteMappingWithConfirmation(
+            this.mappings[i],
+            true,
+            true
           );
+        } else if (continueDelete) {
+          await this.deleteMapping(this.mappings[i]);
         }
       }
     }

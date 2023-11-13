@@ -135,7 +135,8 @@ public abstract class AConnectorClient {
 
     public void submitHouskeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30, TimeUnit.SECONDS);
+        this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
+                TimeUnit.SECONDS);
     }
 
     /***
@@ -149,7 +150,8 @@ public abstract class AConnectorClient {
     public abstract boolean canConnect();
 
     /***
-     * Should return true when connector is enabled and provided properties are valid
+     * Should return true when connector is enabled and provided properties are
+     * valid
      ***/
     public abstract boolean shouldConnect();
 
@@ -189,7 +191,8 @@ public abstract class AConnectorClient {
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
     /***
-     * This method should publish Cumulocity received Messages to the Connector using the provided ProcessContext
+     * This method should publish Cumulocity received Messages to the Connector
+     * using the provided ProcessContext
      * Relevant for Outbound Communication
      ***/
     public abstract void publishMEAO(ProcessingContext<?> context);
@@ -248,7 +251,7 @@ public abstract class AConnectorClient {
     }
 
     public void deleteActiveSubscription(Mapping mapping) {
-        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic) && isConnected()) {
             MutableInt activeSubs = getActiveSubscriptions()
                     .get(mapping.subscriptionTopic);
             activeSubs.subtract(1);
@@ -264,51 +267,32 @@ public abstract class AConnectorClient {
     }
 
     public void upsertActiveSubscription(Mapping mapping) {
-        // test if subscriptionTopic has changed
-        Mapping activeMapping = null;
-        Boolean create = true;
-        Boolean subscriptionTopicChanged = false;
-        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
-                .stream()
-                .filter(m -> m.id.equals(mapping.id))
-                .findFirst();
+        if (isConnected()) {
+            // test if subscriptionTopic has changed
+            Mapping activeMapping = null;
+            Boolean create = true;
+            Boolean subscriptionTopicChanged = false;
+            Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
+                    .stream()
+                    .filter(m -> m.id.equals(mapping.id))
+                    .findFirst();
 
-        if (activeMappingOptional.isPresent()) {
-            create = false;
-            activeMapping = activeMappingOptional.get();
-            subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
-        }
-
-        if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-            getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
-        }
-        MutableInt updatedMappingSubs = getActiveSubscriptions()
-                .get(mapping.subscriptionTopic);
-
-        // consider unsubscribing from previous subscription topic if it has changed
-        if (create) {
-            updatedMappingSubs.add(1);
-            ;
-            log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
-                    mapping.qos.ordinal());
-            try {
-                subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-            } catch (MqttException e1) {
-                log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
+            if (activeMappingOptional.isPresent()) {
+                create = false;
+                activeMapping = activeMappingOptional.get();
+                subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
             }
-        } else if (subscriptionTopicChanged && activeMapping != null) {
-            MutableInt activeMappingSubs = getActiveSubscriptions()
-                    .get(activeMapping.subscriptionTopic);
-            activeMappingSubs.subtract(1);
-            if (activeMappingSubs.intValue() <= 0) {
-                try {
-                    unsubscribe(mapping.subscriptionTopic);
-                } catch (Exception e) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
-                }
-            }
-            updatedMappingSubs.add(1);
+
             if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
+            }
+            MutableInt updatedMappingSubs = getActiveSubscriptions()
+                    .get(mapping.subscriptionTopic);
+
+            // consider unsubscribing from previous subscription topic if it has changed
+            if (create) {
+                updatedMappingSubs.add(1);
+                ;
                 log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                         mapping.qos.ordinal());
                 try {
@@ -316,52 +300,75 @@ public abstract class AConnectorClient {
                 } catch (MqttException e1) {
                     log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
                 }
+            } else if (subscriptionTopicChanged && activeMapping != null) {
+                MutableInt activeMappingSubs = getActiveSubscriptions()
+                        .get(activeMapping.subscriptionTopic);
+                activeMappingSubs.subtract(1);
+                if (activeMappingSubs.intValue() <= 0) {
+                    try {
+                        unsubscribe(mapping.subscriptionTopic);
+                    } catch (Exception e) {
+                        log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
+                    }
+                }
+                updatedMappingSubs.add(1);
+                if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                            mapping.qos.ordinal());
+                    try {
+                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                    } catch (MqttException e1) {
+                        log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
+                    }
+                }
             }
-        }
 
+        }
     }
 
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
         }
-        Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
-        updatedMappings.forEach(mapping -> {
-            if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
-            }
-            MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
-            activeSubs.add(1);
-        });
-
-        // unsubscribe topics not used
-        getActiveSubscriptions().keySet().forEach((topic) -> {
-            if (!updatedSubscriptionCache.containsKey(topic)) {
-                log.info("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
-                try {
-                    unsubscribe(topic);
-                } catch (Exception e1) {
-                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", topic, e1);
-                    throw new RuntimeException(e1);
+        if (isConnected()) {
+            Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
+            updatedMappings.forEach(mapping -> {
+                if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
+                    updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
                 }
-            }
-        });
+                MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
+                activeSubs.add(1);
+            });
 
-        // subscribe to new topics
-        updatedSubscriptionCache.keySet().forEach((topic) -> {
-            if (!getActiveSubscriptions().containsKey(topic)) {
-                int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
-                        .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
-                try {
-                    subscribe(topic, qos);
-                } catch (MqttException e1) {
-                    log.error("Exception when subscribing to topic: {}, {}", topic, e1);
-                    throw new RuntimeException(e1);
+            // unsubscribe topics not used
+            getActiveSubscriptions().keySet().forEach((topic) -> {
+                if (!updatedSubscriptionCache.containsKey(topic)) {
+                    log.info("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
+                    try {
+                        unsubscribe(topic);
+                    } catch (Exception e1) {
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", topic, e1);
+                        throw new RuntimeException(e1);
+                    }
                 }
-            }
-        });
-        activeSubscriptions = updatedSubscriptionCache;
+            });
+
+            // subscribe to new topics
+            updatedSubscriptionCache.keySet().forEach((topic) -> {
+                if (!getActiveSubscriptions().containsKey(topic)) {
+                    int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
+                            .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
+                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
+                    try {
+                        subscribe(topic, qos);
+                    } catch (MqttException e1) {
+                        log.error("Exception when subscribing to topic: {}, {}", topic, e1);
+                        throw new RuntimeException(e1);
+                    }
+                }
+            });
+            activeSubscriptions = updatedSubscriptionCache;
+        }
     }
 
     public Map<String, MutableInt> getActiveSubscriptions() {

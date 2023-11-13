@@ -270,7 +270,7 @@ export class BrokerConfigurationService {
     }
     this._connectorConfigurationCombined.forEach((cc) => {
       if (status[cc.configuration.ident]) {
-        cc.status$.next(status[cc.configuration.ident]);
+        cc.status$.next(status[cc.configuration?.ident]);
       }
     });
   }
