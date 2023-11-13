@@ -67,7 +67,7 @@
       "exports": [
         {
           "name": "Dynamic Mapping Widget",
-          "module": "DaynamicMappingModule",
+          "module": "DynamicMappingModule",
           "path": "./src/dynamic-mapping.module",
           "description": "Adds a Dynamic Mapping Widget"
         }
