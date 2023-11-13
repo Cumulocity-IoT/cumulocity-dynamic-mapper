@@ -333,7 +333,7 @@ public class C8YAPISubscriber {
 
 
     public void subscribeTenant(String tenant) {
-        logger.info("Creating new Subscription for Tenant " + tenant);
+        logger.info("Tenant {} - Creating new Tenant Subscription", tenant);
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
         String tenantToken = createToken(notification.getSubscription(),
                 TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
