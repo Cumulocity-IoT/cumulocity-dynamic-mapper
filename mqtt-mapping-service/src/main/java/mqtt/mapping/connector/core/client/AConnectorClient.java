@@ -18,9 +18,11 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.connector.mqtt;
+package mqtt.mapping.connector.core.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +31,8 @@ import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.core.ConnectorStatus;
+import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.ProcessingContext;
@@ -43,15 +45,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Slf4j
-// This is instantiated manually not using Spring Boot anymore.
 public abstract class AConnectorClient {
 
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
@@ -111,7 +107,7 @@ public abstract class AConnectorClient {
     public abstract Map<String, ConnectorPropertyDefinition> getConfigProperties();
 
     public void reloadConfiguration() {
-        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConntectorIdent(), tenant);
+        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
         // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
         // configuration,
         // configuration.properties);
@@ -142,28 +138,60 @@ public abstract class AConnectorClient {
         this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30, TimeUnit.SECONDS);
     }
 
+    /***
+     * Connect to the broker
+     ***/
     public abstract void connect();
 
+    /***
+     * Should return true when all required properties are provided
+     ***/
     public abstract boolean canConnect();
 
+    /***
+     * Should return true when connector is enabled and provided properties are valid
+     ***/
     public abstract boolean shouldConnect();
 
+    /***
+     * Returns true if the connector is currently connected
+     ***/
     public abstract boolean isConnected();
 
-    public abstract void disconnect();   
-    
+    /***
+     * Disconnect the broker
+     ***/
+    public abstract void disconnect();
+
+    /***
+     * Close the connection to broker and release all resources
+     ***/
     public abstract void close();
 
-    public abstract String getConntectorId();
+    /***
+     * Returning the unique ID identifying the connector instance
+     ***/
+    public abstract String getConnectorIdent();
 
-    public abstract String getConntectorIdent();
-
+    /***
+     * Subscribe to a topic on the Broker
+     ***/
     public abstract void subscribe(String topic, Integer qos) throws MqttException;
 
+    /***
+     * Unsubscribe a topic on the Broker
+     ***/
     public abstract void unsubscribe(String topic) throws Exception;
 
+    /***
+     * Checks if the provided configuration is valid
+     ***/
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
+    /***
+     * This method should publish Cumulocity received Messages to the Connector using the provided ProcessContext
+     * Relevant for Outbound Communication
+     ***/
     public abstract void publishMEAO(ProcessingContext<?> context);
 
     public void runHouskeeping() {
@@ -181,7 +209,7 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
+            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
@@ -208,7 +236,7 @@ public abstract class AConnectorClient {
         message.setPayload(payloadMessage.getBytes());
         if (dispatcher == null)
             dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
-        return dispatcher.processMessage(tenant, getConntectorId(), topic, message, send).get();
+        return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
     }
 
     public void reconnect() {
@@ -313,7 +341,7 @@ public abstract class AConnectorClient {
                 try {
                     unsubscribe(topic);
                 } catch (Exception e1) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", topic, e1);
+                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", topic, e1);
                     throw new RuntimeException(e1);
                 }
             }
@@ -345,5 +373,12 @@ public abstract class AConnectorClient {
         // release all resources
         close();
         log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class Certificate {
+        private String fingerprint;
+        private String certInPemFormat;
     }
 }

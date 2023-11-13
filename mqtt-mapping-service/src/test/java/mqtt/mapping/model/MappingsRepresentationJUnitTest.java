@@ -22,8 +22,6 @@
 package mqtt.mapping.model;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectorConfiguration;
-import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.junit.jupiter.api.Test;
 

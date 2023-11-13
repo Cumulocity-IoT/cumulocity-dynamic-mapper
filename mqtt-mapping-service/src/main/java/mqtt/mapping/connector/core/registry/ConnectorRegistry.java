@@ -2,8 +2,7 @@ package mqtt.mapping.connector.core.registry;
 
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
-
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -32,20 +31,20 @@ public class ConnectorRegistry {
     public void registerClient(String tenant, AConnectorClient client) throws ConnectorRegistryException {
         if(tenant == null)
             throw new ConnectorRegistryException("tenant is missing!");
-        if(client.getConntectorIdent() == null)
+        if(client.getConnectorIdent() == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
         if (connectorTenantMap.get(tenant) == null) {
             HashMap<String, AConnectorClient> connectorMap = new HashMap<>();
-            connectorMap.put(client.getConntectorIdent(), client);
+            connectorMap.put(client.getConnectorIdent(), client);
             connectorTenantMap.put(tenant, connectorMap);
         } else {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
-            if(connectorMap.get(client.getConntectorIdent()) == null) {
-                log.info("Adding new client for tenant {} with id {}...", tenant, client.getConntectorIdent());
-                connectorMap.put(client.getConntectorIdent(), client);
+            if(connectorMap.get(client.getConnectorIdent()) == null) {
+                log.info("Adding new client for tenant {} with id {}...", tenant, client.getConnectorIdent());
+                connectorMap.put(client.getConnectorIdent(), client);
                 connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.info("Client {} is already registered for tenant {}!", client.getConntectorIdent(), tenant);
+                log.info("Client {} is already registered for tenant {}!", client.getConnectorIdent(), tenant);
             }
         }
 
@@ -87,7 +86,7 @@ public class ConnectorRegistry {
         if(connectorTenantMap.get(tenant) != null) {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             for (AConnectorClient client : connectorMap.values()) {
-                this.unregisterClient(tenant, client.getConntectorIdent());
+                this.unregisterClient(tenant, client.getConnectorIdent());
             }
         }
     }

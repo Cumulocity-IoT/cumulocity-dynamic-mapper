@@ -6,33 +6,25 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAd
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
 import mqtt.mapping.connector.mqtt.MQTTClient;
 import mqtt.mapping.model.MappingServiceRepresentation;
 import mqtt.mapping.processor.PayloadProcessor;
-import mqtt.mapping.processor.inbound.BasePayloadProcessor;
-import mqtt.mapping.processor.model.MappingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
@@ -76,7 +68,7 @@ public class BootstrapService {
 
     @EventListener
     public void destroy(MicroserviceSubscriptionRemovedEvent event) {
-        log.info("Microservice unsubscribed for tenant {}", event.getTenant());
+        log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
         String tenant = event.getTenant();
         c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
         try {
@@ -91,7 +83,7 @@ public class BootstrapService {
         // Executed for each tenant subscribed
         String tenant = event.getCredentials().getTenant();
         MicroserviceCredentials credentials = event.getCredentials();
-        log.info("Event received for Tenant {}", tenant);
+        log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingObject(tenant);
         PayloadProcessor processor = new PayloadProcessor(objectMapper, c8YAgent, tenant, null);
@@ -102,7 +94,7 @@ public class BootstrapService {
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
                 MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
-        // TODO Add other clients property definition here
+        // TODO Add other clients static property definition here
         connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getConfigProps());
 
         try {
@@ -126,7 +118,7 @@ public class BootstrapService {
         AConnectorClient client = null;
 
         if (MQTTClient.getConnectorId().equals(connectorConfiguration.getConnectorId())) {
-            log.info("Initializing MQTT Connector with ident {}", connectorConfiguration.getIdent());
+            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant, connectorConfiguration.getIdent());
             MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent,
                     connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
                     additionalSubscriptionIdTest);

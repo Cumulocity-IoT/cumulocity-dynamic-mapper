@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.connector.core.callback.GenericMessageCallback;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
@@ -239,7 +239,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     @Override
     public void onClose( String closeMessage, Throwable closeException) {
         String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConntectorIdent();
+        String connectorIdent = connectorClient.getConnectorIdent();
         if (closeException != null)
             log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent, closeException.getMessage());
         closeException.printStackTrace();
@@ -253,7 +253,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     @Override
     public void onMessage(String topic, ConnectorMessage message) throws Exception {
         String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConntectorIdent();
+        String connectorIdent = connectorClient.getConnectorIdent();
         if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
             // REPORT MAINTENANCE METRIC
         } else {

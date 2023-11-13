@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.model.*;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,15 +41,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import mqtt.mapping.model.API;
-import mqtt.mapping.model.Direction;
-import mqtt.mapping.model.InnerNode;
-import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.MappingRepresentation;
-import mqtt.mapping.model.MappingServiceRepresentation;
-import mqtt.mapping.model.MappingStatus;
-import mqtt.mapping.model.ResolveException;
-import mqtt.mapping.model.ValidationError;
 
 @Slf4j
 @Component

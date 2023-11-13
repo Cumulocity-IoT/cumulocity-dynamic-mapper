@@ -2,7 +2,7 @@ package mqtt.mapping.processor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
-import mqtt.mapping.connector.mqtt.AConnectorClient;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
 import mqtt.mapping.processor.inbound.BasePayloadProcessor;

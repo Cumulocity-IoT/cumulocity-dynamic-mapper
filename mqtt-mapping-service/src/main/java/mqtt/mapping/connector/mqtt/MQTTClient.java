@@ -29,14 +29,13 @@ import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.connector.core.ConnectorProperty;
 import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
-import mqtt.mapping.connector.core.client.IConnectorClient;
+import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -45,10 +44,6 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.joda.time.DateTime;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -98,7 +93,8 @@ public class MQTTClient extends AConnectorClient {
 
     private Credentials credentials = null;
 
-    private static final String CONNECTOR_ID = "MQTT";
+    @Getter
+    private static final String connectorId = "MQTT";
 
     private String connectorIdent = null;
 
@@ -122,7 +118,7 @@ public class MQTTClient extends AConnectorClient {
 
     private String additionalSubscriptionIdTest;
 
-    private IConnectorClient.Certificate cert;
+    private AConnectorClient.Certificate cert;
 
     private MQTTCallback mqttCallback = null;
 
@@ -159,6 +155,7 @@ public class MQTTClient extends AConnectorClient {
         return MQTTClient.configProps;
     }
 
+    @Override
     public void connect() {
         reloadConfiguration();
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
@@ -179,7 +176,7 @@ public class MQTTClient extends AConnectorClient {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
-                        log.error("Teanant {} - Error on reconnect: {}", tenant, e.getMessage());
+                        log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
                         log.debug("Stacktrace:", e);
                     }
                 }
@@ -210,7 +207,7 @@ public class MQTTClient extends AConnectorClient {
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
-                        mqttCallback = new MQTTCallback(dispatcher, tenant, getConntectorId());
+                        mqttCallback = new MQTTCallback(dispatcher, tenant, this.getConnectorId());
                         mqttClient.setCallback(mqttCallback);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
@@ -245,7 +242,7 @@ public class MQTTClient extends AConnectorClient {
                                 connOpts.setSocketFactory(sslSocketFactory);
                             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                                     | KeyManagementException e) {
-                                log.error("Exception when configuring socketFactory for TLS!", e);
+                                log.error("Tenant {} - Exception when configuring socketFactory for TLS!", tenant, e);
                             }
                         }
                         mqttClient.connect(connOpts);
@@ -285,7 +282,7 @@ public class MQTTClient extends AConnectorClient {
                 successful = true;
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
-                log.error("Teanant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 log.debug("Stacktrace:", e);
                 successful = false;
             }
@@ -293,16 +290,18 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
+    @Override
     public void close() {
         if (mqttClient != null) {
             try {
                 mqttClient.close();
             } catch (MqttException e) {
-                log.error("Teanant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
             }
         }
     }
 
+    @Override
     public boolean canConnect() {
         Map<String, Object> p = configuration.getProperties();
         if (configuration == null)
@@ -314,21 +313,24 @@ public class MQTTClient extends AConnectorClient {
                                 cert != null));
     }
 
+    @Override
     public boolean shouldConnect() {
         return isConfigValid(configuration) && configuration.isEnabled();
     }
 
+    @Override
     public boolean isConnected() {
         return mqttClient != null ? mqttClient.isConnected() : false;
     }
 
+    @Override
     public void disconnect() {
         reloadConfiguration();
-        log.info("Tenant {} - is connecting from MQTT broker: {}", tenant,
+        log.info("Tenant {} - Diconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getServerURI()));
         try {
             if (isConnected()) {
-                log.debug("Disconnected from MQTT broker I: {}", mqttClient.getServerURI());
+                log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant, mqttClient.getServerURI());
                 activeSubscriptions.entrySet().forEach(entry -> {
                     // only unsubscribe if still active subscriptions exist
                     String topic = entry.getKey();
@@ -344,33 +346,28 @@ public class MQTTClient extends AConnectorClient {
                 });
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
-                log.debug("Disconnected from MQTT broker II: {}", mqttClient.getServerURI());
+                log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());
             }
         } catch (MqttException e) {
-            log.error("Error on disconnecting MQTT Client: ", e);
+            log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
         }
     }
 
     @Override
-    public String getConntectorId() {
-        return CONNECTOR_ID;
-    }
-
-    @Override
-    public String getConntectorIdent() {
+    public String getConnectorIdent() {
         return connectorIdent;
     }
 
     public void disconnectFromBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), false);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), false);
         disconnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
     }
 
     public void connectToBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConntectorIdent(), true);
+        configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), true);
         submitConnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConntectorIdent());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
     }
 
     @Override
@@ -400,10 +397,6 @@ public class MQTTClient extends AConnectorClient {
         return !StringUtils.isEmpty(host) &&
                 !(port == 0) &&
                 !StringUtils.isEmpty(clientId);
-    }
-
-    public static String getConnectorId() {
-        return CONNECTOR_ID;
     }
 
     public void publishMEAO(ProcessingContext<?> context) {

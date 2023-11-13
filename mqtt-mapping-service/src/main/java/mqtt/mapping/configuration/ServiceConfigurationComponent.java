@@ -21,22 +21,17 @@
 
 package mqtt.mapping.configuration;
 
-import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
-import com.cumulocity.sdk.client.Platform;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.ws.rs.core.MediaType;
 
 @Slf4j
 @Component
@@ -78,16 +73,17 @@ public class ServiceConfigurationComponent {
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
         ServiceConfiguration result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
+            String tenant = subscriptionsService.getTenant();
             ServiceConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
                 final ServiceConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(),
                         ServiceConfiguration.class);
-                log.debug("Returning service configuration found: {}:", configuration.logPayload);
+                log.debug("Tenant {} - Returning service configuration found: {}:", tenant, configuration.logPayload);
                 rt = configuration;
-                log.info("Found connection configuration: {}", rt);
+                log.info("Tenant {} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
-                log.warn("No configuration found, returning empty element!");
+                log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
                 // exception.printStackTrace();
             } catch (JsonMappingException e) {
                 e.printStackTrace();
