@@ -22,7 +22,7 @@ import { NgModule } from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule as ngRouterModule } from '@angular/router';
 import { BootstrapComponent, CoreModule, RouterModule } from '@c8y/ngx-components';
-import { MQTTMappingModule } from './src/service-mapping.module';
+import { DynamicMappingModule } from './src/dynamic-mapping.module';
 
 @NgModule({
   declarations: [],
@@ -31,7 +31,7 @@ import { MQTTMappingModule } from './src/service-mapping.module';
     ngRouterModule.forRoot([], { enableTracing: false, useHash: true }),
     RouterModule.forRoot(),
     CoreModule.forRoot(),
-    MQTTMappingModule,
+    DynamicMappingModule,
   ],
   entryComponents: [ ],
   bootstrap: [BootstrapComponent]

@@ -38,8 +38,8 @@ import {
 } from "../../shared/mapping.model";
 import {
   BASE_URL,
-  MQTT_MAPPING_FRAGMENT,
-  MQTT_MAPPING_TYPE,
+  MAPPING_FRAGMENT,
+  MAPPING_TYPE,
   PATH_MAPPING_ENDPOINT,
   PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
@@ -85,28 +85,28 @@ export class MappingService {
     const filter: object = {
       pageSize: 100,
       withTotalPages: true,
-      type: MQTT_MAPPING_TYPE,
+      type: MAPPING_TYPE,
     };
-    let query: any = { "c8y_mqttMapping.direction": direction };
+    let query: any = { "d11r_mapping.direction": direction };
 
     if (direction == Direction.INBOUND) {
       query = this.queriesUtil.addOrFilter(query, {
-        __not: { __has: "c8y_mqttMapping.direction" },
+        __not: { __has: "d11r_mapping.direction" },
       });
     }
     query = this.queriesUtil.addAndFilter(query, {
-      type: { __has: "c8y_mqttMapping" },
+      type: { __has: "d11r_mapping" },
     });
 
     let data = (await this.inventory.listQuery(query, filter)).data;
     // const query = {
-    //       'c8y_mqttMapping.snoopStatus': direction
+    //       'd11r_mapping.snoopStatus': direction
     // }
     //let data = (await this.inventory.list(filter)).data;
 
     data.forEach((m) =>
       result.push({
-        ...m[MQTT_MAPPING_FRAGMENT],
+        ...m[MAPPING_FRAGMENT],
         id: m.id,
       })
     );
@@ -185,7 +185,7 @@ export class MappingService {
   async saveMappings(mappings: Mapping[]): Promise<void> {
     mappings.forEach((m) => {
       this.inventory.update({
-        c8y_mqttMapping: m,
+        d11r_mapping: m,
         id: m.id,
       });
     });

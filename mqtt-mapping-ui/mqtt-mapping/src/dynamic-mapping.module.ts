@@ -74,6 +74,6 @@ const extensionRoutes: Route[] = [
     hookTab(MappingTabFactory),
   ],
 })
-export class MQTTMappingModule {
+export class DynamicMappingModule {
   constructor() {}
 }
