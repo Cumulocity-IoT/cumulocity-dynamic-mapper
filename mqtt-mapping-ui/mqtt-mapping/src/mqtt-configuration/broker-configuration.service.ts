@@ -131,7 +131,7 @@ export class BrokerConfigurationService {
 
   async deleteConnectorConfiguration(ident: String): Promise<IFetchResponse> {
     return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance${ident}`,
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${ident}`,
       {
         headers: {
           accept: "application/json",

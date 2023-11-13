@@ -27,7 +27,7 @@ import {
 import { BehaviorSubject, Subject } from "rxjs";
 import { MappingService } from "../core/mapping.service";
 import { Mapping } from "src/shared/mapping.model";
-import { v4 as uuidv4 } from "uuid";
+import { uuidCustom } from "../../shared/util";
 
 @Component({
   selector: "d11r-mapping-import-extension",
@@ -67,7 +67,7 @@ export class ImportMappingsComponent {
     let errors = [];
     mappings.forEach((m, i) => {
       try {
-        m.ident = uuidv4();
+        m.ident = uuidCustom();
         m.lastUpdate = Date.now();
         m.active = false;
         this.mappingService.createMapping(m);

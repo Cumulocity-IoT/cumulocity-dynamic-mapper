@@ -944,3 +944,8 @@ export function reduceTargetTemplate(t: object, patched: boolean): string {
   let tt = JSON.stringify(t);
   return tt;
 }
+
+export function uuidCustom(): string {
+  let id = Math.random().toString(36).slice(-6);
+  return id;
+}

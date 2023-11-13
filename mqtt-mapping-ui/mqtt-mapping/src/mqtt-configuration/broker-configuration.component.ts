@@ -38,7 +38,7 @@ import {
 } from "../shared/mapping.model";
 import packageJson from "../../package.json";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
-import { v4 as uuidv4 } from "uuid";
+import { uuidCustom } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-broker-configuration",
@@ -166,7 +166,7 @@ export class BrokerConfigurationComponent implements OnInit {
   public async onConfigurationAdd() {
     const configuration: Partial<ConnectorConfiguration> = {
       properties: {},
-      ident: uuidv4(),
+      ident: uuidCustom(),
     };
     const initialState = {
       add: true,
