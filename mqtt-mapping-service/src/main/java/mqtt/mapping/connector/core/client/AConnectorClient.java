@@ -52,7 +52,7 @@ public abstract class AConnectorClient {
 
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
 
-    public static final String STATUS_MAPPING_EVENT_TYPE = "mqtt_status_event";
+    public static final String STATUS_MAPPING_EVENT_TYPE = "d11r_statusEvent";
 
     @Getter
     @Setter

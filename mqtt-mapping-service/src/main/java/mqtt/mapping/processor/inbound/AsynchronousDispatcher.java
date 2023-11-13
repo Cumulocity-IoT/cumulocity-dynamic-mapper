@@ -246,7 +246,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
         if(closeMessage != null)
             log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
 
-        c8yAgent.createEvent("Connection lost to MQTT broker", "mqtt_status_event", DateTime.now(), null, tenant);
+        c8yAgent.createEvent("Connection lost to MQTT broker", AConnectorClient.STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
         connectorClient.connect();
     }
 
