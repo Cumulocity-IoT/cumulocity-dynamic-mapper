@@ -38,8 +38,8 @@ public class Feature {
     public boolean externalExtensionsEnabled;
 
     @NotNull
-    public boolean userHasMQTTMappingCreateRole;
+    public boolean userHasMappingCreateRole;
 
     @NotNull
-    public boolean userHasMQTTMappingAdminRole;
+    public boolean userHasMappingAdminRole;
 }
