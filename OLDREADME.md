@@ -1,4 +1,4 @@
-# Dynamic MQTT Mapping Service for Cumulocity
+# Dynamic Mapping Service for Cumulocity
 
 # Content
 - [Overview](#overview)
