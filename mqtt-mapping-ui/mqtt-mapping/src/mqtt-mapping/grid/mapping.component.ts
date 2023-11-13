@@ -36,7 +36,7 @@ import {
   Pagination,
   Row,
 } from "@c8y/ngx-components";
-import { v4 as uuidv4 } from "uuid";
+import { uuidCustom } from "../../shared/util";
 import { saveAs } from "file-saver";
 import { BrokerConfigurationService } from "../../mqtt-configuration/broker-configuration.service";
 import {
@@ -368,7 +368,7 @@ export class MappingComponent implements OnInit {
       editorMode: EditorMode.CREATE,
     };
 
-    let ident = uuidv4();
+    let ident = uuidCustom();
     let sub: MappingSubstitution[] = [];
     let mapping: Mapping = {
       name: "Mapping - " + ident.substring(0, 7),
@@ -482,7 +482,7 @@ export class MappingComponent implements OnInit {
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.name = this.mappingToUpdate.name + " - Copy";
-    this.mappingToUpdate.ident = uuidv4();
+    this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     console.log("Copying mapping", this.mappingToUpdate);
     this.showConfigMapping = true;
