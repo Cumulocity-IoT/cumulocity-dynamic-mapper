@@ -323,7 +323,7 @@ public class MappingComponent {
 
     public void addToCacheMappingInbound(String tenant, Mapping mapping) {
         try {
-            ((InnerNode) resolverMappingInbound.get(tenant)).addMapping(mapping);
+            resolverMappingInbound.get(tenant).addMapping(mapping);
         } catch (ResolveException e) {
             log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, mapping);
         }
@@ -331,7 +331,7 @@ public class MappingComponent {
 
     public void deleteFromCacheMappingInbound(String tenant, Mapping mapping) {
         try {
-            ((InnerNode) resolverMappingInbound.get(tenant)).deleteMapping(mapping);
+            resolverMappingInbound.get(tenant).deleteMapping(mapping);
         } catch (ResolveException e) {
             log.error("Tenant {} - Could not delete mapping {}, ignoring mapping", tenant, mapping);
         }
