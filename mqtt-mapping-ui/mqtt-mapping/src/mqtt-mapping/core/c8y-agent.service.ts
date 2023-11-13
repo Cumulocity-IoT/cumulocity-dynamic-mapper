@@ -143,7 +143,7 @@ export class C8YAgent {
     let device: Partial<IManagedObject> = {
       ...currentRequest,
       c8y_IsDevice: {},
-      c8y_mqttMapping_TestDevice: {},
+      d11r_testDevice: {},
       com_cumulocity_model_Agent: {},
     };
     // remove device identifier

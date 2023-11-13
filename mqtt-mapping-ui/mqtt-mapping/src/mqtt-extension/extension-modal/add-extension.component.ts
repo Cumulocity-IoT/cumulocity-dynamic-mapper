@@ -72,7 +72,7 @@ export class AddExtensionComponent {
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
-        c8y_mqttMapping_Extension: {
+        d11r_processorExtension: {
           name: nameUpload,
           external: true,
         },

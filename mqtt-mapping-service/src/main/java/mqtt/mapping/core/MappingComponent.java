@@ -236,7 +236,7 @@ public class MappingComponent {
     public List<Mapping> getMappings(String tenant) {
         List<Mapping> result = subscriptionsService.callForTenant(tenant, () -> {
             InventoryFilter inventoryFilter = new InventoryFilter();
-            inventoryFilter.byType(MappingRepresentation.MQTT_MAPPING_TYPE);
+            inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
             ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter);
             List<Mapping> res = StreamSupport.stream(moc.get().allPages().spliterator(), true)
                     .map(mo -> toMappingObject(mo).getC8yMQTTMapping())
@@ -265,7 +265,7 @@ public class MappingComponent {
             if (errors.size() == 0 || ignoreValidation) {
                 MappingRepresentation mr = new MappingRepresentation();
                 mapping.lastUpdate = System.currentTimeMillis();
-                mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
+                mr.setType(MappingRepresentation.MAPPING_TYPE);
                 mr.setC8yMQTTMapping(mapping);
                 mr.setId(mapping.id);
                 ManagedObjectRepresentation mor = toManagedObject(mr);
@@ -299,7 +299,7 @@ public class MappingComponent {
             MappingRepresentation mr = new MappingRepresentation();
             // 1. step create managed object
             mapping.lastUpdate = System.currentTimeMillis();
-            mr.setType(MappingRepresentation.MQTT_MAPPING_TYPE);
+            mr.setType(MappingRepresentation.MAPPING_TYPE);
             mr.setC8yMQTTMapping(mapping);
             ManagedObjectRepresentation mor = toManagedObject(mr);
             mor = inventoryApi.create(mor);

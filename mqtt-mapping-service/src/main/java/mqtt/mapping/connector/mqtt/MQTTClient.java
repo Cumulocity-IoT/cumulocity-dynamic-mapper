@@ -252,7 +252,7 @@ public class MQTTClient extends AConnectorClient {
                         log.info("Tenant {} - Successfully connected to broker {}", tenant,
                                 mqttClient.getServerURI());
                         c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                                STATUS_MQTT_EVENT_TYPE,
+                                STATUS_MAPPING_EVENT_TYPE,
                                 DateTime.now(), null, tenant);
 
                     }
@@ -376,7 +376,7 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public void subscribe(String topic, Integer qos) throws MqttException {
         log.debug("Subscribing on topic: {}", topic);
-        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenant);
+        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
@@ -386,7 +386,7 @@ public class MQTTClient extends AConnectorClient {
 
     public void unsubscribe(String topic) throws Exception {
         log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
-        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MQTT_EVENT_TYPE, DateTime.now(), null, tenant);
+        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
         mqttClient.unsubscribe(topic);
     }
 

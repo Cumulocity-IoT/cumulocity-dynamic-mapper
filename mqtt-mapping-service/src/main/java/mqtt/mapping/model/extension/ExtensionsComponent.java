@@ -44,7 +44,7 @@ public class ExtensionsComponent {
 	private InventoryApi inventory;
 
 	/** Fragment name containing the extension details within the managed object for that extension */
-	public static final String PROCESSOR_EXTENSION_TYPE = "c8y_mqttMapping_Extension";
+	public static final String PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
 	public static final String PROCESSOR_EXTENSION_INTERNAL_NAME = "mqtt-mapping-extension-internal";
 
 	/** Get all extensions. */

@@ -27,7 +27,7 @@ import {
   MappingType,
   RepairStrategy,
 } from "../../shared/mapping.model";
-import { findDeviceIdentifier, MQTT_TEST_DEVICE_TYPE } from "../../shared/util";
+import { findDeviceIdentifier, MAPPING_TEST_DEVICE_TYPE } from "../../shared/util";
 import { getTypedValue } from "../shared/util";
 import { C8YAgent } from "../core/c8y-agent.service";
 import {
@@ -146,8 +146,8 @@ export abstract class PayloadProcessorInbound {
                   "_" +
                   substituteValue.value,
                 c8y_mqttMapping_Generated_Type: {},
-                c8y_mqttMapping_TestDevice: {},
-                type: MQTT_TEST_DEVICE_TYPE,
+                d11r_testDevice: {},
+                type: MAPPING_TEST_DEVICE_TYPE,
               };
               let newPredecessor = context.requests.push({
                 predecessor: predecessor,

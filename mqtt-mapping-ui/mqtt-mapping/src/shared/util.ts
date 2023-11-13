@@ -297,15 +297,12 @@ export const SCHEMA_PAYLOAD = {
 
 export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
-export const MQTT_MAPPING_TYPE = "c8y_mqttMapping";
-export const PROCESSOR_EXTENSION_TYPE = "c8y_mqttMapping_Extension";
-export const MQTT_TEST_DEVICE_TYPE = "c8y_mqttMapping_TestDevice";
-export const MQTT_TEST_DEVICE_FRAGMENT = "c8y_mqttMapping_TestDevice";
-export const MQTT_MAPPING_GENERATED_TEST_DEVICE =
-  "c8y_mqttMapping_Generated_Type";
-export const STATUS_MAPPING_EVENT_TYPE = "mqtt_mapping_event";
-export const STATUS_SERVICE_EVENT_TYPE = "mqtt_service_event";
-export const MQTT_MAPPING_FRAGMENT = "c8y_mqttMapping";
+export const MAPPING_TYPE = "d11r_mapping";
+export const PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
+export const MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
+export const MAPPING_TEST_DEVICE_FRAGMENT = "d11r_testDevice";
+
+export const MAPPING_FRAGMENT = "d11r_mapping";
 export const PATH_OPERATION_ENDPOINT = "operation";
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
   "configuration/connector";
@@ -319,12 +316,11 @@ export const PATH_SUBSCRIPTION_ENDPOINT = "subscription";
 export const PATH_SUBSCRIPTIONS_ENDPOINT = "subscriptions";
 export const PATH_MAPPING_ENDPOINT = "mapping";
 export const BASE_URL = "service/mqtt-mapping-service";
-export const AGENT_ID = "MQTT_MAPPING_SERVICE";
-export const MQTT_TEST_DEVICE_ID = "MQTT_MAPPING_TEST_DEVICE";
+export const AGENT_ID = "d11r_mappingService";
 export const COLOR_HIGHLIGHTED: string = "lightgrey"; //#5FAEEC';
 
-export const CONNECTOR_STATUS_FRAGMENT = "d11r_connector_status";
-export const MAPPING_STATUS_FRAGMENT = "d11r_mapping_status";
+export const CONNECTOR_STATUS_FRAGMENT = "d11r_connectorStatus";
+export const MAPPING_STATUS_FRAGMENT = "d11r_mappingStatus";
 
 export function getExternalTemplate(mapping: Mapping): any {
   if (

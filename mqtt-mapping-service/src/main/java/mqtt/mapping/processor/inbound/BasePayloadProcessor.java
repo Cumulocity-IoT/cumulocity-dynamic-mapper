@@ -136,7 +136,7 @@ public abstract class BasePayloadProcessor<T> {
                             Map<String, Object> request = new HashMap<String, Object>();
                             request.put("name",
                                     "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
-                            request.put(MappingRepresentation.MQTT_MAPPING_GENERATED_TEST_DEVICE, null);
+                            request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
                             request.put("c8y_IsDevice", null);
                             try {
                                 var requestString = objectMapper.writeValueAsString(request);
