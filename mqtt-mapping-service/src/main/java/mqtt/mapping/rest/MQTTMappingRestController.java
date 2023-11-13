@@ -109,8 +109,8 @@ public class MQTTMappingRestController {
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
-        feature.setUserHasMQTTMappingCreateRole(userHasMappingCreateRole());
-        feature.setUserHasMQTTMappingAdminRole(userHasMappingAdminRole());
+        feature.setUserHasMappingCreateRole(userHasMappingCreateRole());
+        feature.setUserHasMappingAdminRole(userHasMappingAdminRole());
         return new ResponseEntity<Feature>(feature, HttpStatus.OK);
     }
 

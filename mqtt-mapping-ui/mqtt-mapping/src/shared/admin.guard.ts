@@ -21,7 +21,6 @@
 import { Injectable } from "@angular/core";
 import { CanActivate } from "@angular/router";
 import { BrokerConfigurationService } from "../mqtt-configuration/broker-configuration.service";
-import { Feature } from "./mapping.model";
 
 @Injectable({ providedIn: "root" })
 export class AdminGuard implements CanActivate {
@@ -33,9 +32,9 @@ export class AdminGuard implements CanActivate {
     this.adminPromise = this.configurationService.getFeatures().then((conf) => {
       console.log(
         "User has externalExtensionEnabled:",
-        conf.userHasMQTTMappingAdminRole
+        conf.userHasMappingAdminRole
       );
-      return conf.userHasMQTTMappingAdminRole;
+      return conf.userHasMappingAdminRole;
     });
 
     return this.adminPromise;
