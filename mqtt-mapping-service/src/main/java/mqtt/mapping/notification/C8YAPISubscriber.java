@@ -112,10 +112,10 @@ public class C8YAPISubscriber {
     private boolean outputMappingEnabled;
 
     private ScheduledExecutorService executorService = null;
-    private final String DEVICE_SUBSCRIBER = "MQTTOutboundMapperDeviceSubscriber";
-    private final String DEVICE_SUBSCRIPTION = "MQTTOutboundMapperDeviceSubscription";
-    private final String TENANT_SUBSCRIBER = "MQTTOutboundMapperTenantSubscriber";
-    private final String TENANT_SUBSCRIPTION = "MQTTOutboundMapperTenantSubscription";
+    private final String DEVICE_SUBSCRIBER = "DynamicMapperDeviceSubscriber";
+    private final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
+    private final String TENANT_SUBSCRIBER = "DynamicMapperTenantSubscriber";
+    private final String TENANT_SUBSCRIPTION = "DynamicMapperTenantSubscription";
 
     //List<CustomWebSocketClient> wsClientList = new ArrayList<>();
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
