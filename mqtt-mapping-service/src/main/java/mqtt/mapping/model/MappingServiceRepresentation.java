@@ -35,10 +35,10 @@ import java.util.ArrayList;
 @AllArgsConstructor
 public class  MappingServiceRepresentation implements Serializable  {
 
-  public static final String CONNECTOR_STATUS_FRAGMENT = "d11r_connector_status";
-  public static final String MAPPING_STATUS_FRAGMENT = "d11r_mapping_status";
-  public static final String AGENT_ID = "MQTT_MAPPING_SERVICE";
-  public static final String AGENT_NAME = "MQTT Mapping Service";
+  public static final String CONNECTOR_STATUS_FRAGMENT = "d11r_connectorStatus";
+  public static final String MAPPING_STATUS_FRAGMENT = "d11r_mappingStatus";
+  public static final String AGENT_ID = "d11r_mappingService";
+  public static final String AGENT_NAME = "Dynamic Mapping Service";
 
   @JsonProperty("id")
   private String id;
