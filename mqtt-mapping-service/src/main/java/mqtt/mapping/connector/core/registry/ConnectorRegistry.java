@@ -1,7 +1,7 @@
 package mqtt.mapping.connector.core.registry;
 
 import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
+import mqtt.mapping.connector.core.ConnectorSpecification;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import org.springframework.stereotype.Service;
 
@@ -12,20 +12,20 @@ import java.util.Map;
 @Slf4j
 public class ConnectorRegistry {
 
-    //Structure: Tenant, <Connector Ident, ConnectorInstance>
+    // Structure: Tenant, <Connector Ident, ConnectorInstance>
     protected HashMap<String, HashMap<String, AConnectorClient>> connectorTenantMap = new HashMap<>();
-    // ConnectorId, <Property, PropertyDefinition>
-    protected Map<String, Map<String, ConnectorPropertyDefinition>> connectorPropertyMap = new HashMap<>();
+    // Structure: ConnectorId, <Property, PropertyDefinition>
+    protected Map<String, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
 
-    public void registerConnector(String connectorId, Map<String, ConnectorPropertyDefinition> properties) {
-        connectorPropertyMap.put(connectorId, properties);
+    public void registerConnector(String connectorId, ConnectorSpecification specification) {
+        connectorSpecificationMap.put(connectorId, specification);
     }
-    public Map<String, ConnectorPropertyDefinition> getConnectorPropertyDefinition(String connectorId) {
-        return connectorPropertyMap.get(connectorId);
+    public ConnectorSpecification getConnectorSpecification(String connectorId) {
+        return connectorSpecificationMap.get(connectorId);
     }
 
-    public Map<String, Map<String, ConnectorPropertyDefinition>> getAllConnectorPropertyDefinition() {
-        return connectorPropertyMap;
+    public Map<String, ConnectorSpecification> getConnectorSpecifications() {
+        return connectorSpecificationMap;
     }
 
     public void registerClient(String tenant, AConnectorClient client) throws ConnectorRegistryException {

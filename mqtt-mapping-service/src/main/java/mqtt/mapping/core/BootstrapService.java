@@ -97,7 +97,7 @@ public class BootstrapService {
                 MappingServiceRepresentation.class);
         mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
         // TODO Add other clients static property definition here
-        connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getConfigProps());
+        connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getSpec());
 
         try {
             if (serviceConfiguration != null) {

@@ -57,9 +57,9 @@ import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
 import mqtt.mapping.configuration.ServiceConfiguration;
 import mqtt.mapping.configuration.ServiceConfigurationComponent;
+import mqtt.mapping.connector.core.ConnectorPropertyType;
+import mqtt.mapping.connector.core.ConnectorSpecification;
 import mqtt.mapping.connector.core.ConnectorProperty;
-import mqtt.mapping.connector.core.ConnectorPropertyConfiguration;
-import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
@@ -136,17 +136,15 @@ public class MQTTMappingRestController {
     }
 
     @RequestMapping(value = "/configuration/connector/specifications", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ConnectorPropertyConfiguration>> getConnectorSpecification() {
+    public ResponseEntity<List<ConnectorSpecification>> getConnectorSpecifications() {
         String tenant = contextService.getContext().getTenant();
-        List<ConnectorPropertyConfiguration> connectorConfigurations = new ArrayList<>();
+        List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
         log.info("Tenant {} - Getting connection properties...", tenant);
-        Map<String, Map<String, ConnectorPropertyDefinition>> spec = connectorRegistry
-                .getAllConnectorPropertyDefinition();
+        Map<String, ConnectorSpecification> spec = connectorRegistry
+                .getConnectorSpecifications();
         // Iterate over all connectors
         for (String connectorId : spec.keySet()) {
-            ConnectorPropertyConfiguration config = new ConnectorPropertyConfiguration(connectorId,
-                    spec.get(connectorId));
-            connectorConfigurations.add(config);
+            connectorConfigurations.add(spec.get(connectorId));
         }
         return ResponseEntity.ok(connectorConfigurations);
     }
@@ -162,7 +160,7 @@ public class MQTTMappingRestController {
                     "Insufficient Permission, user does not have required permission to access this API");
         }
         // Remove sensitive data before printing to log
-        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
+        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
@@ -187,14 +185,8 @@ public class MQTTMappingRestController {
             // Remove sensitive data before sending to UI
             for (ConnectorConfiguration config : configurations) {
                 ConnectorConfiguration clonedConfig = (ConnectorConfiguration) config.clone();
-                for (String property : clonedConfig.getProperties().keySet()) {
-                    Map<String, ConnectorPropertyDefinition> spec = connectorRegistry
-                            .getConnectorPropertyDefinition(config.getConnectorId());
-                    if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == spec.get(property).property) {
-                        clonedConfig.getProperties().replace(property, "");
-                    }
-                }
-                modifiedConfigs.add(clonedConfig);
+                ConnectorConfiguration cleanedConfig = getCleanedConfig(clonedConfig);
+                modifiedConfigs.add(cleanedConfig);
             }
             return ResponseEntity.ok(modifiedConfigs);
         } catch (Exception ex) {
@@ -245,7 +237,7 @@ public class MQTTMappingRestController {
                     "Insufficient Permission, user does not have required permission to access this API");
         }
         // Remove sensitive data before printing to log
-        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration, tenant);
+        ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
 
@@ -260,14 +252,12 @@ public class MQTTMappingRestController {
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
-    private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration, String tenant) {
+    private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
-        // log.info("Tenant {} - Configuration Properties:{}, {}", tenant,
-        // configuration, clonedConfig);
         for (String property : clonedConfig.getProperties().keySet()) {
-            Map<String, ConnectorPropertyDefinition> connectorProperties = connectorRegistry
-                    .getConnectorPropertyDefinition(configuration.connectorId);
-            if (ConnectorProperty.SENSITIVE_STRING_PROPERTY == connectorProperties.get(property).property) {
+            ConnectorSpecification connectorSpecification = connectorRegistry
+                    .getConnectorSpecification(configuration.connectorId);
+            if (connectorSpecification.isPropetySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
             }
         }

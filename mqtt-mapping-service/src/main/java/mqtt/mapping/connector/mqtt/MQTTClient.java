@@ -34,6 +34,7 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLContext;
@@ -57,8 +58,9 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
+import mqtt.mapping.connector.core.ConnectorPropertyType;
+import mqtt.mapping.connector.core.ConnectorSpecification;
 import mqtt.mapping.connector.core.ConnectorProperty;
-import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
@@ -102,21 +104,22 @@ public class MQTTClient extends AConnectorClient {
     private String connectorIdent = null;
 
     @Getter
-    public static Map<String, ConnectorPropertyDefinition> configProps;
+    public static ConnectorSpecification spec;
     static {
-        configProps = new HashMap<>();
-        configProps.put("mqttHost", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
-        configProps.put("mqttPort", new ConnectorPropertyDefinition(true, ConnectorProperty.NUMERIC_PROPERTY));
-        configProps.put("user", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+        Map<String, ConnectorProperty> configProps = new HashMap<>();
+        configProps.put("mqttHost", new ConnectorProperty(true, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("mqttPort", new ConnectorProperty(true, ConnectorPropertyType.NUMERIC_PROPERTY));
+        configProps.put("user", new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
         configProps.put("password",
-                new ConnectorPropertyDefinition(false, ConnectorProperty.SENSITIVE_STRING_PROPERTY));
-        configProps.put("clientId", new ConnectorPropertyDefinition(true, ConnectorProperty.STRING_PROPERTY));
-        configProps.put("useTLS", new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+                new ConnectorProperty(false, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY));
+        configProps.put("clientId", new ConnectorProperty(true, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("useTLS", new ConnectorProperty(false, ConnectorPropertyType.BOOLEAN_PROPERTY));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorPropertyDefinition(false, ConnectorProperty.BOOLEAN_PROPERTY));
+                new ConnectorProperty(false, ConnectorPropertyType.BOOLEAN_PROPERTY));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
-        configProps.put("nameCertificate", new ConnectorPropertyDefinition(false, ConnectorProperty.STRING_PROPERTY));
+                new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("nameCertificate", new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
+        spec = new ConnectorSpecification(connectorId, true, configProps);
     }
 
     private String additionalSubscriptionIdTest;
@@ -154,8 +157,8 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public Map<String, ConnectorPropertyDefinition> getConfigProperties() {
-        return MQTTClient.configProps;
+    public ConnectorSpecification getSpecification() {
+        return MQTTClient.spec;
     }
 
     @Override
