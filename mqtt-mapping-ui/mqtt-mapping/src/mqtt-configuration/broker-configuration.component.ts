@@ -75,16 +75,16 @@ export class BrokerConfigurationComponent implements OnInit {
 
     this.initializeMonitoringService();
     this.isBrokerAgentCreated$ = from(
-      this.configurationService.initializeBrokerAgent()
+      this.brokerConfigurationService.initializeBrokerAgent()
     )
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
-    this.feature = await this.configurationService.getFeatures();
+    this.feature = await this.brokerConfigurationService.getFeatures();
   }
 
   private async initializeMonitoringService(): Promise<void> {
     this.subscription =
-      await this.configurationService.subscribeMonitoringChannel();
+      await this.brokerConfigurationService.subscribeMonitoringChannel();
   }
 
   private initForms(): void {
@@ -95,18 +95,18 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async loadData(): Promise<void> {
-    let sc = await this.configurationService.getServiceConfiguration();
+    let sc = await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
-      await this.configurationService.getConnectorSpecifications();
+      await this.brokerConfigurationService.getConnectorSpecifications();
     this.configurations =
-      await this.configurationService.getConnectorConfigurationsCombined();
+      await this.brokerConfigurationService.getConnectorConfigurationsCombined();
     if (sc) {
       this.serviceConfiguration = sc;
     }
   }
 
   async clickedReconnect2NotificationEnpoint() {
-    const response1 = await this.configurationService.runOperation(
+    const response1 = await this.brokerConfigurationService.runOperation(
       Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS
     );
     console.log("Details reconnect2NotificationEnpoint", response1);
@@ -133,7 +133,7 @@ export class BrokerConfigurationComponent implements OnInit {
       if (editedConfiguration) {
         this.configurations[index] = editedConfiguration;
         const response =
-          await this.configurationService.updateConnectorConfiguration(
+          await this.brokerConfigurationService.updateConnectorConfiguration(
             editedConfiguration
           );
         if (response.status < 300) {
@@ -168,7 +168,7 @@ export class BrokerConfigurationComponent implements OnInit {
         console.log("Confirmation result:", result);
         if (!!result) {
           const response = 
-            await this.configurationService.deleteConnectorConfiguration(
+            await this.brokerConfigurationService.deleteConnectorConfiguration(
               configuration.ident
             );
           if (response.status < 300) {
@@ -203,7 +203,7 @@ export class BrokerConfigurationComponent implements OnInit {
       if (addedConfiguration) {
         this.configurations.push(addedConfiguration);
         const response =
-          await this.configurationService.createConnectorConfiguration(
+          await this.brokerConfigurationService.createConnectorConfiguration(
             addedConfiguration
           );
         if (response.status < 300) {
@@ -220,7 +220,7 @@ export class BrokerConfigurationComponent implements OnInit {
 
   public async onConfigurationToogle(index) {
     const configuration = this.configurations[index];
-    const response1 = await this.configurationService.runOperation(
+    const response1 = await this.brokerConfigurationService.runOperation(
       configuration.configuration.enabled
         ? Operation.DISCONNECT
         : Operation.CONNECT,
@@ -239,7 +239,7 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async resetStatusMapping() {
-    const res = await this.configurationService.runOperation(
+    const res = await this.brokerConfigurationService.runOperation(
       Operation.RESET_STATUS_MAPPING
     );
     if (res.status < 300) {
@@ -251,7 +251,7 @@ export class BrokerConfigurationComponent implements OnInit {
 
   ngOnDestroy(): void {
     console.log("Stop subscription");
-    this.configurationService.unsubscribeFromMonitoringChannel(
+    this.brokerConfigurationService.unsubscribeFromMonitoringChannel(
       this.subscription
     );
   }
@@ -260,7 +260,7 @@ export class BrokerConfigurationComponent implements OnInit {
     let conf: ServiceConfiguration = {
       ...this.serviceConfiguration,
     };
-    const response = await this.configurationService.updateServiceConfiguration(
+    const response = await this.brokerConfigurationService.updateServiceConfiguration(
       conf
     );
     if (response.status < 300) {

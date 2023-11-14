@@ -59,7 +59,7 @@ export class MappingService {
   _feature: Feature;
   constructor(
     private inventory: InventoryService,
-    private configurationService: BrokerConfigurationService,
+    private brokerConfigurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private client: FetchClient
@@ -73,7 +73,7 @@ export class MappingService {
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
   public async changeActivationMapping(parameter: any) {
-    await this.configurationService.runOperation(
+    await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
@@ -162,7 +162,7 @@ export class MappingService {
 
   async getSubscriptions(): Promise<C8YAPISubscription> {
     if (!this._feature) {
-      this._feature = await this.configurationService.getFeatures();
+      this._feature = await this.brokerConfigurationService.getFeatures();
     }
     if (this._feature.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(

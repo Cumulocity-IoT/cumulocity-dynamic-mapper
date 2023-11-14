@@ -30,7 +30,7 @@ export class MonitoringService {
   constructor(
     private client: FetchClient,
     private inventory: InventoryService,
-    private configurationService: BrokerConfigurationService
+    private brokerConfigurationService: BrokerConfigurationService
   ) {
     this.realtime = new Realtime(this.client);
   }
@@ -44,7 +44,7 @@ export class MonitoringService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.configurationService. initializeBrokerAgent();
+    this.agentId = await this.brokerConfigurationService. initializeBrokerAgent();
     console.log("Start subscription for monitoring:", this.agentId);
 
     let { data, res } = await this.inventory.detail(this.agentId);

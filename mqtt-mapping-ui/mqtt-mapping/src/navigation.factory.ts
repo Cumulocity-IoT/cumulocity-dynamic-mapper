@@ -45,11 +45,13 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
-    private configurationService: BrokerConfigurationService) {}
+    private brokerConfigurationService: BrokerConfigurationService) {
+      console.log("MappingNavigationFactory constructor");
+    }
 
   async get() {
     if (!this._feature) {
-      const f: any= await this.configurationService.getFeatures();
+      const f: any= await this.brokerConfigurationService.getFeatures();
       if (f.error) {
         console.error("mqtt-mapping-service microservice not accessible", f);
         this._feature = undefined;

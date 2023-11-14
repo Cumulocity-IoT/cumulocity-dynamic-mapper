@@ -138,7 +138,7 @@ export class MonitoringComponent implements OnInit {
   }
 
   async refreshMappingStatus(): Promise<void> {
-    await this.configurationService.runOperation(
+    await this.brokerConfigurationService.runOperation(
       Operation.REFRESH_STATUS_MAPPING
     );
   }

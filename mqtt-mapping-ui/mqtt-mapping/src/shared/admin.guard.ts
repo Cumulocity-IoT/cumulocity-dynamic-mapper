@@ -26,10 +26,10 @@ import { BrokerConfigurationService } from "../mqtt-configuration/broker-configu
 export class AdminGuard implements CanActivate {
   private adminPromise: Promise<boolean>;
 
-  constructor(private configurationService: BrokerConfigurationService) {}
+  constructor(private brokerConfigurationService: BrokerConfigurationService) {}
 
   canActivate(): Promise<boolean> {
-    this.adminPromise = this.configurationService.getFeatures().then((conf) => {
+    this.adminPromise = this.brokerConfigurationService.getFeatures().then((conf) => {
       console.log(
         "User has externalExtensionEnabled:",
         conf.userHasMappingAdminRole

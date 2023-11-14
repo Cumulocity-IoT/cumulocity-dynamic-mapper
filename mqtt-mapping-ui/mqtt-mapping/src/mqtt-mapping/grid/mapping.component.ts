@@ -725,7 +725,7 @@ export class MappingComponent implements OnInit {
   }
 
   private async reloadMappings() {
-    const response2 = await this.configurationService.runOperation(
+    const response2 = await this.brokerConfigurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );
     console.log("Activate mapping response:", response2);
