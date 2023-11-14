@@ -20,7 +20,7 @@
  */
 import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
 import { MappingTreeService } from "./tree.service";
-import { JsonEditor2Component } from "src/shared/editor2/jsoneditor2.component";
+import { JsonEditor2Component } from "../shared";
 
 @Component({
   selector: "d11r-mapping-tree-grid",

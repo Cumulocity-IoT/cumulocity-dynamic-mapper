@@ -37,9 +37,8 @@ import * as _ from "lodash";
 
 import { TranslateService } from "@ngx-translate/core";
 import { BehaviorSubject } from "rxjs";
-import { ExtensionStatus } from "../../shared/mapping.model";
-import { PROCESSOR_EXTENSION_TYPE } from "../../shared/util";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
+import { PROCESSOR_EXTENSION_TYPE, ExtensionStatus } from "../../shared";
+import { BrokerConfigurationService } from "../../configuration";
 
 @Injectable({ providedIn: "root" })
 export class ExtensionService {
@@ -71,10 +70,8 @@ export class ExtensionService {
     }
     return result;
   }
-  
-  async getExtensionsEnriched(
-    extensionId: string
-  ): Promise<IManagedObject[]> {
+
+  async getExtensionsEnriched(extensionId: string): Promise<IManagedObject[]> {
     let listOfExtensionsInventory: Promise<IManagedObject[]> =
       this.getExtensions(extensionId);
     let listOfExtensionsBackend: Promise<Object> =

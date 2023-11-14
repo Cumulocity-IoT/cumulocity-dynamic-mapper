@@ -20,7 +20,6 @@
  */
 import * as _ from "lodash";
 import { PayloadProcessorOutbound } from "../payload-processor-outbound.service";
-import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import {
   splitTopicExcludingSeparator,
   TOKEN_TOPIC_LEVEL,
@@ -28,7 +27,10 @@ import {
   whatIsIt,
   TIME,
   findDeviceIdentifier,
-} from "../../../shared/util";
+  Mapping,
+  API,
+  RepairStrategy,
+} from "../../../shared";
 import {
   ProcessingContext,
   SubstituteValue,
@@ -169,7 +171,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                       mapping.externalIdType +
                       " not found!"
                   );
-                } 
+                }
                 externalId = extractedSourceContent;
               }
               extractedSourceContent = `${externalId}_${mapping.externalIdType}`;

@@ -19,7 +19,7 @@
  * @authors Christof Strack
  */
 
-import { Direction } from "../../shared/mapping.model";
+import { Direction } from "../../shared";
 
 export enum EditorMode {
   CREATE = "CREATE",

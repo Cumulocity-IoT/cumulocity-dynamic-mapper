@@ -28,14 +28,7 @@ import {
 } from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
-import {
-  C8YAPISubscription,
-  Direction,
-  Feature,
-  Mapping,
-  Operation,
-} from "../../shared/mapping.model";
+import { BrokerConfigurationService } from "../../configuration";
 import {
   BASE_URL,
   MAPPING_FRAGMENT,
@@ -43,7 +36,12 @@ import {
   PATH_MAPPING_ENDPOINT,
   PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
-} from "../../shared/util";
+  C8YAPISubscription,
+  Direction,
+  Feature,
+  Mapping,
+  Operation,
+} from "../../shared";
 import { JSONProcessorInbound } from "../processor/impl/json-processor-inbound.service";
 import { JSONProcessorOutbound } from "../processor/impl/json-processor-outbound.service";
 import {

@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { APP_INITIALIZER, Injectable } from "@angular/core";
+import { Injectable } from "@angular/core";
 import {
   FetchClient,
   IdentityService,
@@ -35,9 +35,6 @@ import {
   PATH_EXTENSION_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
-  PATH_STATUS_CONNECTOR_ENDPOINT as PATH_STATUS_CONNECTORS_ENDPOINT,
-} from "../shared/util";
-import {
   ConnectorConfiguration,
   ConnectorPropertyConfiguration,
   Extension,
@@ -47,7 +44,9 @@ import {
   ConnectorStatus,
   Status,
   ConnectorConfigurationCombined,
-} from "../shared/mapping.model";
+  PATH_STATUS_CONNECTORS_ENDPOINT,
+} from "../shared";
+
 import { BehaviorSubject } from "rxjs";
 
 @Injectable({ providedIn: "root" })

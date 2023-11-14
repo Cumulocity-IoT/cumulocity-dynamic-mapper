@@ -32,16 +32,16 @@ import {
   Column,
   ColumnDataType,
   DisplayOptions,
-  gettext,
   Pagination,
   Row,
+  gettext,
 } from "@c8y/ngx-components";
-import { uuidCustom } from "../../shared/util";
 import { saveAs } from "file-saver";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
+import { BrokerConfigurationService } from "../../configuration";
 import {
   API,
   C8YAPISubscription,
+  ConfirmationModalComponent,
   Direction,
   Mapping,
   MappingSubstitution,
@@ -49,28 +49,27 @@ import {
   Operation,
   PayloadWrapper,
   QOS,
+  SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
-} from "../../shared/mapping.model";
-import {
   getExternalTemplate,
   isTemplateTopicUnique,
-  SAMPLE_TEMPLATES_C8Y,
-} from "../../shared/util";
-import { APIRendererComponent } from "../renderer/api.renderer.component";
-import { QOSRendererComponent } from "../renderer/qos-cell.renderer.component";
-import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
-import { TemplateRendererComponent } from "../renderer/template.renderer.component";
-import { MappingService } from "../core/mapping.service";
-import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { Subject } from "rxjs";
-import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
+  uuidCustom
+} from "../../shared";
+
 import { Router } from "@angular/router";
 import { IIdentified } from "@c8y/client";
-import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
-import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
-import { NameRendererComponent } from "../renderer/name.renderer.component";
+import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
+import { Subject } from "rxjs";
+import { MappingService } from "../core/mapping.service";
 import { ImportMappingsComponent } from "../import-modal/import.component";
-import { ConfirmationModalComponent } from "../../shared/confirmation/confirmation-modal.component";
+import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
+import { APIRendererComponent } from "../renderer/api.renderer.component";
+import { NameRendererComponent } from "../renderer/name.renderer.component";
+import { QOSRendererComponent } from "../renderer/qos-cell.renderer.component";
+import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
+import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
+import { TemplateRendererComponent } from "../renderer/template.renderer.component";
+import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
 
 @Component({
   selector: "d11r-mapping-mapping-grid",
@@ -504,7 +503,7 @@ export class MappingComponent implements OnInit {
     confirmation: boolean = true,
     multiple: boolean = false
   ): Promise<boolean> {
-    let result : boolean = false;
+    let result: boolean = false;
     console.log("Deleting mapping before confirmation:", mapping);
     if (confirmation) {
       const initialState = {
@@ -524,10 +523,10 @@ export class MappingComponent implements OnInit {
 
       result = await confirmDeletionModalRef.content.closeSubject.toPromise();
       if (result) {
-          console.log("DELETE mapping:", mapping, result);
-          await this.deleteMapping(mapping);
+        console.log("DELETE mapping:", mapping, result);
+        await this.deleteMapping(mapping);
       } else {
-          console.log("Canceled DELETE mapping", mapping, result);
+        console.log("Canceled DELETE mapping", mapping, result);
       }
       // confirmDeletionModalRef.content.closeSubject.subscribe(
       //   async (result: boolean) => {
@@ -681,7 +680,7 @@ export class MappingComponent implements OnInit {
   }
 
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
-    let continueDelete : boolean = false;
+    let continueDelete: boolean = false;
     for (let i = 0; i < this.mappings.length; i++) {
       if (ids.includes(this.mappings[i].id)) {
         if (i == 0) {

@@ -20,7 +20,7 @@
  */
 import { Component } from "@angular/core";
 import { CellRendererContext } from "@c8y/ngx-components";
-import { SnoopStatus } from "../../shared/mapping.model";
+import { SnoopStatus } from "../../shared";
 
 @Component({
   template: `

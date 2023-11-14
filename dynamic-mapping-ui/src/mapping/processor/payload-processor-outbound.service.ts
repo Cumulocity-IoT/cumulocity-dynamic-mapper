@@ -26,7 +26,7 @@ import {
   Mapping,
   MappingType,
   RepairStrategy,
-} from "../../shared/mapping.model";
+} from "../../shared";
 import {
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
