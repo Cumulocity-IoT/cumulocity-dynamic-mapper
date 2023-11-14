@@ -137,9 +137,7 @@ public class BootstrapService {
 
     public void shutdownConnector(String tenant, String ident) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, ident);
-        if (connectorRegistry.getClientsForTenant(tenant).isEmpty())
-            c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
-
+        c8YAgent.getNotificationSubscriber().removeConnector(tenant, ident);
     }
 
 
