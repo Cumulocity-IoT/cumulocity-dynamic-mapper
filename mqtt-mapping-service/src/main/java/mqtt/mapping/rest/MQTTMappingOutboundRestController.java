@@ -45,6 +45,8 @@ public class MQTTMappingOutboundRestController {
                 ManagedObjectRepresentation mor = c8yAgent
                         .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
+                    if(!c8yAgent.getNotificationSubscriber().isInitialized())
+                        c8yAgent.getNotificationSubscriber().init();
                     // Creates subscription for each connector
                     c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
 
@@ -90,6 +92,8 @@ public class MQTTMappingOutboundRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
+                        if(!c8yAgent.getNotificationSubscriber().isInitialized())
+                            c8yAgent.getNotificationSubscriber().init();
                         // Creates subscription for each connector
                         c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
                     } catch (Exception e) {
