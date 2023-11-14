@@ -21,10 +21,37 @@
 
 package mqtt.mapping.rest;
 
+import java.net.URI;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
@@ -36,25 +63,19 @@ import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
-import mqtt.mapping.core.*;
+import mqtt.mapping.core.BootstrapService;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.core.Operation;
+import mqtt.mapping.core.ServiceOperation;
+import mqtt.mapping.core.Status;
+import mqtt.mapping.model.Direction;
+import mqtt.mapping.model.Extension;
+import mqtt.mapping.model.Feature;
+import mqtt.mapping.model.InnerNode;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.model.*;
+import mqtt.mapping.model.MappingStatus;
 import mqtt.mapping.processor.model.ProcessingContext;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import java.net.URI;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController

@@ -20,7 +20,24 @@
 
 package mqtt.mapping.connector.core.client;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -36,16 +53,6 @@ import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
 import mqtt.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import mqtt.mapping.processor.model.ProcessingContext;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.MqttException;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.*;
 
 @Slf4j
 public abstract class AConnectorClient {

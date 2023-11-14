@@ -21,29 +21,13 @@
 
 package mqtt.mapping;
 
-import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
-import com.cumulocity.microservice.context.annotation.EnableContextSupport;
-import com.cumulocity.model.DateTimeConverter;
-import com.cumulocity.model.IDTypeConverter;
-import com.cumulocity.model.JSONBase;
-import com.cumulocity.model.idtype.GId;
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
-import com.cumulocity.rest.representation.BaseResourceRepresentation;
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.deser.Deserializers;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.ser.Serializers;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.model.InnerNode;
-import mqtt.mapping.model.InnerNodeSerializer;
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.joda.time.DateTime;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -56,12 +40,40 @@ import org.svenson.AbstractDynamicProperties;
 import org.svenson.JSONParser;
 import org.svenson.converter.DefaultTypeConverterRepository;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
+import com.cumulocity.microservice.context.annotation.EnableContextSupport;
+import com.cumulocity.model.DateTimeConverter;
+import com.cumulocity.model.IDTypeConverter;
+import com.cumulocity.model.JSONBase;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
+import com.cumulocity.rest.representation.BaseResourceRepresentation;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.deser.Deserializers;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.Serializers;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.model.InnerNode;
+import mqtt.mapping.model.InnerNodeSerializer;
 
 @MicroserviceApplication
 @EnableContextSupport

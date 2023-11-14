@@ -21,13 +21,14 @@
 
 package mqtt.mapping.configuration;
 
+import javax.validation.constraints.NotNull;
+
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
-
-import javax.validation.constraints.NotNull;
 
 @Data
 @ToString ()

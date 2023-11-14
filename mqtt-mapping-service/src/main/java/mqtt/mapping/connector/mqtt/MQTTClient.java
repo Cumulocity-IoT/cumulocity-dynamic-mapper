@@ -21,34 +21,6 @@
 
 package mqtt.mapping.connector.mqtt;
 
-import com.cumulocity.microservice.context.credentials.Credentials;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import mqtt.mapping.configuration.ConnectorConfiguration;
-import mqtt.mapping.configuration.ConnectorConfigurationComponent;
-import mqtt.mapping.connector.core.ConnectorProperty;
-import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
-import mqtt.mapping.connector.core.client.AConnectorClient;
-import mqtt.mapping.core.C8YAgent;
-import mqtt.mapping.core.MappingComponent;
-import mqtt.mapping.model.Mapping;
-import mqtt.mapping.processor.inbound.AsynchronousDispatcherInbound;
-import mqtt.mapping.processor.model.C8YRequest;
-import mqtt.mapping.processor.model.ProcessingContext;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.joda.time.DateTime;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -63,6 +35,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.joda.time.DateTime;
+
+import com.cumulocity.microservice.context.credentials.Credentials;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import mqtt.mapping.configuration.ConnectorConfiguration;
+import mqtt.mapping.configuration.ConnectorConfigurationComponent;
+import mqtt.mapping.connector.core.ConnectorProperty;
+import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
+import mqtt.mapping.connector.core.client.AConnectorClient;
+import mqtt.mapping.core.C8YAgent;
+import mqtt.mapping.core.MappingComponent;
+import mqtt.mapping.model.Mapping;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcherInbound;
+import mqtt.mapping.processor.model.C8YRequest;
+import mqtt.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 // @EnableScheduling

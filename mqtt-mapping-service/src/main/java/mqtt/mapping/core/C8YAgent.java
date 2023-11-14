@@ -21,7 +21,32 @@
 
 package mqtt.mapping.core;
 
-import c8y.IsDevice;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.ws.rs.core.MediaType;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.svenson.JSONParser;
+
 import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
@@ -46,6 +71,8 @@ import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import c8y.IsDevice;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -66,20 +93,6 @@ import mqtt.mapping.processor.extension.ProcessorExtensionInbound;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableObject;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
-import org.svenson.JSONParser;
-
-import javax.ws.rs.core.MediaType;
-import java.io.*;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.*;
 
 @Slf4j
 @Service
