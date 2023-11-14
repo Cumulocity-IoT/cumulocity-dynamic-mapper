@@ -34,6 +34,8 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.connector.core.registry.ConnectorRegistry;
 import mqtt.mapping.connector.core.registry.ConnectorRegistryException;
@@ -124,6 +126,9 @@ public class C8YAPISubscriber {
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
     //private int deviceWSStatusCode = 0;
 
+    @Getter
+    private boolean initialized = false;
+
     public void init() {
         //Assuming this can be only changed for all tenants!
         String tenant = subscriptionsService.getTenant();
@@ -145,6 +150,7 @@ public class C8YAPISubscriber {
                     initDeviceClient();
                 }
             }
+            initialized = true;
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }
@@ -575,6 +581,7 @@ public class C8YAPISubscriber {
             }
 
         }
+        initialized = false;
 
     }
 
