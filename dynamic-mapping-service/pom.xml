@@ -30,7 +30,7 @@
     <parent>
         <groupId>com.softwareag.c8y.mapping</groupId>
         <artifactId>dynamic-mapping-solution</artifactId>
-        <version>4.0.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <properties>
