@@ -238,27 +238,12 @@ export class BrokerConfigurationComponent implements OnInit {
     await this.loadData();
   }
 
-  // private showTerminateConnectionModal() {
-  //   const terminateExistingConnectionModalRef: BsModalRef =
-  //     this.bsModalService.show(TerminateBrokerConnectionModalComponent, {});
-  //   terminateExistingConnectionModalRef.content.closeSubject.subscribe(
-  //     async (isTerminateConnection: boolean) => {
-  //       console.log("Termination result:", isTerminateConnection);
-  //       if (!isTerminateConnection) {
-  //       } else {
-  //         await this.disconnectFromBroker();
-  //       }
-  //       terminateExistingConnectionModalRef.hide();
-  //     }
-  //   );
-  // }
-
   public async resetStatusMapping() {
     const res = await this.configurationService.runOperation(
       Operation.RESET_STATUS_MAPPING
     );
     if (res.status < 300) {
-      this.alert.success(gettext("Successfully rreset"));
+      this.alert.success(gettext("Successfully reset"));
     } else {
       this.alert.danger(gettext("Failed to rest statistic."));
     }
