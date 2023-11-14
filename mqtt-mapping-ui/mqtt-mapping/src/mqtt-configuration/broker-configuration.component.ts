@@ -63,7 +63,7 @@ export class BrokerConfigurationComponent implements OnInit {
 
   constructor(
     public bsModalService: BsModalService,
-    public configurationService: BrokerConfigurationService,
+    public brokerConfigurationService: BrokerConfigurationService,
     public mappingService: MappingService,
     public alert: AlertService
   ) {}

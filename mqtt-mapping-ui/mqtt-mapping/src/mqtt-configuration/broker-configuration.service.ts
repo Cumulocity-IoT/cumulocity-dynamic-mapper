@@ -50,9 +50,9 @@ import {
 } from "../shared/mapping.model";
 import { BehaviorSubject } from "rxjs";
 
-@Injectable({ providedIn: "root"})
+@Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
-   constructor(private client: FetchClient, private identity: IdentityService) {
+  constructor(private client: FetchClient, private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
   }
 
@@ -60,7 +60,7 @@ export class BrokerConfigurationService {
 
   private _connectorConfigurationCombined: ConnectorConfigurationCombined[] =
     [];
-  private _feature: Feature;
+  private _feature: Promise<Feature> ;
   private realtime: Realtime;
 
   async initializeBrokerAgent(): Promise<string> {
@@ -224,15 +224,19 @@ export class BrokerConfigurationService {
 
   async getFeatures(): Promise<Feature> {
     if (!this._feature) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-        {
-          method: "GET",
-        }
-      );
-      this._feature = await response.json();
+      this._feature = this.getUncachedFeatures();
     }
     return this._feature;
+  }
+
+  async getUncachedFeatures(): Promise<Feature> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+      {
+        method: "GET",
+      }
+    );
+    return await response.json();
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
