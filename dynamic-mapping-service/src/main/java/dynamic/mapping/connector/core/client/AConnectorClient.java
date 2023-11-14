@@ -213,7 +213,7 @@ public abstract class AConnectorClient {
                         : connectTask.isDone() ? "stopped" : "running");
                 String statusInitializeTask = (initializeTask == null ? "stopped"
                         : initializeTask.isDone() ? "stopped" : "running");
-                log.info("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}", tenant,
+                log.debug("Tenant {} - Status: connectTask: {}, initializeTask: {}, isConnected: {}", tenant,
                         statusConnectTask,
                         statusInitializeTask, isConnected());
             }

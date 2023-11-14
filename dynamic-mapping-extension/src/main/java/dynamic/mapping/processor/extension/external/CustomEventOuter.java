@@ -1269,7 +1269,7 @@ public final class CustomEventOuter {
       "z\n\013CustomEvent\022\021\n\ttimestamp\030\001 \001(\003\022\013\n\003txt" +
       "\030\002 \001(\t\022\014\n\004unit\030\003 \001(\t\022\026\n\016externalIdType\030\004" +
       " \001(\t\022\022\n\nexternalId\030\005 \001(\t\022\021\n\teventType\030\006 " +
-      "\001(\tB=\n)mqtt.mapping.processor.extension." +
+      "\001(\tB=\n)dynamic.mapping.processor.extension." +
       "externalB\020CustomEventOuterb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor

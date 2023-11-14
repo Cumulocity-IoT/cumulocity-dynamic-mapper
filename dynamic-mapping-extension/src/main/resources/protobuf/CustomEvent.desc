@@ -1,6 +1,6 @@
 
-¨
-CustomEvent.protoprocessor.protobuf"·
+ï¿½
+CustomEvent.protoprocessor.protobuf"ï¿½
 CustomEvent
 	timestamp (R	timestamp
 txt (	Rtxt
@@ -10,4 +10,4 @@
 externalId (	R
 externalId
 	eventType (	R	eventTypeB=
-)mqtt.mapping.processor.extension.externalBCustomEventOuterbproto3
+)dynamic.mapping.processor.extension.externalBCustomEventOuterbproto3
