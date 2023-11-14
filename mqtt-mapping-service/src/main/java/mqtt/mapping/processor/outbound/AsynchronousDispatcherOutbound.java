@@ -69,9 +69,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public void onNotification(Notification notification) {
         // We don't care about UPDATES nor DELETES
         if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
-            log.info("Notification received: <{}>", notification.getMessage());
-            log.info("Notification headers: <{}>", notification.getNotificationHeaders());
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+            log.info("Tenant - {} Notification received: <{}>", tenant, notification.getMessage());
+            log.info("Tenant - {} Notification headers: <{}>", tenant, notification.getNotificationHeaders());
             C8YMessage message = new C8YMessage();
             message.setPayload(notification.getMessage());
             message.setApi(notification.getApi());
@@ -94,7 +94,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
-        return notificationHeaders.get(0).split("/")[0];
+        return notificationHeaders.get(0).split("/")[1];
     }
 
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
