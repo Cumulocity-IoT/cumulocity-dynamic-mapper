@@ -47,13 +47,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-public class AsynchronousDispatcher implements GenericMessageCallback {
+public class AsynchronousDispatcherInbound implements GenericMessageCallback {
     public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
         String tenant;
-        Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound;
+        Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound;
         boolean sendPayload;
         ConnectorMessage message;
         MappingComponent mappingStatusComponent;
@@ -62,7 +62,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
 
         public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 String topic, String tenant,
-                Map<MappingType, BasePayloadProcessor<T>> payloadProcessorsInbound, boolean sendPayload,
+                Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound, boolean sendPayload,
                 ConnectorMessage message, ObjectMapper objectMapper) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
@@ -97,7 +97,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
                     context.setSendPayload(sendPayload);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
-                    BasePayloadProcessor processor = payloadProcessorsInbound.get(mappingType);
+                    BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mappingType);
 
                     if (processor != null) {
                         try {
@@ -195,7 +195,7 @@ public class AsynchronousDispatcher implements GenericMessageCallback {
     //@Autowired
     //ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public AsynchronousDispatcher(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
+    public AsynchronousDispatcherInbound(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
         this.connectorClient = connectorClient;
         this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;

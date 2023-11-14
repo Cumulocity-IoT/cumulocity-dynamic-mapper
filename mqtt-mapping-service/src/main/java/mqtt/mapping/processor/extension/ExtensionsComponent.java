@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package mqtt.mapping.model.extension;
+package mqtt.mapping.processor.extension;
 
 
 /** Utility for managing the extensions. */

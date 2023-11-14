@@ -32,10 +32,10 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 //@Service
-public class FlatFileProcessor extends JSONProcessor {
+public class FlatFileProcessorInbound extends JSONProcessorInbound {
 
 
-    public FlatFileProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
+    public FlatFileProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
         super(objectMapper, c8yAgent, tenant);
     }
 

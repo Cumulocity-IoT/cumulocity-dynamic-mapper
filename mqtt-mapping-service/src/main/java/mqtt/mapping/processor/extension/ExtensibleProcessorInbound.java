@@ -29,7 +29,7 @@ import mqtt.mapping.model.Extension;
 import mqtt.mapping.model.ExtensionEntry;
 import mqtt.mapping.model.ExtensionStatus;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessorInbound;
 import mqtt.mapping.processor.model.ProcessingContext;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ import java.util.Map;
 
 @Slf4j
 //@Service
-public class ExtensibleProcessorInbound extends BasePayloadProcessor<byte[]> {
+public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();
 

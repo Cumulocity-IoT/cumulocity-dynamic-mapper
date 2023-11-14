@@ -50,9 +50,9 @@ import java.util.Map;
 
 @Slf4j
 //@Service
-public class JSONProcessor extends BasePayloadProcessor<JsonNode> {
+public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
 
-    public JSONProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
+    public JSONProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
         super(objectMapper, c8yAgent, tenant);
     }
 

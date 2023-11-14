@@ -52,9 +52,9 @@ import java.util.Map.Entry;
 
 @Slf4j
 //@Service
-public abstract class BasePayloadProcessor<T> {
+public abstract class BasePayloadProcessorInbound<T> {
 
-    public BasePayloadProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
+    public BasePayloadProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
         this.objectMapper = objectMapper;
         //this.connectorClient = connectorClient;
         this.tenant = tenant;

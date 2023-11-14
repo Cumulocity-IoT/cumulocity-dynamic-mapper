@@ -34,7 +34,7 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.ConnectorStatus;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -68,7 +68,7 @@ public abstract class AConnectorClient {
     public C8YAgent c8yAgent;
 
     @Getter
-    public AsynchronousDispatcher dispatcher;
+    public AsynchronousDispatcherInbound dispatcher;
 
     public ObjectMapper objectMapper;
 
@@ -238,7 +238,7 @@ public abstract class AConnectorClient {
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
         if (dispatcher == null)
-            dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
+            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
         return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
     }
 
