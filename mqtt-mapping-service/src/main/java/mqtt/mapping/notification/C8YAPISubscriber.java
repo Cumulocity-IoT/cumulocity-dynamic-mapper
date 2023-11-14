@@ -126,9 +126,6 @@ public class C8YAPISubscriber {
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
     //private int deviceWSStatusCode = 0;
 
-    @Getter
-    private boolean initialized = false;
-
     public void init() {
         //Assuming this can be only changed for all tenants!
         String tenant = subscriptionsService.getTenant();
@@ -150,11 +147,21 @@ public class C8YAPISubscriber {
                     initDeviceClient();
                 }
             }
-            initialized = true;
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }
 
+    }
+
+    public void removeConnector(String tenant, String ident) {
+        //Remove Dispatcher from list
+        this.dispatcherOutboundMap.get(tenant).remove(ident);
+        //Close WS connection for connector
+        this.deviceClientMap.get(tenant).get(ident).close();
+        //Remove client from client Map
+        this.deviceClientMap.get(tenant).remove(ident);
+        if(dispatcherOutboundMap.get(tenant).keySet().isEmpty())
+            disconnect(tenant, false);
     }
 
     public void initTenantClient() {
@@ -239,6 +246,9 @@ public class C8YAPISubscriber {
 
                 try {
                     //Add Dispatcher for each Connector
+                    if(dispatcherOutboundMap.get(tenant).keySet().isEmpty())
+                        logger.info("No Outbound dispatcher for any connector is registered, add a connector first!");
+
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
                         String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent() + additionalSubscriptionIdTest);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
@@ -557,7 +567,7 @@ public class C8YAPISubscriber {
                 }
             }
             deviceClientMap.put(tenant, new HashMap<>());
-            dispatcherOutboundMap.put(tenant, new HashMap<>());
+            //dispatcherOutboundMap.put(tenant, new HashMap<>());
         } else {
             if (this.executorService != null)
                 this.executorService.shutdownNow();
@@ -570,7 +580,7 @@ public class C8YAPISubscriber {
                 }
                 deviceClientMap.put(tenant, new HashMap<>());
             }
-            dispatcherOutboundMap.put(tenant, new HashMap<>());
+            //dispatcherOutboundMap.put(tenant, new HashMap<>());
             if(tenantClientMap.get(tenant) != null) {
                 CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
                 if (tenant_client != null && tenant_client.isOpen()) {
@@ -581,8 +591,6 @@ public class C8YAPISubscriber {
             }
 
         }
-        initialized = false;
-
     }
 
     public void setDeviceConnectionStatus(String tenant, int status) {
