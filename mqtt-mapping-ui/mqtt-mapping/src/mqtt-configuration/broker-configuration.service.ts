@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { APP_INITIALIZER, Injectable } from "@angular/core";
 import {
   FetchClient,
   IdentityService,
@@ -48,18 +48,16 @@ import {
   Status,
   ConnectorConfigurationCombined,
 } from "../shared/mapping.model";
-import { BehaviorSubject, Observable } from "rxjs";
+import { BehaviorSubject } from "rxjs";
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: "root"})
 export class BrokerConfigurationService {
-  constructor(private client: FetchClient, private identity: IdentityService) {
+   constructor(private client: FetchClient, private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
   }
 
   private agentId: string;
-  // private connectorStatus = new BehaviorSubject<ConnectorStatus>({
-  //   status: Status.NOT_READY,
-  // });
+
   private _connectorConfigurationCombined: ConnectorConfigurationCombined[] =
     [];
   private _feature: Feature;
@@ -241,7 +239,6 @@ export class BrokerConfigurationService {
     this.agentId = await this.initializeBrokerAgent();
     console.log("Started subscription:", this.agentId);
     this.getConnectorStatus().then((status) => {
-      //this.connectorStatus.next(status);
       for (const [key, value] of Object.entries(status)) {
         console.log(`${key}: ${value}`);
       }

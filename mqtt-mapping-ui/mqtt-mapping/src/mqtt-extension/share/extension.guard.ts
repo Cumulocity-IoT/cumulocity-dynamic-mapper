@@ -26,7 +26,7 @@ import { BrokerConfigurationService } from "../../mqtt-configuration/broker-conf
 export class ExtensionGuard implements CanActivate {
   private activateExtensionNavigationPromise: Promise<boolean>;
 
-  constructor(private configurationService: BrokerConfigurationService) {}
+  constructor(private brokerConfigurationService: BrokerConfigurationService) {}
 
   canActivate(): Promise<boolean> {
     if (!this.activateExtensionNavigationPromise) {

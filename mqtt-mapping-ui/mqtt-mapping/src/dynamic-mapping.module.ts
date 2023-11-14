@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { NgModule } from "@angular/core";
+import { APP_INITIALIZER, NgModule } from "@angular/core";
 import { Route, RouterModule as NgRouterModule } from "@angular/router";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { CoreModule, hookNavigator, hookTab } from "@c8y/ngx-components";
@@ -35,6 +35,7 @@ import { ExtensionComponent } from "./mqtt-extension/grid/extension.component";
 import { ExtensionPropertiesComponent } from "./mqtt-extension/properties/extension-properties.component";
 import { Editor2TestModule } from "./editor2/editor2-test.module";
 import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
+import { BrokerConfigurationService } from "./mqtt-configuration/broker-configuration.service";
 
 const extensionRoutes: Route[] = [
   {
@@ -68,6 +69,11 @@ const extensionRoutes: Route[] = [
   entryComponents: [],
   declarations: [],
   providers: [
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initSynchronousFactory,
+      multi: true,
+    },
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
@@ -76,4 +82,14 @@ const extensionRoutes: Route[] = [
 })
 export class DynamicMappingModule {
   constructor() {}
+}
+
+export function initSynchronousFactory(
+  brokerConfigurationService: BrokerConfigurationService,
+) {
+  return async () => {
+    console.log('initServicesFactory - started');
+    const features = await brokerConfigurationService.getFeatures();
+    console.log('initServicesFactory - completed');
+  };
 }

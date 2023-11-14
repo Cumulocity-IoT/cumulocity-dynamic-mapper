@@ -626,7 +626,7 @@ export class MappingStepperComponent implements OnInit {
       );
       this.enrichTemplates();
       this.extensions =
-        (await this.configurationService.getProcessorExtensions()) as any;
+        (await this.brokerConfigurationService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
         this.extensionEvents$.next(
           Object.keys(

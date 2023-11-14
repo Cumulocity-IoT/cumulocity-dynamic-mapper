@@ -53,7 +53,7 @@ export class ExtensionService {
     private translateService: TranslateService,
     private inventoryService: InventoryService,
     private inventoryBinaryService: InventoryBinaryService,
-    private configurationService: BrokerConfigurationService
+    private brokerConfigurationService: BrokerConfigurationService
   ) {}
 
   async getExtensions(extensionId: string): Promise<IManagedObject[]> {
@@ -78,7 +78,7 @@ export class ExtensionService {
     let listOfExtensionsInventory: Promise<IManagedObject[]> =
       this.getExtensions(extensionId);
     let listOfExtensionsBackend: Promise<Object> =
-      this.configurationService.getProcessorExtensions();
+      this.brokerConfigurationService.getProcessorExtensions();
     let combinedResult = Promise.all([
       listOfExtensionsInventory,
       listOfExtensionsBackend,
@@ -115,7 +115,7 @@ export class ExtensionService {
     );
     //TODO this needs to be changed: create
     //await this.inventoryBinaryService.delete(app.id);
-    await this.configurationService.deleteProcessorExtension(app.name);
+    await this.brokerConfigurationService.deleteProcessorExtension(app.name);
     this.alertService.success(gettext("Extension deleted."));
     this.appDeleted.emit(app);
   }

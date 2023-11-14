@@ -29,14 +29,14 @@ export class MappingTabFactory implements TabFactory {
   _feature: Feature;
   constructor(
     public router: Router,
-    private configurationService: BrokerConfigurationService
+    private brokerConfigurationService: BrokerConfigurationService
   ) {}
 
   async get() {
     //console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-mqtt-mapping/g));
     //console.log("Feature: ", this._feature)
     if (!this._feature) {
-      this._feature = await this.configurationService.getFeatures();
+      this._feature = await this.brokerConfigurationService.getFeatures();
       //console.log("Feature reload: ", this._feature)
     }
 
@@ -58,7 +58,7 @@ export class MappingTabFactory implements TabFactory {
         icon: "swipe-right",
         orientation: "horizontal",
       } as Tab);
-      this.configurationService.getFeatures();
+      this.brokerConfigurationService.getFeatures();
       if (this._feature.outputMappingEnabled) {
         tabs.push({
           path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",

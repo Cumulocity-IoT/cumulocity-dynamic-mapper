@@ -52,7 +52,7 @@ export class ExtensionComponent implements OnInit {
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
-    private configurationService: BrokerConfigurationService
+    private brokerConfigurationService: BrokerConfigurationService
   ) {}
 
   async ngOnInit() {
@@ -61,7 +61,7 @@ export class ExtensionComponent implements OnInit {
       console.log("New extenions:", exts);
     });
     this.externalExtensionEnabled = (
-      await this.configurationService.getServiceConfiguration()
+      await this.brokerConfigurationService.getServiceConfiguration()
     ).externalExtensionEnabled;
   }
 
@@ -70,7 +70,7 @@ export class ExtensionComponent implements OnInit {
   }
 
   async reloadExtensions() {
-    await this.configurationService.runOperation(Operation.RELOAD_EXTENSIONS);
+    await this.brokerConfigurationService.runOperation(Operation.RELOAD_EXTENSIONS);
     this.reload$.next();
   }
 
