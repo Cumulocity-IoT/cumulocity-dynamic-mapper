@@ -69,7 +69,7 @@ TODO: Add Screen that shows the UI of the Mapper
 The architecture of the components consists of the following components:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Architecture.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Architecture.png"  style="width: 70%;" />
 </p>
 <br/>
 The orange components are part of this project which are:
@@ -139,7 +139,7 @@ the binaries from the latest release and upload them to your Cumulocity IoT Tena
 In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_UploadMicroservice.png"  style="width: 40%;"/>
+<img src="resources/image/Generic_Mapping_UploadMicroservice.png"  style="width: 40%;"/>
 </p>
 <br/>
 
@@ -159,7 +159,7 @@ and afterward "Administration".
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_DuplicateApp.png" style="width: 40%;" />
+<img src="resources/image/Generic_Mapping_DuplicateApp.png" style="width: 40%;" />
 </p>
 <br/>
 
@@ -167,7 +167,7 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_PluginInstalled.png" style="width: 50%;" />
+<img src="resources/image/Generic_Mapping_PluginInstalled.png" style="width: 50%;" />
 </p>
 <br/>
 
@@ -202,15 +202,18 @@ The solution differentiates two different roles:
 The two roles have to be assigned in the Web UI **Adminisitration**, see [here](https://cumulocity.com/guides/users-guide/administration/#managing-permissions).
 
 The available tabs for `ROLE_MAPPING_MAPPING_ADMIN` are as follows:
-![ROLE_MAPPING_MAPPING_ADMIN](./resources/image/Generic_MAPPING_UI_AdminRole_Tabs.png)
+![ROLE_MAPPING_MAPPING_ADMIN](./resources/image/Generic_Mapping_UI_AdminRole_Tabs.png)
 
 The available tabs for `ROLE_MAPPING_MAPPING_CREATE` are as follows:
-![ROLE_MAPPING_MAPPING_CREATE](./resources/image/Generic_MAPPING_UI_CreateRole_Tabs.png)
+![ROLE_MAPPING_MAPPING_CREATE](./resources/image/Generic_Mapping_UI_CreateRole_Tabs.png)
 
-### Configuration MQTT connection to broker
+### Configuration connector to broker
 
-The broker configuration is persisted in the tenant options of a Cumulocity Tenant and can be configured by the following UI.\
-Furthermore, connections to the MQTT broker can be enabled or disabled.
+The configurations are persisted in the tenant options of a Cumulocity Tenant and can be manged by the following UI.\
+The table of configured connectors to different brokers can be:
+* deleted
+* enabled / disabled
+* updated
 
 <!-- <br/>
 <p align="center" style="text-indent:70px;">
@@ -221,7 +224,14 @@ Furthermore, connections to the MQTT broker can be enabled or disabled.
 <br/> -->
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Connection.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Connector_Overview.png"  style="width: 70%;" />
+</p>
+<br/>
+
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the choosen connector type:
+
+<p align="center">
+<img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -272,7 +282,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_AddMapping.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_AddMapping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -320,7 +330,7 @@ ___
 
 In the first wizard step properties for the topic are defined.
 <p align="center">
-<img src="resources/image/Generic_MAPPING_TopicDefinition.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_TopicDefinition.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -333,7 +343,7 @@ For outbound mappings the properties are slightly different. Most important are 
 2. `publishTopic`: MQTT topic to publish outbound messages to.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_TopicDefinition_Outbound.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_TopicDefinition_Outbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -341,7 +351,7 @@ For an outbound mapping to be applied two conditions have to be fulfilled:
 1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_Outbound_subscription.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_Outbound_subscription.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -385,7 +395,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_EnableSnooping.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_EnableSnooping.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -402,7 +412,7 @@ In the second wizard step, shown on the screenshot below the mapping is further 
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -412,7 +422,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -438,7 +448,7 @@ To define a new substitution the following steps have to be performed:
       *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
       *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_EditModal.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_EditModal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -453,7 +463,7 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_SchemaValidation_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_SchemaValidation_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -486,7 +496,7 @@ When you define an expression or a path in the source payload for a substitution
 This is illustrated on the following diagram:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_SubstitutionType.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_SubstitutionType.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -512,7 +522,7 @@ To iterate and show all results press the button ```Show Next Test Result```.
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_TestTransformation.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_TestTransformation.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -521,7 +531,7 @@ All generated test devices have a fragment ```d11r_testDevice```.
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_TestDevices.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_TestDevices.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -532,7 +542,7 @@ To send the transformed payload to a test device, press the button ```Send test 
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_SendTestMessageToCumulocity.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_SendTestMessageToCumulocity.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -543,7 +553,7 @@ In order to use a previously snooped payload click the button
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_Snooping_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_Snooping_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -553,14 +563,14 @@ To avoid inconsistencies when updating the properties of a mapping, active mappi
 This can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_TopicDefinition_ReadOnly.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_TopicDefinition_ReadOnly.png"  style="width: 70%;" />
 </p>
 <br/>
 
 To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTable_annotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTable_annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -571,7 +581,7 @@ You can as well export all or a single mapping.
 The import dialog can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTable_Import.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTable_Import.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -582,21 +592,21 @@ The import dialog can be seen on the following screenshot:
 When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
 Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice has to be re-subscribed in order to load the extensions. This does not happen dynamically.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_ProcessorExtensionInbound.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_ProcessorExtensionInbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out hte steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -608,7 +618,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Monitoring.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Monitoring.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -619,7 +629,7 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_MappingTree.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTree.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -675,7 +685,7 @@ A sample how to build an extension is contained in the maven module [mqtt-mappin
 The following diagram shows how the dispatcher handles meassages with different format:
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Dispatcher.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Dispatcher.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -692,7 +702,7 @@ Contact us at [TECHcommunity](mailto:technologycommunity@softwareag.com?subject=
 Before inbound messages can be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrieval times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Diagram_Map.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Diagram_Map.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -700,17 +710,17 @@ Once all mappings are added to the cache we are ready to process inbound message
 The following diagram describes how a new message is processed.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Diagram_Transform1.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Diagram_Transform1.png"  style="width: 70%;" />
 </p>
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Diagram_Transform2.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Diagram_Transform2.png"  style="width: 70%;" />
 </p>
 <br/>
 
 Outbound messages are organized in a flat list. Mappings are bound using the mapping property ```filterOutgoing```. This specifies an fragment name in the Cumulocity message (MEAO or Inventory). Once this fragment exists in a Cumulocity message the respective mapping is applied.
 
 <p align="center">
-<img src="resources/image/Generic_MAPPING_Diagram_Transform_Outbound1.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_Diagram_Transform_Outbound1.png"  style="width: 70%;" />
 </p>
 <br/>
