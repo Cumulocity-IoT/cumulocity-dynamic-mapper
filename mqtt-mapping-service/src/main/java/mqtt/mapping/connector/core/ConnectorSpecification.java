@@ -7,22 +7,30 @@ import lombok.Data;
 import lombok.ToString;
 
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 @Data
 @ToString()
 @AllArgsConstructor
-public class ConnectorPropertyDefinition implements Cloneable {
+public class ConnectorSpecification implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean required;
+    public String connectorId;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public ConnectorProperty property;
+    public boolean supportsWildcardInTopic;
 
-    public Object clone()
-    {
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Map<String, ConnectorProperty> properties;
+
+    public boolean isPropetySensitive(String property) {
+        return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).property;
+    }
+
+    public Object clone() {
         try {
             return super.clone();
         } catch (CloneNotSupportedException e) {

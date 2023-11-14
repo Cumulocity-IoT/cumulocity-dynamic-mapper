@@ -45,7 +45,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mqtt.mapping.configuration.ConnectorConfiguration;
 import mqtt.mapping.configuration.ConnectorConfigurationComponent;
-import mqtt.mapping.connector.core.ConnectorPropertyDefinition;
+import mqtt.mapping.connector.core.ConnectorProperty;
+import mqtt.mapping.connector.core.ConnectorSpecification;
 import mqtt.mapping.connector.core.callback.ConnectorMessage;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.ConnectorStatus;
@@ -111,7 +112,7 @@ public abstract class AConnectorClient {
 
     public abstract boolean initialize();
 
-    public abstract Map<String, ConnectorPropertyDefinition> getConfigProperties();
+    public abstract ConnectorSpecification getSpecification();
 
     public void reloadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
