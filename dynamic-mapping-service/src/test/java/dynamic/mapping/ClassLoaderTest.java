@@ -53,7 +53,7 @@ public class ClassLoaderTest {
     // } catch (IOException io) {
     //     io.printStackTrace();
     // }
-    Class<?> clazz = classLoader.loadClass("mqtt.mapping.processor.protobuf.CustomEventOuter");
+    Class<?> clazz = classLoader.loadClass("dynamic.mapping.processor.protobuf.CustomEventOuter");
     //Class<?> clazz = classLoader.loadClass("mqtt.Test");
     System.out.println("Found:" + clazz.getName());
  }
