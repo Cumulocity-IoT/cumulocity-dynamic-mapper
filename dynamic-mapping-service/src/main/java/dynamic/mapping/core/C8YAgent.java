@@ -99,7 +99,7 @@ import dynamic.mapping.notification.C8YAPISubscriber;
 @Service
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
-    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "mqtt.mapping.processor.extension.external";
+    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
 
     @Autowired
     private EventApi eventApi;
