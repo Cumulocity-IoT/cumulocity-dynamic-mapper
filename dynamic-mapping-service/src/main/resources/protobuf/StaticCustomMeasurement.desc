@@ -1,6 +1,6 @@
 
-Ù
-StaticCustomMeasurement.protoprocessor.protobuf"Ó
+ï¿½
+StaticCustomMeasurement.protoprocessor.protobuf"ï¿½
 StaticCustomMeasurement
 	timestamp (R	timestamp
 value (Rvalue
@@ -10,4 +10,4 @@
 externalId (	R
 externalId(
 measurementType (	RmeasurementTypeBF
-&mqtt.mapping.processor.processor.fixedBStaticCustomMeasurementOuterbproto3
+&dynamic.mapping.processor.processor.fixedBStaticCustomMeasurementOuterbproto3

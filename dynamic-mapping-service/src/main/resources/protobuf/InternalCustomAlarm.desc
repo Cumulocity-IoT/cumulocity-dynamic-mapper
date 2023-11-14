@@ -1,6 +1,6 @@
 
-Ü
-InternalCustomAlarm.protoprocessor.protobuf"Û
+ï¿½
+InternalCustomAlarm.protoprocessor.protobuf"ï¿½
 InternalCustomAlarm
 	timestamp (R	timestamp
 txt (	Rtxt
@@ -11,4 +11,4 @@ externalId (	R
 externalId
 	alarmType (	R	alarmType
 severity (	RseverityBE
-)mqtt.mapping.processor.extension.internalBInternalCustomAlarmOuterbproto3
+)dynamic.mapping.processor.extension.internalBInternalCustomAlarmOuterbproto3

@@ -1419,7 +1419,7 @@ public final class InternalCustomAlarmOuter {
       "tamp\030\001 \001(\003\022\013\n\003txt\030\002 \001(\t\022\014\n\004unit\030\003 \001(\t\022\026\n" +
       "\016externalIdType\030\004 \001(\t\022\022\n\nexternalId\030\005 \001(" +
       "\t\022\021\n\talarmType\030\006 \001(\t\022\020\n\010severity\030\007 \001(\tBE" +
-      "\n)mqtt.mapping.processor.extension.inter" +
+      "\n)dynamic.mapping.processor.extension.inter" +
       "nalB\030InternalCustomAlarmOuterb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
