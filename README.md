@@ -669,8 +669,8 @@ In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
 In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
 ```
-CustomEvent=mqtt.mapping.processor.extension.external.ProcessorExtensionInboundCustomEvent
-CustomMeasurement=mqtt.mapping.processor.extension.external.ProcessorExtensionInboundCustomMeasurement
+CustomEvent=external.extension.processor.dynamic.mapping.ProcessorExtensionInboundCustomEvent
+CustomMeasurement=external.extension.processor.dynamic.mapping.ProcessorExtensionInboundCustomMeasurement
 ```
 
 The steps required for a external extension are as follows. The extension:

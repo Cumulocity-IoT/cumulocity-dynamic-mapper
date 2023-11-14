@@ -36,9 +36,9 @@ logs/
 bin/
 attic/*
 
-mqtt-mapping-ui/mqtt-mapping/node_modules/*
-mqtt-mapping-extension/.factorypath
-mqtt-mapping-interface/.factorypath
-mqtt-mapping-service/.factorypath
+dynamic-mapping-ui/mqtt-mapping/node_modules/*
+dynamic-mapping-extension/.factorypath
+dynamic-mapping-interface/.factorypath
+dynamic-mapping-service/.factorypath
 set.sh
-mqtt-mapping-ui/mqtt-mapping/.env
+dynamic-mapping-ui/mqtt-mapping/.env
