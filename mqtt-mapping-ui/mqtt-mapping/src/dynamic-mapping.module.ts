@@ -69,11 +69,6 @@ const extensionRoutes: Route[] = [
   entryComponents: [],
   declarations: [],
   providers: [
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initSynchronousFactory,
-      multi: true,
-    },
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
@@ -82,14 +77,4 @@ const extensionRoutes: Route[] = [
 })
 export class DynamicMappingModule {
   constructor() {}
-}
-
-export function initSynchronousFactory(
-  brokerConfigurationService: BrokerConfigurationService,
-) {
-  return async () => {
-    console.log('initServicesFactory - started');
-    const features = await brokerConfigurationService.getFeatures();
-    console.log('initServicesFactory - completed');
-  };
 }

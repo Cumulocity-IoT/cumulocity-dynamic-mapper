@@ -237,7 +237,7 @@ export class MappingComponent implements OnInit {
 
   constructor(
     public mappingService: MappingService,
-    public configurationService: BrokerConfigurationService,
+    public brokerConfigurationService: BrokerConfigurationService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router

@@ -129,7 +129,7 @@ export class MonitoringComponent implements OnInit {
 
   constructor(
     public monitoringService: MonitoringService,
-    public configurationService: BrokerConfigurationService,
+    public brokerConfigurationService: BrokerConfigurationService,
     public alertService: AlertService
   ) {}
 

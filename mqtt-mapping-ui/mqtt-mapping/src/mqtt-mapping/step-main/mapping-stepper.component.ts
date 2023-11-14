@@ -142,7 +142,7 @@ export class MappingStepperComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
-    public configurationService: BrokerConfigurationService,
+    public brokerConfigurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}
