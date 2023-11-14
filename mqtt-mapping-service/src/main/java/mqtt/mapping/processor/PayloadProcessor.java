@@ -5,10 +5,10 @@ import lombok.Getter;
 import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.processor.extension.ExtensibleProcessorInbound;
-import mqtt.mapping.processor.inbound.BasePayloadProcessor;
-import mqtt.mapping.processor.inbound.FlatFileProcessor;
-import mqtt.mapping.processor.inbound.GenericBinaryProcessor;
-import mqtt.mapping.processor.inbound.JSONProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessorInbound;
+import mqtt.mapping.processor.inbound.FlatFileProcessorInbound;
+import mqtt.mapping.processor.inbound.GenericBinaryProcessorInbound;
+import mqtt.mapping.processor.inbound.JSONProcessorInbound;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.outbound.BasePayloadProcessorOutbound;
 import mqtt.mapping.processor.outbound.JSONProcessorOutbound;
@@ -23,7 +23,7 @@ public class PayloadProcessor {
     private String tenant;
     private AConnectorClient connectorClient;
     @Getter
-    private Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound = null;
+    private Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound = null;
     @Getter
     private Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound = null;
 
@@ -32,12 +32,12 @@ public class PayloadProcessor {
        this.payloadProcessorsOutbound = payloadProcessorsOutbound(mapper, connectorClient, c8YAgent, tenant);
     }
 
-    public Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound(ObjectMapper objectMapper,
+    public Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound(ObjectMapper objectMapper,
                                                                               C8YAgent c8yAgent, String tenant) {
         return Map.of(
-                MappingType.JSON, new JSONProcessor(objectMapper, c8yAgent, tenant),
-                MappingType.FLAT_FILE, new FlatFileProcessor(objectMapper, c8yAgent, tenant),
-                MappingType.GENERIC_BINARY, new GenericBinaryProcessor(objectMapper, c8yAgent, tenant),
+                MappingType.JSON, new JSONProcessorInbound(objectMapper, c8yAgent, tenant),
+                MappingType.FLAT_FILE, new FlatFileProcessorInbound(objectMapper, c8yAgent, tenant),
+                MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(objectMapper, c8yAgent, tenant),
                 MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(objectMapper, c8yAgent, tenant),
                 MappingType.PROCESSOR_EXTENSION, new ExtensibleProcessorInbound(objectMapper, c8yAgent, tenant));
     }

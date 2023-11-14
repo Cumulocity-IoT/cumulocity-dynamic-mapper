@@ -33,7 +33,7 @@ import mqtt.mapping.connector.core.client.AConnectorClient;
 import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.core.MappingComponent;
 import mqtt.mapping.model.Mapping;
-import mqtt.mapping.processor.inbound.AsynchronousDispatcher;
+import mqtt.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import mqtt.mapping.processor.model.C8YRequest;
 import mqtt.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
@@ -202,7 +202,7 @@ public class MQTTClient extends AConnectorClient {
                             mqttClient.close(true);
                         }
                         if (dispatcher == null)
-                            this.dispatcher = new AsynchronousDispatcher(this, c8yAgent, objectMapper, cachedThreadPool,
+                            this.dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool,
                                     mappingComponent);
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,

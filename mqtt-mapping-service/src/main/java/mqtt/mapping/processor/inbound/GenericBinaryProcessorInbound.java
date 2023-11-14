@@ -32,9 +32,9 @@ import org.apache.commons.codec.binary.Hex;
 import java.io.IOException;
 
 //@Service
-public class GenericBinaryProcessor extends JSONProcessor {
+public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
 
-    public GenericBinaryProcessor (ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
+    public GenericBinaryProcessorInbound (ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
         super(objectMapper, c8yAgent, tenant);
     }
 

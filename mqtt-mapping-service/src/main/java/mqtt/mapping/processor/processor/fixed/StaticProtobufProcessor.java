@@ -31,7 +31,7 @@ import mqtt.mapping.core.C8YAgent;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue;
 import mqtt.mapping.model.MappingSubstitution.SubstituteValue.TYPE;
 import mqtt.mapping.processor.ProcessingException;
-import mqtt.mapping.processor.inbound.BasePayloadProcessor;
+import mqtt.mapping.processor.inbound.BasePayloadProcessorInbound;
 import mqtt.mapping.processor.model.MappingType;
 import mqtt.mapping.processor.model.ProcessingContext;
 import mqtt.mapping.processor.model.RepairStrategy;
@@ -45,7 +45,7 @@ import java.util.Map;
 
 @Slf4j
 //@Service
-public class StaticProtobufProcessor extends BasePayloadProcessor<byte[]> {
+public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
 
     public StaticProtobufProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
         super(objectMapper, c8yAgent, tenant);
