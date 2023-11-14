@@ -35,7 +35,7 @@ import { FormlyFieldConfig } from "@ngx-formly/core";
 import * as _ from "lodash";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Subject } from "rxjs";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
+import { BrokerConfigurationService } from "../../configuration";
 import {
   API,
   Direction,

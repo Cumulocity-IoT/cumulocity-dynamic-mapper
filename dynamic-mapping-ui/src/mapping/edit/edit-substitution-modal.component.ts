@@ -5,10 +5,9 @@ import {
   Direction,
   Mapping,
   MappingSubstitution,
-  RepairStrategy,
-} from "../../shared/mapping.model";
+  RepairStrategy, definesDeviceIdentifier
+} from "../../shared";
 import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
-import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
   selector: "d11y-edit-substitution-modal",

@@ -7,7 +7,7 @@ import {
   ConnectorConfiguration,
   ConnectorProperty,
   ConnectorPropertyConfiguration,
-} from "../../shared/mapping.model";
+} from "../../shared";
 
 @Component({
   selector: "d11y-edit-connector-modal",

@@ -18,22 +18,24 @@
  *
  * @authors Christof Strack
  */
+import { Injectable } from "@angular/core";
 import * as _ from "lodash";
-import { Mapping, API, RepairStrategy } from "../../../shared/mapping.model";
 import {
-  splitTopicExcludingSeparator,
+  API,
+  Mapping,
+  RepairStrategy,
+  TIME,
   TOKEN_TOPIC_LEVEL,
   isNumeric,
+  splitTopicExcludingSeparator,
   whatIsIt,
-  TIME,
-} from "../../../shared/util";
+} from "../../../shared";
+import { PayloadProcessorInbound } from "../payload-processor-inbound.service";
 import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType,
 } from "../prosessor.model";
-import { Injectable } from "@angular/core";
-import { PayloadProcessorInbound } from "../payload-processor-inbound.service";
 
 @Injectable({ providedIn: "root" })
 export class JSONProcessorInbound extends PayloadProcessorInbound {

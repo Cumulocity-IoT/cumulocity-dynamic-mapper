@@ -18,24 +18,20 @@
  *
  * @authors Christof Strack
  */
-import { APP_INITIALIZER, NgModule } from "@angular/core";
-import { Route, RouterModule as NgRouterModule } from "@angular/router";
+import { NgModule } from "@angular/core";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { Route } from "@angular/router";
 import { CoreModule, hookNavigator, hookTab } from "@c8y/ngx-components";
-import { ConfigurationModule } from "./configuration/configuration.module";
+import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
+import { BrokerConfigurationModule } from "./configuration/broker-configuration.module";
 import { ExtensionModule } from "./extension/extension.module";
+import { ExtensionComponent } from "./extension/grid/extension.component";
+import { ExtensionPropertiesComponent } from "./extension/properties/extension-properties.component";
 import { MappingTreeModule } from "./mapping-tree/tree.module";
 import { MappingModule } from "./mapping/mapping.module";
 import { MonitoringModule } from "./monitoring/monitoring.module";
+import { MappingNavigationFactory, MappingTabFactory, OverviewGuard } from "./shared";
 import { TestingModule } from "./testing-devices/testing.module";
-import { MappingNavigationFactory } from "./navigation.factory";
-import { OverviewGuard } from "./shared/overview.guard";
-import { MappingTabFactory } from "./tab.factory";
-import { ExtensionComponent } from "./extension/grid/extension.component";
-import { ExtensionPropertiesComponent } from "./extension/properties/extension-properties.component";
-import { Editor2TestModule } from "./editor2/editor2-test.module";
-import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
-import { BrokerConfigurationService } from "./configuration/broker-configuration.service";
 
 const extensionRoutes: Route[] = [
   {
@@ -59,7 +55,7 @@ const extensionRoutes: Route[] = [
     MappingModule,
     MappingTreeModule,
     MonitoringModule,
-    ConfigurationModule,
+    BrokerConfigurationModule,
     ExtensionModule,
     FormsModule,
     ModalModule,

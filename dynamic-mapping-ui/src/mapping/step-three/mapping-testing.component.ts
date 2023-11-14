@@ -29,15 +29,12 @@ import {
   ViewEncapsulation,
 } from "@angular/core";
 import { AlertService } from "@c8y/ngx-components";
-import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
-import { Direction, Mapping } from "../../shared/mapping.model";
-import { getSchema } from "../../shared/util";
+import { Direction, JsonEditor2Component, Mapping, getSchema } from "../../shared/";
 import { MappingService } from "../core/mapping.service";
 import { C8YRequest } from "../processor/prosessor.model";
-import { isDisabled } from "../step-main/util";
-import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
 import { StepperConfiguration } from "../step-main/stepper-model";
+import { isDisabled } from "../step-main/util";
 
 @Component({
   selector: "d11r-mapping-testing",
@@ -89,13 +86,9 @@ export class MappingStepTestingComponent implements OnInit {
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
-      this.mapping.direction == Direction.INBOUND
-        ? "Cumulocity"
-        : "Broker";
+      this.mapping.direction == Direction.INBOUND ? "Cumulocity" : "Broker";
     this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND
-        ? "Cumulocity"
-        : "Broker";
+      this.mapping.direction == Direction.OUTBOUND ? "Cumulocity" : "Broker";
     console.log(
       "Mapping to be tested:",
       this.mapping,

@@ -25,8 +25,8 @@ import { BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Observable } from "rxjs";
 import { shareReplay, switchMap, tap } from "rxjs/operators";
 import { ExtensionService } from "../share/extension.service";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
-import { Operation } from "../../shared/mapping.model";
+import { BrokerConfigurationService } from "../../configuration";
+import { Operation } from "../../shared";
 import { AddExtensionComponent } from "../extension-modal/add-extension.component";
 
 @Component({

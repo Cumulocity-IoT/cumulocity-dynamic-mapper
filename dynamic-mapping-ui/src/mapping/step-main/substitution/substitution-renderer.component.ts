@@ -27,8 +27,11 @@ import {
   Output,
   ViewEncapsulation,
 } from "@angular/core";
-import { definesDeviceIdentifier } from "../../../shared/util";
-import { Direction, MappingSubstitution } from "../../../shared/mapping.model";
+import {
+  Direction,
+  MappingSubstitution,
+  definesDeviceIdentifier,
+} from "../../../shared";
 import { isDisabled } from "../util";
 import { EditorMode } from "../stepper-model";
 

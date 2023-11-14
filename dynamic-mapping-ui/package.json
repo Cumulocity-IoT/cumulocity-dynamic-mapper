@@ -77,7 +77,7 @@
           "to": "README.md"
         },
         {
-          "from": "../../resources/image/Generic_Mapping_AddMapping.png",
+          "from": "../resources/image/Generic_Mapping_AddMapping.png",
           "to": "images/Generic_Mapping_AddMapping.png"
         }
       ],

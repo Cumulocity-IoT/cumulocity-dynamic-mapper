@@ -28,12 +28,12 @@ import {
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
 import { PopoverModule } from "ngx-bootstrap/popover";
-import { ConfigurationModule } from "../configuration/configuration.module";
+import { BrokerConfigurationModule } from "../configuration/broker-configuration.module";
 import { SharedModule } from "../shared/shared.module";
 import {
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid,
-} from "../shared/util";
+} from "../shared";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
 import { MappingComponent } from "./grid/mapping.component";
 import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
@@ -97,11 +97,11 @@ import { ImportMappingsComponent } from "./import-modal/import.component";
   imports: [
     CoreModule,
     AssetSelectorModule,
-    SharedModule,
     PopoverModule,
-    ConfigurationModule,
     DynamicFormsModule,
     ModalModule,
+    SharedModule,
+    BrokerConfigurationModule,
   ],
   entryComponents: [
     MappingComponent,

@@ -28,7 +28,7 @@ import {
 } from "@c8y/ngx-components";
 import { TranslateService } from "@ngx-translate/core";
 import { Subject } from "rxjs";
-import { SnoopStatus } from "../../shared/mapping.model";
+import { SnoopStatus } from "../../shared";
 
 @Component({
   selector: "d11r-mapping-snooping-modal",

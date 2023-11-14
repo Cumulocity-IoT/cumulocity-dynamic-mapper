@@ -19,8 +19,7 @@
  * @authors Christof Strack
  */
 import { Pipe, PipeTransform } from "@angular/core";
-import { Mapping } from "../../../shared/mapping.model";
-import { definesDeviceIdentifier } from "../../../shared/util";
+import { definesDeviceIdentifier, Mapping } from "../../../shared";
 
 @Pipe({ name: "countDeviceIdentifers", pure: true })
 export class CountDeviceIdentifiersPipe implements PipeTransform {

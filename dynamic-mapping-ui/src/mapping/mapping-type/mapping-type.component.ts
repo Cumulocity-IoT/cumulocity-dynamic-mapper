@@ -28,7 +28,7 @@ import {
 import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
 import { Subject } from "rxjs";
-import { Direction, MappingType } from "../../shared/mapping.model";
+import { Direction, MappingType } from "../../shared";
 import { isDisabled } from "../step-main/util";
 
 @Component({

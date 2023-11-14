@@ -25,9 +25,8 @@ import {
   ViewChild,
   ViewEncapsulation,
 } from "@angular/core";
-import { API, Direction } from "../shared/mapping.model";
 import { getSchema } from "../shared/util";
-import { JsonEditor2Component } from "../shared/editor2/jsoneditor2.component";
+import { JsonEditor2Component, API, Direction  } from "../shared";
 
 @Component({
   selector: "json-editor2",

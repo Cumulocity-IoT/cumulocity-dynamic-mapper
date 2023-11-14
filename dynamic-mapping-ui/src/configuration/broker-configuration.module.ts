@@ -19,13 +19,12 @@
  * @authors Christof Strack
  */
 
-import { APP_INITIALIZER, NgModule } from "@angular/core";
+import { NgModule } from "@angular/core";
 import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { BrokerConfigurationComponent } from "./broker-configuration.component";
 import { AdminGuard } from "../shared/admin.guard";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 import { SharedModule } from "../shared/shared.module";
-import { BrokerConfigurationService } from "./broker-configuration.service";
 
 @NgModule({
   declarations: [
@@ -41,23 +40,6 @@ import { BrokerConfigurationService } from "./broker-configuration.service";
       component: BrokerConfigurationComponent,
       canActivate: [AdminGuard],
     }),
-    // {
-    //   provide: APP_INITIALIZER,
-    //   useFactory: initSynchronousFactory,
-    //   multi: true,
-    // },
   ],
 })
-export class ConfigurationModule {}
-
-
-// export function initSynchronousFactory(
-//   brokerConfigurationService: BrokerConfigurationService,
-// ) {
-//   return async () => {
-//     console.log('initServicesFactory - started');
-//     const features = await brokerConfigurationService.getFeatures();
-//     console.log('initServicesFactory - completed');
-//   };
-// }
-
+export class BrokerConfigurationModule {}

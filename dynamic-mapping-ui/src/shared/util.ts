@@ -297,30 +297,32 @@ export const SCHEMA_PAYLOAD = {
 
 export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 export const TIME = "time";
+
 export const MAPPING_TYPE = "d11r_mapping";
 export const PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
 export const MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
 export const MAPPING_TEST_DEVICE_FRAGMENT = "d11r_testDevice";
 export const MAPPING_FRAGMENT = "d11r_mapping";
+export const CONNECTOR_STATUS_FRAGMENT = "d11r_connectorStatus";
+export const MAPPING_STATUS_FRAGMENT = "d11r_mappingStatus";
 export const MAPPING_GENERATED_TEST_DEVICE = "d11r_device_generatedType";
+
+export const BASE_URL = "service/dynamic-mapping-service";
 export const PATH_OPERATION_ENDPOINT = "operation";
 export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
   "configuration/connector";
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = "configuration/service";
 export const PATH_MAPPING_TREE_ENDPOINT = "monitoring/tree";
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = "monitoring/tree";
-export const PATH_STATUS_CONNECTOR_ENDPOINT = "monitoring/status/connectors";
+export const PATH_STATUS_CONNECTORS_ENDPOINT = "monitoring/status/connectors";
 export const PATH_FEATURE_ENDPOINT = "feature";
 export const PATH_EXTENSION_ENDPOINT = "extension";
 export const PATH_SUBSCRIPTION_ENDPOINT = "subscription";
 export const PATH_SUBSCRIPTIONS_ENDPOINT = "subscriptions";
 export const PATH_MAPPING_ENDPOINT = "mapping";
-export const BASE_URL = "service/mapping-service";
+
 export const AGENT_ID = "d11r_mappingService";
 export const COLOR_HIGHLIGHTED: string = "lightgrey"; //#5FAEEC';
-
-export const CONNECTOR_STATUS_FRAGMENT = "d11r_connectorStatus";
-export const MAPPING_STATUS_FRAGMENT = "d11r_mappingStatus";
 
 export function getExternalTemplate(mapping: Mapping): any {
   if (

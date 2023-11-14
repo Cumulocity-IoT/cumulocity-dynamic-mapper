@@ -28,10 +28,10 @@ import {
   Pagination,
 } from "@c8y/ngx-components";
 import { Observable } from "rxjs";
-import { BrokerConfigurationService } from "../../configuration/broker-configuration.service";
-import { MappingStatus, Operation } from "../../shared/mapping.model";
+import { BrokerConfigurationService } from "../../configuration";
+import { NameRendererComponent } from "../../mapping";
+import { MappingStatus, Operation } from "../../shared";
 import { MonitoringService } from "../shared/monitoring.service";
-import { NameRendererComponent } from "../../mapping/renderer/name.renderer.component";
 
 @Component({
   selector: "d11r-mapping-monitoring-grid",

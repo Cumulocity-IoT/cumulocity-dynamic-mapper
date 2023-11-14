@@ -28,8 +28,11 @@ import {
 } from "@c8y/ngx-components";
 import { TranslateService } from "@ngx-translate/core";
 import { Subject } from "rxjs";
-import { definesDeviceIdentifier } from "../../shared/util";
-import { Direction, MappingSubstitution } from "../../shared/mapping.model";
+import {
+  Direction,
+  MappingSubstitution,
+  definesDeviceIdentifier,
+} from "../../shared";
 
 @Component({
   selector: "d11r-mapping-overwrite-substitution-modal",

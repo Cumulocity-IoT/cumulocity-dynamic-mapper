@@ -20,25 +20,24 @@
  */
 import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup } from "@angular/forms";
-import { BrokerConfigurationService } from "./broker-configuration.service";
 import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { ConfirmationModalComponent } from "../shared/confirmation/confirmation-modal.component";
-import { MappingService } from "../mapping/core/mapping.service";
-import { from, Observable } from "rxjs";
+import { Observable, from } from "rxjs";
 import { map } from "rxjs/operators";
+import packageJson from "../../package.json";
 import {
+  ConfirmationModalComponent,
   ConnectorConfiguration,
+  ConnectorConfigurationCombined,
   ConnectorPropertyConfiguration,
+  ConnectorStatus,
   Feature,
   Operation,
   ServiceConfiguration,
-  ConnectorStatus,
-  ConnectorConfigurationCombined,
-} from "../shared/mapping.model";
-import packageJson from "../../package.json";
+  uuidCustom,
+} from "../shared";
+import { BrokerConfigurationService } from "./broker-configuration.service";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
-import { uuidCustom } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-broker-configuration",
@@ -64,7 +63,6 @@ export class BrokerConfigurationComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public brokerConfigurationService: BrokerConfigurationService,
-    public mappingService: MappingService,
     public alert: AlertService
   ) {}
 
@@ -167,7 +165,7 @@ export class BrokerConfigurationComponent implements OnInit {
       async (result: boolean) => {
         console.log("Confirmation result:", result);
         if (!!result) {
-          const response = 
+          const response =
             await this.brokerConfigurationService.deleteConnectorConfiguration(
               configuration.ident
             );
@@ -226,8 +224,6 @@ export class BrokerConfigurationComponent implements OnInit {
         : Operation.CONNECT,
       { connectorIdent: configuration.configuration.ident }
     );
-    //const response2 = await this.mappingService.activateMappings();
-    //console.log("Details connectToBroker", response1, response2)
     console.log("Details toogle activation to broker", response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
@@ -260,9 +256,8 @@ export class BrokerConfigurationComponent implements OnInit {
     let conf: ServiceConfiguration = {
       ...this.serviceConfiguration,
     };
-    const response = await this.brokerConfigurationService.updateServiceConfiguration(
-      conf
-    );
+    const response =
+      await this.brokerConfigurationService.updateServiceConfiguration(conf);
     if (response.status < 300) {
       this.alert.success(gettext("Update successful"));
     } else {

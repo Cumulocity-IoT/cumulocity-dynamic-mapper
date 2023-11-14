@@ -22,7 +22,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { IManagedObject } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
-import { ExtensionStatus } from "../../shared/mapping.model";
+import { ExtensionStatus } from "../../shared";
 import { ExtensionService } from "../share/extension.service";
 
 @Component({

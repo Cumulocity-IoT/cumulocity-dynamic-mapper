@@ -26,8 +26,7 @@ import {
 } from "@c8y/ngx-components";
 import { BehaviorSubject, Subject } from "rxjs";
 import { MappingService } from "../core/mapping.service";
-import { Mapping } from "src/shared/mapping.model";
-import { uuidCustom } from "../../shared/util";
+import { uuidCustom, Mapping } from "../../shared";
 
 @Component({
   selector: "d11r-mapping-import-extension",

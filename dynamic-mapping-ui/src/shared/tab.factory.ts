@@ -21,8 +21,8 @@
 import { Injectable } from "@angular/core";
 import { TabFactory, Tab } from "@c8y/ngx-components";
 import { Router } from "@angular/router";
-import { BrokerConfigurationService } from "./configuration/broker-configuration.service";
-import { Feature } from "./shared/mapping.model";
+import { BrokerConfigurationService } from "../configuration/broker-configuration.service";
+import { Feature } from "./mapping.model";
 
 @Injectable()
 export class MappingTabFactory implements TabFactory {
