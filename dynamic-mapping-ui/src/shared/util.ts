@@ -315,7 +315,7 @@ export const PATH_EXTENSION_ENDPOINT = "extension";
 export const PATH_SUBSCRIPTION_ENDPOINT = "subscription";
 export const PATH_SUBSCRIPTIONS_ENDPOINT = "subscriptions";
 export const PATH_MAPPING_ENDPOINT = "mapping";
-export const BASE_URL = "service/mapping-service";
+export const BASE_URL = "service/dynamic-mapping-service";
 export const AGENT_ID = "d11r_mappingService";
 export const COLOR_HIGHLIGHTED: string = "lightgrey"; //#5FAEEC';
 
