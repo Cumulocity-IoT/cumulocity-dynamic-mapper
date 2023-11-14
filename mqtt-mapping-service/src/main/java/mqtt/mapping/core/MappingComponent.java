@@ -61,6 +61,7 @@ import mqtt.mapping.model.ValidationError;
 @Component
 public class MappingComponent {
 
+    // structure: <tenant, < mappingId , status>>
     private Map<String, Map<String, MappingStatus>> tenantStatusMapping = new HashMap<>();
 
     private Map<String, Set<Mapping>> dirtyMappings = new HashMap<>();
@@ -181,6 +182,7 @@ public class MappingComponent {
     }
 
     public MappingStatus getMappingStatus(String tenant, Mapping m) {
+        //log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
         Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {

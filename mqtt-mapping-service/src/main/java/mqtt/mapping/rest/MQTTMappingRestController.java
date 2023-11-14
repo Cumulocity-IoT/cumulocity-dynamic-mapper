@@ -383,9 +383,11 @@ public class MQTTMappingRestController {
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
-            for (AConnectorClient client : connectorMap.values()) {
-                Status st = client.getConnectorStatus().getStatus();
-                connectorsStatus.put(client.getConnectorIdent(), st);
+            if (connectorMap != null) {
+                for (AConnectorClient client : connectorMap.values()) {
+                    Status st = client.getConnectorStatus().getStatus();
+                    connectorsStatus.put(client.getConnectorIdent(), st);
+                }
             }
             log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
