@@ -99,7 +99,7 @@ import dynamic.mapping.notification.C8YAPISubscriber;
 @Service
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
-    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "mqtt.mapping.processor.extension.external";
+    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
 
     @Autowired
     private EventApi eventApi;
@@ -423,7 +423,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
                 if (external && !clazz.getPackageName().startsWith(PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL)) {
                     extensionEntry.setMessage(
-                            "Implementation must be in package: 'mqtt.mapping.processor.extension.external' instead of: "
+                            "Implementation must be in package: 'dynamic.mapping.processor.extension.external' instead of: "
                                     + clazz.getPackageName());
                     extensionEntry.setLoaded(false);
                 } else {

@@ -1193,7 +1193,7 @@ public final class StaticCustomMeasurementOuter {
       "\021\n\ttimestamp\030\001 \001(\003\022\r\n\005value\030\002 \001(\002\022\014\n\004uni" +
       "t\030\003 \001(\t\022\026\n\016externalIdType\030\004 \001(\t\022\022\n\nexter" +
       "nalId\030\005 \001(\t\022\027\n\017measurementType\030\006 \001(\tBF\n&" +
-      "mqtt.mapping.processor.processor.fixedB\034" +
+      "dynamic.mapping.processor.processor.fixedB\034" +
       "StaticCustomMeasurementOuterb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
