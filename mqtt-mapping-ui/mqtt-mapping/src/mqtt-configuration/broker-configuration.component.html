@@ -108,25 +108,25 @@
                     (click)="onConfigurationDelete(i)"
                     [disabled]="con.configuration?.enabled"
                   >
-                    <i c8yIcon="minus-circle" class="text-danger"></i>
+                    <i c8yIcon="trash-o" class="text-danger"></i>
                     <span class="sr-only" translate>Remove configuration</span>
                   </button>
                   <button
-                    title="{{ 'Toggle Activation' | translate }}"
-                    class="btn btn-icon btn-clean p-r-4"
-                    (click)="onConfigurationToogle(i)"
+                  title="{{ 'Update' | translate }}"
+                  class="btn btn-icon btn-clean p-r-4"
+                  (click)="onConfigurationUpdate(i)"
                   >
-                    <i c8yIcon="toggle-on" class="text-danger"></i>
-                    <span class="sr-only" translate>Toogle activation</span>
-                  </button>
-                  <button
-                    title="{{ 'Update' | translate }}"
-                    class="btn btn-icon btn-clean"
-                    (click)="onConfigurationUpdate(i)"
-                  >
-                    <i c8yIcon="pencil" class="text-danger"></i>
-                    <span class="sr-only" translate>Update configuration</span>
-                  </button>
+                  <i c8yIcon="pencil" class="text-danger"></i>
+                  <span class="sr-only" translate>Update configuration</span>
+                </button>
+                <button
+                  title="{{ 'Toggle Activation' | translate }}"
+                  class="btn btn-icon btn-clean"
+                  (click)="onConfigurationToogle(i)"
+                >
+                  <i c8yIcon="toggle-on" class="text-danger"></i>
+                  <span class="sr-only" translate>Toogle activation</span>
+                </button>
                 </td>
               </tr>
             </tbody>
