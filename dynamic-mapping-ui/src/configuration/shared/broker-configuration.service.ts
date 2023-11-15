@@ -75,12 +75,13 @@ export class BrokerConfigurationService {
       externalId: AGENT_ID,
     };
     const { data, res } = await this.identity.detail(identity);
+    let agentId;
     if (res.status < 300) {
-      const agentId = data.managedObject.id.toString();
+      agentId = data.managedObject.id.toString();
       console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
     }
 
-    return this._agentId;
+    return agentId;
   }
 
   async updateConnectorConfiguration(
