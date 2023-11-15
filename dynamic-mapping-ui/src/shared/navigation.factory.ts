@@ -31,8 +31,8 @@ import { BrokerConfigurationService } from "../configuration/broker-configuratio
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
-  private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE = "dynamic-mapping-service";
-  _feature: Feature;
+  private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
+    "dynamic-mapping-service";
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext("Settings"),
     label: gettext("Dynamic Mapping"),
@@ -45,25 +45,23 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
-    private brokerConfigurationService: BrokerConfigurationService) {
-      console.log("MappingNavigationFactory constructor");
-    }
+    private brokerConfigurationService: BrokerConfigurationService
+  ) {
+    console.log("MappingNavigationFactory constructor");
+  }
 
   async get() {
-    if (!this._feature) {
-      const f: any= await this.brokerConfigurationService.getFeatures();
-      if (f.error) {
-        console.error("dynamic-mapping-service microservice not accessible", f);
-        this._feature = undefined;
-      } else {
-        this._feature = f;
-      }
+    const feature: any = await this.brokerConfigurationService.getFeatures();
+    if (feature.error) {
+      console.error("dynamic-mapping-service microservice not accessible", feature);
     }
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
       .then((result) => {
-        if (!(result && result.data) || !this._feature) {
-          this.alertService.danger("Microservice:dynamic-mapping-service not subscribed. Please subscribe this service before using the mapping editor!");
+        if (!(result && result.data) || !feature) {
+          this.alertService.danger(
+            "Microservice:dynamic-mapping-service not subscribed. Please subscribe this service before using the mapping editor!"
+          );
           console.error("dynamic-mapping-service microservice not subscribed!");
           return [];
         }

@@ -50,11 +50,8 @@ import {
   SubstituteValue,
 } from "../processor/prosessor.model";
 
-
-
 @Injectable({ providedIn: "root" })
 export class MappingService {
-  _feature: Feature;
   constructor(
     private inventory: InventoryService,
     private brokerConfigurationService: BrokerConfigurationService,
@@ -119,7 +116,7 @@ export class MappingService {
     return this.reload$;
   }
 
-  initializeCache(dir: Direction): void{
+  initializeCache(dir: Direction): void {
     if (dir == Direction.INBOUND) {
       this.jsonProcessorInbound.initializeCache();
     }
@@ -159,10 +156,9 @@ export class MappingService {
   }
 
   async getSubscriptions(): Promise<C8YAPISubscription> {
-    if (!this._feature) {
-      this._feature = await this.brokerConfigurationService.getFeatures();
-    }
-    if (this._feature.outputMappingEnabled) {
+    const feature = await this.brokerConfigurationService.getFeatures();
+
+    if (feature?.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
         {
@@ -175,7 +171,6 @@ export class MappingService {
       const data = await res.json();
       return data;
     } else {
-      //return Promise.resolve();
       return null;
     }
   }

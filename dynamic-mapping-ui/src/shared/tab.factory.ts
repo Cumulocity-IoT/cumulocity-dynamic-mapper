@@ -26,7 +26,6 @@ import { Feature } from "./mapping.model";
 
 @Injectable()
 export class MappingTabFactory implements TabFactory {
-  _feature: Feature;
   constructor(
     public router: Router,
     private brokerConfigurationService: BrokerConfigurationService
@@ -34,15 +33,11 @@ export class MappingTabFactory implements TabFactory {
 
   async get() {
     //console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
-    //console.log("Feature: ", this._feature)
-    if (!this._feature) {
-      this._feature = await this.brokerConfigurationService.getFeatures();
-      //console.log("Feature reload: ", this._feature)
-    }
+    const feature = await this.brokerConfigurationService.getFeatures();
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
-      if (this._feature.userHasMappingAdminRole) {
+      if (feature?.userHasMappingAdminRole) {
         tabs.push({
           path: "sag-ps-pkg-dynamic-mapping/configuration",
           priority: 930,
@@ -59,7 +54,7 @@ export class MappingTabFactory implements TabFactory {
         orientation: "horizontal",
       } as Tab);
       this.brokerConfigurationService.getFeatures();
-      if (this._feature.outputMappingEnabled) {
+      if (feature?.outputMappingEnabled) {
         tabs.push({
           path: "sag-ps-pkg-dynamic-mapping/mappings/outbound",
           priority: 920,
@@ -89,7 +84,7 @@ export class MappingTabFactory implements TabFactory {
         icon: "tree-structure",
         orientation: "horizontal",
       } as Tab);
-      if (this._feature.userHasMappingAdminRole) {
+      if (feature?.userHasMappingAdminRole) {
         tabs.push({
           path: "sag-ps-pkg-dynamic-mapping/extensions",
           priority: 880,
@@ -101,7 +96,7 @@ export class MappingTabFactory implements TabFactory {
 
       // this tab is used to develop the migration from json library:
       //     "vanilla-jsoneditor": "^0.17.9"
-      // to 
+      // to
       //     "jsoneditor": "^9.9.2"
       // Do NOT DELETE
 
@@ -112,7 +107,6 @@ export class MappingTabFactory implements TabFactory {
       //   icon: "file",
       //   orientation: "horizontal",
       // } as Tab);
-      
     }
 
     return tabs;
