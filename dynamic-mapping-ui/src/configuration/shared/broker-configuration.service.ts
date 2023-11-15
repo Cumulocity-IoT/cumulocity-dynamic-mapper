@@ -55,30 +55,32 @@ export class BrokerConfigurationService {
     this.realtime = new Realtime(this.client);
   }
 
-  private agentId: string;
+  private _agentId: Promise<string>;
 
   private _connectorConfigurationCombined: ConnectorConfigurationCombined[] =
     [];
-  private _feature: Promise<Feature> ;
+  private _feature: Promise<Feature>;
   private realtime: Realtime;
 
-  async initializeBrokerAgent(): Promise<string> {
-    if (!this.agentId) {
-      const identity: IExternalIdentity = {
-        type: "c8y_Serial",
-        externalId: AGENT_ID,
-      };
-
-      const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300) {
-        this.agentId = data.managedObject.id.toString();
-        console.log(
-          "BrokerConfigurationService: Found BrokerAgent",
-          this.agentId
-        );
-      }
+  async getDynamicMappingServiceAgent(): Promise<string> {
+    if (!this._agentId) {
+      this._agentId = this.getUncachedDynamicMappingServiceAgent();
     }
-    return this.agentId;
+    return this._agentId;
+  }
+
+  async getUncachedDynamicMappingServiceAgent(): Promise<string> {
+    const identity: IExternalIdentity = {
+      type: "c8y_Serial",
+      externalId: AGENT_ID,
+    };
+    const { data, res } = await this.identity.detail(identity);
+    if (res.status < 300) {
+      const agentId = data.managedObject.id.toString();
+      console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
+    }
+
+    return this._agentId;
   }
 
   async updateConnectorConfiguration(
@@ -239,12 +241,12 @@ export class BrokerConfigurationService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId = await this.initializeBrokerAgent();
-    console.log("Started subscription:", this.agentId);
+    const agentId = await this.getDynamicMappingServiceAgent();
+    console.log("Started subscription:", agentId);
     this.getConnectorStatus().then((status) => {
-      for (const [key, value] of Object.entries(status)) {
-        console.log(`${key}: ${value}`);
-      }
+      // for (const [key, value] of Object.entries(status)) {
+      //   console.log(`${key}: ${value}`);
+      // }
       this._connectorConfigurationCombined.forEach((cc) => {
         if (status[cc.configuration.ident]) {
           cc.status$.next(status[cc.configuration.ident]);
@@ -252,10 +254,11 @@ export class BrokerConfigurationService {
       });
       console.log("New monitoring event", status);
     });
-    return this.realtime.subscribe(
-      `/managedobjects/${this.agentId}`,
+    const sub = this.realtime.subscribe(
+      `/managedobjects/${agentId}`,
       this.updateStatus.bind(this)
     );
+    return sub;
   }
 
   unsubscribeFromMonitoringChannel(subscription: object) {
