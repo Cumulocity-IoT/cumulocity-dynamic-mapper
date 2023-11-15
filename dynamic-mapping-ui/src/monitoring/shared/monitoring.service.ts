@@ -34,7 +34,6 @@ export class MonitoringService {
     this.realtime = new Realtime(this.client);
   }
   private realtime: Realtime;
-  private agentId: string;
   private mappingStatus = new BehaviorSubject<MappingStatus[]>([]);
   private _currentMappingStatus = this.mappingStatus.asObservable();
 
@@ -43,15 +42,15 @@ export class MonitoringService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    this.agentId =
-      await this.brokerConfigurationService.initializeBrokerAgent();
-    console.log("Start subscription for monitoring:", this.agentId);
+    const agentId =
+      await this.brokerConfigurationService.getDynamicMappingServiceAgent();
+    console.log("Start subscription for monitoring:", agentId);
 
-    let { data, res } = await this.inventory.detail(this.agentId);
+    let { data, res } = await this.inventory.detail(agentId);
     let monitoring: MappingStatus[] = data[MAPPING_STATUS_FRAGMENT];
     this.mappingStatus.next(monitoring);
     return this.realtime.subscribe(
-      `/managedobjects/${this.agentId}`,
+      `/managedobjects/${agentId}`,
       this.updateStatus.bind(this)
     );
   }

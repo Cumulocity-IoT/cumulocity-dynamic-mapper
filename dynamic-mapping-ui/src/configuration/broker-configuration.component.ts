@@ -73,7 +73,7 @@ export class BrokerConfigurationComponent implements OnInit {
 
     this.initializeMonitoringService();
     this.isBrokerAgentCreated$ = from(
-      this.brokerConfigurationService.initializeBrokerAgent()
+      this.brokerConfigurationService.getDynamicMappingServiceAgent()
     )
       // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
       .pipe(map((agentId) => agentId != null));
