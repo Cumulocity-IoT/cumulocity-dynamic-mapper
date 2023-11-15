@@ -1,1 +1,1 @@
-export * from './broker-configuration.service';
+export * from './shared/broker-configuration.service';

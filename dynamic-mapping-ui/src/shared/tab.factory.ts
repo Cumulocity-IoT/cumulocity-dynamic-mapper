@@ -21,9 +21,7 @@
 import { Injectable } from "@angular/core";
 import { TabFactory, Tab } from "@c8y/ngx-components";
 import { Router } from "@angular/router";
-import { BrokerConfigurationService } from "../configuration/broker-configuration.service";
-import { Feature } from "./mapping.model";
-
+import { BrokerConfigurationService } from "../configuration/shared/broker-configuration.service";
 @Injectable()
 export class MappingTabFactory implements TabFactory {
   constructor(
@@ -93,22 +91,7 @@ export class MappingTabFactory implements TabFactory {
           orientation: "horizontal",
         } as Tab);
       }
-
-      // this tab is used to develop the migration from json library:
-      //     "vanilla-jsoneditor": "^0.17.9"
-      // to
-      //     "jsoneditor": "^9.9.2"
-      // Do NOT DELETE
-
-      // tabs.push({
-      //   path: "sag-ps-pkg-mqtt-mapping/editor2-test",
-      //   priority: 870,
-      //   label: "Editor2",
-      //   icon: "file",
-      //   orientation: "horizontal",
-      // } as Tab);
     }
-
     return tabs;
   }
 }

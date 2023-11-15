@@ -36,7 +36,7 @@ import {
   ServiceConfiguration,
   uuidCustom,
 } from "../shared";
-import { BrokerConfigurationService } from "./broker-configuration.service";
+import { BrokerConfigurationService } from "./shared/broker-configuration.service";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 
 @Component({

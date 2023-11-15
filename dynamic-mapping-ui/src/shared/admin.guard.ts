@@ -20,7 +20,7 @@
  */
 import { Injectable } from "@angular/core";
 import { CanActivate } from "@angular/router";
-import { BrokerConfigurationService } from "../configuration/broker-configuration.service";
+import { BrokerConfigurationService } from "../configuration/shared/broker-configuration.service";
 
 @Injectable({ providedIn: "root" })
 export class AdminGuard implements CanActivate {

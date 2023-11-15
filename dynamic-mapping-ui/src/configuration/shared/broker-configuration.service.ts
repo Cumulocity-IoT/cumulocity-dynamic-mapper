@@ -45,7 +45,7 @@ import {
   Status,
   ConnectorConfigurationCombined,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-} from "../shared";
+} from "../../shared";
 
 import { BehaviorSubject } from "rxjs";
 
