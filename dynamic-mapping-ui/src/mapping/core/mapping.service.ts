@@ -38,7 +38,6 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   C8YAPISubscription,
   Direction,
-  Feature,
   Mapping,
   Operation,
 } from "../../shared";

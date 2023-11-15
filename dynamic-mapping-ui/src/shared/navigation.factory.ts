@@ -26,8 +26,7 @@ import {
   NavigatorNode,
   NavigatorNodeFactory,
 } from "@c8y/ngx-components";
-import { Feature } from "./mapping.model";
-import { BrokerConfigurationService } from "../configuration/broker-configuration.service";
+import { BrokerConfigurationService } from "../configuration/shared/broker-configuration.service";
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
