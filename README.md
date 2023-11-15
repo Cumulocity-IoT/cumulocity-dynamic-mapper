@@ -1,36 +1,14 @@
 # Dynamic Mapping Service for Cumulocity
 
-# Content
+## Table of Contents
 - [Overview](#overview)
-  * [Architecture](#architecture)
-  * [Known Limitation and Disclaimer](#known-limitation-and-disclaimer)
-  * [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  * [Microservice](#microservice)
-  * [Web App Plugin](#web-app-plugin)
-  * [Build, Deploy, Run](#build-deploy-run)
-  * [Permissions](#permissions)
-- [Configuration MQTT connection to broker](#configuration-mqtt-connection-to-broker)
-- [Definition and Activation  of MQTT mappings](#definition-and-activation-of-mqtt-mappings)
-  * [Table of MQTT mappings](#table-of-mqtt-mappings)
-  * [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format-cumulocity-rest-format)
-    + [Wizard to define a mapping](#wizard-to-define-a-mapping)
-    + [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
-    + [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
-    + [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
-    + [Different type of substitutions](#different-type-of-substitutions)
-  * [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
-  * [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
-  * [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
-  * [Update existing Mapping](#update-existing-mapping)
-  * [Import & Export Mappings](#import--export-mappings)
-- [Processing Extensions (Protobuf, ...)](#processing-extensions)
-- [Monitoring](#monitoring)
-- [Mapping Tree](#mapping-tree)
-- [REST API](#rest-api)
-- [Load Test](#load-test)
-- [Setup Sample MQTT mappings](#setup-sample-mqtt-mappings)
-
+- [Installation Guide ](#installation-guide)
+- [Build & Deploye](#build--deploy)
+- [User Guide](#user-guide)
+- [API Documentation](#api-documentation)
+- [Tests & Sample Data](#tests--sample-data)
+- [Setup Sample mappings](#setup-sample-mappings)
+- [Enhance and Extensions](#enhance-and-extensions)
 
 ## Overview
 
@@ -39,7 +17,7 @@ It can connect to multiple message brokers likes **MQTT**, **MQTT Connect** and 
 
 Per default the followings connectors are supported
 * **MQTT** - any MQTT Broker
-* **MQTT Connect** - MQTT Broker provided by Cumulocity IoT
+* **MQTT Connect (in development)** - MQTT Broker provided by Cumulocity IoT
 
 It contains two major components:
 
@@ -53,13 +31,13 @@ graphical data mappings within the Cumumlocity IoT UI.
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical way.
 
-Here are the core features summarized:
+Here are the **core features** summarized:
 
 * **Connect** to multiple message broker of your choice at the same time.
 * **Map** any data to/from the Cumulocity IoT Domain Model in a graphical way.
 * **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker.
 * **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) 
-* Support of multiple payload formats starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
+* **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
 * **Extend**  the mapper easily by using payload extensions or the provided connector interface
 * Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.
 
@@ -69,14 +47,14 @@ TODO: Add Screen that shows the UI of the Mapper
 The architecture of the components consists of the following components:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Architecture.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Architecture.jpg"  style="width: 100%;" />
 </p>
 <br/>
 The orange components are part of this project which are:
 
 * 2 Default connectors for..
   * **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to MQTT brokers
-  * **MQTT Connect** -  using the MQTT Connect Client to connect to MQTT Connect
+  * **MQTT Connect (in development) ** -  using the MQTT Connect Client to connect to MQTT Connect
 * **Data Mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 * **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
@@ -110,7 +88,7 @@ Due to two different libraries to evaluate JSONata in:
 1. `dynamic-mapping-ui`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
 2. `dynamic-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
-differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
+Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
 The Paho java client uses memory persistence to persist its state (used to store outbound and inbound messages while they are in flight). When the microservice restarts this information is lost. 
 The microservice can not use the default `MqttDefaultFilePersistence` of the paho client. See [Issue](https://github.com/eclipse/paho.mqtt.java/issues/507)
@@ -118,13 +96,16 @@ The microservice can not use the default `MqttDefaultFilePersistence` of the pah
 ### Contribution
 > **Pull Requests adding connectors, mappings for other data formats or additional functionally are welcomed!**
 
-## Prerequisites
+## Installation Guide
+
+### Prerequisites
+
 In your Cumulocity IoT Tenant you must have the **microservice** feature subscribed. Per default this feature is not
 available and must be provided by administrators of the instance you are using.
 
 Make sure to use a user with admin privileges in your Tenant.
 
-## Installation
+### Installation
 
 You need to install two components to your Cumulocity IoT Tenant:
 
@@ -134,29 +115,23 @@ You need to install two components to your Cumulocity IoT Tenant:
 Both are provided as binaries in [Releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Take 
 the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
-### Microservice
+#### Microservice
 
-In Administration App go to Ecosystem -> Microservices and click on "Add Microservice" on the top right.
+In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
 
-<p align="center">
-<img src="resources/image/Generic_Mapping_UploadMicroservice.png"  style="width: 40%;"/>
-</p>
-<br/>
-
-Select the "mqtt.mapping.service.zip".
+Select the `dynamic-mapping-service.zip`.
 Make sure that you subscribe the microservice to your tenant when prompted
 
-### Web App Plugin
+#### Web App Plugin
 
-In Adminstration App go to Ecosystem -> Packages and click on "Add Application" on the top right.
+#### Community Store
 
-Select "dynamic-mapping-ui.zip" and wait until it is uploaded.
+The Web App Plugin is part of the community plugins and should be available directly in your Tenant under
+"Administration" -> "Ecosystem" -> "Extensions". Just click on "dynamic-mapping" and click on "install plugin".
 
 > **_NOTE:_** We need to clone the Administration app to add the plugin to it
 
-After successful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application"
-and afterward "Administration".
-
+After successful upload go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_DuplicateApp.png" style="width: 40%;" />
@@ -165,30 +140,38 @@ and afterward "Administration".
 
 Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "MQTT configuration plugin"
 
-
 <p align="center">
 <img src="resources/image/Generic_Mapping_PluginInstalled.png" style="width: 50%;" />
 </p>
 <br/>
 
-## Build, Deploy, Run
-Make sure that [Docker](https://www.docker.com/) and [Apache Maven](https://maven.apache.org/) are installed and running on your computer.
+#### Manual
+If you made changes or your want to upload the plugin manually you can do that by following these steps:
+
+1. In "Administration" App go to "Ecosystem" -> "Packages" and click on "Add Application" on the top right.
+2. Select `dynamic-mapping-ui.zip` and wait until it is uploaded.
+
+Follow the steps from the point above to assign the plugin to your Administration App.
+
+## Build & Deploy
+
+### Prerequisites
+Make sure that [Docker](https://www.docker.com/), [Apache Maven](https://maven.apache.org/) and [Node.js](https://nodejs.org/) are installed and running on your computer.
 
 ### Backend - Microservice
-Run `mvn clean package` in folder `mqtt-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Run `mvn clean package` in folder `dyanmic-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frontend - Plugin
-Run `npm run build` in folder `mqtt-mapping-ui/mqtt-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `mqtt-mapping-ui/mqtt-mapping` to deploy the Front End (plugin) to your Cumulocity tenant.
+Run `npm run build` in folder `dynamic-mapping-ui` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `dynamic-mapping-ui` to deploy the Front End (plugin) to your Cumulocity tenant.
 The Frontend is build as [Cumulocity plugin](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
-
 
 ## User Guide
 
 ### Permissions
 The solution differentiates two different roles:
-1. `ROLE_MAPPING_MAPPING_ADMIN`: can use/access all tabs, including **Configuration**, **Processor Extension**. In addition the relevant endpoints in `MQTTMappingRestController`:
+1. `ROLE_MAPPING_ADMIN`: can use/access all tabs, including **Configuration**, **Processor Extension**. In addition, the relevant endpoints in `MappingRestController`:
 
    1.1. `POST /configuration/connection`
 
@@ -197,15 +180,15 @@ The solution differentiates two different roles:
    1.3 `DELETE /extension/{extensionName}`
 
    are accessible.
-1. `ROLE_MAPPING_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
+2. `ROLE_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
 
 The two roles have to be assigned in the Web UI **Adminisitration**, see [here](https://cumulocity.com/guides/users-guide/administration/#managing-permissions).
 
-The available tabs for `ROLE_MAPPING_MAPPING_ADMIN` are as follows:
-![ROLE_MAPPING_MAPPING_ADMIN](./resources/image/Generic_Mapping_UI_AdminRole_Tabs.png)
+The available tabs for `ROLE_MAPPING_ADMIN` are as follows:
+![ROLE_MAPPING_ADMIN](./resources/image/Generic_Mapping_UI_AdminRole_Tabs.png)
 
-The available tabs for `ROLE_MAPPING_MAPPING_CREATE` are as follows:
-![ROLE_MAPPING_MAPPING_CREATE](./resources/image/Generic_Mapping_UI_CreateRole_Tabs.png)
+The available tabs for `ROLE_MAPPING_CREATE` are as follows:
+![ROLE_MAPPING_CREATE](./resources/image/Generic_Mapping_UI_CreateRole_Tabs.png)
 
 ### Configuration connector to broker
 
@@ -237,15 +220,14 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 
 ### Definition and Activation of  mappings
 
-#### Table of MQTT mappings
+#### Table of mappings
 
-Once the connection to a MQTT broker is configured and successfully enabled you can start defining MQTT mappings. The MQTT mappings table is the entry point for:
-1. Creating new MQTT mappings: Press button `Add mapping`
-2. Updating existing MQTT mapping: Press the pencil in the row of the relevant mapping
-3. Deleting existing MQTT mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
+Once the connection to a broker is configured and successfully enabled you can start defining mappings. The mappings table is the entry point for:
+1. Creating new mappings: Press button `Add mapping`
+2. Updating existing mapping: Press the pencil in the row of the relevant mapping
+3. Deleting existing mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
 
 After every change the mappings is automatically updated in the mapping cache of the microservice.
-
 
 #### Define mappings from source to target format (Cumulocity REST format)
 
@@ -326,7 +308,7 @@ ___
 2. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 3. Test the mapping by applying the transformation and send the result to a test device.
 
-##### Define MQTT topic properties
+##### Define topic properties
 
 In the first wizard step properties for the topic are defined.
 <p align="center">
@@ -357,8 +339,8 @@ For an outbound mapping to be applied two conditions have to be fulfilled:
 
 ##### Subscription Topic
 
-This is the topic which is actually subscribed on in the MQTT broker. It can contain wildcards, either single level "+" or multilevel "#".
-
+This is the topic which is actually subscribed on in the broker. It can contain wildcards, either single level "+" or multilevel "#".
+This occurs must be supported by the configured message broker.
 >**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
 
@@ -654,9 +636,9 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 In the resource section you find a test profil [jmeter_test_01.jmx](./resources/script/performance/jmeter_test_01.jmx) using the performance tool ```jmeter``` and an extension for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
 This was used to run simple loadtest.
 
-## Setup Sample MQTT mappings
+## Setup Sample mappings
 
-A script to create sample MQTT mappings can be found [here](./resources/script/mapping/import_mappings_01.py).
+A script to create sample mappings can be found [here](./resources/script/mapping/import_mappings_01.py).
 You have to start it as follows:
 ```
 #python3 resources/script/mapping/import_mappings_01.py -p <YOUR_PASSWORD> -U <YOUR_TENANT> -u <YOUR_USER> -f resources/script/mapping/sampleMapping/sampleMappings_02.json
@@ -665,62 +647,43 @@ You have to start it as follows:
 The mappings with inputs and substitutions are explained in the [sample document](./resources/script/mapping/sampleMapping/sampleMappings_02.html).
 
 ## Enhance and Extensions
-In the folder [mqtt.mapping.processor.extension](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/extension) you can implement  the Interface `ProcessorExtensionInbound<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
+
+### Custom message broker connector
+
+Additional connectors supporting different message brokers can be added to the dynamic mapper.
+For that an abstract Class [AConnectorClient](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/core/client/AConnectorClient.java) must be implemented handling the basic methods of a message broker like  `connect`, `subscribe` and `disconnect`.
+In addition a Callback must be implemented handling the message broker typical messages and forwarding it to a [GenericMessageCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/core/callback/GenericMessageCallback.java)
+
+Check out the [MQTTCallback](./dynamic-mapping-service/src/main/java/dynamic/mapping/connector/mqtt/MQTTCallback.java) as an example implementation.
+
+### Mapper Extensions
+In the folder [dynamic.mapping.processor.extension](./dynamic-mapping-service/src/main/java/dynamic/mapping/processor/extension) you can implement  the Interface `ProcessorExtensionInbound<O>` to implement the processing of your own messages. Together with the Java representation of your message you can build your own processor extension.
 This needs to be packages in a ```jar``` file. The extension packaged as a ```jar``` you can upload this extension using the tab ```Processor Extension```, see [Processing Extensions (Protobuf, ...)](#processing-extensions-protobuf) for details.
-In order for the mapper backend (```mqtt-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
+In order for the mapper backend (```dynamic-mapping-service```) to find your extension you need to add the properties file ```extension-external.properties```. The content could be as follows:
 ```
 CustomEvent=external.extension.processor.dynamic.mapping.ProcessorExtensionInboundCustomEvent
 CustomMeasurement=external.extension.processor.dynamic.mapping.ProcessorExtensionInboundCustomMeasurement
 ```
 
 The steps required for a external extension are as follows. The extension:
-1. has to implement the inteface <code>ProcessorExtensionInbound<O></code> 
-2. be registered in the properties file <code>mqtt-mapping-extension/src/main/resources/extension-external.properties</code>
-3. be developed/packed in the maven module <code>mqtt-mapping-extension</code>. **Not** in the maven module <code>mqtt-mapping-service</code>. This is reserved for internal extensions.
+1. has to implement the interface <code>ProcessorExtensionInbound<O></code> 
+2. be registered in the properties file <code>dynamic-mapping-extension/src/main/resources/extension-external.properties</code>
+3. be developed/packed in the maven module <code>dynamic-mapping-extension</code>. **Not** in the maven module <code>dynamic-mapping-service</code>. This is reserved for internal extensions.
 4. be uploaded through the Web UI.
 
 > **_NOTE:_** When you implement <code>ProcessorExtensionInbound<O></code> an additional <code>RepairStrategy.CREATE_IF_MISSING</code> can be used. This helps to address mapping cases, where you want to create a mapping that adapts to different structures of source payloads. It is used to create a node in the target if it doesn't exist and allows for using mapping with dynamic content. See [sample 25](./resources/script/mapping/sampleMapping/SampleMappings_06.pdf).
 
-A sample how to build an extension is contained in the maven module [mqtt-mapping-extension](./mqtt-mapping-extension).
-The following diagram shows how the dispatcher handles meassages with different format:
+A sample how to build an extension is contained in the maven module [dynamic-mapping-extension](./dynamic-mapping-extension).
+The following diagram shows how the dispatcher handles messages with different format:
 
+TODO Replace picture
 <p align="center">
 <img src="resources/image/Generic_Mapping_Dispatcher.png"  style="width: 70%;" />
 </p>
 <br/>
-
-As an example see the [SysHandler](./mqtt-mapping-service/src/main/java/mqtt/mapping/processor/system/SysHandler.java) which subscribes and handles all topics for $SYS and creates Measurements in Cumulocity for the received data.
 
 ______________________
 These tools are provided as-is and without warranty or support. They do not constitute part of the Software AG product suite. Users are free to use, fork and modify them, subject to the license agreement. While Software AG welcomes contributions, we cannot guarantee to include every contribution in the master project.
 
 Contact us at [TECHcommunity](mailto:technologycommunity@softwareag.com?subject=Github/SoftwareAG) if you have any questions.
 
-## Attachment
-
-//TODO Too detailed for this section??
-Before inbound messages can be processed, the mappings have to be loaded into the mapping cache, which is part of the microservice. This cache is organized as a tree to reduce retrieval times when later messages arrive. Then the approriate mapping can be efficiently found by traversing the tree.The following diagram describes what happens in the mapping cache if a new MQTT mapping is added to the list of already existing mappings.
-
-<p align="center">
-<img src="resources/image/Generic_Mapping_Diagram_Map.png"  style="width: 70%;" />
-</p>
-<br/>
-
-Once all mappings are added to the cache we are ready to process inbound messages transmitted by the MQTT broker.
-The following diagram describes how a new message is processed.
-
-<p align="center">
-<img src="resources/image/Generic_Mapping_Diagram_Transform1.png"  style="width: 70%;" />
-</p>
-
-<p align="center">
-<img src="resources/image/Generic_Mapping_Diagram_Transform2.png"  style="width: 70%;" />
-</p>
-<br/>
-
-Outbound messages are organized in a flat list. Mappings are bound using the mapping property ```filterOutgoing```. This specifies an fragment name in the Cumulocity message (MEAO or Inventory). Once this fragment exists in a Cumulocity message the respective mapping is applied.
-
-<p align="center">
-<img src="resources/image/Generic_Mapping_Diagram_Transform_Outbound1.png"  style="width: 70%;" />
-</p>
-<br/>
