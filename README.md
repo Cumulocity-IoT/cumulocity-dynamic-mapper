@@ -57,7 +57,7 @@ The orange components are part of this project which are:
 
 * 2 Default connectors for..
   * **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to MQTT brokers
-  * **MQTT Connect (in development) ** -  using the MQTT Connect Client to connect to MQTT Connect
+  * **MQTT Connect (in development)** -  using the MQTT Connect Client to connect to MQTT Connect
 * **Data Mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 * **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
