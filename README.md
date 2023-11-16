@@ -17,7 +17,7 @@ It can connect to multiple message brokers likes **MQTT**, **MQTT Connect** and 
 
 Per default the followings connectors are supported
 * **MQTT** - any MQTT Broker
-* **MQTT Connect (in development)** - MQTT Broker provided by Cumulocity IoT
+* **MQTT Connect** - MQTT Broker provided by Cumulocity IoT (in development)
 
 It contains two major components:
 
