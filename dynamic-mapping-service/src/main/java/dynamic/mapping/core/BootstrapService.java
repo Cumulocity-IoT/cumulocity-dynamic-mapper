@@ -73,6 +73,7 @@ public class BootstrapService {
         log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
         String tenant = event.getTenant();
         c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
+        c8YAgent.getNotificationSubscriber().deleteAllSubscriptions(tenant);
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
         } catch (ConnectorRegistryException e) {

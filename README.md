@@ -41,7 +41,10 @@ Here are the **core features** summarized:
 * **Extend**  the mapper easily by using payload extensions or the provided connector interface
 * Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.
 
-TODO: Add Screen that shows the UI of the Mapper
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Mapper.jpg"  style="width: 80%;" />
+</p>
+<br/>
 
 ### Architecture
 The architecture of the components consists of the following components:

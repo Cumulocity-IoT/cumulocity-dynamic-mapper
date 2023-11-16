@@ -32,6 +32,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
+import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -122,6 +123,9 @@ public class C8YAPISubscriber {
     private Map<String, CustomWebSocketClient> tenantClientMap = new HashMap<>();
     private Map<String, Integer> tenantWSStatusCode = new HashMap<>();
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
+
+    private Map<String, String> tenantDeviceToken = new HashMap<>();
+    private Map<String, String> tenantToken = new HashMap<>();
     //private int deviceWSStatusCode = 0;
 
     public void init() {
@@ -188,6 +192,7 @@ public class C8YAPISubscriber {
                 //For each dispatcher/connector create a new connection
                 for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
                     String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent() + additionalSubscriptionIdTest);
+                    tenantDeviceToken.put(tenant, token);
                     CustomWebSocketClient client = connect(token, dispatcherOutbound);
                     deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), client);
                 }
@@ -236,10 +241,10 @@ public class C8YAPISubscriber {
         String deviceName = mor.getName();
         logger.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName, mor.getId().getValue());
         CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+        subscriptionsService.runForTenant(tenant, () -> {
             NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
             notificationFut.complete(notification);
-            if (deviceWSStatusCode.get(tenant) != 200) {
+            if (deviceWSStatusCode.get(tenant) == null || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
                 logger.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
 
                 try {
@@ -249,6 +254,7 @@ public class C8YAPISubscriber {
 
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMap.get(tenant).values()) {
                         String token = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent() + additionalSubscriptionIdTest);
+                        tenantDeviceToken.put(tenant, token);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), client);
                     }
@@ -351,6 +357,7 @@ public class C8YAPISubscriber {
         NotificationSubscriptionRepresentation notification = createTenantSubscription();
         String tenantToken = createToken(notification.getSubscription(),
                 TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
+        this.tenantToken.put(tenant, tenantToken);
 
         try {
             NotificationCallback tenantCallback = new NotificationCallback() {
@@ -542,6 +549,13 @@ public class C8YAPISubscriber {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             subscriptionApi.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
         });
+    }
+
+    public void deleteAllSubscriptions(String tenant) {
+        if(tenantDeviceToken.get(tenant) != null)
+            tokenApi.unsubscribe(new Token(tenantDeviceToken.get(tenant)));
+        if(tenantToken.get(tenant) != null)
+            tokenApi.unsubscribe(new Token(tenantToken.get(tenant)));
     }
 
 
