@@ -74,6 +74,9 @@ public class BootstrapService {
         String tenant = event.getTenant();
         c8YAgent.getNotificationSubscriber().disconnect(tenant, false);
         c8YAgent.getNotificationSubscriber().deleteAllSubscriptions(tenant);
+        serviceConfigurationComponent.deleteServiceConfigurations(tenant);
+        connectorConfigurationComponent.deleteConnectorConfigurations(tenant);
+
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
         } catch (ConnectorRegistryException e) {
