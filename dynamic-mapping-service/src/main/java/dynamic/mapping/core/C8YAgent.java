@@ -128,14 +128,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-
     private ObjectMapper objectMapper;
 
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
-
 
     private ExtensionsComponent extensions;
 
@@ -520,7 +518,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
 
-    public ManagedObjectRepresentation createMappingObject(String tenant) {
+    public ManagedObjectRepresentation createMappingServiceObject(String tenant) {
         ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MappingServiceRepresentation.AGENT_ID),
                 null);;

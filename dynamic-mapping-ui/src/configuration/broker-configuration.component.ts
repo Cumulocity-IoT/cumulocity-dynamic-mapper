@@ -93,14 +93,11 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async loadData(): Promise<void> {
-    let sc = await this.brokerConfigurationService.getServiceConfiguration();
+    this.serviceConfiguration = await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
     this.configurations =
       await this.brokerConfigurationService.getConnectorConfigurationsCombined();
-    if (sc) {
-      this.serviceConfiguration = sc;
-    }
   }
 
   async clickedReconnect2NotificationEnpoint() {

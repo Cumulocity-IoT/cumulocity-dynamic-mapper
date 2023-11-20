@@ -88,7 +88,7 @@ public class BootstrapService {
         MicroserviceCredentials credentials = event.getCredentials();
         log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingObject(tenant);
+        ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingServiceObject(tenant);
         PayloadProcessor processor = new PayloadProcessor(objectMapper, c8YAgent, tenant, null);
         c8YAgent.checkExtensions(tenant, processor);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
