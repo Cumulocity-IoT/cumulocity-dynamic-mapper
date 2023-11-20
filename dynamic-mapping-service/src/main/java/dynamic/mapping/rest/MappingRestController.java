@@ -213,7 +213,7 @@ public class MappingRestController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Client with ident " + ident + " not found");
             client.disconnect();
             bootstrapService.shutdownConnector(tenant, ident);
-            connectorConfigurationComponent.deleteConnectionConfiguration(ident);
+            connectorConfigurationComponent.deleteConnectorConfiguration(ident);
         } catch (Exception ex) {
             log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());

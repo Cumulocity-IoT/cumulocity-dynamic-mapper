@@ -77,7 +77,7 @@ public class ConnectorConfigurationComponent {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public void deleteConnectionConfiguration(final String ident)
+    public void deleteConnectorConfiguration(final String ident)
             throws JsonProcessingException {
         if (ident == null) {
             return;
