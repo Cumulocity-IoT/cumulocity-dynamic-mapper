@@ -28,7 +28,6 @@ jobs:
         with:
           java-version: 11
           distribution: zulu
-
       - name: Build Backend
         run: mvn -B package --file pom.xml
       - name: deploy
