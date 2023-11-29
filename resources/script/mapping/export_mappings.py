@@ -61,7 +61,7 @@ def main(argv):
         elif opt in ("-f", "--file"):
             file = arg
 
-    url = f"{url}/inventory/managedObjects?type=c8y_mqttMapping&pageSize=1000"
+    url = f"{url}/inventory/managedObjects?type=d11r_mapping&pageSize=1000"
     up = f'{user}:{secret}'
     up_encoded = base64.b64encode(up.encode("utf-8")).decode("utf-8")
     token = f'Basic {up_encoded}'
@@ -77,11 +77,11 @@ def main(argv):
     mappings = []
 
     for index, mapping in enumerate(jsonResponse['managedObjects']):
-        #print ("Original:" + str(managedObject['c8y_mqttMapping']['id']) + "/" + str(managedObject['id']))
-        mapping['c8y_mqttMapping']['id'] = mapping['id']
-        mapping['c8y_mqttMapping']['name'] = 'Mapping - ' + str(index + 1)
-        #print ("Changed:" + str(managedObject['c8y_mqttMapping']['id']))
-        mappings.append(mapping['c8y_mqttMapping'])
+        #print ("Original:" + str(managedObject['d11r_mapping']['id']) + "/" + str(managedObject['id']))
+        mapping['d11r_mapping']['id'] = mapping['id']
+        mapping['d11r_mapping']['name'] = 'Mapping - ' + str(index + 1)
+        #print ("Changed:" + str(managedObject['d11r_mapping']['id']))
+        mappings.append(mapping['d11r_mapping'])
 
     #print(json.dumps(mappings, indent=4))
 

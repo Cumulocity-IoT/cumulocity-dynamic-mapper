@@ -1,0 +1,260 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+<c8y-title>Dynamic Mapping</c8y-title>
+<c8y-action-bar-item [placement]="'right'">
+  <button
+    class="btn btn-link"
+    title="{{ 'Refresh' | translate }}"
+    (click)="loadData()"
+  >
+    <i c8yIcon="refresh"></i>
+    {{ "Refresh" | translate }}
+  </button>
+</c8y-action-bar-item>
+
+<div class="d-flex flex-wrap">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Configured Brokers" | translate }}
+        </h4>
+      </div>
+      <div class="card-block">
+        <div class="row">
+          <div class="col-lg-2">
+            <button
+              type="button"
+              name="addConfiguration"
+              class="btn btn-default btn-sm"
+              (click)="onConfigurationAdd()"
+              translate
+              title="Add configuration"
+            >
+              <i c8yIcon="plus-circle-o"></i>&nbsp;Add configuration
+            </button>
+          </div>
+        </div>
+
+        <div style="height: 200px; overflow-y: auto">
+          <table class="table table-condensed table-striped fixTableHead">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Connector Id</th>
+                <th>Name</th>
+                <th>Enabled</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let con of configurations; let i = index">
+                <td width="5%" style="padding-top: 12px">
+                  {{ i }}
+                </td>
+                <td width="10%" style="padding-top: 12px">
+                  <span class="text-12"
+                    >{{ con.configuration?.connectorId }}
+                  </span>
+                </td>
+                <td width="40%" style="padding-top: 12px">
+                  {{ con.configuration?.name }}
+                </td>
+                <td width="5%" style="padding-top: 12px">
+                  <i
+                    style="text-align: center; width: 100%"
+                    [c8yIcon]="
+                      !con.configuration?.enabled ? 'circle-o' : 'plus-circle-o'
+                    "
+                    class="m-r-5"
+                  ></i>
+                </td>
+                <td width="20%" style="padding-top: 12px">
+                  <div class="c8y-realtime">
+                    <span
+                      class="c8y-pulse animated pulse animation-slow"
+                      [ngClass]="{
+                        active: (con.status$ | async) == 'CONNECTED',
+                        inactive: (con.status$ | async) != 'CONNECTED'
+                      }"
+                    ></span
+                    >{{ con.status$ | async }}
+                  </div>
+                </td>
+                <td width="20%">
+                  <button
+                    title="{{ 'Remove' | translate }}"
+                    class="btn btn-icon btn-clean p-r-4"
+                    (click)="onConfigurationDelete(i)"
+                    [disabled]="con.configuration?.enabled"
+                  >
+                    <i c8yIcon="trash-o" class="text-danger"></i>
+                    <span class="sr-only" translate>Remove configuration</span>
+                  </button>
+                  <button
+                  title="{{ 'Update' | translate }}"
+                  class="btn btn-icon btn-clean p-r-4"
+                  (click)="onConfigurationUpdate(i)"
+                  >
+                  <i c8yIcon="pencil" class="text-danger"></i>
+                  <span class="sr-only" translate>Update configuration</span>
+                </button>
+                <button
+                  title="{{ 'Toggle Activation' | translate }}"
+                  class="btn btn-icon btn-clean"
+                  (click)="onConfigurationToogle(i)"
+                >
+                  <i c8yIcon="toggle-on" class="text-danger"></i>
+                  <span class="sr-only" translate>Toogle activation</span>
+                </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card" *ngIf="feature?.outputMappingEnabled">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">Cumulocity Notification Endpoint</h4>
+      </div>
+      <div class="inner-scroll">
+        <div class="card-footer">
+          <div class="form-group">
+            <button
+              type="button"
+              name="update"
+              class="btn btn-primary"
+              (click)="clickedReconnect2NotificationEnpoint()"
+              translate
+            >
+              Reconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Service Configuration" | translate }}
+        </h4>
+        <div class="c8y-realtime">
+          <span
+            class="c8y-pulse animated pulse animation-slow"
+            [ngClass]="{
+              active: isBrokerAgentCreated$ | async,
+              inactive: !isBrokerAgentCreated$ | async
+            }"
+          ></span>
+          {{ "Dynamic Mapping Service installed" | translate }}
+        </div>
+      </div>
+      <div class="inner-scroll">
+        <div class="card-block">
+          <div [formGroup]="serviceForm">
+            <c8y-form-group>
+              <div class="row">
+                <div class="col-lg-6">
+                  <label
+                    class="c8y-switch"
+                    title="{{ 'Log payload in Backend' | translate }}"
+                  >
+                    <input
+                      type="checkbox"
+                      formControlName="logPayload"
+                      [(ngModel)]="serviceConfiguration.logPayload"
+                      #useTLSRef
+                    />
+                    <span></span>
+                    <span>
+                      {{ "Log Payload" }}
+                    </span>
+                  </label>
+                </div>
+                <div class="col-lg-6">
+                  <label
+                    class="c8y-switch"
+                    title="{{ 'Log substitution in Backend' | translate }}"
+                  >
+                    <input
+                      type="checkbox"
+                      formControlName="logSubstitution"
+                      [(ngModel)]="serviceConfiguration.logSubstitution"
+                      #useTLSRef
+                    />
+                    <span></span>
+                    <span>
+                      {{ "Log Substitution" }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </c8y-form-group>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="form-group">
+            <button
+              type="button"
+              name="update"
+              class="btn btn-primary"
+              (click)="clickedSaveServiceConfiguration()"
+              translate
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card" *ngIf="feature?.outputMappingEnabled">
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Mapping Monitoring" | translate }}
+        </h4>
+      </div>
+      <div class="inner-scroll">
+        <div class="card-footer">
+          <div class="form-group">
+            <button
+              type="button"
+              name="update"
+              class="btn btn-primary"
+              (click)="resetStatusMapping()"
+              translate
+            >
+              Reset Monitoring
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
