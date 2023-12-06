@@ -21,7 +21,6 @@
 
 package mqtt.mapping.configuration;
 
-
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.option.OptionPK;
 import com.cumulocity.rest.representation.tenant.OptionRepresentation;
@@ -39,11 +38,10 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.core.MediaType;
 
-
 @Slf4j
 @Component
 public class ServiceConfigurationComponent {
-	private static final String OPTION_CATEGORY_CONFIGURATION = "mqtt.dynamic.service";
+    private static final String OPTION_CATEGORY_CONFIGURATION = "mqtt.dynamic.service";
 
     private static final String OPTION_KEY_CONNECTION_CONFIGURATION = "credentials.connection.configuration";
     private static final String OPTION_KEY_SERVICE_CONFIGURATION = "service.configuration";
@@ -53,8 +51,9 @@ public class ServiceConfigurationComponent {
     private final Platform platform;
 
     private ObjectMapper objectMapper;
+
     @Autowired
-    public void setObjectMapper (ObjectMapper objectMapper){
+    public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -64,13 +63,17 @@ public class ServiceConfigurationComponent {
         this.platform = platform;
     }
 
-    public TrustedCertificateRepresentation loadCertificateByName(String certificateName, MicroserviceCredentials credentials) {
+    public TrustedCertificateRepresentation loadCertificateByName(String certificateName,
+            MicroserviceCredentials credentials) {
         TrustedCertificateRepresentation[] results = { new TrustedCertificateRepresentation() };
-        TrustedCertificateCollectionRepresentation certificates = platform.rest().get(String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()), MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);        
+        TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
+                String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
+                MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
         certificates.forEach(cert -> {
-            if ( cert.getName().equals(certificateName)) {
+            if (cert.getName().equals(certificateName)) {
                 results[0] = cert;
-            log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(), cert.getName() );
+                log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(),
+                        cert.getName());
             }
         });
         return results[0];
@@ -94,21 +97,27 @@ public class ServiceConfigurationComponent {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
+        ServiceConfiguration rt = null;
         try {
             final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);
-            final ServiceConfiguration configuration = new ObjectMapper().readValue(optionRepresentation.getValue(), ServiceConfiguration.class);
-            log.debug("Returning service configuration found: {}:", configuration.logPayload );
-            return configuration;
+            if (optionRepresentation.getValue() == null) {
+                rt = initialize();
+            } else {
+                rt = new ObjectMapper().readValue(optionRepresentation.getValue(),
+                        ServiceConfiguration.class);
+            }
+            log.debug("Returning service configuration found: {}:", rt.logPayload);
+            log.info("Found connection configuration: {}", rt);
         } catch (SDKException exception) {
-            log.warn("No configuration found, returning empty element!");
-            return new ServiceConfiguration();
-            //exception.printStackTrace();
+            log.info("No configuration found, returning default configuration. Initializing ... !");
+            rt = initialize();
+            // exception.printStackTrace();
         } catch (JsonMappingException e) {
             e.printStackTrace();
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        return null;
+        return rt;
     }
 
     public void deleteAllConfiguration() {
@@ -118,5 +127,16 @@ public class ServiceConfigurationComponent {
         tenantOptionApi.delete(optionPK);
         optionPK.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
         tenantOptionApi.delete(optionPK);
+    }
+
+    public ServiceConfiguration initialize() {
+        ServiceConfiguration configuration = new ServiceConfiguration(false, true, true);
+        try {
+            saveServiceConfiguration(configuration);
+        } catch (JsonProcessingException e) {
+            log.warn("Tenant {} - failed to initializes ServiceConfiguration!");
+            e.printStackTrace();
+        }
+        return configuration;
     }
 }

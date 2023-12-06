@@ -126,6 +126,26 @@ import { WrapperCustomFormField } from "./shared/formly/form-field/custom-form-f
       multi: true,
     },
     {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: "sag-ps-pkg-mqtt-mapping/mappings/inbound",
+          component: MappingComponent,
+        },
+      ] as Route[],
+      multi: true,
+    },
+    {
+      provide: HOOK_ROUTE,
+      useValue: [
+        {
+          path: "sag-ps-pkg-mqtt-mapping/mappings/outbound",
+          component: MappingComponent,
+        },
+      ] as Route[],
+      multi: true,
+    },
+    {
       provide: FORMLY_CONFIG,
       multi: true,
       useValue: {

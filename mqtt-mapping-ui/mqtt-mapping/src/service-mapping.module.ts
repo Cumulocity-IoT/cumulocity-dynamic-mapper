@@ -21,11 +21,7 @@
 import { NgModule } from "@angular/core";
 import { Route, RouterModule as NgRouterModule } from "@angular/router";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
-import {
-  CoreModule,
-  HOOK_NAVIGATOR_NODES,
-  HOOK_TABS,
-} from "@c8y/ngx-components";
+import { CoreModule, HOOK_NAVIGATOR_NODES, HOOK_TABS } from "@c8y/ngx-components";
 import { ConfigurationModule } from "./mqtt-configuration/configuration.module";
 import { ExtensionModule } from "./mqtt-extension/extension.module";
 import { MappingTreeModule } from "./mqtt-mapping-tree/tree.module";
@@ -38,7 +34,6 @@ import { OverviewGuard } from "./shared/overview.guard";
 import { MappingTabFactory } from "./tab.factory";
 import { ExtensionComponent } from "./mqtt-extension/grid/extension.component";
 import { ExtensionPropertiesComponent } from "./mqtt-extension/properties/extension-properties.component";
-import { Editor2TestModule } from "./editor2/editor2-test.module";
 import { BsModalService, ModalModule } from "ngx-bootstrap/modal";
 
 const extensionRoutes: Route[] = [
@@ -70,7 +65,6 @@ const extensionRoutes: Route[] = [
     MonitoringModule,
     ConfigurationModule,
     ExtensionModule,
-    Editor2TestModule,
     FormsModule,
     ModalModule,
     ReactiveFormsModule,

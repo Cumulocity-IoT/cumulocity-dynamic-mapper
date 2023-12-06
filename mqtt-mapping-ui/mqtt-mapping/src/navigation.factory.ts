@@ -31,7 +31,7 @@ import { BrokerConfigurationService } from "./mqtt-configuration/broker-configur
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
-  private static readonly APPLICATION_MQTT_GENERIC = "mqtt-mapping-service";
+  private static readonly APPLICATION_MQTT_GENERIC = "mqtt-mapping-service-tk";
   _feature: Feature;
   private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
     parent: gettext("Settings"),
