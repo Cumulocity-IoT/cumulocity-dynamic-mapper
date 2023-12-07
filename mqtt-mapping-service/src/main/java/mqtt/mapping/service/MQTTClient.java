@@ -253,7 +253,7 @@ public class MQTTClient {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
                         log.error("Error on reconnect: {}", e.getMessage());
-                        log.debug("Stacktrace:", e);
+                        log.info("Stacktrace:", e);
                     }
                 }
                 try {
@@ -318,7 +318,7 @@ public class MQTTClient {
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
-                    log.debug("Stacktrace:", e);
+                    log.info("Stacktrace:", e);
                 }
                 firstRun = false;
             }
@@ -342,7 +342,7 @@ public class MQTTClient {
                 log.info("Subscribing to topics was sucessful: {}", successful);
             } catch (Exception e) {
                 log.error("Error on reconnect, retrying ... {} {}", e.getMessage(), e);
-                log.debug("Stacktrace:", e);
+                log.info("Stacktrace:", e);
                 successful = false;
             }
 
