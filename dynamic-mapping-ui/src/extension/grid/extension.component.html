@@ -97,21 +97,18 @@
 
 <div [ngClass]="listClass" class="card-group">
   <div
-    class="page-sticky-header hidden-xs flex-row"
+    class="page-sticky-header hidden-xs d-flex"
     *ngIf="(extensions$ | async)?.length > 0"
   >
-    <div class="card-block card-column-40">
+    <div class="card-block card-column-30">
       <div class="card-appicon p-l-32 p-r-16 m-r-0 m-l-4"></div>
       {{ "Extension" | translate }}
     </div>
-    <div class="card-block p-0 card-column-80">
-      <div class="card-block card-column-20"></div>
-    </div>
+
+    <div class="card-block card-column-40">Extension Type</div>
+    <div class="card-block card-column-30">Number Events</div>
   </div>
-  <div
-    *ngFor="let app of extensions$ | async"
-    class="col-sm-3"
-  >
+  <div *ngFor="let app of extensions$ | async" class="col-sm-3">
     <d11r-mapping-extension-card
       (onAppDeleted)="loadExtensions()"
       [app]="app"
