@@ -1,0 +1,14 @@
+
+�
+InternalCustomAlarm.protoprocessor.protobuf"�
+InternalCustomAlarm
+	timestamp (R	timestamp
+txt (	Rtxt
+unit (	Runit&
+externalIdType (	RexternalIdType
+
+externalId (	R
+externalId
+	alarmType (	R	alarmType
+severity (	RseverityBE
+)dynamic.mapping.processor.extension.internalBInternalCustomAlarmOuterbproto3
