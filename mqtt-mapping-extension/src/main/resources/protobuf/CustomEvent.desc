@@ -1,13 +1,0 @@
-
-¨
-CustomEvent.protoprocessor.protobuf"·
-CustomEvent
-	timestamp (R	timestamp
-txt (	Rtxt
-unit (	Runit&
-externalIdType (	RexternalIdType
-
-externalId (	R
-externalId
-	eventType (	R	eventTypeB=
-)mqtt.mapping.processor.extension.externalBCustomEventOuterbproto3
