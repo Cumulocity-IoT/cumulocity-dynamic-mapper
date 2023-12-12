@@ -23,6 +23,7 @@ import { FetchClient, InventoryService, Realtime } from "@c8y/client";
 import { BehaviorSubject, Observable } from "rxjs";
 import { MAPPING_STATUS_FRAGMENT, MappingStatus } from "../../shared";
 import { BrokerConfigurationService } from "../../configuration";
+import { A11yModule } from "@angular/cdk/a11y";
 
 @Injectable({ providedIn: "root" })
 export class MonitoringService {
@@ -55,7 +56,7 @@ export class MonitoringService {
     );
   }
 
-  unsubscribeFromMonitoringChannel(subscription: object) {
+  unsubscribeFromMonitoringChannel(subscription: any) {
     this.realtime.unsubscribe(subscription);
   }
 

@@ -262,7 +262,7 @@ export class BrokerConfigurationService {
     return sub;
   }
 
-  unsubscribeFromMonitoringChannel(subscription: object) {
+  unsubscribeFromMonitoringChannel(subscription: any) {
     this.realtime.unsubscribe(subscription);
   }
 
