@@ -89,14 +89,15 @@ export class MappingStepperComponent implements OnInit {
   EditorMode = EditorMode;
   isDisabled = isDisabled;
 
-  templateFormly: FormGroup = new FormGroup({});
+  substitutionFormly: FormGroup = new FormGroup({});
   templateForm: FormGroup;
-  templateFormlyFields: FormlyFieldConfig[];
+  substitutionFormlyFields: FormlyFieldConfig[];
   editorTestingPayloadTemplateEmitter = new EventEmitter<any>();
   schemaUpdateSource: EventEmitter<string> = new EventEmitter<any>();
   schemaUpdateTarget: EventEmitter<string> = new EventEmitter<any>();
 
   templateModel: any = {};
+  substitutionModel: any = {};
   templateSource: any;
   templateTarget: any;
 
@@ -151,34 +152,32 @@ export class MappingStepperComponent implements OnInit {
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
-      this.mapping.direction == Direction.INBOUND
-        ? "Cumulocity"
-        : "Broker";
+      this.mapping.direction == Direction.INBOUND ? "Cumulocity" : "Broker";
     this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND
-        ? "Cumulocity"
-        : "Broker";
+      this.mapping.direction == Direction.OUTBOUND ? "Cumulocity" : "Broker";
     this.templateModel = {
       stepperConfiguration: this.stepperConfiguration,
-      mapping: this.mapping,
-      currentSubstitution: {
-        pathSource: "",
-        pathTarget: "",
-        repairStrategy: RepairStrategy.DEFAULT,
-        resolve2ExternalId: false,
-        expandArray: false,
-        targetExpression: {
-          result: "",
-          resultType: "empty",
-          msgTxt: "",
-          severity: "text-info",
-        },
-        sourceExpression: {
-          result: "",
-          resultType: "empty",
-          msgTxt: "",
-          severity: "text-info",
-        },
+      mapping: this.mapping
+    };
+
+    this.substitutionModel = {
+      stepperConfiguration: this.stepperConfiguration,
+      pathSource: "",
+      pathTarget: "",
+      repairStrategy: RepairStrategy.DEFAULT,
+      resolve2ExternalId: false,
+      expandArray: false,
+      targetExpression: {
+        result: "",
+        resultType: "empty",
+        msgTxt: "",
+        severity: "text-info",
+      },
+      sourceExpression: {
+        result: "",
+        resultType: "empty",
+        msgTxt: "",
+        severity: "text-info",
       },
     };
     console.log(
@@ -197,13 +196,13 @@ export class MappingStepperComponent implements OnInit {
       );
     }
 
-    this.templateFormlyFields = [
+    this.substitutionFormlyFields = [
       {
         fieldGroup: [
           {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace column-right-border",
-            key: "currentSubstitution.pathSource",
+            key: "pathSource",
             type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
@@ -226,18 +225,12 @@ export class MappingStepperComponent implements OnInit {
                   notation. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
                   becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
               </ol>`,
-              change: (field: FormlyFieldConfig, event?: any) => {
-                this.updateSourceExpressionResult(
-                  this.templateFormly.get("currentSubstitution.pathSource")
-                    .value
-                );
-              },
-              required: false,
+              required: true,
             },
             expressionProperties: {
               "templateOptions.class": (model) => {
                 if (
-                  model.currentSubstitution.pathSource == "" &&
+                  model.pathSource == "" &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
                   return "input-sm animate-background";
@@ -256,7 +249,7 @@ export class MappingStepperComponent implements OnInit {
           },
           {
             className: "col-lg-5 text-monospace column-left-border",
-            key: "currentSubstitution.pathTarget",
+            key: "pathTarget",
             type: "input-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
@@ -264,23 +257,17 @@ export class MappingStepperComponent implements OnInit {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
-              change: (field: FormlyFieldConfig, event?: any) => {
-                this.updateTargetExpressionResult(
-                  this.templateFormly.get("currentSubstitution.pathTarget")
-                    .value
-                );
-              },
               description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
               expressions as in the source template. In addition you can use <code>$</code> to merge the 
               result of the source expression with the existing target template. Special care is 
               required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
-              required: false,
+              required: true,
             },
             expressionProperties: {
               "templateOptions.class": (model) => {
                 //console.log("Logging class:", t)
                 if (
-                  model.currentSubstitution.pathTarget == "" &&
+                  model.pathTarget == "" &&
                   model.stepperConfiguration.allowDefiningSubstitutions
                 ) {
                   return "input-sm animate-background";
@@ -307,9 +294,9 @@ export class MappingStepperComponent implements OnInit {
             type: "message-field",
             expressionProperties: {
               "templateOptions.content": (model) =>
-                model.currentSubstitution.sourceExpression.msgTxt,
+                model.sourceExpression.msgTxt,
               "templateOptions.textClass": (model) =>
-                model.currentSubstitution.sourceExpression.severity,
+                model.sourceExpression.severity,
               "templateOptions.enabled": (model) => true,
             },
           },
@@ -319,9 +306,9 @@ export class MappingStepperComponent implements OnInit {
             type: "message-field",
             expressionProperties: {
               "templateOptions.content": (model) =>
-                model.currentSubstitution.targetExpression.msgTxt,
+                model.targetExpression.msgTxt,
               "templateOptions.textClass": (model) =>
-                model.currentSubstitution.targetExpression.severity,
+                model.targetExpression.severity,
               "templateOptions.enabled": (model) => true,
             },
           },
@@ -339,7 +326,7 @@ export class MappingStepperComponent implements OnInit {
           {
             className:
               "col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border",
-            key: "currentSubstitution.sourceExpression.result",
+            key: "sourceExpression.result",
             type: "textarea-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
@@ -349,16 +336,16 @@ export class MappingStepperComponent implements OnInit {
             },
             expressionProperties: {
               "templateOptions.label": (model) =>
-                `Result Type [${this.templateModel.currentSubstitution.sourceExpression.resultType}]`,
+                `Result Type [${this.substitutionModel.sourceExpression.resultType}]`,
               "templateOptions.value": (model) => {
-                return `${this.templateModel.currentSubstitution.sourceExpression.result}`;
+                return `${this.substitutionModel.sourceExpression.result}`;
               },
             },
           },
           {
             className:
               "col-lg-5 text-monospace font-smaller column-left-border",
-            key: "currentSubstitution.targetExpression.result",
+            key: "targetExpression.result",
             type: "textarea-custom",
             wrappers: ["custom-form-field"],
             templateOptions: {
@@ -368,9 +355,9 @@ export class MappingStepperComponent implements OnInit {
             },
             expressionProperties: {
               "templateOptions.label": (model) =>
-                `Result Type [${this.templateModel.currentSubstitution.targetExpression.resultType}]`,
+                `Result Type [${this.substitutionModel.targetExpression.resultType}]`,
               "templateOptions.value": (model) => {
-                return `${this.templateModel.currentSubstitution.targetExpression.result}`;
+                return `${this.substitutionModel.targetExpression.result}`;
               },
             },
           },
@@ -434,7 +421,9 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public onSelectedPathSourceChanged(path: string) {
-    this.templateFormly.get("currentSubstitution.pathSource").setValue(path);
+    this.substitutionFormly
+      .get("pathSource")
+      .setValue(path);
   }
 
   public onEditorSourceInitialized(state: string) {
@@ -450,109 +439,114 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public async updateSourceExpressionResult(path: string) {
-    this.editorSource.schemaUpdate;
     try {
-      this.templateModel.currentSubstitution.sourceExpression = {
+      this.substitutionModel.sourceExpression = {
         msgTxt: "",
         severity: "text-info",
       };
-      this.templateFormly.get("currentSubstitution.pathSource").setErrors(null);
+      this.substitutionFormly
+        .get("pathSource")
+        .setErrors(null);
 
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorSource?.get(),
         path
       );
-      this.templateModel.currentSubstitution.sourceExpression = {
+      this.substitutionModel.sourceExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
       };
 
       if (
-        this.templateModel.currentSubstitution.sourceExpression.resultType ==
+        this.substitutionModel.sourceExpression.resultType ==
           "Array" &&
-        !this.templateModel.currentSubstitution.expandArray
+        !this.substitutionModel.expandArray
       ) {
-        this.templateModel.currentSubstitution.sourceExpression.msgTxt =
+        this.substitutionModel.sourceExpression.msgTxt =
           'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-        this.templateModel.currentSubstitution.sourceExpression.severity =
+        this.substitutionModel.sourceExpression.severity =
           "text-warning";
       }
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
-      this.templateModel.currentSubstitution.sourceExpression = {
+      this.substitutionModel.sourceExpression = {
         msgTxt: error.message,
         severity: "text-danger",
       };
-      this.templateFormly
-        .get("currentSubstitution.pathSource")
+      this.substitutionFormly
+        .get("pathSource")
         .setErrors({ error: error.message });
     }
-    this.templateModel = { ...this.templateModel };
+    this.substitutionModel = { ...this.substitutionModel };
   }
 
   isSubstitutionValid() {
     const r1 =
-      this.templateModel.currentSubstitution.sourceExpression.severity !=
+      this.substitutionModel.sourceExpression.severity !=
       "text-danger";
     const r2 =
-      this.templateModel.currentSubstitution.targetExpression.severity !=
+      this.substitutionModel.targetExpression.severity !=
       "text-danger";
-    const r3 = this.templateModel.currentSubstitution.pathSource != "";
-    const r4 = this.templateModel.currentSubstitution.pathTarget != "";
+    const r3 = this.substitutionModel.pathSource != "";
+    const r4 = this.substitutionModel.pathTarget != "";
     let result = r1 && r2 && r3 && r4;
     return result;
   }
 
   public onSelectedPathTargetChanged(path: string) {
-    this.templateFormly.get("currentSubstitution.pathTarget").setValue(path);
+    this.substitutionFormly
+      .get("pathTarget")
+      .setValue(path);
   }
 
   public async updateTargetExpressionResult(path: string) {
     try {
-      this.templateModel.currentSubstitution.targetExpression = {
+      this.substitutionModel.targetExpression = {
         msgTxt: "",
         severity: "text-info",
       };
-      this.templateFormly.get("currentSubstitution.pathTarget").setErrors(null);
+      this.substitutionFormly
+        .get("pathTarget")
+        .setErrors(null);
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorTarget?.get(),
         path
       );
-      this.templateModel.currentSubstitution.targetExpression = {
+      this.substitutionModel.targetExpression = {
         resultType: whatIsIt(r),
         result: JSON.stringify(r, null, 4),
       };
 
       const definesDI = definesDeviceIdentifier(
         this.mapping.targetAPI,
-        this.templateModel.currentSubstitution,
+        this.substitutionModel,
         this.mapping.direction
       );
       if (definesDI) {
-        this.templateModel.currentSubstitution.targetExpression.msgTxt =
+        this.substitutionModel.targetExpression.msgTxt =
           API[this.mapping.targetAPI].identifier +
           ` is resolved using the external Id ` +
           this.mapping.externalIdType +
           ` defined s in the previous step.`;
-        this.templateModel.currentSubstitution.targetExpression.severity =
+        this.substitutionModel.targetExpression.severity =
           "text-info";
       } else if (path == "$") {
-        this.templateModel.currentSubstitution.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
+        this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
         template and this rersults in merging the source expression with the target template.`;
-        this.templateModel.currentSubstitution.targetExpression.severity =
+        this.substitutionModel.targetExpression.severity =
           "text-warning";
       }
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
-      this.templateModel.currentSubstitution.targetExpression = {
+      this.substitutionModel.targetExpression = {
         msgTxt: error.message,
         severity: "text-danger",
       };
-      this.templateFormly
-        .get("currentSubstitution.pathTarget")
+      this.substitutionFormly
+        .get("pathTarget")
         .setErrors({ error: error.message });
     }
-    this.templateModel = { ...this.templateModel };
+    this.substitutionModel = { ...this.substitutionModel };
   }
 
   public getCurrentMapping(patched: boolean): Mapping {
@@ -826,11 +820,11 @@ export class MappingStepperComponent implements OnInit {
 
   public onAddSubstitution() {
     if (this.isSubstitutionValid()) {
-      this.templateModel.currentSubstitution.expandArray = false;
-      this.templateModel.currentSubstitution.repairStrategy =
+      this.substitutionModel.expandArray = false;
+      this.substitutionModel.repairStrategy =
         RepairStrategy.DEFAULT;
-      this.templateModel.currentSubstitution.resolve2ExternalId = false;
-      this.addSubstitution(this.templateModel.currentSubstitution);
+      this.substitutionModel.resolve2ExternalId = false;
+      this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
       console.log(
         "New substitution",
@@ -864,15 +858,15 @@ export class MappingStepperComponent implements OnInit {
         stepperConfiguration: this.stepperConfiguration,
       };
       if (
-        this.templateModel.currentSubstitution.sourceExpression?.severity !=
+        this.substitutionModel.sourceExpression?.severity !=
           "text-danger" &&
-        this.templateModel.currentSubstitution.targetExpression?.severity !=
+        this.substitutionModel.targetExpression?.severity !=
           "text-danger"
       ) {
         initialState.substitution.pathSource =
-          this.templateModel.currentSubstitution.pathSource;
+          this.substitutionModel.pathSource;
         initialState.substitution.pathTarget =
-          this.templateModel.currentSubstitution.pathTarget;
+          this.substitutionModel.pathTarget;
       }
       const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
         initialState,
@@ -881,9 +875,9 @@ export class MappingStepperComponent implements OnInit {
         console.log("Mapping after edit:", editedSub);
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
-          this.templateModel.currentSubstitution.pathSource =
+          this.substitutionModel.pathSource =
             editedSub.pathSource;
-          this.templateModel.currentSubstitution.pathTarget =
+          this.substitutionModel.pathTarget =
             editedSub.pathTarget;
         }
       });
@@ -924,14 +918,15 @@ export class MappingStepperComponent implements OnInit {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
-      this.templateModel.currentSubstitution = _.clone(
+      this.substitutionModel = _.clone(
         this.mapping.substitutions[selected]
       );
+      this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
       this.editorSource?.setSelectionToPath(
-        this.templateModel.currentSubstitution.pathSource
+        this.substitutionModel.pathSource
       );
       this.editorTarget.setSelectionToPath(
-        this.templateModel.currentSubstitution.pathTarget
+        this.substitutionModel.pathTarget
       );
     }
   }

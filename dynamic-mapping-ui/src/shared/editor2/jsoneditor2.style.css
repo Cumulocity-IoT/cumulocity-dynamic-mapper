@@ -23,22 +23,23 @@ svg {
   height: unset !important;
 }
 
-.jsoneditor2 {
-  /* --jse-theme-color: var(--brand-primary); */
-  --jse-theme-color: var(
-    --navigator-bg-color,
-    var(--navigator-dark-bg-color, var(--brand-primary,  rgb(134, 134, 134)))
-  );
-  /* --jse-theme-color-highlight: #f553b5; */
-  /* --jse-font-size: var(--c8y-font-size-xs, 8px); */
-  --jse-font-size:   var(--c8y-font-size-small);
+body .jsoneditor2 {
+  --jse-theme-color: var(--c8y-root-component-background-default);
+  --jse-menu-color: var(--c8y-root-component-color-default);
+  /*--jse-theme-color-highlight: var(
+    --brand-complementary,
+    var(--c8y-brand-complementary)
+  ) !important; */
+  /* --jse-navigation-bar-background: var(--c8y-root-component-background-default) !important;
+  --jse-navigation-bar-background-highlight: var(--c8y-brand-primary) !important;
+  --jse-navigation-bar-dropdown-color: var(--c8y-root-component-color-default) !important; */
+  --jse-font-size: var(--c8y-font-size-small);
   --jse-font-size-mono: var(--c8y-font-size-small);
 }
 
-/* .jse-main {
-  max-height: 300px;
-} */
-
+.jse-menu {
+  border-bottom: 1px solid var(--c8y-root-component-separator-color);
+}
 
 .jse-main-small {
   height: 300px;
@@ -53,4 +54,8 @@ svg {
 .jse-main-large {
   height: 600px;
   overflow: auto;
+}
+/* remove the 'transform' option from the context menu */
+div.jse-absolute-popup div:nth-child(5) > div:nth-child(1) > button:nth-child(4) {
+  display:none;
 }
