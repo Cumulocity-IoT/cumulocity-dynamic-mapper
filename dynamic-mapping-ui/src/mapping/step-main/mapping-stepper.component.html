@@ -127,7 +127,7 @@
                     <c8y-messages class="text-left">
                       <c8y-message
                         *ngIf="
-                          templateModel.currentSubstitution.pathSource == ''
+                        substitutionModel.pathSource == ''
                         "
                         translate
                         ><span class="text-warning"
@@ -271,7 +271,7 @@
                     <c8y-messages class="text-right">
                       <c8y-message
                         *ngIf="
-                          templateModel.currentSubstitution.pathTarget == ''
+                        substitutionModel.pathTarget == ''
                         "
                         translate
                         ><span class="text-warning"
@@ -283,18 +283,13 @@
                 </div>
               </div>
             </div>
-            <div [formGroup]="templateFormly">
+            <div [formGroup]="substitutionFormly">
               <div class="row">
                 <formly-form
-                  [form]="templateFormly"
-                  [fields]="templateFormlyFields"
-                  [model]="templateModel"
+                  [form]="substitutionFormly"
+                  [fields]="substitutionFormlyFields"
+                  [model]="substitutionModel"
                 ></formly-form>
-              </div>
-            </div>
-            <div [formGroup]="templateForm">
-              <div class="legend form-block col-lg-10 col-lg-offset-1">
-                Substitutions
               </div>
               <div class="row">
                 <div class="col-lg-2 col-lg-offset-1">
@@ -340,6 +335,12 @@
                   </button>
                 </div>
               </div>
+            </div>
+            <div [formGroup]="templateForm">
+              <div class="legend form-block col-lg-10 col-lg-offset-1">
+                Substitutions
+              </div>
+
               <div class="row">
                 <div class="col-lg-10 col-lg-offset-1">
                   <div style="min-height: 32px">

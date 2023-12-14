@@ -82,7 +82,7 @@ json-editor > div {
 
 .animate-background {
   animation-name: background-color;
-  animation-duration: 1s;
+  animation-duration: 2s;
   animation-iteration-count: infinite;
   animation-direction: alternate-reverse;
   animation-timing-function: ease;
@@ -90,7 +90,7 @@ json-editor > div {
 
 @keyframes background-color {
   from {
-    background-color: #8adbd5;
+    background-color: var(--brand-light,var(--c8y-brand-light));
   }
   to {
     background-color: white;
