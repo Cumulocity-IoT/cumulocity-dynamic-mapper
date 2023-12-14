@@ -88,10 +88,5 @@ export class SubstitutionRendererComponent implements OnInit {
     this.settings.selectedSubstitutionIndex = index;
     this.onDelete.emit(index);
   }
-
-  public onSubstitutionEdit(index: number) {
-    console.log("Edit substitution:", index);
-    this.settings.selectedSubstitutionIndex = index;
-    this.onEdit.emit(index);
-  }
+  
 }
