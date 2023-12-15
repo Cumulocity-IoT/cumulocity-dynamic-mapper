@@ -25,19 +25,22 @@ div:has(>c8y-li-body ) {
   padding-bottom: 4px !important;
 } */
 
- .c8y-list__item__body:has(>c8y-li-body ) {
+.c8y-list__item__body:has(> c8y-li-body) {
   padding-top: 6px;
   padding-bottom: 4px;
-} 
+}
 
-.fixTableHead { 
-  overflow-y: auto; 
+.fixTableHead {
+  overflow-y: auto;
   /* height: 110px;  */
-} 
-.fixTableHead thead tr th { 
+}
+
+tbody tr td button i {
+  position: unset !important;
+}
+
+.fixTableHead thead tr th {
   background-color: white;
-  position: sticky; 
-  top: 0; 
-} 
-
-
+  position: sticky;
+  top: 0;
+}

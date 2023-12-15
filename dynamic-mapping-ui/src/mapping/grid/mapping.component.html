@@ -26,14 +26,6 @@
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
-    title="{{ 'Refresh' | translate }}"
-    (click)="loadMappings()"
-  >
-    <i c8yIcon="refresh"></i>
-    {{ "Refresh" | translate }}
-  </button>
-  <button
-    class="btn btn-link"
     title="{{ 'Add mapping' | translate }}"
     (click)="onAddMapping()"
   >
@@ -73,6 +65,14 @@
     <i c8yIcon="upload"></i>
     {{ "Import mappings" | translate }}
   </button>
+  <button
+  class="btn btn-link"
+  title="{{ 'Refresh' | translate }}"
+  (click)="loadMappings()"
+>
+  <i c8yIcon="refresh"></i>
+  {{ "Refresh" | translate }}
+</button>
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block">

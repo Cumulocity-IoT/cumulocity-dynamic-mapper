@@ -133,10 +133,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             items.findIndex((i) => i["className"] === "jse-sort"),
             1
           );
-          // items.splice(
-          //   items.findIndex((i) => i["className"] === "jse-transform"),
-          //   1
-          // );
+          items.splice(
+            items.findIndex((i) => i["className"] === "jse-transform"),
+            1
+          );
           return items;
         },
       },
