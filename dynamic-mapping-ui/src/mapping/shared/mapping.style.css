@@ -51,25 +51,15 @@ json-editor > div {
 
 .column-left-border {
   border-left: 1px solid;
-  border-color: var(
-    --legend-color,
-    var(
-      --component-legend-color,
-      var(--root-component-legend-color, var(--gray-5, #677680))
-    )
-  );
+  border-color: var(--c8y-form-legend-color);
   margin-left: -1px;
+  /* border-color: var(--c8y-root-component-separator-color); */
 }
 
 .column-right-border {
   border-right: 1px solid;
-  border-color: var(
-    --legend-color,
-    var(
-      --component-legend-color,
-      var(--root-component-legend-color, var(--gray-5, #677680))
-    )
-  );
+  border-color: var(--c8y-form-legend-color);
+  /* border-color: var(--c8y-root-component-separator-color); */
 }
 
 .reduced-top {
@@ -90,7 +80,7 @@ json-editor > div {
 
 @keyframes background-color {
   from {
-    background-color: var(--brand-light,var(--c8y-brand-light));
+    background-color: var(--brand-light, var(--c8y-brand-light));
   }
   to {
     background-color: white;
