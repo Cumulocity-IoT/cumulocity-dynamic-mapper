@@ -378,15 +378,15 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Status>> getConnectorsStatus() {
-        HashMap<String, Status> connectorsStatus = new HashMap<>();
+    public ResponseEntity<Map<String, ConnectorStatus>> getConnectorsStatus() {
+        HashMap<String, ConnectorStatus> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
-                    Status st = client.getConnectorStatus().getStatus();
+                    ConnectorStatus st = client.getConnectorStatus();
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }
