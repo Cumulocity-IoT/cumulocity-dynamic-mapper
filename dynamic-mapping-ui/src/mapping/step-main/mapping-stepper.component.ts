@@ -527,7 +527,7 @@ export class MappingStepperComponent implements OnInit {
           API[this.mapping.targetAPI].identifier +
           ` is resolved using the external Id ` +
           this.mapping.externalIdType +
-          ` defined s in the previous step.`;
+          ` defined in the previous step.`;
         this.substitutionModel.targetExpression.severity =
           "text-info";
       } else if (path == "$") {
