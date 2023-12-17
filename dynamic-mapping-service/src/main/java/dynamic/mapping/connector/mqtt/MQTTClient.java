@@ -264,10 +264,7 @@ public class MQTTClient extends AConnectorClient {
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
-                    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    Date date = new Date();
-                    latestErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
-                        + e.getMessage() + " --- " + e.getCause().getMessage();
+                    latestErrorMessage = createErrorMessage(e);
                     if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                         log.error("Stacktrace:", e);
                     }
@@ -299,16 +296,24 @@ public class MQTTClient extends AConnectorClient {
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
-                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                Date date = new Date();
-                latestErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
-                        + e.getMessage() + " --- " + e.getCause().getMessage();
+                latestErrorMessage = createErrorMessage(e);
                 if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                     log.error("Stacktrace:", e);
                 }
                 successful = false;
             }
         }
+    }
+
+    private String createErrorMessage(Exception e) {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date date = new Date();
+        String result = dateFormat.format(date) + " --- " + e.getClass().getName() + ": "
+                + e.getMessage();
+        if (!(e.getCause() == null)) {
+            result = result + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
+        }
+        return result;
     }
 
     @Override
