@@ -34,11 +34,6 @@ import { TypeHeaderCellRendererComponent } from "./grid/type-data-grid-column/ty
     TypeFilteringFormRendererComponent,
   ],
   imports: [CoreModule],
-  entryComponents: [
-    TypeHeaderCellRendererComponent,
-    TypeCellRendererComponent,
-    TypeFilteringFormRendererComponent,
-  ],
   exports: [],
   providers: [
     hookRoute({

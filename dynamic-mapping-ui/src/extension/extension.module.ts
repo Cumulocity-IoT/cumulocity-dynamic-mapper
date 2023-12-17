@@ -39,12 +39,6 @@ import { AdminGuard } from "../shared/admin.guard";
     ExtensionPropertiesComponent,
   ],
   imports: [CoreModule, BsDropdownModule.forRoot(), CollapseModule.forRoot()],
-  entryComponents: [
-    AddExtensionComponent,
-    ExtensionComponent,
-    ExtensionCardComponent,
-    ExtensionPropertiesComponent,
-  ],
   exports: [],
   providers: [
     hookRoute({
