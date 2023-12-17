@@ -106,18 +106,18 @@ public class MQTTClient extends AConnectorClient {
     public static ConnectorSpecification spec;
     static {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
-        configProps.put("mqttHost", new ConnectorProperty(true, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("mqttPort", new ConnectorProperty(true, ConnectorPropertyType.NUMERIC_PROPERTY));
-        configProps.put("user", new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("mqttHost", new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("mqttPort", new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY));
+        configProps.put("user", new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY));
         configProps.put("password",
-                new ConnectorProperty(false, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY));
-        configProps.put("clientId", new ConnectorProperty(true, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("useTLS", new ConnectorProperty(false, ConnectorPropertyType.BOOLEAN_PROPERTY));
+                new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY));
+        configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("useTLS", new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, ConnectorPropertyType.BOOLEAN_PROPERTY));
+                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("nameCertificate", new ConnectorProperty(false, ConnectorPropertyType.STRING_PROPERTY));
+                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY));
+        configProps.put("nameCertificate", new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY));
         spec = new ConnectorSpecification(connectorId, true, configProps);
     }
 
@@ -182,7 +182,9 @@ public class MQTTClient extends AConnectorClient {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
                         log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
-                        log.debug("Stacktrace:", e);
+                        if (c8yAgent.getServiceConfiguration().logErrorConnect) {
+                            log.error("Stacktrace:", e);
+                        }
                     }
                 }
                 try {
@@ -207,7 +209,8 @@ public class MQTTClient extends AConnectorClient {
                             mqttClient.close(true);
                         }
                         if (dispatcher == null)
-                            this.dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool,
+                            this.dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper,
+                                    cachedThreadPool,
                                     mappingComponent);
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
@@ -260,7 +263,9 @@ public class MQTTClient extends AConnectorClient {
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
-                    log.debug("Stacktrace:", e);
+                    if (c8yAgent.getServiceConfiguration().logErrorConnect) {
+                        log.error("Stacktrace:", e);
+                    }
                 }
                 firstRun = false;
             }
@@ -288,10 +293,11 @@ public class MQTTClient extends AConnectorClient {
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
-                log.debug("Stacktrace:", e);
+                if (c8yAgent.getServiceConfiguration().logErrorConnect) {
+                    log.error("Stacktrace:", e);
+                }
                 successful = false;
             }
-
         }
     }
 
@@ -388,7 +394,8 @@ public class MQTTClient extends AConnectorClient {
 
     public void unsubscribe(String topic) throws Exception {
         log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
-        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
+        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null,
+                tenant);
         mqttClient.unsubscribe(topic);
     }
 

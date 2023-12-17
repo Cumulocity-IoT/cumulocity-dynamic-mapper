@@ -27,7 +27,7 @@ public class ConnectorSpecification implements Cloneable {
     public Map<String, ConnectorProperty> properties;
 
     public boolean isPropetySensitive(String property) {
-        return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).property;
+        return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).type;
     }
 
     public Object clone() {

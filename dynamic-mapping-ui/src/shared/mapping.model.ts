@@ -21,7 +21,7 @@ import { Subject } from "rxjs";
  *
  * @authors Christof Strack
  */
-export enum ConnectorProperty {
+export enum ConnectorPropertyType {
   STRING_PROPERTY ="STRING_PROPERTY",
   SENSITIVE_STRING_PROPERTY ="SENSITIVE_STRING_PROPERTY",
   NUMERIC_PROPERTY="NUMERIC_PROPERTY",
@@ -29,9 +29,10 @@ export enum ConnectorProperty {
 }
 
 
-export interface ConnectorPropertyDefinition {
+export interface ConnectorProperty {
   required: boolean;
-  property:  ConnectorProperty ;
+  order:number;
+  type:  ConnectorPropertyType ;
 }
 
 export interface ConnectorConfiguration {
@@ -47,9 +48,10 @@ export interface ConnectorConfigurationCombined {
   status$: Subject<string>;
 }
 
-export interface ConnectorPropertyConfiguration {
+export interface ConnectorSpecification {
   connectorId: string;
-  properties: { [name: string]: ConnectorPropertyDefinition };
+  supportsWildcardInTopic: boolean;
+  properties: { [name: string]: ConnectorProperty };
 }
 
 export interface ServiceConfiguration {

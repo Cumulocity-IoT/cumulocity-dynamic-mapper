@@ -19,7 +19,11 @@ public class ConnectorProperty implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public ConnectorPropertyType property;
+    public Integer order;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public ConnectorPropertyType type;
 
     public Object clone()
     {

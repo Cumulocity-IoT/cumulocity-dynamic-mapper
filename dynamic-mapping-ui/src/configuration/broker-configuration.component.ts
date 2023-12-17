@@ -29,7 +29,7 @@ import {
   ConfirmationModalComponent,
   ConnectorConfiguration,
   ConnectorConfigurationCombined,
-  ConnectorPropertyConfiguration,
+  ConnectorSpecification,
   ConnectorStatus,
   Feature,
   Operation,
@@ -52,12 +52,13 @@ export class BrokerConfigurationComponent implements OnInit {
   subscription: any;
   serviceForm: FormGroup;
   feature: Feature;
-  specifications: ConnectorPropertyConfiguration[] = [];
+  specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfigurationCombined[] = [];
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
     logSubstitution: true,
+    logErrorConnect: false,
   };
 
   constructor(
@@ -89,6 +90,7 @@ export class BrokerConfigurationComponent implements OnInit {
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(""),
       logSubstitution: new FormControl(""),
+      logErrorConnect: new FormControl(""),
     });
   }
 
