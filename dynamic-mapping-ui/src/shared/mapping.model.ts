@@ -151,6 +151,7 @@ export enum Status {
   ENABLED = "ACTIVATED",
   CONFIGURED = "CONFIGURED",
   NOT_READY = "NOT_READY",
+  FAILED = "FAILED",
   UNKNOWN = "UNKNOWN",
 }
 
