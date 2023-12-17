@@ -569,4 +569,5 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }
+
 }
