@@ -395,4 +395,5 @@ public abstract class AConnectorClient {
         private String fingerprint;
         private String certInPemFormat;
     }
+
 }

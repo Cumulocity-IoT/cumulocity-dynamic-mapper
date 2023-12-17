@@ -21,7 +21,8 @@
   ~ @authors Christof Strack, Stefan Witschel
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <!-- 
@@ -34,7 +35,9 @@
     ++mqtt.mapping
     ++mqtt.mapping.configuration
     ++ *
-    mvn install:install-file -Dfile=backend/target/mqtt.mapping.service-1.89.jar.original -DgroupId=com.softwareag.c8y.integration.mqtt -DartifactId=mqtt.mapping.service -Dversion=1.89 -Dpackaging=jar
+    mvn install:install-file -Dfile=backend/target/mqtt.mapping.service-1.89.jar.original
+    -DgroupId=com.softwareag.c8y.integration.mqtt -DartifactId=mqtt.mapping.service -Dversion=1.89
+    -Dpackaging=jar
    -->
     <groupId>com.softwareag.c8y.mapping</groupId>
     <artifactId>dynamic-mapping-interface</artifactId>
@@ -61,18 +64,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-kotlin</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
         </dependency>
@@ -96,14 +87,7 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-websocket</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.integration</groupId>
-            <artifactId>spring-integration-websocket</artifactId>
-        </dependency>
+
         <dependency>
             <groupId>org.java-websocket</groupId>
             <artifactId>Java-WebSocket</artifactId>
@@ -125,16 +109,13 @@
     </dependencies>
 
     <build>
-        <!-- <resources>
-      <resource>
-        <directory>../mqtt-mapping-service/src/main/java</directory>
-      </resource>
-    </resources> -->
         <sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>
         <pluginManagement>
-            <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+            <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent
+            pom) -->
             <plugins>
-                <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+                <!-- clean lifecycle, see
+                https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>build-helper-maven-plugin</artifactId>
@@ -160,7 +141,8 @@
                     <artifactId>maven-clean-plugin</artifactId>
                     <version>3.1.0</version>
                 </plugin>
-                <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+                <!-- default lifecycle, jar packaging: see
+                https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.0.2</version>
@@ -173,8 +155,10 @@
                             <include>dynamic/mapping/model/*.java</include>
                             <include>dynamic/mapping/processor/model/*.java</include>
                             <include>dynamic/mapping/processor/model/ProcessingContext.java</include>
-                            <include>dynamic/mapping/processor/extension/ProcessorExtensionInbound.java</include>
-                            <include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include>
+                            <include>
+                                dynamic/mapping/processor/extension/ProcessorExtensionInbound.java</include>
+                            <include>
+                                dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include>
                         </includes>
                     </configuration>
                 </plugin>
@@ -191,7 +175,8 @@
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>2.8.2</version>
                 </plugin>
-                <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+                <!-- site lifecycle, see
+                https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
                 <plugin>
                     <artifactId>maven-assembly-plugin</artifactId>
                     <executions>
