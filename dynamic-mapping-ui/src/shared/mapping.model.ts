@@ -55,6 +55,7 @@ export interface ConnectorPropertyConfiguration {
 export interface ServiceConfiguration {
   logPayload: boolean;
   logSubstitution: boolean;
+  logErrorConnect: boolean;
   externalExtensionEnabled?: boolean;
 }
 

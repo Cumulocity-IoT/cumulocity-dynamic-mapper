@@ -179,7 +179,7 @@
           <div [formGroup]="serviceForm">
             <c8y-form-group>
               <div class="row">
-                <div class="col-lg-6">
+                <div class="col-lg-4">
                   <label
                     class="c8y-switch"
                     title="{{ 'Log payload in Backend' | translate }}"
@@ -196,7 +196,7 @@
                     </span>
                   </label>
                 </div>
-                <div class="col-lg-6">
+                <div class="col-lg-4">
                   <label
                     class="c8y-switch"
                     title="{{ 'Log substitution in Backend' | translate }}"
@@ -210,6 +210,23 @@
                     <span></span>
                     <span>
                       {{ "Log Substitution" }}
+                    </span>
+                  </label>
+                </div>
+                <div class="col-lg-4">
+                  <label
+                    class="c8y-switch"
+                    title="{{ 'Log connect error in Backend' | translate }}"
+                  >
+                    <input
+                      type="checkbox"
+                      formControlName="logErrorConnect"
+                      [(ngModel)]="serviceConfiguration.logErrorConnect"
+                      #useTLSRef
+                    />
+                    <span></span>
+                    <span>
+                      {{ "Log Connect-Error" }}
                     </span>
                   </label>
                 </div>

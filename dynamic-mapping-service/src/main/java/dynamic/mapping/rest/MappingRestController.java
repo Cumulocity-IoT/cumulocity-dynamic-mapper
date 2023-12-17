@@ -297,6 +297,7 @@ public class MappingRestController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(configuration);
+            c8yAgent.setServiceConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);

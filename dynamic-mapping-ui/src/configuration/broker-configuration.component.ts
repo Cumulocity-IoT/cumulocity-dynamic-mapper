@@ -224,7 +224,7 @@ export class BrokerConfigurationComponent implements OnInit {
     console.log("Details toogle activation to broker", response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
-      this.alert.success(gettext("Connection successful"));
+      this.alert.success(gettext("Connection updated successful"));
     } else {
       this.alert.danger(gettext("Failed to establish connection"));
     }
