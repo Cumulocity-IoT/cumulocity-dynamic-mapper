@@ -36,7 +36,6 @@ import {
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
   ConnectorConfiguration,
-  ConnectorPropertyConfiguration,
   Extension,
   Feature,
   Operation,
@@ -48,6 +47,7 @@ import {
 } from "../../shared";
 
 import { BehaviorSubject } from "rxjs";
+import { ConnectorSpecification } from '../../shared/mapping.model';
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
@@ -143,7 +143,7 @@ export class BrokerConfigurationService {
   }
 
   async getConnectorSpecifications(): Promise<
-    ConnectorPropertyConfiguration[]
+    ConnectorSpecification[]
   > {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
@@ -159,7 +159,7 @@ export class BrokerConfigurationService {
       return undefined;
     }
 
-    return (await response.json()) as ConnectorPropertyConfiguration[];
+    return (await response.json()) as ConnectorSpecification[];
   }
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
@@ -250,7 +250,7 @@ export class BrokerConfigurationService {
       // }
       this._connectorConfigurationCombined.forEach((cc) => {
         if (status[cc.configuration.ident]) {
-          cc.status$.next(status[cc.configuration.ident]);
+          cc.status$.next(status[cc.configuration.ident].status);
         }
       });
       console.log("New monitoring event", status);
@@ -274,7 +274,7 @@ export class BrokerConfigurationService {
     }
     this._connectorConfigurationCombined.forEach((cc) => {
       if (status[cc.configuration.ident]) {
-        cc.status$.next(status[cc.configuration?.ident]);
+        cc.status$.next(status[cc.configuration?.ident].status);
       }
     });
   }

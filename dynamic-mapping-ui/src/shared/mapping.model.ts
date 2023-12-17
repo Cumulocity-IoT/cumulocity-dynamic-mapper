@@ -111,6 +111,7 @@ export interface MappingStatus {
 
 export interface ConnectorStatus {
   status: Status;
+  message: string;
 }
 
 export interface Feature {
