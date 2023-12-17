@@ -44,7 +44,6 @@ import { BrokerConfigurationService } from "../../configuration";
 export class ExtensionService {
   appDeleted = new EventEmitter<IManagedObject>();
   progress: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-  protected baseUrl: string;
 
   constructor(
     private modal: ModalService,
