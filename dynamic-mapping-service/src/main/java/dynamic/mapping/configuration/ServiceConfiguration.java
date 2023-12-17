@@ -36,7 +36,8 @@ import lombok.ToString;
 public class ServiceConfiguration implements Cloneable {
     public ServiceConfiguration () {
         this.logPayload = false;
-        this.logSubstitution = false;
+        this.logSubstitution = false; 
+        this.logErrorConnect = false;
         this.externalExtensionEnabled = true;
     }
 
@@ -48,6 +49,10 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean logSubstitution;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean logErrorConnect;
+    
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean externalExtensionEnabled;

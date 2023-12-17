@@ -90,7 +90,7 @@ public class ServiceConfigurationComponent {
                 log.info("Tenant {} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
-                // exception.printStackTrace();
+                rt = initialize(tenant);
             } catch (JsonMappingException e) {
                 e.printStackTrace();
             } catch (JsonProcessingException e) {
@@ -107,7 +107,7 @@ public class ServiceConfigurationComponent {
     }
 
     public ServiceConfiguration initialize(String tenant) {
-        ServiceConfiguration configuration = new ServiceConfiguration(false, true, true);
+        ServiceConfiguration configuration = new ServiceConfiguration(false, true, false, true);
         try {
             saveServiceConfiguration(configuration);
         } catch (JsonProcessingException e) {
