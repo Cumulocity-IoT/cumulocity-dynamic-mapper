@@ -28,7 +28,6 @@ import { BrokerConfigurationModule } from "../configuration/broker-configuration
 @NgModule({
   declarations: [MonitoringComponent, IdRendererComponent],
   imports: [CoreModule, BrokerConfigurationModule],
-  entryComponents: [IdRendererComponent],
   exports: [],
   providers: [
     hookRoute({
