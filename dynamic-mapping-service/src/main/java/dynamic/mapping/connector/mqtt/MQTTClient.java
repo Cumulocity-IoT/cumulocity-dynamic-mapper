@@ -266,8 +266,8 @@ public class MQTTClient extends AConnectorClient {
                     log.error("Error on reconnect: {}", e.getMessage());
                     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                     Date date = new Date();
-                    latesErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
-                            + e.getMessage();
+                    latestErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
+                        + e.getMessage() + " --- " + e.getCause().getMessage();
                     if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                         log.error("Stacktrace:", e);
                     }
@@ -295,14 +295,14 @@ public class MQTTClient extends AConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
-                latesErrorMessage = "";
+                latestErrorMessage = "";
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 Date date = new Date();
-                latesErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
-                        + e.getMessage();
+                latestErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
+                        + e.getMessage() + " --- " + e.getCause().getMessage();
                 if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                     log.error("Stacktrace:", e);
                 }
