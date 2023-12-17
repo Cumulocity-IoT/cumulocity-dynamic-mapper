@@ -21,6 +21,7 @@
 
 package dynamic.mapping.core;
 
+import static java.util.Map.entry; 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -83,7 +84,7 @@ public class MappingComponent {
     private Map<String, Boolean> initialized = new HashMap<>();
 
     @Getter
-    private Map<String, Map<String, String>> consolidatedConnectorStatus = new HashMap<>();
+    private Map<String, Map<String, Map <String,String>>> consolidatedConnectorStatus = new HashMap<>();
 
     // cache of inbound mappings stored by mapping.id
     @Getter
@@ -170,8 +171,12 @@ public class MappingComponent {
         subscriptionsService.runForTenant(tenant, () -> {
             MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
             log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
-            Map<String, String> ccs = consolidatedConnectorStatus.getOrDefault(tenant, new HashMap<String, String>());
-            ccs.put(connectorIdent, connectorStatus.getStatus().name());
+            Map<String, Map <String,String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant, new HashMap<String, Map <String,String>>());   
+            Map<String, String> stMap = Map.ofEntries(
+                entry("status", connectorStatus.getStatus().name()),
+                entry("message",connectorStatus.message)
+            );
+            ccs.put(connectorIdent, stMap);
             Map<String, Object> service = new HashMap<String, Object>();
             service.put(MappingServiceRepresentation.CONNECTOR_STATUS_FRAGMENT, ccs);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();

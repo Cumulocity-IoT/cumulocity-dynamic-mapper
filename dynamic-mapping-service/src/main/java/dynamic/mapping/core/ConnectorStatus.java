@@ -25,36 +25,48 @@ import java.io.Serializable;
 
 import javax.validation.constraints.NotNull;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-// @NoArgsConstructor
-// @AllArgsConstructor
 public class ConnectorStatus implements Serializable {
     @NotNull
     public Status status;
 
-    public ConnectorStatus(Status status) {
-        this.status = status;
-    }
-
+    @NotNull
+    public String message;
+    
     public ConnectorStatus() {
         this.status = Status.NOT_READY;
     }
 
+     public ConnectorStatus(Status status) {
+        this.status = status;
+    }
+
+    public ConnectorStatus(Status status, String message) {
+        this.status = status;
+        this.message = message;
+    }
+
     public static ConnectorStatus connected() {
-        return new ConnectorStatus(Status.CONNECTED);
+        return new ConnectorStatus(Status.CONNECTED, "");
     }
 
     public static ConnectorStatus enabled() {
-        return new ConnectorStatus(Status.ENABLED);
+        return new ConnectorStatus(Status.ENABLED, "");
     }
 
     public static ConnectorStatus configured() {
-        return new ConnectorStatus(Status.CONFIGURED);
+        return new ConnectorStatus(Status.CONFIGURED, "");
     }
 
     public static ConnectorStatus notReady() {
-        return new ConnectorStatus(Status.NOT_READY);
+        return new ConnectorStatus(Status.NOT_READY, null);
+    }
+
+    public static ConnectorStatus failed(String errorMessage) {
+        return new ConnectorStatus(Status.FAILED, errorMessage);
     }
 }

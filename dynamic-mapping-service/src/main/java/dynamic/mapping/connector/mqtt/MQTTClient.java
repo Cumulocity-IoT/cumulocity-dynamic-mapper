@@ -31,6 +31,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,10 +184,8 @@ public class MQTTClient extends AConnectorClient {
                     try {
                         Thread.sleep(WAIT_PERIOD_MS);
                     } catch (InterruptedException e) {
-                        log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
-                        if (c8yAgent.getServiceConfiguration().logErrorConnect) {
-                            log.error("Stacktrace:", e);
-                        }
+                        // ignore errorMessage
+                        // log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
                     }
                 }
                 try {
@@ -215,7 +216,7 @@ public class MQTTClient extends AConnectorClient {
                         mqttClient = new MqttClient(broker,
                                 clientId + additionalSubscriptionIdTest,
                                 new MemoryPersistence());
-                        mqttCallback = new MQTTCallback(dispatcher, tenant, this.getConnectorId());
+                        mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorId());
                         mqttClient.setCallback(mqttCallback);
                         MqttConnectOptions connOpts = new MqttConnectOptions();
                         connOpts.setCleanSession(true);
@@ -263,6 +264,10 @@ public class MQTTClient extends AConnectorClient {
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    Date date = new Date();
+                    latesErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
+                            + e.getMessage();
                     if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                         log.error("Stacktrace:", e);
                     }
@@ -290,9 +295,14 @@ public class MQTTClient extends AConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
+                latesErrorMessage = "";
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date date = new Date();
+                latesErrorMessage = dateFormat.format(date) + " --- " + e.getClass().getName() + " --- "
+                        + e.getMessage();
                 if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                     log.error("Stacktrace:", e);
                 }

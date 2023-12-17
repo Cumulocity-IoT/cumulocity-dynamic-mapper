@@ -101,6 +101,8 @@ public abstract class AConnectorClient {
 
     private ScheduledFuture<?> housekeepingTask;
 
+    protected String latesErrorMessage = "";;
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.info("Tenant {} - Called initialize(): {}", initializeTask == null || initializeTask.isDone(), tenant);
@@ -229,6 +231,8 @@ public abstract class AConnectorClient {
         ConnectorStatus connectorStatus;
         if (isConnected()) {
             connectorStatus = ConnectorStatus.connected();
+        } else if (hasError()) {
+            connectorStatus = ConnectorStatus.failed(latesErrorMessage);
         } else if (canConnect()) {
             connectorStatus = ConnectorStatus.enabled();
         } else if (isConfigValid(configuration)) {
@@ -237,6 +241,10 @@ public abstract class AConnectorClient {
             connectorStatus = ConnectorStatus.notReady();
         }
         return connectorStatus;
+    }
+
+    public boolean hasError() {
+        return !("").equals(latesErrorMessage);
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
