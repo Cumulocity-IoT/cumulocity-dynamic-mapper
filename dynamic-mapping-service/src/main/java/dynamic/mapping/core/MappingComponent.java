@@ -21,7 +21,7 @@
 
 package dynamic.mapping.core;
 
-import static java.util.Map.entry; 
+import static java.util.Map.entry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,17 +74,24 @@ public class MappingComponent {
         this.objectMapper = objectMapper;
     }
 
+    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
+
+    @Autowired
+    public void setMappingServiceRepresentations(Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
+        this.mappingServiceRepresentations = mappingServiceRepresentations;
+    }
+
     @Autowired
     private InventoryApi inventoryApi;
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
+    
     private Map<String, Boolean> initialized = new HashMap<>();
 
     @Getter
-    private Map<String, Map<String, Map <String,String>>> consolidatedConnectorStatus = new HashMap<>();
+    private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 
     // cache of inbound mappings stored by mapping.id
     @Getter
@@ -129,10 +136,10 @@ public class MappingComponent {
             cacheMappingOutbound.put(tenant, new HashMap<>());
     }
 
-    public void initializeMappingComponent(String tenant, MappingServiceRepresentation mappingServiceRepresentation) {
-        this.mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
-        initializeMappingStatus(tenant, false);
-    }
+    // public void initializeMappingComponent(String tenant, MappingServiceRepresentation mappingServiceRepresentation) {
+    //     this.mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
+    //     initializeMappingStatus(tenant, false);
+    // }
 
     public void sendMappingStatus(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
@@ -153,7 +160,7 @@ public class MappingComponent {
                         ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
                     }
                 }
-                service.put(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT, ms);
+                service.put(MappingServiceRepresentation.MAPPING_FRAGMENT, ms);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);
@@ -166,19 +173,21 @@ public class MappingComponent {
         });
     }
 
-    public void sendConnectorStatus(String tenant, ConnectorStatus connectorStatus, String connectorIdent) {
+    public void sendConnectorStatus(String tenant, ConnectorStatus connectorStatus, String connectorIdent,
+            String connectorName) {
         subscriptionsService.runForTenant(tenant, () -> {
             MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
             log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
-            Map<String, Map <String,String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant, new HashMap<String, Map <String,String>>());   
+            Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
+                    new HashMap<String, Map<String, String>>());
             Map<String, String> stMap = Map.ofEntries(
-                entry("status", connectorStatus.getStatus().name()),
-                entry("message",connectorStatus.message),
-                entry("date",connectorStatus.date)
-            );
+                    entry("status", connectorStatus.getStatus().name()),
+                    entry("message", connectorStatus.message),
+                    entry("connectorName", connectorName),
+                    entry("date", connectorStatus.date));
             ccs.put(connectorIdent, stMap);
             Map<String, Object> service = new HashMap<String, Object>();
-            service.put(MappingServiceRepresentation.CONNECTOR_STATUS_FRAGMENT, ccs);
+            service.put(MappingServiceRepresentation.CONNECTOR_FRAGMENT, ccs);
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
             updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
             updateMor.setAttrs(service);
@@ -187,7 +196,7 @@ public class MappingComponent {
     }
 
     public MappingStatus getMappingStatus(String tenant, Mapping m) {
-        //log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
+        // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
         Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {

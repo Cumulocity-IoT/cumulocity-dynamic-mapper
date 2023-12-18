@@ -20,8 +20,13 @@
 
 package dynamic.mapping.connector.core.client;
 
+import static java.util.Map.entry;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -61,7 +67,9 @@ public abstract class AConnectorClient {
 
     public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
 
-    public static final String STATUS_MAPPING_EVENT_TYPE = "d11r_statusEvent";
+    public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
+    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
+    public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
 
     @Getter
     @Setter
@@ -69,6 +77,9 @@ public abstract class AConnectorClient {
 
     @Getter
     public MappingComponent mappingComponent;
+
+    @Getter
+    public MappingServiceRepresentation mappingServiceRepresentation;
 
     @Getter
     public ConnectorConfigurationComponent connectorConfigurationComponent;
@@ -135,6 +146,8 @@ public abstract class AConnectorClient {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
         connectorStatus.updateStatus(Status.CONNECTING);
+        connectorStatus.clearMessage();
+        sendConnectorStatusAsEvent();
     }
 
     public void submitDisconnect() {
@@ -146,7 +159,8 @@ public abstract class AConnectorClient {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
         connectorStatus.updateStatus(Status.DISCONNECTING);
-
+        connectorStatus.clearMessage();
+        sendConnectorStatusAsEvent();
     }
 
     public void submitHouskeeping() {
@@ -192,6 +206,11 @@ public abstract class AConnectorClient {
     public abstract String getConnectorIdent();
 
     /***
+     * Returning the name of the connector instance
+     ***/
+    public abstract String getConnectorName();
+
+    /***
      * Subscribe to a topic on the Broker
      ***/
     public abstract void subscribe(String topic, Integer qos) throws MqttException;
@@ -228,7 +247,8 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
+            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+            sendConnectorStatusAsEvent();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
@@ -375,6 +395,7 @@ public abstract class AConnectorClient {
                 }
             });
             activeSubscriptions = updatedSubscriptionCache;
+            log.info("Tenant {} - Updating subscriptions to topics was successful", tenant);
         }
     }
 
@@ -390,9 +411,31 @@ public abstract class AConnectorClient {
     }
 
     public void sendConnectorStatusAsEvent() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+        String date = dateFormat.format(now);
+        Map<String, String> stMap = Map.ofEntries(
+                entry("status", connectorStatus.getStatus().name()),
+                entry("message", connectorStatus.message),
+                entry("connectorName", getConnectorName()),
+                entry("date", date));
         c8yAgent.createEvent("Connector status:" + connectorStatus.status,
-                STATUS_MAPPING_EVENT_TYPE,
-                DateTime.now(), null, tenant);
+                STATUS_CONNECTOR_EVENT_TYPE,
+                DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+    }
+
+    public void sendSubscriptionEvent(String topic, String action) {
+        String msg = action + " topic: " + topic;
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date now = new Date();
+        String date = dateFormat.format(now);
+        Map<String, String> stMap = Map.ofEntries(
+                entry("message", msg),
+                entry("connectorName", getConnectorName()),
+                entry("date", date));
+        c8yAgent.createEvent(msg,
+                STATUS_SUBSCRIPTION_EVENT_TYPE,
+                DateTime.now(), mappingServiceRepresentation, tenant, stMap);
     }
 
     @Data
@@ -401,5 +444,4 @@ public abstract class AConnectorClient {
         private String fingerprint;
         private String certInPemFormat;
     }
-
 }

@@ -24,12 +24,15 @@ package dynamic.mapping;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import dynamic.mapping.model.InnerNode;
 import dynamic.mapping.model.InnerNodeSerializer;
+import dynamic.mapping.model.MappingServiceRepresentation;
+
 import org.joda.time.DateTime;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -107,7 +110,11 @@ public class App {
         return objectMapper;
     }
 
-
+    @Bean
+    public Map<String, MappingServiceRepresentation>  mappingServiceRepresentations() {
+        Map<String, MappingServiceRepresentation>  mappingServiceRepresentations = new HashMap<>();
+        return mappingServiceRepresentations;
+    }
 
     public static ObjectMapper baseObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();

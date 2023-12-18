@@ -150,7 +150,6 @@ export enum ExtensionStatus {
 export enum Status {
   UNKNOWN = "UNKNOWN",
   ENABLED = "ENABLED",
-  CONFIGURED = "CONFIGURED",
   CONNECTING = "CONNECTING",
   CONNECTED = "CONNECTED",
   DISCONNECTED = "DISCONNECTED",

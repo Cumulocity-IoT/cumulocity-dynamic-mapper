@@ -23,6 +23,14 @@
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
+    title="{{ 'Reconnect Notification Endpoint' | translate }}"
+    (click)="clickedReconnect2NotificationEnpoint()"
+  >
+    <i c8yIcon="disconnected"></i>
+    {{ "Reconnect Notification Endpoint" | translate }}
+  </button>
+  <button
+    class="btn btn-link"
     title="{{ 'Reset Monitoring' | translate }}"
     (click)="resetStatusMapping()"
   >
@@ -62,8 +70,8 @@
             </button>
           </div>
         </div>
+        <div style="xheight: 200px; overflow-y: auto">
 
-        <div style="height: 200px; overflow-y: auto">
           <table class="table table-condensed table-striped fixTableHead">
             <thead>
               <tr>
@@ -141,9 +149,54 @@
           </table>
         </div>
       </div>
+
+      <div class="card-header separator j-c-between">
+        <h4 class="card-title">
+          {{ "Connector Logs" | translate }}
+        </h4>
+      </div>
+      <div class="card-block">
+        <div style="height: 430px; overflow: auto">
+          <div class="timeline-list list-condensed">
+            <div
+              class="timeline-list-item d-flex"
+              *ngFor="let event of (statusLogs$ | async)"
+            >
+              <small class="timeline-item-date">
+                {{ event.date | date : "short" }}
+              </small>
+              <div class="timeline-item-content d-flex flex-wrap">
+                <div class="list-item-icon">
+                  <i c8yIcon="c8y-events"></i>
+                </div>
+                <div class="list-item-body">
+                  <div class="row">
+                    <div class="col-sm-9">
+                      <label class="small" translate>Status&nbsp;</label>
+                      <span>{{ event.status }}</span>
+                      <label class="small" translate
+                        >&nbsp;&nbsp;Connector&nbsp;</label
+                      >
+                      <span>{{ event.connectorName }}</span>
+                      <br />
+                      <span>{{ event.message }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <c8y-ui-empty-state
+              *ngIf="(statusLogs$ | async)?.length == 0"
+              [icon]="'event'"
+              [title]="'No logs found.' | translate"
+              [horizontal]="true"
+            ></c8y-ui-empty-state>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-lg-6">
+  <!-- <div class="col-lg-6">
     <div class="card" *ngIf="feature?.outputMappingEnabled">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">Cumulocity Notification Endpoint</h4>
@@ -164,23 +217,13 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
   <div class="col-lg-6">
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
           {{ "Service Configuration" | translate }}
         </h4>
-        <div class="c8y-realtime">
-          <span
-            class="c8y-pulse animated pulse animation-slow"
-            [ngClass]="{
-              active: isBrokerAgentCreated$ | async,
-              inactive: !isBrokerAgentCreated$ | async
-            }"
-          ></span>
-          {{ "Dynamic Mapping Service installed" | translate }}
-        </div>
       </div>
       <div class="inner-scroll">
         <div class="card-block">

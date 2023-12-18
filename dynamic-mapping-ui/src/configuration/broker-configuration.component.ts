@@ -22,8 +22,7 @@ import { Component, OnInit } from "@angular/core";
 import { FormControl, FormGroup } from "@angular/forms";
 import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { Observable, from } from "rxjs";
-import { map } from "rxjs/operators";
+import { Observable } from "rxjs";
 import packageJson from "../../package.json";
 import {
   ConfirmationModalComponent,
@@ -45,15 +44,12 @@ import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 })
 export class BrokerConfigurationComponent implements OnInit {
   version: string = packageJson.version;
-  isBrokerConnected: boolean;
-  isConnectionEnabled: boolean;
-  isBrokerAgentCreated$: Observable<boolean> = new Observable();
   monitorings$: Observable<ConnectorStatus>;
-  subscription: any;
   serviceForm: FormGroup;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfigurationCombined[] = [];
+  statusLogs$: Observable<any[]>;
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -69,29 +65,20 @@ export class BrokerConfigurationComponent implements OnInit {
 
   async ngOnInit() {
     console.log("Running version", this.version);
-    this.initForms();
-    await this.loadData();
-
-    this.initializeMonitoringService();
-    this.isBrokerAgentCreated$ = from(
-      this.brokerConfigurationService.getDynamicMappingServiceAgent()
-    )
-      // .pipe(map(agentId => agentId != null), tap(() => this.initializeMonitoringService()));
-      .pipe(map((agentId) => agentId != null));
-    this.feature = await this.brokerConfigurationService.getFeatures();
-  }
-
-  private async initializeMonitoringService(): Promise<void> {
-    this.subscription =
-      await this.brokerConfigurationService.subscribeMonitoringChannel();
-  }
-
-  private initForms(): void {
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(""),
       logSubstitution: new FormControl(""),
       logErrorConnect: new FormControl(""),
     });
+
+    await this.loadData();
+    this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
+    this.initializeMonitoringService();
+    this.feature = await this.brokerConfigurationService.getFeatures();
+  }
+
+  private async initializeMonitoringService(): Promise<void> {
+    await this.brokerConfigurationService.subscribeMonitoringChannels();
   }
 
   public async loadData(): Promise<void> {
@@ -244,13 +231,6 @@ export class BrokerConfigurationComponent implements OnInit {
     }
   }
 
-  ngOnDestroy(): void {
-    console.log("Stop subscription");
-    this.brokerConfigurationService.unsubscribeFromMonitoringChannel(
-      this.subscription
-    );
-  }
-
   async clickedSaveServiceConfiguration() {
     let conf: ServiceConfiguration = {
       ...this.serviceConfiguration,
@@ -262,5 +242,10 @@ export class BrokerConfigurationComponent implements OnInit {
     } else {
       this.alert.danger(gettext("Failed to update service configuration"));
     }
+  }
+
+  ngOnDestroy(): void {
+    console.log("Stop subscriptions");
+    this.brokerConfigurationService.unsubscribeFromMonitoringChannels();
   }
 }

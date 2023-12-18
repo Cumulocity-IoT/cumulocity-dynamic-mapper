@@ -36,8 +36,8 @@ import dynamic.mapping.core.ConnectorStatus;
 @AllArgsConstructor
 public class  MappingServiceRepresentation implements Serializable  {
 
-  public static final String CONNECTOR_STATUS_FRAGMENT = "d11r_connectorStatus";
-  public static final String MAPPING_STATUS_FRAGMENT = "d11r_mappingStatus";
+  public static final String CONNECTOR_FRAGMENT = "d11r_connector";
+  public static final String MAPPING_FRAGMENT = "d11r_mapping";
   public static final String AGENT_ID = "d11r_mappingService";
   public static final String AGENT_NAME = "Dynamic Mapping Service";
 
@@ -53,10 +53,10 @@ public class  MappingServiceRepresentation implements Serializable  {
   @JsonProperty(value = "description")
   private String description;
 
-  @JsonProperty(value = MAPPING_STATUS_FRAGMENT)
+  @JsonProperty(value = MAPPING_FRAGMENT)
   private ArrayList<MappingStatus> mappingStatus;
 
-  @JsonProperty(value = CONNECTOR_STATUS_FRAGMENT)
+  @JsonProperty(value = CONNECTOR_FRAGMENT)
   private ConnectorStatus connectorStatus;
 
 }
