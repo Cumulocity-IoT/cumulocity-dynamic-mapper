@@ -109,7 +109,7 @@ public class BootstrapService {
         mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
         mappingComponent.initializeMappingStatus(tenant, false);
         // TODO Add other clients static property definition here
-        connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getSpec());
+        connectorRegistry.registerConnector(MQTTClient.getConnectorType(), MQTTClient.getSpec());
 
         try {
             if (serviceConfiguration != null) {
@@ -131,14 +131,13 @@ public class BootstrapService {
                                                                Credentials credentials, String tenant) throws ConnectorRegistryException {
         AConnectorClient client = null;
 
-        if (MQTTClient.getConnectorId().equals(connectorConfiguration.getConnectorId())) {
+        if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant, connectorConfiguration.getIdent());
             MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent,
                     connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
                     additionalSubscriptionIdTest, mappingServiceRepresentations.get(tenant) );
             connectorRegistry.registerClient(tenant, mqttClient);
-            mqttClient.submitInitialize();
-            mqttClient.submitConnect();
+            mqttClient.reconnect();
             mqttClient.submitHouskeeping();
             client = mqttClient;
         }

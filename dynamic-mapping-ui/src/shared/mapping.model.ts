@@ -37,7 +37,7 @@ export interface ConnectorProperty {
 
 export interface ConnectorConfiguration {
   ident: string;
-  connectorId: string;
+  connectorType: string;
   enabled: boolean;
   name: string;
   properties: { [name: string]: any };
@@ -49,7 +49,7 @@ export interface ConnectorConfigurationCombined {
 }
 
 export interface ConnectorSpecification {
-  connectorId: string;
+  connectorType: string;
   supportsWildcardInTopic: boolean;
   properties: { [name: string]: ConnectorProperty };
 }
@@ -149,6 +149,7 @@ export enum ExtensionStatus {
 
 export enum Status {
   UNKNOWN = "UNKNOWN",
+  CONFIGURED = "CONFIGURED",
   ENABLED = "ENABLED",
   CONNECTING = "CONNECTING",
   CONNECTED = "CONNECTED",

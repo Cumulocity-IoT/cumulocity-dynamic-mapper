@@ -17,11 +17,11 @@ public class ConnectorRegistry {
     // Structure: ConnectorId, <Property, PropertyDefinition>
     protected Map<String, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
 
-    public void registerConnector(String connectorId, ConnectorSpecification specification) {
-        connectorSpecificationMap.put(connectorId, specification);
+    public void registerConnector(String connectorType, ConnectorSpecification specification) {
+        connectorSpecificationMap.put(connectorType, specification);
     }
-    public ConnectorSpecification getConnectorSpecification(String connectorId) {
-        return connectorSpecificationMap.get(connectorId);
+    public ConnectorSpecification getConnectorSpecification(String connectorType) {
+        return connectorSpecificationMap.get(connectorType);
     }
 
     public Map<String, ConnectorSpecification> getConnectorSpecifications() {

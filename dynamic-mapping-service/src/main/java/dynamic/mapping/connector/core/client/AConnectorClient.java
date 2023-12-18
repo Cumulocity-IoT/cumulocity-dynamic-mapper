@@ -42,6 +42,7 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.joda.time.DateTime;
@@ -130,8 +131,11 @@ public abstract class AConnectorClient {
 
     public abstract ConnectorSpecification getSpecification();
 
-    public void reloadConfiguration() {
+    public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorStatus.updateStatus(Status.CONFIGURED);
+        connectorStatus.clearMessage();
+        sendConnectorStatusAsEvent();
         // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
         // configuration,
         // configuration.properties);
@@ -173,11 +177,6 @@ public abstract class AConnectorClient {
      * Connect to the broker
      ***/
     public abstract void connect();
-
-    /***
-     * Should return true when all required properties are provided
-     ***/
-    public abstract boolean canConnect();
 
     /***
      * Should return true when connector is enabled and provided properties are
@@ -272,7 +271,7 @@ public abstract class AConnectorClient {
     public void reconnect() {
         disconnect();
         // invalidate broker client
-        reloadConfiguration();
+        loadConfiguration();
         submitInitialize();
         submitConnect();
     }

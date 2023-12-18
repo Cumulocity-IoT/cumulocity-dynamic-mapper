@@ -143,8 +143,8 @@ public class MappingRestController {
         Map<String, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
-        for (String connectorId : spec.keySet()) {
-            connectorConfigurations.add(spec.get(connectorId));
+        for (String connectorType : spec.keySet()) {
+            connectorConfigurations.add(spec.get(connectorType));
         }
         return ResponseEntity.ok(connectorConfigurations);
     }
@@ -245,7 +245,7 @@ public class MappingRestController {
             ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
                     .getConnectorConfiguration(configuration.ident, tenant);
             ConnectorSpecification connectorSpecification = connectorRegistry
-                    .getConnectorSpecification(configuration.connectorId);
+                    .getConnectorSpecification(configuration.connectorType);
 
             for (String property : configuration.getProperties().keySet()) {
                 if (connectorSpecification.isPropertySensitive(property)
@@ -271,7 +271,7 @@ public class MappingRestController {
     private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
         ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.connectorId);
+                .getConnectorSpecification(configuration.connectorType);
         for (String property : clonedConfig.getProperties().keySet()) {
             if (connectorSpecification.isPropertySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
