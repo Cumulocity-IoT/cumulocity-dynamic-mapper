@@ -31,9 +31,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +67,7 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.MappingComponent;
+import dynamic.mapping.core.Status;
 
 @Slf4j
 // @EnableScheduling
@@ -257,14 +255,12 @@ public class MQTTClient extends AConnectorClient {
                         mqttClient.connect(connOpts);
                         log.info("Tenant {} - Successfully connected to broker {}", tenant,
                                 mqttClient.getServerURI());
-                        c8yAgent.createEvent("Successfully connected to broker " + mqttClient.getServerURI(),
-                                STATUS_MAPPING_EVENT_TYPE,
-                                DateTime.now(), null, tenant);
-
+                        sendConnectorStatusAsEvent();
+                        connectorStatus.updateStatus(Status.CONNECTED);
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
-                    latestErrorMessage = createErrorMessage(e);
+                    updateConnectorStatusWithErrorMessage(e);
                     if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                         log.error("Stacktrace:", e);
                     }
@@ -292,11 +288,11 @@ public class MQTTClient extends AConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
-                latestErrorMessage = "";
+                connectorStatus.setStatus(Status.CONNECTED);
                 log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
-                latestErrorMessage = createErrorMessage(e);
+                updateConnectorStatusWithErrorMessage(e);
                 if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                     log.error("Stacktrace:", e);
                 }
@@ -305,15 +301,14 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
-    private String createErrorMessage(Exception e) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date();
-        String result = dateFormat.format(date) + " --- " + e.getClass().getName() + ": "
+    private void updateConnectorStatusWithErrorMessage(Exception e) {
+        String msg = " --- " + e.getClass().getName() + ": "
                 + e.getMessage();
         if (!(e.getCause() == null)) {
-            result = result + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
+            msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
         }
-        return result;
+        connectorStatus.setMessage(msg);
+        connectorStatus.updateStatus(Status.FAILED);
     }
 
     @Override
@@ -372,10 +367,12 @@ public class MQTTClient extends AConnectorClient {
                 });
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
+                connectorStatus.updateStatus(Status.DISCONNECTED);
                 log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());
             }
         } catch (MqttException e) {
             log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
+            updateConnectorStatusWithErrorMessage(e);
         }
     }
 
@@ -386,7 +383,7 @@ public class MQTTClient extends AConnectorClient {
 
     public void disconnectFromBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), false);
-        disconnect();
+        submitDisconnect();
         mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
     }
 

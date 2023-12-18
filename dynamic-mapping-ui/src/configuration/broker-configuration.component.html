@@ -23,6 +23,14 @@
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
+    title="{{ 'Reset Monitoring' | translate }}"
+    (click)="resetStatusMapping()"
+  >
+    <i c8yIcon="reset"></i>
+    {{ "Reset Monitoring" | translate }}
+  </button>
+  <button
+    class="btn btn-link"
     title="{{ 'Refresh' | translate }}"
     (click)="loadData()"
   >
@@ -112,21 +120,21 @@
                     <span class="sr-only" translate>Remove configuration</span>
                   </button>
                   <button
-                  title="{{ 'Update' | translate }}"
-                  class="btn btn-icon btn-clean p-r-4"
-                  (click)="onConfigurationUpdate(i)"
+                    title="{{ 'Update' | translate }}"
+                    class="btn btn-icon btn-clean p-r-4"
+                    (click)="onConfigurationUpdate(i)"
                   >
-                  <i c8yIcon="pencil" class="text-danger"></i>
-                  <span class="sr-only" translate>Update configuration</span>
-                </button>
-                <button
-                  title="{{ 'Toggle Activation' | translate }}"
-                  class="btn btn-icon btn-clean"
-                  (click)="onConfigurationToogle(i)"
-                >
-                  <i c8yIcon="toggle-on" class="text-danger"></i>
-                  <span class="sr-only" translate>Toogle activation</span>
-                </button>
+                    <i c8yIcon="pencil" class="text-danger"></i>
+                    <span class="sr-only" translate>Update configuration</span>
+                  </button>
+                  <button
+                    title="{{ 'Toggle Activation' | translate }}"
+                    class="btn btn-icon btn-clean"
+                    (click)="onConfigurationToogle(i)"
+                  >
+                    <i c8yIcon="toggle-on" class="text-danger"></i>
+                    <span class="sr-only" translate>Toogle activation</span>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -248,7 +256,7 @@
       </div>
     </div>
   </div>
-  <div class="col-lg-6">
+  <!-- <div class="col-lg-6">
     <div class="card" *ngIf="feature?.outputMappingEnabled">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
@@ -271,5 +279,5 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 </div>

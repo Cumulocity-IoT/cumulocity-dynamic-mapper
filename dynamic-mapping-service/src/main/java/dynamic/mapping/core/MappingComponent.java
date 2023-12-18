@@ -147,7 +147,6 @@ public class MappingComponent {
                 // add current name of mappings to the status messages
                 for (int index = 0; index < ms.length; index++) {
                     ms[index].name = "#";
-
                     if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
                         ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
                     } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
@@ -174,7 +173,8 @@ public class MappingComponent {
             Map<String, Map <String,String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant, new HashMap<String, Map <String,String>>());   
             Map<String, String> stMap = Map.ofEntries(
                 entry("status", connectorStatus.getStatus().name()),
-                entry("message",connectorStatus.message)
+                entry("message",connectorStatus.message),
+                entry("date",connectorStatus.date)
             );
             ccs.put(connectorIdent, stMap);
             Map<String, Object> service = new HashMap<String, Object>();
