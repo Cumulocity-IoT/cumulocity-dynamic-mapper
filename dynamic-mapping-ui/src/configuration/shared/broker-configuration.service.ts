@@ -258,9 +258,6 @@ export class BrokerConfigurationService {
     const agentId = await this.getDynamicMappingServiceAgent();
     console.log("Started subscription:", agentId);
     this.getConnectorStatus().then((status) => {
-      // for (const [key, value] of Object.entries(status)) {
-      //   console.log(`${key}: ${value}`);
-      // }
       this._connectorConfigurationCombined.forEach((cc) => {
         if (status[cc.configuration.ident]) {
           cc.status$.next(status[cc.configuration.ident].status);
@@ -268,10 +265,11 @@ export class BrokerConfigurationService {
       });
       console.log("New monitoring event", status);
     });
-    this.subscriptionMO = this.realtime.subscribe(
-      `/managedobjects/${agentId}`,
-      this.processNewStatusLogMO.bind(this)
-    );
+
+    // this.subscriptionMO = this.realtime.subscribe(
+    //   `/managedobjects/${agentId}`,
+    //   this.processNewStatusLogMO.bind(this)
+    // );
 
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${agentId}`,
@@ -280,28 +278,34 @@ export class BrokerConfigurationService {
   }
 
   unsubscribeFromMonitoringChannels() {
-    this.realtime.unsubscribe(this.subscriptionMO);
+    //this.realtime.unsubscribe(this.subscriptionMO);
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
-  private processNewStatusLogMO(p: object): void {
-    let payload = p["data"]["data"];
-    let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
-    // for (const [key, value] of Object.entries(statusLog)) {
-    //   console.log(`${key}: ${value}`);
-    // }
-    this._connectorConfigurationCombined.forEach((cc) => {
-      if (statusLog[cc.configuration.ident]) {
-        cc.status$.next(statusLog[cc.configuration?.ident].status);
-      }
-    });
-  }
+  // private processNewStatusLogMO(p: object): void {
+  //   let payload = p["data"]["data"];
+  //   let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
+  //   // for (const [key, value] of Object.entries(statusLog)) {
+  //   //   console.log(`${key}: ${value}`);
+  //   // }
+  //   this._connectorConfigurationCombined.forEach((cc) => {
+  //     if (statusLog[cc.configuration.ident]) {
+  //       cc.status$.next(statusLog[cc.configuration?.ident].status);
+  //     }
+  //   });
+  // }
 
   private processNewStatusLogEvent(p: object): void {
     let payload = p["data"]["data"];
     if (payload.type == STATUS_CONNECTOR_EVENT_TYPE) {
       let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
       this.newStatusLog$.next(statusLog);
+
+      this._connectorConfigurationCombined.forEach((cc) => {
+        if (statusLog["connectorIdent"] == cc.configuration.ident) {
+          cc.status$.next(statusLog.status);
+        }
+      });
     }
   }
 
