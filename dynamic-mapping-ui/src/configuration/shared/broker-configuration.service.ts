@@ -29,7 +29,7 @@ import {
 import {
   AGENT_ID,
   BASE_URL,
-  CONNECTOR_STATUS_FRAGMENT,
+  CONNECTOR_FRAGMENT,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
@@ -44,23 +44,38 @@ import {
   Status,
   ConnectorConfigurationCombined,
   PATH_STATUS_CONNECTORS_ENDPOINT,
+  STATUS_CONNECTOR_EVENT_TYPE,
 } from "../../shared";
 
-import { BehaviorSubject } from "rxjs";
-import { ConnectorSpecification } from '../../shared/mapping.model';
+import { BehaviorSubject, Observable, Subject } from "rxjs";
+import { ConnectorSpecification } from "../../shared/mapping.model";
+import { scan } from "rxjs/operators";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
   constructor(private client: FetchClient, private identity: IdentityService) {
     this.realtime = new Realtime(this.client);
+    this.statusLogs$ = this.newStatusLog$.pipe(
+      scan((acc, val) => {
+        acc.push(val);
+        return acc.slice(-5);
+      }, [])
+    );
   }
 
   private _agentId: Promise<string>;
-
   private _connectorConfigurationCombined: ConnectorConfigurationCombined[] =
     [];
   private _feature: Promise<Feature>;
   private realtime: Realtime;
+  statusLogs$: Observable<any[]>;
+  subscriptionMO: any;
+  subscriptionEvents: any;
+  newStatusLog$: Subject<any> = new Subject();
+
+  getStatusLogs(): Observable<any[]> {
+    return this.statusLogs$;
+  }
 
   async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
@@ -142,9 +157,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  async getConnectorSpecifications(): Promise<
-    ConnectorSpecification[]
-  > {
+  async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
       {
@@ -241,7 +254,7 @@ export class BrokerConfigurationService {
     return await response.json();
   }
 
-  async subscribeMonitoringChannel(): Promise<object> {
+  async subscribeMonitoringChannels(): Promise<void> {
     const agentId = await this.getDynamicMappingServiceAgent();
     console.log("Started subscription:", agentId);
     this.getConnectorStatus().then((status) => {
@@ -255,28 +268,41 @@ export class BrokerConfigurationService {
       });
       console.log("New monitoring event", status);
     });
-    const sub = this.realtime.subscribe(
+    this.subscriptionMO = this.realtime.subscribe(
       `/managedobjects/${agentId}`,
-      this.updateStatus.bind(this)
+      this.processNewStatusLogMO.bind(this)
     );
-    return sub;
+
+    this.subscriptionEvents = this.realtime.subscribe(
+      `/events/${agentId}`,
+      this.processNewStatusLogEvent.bind(this)
+    );
   }
 
-  unsubscribeFromMonitoringChannel(subscription: any) {
-    this.realtime.unsubscribe(subscription);
+  unsubscribeFromMonitoringChannels() {
+    this.realtime.unsubscribe(this.subscriptionMO);
+    this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
-  private updateStatus(p: object): void {
+  private processNewStatusLogMO(p: object): void {
     let payload = p["data"]["data"];
-    let status: ConnectorStatus = payload[CONNECTOR_STATUS_FRAGMENT];
-    for (const [key, value] of Object.entries(status)) {
-      console.log(`${key}: ${value}`);
-    }
+    let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
+    // for (const [key, value] of Object.entries(statusLog)) {
+    //   console.log(`${key}: ${value}`);
+    // }
     this._connectorConfigurationCombined.forEach((cc) => {
-      if (status[cc.configuration.ident]) {
-        cc.status$.next(status[cc.configuration?.ident].status);
+      if (statusLog[cc.configuration.ident]) {
+        cc.status$.next(statusLog[cc.configuration?.ident].status);
       }
     });
+  }
+
+  private processNewStatusLogEvent(p: object): void {
+    let payload = p["data"]["data"];
+    if (payload.type == STATUS_CONNECTOR_EVENT_TYPE) {
+      let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
+      this.newStatusLog$.next(statusLog);
+    }
   }
 
   runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {

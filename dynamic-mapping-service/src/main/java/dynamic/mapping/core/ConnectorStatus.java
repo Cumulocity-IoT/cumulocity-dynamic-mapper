@@ -65,10 +65,6 @@ public class ConnectorStatus implements Serializable {
         return new ConnectorStatus(Status.ENABLED);
     }
 
-    public static ConnectorStatus configured() {
-        return new ConnectorStatus(Status.CONFIGURED);
-    }
-
     public static ConnectorStatus failed(String errorMessage) {
         return new ConnectorStatus(Status.FAILED);
     }
@@ -82,5 +78,9 @@ public class ConnectorStatus implements Serializable {
         Date now = new Date();
         date = dateFormat.format(now);
         status = st;
+    }
+
+    public void clearMessage() {
+        this.message = "";
     }
 }

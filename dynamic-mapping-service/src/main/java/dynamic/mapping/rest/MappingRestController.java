@@ -240,13 +240,29 @@ public class MappingRestController {
         ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
+            // check if password filed was touched, e.g. != "****", then use password from
+            // new payload, otherwise copy password from previously saved configuration
+            ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
+                    .getConnectorConfiguration(configuration.connectorId, tenant);
+            ConnectorSpecification connectorSpecification = connectorRegistry
+                    .getConnectorSpecification(configuration.connectorId);
 
+            for (String property : configuration.getProperties().keySet()) {
+                if (connectorSpecification.isPropertySensitive(property)
+                        && configuration.getProperties().get(property).equals("****")) {
+                    // retrieve the existing value
+                    configuration.getProperties().put(property,
+                            originalConfiguration.getProperties().get(property));
+                    log.info("Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
+                            property);
+                }
+            }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     configuration.getIdent());
             client.reconnect();
         } catch (Exception ex) {
-            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
@@ -254,10 +270,10 @@ public class MappingRestController {
 
     private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
+        ConnectorSpecification connectorSpecification = connectorRegistry
+                .getConnectorSpecification(configuration.connectorId);
         for (String property : clonedConfig.getProperties().keySet()) {
-            ConnectorSpecification connectorSpecification = connectorRegistry
-                    .getConnectorSpecification(configuration.connectorId);
-            if (connectorSpecification.isPropetySensitive(property)) {
+            if (connectorSpecification.isPropertySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
             }
         }
@@ -546,8 +562,8 @@ public class MappingRestController {
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-                                                                     @RequestParam URI topic, @RequestParam String connectorIdent,
-                                                                     @Valid @RequestBody Map<String, Object> payload) {
+            @RequestParam URI topic, @RequestParam String connectorIdent,
+            @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         List<ProcessingContext<?>> result = null;
         String tenant = contextService.getContext().getTenant();

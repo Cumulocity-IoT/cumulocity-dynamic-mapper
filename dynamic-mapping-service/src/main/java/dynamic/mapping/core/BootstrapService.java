@@ -1,6 +1,8 @@
 package dynamic.mapping.core;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
@@ -46,6 +48,13 @@ public class BootstrapService {
 
     @Autowired
     ServiceConfigurationComponent serviceConfigurationComponent;
+
+    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
+
+    @Autowired
+    public void setMappingServiceRepresentations(Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
+        this.mappingServiceRepresentations = mappingServiceRepresentations;
+    }
 
     @Autowired
     ConnectorConfigurationComponent connectorConfigurationComponent;
@@ -97,7 +106,8 @@ public class BootstrapService {
         c8YAgent.loadProcessorExtensions(tenant);
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
                 MappingServiceRepresentation.class);
-        mappingComponent.initializeMappingComponent(tenant, mappingServiceRepresentation);
+        mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
+        mappingComponent.initializeMappingStatus(tenant, false);
         // TODO Add other clients static property definition here
         connectorRegistry.registerConnector(MQTTClient.getConnectorId(), MQTTClient.getSpec());
 
@@ -125,7 +135,7 @@ public class BootstrapService {
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant, connectorConfiguration.getIdent());
             MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent,
                     connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
-                    additionalSubscriptionIdTest);
+                    additionalSubscriptionIdTest, mappingServiceRepresentations.get(tenant) );
             connectorRegistry.registerClient(tenant, mqttClient);
             mqttClient.submitInitialize();
             mqttClient.submitConnect();

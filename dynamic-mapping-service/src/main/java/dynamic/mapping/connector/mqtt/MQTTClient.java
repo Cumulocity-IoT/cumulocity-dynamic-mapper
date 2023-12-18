@@ -45,6 +45,7 @@ import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -55,7 +56,6 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.joda.time.DateTime;
 
 import com.cumulocity.microservice.context.credentials.Credentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -79,7 +79,8 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient(Credentials credentials, String tenant, MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
             ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool,
-            ObjectMapper objectMapper, String additionalSubscriptionIdTest) {
+            ObjectMapper objectMapper, String additionalSubscriptionIdTest,
+            MappingServiceRepresentation mappingServiceRepresentation) {
         // setConfigProperties();
         this.credentials = credentials;
         this.tenant = tenant;
@@ -88,10 +89,12 @@ public class MQTTClient extends AConnectorClient {
         this.configuration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
+        this.connectorName = connectorConfiguration.name;
         this.c8yAgent = c8YAgent;
         this.cachedThreadPool = cachedThreadPool;
         this.objectMapper = objectMapper;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
+        this.mappingServiceRepresentation = mappingServiceRepresentation;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -102,6 +105,7 @@ public class MQTTClient extends AConnectorClient {
     private static final String connectorId = "MQTT";
 
     private String connectorIdent = null;
+    private String connectorName = null;
 
     @Getter
     public static ConnectorSpecification spec;
@@ -255,12 +259,14 @@ public class MQTTClient extends AConnectorClient {
                         mqttClient.connect(connOpts);
                         log.info("Tenant {} - Successfully connected to broker {}", tenant,
                                 mqttClient.getServerURI());
-                        sendConnectorStatusAsEvent();
                         connectorStatus.updateStatus(Status.CONNECTED);
+                        connectorStatus.clearMessage();
+                        sendConnectorStatusAsEvent();
                     }
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
                     updateConnectorStatusWithErrorMessage(e);
+                    sendConnectorStatusAsEvent();
                     if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                         log.error("Stacktrace:", e);
                     }
@@ -288,11 +294,10 @@ public class MQTTClient extends AConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
-                connectorStatus.setStatus(Status.CONNECTED);
-                log.info("Tenant {} - Subscribing to topics was successful: {}", tenant, successful);
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 updateConnectorStatusWithErrorMessage(e);
+                sendConnectorStatusAsEvent();
                 if (c8yAgent.getServiceConfiguration().logErrorConnect) {
                     log.error("Stacktrace:", e);
                 }
@@ -368,11 +373,14 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
                 connectorStatus.updateStatus(Status.DISCONNECTED);
+                connectorStatus.clearMessage();
+                sendConnectorStatusAsEvent();
                 log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());
             }
         } catch (MqttException e) {
             log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
             updateConnectorStatusWithErrorMessage(e);
+            sendConnectorStatusAsEvent();
         }
     }
 
@@ -384,19 +392,19 @@ public class MQTTClient extends AConnectorClient {
     public void disconnectFromBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), false);
         submitDisconnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
     }
 
     public void connectToBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), true);
         submitConnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
+        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
     }
 
     @Override
     public void subscribe(String topic, Integer qos) throws MqttException {
         log.debug("Subscribing on topic: {}", topic);
-        c8yAgent.createEvent("Subscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
+        sendSubscriptionEvent(topic, "Subscribing");
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
@@ -406,8 +414,7 @@ public class MQTTClient extends AConnectorClient {
 
     public void unsubscribe(String topic) throws Exception {
         log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
-        c8yAgent.createEvent("Unsubscribing on topic " + topic, STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null,
-                tenant);
+        sendSubscriptionEvent(topic, "Unsubscribing");
         mqttClient.unsubscribe(topic);
     }
 
@@ -435,6 +442,11 @@ public class MQTTClient extends AConnectorClient {
         }
         log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenant, payload,
                 context.getMapping().name, context.getResolvedPublishTopic());
+    }
+
+    @Override
+    public String getConnectorName() {
+        return connectorName;
     }
 
 }
