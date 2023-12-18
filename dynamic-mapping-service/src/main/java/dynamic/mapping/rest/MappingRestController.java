@@ -243,7 +243,7 @@ public class MappingRestController {
             // check if password filed was touched, e.g. != "****", then use password from
             // new payload, otherwise copy password from previously saved configuration
             ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
-                    .getConnectorConfiguration(configuration.connectorId, tenant);
+                    .getConnectorConfiguration(configuration.ident, tenant);
             ConnectorSpecification connectorSpecification = connectorRegistry
                     .getConnectorSpecification(configuration.connectorId);
 
@@ -251,10 +251,10 @@ public class MappingRestController {
                 if (connectorSpecification.isPropertySensitive(property)
                         && configuration.getProperties().get(property).equals("****")) {
                     // retrieve the existing value
-                    configuration.getProperties().put(property,
-                            originalConfiguration.getProperties().get(property));
                     log.info("Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
                             property);
+                    configuration.getProperties().put(property,
+                            originalConfiguration.getProperties().get(property));
                 }
             }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);

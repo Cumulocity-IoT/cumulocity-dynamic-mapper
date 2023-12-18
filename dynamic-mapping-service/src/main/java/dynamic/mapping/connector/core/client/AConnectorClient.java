@@ -418,6 +418,7 @@ public abstract class AConnectorClient {
                 entry("status", connectorStatus.getStatus().name()),
                 entry("message", connectorStatus.message),
                 entry("connectorName", getConnectorName()),
+                entry("connectorIdent", getConnectorIdent()),
                 entry("date", date));
         c8yAgent.createEvent("Connector status:" + connectorStatus.status,
                 STATUS_CONNECTOR_EVENT_TYPE,
