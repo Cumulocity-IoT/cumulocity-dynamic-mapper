@@ -25,8 +25,8 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    @JsonProperty("connectorId")
-    public String connectorId;
+    @JsonProperty("connectorType")
+    public String connectorType;
 
     @NotNull
     @JsonProperty("enabled")

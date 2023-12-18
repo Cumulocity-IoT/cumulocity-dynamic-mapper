@@ -16,7 +16,7 @@ public class ConnectorSpecification implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public String connectorId;
+    public String connectorType;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)

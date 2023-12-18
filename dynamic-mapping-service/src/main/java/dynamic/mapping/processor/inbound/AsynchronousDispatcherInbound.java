@@ -245,9 +245,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         closeException.printStackTrace();
         if(closeMessage != null)
             log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
-
-
-        connectorClient.connect();
+        connectorClient.reconnect();
     }
 
     @Override

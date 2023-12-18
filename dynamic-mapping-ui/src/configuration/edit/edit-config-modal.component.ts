@@ -52,26 +52,26 @@ export class EditConfigurationComponent implements OnInit {
     this.brokerFormlyFields = [
       {
         className: "col-lg-12",
-        key: "connectorId",
+        key: "connectorType",
         type: "select",
         wrappers: ["c8y-form-field"],
         templateOptions: {
           label: "Connector Id",
           options: this.specifications.map((sp) => {
             return {
-              label: sp.connectorId,
-              value: sp.connectorId,
+              label: sp.connectorType,
+              value: sp.connectorType,
             };
           }),
           change: (field: FormlyFieldConfig, event?: any) => {
-            this.createDynamicForm(this.brokerFormly.get("connectorId").value);
+            this.createDynamicForm(this.brokerFormly.get("connectorType").value);
           },
           required: true,
         },
       },
     ];
     if (!this.add) {
-      this.createDynamicForm(this.configuration.connectorId);
+      this.createDynamicForm(this.configuration.connectorType);
     }
   }
 
@@ -85,12 +85,12 @@ export class EditConfigurationComponent implements OnInit {
     this.closeSubject.next(this.configuration);
   }
 
-  private async createDynamicForm(connectorId: string): Promise<void> {
+  private async createDynamicForm(connectorType: string): Promise<void> {
     const dynamicFields: ConnectorSpecification = this.specifications.find(
-      (c) => c.connectorId == connectorId
+      (c) => c.connectorType == connectorType
     );
 
-    this.configuration.connectorId = connectorId;
+    this.configuration.connectorType = connectorType;
 
     this.dynamicFormlyFields.push({
       fieldGroup: [

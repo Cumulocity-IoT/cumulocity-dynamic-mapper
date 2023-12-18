@@ -99,7 +99,7 @@ public class ConnectorConfigurationComponent {
                 final ConnectorConfiguration configuration = new ObjectMapper().readValue(
                         optionRepresentation.getValue(),
                         ConnectorConfiguration.class);
-                log.debug("Tenant {} - Returning connection configuration found: {}:", tenant, configuration.getConnectorId());
+                log.debug("Tenant {} - Returning connection configuration found: {}:", tenant, configuration.getConnectorType());
                 rt = configuration;
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
@@ -128,7 +128,7 @@ public class ConnectorConfigurationComponent {
                                 optionRepresentation.getValue(),
                                 ConnectorConfiguration.class);
                         connectorConfigurations.add(configuration);
-                        log.debug("Tenant {} - Connection configuration found: {}:", tenant, configuration.getConnectorId());
+                        log.debug("Tenant {} - Connection configuration found: {}:", tenant, configuration.getConnectorType());
                     }
                 }
             } catch (SDKException exception) {
@@ -146,7 +146,7 @@ public class ConnectorConfigurationComponent {
         List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
         for (ConnectorConfiguration config : configs) {
             OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
-                    getConnectorOptionKey(config.getConnectorId()));
+                    getConnectorOptionKey(config.getConnectorType()));
             tenantOptionApi.delete(optionPK);
         }
     }

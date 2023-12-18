@@ -23,10 +23,11 @@ package dynamic.mapping.core;
 
 public enum Status {
     UNKNOWN,
+    CONFIGURED,
     ENABLED,
     CONNECTING,
     CONNECTED,
     DISCONNECTED,
     DISCONNECTING,
-    FAILED, 
+    FAILED,
 }
