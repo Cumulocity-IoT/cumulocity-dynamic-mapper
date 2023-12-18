@@ -38,6 +38,7 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -52,6 +53,7 @@ import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.MappingComponent;
+import dynamic.mapping.core.Status;
 import dynamic.mapping.processor.model.ProcessingContext;
 
 @Slf4j
@@ -101,7 +103,9 @@ public abstract class AConnectorClient {
 
     private ScheduledFuture<?> housekeepingTask;
 
-    protected String latestErrorMessage = "";;
+    @Getter
+    @Setter
+    public ConnectorStatus connectorStatus = ConnectorStatus.unknown();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -130,6 +134,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
+        connectorStatus.updateStatus(Status.CONNECTING);
     }
 
     public void submitDisconnect() {
@@ -140,6 +145,8 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
+        connectorStatus.updateStatus(Status.DISCONNECTING);
+
     }
 
     public void submitHouskeeping() {
@@ -227,24 +234,8 @@ public abstract class AConnectorClient {
         }
     }
 
-    public ConnectorStatus getConnectorStatus() {
-        ConnectorStatus connectorStatus;
-        if (isConnected()) {
-            connectorStatus = ConnectorStatus.connected();
-        } else if (hasError()) {
-            connectorStatus = ConnectorStatus.failed(latestErrorMessage);
-        } else if (canConnect()) {
-            connectorStatus = ConnectorStatus.enabled();
-        } else if (isConfigValid(configuration)) {
-            connectorStatus = ConnectorStatus.configured();
-        } else {
-            connectorStatus = ConnectorStatus.notReady();
-        }
-        return connectorStatus;
-    }
-
     public boolean hasError() {
-        return !("").equals(latestErrorMessage);
+        return !(connectorStatus.status).equals(Status.FAILED);
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
@@ -253,7 +244,8 @@ public abstract class AConnectorClient {
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
         if (dispatcher == null)
-            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
+            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool,
+                    mappingComponent);
         return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
     }
 
@@ -395,6 +387,12 @@ public abstract class AConnectorClient {
         // release all resources
         close();
         log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
+    }
+
+    public void sendConnectorStatusAsEvent() {
+        c8yAgent.createEvent("Connector status:" + connectorStatus.status,
+                STATUS_MAPPING_EVENT_TYPE,
+                DateTime.now(), null, tenant);
     }
 
     @Data
