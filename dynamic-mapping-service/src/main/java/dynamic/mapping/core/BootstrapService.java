@@ -133,7 +133,7 @@ public class BootstrapService {
 
         if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant, connectorConfiguration.getIdent());
-            MQTTClient mqttClient = new MQTTClient(credentials, tenant, mappingComponent,
+            MQTTClient mqttClient = new MQTTClient(tenant, mappingComponent,
                     connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
                     additionalSubscriptionIdTest, mappingServiceRepresentations.get(tenant) );
             connectorRegistry.registerClient(tenant, mqttClient);
