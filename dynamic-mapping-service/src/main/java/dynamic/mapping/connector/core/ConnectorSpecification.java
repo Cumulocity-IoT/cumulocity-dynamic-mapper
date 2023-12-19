@@ -16,7 +16,7 @@ public class ConnectorSpecification implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public String connectorId;
+    public String connectorType;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
@@ -26,8 +26,8 @@ public class ConnectorSpecification implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Map<String, ConnectorProperty> properties;
 
-    public boolean isPropetySensitive(String property) {
-        return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).property;
+    public boolean isPropertySensitive(String property) {
+        return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).type;
     }
 
     public Object clone() {

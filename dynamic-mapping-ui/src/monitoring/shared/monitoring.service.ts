@@ -21,9 +21,8 @@
 import { Injectable } from "@angular/core";
 import { FetchClient, InventoryService, Realtime } from "@c8y/client";
 import { BehaviorSubject, Observable } from "rxjs";
-import { MAPPING_STATUS_FRAGMENT, MappingStatus } from "../../shared";
+import { MAPPING_FRAGMENT, MappingStatus } from "../../shared";
 import { BrokerConfigurationService } from "../../configuration";
-import { A11yModule } from "@angular/cdk/a11y";
 
 @Injectable({ providedIn: "root" })
 export class MonitoringService {
@@ -48,7 +47,7 @@ export class MonitoringService {
     console.log("Start subscription for monitoring:", agentId);
 
     let { data, res } = await this.inventory.detail(agentId);
-    let monitoring: MappingStatus[] = data[MAPPING_STATUS_FRAGMENT];
+    let monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
     this.mappingStatus.next(monitoring);
     return this.realtime.subscribe(
       `/managedobjects/${agentId}`,
@@ -62,7 +61,7 @@ export class MonitoringService {
 
   private updateStatus(p: object): void {
     let payload = p["data"]["data"];
-    let monitoring: MappingStatus[] = payload[MAPPING_STATUS_FRAGMENT];
+    let monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
     this.mappingStatus.next(monitoring);
     console.log("New statusMonitoring event", monitoring);
   }

@@ -65,6 +65,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;
 import dynamic.mapping.core.ServiceOperation;
@@ -142,8 +143,8 @@ public class MappingRestController {
         Map<String, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
-        for (String connectorId : spec.keySet()) {
-            connectorConfigurations.add(spec.get(connectorId));
+        for (String connectorType : spec.keySet()) {
+            connectorConfigurations.add(spec.get(connectorType));
         }
         return ResponseEntity.ok(connectorConfigurations);
     }
@@ -163,7 +164,10 @@ public class MappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            bootstrapService.initializeConnectorByConfiguration(configuration, contextService.getContext(), tenant);
+            ServiceConfiguration serviceConfiguration = new ServiceConfiguration();
+            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+                    contextService.getContext(), tenant);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
@@ -239,13 +243,30 @@ public class MappingRestController {
         ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
+            // check if password filed was touched, e.g. != "****", then use password from
+            // new payload, otherwise copy password from previously saved configuration
+            ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
+                    .getConnectorConfiguration(configuration.ident, tenant);
+            ConnectorSpecification connectorSpecification = connectorRegistry
+                    .getConnectorSpecification(configuration.connectorType);
 
+            for (String property : configuration.getProperties().keySet()) {
+                if (connectorSpecification.isPropertySensitive(property)
+                        && configuration.getProperties().get(property).equals("****")) {
+                    // retrieve the existing value
+                    log.info(
+                            "Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
+                            property);
+                    configuration.getProperties().put(property,
+                            originalConfiguration.getProperties().get(property));
+                }
+            }
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     configuration.getIdent());
             client.reconnect();
         } catch (Exception ex) {
-            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
@@ -253,10 +274,10 @@ public class MappingRestController {
 
     private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
         ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
+        ConnectorSpecification connectorSpecification = connectorRegistry
+                .getConnectorSpecification(configuration.connectorType);
         for (String property : clonedConfig.getProperties().keySet()) {
-            ConnectorSpecification connectorSpecification = connectorRegistry
-                    .getConnectorSpecification(configuration.connectorId);
-            if (connectorSpecification.isPropetySensitive(property)) {
+            if (connectorSpecification.isPropertySensitive(property)) {
                 clonedConfig.getProperties().replace(property, "****");
             }
         }
@@ -297,6 +318,7 @@ public class MappingRestController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(configuration);
+            c8yAgent.getServiceConfigurations().put(tenant, configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -330,7 +352,9 @@ public class MappingRestController {
 
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                         connectorIdent);
-                client.submitConnect();
+                // important to use reconnect, since it requires to go through the
+                // initialization phase
+                client.reconnect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
                 ConnectorConfiguration configuration = connectorConfigurationComponent
@@ -362,12 +386,12 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connector/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Status> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
+    public ResponseEntity<ConnectorStatus> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
         try {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     connectorIdent);
-            Status st = client.getConnectorStatus().getStatus();
+            ConnectorStatus st = client.getConnectorStatus();
             log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
             return new ResponseEntity<>(st, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
@@ -376,15 +400,15 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Status>> getConnectorsStatus() {
-        HashMap<String, Status> connectorsStatus = new HashMap<>();
+    public ResponseEntity<Map<String, ConnectorStatus>> getConnectorsStatus() {
+        HashMap<String, ConnectorStatus> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
-                    Status st = client.getConnectorStatus().getStatus();
+                    ConnectorStatus st = client.getConnectorStatus();
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }
@@ -544,8 +568,8 @@ public class MappingRestController {
 
     @RequestMapping(value = "/test/{method}", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ProcessingContext<?>>> forwardPayload(@PathVariable String method,
-                                                                     @RequestParam URI topic, @RequestParam String connectorIdent,
-                                                                     @Valid @RequestBody Map<String, Object> payload) {
+            @RequestParam URI topic, @RequestParam String connectorIdent,
+            @Valid @RequestBody Map<String, Object> payload) {
         String path = topic.getPath();
         List<ProcessingContext<?>> result = null;
         String tenant = contextService.getContext().getTenant();

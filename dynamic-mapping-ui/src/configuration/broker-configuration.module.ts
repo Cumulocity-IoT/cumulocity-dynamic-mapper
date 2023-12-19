@@ -32,7 +32,6 @@ import { SharedModule } from "../shared/shared.module";
     EditConfigurationComponent,
   ],
   imports: [CoreModule, SharedModule],
-  entryComponents: [ EditConfigurationComponent],
   exports: [],
   providers: [
     hookRoute({

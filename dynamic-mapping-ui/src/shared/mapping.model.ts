@@ -21,7 +21,7 @@ import { Subject } from "rxjs";
  *
  * @authors Christof Strack
  */
-export enum ConnectorProperty {
+export enum ConnectorPropertyType {
   STRING_PROPERTY ="STRING_PROPERTY",
   SENSITIVE_STRING_PROPERTY ="SENSITIVE_STRING_PROPERTY",
   NUMERIC_PROPERTY="NUMERIC_PROPERTY",
@@ -29,14 +29,15 @@ export enum ConnectorProperty {
 }
 
 
-export interface ConnectorPropertyDefinition {
+export interface ConnectorProperty {
   required: boolean;
-  property:  ConnectorProperty ;
+  order:number;
+  type:  ConnectorPropertyType ;
 }
 
 export interface ConnectorConfiguration {
   ident: string;
-  connectorId: string;
+  connectorType: string;
   enabled: boolean;
   name: string;
   properties: { [name: string]: any };
@@ -47,14 +48,19 @@ export interface ConnectorConfigurationCombined {
   status$: Subject<string>;
 }
 
-export interface ConnectorPropertyConfiguration {
-  connectorId: string;
-  properties: { [name: string]: ConnectorPropertyDefinition };
+export interface ConnectorSpecification {
+  connectorType: string;
+  supportsWildcardInTopic: boolean;
+  properties: { [name: string]: ConnectorProperty };
 }
 
 export interface ServiceConfiguration {
   logPayload: boolean;
   logSubstitution: boolean;
+  logConnectorErrorInBackend: boolean;
+  sendConnectorLifecycle: boolean;
+  sendMappingStatus: boolean;
+  sendSubscriptionEvents: boolean;
   externalExtensionEnabled?: boolean;
 }
 
@@ -108,6 +114,7 @@ export interface MappingStatus {
 
 export interface ConnectorStatus {
   status: Status;
+  message: string;
 }
 
 export interface Feature {
@@ -144,11 +151,14 @@ export enum ExtensionStatus {
 }
 
 export enum Status {
-  CONNECTED = "CONNECTED",
-  ENABLED = "ACTIVATED",
-  CONFIGURED = "CONFIGURED",
-  NOT_READY = "NOT_READY",
   UNKNOWN = "UNKNOWN",
+  CONFIGURED = "CONFIGURED",
+  ENABLED = "ENABLED",
+  CONNECTING = "CONNECTING",
+  CONNECTED = "CONNECTED",
+  DISCONNECTED = "DISCONNECTED",
+  DISCONNECTING = "DISCONNECTING",
+  FAILED = "FAILED",
 }
 
 export enum Direction {

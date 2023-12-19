@@ -33,7 +33,6 @@ import { DynamicMappingModule } from './src/dynamic-mapping.module';
     CoreModule.forRoot(),
     DynamicMappingModule,
   ],
-  entryComponents: [ ],
   bootstrap: [BootstrapComponent]
 })
 export class AppModule { }

@@ -601,7 +601,6 @@ public class C8YAPISubscriber {
                     tenantClientMap.remove(tenant);
                 }
             }
-
         }
     }
 
@@ -630,5 +629,4 @@ public class C8YAPISubscriber {
         }
         return null;
     }
-
 }
