@@ -71,7 +71,6 @@
           </div>
         </div>
         <div style="xheight: 200px; overflow-y: auto">
-
           <table class="table table-condensed table-striped fixTableHead">
             <thead>
               <tr>
@@ -160,7 +159,7 @@
           <div class="timeline-list list-condensed">
             <div
               class="timeline-list-item d-flex"
-              *ngFor="let event of (statusLogs$ | async)"
+              *ngFor="let event of statusLogs$ | async"
             >
               <small class="timeline-item-date">
                 {{ event.date | date : "short" }}
@@ -171,7 +170,7 @@
                 </div>
                 <div class="list-item-body">
                   <div class="row">
-                    <div class="col-sm-9">
+                    <div class="col-lg-12">
                       <label class="small" translate>Status&nbsp;</label>
                       <span>{{ event.status }}</span>
                       <label class="small" translate
@@ -196,28 +195,6 @@
       </div>
     </div>
   </div>
-  <!-- <div class="col-lg-6">
-    <div class="card" *ngIf="feature?.outputMappingEnabled">
-      <div class="card-header separator j-c-between">
-        <h4 class="card-title">Cumulocity Notification Endpoint</h4>
-      </div>
-      <div class="inner-scroll">
-        <div class="card-footer">
-          <div class="form-group">
-            <button
-              type="button"
-              name="update"
-              class="btn btn-primary"
-              (click)="clickedReconnect2NotificationEnpoint()"
-              translate
-            >
-              Reconnect
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> -->
   <div class="col-lg-6">
     <div class="card">
       <div class="card-header separator j-c-between">
@@ -228,58 +205,83 @@
       <div class="inner-scroll">
         <div class="card-block">
           <div [formGroup]="serviceForm">
-            <c8y-form-group>
-              <div class="row">
-                <div class="col-lg-4">
-                  <label
-                    class="c8y-switch"
-                    title="{{ 'Log payload in Backend' | translate }}"
-                  >
-                    <input
-                      type="checkbox"
-                      formControlName="logPayload"
-                      [(ngModel)]="serviceConfiguration.logPayload"
-                      #useTLSRef
-                    />
-                    <span></span>
-                    <span>
-                      {{ "Log Payload" }}
-                    </span>
-                  </label>
-                </div>
-                <div class="col-lg-4">
-                  <label
-                    class="c8y-switch"
-                    title="{{ 'Log substitution in Backend' | translate }}"
-                  >
-                    <input
-                      type="checkbox"
-                      formControlName="logSubstitution"
-                      [(ngModel)]="serviceConfiguration.logSubstitution"
-                    />
-                    <span></span>
-                    <span>
-                      {{ "Log Substitution" }}
-                    </span>
-                  </label>
-                </div>
-                <div class="col-lg-4">
-                  <label
-                    class="c8y-switch"
-                    title="{{ 'Log connect error in Backend' | translate }}"
-                  >
-                    <input
-                      type="checkbox"
-                      formControlName="logErrorConnect"
-                      [(ngModel)]="serviceConfiguration.logErrorConnect"
-                    />
-                    <span></span>
-                    <span>
-                      {{ "Log Connection Errors" }}
-                    </span>
-                  </label>
-                </div>
-              </div>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="logPayload"
+                  [(ngModel)]="serviceConfiguration.logPayload"
+                />
+                <span></span>
+                <span>
+                  {{ "Log Payload" }}
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="logSubstitution"
+                  [(ngModel)]="serviceConfiguration.logSubstitution"
+                />
+                <span></span>
+                <span>
+                  {{ "Log Substitution" }}
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="logConnectorErrorInBackend"
+                  [(ngModel)]="serviceConfiguration.logConnectorErrorInBackend"
+                />
+                <span></span>
+                <span>
+                  {{ "Log Connector Errors" }}
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="sendConnectorLifecycle"
+                  [(ngModel)]="serviceConfiguration.sendConnectorLifecycle"
+                />
+                <span></span>
+                <span>
+                  {{ "Send Connector Lifcycle" }} <i c8yIcon="euro"></i>
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="sendMappingStatus"
+                  [(ngModel)]="serviceConfiguration.sendMappingStatus"
+                />
+                <span></span>
+                <span>
+                  {{ "Send Mapping Status" }} <i c8yIcon="euro"></i>
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="sendSubscriptionEvents"
+                  [(ngModel)]="serviceConfiguration.sendSubscriptionEvents"
+                />
+                <span></span>
+                <span>
+                  {{ "Send Events on Topic Subscriptions" }} <i c8yIcon="euro"></i>
+                </span>
+              </label>
             </c8y-form-group>
           </div>
         </div>
@@ -299,28 +301,4 @@
       </div>
     </div>
   </div>
-  <!-- <div class="col-lg-6">
-    <div class="card" *ngIf="feature?.outputMappingEnabled">
-      <div class="card-header separator j-c-between">
-        <h4 class="card-title">
-          {{ "Mapping Monitoring" | translate }}
-        </h4>
-      </div>
-      <div class="inner-scroll">
-        <div class="card-footer">
-          <div class="form-group">
-            <button
-              type="button"
-              name="update"
-              class="btn btn-primary"
-              (click)="resetStatusMapping()"
-              translate
-            >
-              Reset Monitoring
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div> -->
 </div>

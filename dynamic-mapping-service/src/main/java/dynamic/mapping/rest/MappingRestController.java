@@ -164,7 +164,10 @@ public class MappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            bootstrapService.initializeConnectorByConfiguration(configuration, contextService.getContext(), tenant);
+            ServiceConfiguration serviceConfiguration = new ServiceConfiguration();
+            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+            bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+                    contextService.getContext(), tenant);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
@@ -251,7 +254,8 @@ public class MappingRestController {
                 if (connectorSpecification.isPropertySensitive(property)
                         && configuration.getProperties().get(property).equals("****")) {
                     // retrieve the existing value
-                    log.info("Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
+                    log.info(
+                            "Tenant {} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
                             property);
                     configuration.getProperties().put(property,
                             originalConfiguration.getProperties().get(property));
@@ -314,7 +318,7 @@ public class MappingRestController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(configuration);
-            c8yAgent.setServiceConfiguration(configuration);
+            c8yAgent.getServiceConfigurations().put(tenant, configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -348,7 +352,8 @@ public class MappingRestController {
 
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                         connectorIdent);
-                // important to use reconnect, since it requires to go through the initialization phase
+                // important to use reconnect, since it requires to go through the
+                // initialization phase
                 client.reconnect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");

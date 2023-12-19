@@ -58,7 +58,7 @@ export class BrokerConfigurationService {
     this.statusLogs$ = this.newStatusLog$.pipe(
       scan((acc, val) => {
         acc.push(val);
-        return acc.slice(-10);
+        return acc.slice(-10).sort((a, b) => this.sortDate(a,b));
       }, [])
     );
   }
@@ -75,6 +75,12 @@ export class BrokerConfigurationService {
 
   getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
+  }
+
+  sortDate(a, b): any {
+    let c: any = new Date(a.date);
+    let d: any = new Date(b.date);
+    return (d - c) ;
   }
 
   async getDynamicMappingServiceAgent(): Promise<string> {

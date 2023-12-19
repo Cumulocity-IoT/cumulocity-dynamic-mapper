@@ -149,7 +149,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, c8yMessage);
-                            if (c8yAgent.getServiceConfiguration().logPayload) {
+                            if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
                                 log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
                                         context.getPayload().toString());
                             } else {
@@ -220,7 +220,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         this.cachedThreadPool = cachedThreadPool;
         this.mappingComponent = mappingComponent;
     }
-    private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
 
     //@Autowired
     @Setter

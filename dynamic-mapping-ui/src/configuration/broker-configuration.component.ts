@@ -54,7 +54,10 @@ export class BrokerConfigurationComponent implements OnInit {
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
     logSubstitution: true,
-    logErrorConnect: false,
+    logConnectorErrorInBackend: false,
+    sendConnectorLifecycle: false,
+    sendMappingStatus: false,
+    sendSubscriptionEvents: false,
   };
 
   constructor(
@@ -68,7 +71,10 @@ export class BrokerConfigurationComponent implements OnInit {
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(""),
       logSubstitution: new FormControl(""),
-      logErrorConnect: new FormControl(""),
+      logConnectorErrorInBackend: new FormControl(""),
+      sendConnectorLifecycle: new FormControl(""),
+      sendMappingStatus: new FormControl(""),
+      sendSubscriptionEvents: new FormControl(""),
     });
 
     await this.loadData();
@@ -82,7 +88,8 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async loadData(): Promise<void> {
-    this.serviceConfiguration = await this.brokerConfigurationService.getServiceConfiguration();
+    this.serviceConfiguration =
+      await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
     this.configurations =

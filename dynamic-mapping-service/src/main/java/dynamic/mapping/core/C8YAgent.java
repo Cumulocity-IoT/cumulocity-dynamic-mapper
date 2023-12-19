@@ -32,7 +32,6 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -56,7 +55,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -64,7 +62,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
-import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
@@ -91,7 +88,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.notification.C8YAPISubscriber;
@@ -151,13 +147,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.notificationSubscriber = notificationSubscriber;
     }
 
+    @Getter
+    public Map<String, ServiceConfiguration> serviceConfigurations;
+
+    @Autowired
+    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
+        this.serviceConfigurations = serviceConfigurations;
+    }
+
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
-    @Getter
-    @Setter
-    private ServiceConfiguration serviceConfiguration;
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
@@ -253,8 +254,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 () -> {
                     log.info("Tenant {} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
                             certificateName);
-                    MutableObject<TrustedCertificateRepresentation> certResult = new MutableObject<TrustedCertificateRepresentation>(
-                            new TrustedCertificateRepresentation());
+                    TrustedCertificateRepresentation certResult = null;
                     try {
                         List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
                         boolean next = true;
@@ -267,7 +267,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             certificatesList.addAll(certificatesResult.getCertificates());
                             nextUrl = certificatesResult.getNext();
                             next = certificatesResult.getCertificates().size() > 0;
-                            log.info("Tenant {} - Connector {} - Found certificates# {} - next {} - nextUrl {}", tenant,
+                            log.info("Tenant {} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
+                                    tenant,
                                     connectorName, certificatesList.size(), next, nextUrl);
                         }
                         for (int index = 0; index < certificatesList.size(); index++) {
@@ -278,23 +279,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                     certificateIterate.getName());
                             if (certificateIterate.getName().equals(certificateName)
                                     && certificateIterate.getFingerprint().equals(fingerprint)) {
-                                certResult.setValue(certificateIterate);
+                                certResult = certificateIterate;
                                 log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
                                         connectorName, certificateName, certificateIterate.getFingerprint());
+                                break;
                             }
                         }
                     } catch (Exception e) {
                         log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
                                 connectorName, e);
                     }
-                    return certResult.getValue();
+                    return certResult;
                 });
         if (result != null) {
+            log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+                    connectorName, certificateName, result.getFingerprint());
             StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
                     .append(result.getCertInPemFormat())
                     .append("\n").append("-----END CERTIFICATE-----");
             return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
         } else {
+            log.info("Tenant {} - Connector {} - No certificate found!", tenant, connectorName);
             return null;
         }
     }
@@ -395,7 +400,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             boolean external = (Boolean) props.get("external");
             log.info("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
                     extName);
-
             try {
                 if (external) {
                     // step 1 download extension for binary repository
@@ -424,7 +428,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             } catch (IOException e) {
                 log.error("Tenant {} - Exception occured, When loading extension, starting without extensions!", tenant,
                         e);
-                // e.printStackTrace();
             }
         }
     }
@@ -617,5 +620,4 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }
-
 }

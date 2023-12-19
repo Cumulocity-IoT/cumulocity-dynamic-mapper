@@ -56,6 +56,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConnectorStatus;
@@ -66,11 +67,9 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
-    public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
-
     public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
     public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
+    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
 
     @Getter
     @Setter
@@ -101,10 +100,8 @@ public abstract class AConnectorClient {
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
+    private ScheduledFuture<?> housekeepingTask;
 
-    // @Getter
-    // @Setter
-    // keeps track of number of active mappings per subscriptionTopic
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     private Instant start = Instant.now();
@@ -113,7 +110,10 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorConfiguration configuration;
 
-    private ScheduledFuture<?> housekeepingTask;
+
+    @Getter
+    @Setter
+    public ServiceConfiguration serviceConfiguration;
 
     @Getter
     @Setter
@@ -135,7 +135,7 @@ public abstract class AConnectorClient {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
         connectorStatus.updateStatus(Status.CONFIGURED);
         connectorStatus.clearMessage();
-        sendConnectorStatusAsEvent();
+        sendConnectorLifecycle();
         // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
         // configuration,
         // configuration.properties);
@@ -151,7 +151,7 @@ public abstract class AConnectorClient {
         }
         connectorStatus.updateStatus(Status.CONNECTING);
         connectorStatus.clearMessage();
-        sendConnectorStatusAsEvent();
+        sendConnectorLifecycle();
     }
 
     public void submitDisconnect() {
@@ -164,7 +164,7 @@ public abstract class AConnectorClient {
         }
         connectorStatus.updateStatus(Status.DISCONNECTING);
         connectorStatus.clearMessage();
-        sendConnectorStatusAsEvent();
+        sendConnectorLifecycle();
     }
 
     public void submitHouskeeping() {
@@ -246,8 +246,8 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
-            sendConnectorStatusAsEvent();
+            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+            sendConnectorLifecycle();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
@@ -346,7 +346,6 @@ public abstract class AConnectorClient {
                     }
                 }
             }
-
         }
     }
 
@@ -407,33 +406,37 @@ public abstract class AConnectorClient {
         log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
     }
 
-    public void sendConnectorStatusAsEvent() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        String date = dateFormat.format(now);
-        Map<String, String> stMap = Map.ofEntries(
-                entry("status", connectorStatus.getStatus().name()),
-                entry("message", connectorStatus.message),
-                entry("connectorName", getConnectorName()),
-                entry("connectorIdent", getConnectorIdent()),
-                entry("date", date));
-        c8yAgent.createEvent("Connector status:" + connectorStatus.status,
-                STATUS_CONNECTOR_EVENT_TYPE,
-                DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+    public void sendConnectorLifecycle() {
+        if (serviceConfiguration.sendConnectorLifecycle) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            String date = dateFormat.format(now);
+            Map<String, String> stMap = Map.ofEntries(
+                    entry("status", connectorStatus.getStatus().name()),
+                    entry("message", connectorStatus.message),
+                    entry("connectorName", getConnectorName()),
+                    entry("connectorIdent", getConnectorIdent()),
+                    entry("date", date));
+            c8yAgent.createEvent("Connector status:" + connectorStatus.status,
+                    STATUS_CONNECTOR_EVENT_TYPE,
+                    DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+        }
     }
 
-    public void sendSubscriptionEvent(String topic, String action) {
-        String msg = action + " topic: " + topic;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        String date = dateFormat.format(now);
-        Map<String, String> stMap = Map.ofEntries(
-                entry("message", msg),
-                entry("connectorName", getConnectorName()),
-                entry("date", date));
-        c8yAgent.createEvent(msg,
-                STATUS_SUBSCRIPTION_EVENT_TYPE,
-                DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+    public void sendSubscriptionEvents(String topic, String action) {
+        if(serviceConfiguration.sendSubscriptionEvents) {
+            String msg = action + " topic: " + topic;
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            String date = dateFormat.format(now);
+            Map<String, String> stMap = Map.ofEntries(
+                    entry("message", msg),
+                    entry("connectorName", getConnectorName()),
+                    entry("date", date));
+            c8yAgent.createEvent(msg,
+                    STATUS_SUBSCRIPTION_EVENT_TYPE,
+                    DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+        } 
     }
 
     @Data

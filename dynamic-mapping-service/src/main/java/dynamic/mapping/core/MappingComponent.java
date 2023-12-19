@@ -48,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.InnerNode;
@@ -81,13 +82,20 @@ public class MappingComponent {
         this.mappingServiceRepresentations = mappingServiceRepresentations;
     }
 
+    @Getter
+    public Map<String, ServiceConfiguration> serviceConfigurations;
+
+    @Autowired
+    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
+        this.serviceConfigurations = serviceConfigurations;
+    }
+
     @Autowired
     private InventoryApi inventoryApi;
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    
     private Map<String, Boolean> initialized = new HashMap<>();
 
     @Getter
@@ -136,63 +144,62 @@ public class MappingComponent {
             cacheMappingOutbound.put(tenant, new HashMap<>());
     }
 
-    // public void initializeMappingComponent(String tenant, MappingServiceRepresentation mappingServiceRepresentation) {
-    //     this.mappingServiceRepresentations.put(tenant, mappingServiceRepresentation);
-    //     initializeMappingStatus(tenant, false);
-    // }
-
     public void sendMappingStatus(String tenant) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            boolean initialized = this.initialized.get(tenant);
-            Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
-            MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
-            // avoid sending empty monitoring events
-            if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
-                log.debug("Sending monitoring: {}", statusMapping.values().size());
-                Map<String, Object> service = new HashMap<String, Object>();
-                MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
-                // add current name of mappings to the status messages
-                for (int index = 0; index < ms.length; index++) {
-                    ms[index].name = "#";
-                    if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
-                        ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
-                    } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
-                        ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
+        if(serviceConfigurations.get(tenant).sendMappingStatus) {
+            subscriptionsService.runForTenant(tenant, () -> {
+                boolean initialized = this.initialized.get(tenant);
+                Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
+                MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
+                // avoid sending empty monitoring events
+                if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
+                    log.debug("Sending monitoring: {}", statusMapping.values().size());
+                    Map<String, Object> service = new HashMap<String, Object>();
+                    MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
+                    // add current name of mappings to the status messages
+                    for (int index = 0; index < ms.length; index++) {
+                        ms[index].name = "#";
+                        if (cacheMappingInbound.get(tenant).containsKey(ms[index].id)) {
+                            ms[index].name = cacheMappingInbound.get(tenant).get(ms[index].id).name;
+                        } else if (cacheMappingOutbound.get(tenant).containsKey(ms[index].id)) {
+                            ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
+                        }
                     }
+                    service.put(MappingServiceRepresentation.MAPPING_FRAGMENT, ms);
+                    ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+                    updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+                    updateMor.setAttrs(service);
+                    this.inventoryApi.update(updateMor);
+                } else {
+                    log.debug("Tenant {} - Ignoring mapping monitoring: {}, initialized: {}", tenant,
+                            statusMapping.values().size(),
+                            initialized);
                 }
-                service.put(MappingServiceRepresentation.MAPPING_FRAGMENT, ms);
+            });
+        } 
+    }
+
+    public void sendConnectorLifecycle(String tenant, ConnectorStatus connectorStatus, String connectorIdent,
+            String connectorName) {
+        if (serviceConfigurations.get(tenant).sendConnectorLifecycle) {
+            subscriptionsService.runForTenant(tenant, () -> {
+                MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
+                log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
+                Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
+                        new HashMap<String, Map<String, String>>());
+                Map<String, String> stMap = Map.ofEntries(
+                        entry("status", connectorStatus.getStatus().name()),
+                        entry("message", connectorStatus.message),
+                        entry("connectorName", connectorName),
+                        entry("date", connectorStatus.date));
+                ccs.put(connectorIdent, stMap);
+                Map<String, Object> service = new HashMap<String, Object>();
+                service.put(MappingServiceRepresentation.CONNECTOR_FRAGMENT, ccs);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);
                 this.inventoryApi.update(updateMor);
-            } else {
-                log.debug("Tenant {} - Ignoring mapping monitoring: {}, initialized: {}", tenant,
-                        statusMapping.values().size(),
-                        initialized);
-            }
-        });
-    }
-
-    public void sendConnectorStatus(String tenant, ConnectorStatus connectorStatus, String connectorIdent,
-            String connectorName) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
-            log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
-            Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
-                    new HashMap<String, Map<String, String>>());
-            Map<String, String> stMap = Map.ofEntries(
-                    entry("status", connectorStatus.getStatus().name()),
-                    entry("message", connectorStatus.message),
-                    entry("connectorName", connectorName),
-                    entry("date", connectorStatus.date));
-            ccs.put(connectorIdent, stMap);
-            Map<String, Object> service = new HashMap<String, Object>();
-            service.put(MappingServiceRepresentation.CONNECTOR_FRAGMENT, ccs);
-            ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-            updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
-            updateMor.setAttrs(service);
-            this.inventoryApi.update(updateMor);
-        });
+            });
+        }
     }
 
     public MappingStatus getMappingStatus(String tenant, Mapping m) {

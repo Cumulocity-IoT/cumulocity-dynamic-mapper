@@ -21,8 +21,6 @@
 
 package dynamic.mapping.configuration;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -107,7 +105,7 @@ public class ServiceConfigurationComponent {
     }
 
     public ServiceConfiguration initialize(String tenant) {
-        ServiceConfiguration configuration = new ServiceConfiguration(false, true, false, true);
+        ServiceConfiguration configuration = new ServiceConfiguration();
         try {
             saveServiceConfiguration(configuration);
         } catch (JsonProcessingException e) {
