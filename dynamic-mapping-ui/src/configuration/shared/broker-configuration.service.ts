@@ -58,7 +58,7 @@ export class BrokerConfigurationService {
     this.statusLogs$ = this.newStatusLog$.pipe(
       scan((acc, val) => {
         acc.push(val);
-        return acc.slice(-5);
+        return acc.slice(-10);
       }, [])
     );
   }

@@ -270,8 +270,6 @@ public abstract class AConnectorClient {
 
     public void reconnect() {
         disconnect();
-        // invalidate broker client
-        loadConfiguration();
         submitInitialize();
         submitConnect();
     }

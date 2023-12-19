@@ -51,13 +51,13 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.bouncycastle.eac.EACException;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import com.cumulocity.microservice.context.credentials.Credentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
@@ -76,13 +76,12 @@ import dynamic.mapping.core.Status;
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
 
-    public MQTTClient(Credentials credentials, String tenant, MappingComponent mappingComponent,
+    public MQTTClient(String tenant, MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
             ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool,
             ObjectMapper objectMapper, String additionalSubscriptionIdTest,
             MappingServiceRepresentation mappingServiceRepresentation) {
         // setConfigProperties();
-        this.credentials = credentials;
         this.tenant = tenant;
         this.mappingComponent = mappingComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
@@ -98,8 +97,6 @@ public class MQTTClient extends AConnectorClient {
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
-
-    private Credentials credentials = null;
 
     @Getter
     private static final String connectorType = "MQTT";
@@ -130,17 +127,66 @@ public class MQTTClient extends AConnectorClient {
 
     private AConnectorClient.Certificate cert;
 
+    private SSLSocketFactory sslSocketFactory;
+
     private MQTTCallback mqttCallback = null;
 
     private MqttClient mqttClient;
 
     public boolean initialize() {
         loadConfiguration();
-        boolean useSelfSignedCertificate = (Boolean) configuration.getProperties().get("useSelfSignedCertificate");
+        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        log.info("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
         if (useSelfSignedCertificate) {
-            String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
-            cert = c8yAgent.loadCertificateByName(nameCertificate, this.credentials);
+            try {
+                String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
+                String fingerprint = (String) configuration.getProperties().get("fingerprintSelfSignedCertificate");
+                if (nameCertificate == null || fingerprint == null) {
+                    throw new Exception(
+                            "Required properties nameCertificate, fingerprint are not set. Please update the connector configuration!");
+                }
+                log.debug("Tenant {} - TLS 00", tenant);
+                cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, getConnectorName());
+                if (cert == null) {
+                    throw new Exception(
+                            "Required certificate {} -  fingerprint {} not found. Please update trusted certificates in the Cumulocity Device Management!");
+                }
+                log.debug("Tenant {} - TLS 01", tenant);
+                KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                log.debug("Tenant {} - TLS 03", tenant);
+                trustStore.load(null, null);
+                trustStore.setCertificateEntry("Custom CA",
+                        (X509Certificate) CertificateFactory.getInstance("X509")
+                                .generateCertificate(new ByteArrayInputStream(
+                                        cert.getCertInPemFormat().getBytes(Charset.defaultCharset()))));
+                log.debug("Tenant {} - TLS 04", tenant);
+                TrustManagerFactory tmf = TrustManagerFactory
+                        .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(trustStore);
+                TrustManager[] trustManagers = tmf.getTrustManagers();
+
+                log.debug("Tenant {} - TLS 05", tenant);
+                SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                sslContext.init(null, trustManagers, null);
+                sslSocketFactory = sslContext.getSocketFactory();
+            } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
+                    | KeyManagementException e) {
+                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS!", tenant,
+                        getConnectorName(), e);
+                updateConnectorStatusWithErrorMessage(e);
+                sendConnectorStatusAsEvent();
+                return false;
+            } catch (Exception e) {
+                log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                        getConnectorName(), e);
+                updateConnectorStatusWithErrorMessage(e);
+                sendConnectorStatusAsEvent();
+                return false;
+            }
         }
+        log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
+                getConnectorName());
         return true;
     }
 
@@ -212,30 +258,7 @@ public class MQTTClient extends AConnectorClient {
                     }
                     if (useSelfSignedCertificate) {
                         log.debug("Using certificate: {}", cert.getCertInPemFormat());
-
-                        try {
-                            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                            trustStore.load(null, null);
-                            trustStore.setCertificateEntry("Custom CA",
-                                    (X509Certificate) CertificateFactory.getInstance("X509")
-                                            .generateCertificate(new ByteArrayInputStream(
-                                                    cert.getCertInPemFormat().getBytes(Charset.defaultCharset()))));
-
-                            TrustManagerFactory tmf = TrustManagerFactory
-                                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                            tmf.init(trustStore);
-                            TrustManager[] trustManagers = tmf.getTrustManagers();
-
-                            SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-                            sslContext.init(null, trustManagers, null);
-                            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-                            // where options is the MqttConnectOptions object
-                            connOpts.setSocketFactory(sslSocketFactory);
-                        } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
-                                | KeyManagementException e) {
-                            log.error("Tenant {} - Exception when configuring socketFactory for TLS!", tenant, e);
-                        }
+                        connOpts.setSocketFactory(sslSocketFactory);
                     }
                     mqttClient.connect(connOpts);
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
@@ -316,6 +339,13 @@ public class MQTTClient extends AConnectorClient {
     public boolean isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
+        // if using selfsignied certificate additional proprties have to be set
+        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        if (useSelfSignedCertificate && (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null
+                || configuration.getProperties().get("nameCertificate") == null)) {
+            return false;
+        }
         // check if all required properties are set
         for (String property : MQTTClient.getSpec().getProperties().keySet()) {
             if (MQTTClient.getSpec().getProperties().get(property).required
@@ -323,10 +353,7 @@ public class MQTTClient extends AConnectorClient {
                 return false;
             }
         }
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
-        Boolean sslConfiguredCorrectly = (useSelfSignedCertificate && cert != null) || !useSelfSignedCertificate;
-        return sslConfiguredCorrectly;
+        return true;
     }
 
     @Override

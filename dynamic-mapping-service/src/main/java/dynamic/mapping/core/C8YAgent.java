@@ -32,6 +32,7 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -246,29 +247,56 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public AConnectorClient.Certificate loadCertificateByName(String certificateName, Credentials credentials) {
-        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(subscriptionsService.getTenant(),
+    public AConnectorClient.Certificate loadCertificateByName(String certificateName, String fingerprint,
+            String tenant, String connectorName) {
+        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
                 () -> {
+                    log.info("Tenant {} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
+                            certificateName);
                     MutableObject<TrustedCertificateRepresentation> certResult = new MutableObject<TrustedCertificateRepresentation>(
                             new TrustedCertificateRepresentation());
-                    TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
-                            String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
-                            MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
-                    certificates.forEach(cert -> {
-                        if (cert.getName().equals(certificateName)) {
-                            certResult.setValue(cert);
-                            log.debug("Found certificate with fingerprint: {} with name: {}", cert.getFingerprint(),
-                                    cert.getName());
+                    try {
+                        List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
+                        boolean next = true;
+                        String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
+                        TrustedCertificateCollectionRepresentation certificatesResult;
+                        while (next) {
+                            certificatesResult = platform.rest().get(
+                                    nextUrl,
+                                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+                            certificatesList.addAll(certificatesResult.getCertificates());
+                            nextUrl = certificatesResult.getNext();
+                            next = certificatesResult.getCertificates().size() > 0;
+                            log.info("Tenant {} - Connector {} - Found certificates# {} - next {} - nextUrl {}", tenant,
+                                    connectorName, certificatesList.size(), next, nextUrl);
                         }
-                    });
+                        for (int index = 0; index < certificatesList.size(); index++) {
+                            TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
+                            log.debug("--- Found certificate: {}", certificateIterate.getName());
+                            log.debug("--- Found certificate with fingerprint: {} with name: {}",
+                                    certificateIterate.getFingerprint(),
+                                    certificateIterate.getName());
+                            if (certificateIterate.getName().equals(certificateName)
+                                    && certificateIterate.getFingerprint().equals(fingerprint)) {
+                                certResult.setValue(certificateIterate);
+                                log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+                                        connectorName, certificateName, certificateIterate.getFingerprint());
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                                connectorName, e);
+                    }
                     return certResult.getValue();
                 });
-        log.info("Found certificate with fingerprint: {}", result.getFingerprint());
-        StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
-                .append(result.getCertInPemFormat())
-                .append("\n").append("-----END CERTIFICATE-----");
-
-        return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+        if (result != null) {
+            StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
+                    .append(result.getCertInPemFormat())
+                    .append("\n").append("-----END CERTIFICATE-----");
+            return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+        } else {
+            return null;
+        }
     }
 
     public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context)
