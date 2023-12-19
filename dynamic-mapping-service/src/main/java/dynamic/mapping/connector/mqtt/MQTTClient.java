@@ -171,13 +171,13 @@ public class MQTTClient extends AConnectorClient {
                     | KeyManagementException e) {
                 log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS!", tenant,
                         getConnectorName(), e);
-                updateConnectorStatusWithErrorMessage(e);
+                updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
                 log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
                         getConnectorName(), e);
-                updateConnectorStatusWithErrorMessage(e);
+                updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             }
@@ -265,7 +265,7 @@ public class MQTTClient extends AConnectorClient {
                     sendConnectorLifecycle();
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
-                    updateConnectorStatusWithErrorMessage(e);
+                    updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
                     if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
                         log.error("Stacktrace:", e);
@@ -296,7 +296,7 @@ public class MQTTClient extends AConnectorClient {
                 successful = true;
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
-                updateConnectorStatusWithErrorMessage(e);
+                updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
                     log.error("Stacktrace:", e);
@@ -306,7 +306,7 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
-    private void updateConnectorStatusWithErrorMessage(Exception e) {
+    private void updateConnectorStatusToFailed(Exception e) {
         String msg = " --- " + e.getClass().getName() + ": "
                 + e.getMessage();
         if (!(e.getCause() == null)) {
@@ -387,7 +387,7 @@ public class MQTTClient extends AConnectorClient {
             }
         } catch (MqttException e) {
             log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
-            updateConnectorStatusWithErrorMessage(e);
+            updateConnectorStatusToFailed(e);
             sendConnectorLifecycle();
         }
     }
@@ -395,18 +395,6 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public String getConnectorIdent() {
         return connectorIdent;
-    }
-
-    public void disconnectFromBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), false);
-        submitDisconnect();
-        mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
-    }
-
-    public void connectToBroker() {
-        configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), true);
-        submitConnect();
-        mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
     }
 
     @Override
