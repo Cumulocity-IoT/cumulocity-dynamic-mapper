@@ -46,7 +46,6 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     private alertService: AlertService,
     private brokerConfigurationService: BrokerConfigurationService
   ) {
-    console.log("MappingNavigationFactory constructor");
   }
 
   async get() {

@@ -55,7 +55,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -63,7 +62,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.svenson.JSONParser;
 
-import com.cumulocity.microservice.context.credentials.Credentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
@@ -90,7 +88,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.notification.C8YAPISubscriber;
@@ -150,18 +147,24 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.notificationSubscriber = notificationSubscriber;
     }
 
+    @Getter
+    public Map<String, ServiceConfiguration> serviceConfigurations;
+
+    @Autowired
+    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
+        this.serviceConfigurations = serviceConfigurations;
+    }
+
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
-    @Getter
-    @Setter
-    private ServiceConfiguration serviceConfiguration;
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
-    public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
+            ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
@@ -176,7 +179,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return result;
     }
 
-    public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType, ProcessingContext<?> context) {
+    public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
+            ProcessingContext<?> context) {
         if (idType == null) {
             idType = "c8y_Serial";
         }
@@ -227,42 +231,81 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return alarmRepresentation;
     }
 
-    public void createEvent(String message, String type, DateTime eventTime, ManagedObjectRepresentation parentMor, String tenant) {
+    public void createEvent(String message, String type, DateTime eventTime, MappingServiceRepresentation source,
+            String tenant, Map<String, String> properties) {
         subscriptionsService.runForTenant(tenant, () -> {
             EventRepresentation er = new EventRepresentation();
-            er.setSource(parentMor);
+            ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+            mor.setId(new GId(source.getId()));
+            er.setSource(mor);
             er.setText(message);
             er.setDateTime(eventTime);
             er.setType(type);
+            if (properties != null) {
+                er.setProperty(AConnectorClient.CONNECTOR_FRAGMENT, properties);
+            }
             this.eventApi.createAsync(er);
         });
     }
 
-    public AConnectorClient.Certificate loadCertificateByName(String certificateName, Credentials credentials) {
-        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
-            MutableObject<TrustedCertificateRepresentation> certResult = new MutableObject<TrustedCertificateRepresentation>(
-                    new TrustedCertificateRepresentation());
-            TrustedCertificateCollectionRepresentation certificates = platform.rest().get(
-                    String.format("/tenant/tenants/%s/trusted-certificates", credentials.getTenant()),
-                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
-            certificates.forEach(cert -> {
-                if (cert.getName().equals(certificateName)) {
-                    certResult.setValue(cert);
-                    log.debug("Found certificate with fingerprint: {} with name: {}",cert.getFingerprint(),
-                            cert.getName());
-                }
-            });
-            return certResult.getValue();
-        });
-        log.info("Found certificate with fingerprint: {}", result.getFingerprint());
-        StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
-                .append(result.getCertInPemFormat())
-                .append("\n").append("-----END CERTIFICATE-----");
-
-        return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+    public AConnectorClient.Certificate loadCertificateByName(String certificateName, String fingerprint,
+            String tenant, String connectorName) {
+        TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
+                () -> {
+                    log.info("Tenant {} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
+                            certificateName);
+                    TrustedCertificateRepresentation certResult = null;
+                    try {
+                        List<TrustedCertificateRepresentation> certificatesList = new ArrayList<>();
+                        boolean next = true;
+                        String nextUrl = String.format("/tenant/tenants/%s/trusted-certificates", tenant);
+                        TrustedCertificateCollectionRepresentation certificatesResult;
+                        while (next) {
+                            certificatesResult = platform.rest().get(
+                                    nextUrl,
+                                    MediaType.APPLICATION_JSON_TYPE, TrustedCertificateCollectionRepresentation.class);
+                            certificatesList.addAll(certificatesResult.getCertificates());
+                            nextUrl = certificatesResult.getNext();
+                            next = certificatesResult.getCertificates().size() > 0;
+                            log.info("Tenant {} - Connector {} - Retrieved certificates {} - next {} - nextUrl {}",
+                                    tenant,
+                                    connectorName, certificatesList.size(), next, nextUrl);
+                        }
+                        for (int index = 0; index < certificatesList.size(); index++) {
+                            TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
+                            log.debug("--- Found certificate: {}", certificateIterate.getName());
+                            log.debug("--- Found certificate with fingerprint: {} with name: {}",
+                                    certificateIterate.getFingerprint(),
+                                    certificateIterate.getName());
+                            if (certificateIterate.getName().equals(certificateName)
+                                    && certificateIterate.getFingerprint().equals(fingerprint)) {
+                                certResult = certificateIterate;
+                                log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+                                        connectorName, certificateName, certificateIterate.getFingerprint());
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                                connectorName, e);
+                    }
+                    return certResult;
+                });
+        if (result != null) {
+            log.info("Tenant {} - Connector {} - Found certificate {} with fingerprint {} ", tenant,
+                    connectorName, certificateName, result.getFingerprint());
+            StringBuffer cert = new StringBuffer("-----BEGIN CERTIFICATE-----\n")
+                    .append(result.getCertInPemFormat())
+                    .append("\n").append("-----END CERTIFICATE-----");
+            return new AConnectorClient.Certificate(result.getFingerprint(), cert.toString());
+        } else {
+            log.info("Tenant {} - Connector {} - No certificate found!", tenant, connectorName);
+            return null;
+        }
     }
 
-    public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context) throws ProcessingException {
+    public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context)
+            throws ProcessingException {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
@@ -316,7 +359,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
                     ManagedObjectRepresentation.class);
             try {
-                ExternalIDRepresentation extId = resolveExternalId2GlobalId( tenant, identity, context);
+                ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
                 if (extId == null) {
                     // Device does not exist
                     // append external id to name
@@ -355,15 +398,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
-            log.info("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(), extName);
-
+            log.info("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
+                    extName);
             try {
                 if (external) {
                     // step 1 download extension for binary repository
                     InputStream downloadInputStream = binaryApi.downloadFile(extension.getId());
 
                     // step 2 create temporary file,because classloader needs a url resource
-                    File tempFile =  File.createTempFile(extName, "jar");
+                    File tempFile = File.createTempFile(extName, "jar");
                     tempFile.deleteOnExit();
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
@@ -376,18 +419,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // step 3 parse list of extentions
                     URL[] urls = { tempFile.toURI().toURL() };
                     externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader, external);
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
+                            external);
                 } else {
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, inernalClassloader, external);
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, inernalClassloader,
+                            external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occured, When loading extension, starting without extensions!", tenant, e);
-                // e.printStackTrace();
+                log.error("Tenant {} - Exception occured, When loading extension, starting without extensions!", tenant,
+                        e);
             }
         }
     }
 
-    private void registerExtensionInProcessor(String tenant, String id, String extName, ClassLoader dynamicLoader, boolean external)
+    private void registerExtensionInProcessor(String tenant, String id, String extName, ClassLoader dynamicLoader,
+            boolean external)
             throws IOException {
         ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
         extensibleProcessor.addExtension(id, extName, external);
@@ -397,7 +443,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         try {
             in = new InputStreamReader(resourceAsStream);
         } catch (Exception e) {
-            log.error("Tenant {} - Registration file: {} missing, ignoring to load extensions from: {}", tenant, resource,
+            log.error("Tenant {} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
+                    resource,
                     (external ? "EXTERNAL" : "INTERNAL"));
             throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
                     + (external ? "EXTERNAL" : "INTERNAL"));
@@ -438,7 +485,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
-                        log.info("Tenant {} - Successfully registered bean: {} for key: {}", tenant, newExtensions.getProperty(key),
+                        log.info("Tenant {} - Successfully registered bean: {} for key: {}", tenant,
+                                newExtensions.getProperty(key),
                                 key);
                     }
                 }
@@ -493,7 +541,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return device;
     }
 
-    public void updateOperationStatus(String tenant, OperationRepresentation op, OperationStatus status, String failureReason) {
+    public void updateOperationStatus(String tenant, OperationRepresentation op, OperationStatus status,
+            String failureReason) {
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 op.setStatus(status.toString());
@@ -501,12 +550,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     op.setFailureReason(failureReason);
                 deviceControlApi.update(op);
             } catch (SDKException exception) {
-                log.error("Tenant {} - Operation with id {} could not be updated: {}", tenant, op.getDeviceId().getValue(),
+                log.error("Tenant {} - Operation with id {} could not be updated: {}", tenant,
+                        op.getDeviceId().getValue(),
                         exception.getLocalizedMessage());
             }
         });
     }
-
 
     public void notificationSubscriberReconnect(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
@@ -517,22 +566,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-
     public ManagedObjectRepresentation createMappingServiceObject(String tenant) {
         ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MappingServiceRepresentation.AGENT_ID),
-                null);;
+                null);
+        ;
         ManagedObjectRepresentation amo = new ManagedObjectRepresentation();
 
         if (mappingServiceIdRepresentation != null) {
-            amo =  inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with ID {} already exists {} , {}", tenant, MappingServiceRepresentation.AGENT_ID,
+            amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
+            log.info("Tenant {} - Agent with ID {} already exists {} , {}", tenant,
+                    MappingServiceRepresentation.AGENT_ID,
                     mappingServiceIdRepresentation, amo);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.set(new Agent());
             amo.set(new IsDevice());
-            amo.setProperty(MappingServiceRepresentation.MAPPING_STATUS_FRAGMENT,
+            amo.setProperty(MappingServiceRepresentation.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
             log.info("Tenant {} - Agent has been created with ID {}", tenant, amo.getId());
@@ -547,14 +597,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public void checkExtensions(String tenant, PayloadProcessor payloadProcessor) {
 
-        ExtensibleProcessorInbound extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor.getPayloadProcessorsInbound()
+        ExtensibleProcessorInbound extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor
+                .getPayloadProcessorsInbound()
                 .get(MappingType.PROCESSOR_EXTENSION);
         extensibleProcessors.put(tenant, extensibleProcessor);
 
         // test if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
         ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
-        if (internalExtension == null || internalExtension.size() == 0 ) {
+        if (internalExtension == null || internalExtension.size() == 0) {
             Map<String, ?> props = Map.of("name",
                     ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                     "external", false);

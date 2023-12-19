@@ -28,7 +28,6 @@ import { ConfirmationModalComponent } from "./confirmation/confirmation-modal.co
 @NgModule({
   declarations: [JsonEditor2Component, ConfirmationModalComponent],
   imports: [CoreModule, BsDatepickerModule, PaginationModule],
-  entryComponents: [JsonEditor2Component],
   exports: [JsonEditor2Component, ConfirmationModalComponent],
   providers: [],
 })

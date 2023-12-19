@@ -20,8 +20,13 @@
 
 package dynamic.mapping.connector.core.client;
 
+import static java.util.Map.entry;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,9 +40,12 @@ import java.util.concurrent.TimeUnit;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -48,18 +56,20 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.MappingComponent;
+import dynamic.mapping.core.Status;
 import dynamic.mapping.processor.model.ProcessingContext;
 
 @Slf4j
 public abstract class AConnectorClient {
 
-    public static final Long KEY_MONITORING_UNSPECIFIED = -1L;
-
-    public static final String STATUS_MAPPING_EVENT_TYPE = "d11r_statusEvent";
+    public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
+    public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
+    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
 
     @Getter
     @Setter
@@ -67,6 +77,9 @@ public abstract class AConnectorClient {
 
     @Getter
     public MappingComponent mappingComponent;
+
+    @Getter
+    public MappingServiceRepresentation mappingServiceRepresentation;
 
     @Getter
     public ConnectorConfigurationComponent connectorConfigurationComponent;
@@ -87,10 +100,8 @@ public abstract class AConnectorClient {
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
+    private ScheduledFuture<?> housekeepingTask;
 
-    // @Getter
-    // @Setter
-    // keeps track of number of active mappings per subscriptionTopic
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     private Instant start = Instant.now();
@@ -99,7 +110,14 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorConfiguration configuration;
 
-    private ScheduledFuture<?> housekeepingTask;
+
+    @Getter
+    @Setter
+    public ServiceConfiguration serviceConfiguration;
+
+    @Getter
+    @Setter
+    public ConnectorStatus connectorStatus = ConnectorStatus.unknown();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -113,8 +131,11 @@ public abstract class AConnectorClient {
 
     public abstract ConnectorSpecification getSpecification();
 
-    public void reloadConfiguration() {
+    public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorStatus.updateStatus(Status.CONFIGURED);
+        connectorStatus.clearMessage();
+        sendConnectorLifecycle();
         // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
         // configuration,
         // configuration.properties);
@@ -128,6 +149,9 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
+        connectorStatus.updateStatus(Status.CONNECTING);
+        connectorStatus.clearMessage();
+        sendConnectorLifecycle();
     }
 
     public void submitDisconnect() {
@@ -138,6 +162,9 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
+        connectorStatus.updateStatus(Status.DISCONNECTING);
+        connectorStatus.clearMessage();
+        sendConnectorLifecycle();
     }
 
     public void submitHouskeeping() {
@@ -150,11 +177,6 @@ public abstract class AConnectorClient {
      * Connect to the broker
      ***/
     public abstract void connect();
-
-    /***
-     * Should return true when all required properties are provided
-     ***/
-    public abstract boolean canConnect();
 
     /***
      * Should return true when connector is enabled and provided properties are
@@ -181,6 +203,11 @@ public abstract class AConnectorClient {
      * Returning the unique ID identifying the connector instance
      ***/
     public abstract String getConnectorIdent();
+
+    /***
+     * Returning the name of the connector instance
+     ***/
+    public abstract String getConnectorName();
 
     /***
      * Subscribe to a topic on the Broker
@@ -219,24 +246,15 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent());
+            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+            sendConnectorLifecycle();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
         }
     }
 
-    public ConnectorStatus getConnectorStatus() {
-        ConnectorStatus connectorStatus;
-        if (isConnected()) {
-            connectorStatus = ConnectorStatus.connected();
-        } else if (canConnect()) {
-            connectorStatus = ConnectorStatus.enabled();
-        } else if (isConfigValid(configuration)) {
-            connectorStatus = ConnectorStatus.configured();
-        } else {
-            connectorStatus = ConnectorStatus.notReady();
-        }
-        return connectorStatus;
+    public boolean hasError() {
+        return !(connectorStatus.status).equals(Status.FAILED);
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
@@ -245,14 +263,13 @@ public abstract class AConnectorClient {
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
         if (dispatcher == null)
-            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool, mappingComponent);
+            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool,
+                    mappingComponent);
         return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
     }
 
     public void reconnect() {
         disconnect();
-        // invalidate broker client
-        reloadConfiguration();
         submitInitialize();
         submitConnect();
     }
@@ -329,7 +346,6 @@ public abstract class AConnectorClient {
                     }
                 }
             }
-
         }
     }
 
@@ -375,6 +391,7 @@ public abstract class AConnectorClient {
                 }
             });
             activeSubscriptions = updatedSubscriptionCache;
+            log.info("Tenant {} - Updating subscriptions to topics was successful", tenant);
         }
     }
 
@@ -387,6 +404,39 @@ public abstract class AConnectorClient {
         // release all resources
         close();
         log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
+    }
+
+    public void sendConnectorLifecycle() {
+        if (serviceConfiguration.sendConnectorLifecycle) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            String date = dateFormat.format(now);
+            Map<String, String> stMap = Map.ofEntries(
+                    entry("status", connectorStatus.getStatus().name()),
+                    entry("message", connectorStatus.message),
+                    entry("connectorName", getConnectorName()),
+                    entry("connectorIdent", getConnectorIdent()),
+                    entry("date", date));
+            c8yAgent.createEvent("Connector status:" + connectorStatus.status,
+                    STATUS_CONNECTOR_EVENT_TYPE,
+                    DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+        }
+    }
+
+    public void sendSubscriptionEvents(String topic, String action) {
+        if(serviceConfiguration.sendSubscriptionEvents) {
+            String msg = action + " topic: " + topic;
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            String date = dateFormat.format(now);
+            Map<String, String> stMap = Map.ofEntries(
+                    entry("message", msg),
+                    entry("connectorName", getConnectorName()),
+                    entry("date", date));
+            c8yAgent.createEvent(msg,
+                    STATUS_SUBSCRIPTION_EVENT_TYPE,
+                    DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+        } 
     }
 
     @Data

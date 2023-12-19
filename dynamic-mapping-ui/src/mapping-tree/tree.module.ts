@@ -26,7 +26,6 @@ import { SharedModule } from "../shared/shared.module";
 @NgModule({
   declarations: [MappingTreeComponent],
   imports: [CoreModule, SharedModule],
-  entryComponents: [MappingTreeComponent],
   exports: [],
   providers: [
 

@@ -62,7 +62,6 @@ const extensionRoutes: Route[] = [
     ReactiveFormsModule,
   ],
   exports: [],
-  entryComponents: [],
   declarations: [],
   providers: [
     OverviewGuard,

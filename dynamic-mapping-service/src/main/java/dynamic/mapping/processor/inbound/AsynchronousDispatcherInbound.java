@@ -102,7 +102,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, message);
-                            if (c8yAgent.getServiceConfiguration().logPayload) {
+                            if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant, context.getTopic(),
                                         context.getPayload().toString());
                             } else {
@@ -245,9 +245,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         closeException.printStackTrace();
         if(closeMessage != null)
             log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
-
-        c8yAgent.createEvent("Connection lost to MQTT broker", AConnectorClient.STATUS_MAPPING_EVENT_TYPE, DateTime.now(), null, tenant);
-        connectorClient.connect();
+        connectorClient.reconnect();
     }
 
     @Override
