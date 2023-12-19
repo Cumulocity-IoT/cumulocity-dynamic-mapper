@@ -57,7 +57,10 @@ export interface ConnectorSpecification {
 export interface ServiceConfiguration {
   logPayload: boolean;
   logSubstitution: boolean;
-  logErrorConnect: boolean;
+  logConnectorErrorInBackend: boolean;
+  sendConnectorLifecycle: boolean;
+  sendMappingStatus: boolean;
+  sendSubscriptionEvents: boolean;
   externalExtensionEnabled?: boolean;
 }
 

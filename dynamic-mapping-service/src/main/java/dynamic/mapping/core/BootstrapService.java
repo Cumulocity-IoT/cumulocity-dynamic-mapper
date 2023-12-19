@@ -1,6 +1,5 @@
 package dynamic.mapping.core;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -27,6 +26,7 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRe
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
@@ -52,8 +52,17 @@ public class BootstrapService {
     private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
 
     @Autowired
-    public void setMappingServiceRepresentations(Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
+    public void setMappingServiceRepresentations(
+            Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
         this.mappingServiceRepresentations = mappingServiceRepresentations;
+    }
+
+    @Getter
+    public Map<String, ServiceConfiguration> serviceConfigurations;
+
+    @Autowired
+    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
+        this.serviceConfigurations = serviceConfigurations;
     }
 
     @Autowired
@@ -102,7 +111,7 @@ public class BootstrapService {
         PayloadProcessor processor = new PayloadProcessor(objectMapper, c8YAgent, tenant, null);
         c8YAgent.checkExtensions(tenant, processor);
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
-        c8YAgent.setServiceConfiguration(serviceConfiguration);
+        serviceConfigurations.put(tenant, serviceConfiguration);
         c8YAgent.loadProcessorExtensions(tenant);
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
                 MappingServiceRepresentation.class);
@@ -117,7 +126,8 @@ public class BootstrapService {
                         .getConnectorConfigurations(tenant);
                 // For each connector configuration create a new instance of the connector
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    initializeConnectorByConfiguration(connectorConfiguration, credentials, tenant);
+                    initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration, credentials,
+                            tenant);
                 }
             }
 
@@ -128,14 +138,16 @@ public class BootstrapService {
     }
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
-                                                               Credentials credentials, String tenant) throws ConnectorRegistryException {
+            ServiceConfiguration serviceConfiguration,
+            Credentials credentials, String tenant) throws ConnectorRegistryException {
         AConnectorClient client = null;
 
         if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
-            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant, connectorConfiguration.getIdent());
+            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
             MQTTClient mqttClient = new MQTTClient(tenant, mappingComponent,
                     connectorConfigurationComponent, connectorConfiguration, c8YAgent, cachedThreadPool, objectMapper,
-                    additionalSubscriptionIdTest, mappingServiceRepresentations.get(tenant) );
+                    additionalSubscriptionIdTest, mappingServiceRepresentations.get(tenant), serviceConfiguration);
             connectorRegistry.registerClient(tenant, mqttClient);
             mqttClient.reconnect();
             mqttClient.submitHouskeeping();
@@ -150,6 +162,4 @@ public class BootstrapService {
         connectorRegistry.unregisterClient(tenant, ident);
         c8YAgent.getNotificationSubscriber().removeConnector(tenant, ident);
     }
-
-
 }

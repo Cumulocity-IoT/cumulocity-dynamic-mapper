@@ -160,7 +160,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                             .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (c8yAgent.getServiceConfiguration().logSubstitution) {
+                if (c8yAgent.getServiceConfigurations().get(tenant).logSubstitution) {
                     log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }

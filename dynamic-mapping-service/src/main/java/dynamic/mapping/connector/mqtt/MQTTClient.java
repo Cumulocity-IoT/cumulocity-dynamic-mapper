@@ -51,7 +51,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.bouncycastle.eac.EACException;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -64,6 +63,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.MappingComponent;
@@ -80,7 +80,7 @@ public class MQTTClient extends AConnectorClient {
             ConnectorConfigurationComponent connectorConfigurationComponent,
             ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool,
             ObjectMapper objectMapper, String additionalSubscriptionIdTest,
-            MappingServiceRepresentation mappingServiceRepresentation) {
+            MappingServiceRepresentation mappingServiceRepresentation, ServiceConfiguration serviceConfiguration) {
         // setConfigProperties();
         this.tenant = tenant;
         this.mappingComponent = mappingComponent;
@@ -93,7 +93,7 @@ public class MQTTClient extends AConnectorClient {
         this.cachedThreadPool = cachedThreadPool;
         this.objectMapper = objectMapper;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = mappingServiceRepresentation;
+        this.mappingServiceRepresentation = mappingServiceRepresentation;        this.serviceConfiguration = serviceConfiguration;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -146,27 +146,24 @@ public class MQTTClient extends AConnectorClient {
                     throw new Exception(
                             "Required properties nameCertificate, fingerprint are not set. Please update the connector configuration!");
                 }
-                log.debug("Tenant {} - TLS 00", tenant);
                 cert = c8yAgent.loadCertificateByName(nameCertificate, fingerprint, tenant, getConnectorName());
                 if (cert == null) {
-                    throw new Exception(
-                            "Required certificate {} -  fingerprint {} not found. Please update trusted certificates in the Cumulocity Device Management!");
+                    String errorMessage = String.format(
+                            "Required certificate %s with fingerprint %s not found. Please update trusted certificates in the Cumulocity Device Management!",
+                            nameCertificate, fingerprint);
+                    throw new Exception(errorMessage);
                 }
-                log.debug("Tenant {} - TLS 01", tenant);
                 KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                log.debug("Tenant {} - TLS 03", tenant);
                 trustStore.load(null, null);
                 trustStore.setCertificateEntry("Custom CA",
                         (X509Certificate) CertificateFactory.getInstance("X509")
                                 .generateCertificate(new ByteArrayInputStream(
                                         cert.getCertInPemFormat().getBytes(Charset.defaultCharset()))));
-                log.debug("Tenant {} - TLS 04", tenant);
                 TrustManagerFactory tmf = TrustManagerFactory
                         .getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(trustStore);
                 TrustManager[] trustManagers = tmf.getTrustManagers();
 
-                log.debug("Tenant {} - TLS 05", tenant);
                 SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
                 sslContext.init(null, trustManagers, null);
                 sslSocketFactory = sslContext.getSocketFactory();
@@ -175,13 +172,13 @@ public class MQTTClient extends AConnectorClient {
                 log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS!", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusWithErrorMessage(e);
-                sendConnectorStatusAsEvent();
+                sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
                 log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusWithErrorMessage(e);
-                sendConnectorStatusAsEvent();
+                sendConnectorLifecycle();
                 return false;
             }
         }
@@ -265,12 +262,12 @@ public class MQTTClient extends AConnectorClient {
                             mqttClient.getServerURI());
                     connectorStatus.updateStatus(Status.CONNECTED);
                     connectorStatus.clearMessage();
-                    sendConnectorStatusAsEvent();
+                    sendConnectorLifecycle();
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
                     updateConnectorStatusWithErrorMessage(e);
-                    sendConnectorStatusAsEvent();
-                    if (c8yAgent.getServiceConfiguration().logErrorConnect) {
+                    sendConnectorLifecycle();
+                    if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
                         log.error("Stacktrace:", e);
                     }
                 }
@@ -300,8 +297,8 @@ public class MQTTClient extends AConnectorClient {
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 updateConnectorStatusWithErrorMessage(e);
-                sendConnectorStatusAsEvent();
-                if (c8yAgent.getServiceConfiguration().logErrorConnect) {
+                sendConnectorLifecycle();
+                if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
                     log.error("Stacktrace:", e);
                 }
                 successful = false;
@@ -385,13 +382,13 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.disconnect();
                 connectorStatus.updateStatus(Status.DISCONNECTED);
                 connectorStatus.clearMessage();
-                sendConnectorStatusAsEvent();
+                sendConnectorLifecycle();
                 log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());
             }
         } catch (MqttException e) {
             log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
             updateConnectorStatusWithErrorMessage(e);
-            sendConnectorStatusAsEvent();
+            sendConnectorLifecycle();
         }
     }
 
@@ -403,19 +400,19 @@ public class MQTTClient extends AConnectorClient {
     public void disconnectFromBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), false);
         submitDisconnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+        mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
     }
 
     public void connectToBroker() {
         configuration = connectorConfigurationComponent.enableConnection(this.getConnectorIdent(), true);
         submitConnect();
-        mappingComponent.sendConnectorStatus(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+        mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
     }
 
     @Override
     public void subscribe(String topic, Integer qos) throws MqttException {
         log.debug("Subscribing on topic: {}", topic);
-        sendSubscriptionEvent(topic, "Subscribing");
+        sendSubscriptionEvents(topic, "Subscribing");
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
@@ -425,7 +422,7 @@ public class MQTTClient extends AConnectorClient {
 
     public void unsubscribe(String topic) throws Exception {
         log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
-        sendSubscriptionEvent(topic, "Unsubscribing");
+        sendSubscriptionEvents(topic, "Unsubscribing");
         mqttClient.unsubscribe(topic);
     }
 
@@ -447,5 +444,4 @@ public class MQTTClient extends AConnectorClient {
     public String getConnectorName() {
         return connectorName;
     }
-
 }

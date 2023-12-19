@@ -102,7 +102,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, message);
-                            if (c8yAgent.getServiceConfiguration().logPayload) {
+                            if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant, context.getTopic(),
                                         context.getPayload().toString());
                             } else {
