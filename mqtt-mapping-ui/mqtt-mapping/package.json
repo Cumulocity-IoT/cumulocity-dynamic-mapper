@@ -1,6 +1,6 @@
 {
   "name": "mqtt-mapping",
-  "version": "3.3.5",
+  "version": "3.3.6",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The lugin support both directions: inbound/outbound.",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "c8ycli server",
-    "start:admin": "npm start -- --shell administration",
+    "start:admin": "npm start -- --shell administration -u https://ck2.eu-latest.cumulocity.com",
     "build": "c8ycli build",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc"
