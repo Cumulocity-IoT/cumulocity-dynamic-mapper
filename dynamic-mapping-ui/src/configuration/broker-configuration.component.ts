@@ -81,17 +81,13 @@ export class BrokerConfigurationComponent implements OnInit {
     });
 
     await this.loadData();
+
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
-    this.initializeMonitoringService();
     this.feature = await this.brokerConfigurationService.getFeatures();
   }
 
-  private async initializeMonitoringService(): Promise<void> {
-   // await this.brokerConfigurationService.subscribeMonitoringChannels();
-   // await this.brokerConfigurationService.subscribeMonitoringChannelsRXJS();
-  }
-
   public async loadData(): Promise<void> {
+    this.brokerConfigurationService.resetCache();
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
@@ -261,6 +257,6 @@ export class BrokerConfigurationComponent implements OnInit {
 
   ngOnDestroy(): void {
     console.log("Stop subscriptions");
-    this.brokerConfigurationService.stopConnectorStatusSubscriptions();
+    //this.brokerConfigurationService.stopConnectorStatusSubscriptions();
   }
 }
