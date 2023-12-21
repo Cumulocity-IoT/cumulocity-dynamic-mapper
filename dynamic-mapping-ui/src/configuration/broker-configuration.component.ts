@@ -86,8 +86,11 @@ export class BrokerConfigurationComponent implements OnInit {
     this.feature = await this.brokerConfigurationService.getFeatures();
   }
 
-  public async loadData(): Promise<void> {
+  public refresh () {
     this.brokerConfigurationService.resetCache();
+  }
+
+  public async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =

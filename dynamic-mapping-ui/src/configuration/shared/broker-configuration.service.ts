@@ -69,12 +69,13 @@ export class BrokerConfigurationService {
   ) {
     this.realtime = new Realtime(this.client);
     this.startConnectorStatusSubscriptions();
+    //console.log("Constructor:BrokerConfigurationService");
   }
 
   private _agentId: Promise<string>;
   private _connectorConfigurationsCombined: ConnectorConfigurationCombined[] =
     [];
-  private _connectorConfigurations: ConnectorConfiguration[] = [];
+  private _connectorConfigurations: ConnectorConfiguration[];
   private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
   private _feature: Promise<Feature>;
@@ -93,9 +94,11 @@ export class BrokerConfigurationService {
   }
 
   public resetCache() {
+    console.log("resetCache() :BrokerConfigurationService");
     this._feature = undefined;
     this._connectorConfigurations = undefined;
     this._connectorConfigurationsCombined = [];
+    this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
   }
 
@@ -109,7 +112,7 @@ export class BrokerConfigurationService {
       if (res.status < 300) {
         const agentId = data.managedObject.id.toString();
         this._agentId = Promise.resolve(agentId);
-        console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
+        //console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
       }
     }
     return this._agentId;
@@ -191,6 +194,7 @@ export class BrokerConfigurationService {
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
     if (!this._connectorConfigurations) {
+      //console.log("Load getConnectorConfigurations()")
       const response = await this.client.fetch(
         `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
         {
@@ -310,7 +314,7 @@ export class BrokerConfigurationService {
     console.log("Agent Id", agentId);
 
     const sourceList$ = this.filterTrigger$.pipe(
-      tap((x) => console.log("Trigger", x)),
+      //tap((x) => console.log("Trigger", x)),
       switchMap((type) =>
         this.eventService.list({
           pageSize: 5,
@@ -326,7 +330,7 @@ export class BrokerConfigurationService {
           return event[CONNECTOR_FRAGMENT];
         })
       ),
-      tap((x) => console.log("Reload", x))
+      //tap((x) => console.log("Reload", x))
     );
 
     const sourceRealtime$ = this.incomingRealtime$.pipe(

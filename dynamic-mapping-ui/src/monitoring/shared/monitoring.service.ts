@@ -63,6 +63,6 @@ export class MonitoringService {
     let payload = p["data"]["data"];
     let monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
     this.mappingStatus.next(monitoring);
-    console.log("New statusMonitoring event", monitoring);
+    //console.log("New statusMonitoring event", monitoring);
   }
 }
