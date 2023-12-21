@@ -29,13 +29,15 @@ export class AdminGuard implements CanActivate {
   constructor(private brokerConfigurationService: BrokerConfigurationService) {}
 
   canActivate(): Promise<boolean> {
-    this.adminPromise = this.brokerConfigurationService.getFeatures().then((conf) => {
-      console.log(
-        "User has externalExtensionEnabled:",
-        conf.userHasMappingAdminRole
-      );
-      return conf.userHasMappingAdminRole;
-    });
+    this.adminPromise = this.brokerConfigurationService
+      .getFeatures()
+      .then((conf) => {
+        // console.log(
+        //   "User has externalExtensionEnabled:",
+        //   conf.userHasMappingAdminRole
+        // );
+        return conf.userHasMappingAdminRole;
+      });
 
     return this.adminPromise;
   }
