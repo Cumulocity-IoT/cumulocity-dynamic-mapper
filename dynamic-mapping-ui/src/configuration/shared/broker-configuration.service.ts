@@ -20,16 +20,20 @@
  */
 import { Injectable } from "@angular/core";
 import {
+  EventService,
   FetchClient,
   IdentityService,
+  IEvent,
   IExternalIdentity,
   IFetchResponse,
+  IResultList,
   Realtime,
 } from "@c8y/client";
 import {
   AGENT_ID,
   BASE_URL,
   CONNECTOR_FRAGMENT,
+  ConnectorSpecification,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
@@ -44,23 +48,30 @@ import {
   Status,
   ConnectorConfigurationCombined,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-  STATUS_CONNECTOR_EVENT_TYPE,
+  StatusEventTypes,
 } from "../../shared";
 
-import { BehaviorSubject, Observable, Subject } from "rxjs";
-import { ConnectorSpecification } from "../../shared/mapping.model";
-import { scan } from "rxjs/operators";
+import { BehaviorSubject, merge, Observable, Subject } from "rxjs";
+import {
+  map,
+  scan,
+  tap,
+  filter,
+  switchMap,
+  withLatestFrom,
+} from "rxjs/operators";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
-  constructor(private client: FetchClient, private identity: IdentityService) {
+  trigger_02$: Subject<string> = new Subject();
+  constructor(
+    private client: FetchClient,
+    private identity: IdentityService,
+    private eventService: EventService
+  ) {
     this.realtime = new Realtime(this.client);
-    this.statusLogs$ = this.newStatusLog$.pipe(
-      scan((acc, val) => {
-        acc.push(val);
-        return acc.slice(-10).sort((a, b) => this.sortDate(a,b));
-      }, [])
-    );
+    this.startConnectorLogsRealtime();
+    this.startConnectorStatusCheck();
   }
 
   private _agentId: Promise<string>;
@@ -69,41 +80,31 @@ export class BrokerConfigurationService {
   private _feature: Promise<Feature>;
   private realtime: Realtime;
   statusLogs$: Observable<any[]>;
-  subscriptionMO: any;
   subscriptionEvents: any;
-  newStatusLog$: Subject<any> = new Subject();
+  statusLogEventType: string;
+  filterTrigger$: BehaviorSubject<string> = new BehaviorSubject(StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE);
+  incomingRealtime$: Subject<IEvent> = new Subject();
 
-  getStatusLogs(): Observable<any[]> {
+  public getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
-  }
-
-  sortDate(a, b): any {
-    let c: any = new Date(a.date);
-    let d: any = new Date(b.date);
-    return (d - c) ;
   }
 
   async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
-      this._agentId = this.getUncachedDynamicMappingServiceAgent();
+      const identity: IExternalIdentity = {
+        type: "c8y_Serial",
+        externalId: AGENT_ID,
+      };
+      const { data, res } = await this.identity.detail(identity);
+      if (res.status < 300) {
+        const agentId = data.managedObject.id.toString();
+        this._agentId = Promise.resolve(agentId);
+        console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
+      }
     }
     return this._agentId;
   }
 
-  async getUncachedDynamicMappingServiceAgent(): Promise<string> {
-    const identity: IExternalIdentity = {
-      type: "c8y_Serial",
-      externalId: AGENT_ID,
-    };
-    const { data, res } = await this.identity.detail(identity);
-    let agentId;
-    if (res.status < 300) {
-      agentId = data.managedObject.id.toString();
-      console.log("BrokerConfigurationService: Found BrokerAgent", agentId);
-    }
-
-    return agentId;
-  }
 
   async updateConnectorConfiguration(
     configuration: ConnectorConfiguration
@@ -245,22 +246,19 @@ export class BrokerConfigurationService {
 
   async getFeatures(): Promise<Feature> {
     if (!this._feature) {
-      this._feature = this.getUncachedFeatures();
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+        {
+          method: "GET",
+        }
+      );
+      this._feature = await response.json();
     }
     return this._feature;
   }
 
-  async getUncachedFeatures(): Promise<Feature> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-      {
-        method: "GET",
-      }
-    );
-    return await response.json();
-  }
 
-  async subscribeMonitoringChannels(): Promise<void> {
+  async startConnectorStatusCheck(): Promise<void> {
     const agentId = await this.getDynamicMappingServiceAgent();
     console.log("Started subscription:", agentId);
     this.getConnectorStatus().then((status) => {
@@ -269,53 +267,83 @@ export class BrokerConfigurationService {
           cc.status$.next(status[cc.configuration.ident].status);
         }
       });
-      console.log("New monitoring event", status);
+      console.log("Update connector status from backend", status);
     });
 
-    // this.subscriptionMO = this.realtime.subscribe(
-    //   `/managedobjects/${agentId}`,
-    //   this.processNewStatusLogMO.bind(this)
-    // );
-
+    // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
       `/events/${agentId}`,
-      this.processNewStatusLogEvent.bind(this)
+      this.updateConnectorStatus
     );
   }
 
-  unsubscribeFromMonitoringChannels() {
-    //this.realtime.unsubscribe(this.subscriptionMO);
-    this.realtime.unsubscribe(this.subscriptionEvents);
-  }
-
-  // private processNewStatusLogMO(p: object): void {
-  //   let payload = p["data"]["data"];
-  //   let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
-  //   // for (const [key, value] of Object.entries(statusLog)) {
-  //   //   console.log(`${key}: ${value}`);
-  //   // }
-  //   this._connectorConfigurationCombined.forEach((cc) => {
-  //     if (statusLog[cc.configuration.ident]) {
-  //       cc.status$.next(statusLog[cc.configuration?.ident].status);
-  //     }
-  //   });
-  // }
-
-  private processNewStatusLogEvent(p: object): void {
+  private updateConnectorStatus = (p: object) => {
     let payload = p["data"]["data"];
-    if (payload.type == STATUS_CONNECTOR_EVENT_TYPE) {
-      let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
-      this.newStatusLog$.next(statusLog);
+    if (payload.type == this.statusLogEventType) {
+      payload[CONNECTOR_FRAGMENT].type = payload.type;
+      this.incomingRealtime$.next(payload);
+    }
 
+    if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
+      let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
       this._connectorConfigurationCombined.forEach((cc) => {
         if (statusLog["connectorIdent"] == cc.configuration.ident) {
           cc.status$.next(statusLog.status);
         }
       });
     }
+  };
+
+  public updateStatusLogs(eventType: string) {
+    this.filterTrigger$.next(eventType);
+    this.statusLogEventType = eventType;
   }
 
-  runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
+  async startConnectorLogsRealtime(): Promise<void> {
+    const agentId = await this.getDynamicMappingServiceAgent();
+    console.log("Agent Id", agentId);
+
+    const sourceList$ = this.filterTrigger$.pipe(
+      tap((x) => console.log("Trigger", x)),
+      switchMap((type) =>
+        this.eventService.list({
+          pageSize: 5,
+          withTotalPages: true,
+          type: type,
+          source: agentId,
+        })
+      ),
+      map((data) => data.data),
+      map((events) =>
+        events.map((event) => {
+          event[CONNECTOR_FRAGMENT].type = event.type;
+          return event[CONNECTOR_FRAGMENT];
+        })
+      ),
+      tap((x) => console.log("Reload", x))
+    );
+
+    const sourceRealtime$ = this.incomingRealtime$.pipe(
+      filter((event) => event.type == this.statusLogEventType),
+      map((event) => [event[CONNECTOR_FRAGMENT]])
+    );
+
+    this.statusLogs$ = merge(sourceList$, sourceRealtime$).pipe(
+      withLatestFrom(this.filterTrigger$),
+      scan((acc, [val, filterEventsType]) => {
+        acc = acc.filter((event) => event.type == filterEventsType);
+        acc = val.concat(acc);
+        const sortedAcc = acc.slice(0, 9);
+        return sortedAcc;
+      }, [])
+    );
+  }
+
+  stopConnectorStatusSubscriptions() {
+    this.realtime.unsubscribe(this.subscriptionEvents);
+  }
+
+  public runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
     let body: any = {
       operation: op,
     };

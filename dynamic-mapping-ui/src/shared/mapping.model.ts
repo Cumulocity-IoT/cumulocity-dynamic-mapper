@@ -321,8 +321,12 @@ export enum RepairStrategy {
   REMOVE_IF_NULL = "REMOVE_IF_NULL",
   CREATE_IF_MISSING = "CREATE_IF_MISSING",
 }
-
 export class C8YAPISubscription {
   api: string;
   devices: IIdentified[];
+}
+
+export enum StatusEventTypes {
+  STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent",
+  STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent",
 }
