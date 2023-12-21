@@ -34,6 +34,7 @@ import {
   Operation,
   ServiceConfiguration,
   uuidCustom,
+  StatusEventTypes,
 } from "../shared";
 import { BrokerConfigurationService } from "./shared/broker-configuration.service";
 import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
@@ -50,6 +51,8 @@ export class BrokerConfigurationComponent implements OnInit {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfigurationCombined[] = [];
   statusLogs$: Observable<any[]>;
+  statusLogEventType: string = StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE;
+  StatusEventTypes = StatusEventTypes;
 
   serviceConfiguration: ServiceConfiguration = {
     logPayload: true,
@@ -84,7 +87,8 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   private async initializeMonitoringService(): Promise<void> {
-    await this.brokerConfigurationService.subscribeMonitoringChannels();
+   // await this.brokerConfigurationService.subscribeMonitoringChannels();
+   // await this.brokerConfigurationService.subscribeMonitoringChannelsRXJS();
   }
 
   public async loadData(): Promise<void> {
@@ -251,8 +255,12 @@ export class BrokerConfigurationComponent implements OnInit {
     }
   }
 
+  updateStatusLogs() {
+    this.brokerConfigurationService.updateStatusLogs(this.statusLogEventType);
+  }
+
   ngOnDestroy(): void {
     console.log("Stop subscriptions");
-    this.brokerConfigurationService.unsubscribeFromMonitoringChannels();
+    this.brokerConfigurationService.stopConnectorStatusSubscriptions();
   }
 }

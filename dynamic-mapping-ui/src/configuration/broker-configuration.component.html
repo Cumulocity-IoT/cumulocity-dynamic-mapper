@@ -149,20 +149,66 @@
         </div>
       </div>
 
+      <!-- export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
+      export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";    -->
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
           {{ "Connector Logs" | translate }}
         </h4>
       </div>
       <div class="card-block">
+        <c8y-form-group>
+          <form class="form-inline">
+            <label
+              class="c8y-radio radio-inline"
+              title="{{ 'Connector Lifecycle' }}"
+            >
+              <input
+                type="radio"
+                checked="checked"
+                name="c8y-group"
+                value="{{ StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE }}"
+                [(ngModel)]="statusLogEventType"
+              />
+              <span></span>
+              <span>Connector Lifecycle</span>
+            </label>
+            <label
+              class="c8y-radio radio-inline"
+              title="{{ 'Connector Lifecycle' }}"
+            >
+              <input
+                type="radio"
+                checked="checked"
+                name="c8y-group"
+                value="{{ StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE }}"
+                [(ngModel)]="statusLogEventType"
+              />
+              <span></span>
+              <span>Subscriptions Events</span>
+            </label>
+            <button
+              type="submit"
+              (click)="updateStatusLogs()"
+              class="btn btn-default btn-sm m-b-8 m-l-16"
+            >
+              Update
+            </button>
+          </form>
+        </c8y-form-group>
         <div style="height: 430px; overflow: auto">
+          <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length == 0"
+            [icon]="'event'"
+            [title]="'No logs found.' | translate"
+            [horizontal]="true"
+          ></c8y-ui-empty-state>
           <div class="timeline-list list-condensed">
             <div
               class="timeline-list-item d-flex"
               *ngFor="let event of statusLogs$ | async"
             >
               <small class="timeline-item-date">
-                {{ event.date | date : "short" }}
+                {{ event.date | date : "dd.MM.yy hh:mm:ss" }}
               </small>
               <div class="timeline-item-content d-flex flex-wrap">
                 <div class="list-item-icon">
@@ -184,12 +230,6 @@
                 </div>
               </div>
             </div>
-            <c8y-ui-empty-state
-              *ngIf="(statusLogs$ | async)?.length == 0"
-              [icon]="'event'"
-              [title]="'No logs found.' | translate"
-              [horizontal]="true"
-            ></c8y-ui-empty-state>
           </div>
         </div>
       </div>
@@ -279,7 +319,8 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Events on Topic Subscriptions" }} <i c8yIcon="euro"></i>
+                  {{ "Send Events on Topic Subscriptions" }}
+                  <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
