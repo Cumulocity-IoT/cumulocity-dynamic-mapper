@@ -43,8 +43,7 @@ export interface ConnectorConfiguration {
   properties: { [name: string]: any };
 }
 
-export interface ConnectorConfigurationCombined {
-  configuration: ConnectorConfiguration;
+export interface ConnectorConfigurationCombined extends ConnectorConfiguration{
   status$: Subject<string>;
 }
 

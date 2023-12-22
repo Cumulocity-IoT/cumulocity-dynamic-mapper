@@ -111,7 +111,7 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async onConfigurationUpdate(index) {
-    const configuration = this.configurations[index].configuration;
+    const configuration = this.configurations[index];
 
     const initialState = {
       add: false,
@@ -142,7 +142,7 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   public async onConfigurationDelete(index) {
-    const configuration = this.configurations[index].configuration;
+    const configuration = this.configurations[index];
 
     const initialState = {
       title: "Delete connector",
@@ -214,10 +214,10 @@ export class BrokerConfigurationComponent implements OnInit {
   public async onConfigurationToogle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.brokerConfigurationService.runOperation(
-      configuration.configuration.enabled
+      configuration.enabled
         ? Operation.DISCONNECT
         : Operation.CONNECT,
-      { connectorIdent: configuration.configuration.ident }
+      { connectorIdent: configuration.ident }
     );
     console.log("Details toogle activation to broker", response1);
     if (response1.status === 201) {
