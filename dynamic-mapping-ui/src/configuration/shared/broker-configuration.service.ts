@@ -87,6 +87,7 @@ export class BrokerConfigurationService {
   private filterTrigger$: BehaviorSubject<string> = new BehaviorSubject(
     StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
   );
+  private mergeFilterTrigger$: Subject<any> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
 
   public getStatusLogs(): Observable<any[]> {
@@ -306,6 +307,7 @@ export class BrokerConfigurationService {
 
   public updateStatusLogs(eventType: string) {
     this.filterTrigger$.next(eventType);
+    this.mergeFilterTrigger$.next([{ type: "reset" }]);
     this.statusLogEventType = eventType;
   }
 
@@ -329,7 +331,7 @@ export class BrokerConfigurationService {
           event[CONNECTOR_FRAGMENT].type = event.type;
           return event[CONNECTOR_FRAGMENT];
         })
-      ),
+      )
       //tap((x) => console.log("Reload", x))
     );
 
@@ -338,11 +340,20 @@ export class BrokerConfigurationService {
       map((event) => [event[CONNECTOR_FRAGMENT]])
     );
 
-    this.statusLogs$ = merge(sourceList$, sourceRealtime$).pipe(
+    this.statusLogs$ = merge(
+      sourceList$,
+      sourceRealtime$,
+      this.mergeFilterTrigger$
+    ).pipe(
       withLatestFrom(this.filterTrigger$),
       scan((acc, [val, filterEventsType]) => {
-        acc = acc.filter((event) => event.type == filterEventsType);
-        acc = val.concat(acc);
+        // acc = acc.filter((event) => event.type == filterEventsType);
+        if (val.type == "reset") {
+          console.log("Reset loaded logs!");
+          acc = [];
+        } else {
+          acc = val.concat(acc);
+        }
         const sortedAcc = acc.slice(0, 9);
         return sortedAcc;
       }, [])
