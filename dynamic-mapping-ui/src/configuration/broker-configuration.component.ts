@@ -79,15 +79,14 @@ export class BrokerConfigurationComponent implements OnInit {
       sendMappingStatus: new FormControl(""),
       sendSubscriptionEvents: new FormControl(""),
     });
-
     await this.loadData();
-
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
     this.feature = await this.brokerConfigurationService.getFeatures();
   }
 
-  public refresh () {
+  public async refresh () {
     this.brokerConfigurationService.resetCache();
+    await this.loadData();
   }
 
   public async loadData(): Promise<void> {
