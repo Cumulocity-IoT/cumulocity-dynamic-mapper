@@ -43,10 +43,6 @@ export interface ConnectorConfiguration {
   properties: { [name: string]: any };
 }
 
-export interface ConnectorConfigurationCombined extends ConnectorConfiguration{
-  status$: Subject<string>;
-}
-
 export interface ConnectorSpecification {
   connectorType: string;
   supportsWildcardInTopic: boolean;
@@ -293,14 +289,14 @@ export enum SnoopStatus {
 }
 
 export enum Operation {
-  ACTIVATE_MAPPING,
-  CONNECT,
-  DISCONNECT,
-  REFRESH_STATUS_MAPPING,
-  RELOAD_EXTENSIONS,
-  RELOAD_MAPPINGS,
-  RESET_STATUS_MAPPING,
-  REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
+  ACTIVATE_MAPPING = "ACTIVATE_MAPPING",
+  CONNECT= "CONNECT",
+  DISCONNECT= "DISCONNECT",
+  REFRESH_STATUS_MAPPING= "REFRESH_STATUS_MAPPING",
+  RELOAD_EXTENSIONS= "RELOAD_EXTENSIONS",
+  RELOAD_MAPPINGS= "RELOAD_MAPPINGS",
+  RESET_STATUS_MAPPING= "RESET_STATUS_MAPPING",
+  REFRESH_NOTFICATIONS_SUBSCRIPTIONS= "REFRESH_NOTFICATIONS_SUBSCRIPTIONS",
 }
 
 export enum MappingType {
