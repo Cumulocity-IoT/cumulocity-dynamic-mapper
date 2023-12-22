@@ -38,6 +38,7 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   Direction,
   Mapping,
+  SharedService,
 } from "../../shared";
 import { JSONProcessorInbound } from "../processor/impl/json-processor-inbound.service";
 import { JSONProcessorOutbound } from "../processor/impl/json-processor-outbound.service";
@@ -55,6 +56,7 @@ export class MappingService {
     private brokerConfigurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
+    private sharedService: SharedService,
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
@@ -154,7 +156,7 @@ export class MappingService {
   }
 
   async getSubscriptions(): Promise<C8YAPISubscription> {
-    const feature = await this.brokerConfigurationService.getFeatures();
+    const feature = await this.sharedService.getFeatures();
 
     if (feature?.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(

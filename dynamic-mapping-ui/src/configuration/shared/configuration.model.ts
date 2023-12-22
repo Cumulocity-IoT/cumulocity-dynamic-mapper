@@ -1,7 +1,3 @@
-import { IIdentified } from "@c8y/client";
-import { Subject } from "rxjs";
-import { ExtensionEntry } from "../../shared";
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -58,7 +54,6 @@ export interface ServiceConfiguration {
   sendSubscriptionEvents: boolean;
   externalExtensionEnabled?: boolean;
 }
-
 
 export interface ConnectorStatusEvent {
   status: ConnectorStatus;
