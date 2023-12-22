@@ -30,10 +30,10 @@ import {
 import {
   Direction,
   MappingSubstitution,
-  definesDeviceIdentifier,
 } from "../../../shared";
-import { isDisabled } from "../util";
+import { isDisabled } from "../../shared/util";
 import { EditorMode } from "../stepper-model";
+import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
   selector: "d11r-mapping-substitution-renderer",

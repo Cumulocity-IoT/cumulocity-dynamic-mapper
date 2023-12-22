@@ -26,10 +26,9 @@ import {
   Mapping,
   MappingType,
   RepairStrategy,
-  findDeviceIdentifier,
   MAPPING_TEST_DEVICE_TYPE,
 } from "../../shared";
-import { getTypedValue } from "../shared/util";
+import { findDeviceIdentifier, getTypedValue } from "../shared/util";
 import { C8YAgent } from "../core/c8y-agent.service";
 import {
   ProcessingContext,

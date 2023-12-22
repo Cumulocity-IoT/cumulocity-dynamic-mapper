@@ -59,9 +59,9 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
-import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
-import dynamic.mapping.core.Status;
+import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.processor.model.ProcessingContext;
 
 @Slf4j
@@ -110,14 +110,13 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorConfiguration configuration;
 
-
     @Getter
     @Setter
     public ServiceConfiguration serviceConfiguration;
 
     @Getter
     @Setter
-    public ConnectorStatus connectorStatus = ConnectorStatus.unknown();
+    public ConnectorStatusEvent connectorStatus = ConnectorStatusEvent.unknown();
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
@@ -133,7 +132,7 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
-        connectorStatus.updateStatus(Status.CONFIGURED);
+        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
         connectorStatus.clearMessage();
         sendConnectorLifecycle();
         // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
@@ -149,7 +148,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
-        connectorStatus.updateStatus(Status.CONNECTING);
+        connectorStatus.updateStatus(ConnectorStatus.CONNECTING);
         connectorStatus.clearMessage();
         sendConnectorLifecycle();
     }
@@ -162,7 +161,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
-        connectorStatus.updateStatus(Status.DISCONNECTING);
+        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING);
         connectorStatus.clearMessage();
         sendConnectorLifecycle();
     }
@@ -182,7 +181,9 @@ public abstract class AConnectorClient {
      * Should return true when connector is enabled and provided properties are
      * valid
      ***/
-    public abstract boolean shouldConnect();
+    public boolean shouldConnect() {
+        return isConfigValid(configuration) && configuration.isEnabled();
+    }
 
     /***
      * Returns true if the connector is currently connected
@@ -246,7 +247,8 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(), getConnectorName());
+            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(),
+                    getConnectorName());
             sendConnectorLifecycle();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
@@ -254,7 +256,7 @@ public abstract class AConnectorClient {
     }
 
     public boolean hasError() {
-        return !(connectorStatus.status).equals(Status.FAILED);
+        return !(connectorStatus.status).equals(ConnectorStatus.FAILED);
     }
 
     public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
@@ -424,7 +426,7 @@ public abstract class AConnectorClient {
     }
 
     public void sendSubscriptionEvents(String topic, String action) {
-        if(serviceConfiguration.sendSubscriptionEvents) {
+        if (serviceConfiguration.sendSubscriptionEvents) {
             String msg = action + " topic: " + topic;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
@@ -436,7 +438,7 @@ public abstract class AConnectorClient {
             c8yAgent.createEvent(msg,
                     STATUS_SUBSCRIPTION_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
-        } 
+        }
     }
 
     @Data

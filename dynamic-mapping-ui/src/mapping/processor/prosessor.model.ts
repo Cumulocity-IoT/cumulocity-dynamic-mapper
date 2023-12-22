@@ -22,7 +22,7 @@ import {
   Mapping,
   MappingType,
   RepairStrategy,
-} from "../../shared/mapping.model";
+} from "../../shared/shared.model";
 
 export interface C8YRequest {
   predecessor?: number;
