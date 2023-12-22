@@ -36,9 +36,10 @@ import {
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
+  PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-} from "../../shared";
+} from ".";
 
 import { BehaviorSubject, merge, Observable, Subject } from "rxjs";
 import {
@@ -46,12 +47,13 @@ import {
   map,
   scan,
   switchMap,
+  tap,
   withLatestFrom,
 } from "rxjs/operators";
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorStatusEvent, Feature, Operation, ServiceConfiguration, ConnectorStatus, StatusEventTypes } from "./configuration.model";
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorStatusEvent, Feature, Operation, ServiceConfiguration, ConnectorStatus, StatusEventTypes } from "../configuration/shared/configuration.model";
 
 @Injectable({ providedIn: "root" })
-export class BrokerConfigurationService {
+export class SharedService {
   constructor(
     private client: FetchClient,
     private identity: IdentityService,
@@ -246,6 +248,19 @@ export class BrokerConfigurationService {
     );
     const result = await response.json();
     return result;
+  }
+
+  async getFeatures(): Promise<Feature> {
+    if (!this._feature) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+        {
+          method: "GET",
+        }
+      );
+      this._feature = await response.json();
+    }
+    return this._feature;
   }
 
   async startConnectorStatusCheck(): Promise<void> {
