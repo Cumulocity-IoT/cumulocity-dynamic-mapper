@@ -69,7 +69,6 @@ import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;
 import dynamic.mapping.core.ServiceOperation;
-import dynamic.mapping.core.Status;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
