@@ -178,7 +178,7 @@ public class MappingComponent {
         } 
     }
 
-    public void sendConnectorLifecycle(String tenant, ConnectorStatus connectorStatus, String connectorIdent,
+    public void sendConnectorLifecycle(String tenant, ConnectorStatusEvent connectorStatus, String connectorIdent,
             String connectorName) {
         if (serviceConfigurations.get(tenant).sendConnectorLifecycle) {
             subscriptionsService.runForTenant(tenant, () -> {

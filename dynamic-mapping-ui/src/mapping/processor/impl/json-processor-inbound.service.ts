@@ -24,10 +24,6 @@ import {
   API,
   Mapping,
   RepairStrategy,
-  TIME,
-  TOKEN_TOPIC_LEVEL,
-  isNumeric,
-  splitTopicExcludingSeparator,
   whatIsIt,
 } from "../../../shared";
 import { PayloadProcessorInbound } from "../payload-processor-inbound.service";
@@ -36,6 +32,7 @@ import {
   SubstituteValue,
   SubstituteValueType,
 } from "../prosessor.model";
+import { TIME, TOKEN_TOPIC_LEVEL, isNumeric, splitTopicExcludingSeparator } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
 export class JSONProcessorInbound extends PayloadProcessorInbound {

@@ -31,8 +31,6 @@ import { PopoverModule } from "ngx-bootstrap/popover";
 import { BrokerConfigurationModule } from "../configuration/broker-configuration.module";
 import { SharedModule } from "../shared/shared.module";
 import {
-  checkTopicsInboundAreValid,
-  checkTopicsOutboundAreValid,
 } from "../shared";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
 import { MappingComponent } from "./grid/mapping.component";
@@ -64,6 +62,7 @@ import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.co
 import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
 import { ImportMappingsComponent } from "./import-modal/import.component";
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from "./shared/util";
 
 @NgModule({
   declarations: [

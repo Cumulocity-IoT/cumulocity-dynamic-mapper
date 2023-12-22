@@ -32,21 +32,13 @@ import {
   AGENT_ID,
   BASE_URL,
   CONNECTOR_FRAGMENT,
-  ConnectorConfiguration,
-  ConnectorSpecification,
-  ConnectorStatus,
   Extension,
-  Feature,
-  Operation,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
   PATH_FEATURE_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-  ServiceConfiguration,
-  Status,
-  StatusEventTypes,
 } from "../../shared";
 
 import { BehaviorSubject, merge, Observable, Subject } from "rxjs";
@@ -58,6 +50,7 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs/operators";
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorStatusEvent, Feature, Operation, ServiceConfiguration, ConnectorStatus, StatusEventTypes } from "./configuration.model";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
@@ -191,7 +184,7 @@ export class BrokerConfigurationService {
       if (!conf["status$"]) {
         const status = connectorStatus[conf.ident]
           ? connectorStatus[conf.ident].status
-          : Status.UNKNOWN;
+          : ConnectorStatus.UNKNOWN;
         conf["status$"] = new BehaviorSubject<string>(status);
       }
     }
@@ -289,7 +282,7 @@ export class BrokerConfigurationService {
     }
 
     if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
-      let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
+      let statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
       this._connectorConfigurations.forEach((cc) => {
         if (statusLog["connectorIdent"] == cc.ident) {
           cc["status$"].next(statusLog.status);

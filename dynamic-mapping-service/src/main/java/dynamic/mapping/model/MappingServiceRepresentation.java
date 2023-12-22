@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 
 @Data
 @NoArgsConstructor
@@ -57,6 +57,6 @@ public class  MappingServiceRepresentation implements Serializable  {
   private ArrayList<MappingStatus> mappingStatus;
 
   @JsonProperty(value = CONNECTOR_FRAGMENT)
-  private ConnectorStatus connectorStatus;
+  private ConnectorStatusEvent connectorStatus;
 
 }

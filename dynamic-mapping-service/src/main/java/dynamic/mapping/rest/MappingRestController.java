@@ -65,7 +65,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
 import dynamic.mapping.core.C8YAgent;
-import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;
 import dynamic.mapping.core.ServiceOperation;
@@ -385,12 +385,12 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connector/{connectorIdent}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConnectorStatus> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
+    public ResponseEntity<ConnectorStatusEvent> getConnectorStatus(@PathVariable @NotNull String connectorIdent) {
         try {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     connectorIdent);
-            ConnectorStatus st = client.getConnectorStatus();
+            ConnectorStatusEvent st = client.getConnectorStatus();
             log.info("Tenant {} - Get status for connector {}: {}", tenant, connectorIdent, st);
             return new ResponseEntity<>(st, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
@@ -399,15 +399,15 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, ConnectorStatus>> getConnectorsStatus() {
-        HashMap<String, ConnectorStatus> connectorsStatus = new HashMap<>();
+    public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
+        HashMap<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
-                    ConnectorStatus st = client.getConnectorStatus();
+                    ConnectorStatusEvent st = client.getConnectorStatus();
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }

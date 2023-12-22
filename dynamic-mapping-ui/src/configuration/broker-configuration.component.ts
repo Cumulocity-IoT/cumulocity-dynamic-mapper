@@ -24,19 +24,18 @@ import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { Observable } from "rxjs";
 import packageJson from "../../package.json";
+import { ConfirmationModalComponent, uuidCustom } from "../shared";
+import { BrokerConfigurationService } from "./shared/broker-configuration.service";
+import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 import {
-  ConfirmationModalComponent,
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
   Feature,
   Operation,
   ServiceConfiguration,
-  uuidCustom,
   StatusEventTypes,
-} from "../shared";
-import { BrokerConfigurationService } from "./shared/broker-configuration.service";
-import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
+} from "./shared/configuration.model";
 
 @Component({
   selector: "d11r-mapping-broker-configuration",
@@ -272,6 +271,5 @@ export class BrokerConfigurationComponent implements OnInit {
 
   ngOnDestroy(): void {
     console.log("Stop subscriptions");
-    //this.brokerConfigurationService.stopConnectorStatusSubscriptions();
   }
 }

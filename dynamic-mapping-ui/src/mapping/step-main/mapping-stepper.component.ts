@@ -44,21 +44,12 @@ import {
   MappingSubstitution,
   RepairStrategy,
   SnoopStatus,
-  ValidationError,
-} from "../../shared/mapping.model";
+} from "../../shared/shared.model";
 import {
   COLOR_HIGHLIGHTED,
-  countDeviceIdentifiers,
-  definesDeviceIdentifier,
-  expandC8YTemplate,
-  expandExternalTemplate,
   getExternalTemplate,
   getSchema,
-  isWildcardTopic,
-  reduceSourceTemplate,
-  reduceTargetTemplate,
   SAMPLE_TEMPLATES_C8Y,
-  splitTopicExcludingSeparator,
   whatIsIt,
 } from "../../shared/util";
 import { MappingService } from "../core/mapping.service";
@@ -66,9 +57,11 @@ import { C8YRequest } from "../processor/prosessor.model";
 import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
 import { SubstitutionRendererComponent } from "./substitution/substitution-renderer.component";
-import { isDisabled } from "./util";
+import { isDisabled } from "../shared/util";
 import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
 import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
+import { countDeviceIdentifiers, definesDeviceIdentifier, expandC8YTemplate, expandExternalTemplate, isWildcardTopic, reduceSourceTemplate, reduceTargetTemplate, splitTopicExcludingSeparator } from "../shared/util";
+import { ValidationError } from "../shared/mapping.model";
 
 @Component({
   selector: "d11r-mapping-stepper",
