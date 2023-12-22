@@ -18,12 +18,10 @@
  *
  * @authors Christof Strack
  */
-import { AbstractControl } from "@angular/forms";
 import {
   API,
   Direction,
   Mapping,
-  MappingSubstitution,
   MappingType,
 } from "./shared.model";
 

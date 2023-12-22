@@ -31,9 +31,8 @@ import {
   Direction,
   MappingSubstitution,
 } from "../../../shared";
-import { isDisabled } from "../../shared/util";
+import { definesDeviceIdentifier, isDisabled } from "../../shared/util";
 import { EditorMode } from "../stepper-model";
-import { definesDeviceIdentifier } from "../../shared/util";
 
 @Component({
   selector: "d11r-mapping-substitution-renderer",

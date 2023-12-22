@@ -34,7 +34,6 @@ import { isDisabled } from "../shared/util";
 @Component({
   selector: "d11r-mapping-type",
   templateUrl: "./mapping-type.component.html",
-  styleUrls: ["./mapping-type.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
 export class MappingTypeComponent implements OnInit {

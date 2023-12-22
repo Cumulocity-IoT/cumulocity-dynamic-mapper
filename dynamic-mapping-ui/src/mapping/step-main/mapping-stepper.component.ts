@@ -38,30 +38,23 @@ import { BehaviorSubject, Subject } from "rxjs";
 import { BrokerConfigurationService } from "../../configuration";
 import {
   API,
-  Direction,
-  Extension,
-  Mapping,
-  MappingSubstitution,
-  RepairStrategy,
-  SnoopStatus,
-} from "../../shared/shared.model";
-import {
   COLOR_HIGHLIGHTED,
+  Direction, Extension, Mapping, MappingSubstitution, RepairStrategy,
+  SAMPLE_TEMPLATES_C8Y,
+  SnoopStatus,
   getExternalTemplate,
   getSchema,
-  SAMPLE_TEMPLATES_C8Y,
   whatIsIt,
-} from "../../shared/util";
+} from "../../shared";
+import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
 import { MappingService } from "../core/mapping.service";
+import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
 import { C8YRequest } from "../processor/prosessor.model";
+import { ValidationError } from "../shared/mapping.model";
+import { countDeviceIdentifiers, definesDeviceIdentifier, expandC8YTemplate, expandExternalTemplate, isDisabled, isWildcardTopic, reduceSourceTemplate, reduceTargetTemplate, splitTopicExcludingSeparator } from "../shared/util";
 import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
 import { SubstitutionRendererComponent } from "./substitution/substitution-renderer.component";
-import { isDisabled } from "../shared/util";
-import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
-import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
-import { countDeviceIdentifiers, definesDeviceIdentifier, expandC8YTemplate, expandExternalTemplate, isWildcardTopic, reduceSourceTemplate, reduceTargetTemplate, splitTopicExcludingSeparator } from "../shared/util";
-import { ValidationError } from "../shared/mapping.model";
 
 @Component({
   selector: "d11r-mapping-stepper",

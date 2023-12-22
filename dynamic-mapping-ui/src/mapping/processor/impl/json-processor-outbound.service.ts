@@ -32,7 +32,6 @@ import {
   SubstituteValueType,
 } from "../prosessor.model";
 import { Injectable } from "@angular/core";
-import { map } from "rxjs/operators";
 import { TIME, TOKEN_TOPIC_LEVEL, findDeviceIdentifier, isNumeric, splitTopicExcludingSeparator } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
