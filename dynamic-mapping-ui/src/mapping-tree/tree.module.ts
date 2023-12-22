@@ -21,7 +21,7 @@
 import { NgModule } from "@angular/core";
 import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { MappingTreeComponent } from "./tree.component";
-import { SharedModule } from "../shared/shared.module";
+import { SharedModule } from "../shared";
 
 @NgModule({
   declarations: [MappingTreeComponent],

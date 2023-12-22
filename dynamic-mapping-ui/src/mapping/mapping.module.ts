@@ -28,12 +28,11 @@ import {
 import { AssetSelectorModule } from "@c8y/ngx-components/assets-navigator";
 import { FORMLY_CONFIG } from "@ngx-formly/core";
 import { PopoverModule } from "ngx-bootstrap/popover";
-import { BrokerConfigurationModule } from "../configuration/broker-configuration.module";
-import { SharedModule } from "../shared/shared.module";
-import {
-} from "../shared";
+import { BrokerConfigurationModule } from "../configuration";
+import { SharedModule } from "../shared";
 import { EditSubstitutionComponent } from "./edit/edit-substitution-modal.component";
 import { MappingComponent } from "./grid/mapping.component";
+import { ImportMappingsComponent } from "./import-modal/import.component";
 import { MappingTypeComponent } from "./mapping-type/mapping-type.component";
 import { OverwriteSubstitutionModalComponent } from "./overwrite/overwrite-substitution-modal.component";
 import { ActiveRendererComponent } from "./renderer/active.renderer.component";
@@ -55,14 +54,13 @@ import { MessageField } from "./shared/formly/message-field";
 import { SelectComponent } from "./shared/formly/select/select.type.component";
 import { FormlyTextField } from "./shared/formly/text-field";
 import { FieldTextareaCustom } from "./shared/formly/textarea-custom";
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from "./shared/util";
 import { SnoopingModalComponent } from "./snooping/snooping-modal.component";
 import { MappingStepperComponent } from "./step-main/mapping-stepper.component";
 import { SubstitutionRendererComponent } from "./step-main/substitution/substitution-renderer.component";
 import { MappingStepPropertiesComponent } from "./step-one/mapping-properties.component";
 import { MappingStepTestingComponent } from "./step-three/mapping-testing.component";
 import { MappingSubscriptionComponent } from "./subscription/mapping-subscription.component";
-import { ImportMappingsComponent } from "./import-modal/import.component";
-import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from "./shared/util";
 
 @NgModule({
   declarations: [

@@ -23,7 +23,7 @@ import { NgModule } from "@angular/core";
 import { CoreModule, hookRoute } from "@c8y/ngx-components";
 import { MonitoringComponent } from "./grid/monitoring.component";
 import { IdRendererComponent } from "./renderer/id-cell.renderer.component";
-import { BrokerConfigurationModule } from "../configuration/broker-configuration.module";
+import { BrokerConfigurationModule } from "../configuration";
 
 @NgModule({
   declarations: [MonitoringComponent, IdRendererComponent],
