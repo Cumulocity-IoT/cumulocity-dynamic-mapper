@@ -221,6 +221,12 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 </p>
 <br/>
 
+When you add or change a connection configuration very often it happens that incorrect parameter are given. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs:
+<p align="center">
+<img src="resources/image/Generic_Mapping_Connector_Monitoring.png"  style="width: 70%;" />
+</p>
+<br/>
+
 ### Definition and Activation of  mappings
 
 #### Table of mappings

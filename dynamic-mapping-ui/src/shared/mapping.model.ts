@@ -43,11 +43,6 @@ export interface ConnectorConfiguration {
   properties: { [name: string]: any };
 }
 
-export interface ConnectorConfigurationCombined {
-  configuration: ConnectorConfiguration;
-  status$: Subject<string>;
-}
-
 export interface ConnectorSpecification {
   connectorType: string;
   supportsWildcardInTopic: boolean;
@@ -294,14 +289,14 @@ export enum SnoopStatus {
 }
 
 export enum Operation {
-  ACTIVATE_MAPPING,
-  CONNECT,
-  DISCONNECT,
-  REFRESH_STATUS_MAPPING,
-  RELOAD_EXTENSIONS,
-  RELOAD_MAPPINGS,
-  RESET_STATUS_MAPPING,
-  REFRESH_NOTFICATIONS_SUBSCRIPTIONS,
+  ACTIVATE_MAPPING = "ACTIVATE_MAPPING",
+  CONNECT= "CONNECT",
+  DISCONNECT= "DISCONNECT",
+  REFRESH_STATUS_MAPPING= "REFRESH_STATUS_MAPPING",
+  RELOAD_EXTENSIONS= "RELOAD_EXTENSIONS",
+  RELOAD_MAPPINGS= "RELOAD_MAPPINGS",
+  RESET_STATUS_MAPPING= "RESET_STATUS_MAPPING",
+  REFRESH_NOTFICATIONS_SUBSCRIPTIONS= "REFRESH_NOTFICATIONS_SUBSCRIPTIONS",
 }
 
 export enum MappingType {
@@ -321,8 +316,12 @@ export enum RepairStrategy {
   REMOVE_IF_NULL = "REMOVE_IF_NULL",
   CREATE_IF_MISSING = "CREATE_IF_MISSING",
 }
-
 export class C8YAPISubscription {
   api: string;
   devices: IIdentified[];
+}
+
+export enum StatusEventTypes {
+  STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent",
+  STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent",
 }
