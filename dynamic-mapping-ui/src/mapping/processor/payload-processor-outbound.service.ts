@@ -27,8 +27,6 @@ import {
   MappingType,
   RepairStrategy,
 } from "../../shared";
-import {
-} from "../../shared/util";
 import { TOKEN_TOPIC_LEVEL, getTypedValue, splitTopicExcludingSeparator, splitTopicIncludingSeparator } from "../shared/util";
 import { C8YAgent } from "../core/c8y-agent.service";
 import {
