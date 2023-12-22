@@ -27,7 +27,6 @@ import packageJson from "../../package.json";
 import {
   ConfirmationModalComponent,
   ConnectorConfiguration,
-  ConnectorConfigurationCombined,
   ConnectorSpecification,
   ConnectorStatus,
   Feature,
@@ -49,7 +48,7 @@ export class BrokerConfigurationComponent implements OnInit {
   serviceForm: FormGroup;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
-  configurations: ConnectorConfigurationCombined[] = [];
+  configurations: ConnectorConfiguration[];
   statusLogs$: Observable<any[]>;
   statusLogEventType: string = StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE;
   StatusEventTypes = StatusEventTypes;
@@ -84,18 +83,18 @@ export class BrokerConfigurationComponent implements OnInit {
     this.feature = await this.brokerConfigurationService.getFeatures();
   }
 
-  public async refresh () {
+  public async refresh() {
     this.brokerConfigurationService.resetCache();
     await this.loadData();
   }
 
   public async loadData(): Promise<void> {
+    this.configurations =
+      await this.brokerConfigurationService.getConnectorConfigurationsWithStatus();
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
-    this.configurations =
-      await this.brokerConfigurationService.getConnectorConfigurationsWithStatus();
   }
 
   async clickedReconnect2NotificationEnpoint() {
@@ -125,9 +124,17 @@ export class BrokerConfigurationComponent implements OnInit {
       console.log("Configuration after edit:", editedConfiguration);
       if (editedConfiguration) {
         this.configurations[index] = editedConfiguration;
+        //avoid to include status$
+        const clonedConfiguration = {
+          ident: editedConfiguration.ident,
+          connectorType: editedConfiguration.connectorType,
+          enabled: editedConfiguration.enabled,
+          name: editedConfiguration.name,
+          properties: editedConfiguration.properties,
+        };
         const response =
           await this.brokerConfigurationService.updateConnectorConfiguration(
-            editedConfiguration
+            clonedConfiguration
           );
         if (response.status < 300) {
           this.alert.success(gettext("Update successful"));
@@ -195,9 +202,17 @@ export class BrokerConfigurationComponent implements OnInit {
       console.log("Configuration after edit:", addedConfiguration);
       if (addedConfiguration) {
         this.configurations.push(addedConfiguration);
+        //avoid to include status$
+        const clonedConfiguration = {
+          ident: addedConfiguration.ident,
+          connectorType: addedConfiguration.connectorType,
+          enabled: addedConfiguration.enabled,
+          name: addedConfiguration.name,
+          properties: addedConfiguration.properties,
+        };
         const response =
           await this.brokerConfigurationService.createConnectorConfiguration(
-            addedConfiguration
+            clonedConfiguration
           );
         if (response.status < 300) {
           this.alert.success(gettext("Added successfully configuration"));
@@ -214,9 +229,7 @@ export class BrokerConfigurationComponent implements OnInit {
   public async onConfigurationToogle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.brokerConfigurationService.runOperation(
-      configuration.enabled
-        ? Operation.DISCONNECT
-        : Operation.CONNECT,
+      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
       { connectorIdent: configuration.ident }
     );
     console.log("Details toogle activation to broker", response1);
