@@ -73,7 +73,7 @@ export class BrokerConfigurationService {
   }
 
   private _agentId: Promise<string>;
-  private _connectorConfigurationsCombined: ConnectorConfigurationCombined[] =
+  private _connectorsConfigurationCombined: ConnectorConfigurationCombined[] =
     [];
   private _connectorConfigurations: ConnectorConfiguration[];
   private _serviceConfiguration: ServiceConfiguration;
@@ -98,7 +98,7 @@ export class BrokerConfigurationService {
     console.log("resetCache() :BrokerConfigurationService");
     this._feature = undefined;
     this._connectorConfigurations = undefined;
-    this._connectorConfigurationsCombined = [];
+    this._connectorsConfigurationCombined = [];
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
   }
@@ -210,22 +210,22 @@ export class BrokerConfigurationService {
     return this._connectorConfigurations;
   }
 
-  async getConnectorConfigurationsCombined(): Promise<
+  async getConnectorConfigurationsWithStatus(): Promise<
     ConnectorConfigurationCombined[]
   > {
     const configurations: ConnectorConfiguration[] =
       await this.getConnectorConfigurations();
-    const currentConnector = this._connectorConfigurationsCombined.map(
+    const currentConnectors = this._connectorsConfigurationCombined.map(
       (cc) => cc.configuration.ident
     );
     let connectorStatus = undefined;
     for (let index = 0; index < configurations.length; index++) {
       const conf = configurations[index];
-      if (!currentConnector.includes(conf.ident)) {
+      if (!currentConnectors.includes(conf.ident)) {
         if (!connectorStatus) {
           connectorStatus = await this.getConnectorStatus();
         }
-        this._connectorConfigurationsCombined.push({
+        this._connectorsConfigurationCombined.push({
           configuration: conf,
           status$: new BehaviorSubject<string>(
             connectorStatus[conf.ident].status
@@ -233,7 +233,7 @@ export class BrokerConfigurationService {
         });
       }
     }
-    return this._connectorConfigurationsCombined;
+    return this._connectorsConfigurationCombined;
   }
 
   async getServiceConfiguration(): Promise<ServiceConfiguration> {
@@ -297,7 +297,7 @@ export class BrokerConfigurationService {
 
     if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
       let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
-      this._connectorConfigurationsCombined.forEach((cc) => {
+      this._connectorsConfigurationCombined.forEach((cc) => {
         if (statusLog["connectorIdent"] == cc.configuration.ident) {
           cc.status$.next(statusLog.status);
         }
@@ -348,7 +348,7 @@ export class BrokerConfigurationService {
       withLatestFrom(this.filterTrigger$),
       scan((acc, [val, filterEventsType]) => {
         // acc = acc.filter((event) => event.type == filterEventsType);
-        if (val.type == "reset") {
+        if (val[0].type == "reset") {
           console.log("Reset loaded logs!");
           acc = [];
         } else {

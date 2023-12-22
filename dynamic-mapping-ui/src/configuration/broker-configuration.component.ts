@@ -95,7 +95,7 @@ export class BrokerConfigurationComponent implements OnInit {
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
     this.configurations =
-      await this.brokerConfigurationService.getConnectorConfigurationsCombined();
+      await this.brokerConfigurationService.getConnectorConfigurationsWithStatus();
   }
 
   async clickedReconnect2NotificationEnpoint() {
