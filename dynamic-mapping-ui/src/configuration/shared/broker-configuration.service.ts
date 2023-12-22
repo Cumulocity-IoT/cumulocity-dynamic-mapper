@@ -216,7 +216,7 @@ export class BrokerConfigurationService {
     const configurations: ConnectorConfiguration[] =
       await this.getConnectorConfigurations();
     const currentConnectors = this._connectorsConfigurationCombined.map(
-      (cc) => cc.configuration.ident
+      (cc) => cc.ident
     );
     let connectorStatus = undefined;
     for (let index = 0; index < configurations.length; index++) {
@@ -226,7 +226,7 @@ export class BrokerConfigurationService {
           connectorStatus = await this.getConnectorStatus();
         }
         this._connectorsConfigurationCombined.push({
-          configuration: conf,
+          ... conf,
           status$: new BehaviorSubject<string>(
             connectorStatus[conf.ident].status
           ),
@@ -298,7 +298,7 @@ export class BrokerConfigurationService {
     if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
       let statusLog: ConnectorStatus = payload[CONNECTOR_FRAGMENT];
       this._connectorsConfigurationCombined.forEach((cc) => {
-        if (statusLog["connectorIdent"] == cc.configuration.ident) {
+        if (statusLog["connectorIdent"] == cc.ident) {
           cc.status$.next(statusLog.status);
         }
       });

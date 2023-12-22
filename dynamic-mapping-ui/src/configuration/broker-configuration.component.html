@@ -89,17 +89,17 @@
                 </td>
                 <td width="10%" style="padding-top: 12px">
                   <span class="text-12"
-                    >{{ con.configuration?.connectorType }}
+                    >{{ con?.connectorType }}
                   </span>
                 </td>
                 <td width="40%" style="padding-top: 12px">
-                  {{ con.configuration?.name }}
+                  {{ con?.name }}
                 </td>
                 <td width="5%" style="padding-top: 12px">
                   <i
                     style="text-align: center; width: 100%"
                     [c8yIcon]="
-                      !con.configuration?.enabled ? 'circle-o' : 'plus-circle-o'
+                      !con?.enabled ? 'circle-o' : 'plus-circle-o'
                     "
                     class="m-r-5"
                   ></i>
@@ -121,7 +121,7 @@
                     title="{{ 'Remove' | translate }}"
                     class="btn btn-icon btn-clean p-r-4"
                     (click)="onConfigurationDelete(i)"
-                    [disabled]="con.configuration?.enabled"
+                    [disabled]="con?.enabled"
                   >
                     <i c8yIcon="trash-o" class="text-danger"></i>
                     <span class="sr-only" translate>Remove configuration</span>
