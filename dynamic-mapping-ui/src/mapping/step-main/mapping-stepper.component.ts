@@ -624,7 +624,7 @@ export class MappingStepperComponent implements OnInit {
       };
       if (
         this.mapping.snoopStatus == SnoopStatus.ENABLED &&
-        this.mapping.snoopedTemplates.length == 0
+        numberSnooped == 0
       ) {
         console.log("Ready to snoop ...");
         const modalRef: BsModalRef = this.bsModalService.show(
