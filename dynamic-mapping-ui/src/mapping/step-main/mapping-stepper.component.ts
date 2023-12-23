@@ -371,6 +371,7 @@ export class MappingStepperComponent implements OnInit {
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
+      readOnly:false,
       name: "message",
     };
 
