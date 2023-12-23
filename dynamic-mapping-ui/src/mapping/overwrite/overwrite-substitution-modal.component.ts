@@ -92,4 +92,8 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
     this.closeSubject.next(false);
     this.closeSubject.complete();
   }
+
+  ngOnDestroy() {
+    this.closeSubject.complete();
+  }
 }

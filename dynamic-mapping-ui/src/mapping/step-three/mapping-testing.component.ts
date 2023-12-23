@@ -220,4 +220,8 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.errorMsg = undefined;
     }
   }
+
+  ngOnDestroy() {
+    this.selectedResult$.complete();
+  }
 }

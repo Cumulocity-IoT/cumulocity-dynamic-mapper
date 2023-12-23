@@ -46,7 +46,7 @@ export class TestingComponent {
   loadingItemsLabel: string = "Loading managed objects…";
 
   displayOptions: DisplayOptions = {
-    bordered: true,
+    bordered: false,
     striped: true,
     filter: true,
     gridHeader: true,

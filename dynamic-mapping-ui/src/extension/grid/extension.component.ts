@@ -83,4 +83,8 @@ export class ExtensionComponent implements OnInit {
       modalRef.hide();
     });
   }
+
+  ngOnDestroy(): void {
+    this.reload$.complete();
+  }
 }

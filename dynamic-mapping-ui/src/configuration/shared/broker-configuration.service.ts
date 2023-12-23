@@ -22,14 +22,11 @@ import { Injectable } from "@angular/core";
 import {
   EventService,
   FetchClient,
-  IdentityService,
   IEvent,
-  IExternalIdentity,
   IFetchResponse,
   Realtime,
 } from "@c8y/client";
 import {
-  AGENT_ID,
   BASE_URL,
   CONNECTOR_FRAGMENT,
   Extension,
@@ -38,35 +35,36 @@ import {
   PATH_EXTENSION_ENDPOINT,
   PATH_OPERATION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
+  SharedService,
 } from "../../shared";
 
 import { BehaviorSubject, merge, Observable, Subject } from "rxjs";
+import { filter, map, scan, switchMap, withLatestFrom } from "rxjs/operators";
 import {
-  filter,
-  map,
-  scan,
-  switchMap,
-  withLatestFrom,
-} from "rxjs/operators";
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorStatusEvent, Feature, Operation, ServiceConfiguration, ConnectorStatus, StatusEventTypes } from "./configuration.model";
+  ConnectorConfiguration,
+  ConnectorSpecification,
+  ConnectorStatus,
+  ConnectorStatusEvent,
+  Operation,
+  ServiceConfiguration,
+  StatusEventTypes,
+} from "./configuration.model";
 
 @Injectable({ providedIn: "root" })
 export class BrokerConfigurationService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService,
-    private eventService: EventService
+    private eventService: EventService,
+    private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
-    this.startConnectorStatusSubscriptions();
+    this.initializeConnectorLogsRealtime();
     //console.log("Constructor:BrokerConfigurationService");
   }
 
-  private _agentId: Promise<string>;
   private _connectorConfigurations: ConnectorConfiguration[];
   private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
-  private _feature: Promise<Feature>;
   private realtime: Realtime;
   private statusLogs$: Observable<any[]>;
   private subscriptionEvents: any;
@@ -84,25 +82,9 @@ export class BrokerConfigurationService {
 
   public resetCache() {
     console.log("resetCache() :BrokerConfigurationService");
-    this._feature = undefined;
     this._connectorConfigurations = undefined;
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
-  }
-
-  async getDynamicMappingServiceAgent(): Promise<string> {
-    if (!this._agentId) {
-      const identity: IExternalIdentity = {
-        type: "c8y_Serial",
-        externalId: AGENT_ID,
-      };
-      const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300) {
-        const agentId = data.managedObject.id.toString();
-        this._agentId = Promise.resolve(agentId);
-      }
-    }
-    return this._agentId;
   }
 
   async updateConnectorConfiguration(
@@ -249,8 +231,8 @@ export class BrokerConfigurationService {
   }
 
   async startConnectorStatusCheck(): Promise<void> {
-    const agentId = await this.getDynamicMappingServiceAgent();
-    console.log("Started subscription:", agentId);
+    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    console.log("Started subscriptions:", agentId);
 
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
@@ -282,8 +264,8 @@ export class BrokerConfigurationService {
     this.statusLogEventType = eventType;
   }
 
-  async startConnectorLogsRealtime(): Promise<void> {
-    const agentId = await this.getDynamicMappingServiceAgent();
+  async initializeConnectorLogsRealtime(): Promise<void> {
+    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
     console.log("Agent Id", agentId);
 
     const sourceList$ = this.filterTrigger$.pipe(
@@ -332,11 +314,15 @@ export class BrokerConfigurationService {
   }
 
   public startConnectorStatusSubscriptions() {
-    this.startConnectorLogsRealtime();
     this.startConnectorStatusCheck();
   }
-  public stopConnectorStatusSubscriptions() {
+  
+  public async stopConnectorStatusSubscriptions() {
+    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    console.log("Stop subscriptions:", agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);
+    // this.mergeFilterTrigger$.complete();
+    // this.incomingRealtime$.complete();
   }
 
   public runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
