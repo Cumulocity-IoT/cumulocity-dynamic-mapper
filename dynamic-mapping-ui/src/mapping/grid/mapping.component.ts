@@ -479,6 +479,8 @@ export class MappingComponent implements OnInit {
     this.setStepperConfiguration(mapping.mappingType, mapping.direction);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
+    this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
+    this.mappingToUpdate.snoopedTemplates = [];
     this.mappingToUpdate.name = this.mappingToUpdate.name + " - Copy";
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
