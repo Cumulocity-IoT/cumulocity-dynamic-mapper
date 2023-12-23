@@ -37,23 +37,19 @@ import {
   gettext,
 } from "@c8y/ngx-components";
 import { saveAs } from "file-saver";
-import { BrokerConfigurationService } from "../../configuration";
+import { BrokerConfigurationService, Operation } from "../../configuration";
 import {
   API,
-  C8YAPISubscription,
   ConfirmationModalComponent,
   Direction,
   Mapping,
   MappingSubstitution,
   MappingType,
-  Operation,
-  PayloadWrapper,
   QOS,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
-  isTemplateTopicUnique,
-  uuidCustom
+  uuidCustom, CamelCasePipe
 } from "../../shared";
 
 import { Router } from "@angular/router";
@@ -70,6 +66,8 @@ import { StatusActivationRendererComponent } from "../renderer/status-activation
 import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
 import { TemplateRendererComponent } from "../renderer/template.renderer.component";
 import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
+import { C8YAPISubscription, PayloadWrapper } from "../shared/mapping.model";
+import { isTemplateTopicUnique } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-mapping-grid",

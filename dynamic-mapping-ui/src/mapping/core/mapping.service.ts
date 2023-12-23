@@ -28,7 +28,7 @@ import {
 } from "@c8y/client";
 import * as _ from "lodash";
 import { BehaviorSubject } from "rxjs";
-import { BrokerConfigurationService } from "../../configuration";
+import { BrokerConfigurationService, Operation } from "../../configuration";
 import {
   BASE_URL,
   MAPPING_FRAGMENT,
@@ -36,10 +36,9 @@ import {
   PATH_MAPPING_ENDPOINT,
   PATH_SUBSCRIPTIONS_ENDPOINT,
   PATH_SUBSCRIPTION_ENDPOINT,
-  C8YAPISubscription,
   Direction,
   Mapping,
-  Operation,
+  SharedService,
 } from "../../shared";
 import { JSONProcessorInbound } from "../processor/impl/json-processor-inbound.service";
 import { JSONProcessorOutbound } from "../processor/impl/json-processor-outbound.service";
@@ -48,6 +47,7 @@ import {
   ProcessingType,
   SubstituteValue,
 } from "../processor/prosessor.model";
+import { C8YAPISubscription } from "../shared/mapping.model";
 
 @Injectable({ providedIn: "root" })
 export class MappingService {
@@ -56,6 +56,7 @@ export class MappingService {
     private brokerConfigurationService: BrokerConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
+    private sharedService: SharedService,
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
@@ -155,7 +156,7 @@ export class MappingService {
   }
 
   async getSubscriptions(): Promise<C8YAPISubscription> {
-    const feature = await this.brokerConfigurationService.getFeatures();
+    const feature = await this.sharedService.getFeatures();
 
     if (feature?.outputMappingEnabled) {
       const res: IFetchResponse = await this.client.fetch(

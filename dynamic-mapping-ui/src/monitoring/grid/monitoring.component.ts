@@ -28,9 +28,9 @@ import {
   Pagination,
 } from "@c8y/ngx-components";
 import { Observable } from "rxjs";
-import { BrokerConfigurationService } from "../../configuration";
+import { BrokerConfigurationService, Operation } from "../../configuration";
 import { NameRendererComponent } from "../../mapping";
-import { MappingStatus, Operation } from "../../shared";
+import { MappingStatus } from "../../shared";
 import { MonitoringService } from "../shared/monitoring.service";
 
 @Component({

@@ -29,12 +29,11 @@ import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
 import { Subject } from "rxjs";
 import { Direction, MappingType } from "../../shared";
-import { isDisabled } from "../step-main/util";
+import { isDisabled } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-type",
   templateUrl: "./mapping-type.component.html",
-  styleUrls: ["./mapping-type.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
 export class MappingTypeComponent implements OnInit {
@@ -78,6 +77,10 @@ export class MappingTypeComponent implements OnInit {
   onSelectMappingType(t) {
     this.mappingType = t;
     this.closeSubject.next(this.mappingType);
+    this.closeSubject.complete();
+  }
+
+  ngOnDestroy() {
     this.closeSubject.complete();
   }
 }

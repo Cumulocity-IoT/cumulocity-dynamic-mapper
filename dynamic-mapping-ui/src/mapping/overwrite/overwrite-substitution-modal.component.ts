@@ -31,8 +31,8 @@ import { Subject } from "rxjs";
 import {
   Direction,
   MappingSubstitution,
-  definesDeviceIdentifier,
 } from "../../shared";
+import { definesDeviceIdentifier } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-overwrite-substitution-modal",
@@ -90,6 +90,10 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
 
   onDismiss() {
     this.closeSubject.next(false);
+    this.closeSubject.complete();
+  }
+
+  ngOnDestroy() {
     this.closeSubject.complete();
   }
 }

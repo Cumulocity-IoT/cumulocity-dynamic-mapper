@@ -21,17 +21,17 @@
 import { Injectable } from "@angular/core";
 import { TabFactory, Tab } from "@c8y/ngx-components";
 import { Router } from "@angular/router";
-import { BrokerConfigurationService } from "../configuration/shared/broker-configuration.service";
+import { SharedService } from "./shared.service";
 @Injectable()
 export class MappingTabFactory implements TabFactory {
   constructor(
     public router: Router,
-    private brokerConfigurationService: BrokerConfigurationService
+    private sharedService: SharedService
   ) {}
 
   async get() {
     //console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
-    const feature = await this.brokerConfigurationService.getFeatures();
+    const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
@@ -51,7 +51,7 @@ export class MappingTabFactory implements TabFactory {
         icon: "swipe-right",
         orientation: "horizontal",
       } as Tab);
-      this.brokerConfigurationService.getFeatures();
+      this.sharedService.getFeatures();
       if (feature?.outputMappingEnabled) {
         tabs.push({
           path: "sag-ps-pkg-dynamic-mapping/mappings/outbound",

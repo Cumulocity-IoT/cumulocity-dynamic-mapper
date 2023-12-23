@@ -21,7 +21,7 @@
 import { Injectable } from "@angular/core";
 import { FetchClient, InventoryService } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
-import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT, whatIsIt } from "../shared/util";
+import { BASE_URL, PATH_MAPPING_TREE_ENDPOINT, whatIsIt } from "../shared";
 import * as _ from "lodash";
 
 @Injectable({ providedIn: "root" })

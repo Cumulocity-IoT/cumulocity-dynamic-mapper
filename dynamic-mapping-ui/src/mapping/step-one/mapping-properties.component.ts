@@ -38,13 +38,13 @@ import {
   QOS,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
-  ValidationError,
-  deriveTemplateTopicFromTopic,
   getExternalTemplate,
 } from "../../shared";
 import { MappingService } from "../core/mapping.service";
 import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
-import { isDisabled } from "../step-main/util";
+import { isDisabled } from "../shared/util";
+import { ValidationError } from "../shared/mapping.model";
+import { deriveTemplateTopicFromTopic } from "../shared/util";
 
 @Component({
   selector: "d11r-mapping-properties",
@@ -420,5 +420,9 @@ export class MappingStepPropertiesComponent implements OnInit {
     } else {
       this.targetTemplateChanged.emit(getExternalTemplate(this.mapping));
     }
+  }
+
+  ngOnDestroy() {
+    this.selectedResult$.complete();
   }
 }

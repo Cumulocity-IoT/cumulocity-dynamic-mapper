@@ -24,19 +24,18 @@ import { AlertService, gettext } from "@c8y/ngx-components";
 import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
 import { Observable } from "rxjs";
 import packageJson from "../../package.json";
+import { ConfirmationModalComponent, SharedService, uuidCustom } from "../shared";
+import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 import {
-  ConfirmationModalComponent,
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
   Feature,
   Operation,
   ServiceConfiguration,
-  uuidCustom,
   StatusEventTypes,
-} from "../shared";
+} from "./shared/configuration.model";
 import { BrokerConfigurationService } from "./shared/broker-configuration.service";
-import { EditConfigurationComponent } from "./edit/edit-config-modal.component";
 
 @Component({
   selector: "d11r-mapping-broker-configuration",
@@ -65,7 +64,8 @@ export class BrokerConfigurationComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public brokerConfigurationService: BrokerConfigurationService,
-    public alert: AlertService
+    public alert: AlertService,
+    private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
@@ -80,7 +80,8 @@ export class BrokerConfigurationComponent implements OnInit {
     });
     await this.loadData();
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
-    this.feature = await this.brokerConfigurationService.getFeatures();
+    this.feature = await this.sharedService.getFeatures();
+    this.brokerConfigurationService.startConnectorStatusSubscriptions();
   }
 
   public async refresh() {
@@ -271,7 +272,6 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
-    console.log("Stop subscriptions");
-    //this.brokerConfigurationService.stopConnectorStatusSubscriptions();
+    this.brokerConfigurationService.stopConnectorStatusSubscriptions();
   }
 }

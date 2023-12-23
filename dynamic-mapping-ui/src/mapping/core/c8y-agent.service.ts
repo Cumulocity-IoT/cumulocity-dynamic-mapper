@@ -29,7 +29,7 @@ import {
   IOperation,
 } from "@c8y/client";
 import { AlertService } from "@c8y/ngx-components";
-import { API } from "../../shared/mapping.model";
+import { API } from "../../shared";
 import { FacadeIdentityService } from "./facade-identity.service";
 import { FacadeInventoryService } from "./facade-inventory.service";
 import { ProcessingContext } from "../processor/prosessor.model";

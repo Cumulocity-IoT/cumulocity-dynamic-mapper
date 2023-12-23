@@ -38,37 +38,37 @@ import { BehaviorSubject, Subject } from "rxjs";
 import { BrokerConfigurationService } from "../../configuration";
 import {
   API,
+  COLOR_HIGHLIGHTED,
   Direction,
   Extension,
   Mapping,
   MappingSubstitution,
   RepairStrategy,
+  SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
-  ValidationError,
-} from "../../shared/mapping.model";
+  getExternalTemplate,
+  getSchema,
+  whatIsIt,
+} from "../../shared";
+import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
+import { MappingService } from "../core/mapping.service";
+import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
+import { C8YRequest } from "../processor/prosessor.model";
+import { ValidationError } from "../shared/mapping.model";
 import {
-  COLOR_HIGHLIGHTED,
   countDeviceIdentifiers,
   definesDeviceIdentifier,
   expandC8YTemplate,
   expandExternalTemplate,
-  getExternalTemplate,
-  getSchema,
+  isDisabled,
   isWildcardTopic,
   reduceSourceTemplate,
   reduceTargetTemplate,
-  SAMPLE_TEMPLATES_C8Y,
   splitTopicExcludingSeparator,
-  whatIsIt,
-} from "../../shared/util";
-import { MappingService } from "../core/mapping.service";
-import { C8YRequest } from "../processor/prosessor.model";
+} from "../shared/util";
 import { SnoopingModalComponent } from "../snooping/snooping-modal.component";
 import { EditorMode, StepperConfiguration } from "./stepper-model";
 import { SubstitutionRendererComponent } from "./substitution/substitution-renderer.component";
-import { isDisabled } from "./util";
-import { JsonEditor2Component } from "../../shared/editor2/jsoneditor2.component";
-import { EditSubstitutionComponent } from "../edit/edit-substitution-modal.component";
 
 @Component({
   selector: "d11r-mapping-stepper",
@@ -115,7 +115,6 @@ export class MappingStepperComponent implements OnInit {
   countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
-  selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   propertyFormly: FormGroup = new FormGroup({});
   sourceSystem: string;
   targetSystem: string;
@@ -157,7 +156,7 @@ export class MappingStepperComponent implements OnInit {
       this.mapping.direction == Direction.OUTBOUND ? "Cumulocity" : "Broker";
     this.templateModel = {
       stepperConfiguration: this.stepperConfiguration,
-      mapping: this.mapping
+      mapping: this.mapping,
     };
 
     this.substitutionModel = {
@@ -372,6 +371,7 @@ export class MappingStepperComponent implements OnInit {
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
+      readOnly:false,
       name: "message",
     };
 
@@ -421,9 +421,7 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public onSelectedPathSourceChanged(path: string) {
-    this.substitutionFormly
-      .get("pathSource")
-      .setValue(path);
+    this.substitutionFormly.get("pathSource").setValue(path);
   }
 
   public onEditorSourceInitialized(state: string) {
@@ -444,9 +442,7 @@ export class MappingStepperComponent implements OnInit {
         msgTxt: "",
         severity: "text-info",
       };
-      this.substitutionFormly
-        .get("pathSource")
-        .setErrors(null);
+      this.substitutionFormly.get("pathSource").setErrors(null);
 
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorSource?.get(),
@@ -458,14 +454,12 @@ export class MappingStepperComponent implements OnInit {
       };
 
       if (
-        this.substitutionModel.sourceExpression.resultType ==
-          "Array" &&
+        this.substitutionModel.sourceExpression.resultType == "Array" &&
         !this.substitutionModel.expandArray
       ) {
         this.substitutionModel.sourceExpression.msgTxt =
           'Current expression extracts an array. Consider to use the option "Expand as array" if you want to create multiple measurements, alarms, events or devices, i.e. "multi-device" or "multi-value"';
-        this.substitutionModel.sourceExpression.severity =
-          "text-warning";
+        this.substitutionModel.sourceExpression.severity = "text-warning";
       }
     } catch (error) {
       console.log("Error evaluating source expression: ", error);
@@ -482,11 +476,9 @@ export class MappingStepperComponent implements OnInit {
 
   isSubstitutionValid() {
     const r1 =
-      this.substitutionModel.sourceExpression.severity !=
-      "text-danger";
+      this.substitutionModel.sourceExpression.severity != "text-danger";
     const r2 =
-      this.substitutionModel.targetExpression.severity !=
-      "text-danger";
+      this.substitutionModel.targetExpression.severity != "text-danger";
     const r3 = this.substitutionModel.pathSource != "";
     const r4 = this.substitutionModel.pathTarget != "";
     let result = r1 && r2 && r3 && r4;
@@ -494,9 +486,7 @@ export class MappingStepperComponent implements OnInit {
   }
 
   public onSelectedPathTargetChanged(path: string) {
-    this.substitutionFormly
-      .get("pathTarget")
-      .setValue(path);
+    this.substitutionFormly.get("pathTarget").setValue(path);
   }
 
   public async updateTargetExpressionResult(path: string) {
@@ -505,9 +495,7 @@ export class MappingStepperComponent implements OnInit {
         msgTxt: "",
         severity: "text-info",
       };
-      this.substitutionFormly
-        .get("pathTarget")
-        .setErrors(null);
+      this.substitutionFormly.get("pathTarget").setErrors(null);
       let r: JSON = await this.mappingService.evaluateExpression(
         this.editorTarget?.get(),
         path
@@ -528,13 +516,11 @@ export class MappingStepperComponent implements OnInit {
           ` is resolved using the external Id ` +
           this.mapping.externalIdType +
           ` defined in the previous step.`;
-        this.substitutionModel.targetExpression.severity =
-          "text-info";
+        this.substitutionModel.targetExpression.severity = "text-info";
       } else if (path == "$") {
         this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 
         template and this rersults in merging the source expression with the target template.`;
-        this.substitutionModel.targetExpression.severity =
-          "text-warning";
+        this.substitutionModel.targetExpression.severity = "text-warning";
       }
     } catch (error) {
       console.log("Error evaluating target expression: ", error);
@@ -821,8 +807,7 @@ export class MappingStepperComponent implements OnInit {
   public onAddSubstitution() {
     if (this.isSubstitutionValid()) {
       this.substitutionModel.expandArray = false;
-      this.substitutionModel.repairStrategy =
-        RepairStrategy.DEFAULT;
+      this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
       this.substitutionModel.resolve2ExternalId = false;
       this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
@@ -858,10 +843,8 @@ export class MappingStepperComponent implements OnInit {
         stepperConfiguration: this.stepperConfiguration,
       };
       if (
-        this.substitutionModel.sourceExpression?.severity !=
-          "text-danger" &&
-        this.substitutionModel.targetExpression?.severity !=
-          "text-danger"
+        this.substitutionModel.sourceExpression?.severity != "text-danger" &&
+        this.substitutionModel.targetExpression?.severity != "text-danger"
       ) {
         initialState.substitution.pathSource =
           this.substitutionModel.pathSource;
@@ -875,10 +858,8 @@ export class MappingStepperComponent implements OnInit {
         console.log("Mapping after edit:", editedSub);
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
-          this.substitutionModel.pathSource =
-            editedSub.pathSource;
-          this.substitutionModel.pathTarget =
-            editedSub.pathTarget;
+          this.substitutionModel.pathSource = editedSub.pathSource;
+          this.substitutionModel.pathTarget = editedSub.pathTarget;
         }
       });
       this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
@@ -918,20 +899,20 @@ export class MappingStepperComponent implements OnInit {
   public onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
-      this.substitutionModel = _.clone(
-        this.mapping.substitutions[selected]
-      );
+      this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      this.editorSource?.setSelectionToPath(
-        this.substitutionModel.pathSource
-      );
-      this.editorTarget.setSelectionToPath(
-        this.substitutionModel.pathTarget
-      );
+      this.editorSource?.setSelectionToPath(this.substitutionModel.pathSource);
+      this.editorTarget.setSelectionToPath(this.substitutionModel.pathTarget);
     }
   }
 
   public onTemplateChanged(templateTarget: any): void {
     this.editorTarget.set(templateTarget);
+  }
+
+  ngOnDestroy() {
+    this.countDeviceIdentifers$.complete();
+    this.extensionEvents$.complete();
+    this.onDestroy$.complete();
   }
 }

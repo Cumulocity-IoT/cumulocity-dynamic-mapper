@@ -3,12 +3,7 @@ import { ModalLabels } from "@c8y/ngx-components";
 import { Subject } from "rxjs";
 import { FormlyFieldConfig } from "@ngx-formly/core";
 import { FormGroup } from "@angular/forms";
-import {
-  ConnectorConfiguration,
-  ConnectorProperty,
-  ConnectorPropertyType,
-  ConnectorSpecification,
-} from "../../shared";
+import { ConnectorConfiguration, ConnectorSpecification, ConnectorPropertyType } from "../shared/configuration.model";
 
 @Component({
   selector: "d11y-edit-connector-modal",

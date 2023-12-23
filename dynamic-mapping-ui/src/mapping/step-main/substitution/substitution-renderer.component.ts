@@ -30,9 +30,8 @@ import {
 import {
   Direction,
   MappingSubstitution,
-  definesDeviceIdentifier,
 } from "../../../shared";
-import { isDisabled } from "../util";
+import { definesDeviceIdentifier, isDisabled } from "../../shared/util";
 import { EditorMode } from "../stepper-model";
 
 @Component({

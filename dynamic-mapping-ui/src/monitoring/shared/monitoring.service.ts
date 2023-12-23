@@ -21,7 +21,7 @@
 import { Injectable } from "@angular/core";
 import { FetchClient, InventoryService, Realtime } from "@c8y/client";
 import { BehaviorSubject, Observable } from "rxjs";
-import { MAPPING_FRAGMENT, MappingStatus } from "../../shared";
+import { MAPPING_FRAGMENT, MappingStatus, SharedService } from "../../shared";
 import { BrokerConfigurationService } from "../../configuration";
 
 @Injectable({ providedIn: "root" })
@@ -29,7 +29,7 @@ export class MonitoringService {
   constructor(
     private client: FetchClient,
     private inventory: InventoryService,
-    private brokerConfigurationService: BrokerConfigurationService
+    private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
   }
@@ -43,7 +43,7 @@ export class MonitoringService {
 
   async subscribeMonitoringChannel(): Promise<object> {
     const agentId =
-      await this.brokerConfigurationService.getDynamicMappingServiceAgent();
+      await this.sharedService.getDynamicMappingServiceAgent();
     console.log("Start subscription for monitoring:", agentId);
 
     let { data, res } = await this.inventory.detail(agentId);
