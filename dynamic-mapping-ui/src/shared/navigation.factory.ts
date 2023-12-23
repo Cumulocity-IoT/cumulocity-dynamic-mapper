@@ -26,7 +26,7 @@ import {
   NavigatorNode,
   NavigatorNodeFactory,
 } from "@c8y/ngx-components";
-import { BrokerConfigurationService } from "../configuration/shared/broker-configuration.service";
+import { SharedService } from "./shared.service";
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
@@ -44,12 +44,12 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
-    private brokerConfigurationService: BrokerConfigurationService
+    private sharedService: SharedService
   ) {
   }
 
   async get() {
-    const feature: any = await this.brokerConfigurationService.getFeatures();
+    const feature: any = await this.sharedService.getFeatures();
     if (feature.error) {
       console.error("dynamic-mapping-service microservice not accessible", feature);
     }

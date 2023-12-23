@@ -67,7 +67,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.MappingComponent;
-import dynamic.mapping.core.Status;
+import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
 // @EnableScheduling
@@ -260,7 +260,7 @@ public class MQTTClient extends AConnectorClient {
                     mqttClient.connect(connOpts);
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getServerURI());
-                    connectorStatus.updateStatus(Status.CONNECTED);
+                    connectorStatus.updateStatus(ConnectorStatus.CONNECTED);
                     connectorStatus.clearMessage();
                     sendConnectorLifecycle();
                 } catch (MqttException e) {
@@ -313,7 +313,7 @@ public class MQTTClient extends AConnectorClient {
             msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
         }
         connectorStatus.setMessage(msg);
-        connectorStatus.updateStatus(Status.FAILED);
+        connectorStatus.updateStatus(ConnectorStatus.FAILED);
     }
 
     @Override
@@ -325,11 +325,6 @@ public class MQTTClient extends AConnectorClient {
                 log.error("Tenant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
             }
         }
-    }
-
-    @Override
-    public boolean shouldConnect() {
-        return isConfigValid(configuration) && configuration.isEnabled();
     }
 
     @Override
@@ -380,7 +375,7 @@ public class MQTTClient extends AConnectorClient {
                 });
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
-                connectorStatus.updateStatus(Status.DISCONNECTED);
+                connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED);
                 connectorStatus.clearMessage();
                 sendConnectorLifecycle();
                 log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());

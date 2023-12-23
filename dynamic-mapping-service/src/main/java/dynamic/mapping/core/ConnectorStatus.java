@@ -21,66 +21,13 @@
 
 package dynamic.mapping.core;
 
-import java.io.Serializable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import javax.validation.constraints.NotNull;
-
-import lombok.Data;
-
-@Data
-public class ConnectorStatus implements Serializable {
-    @NotNull
-    public Status status;
-
-    @NotNull
-    public String message;
-
-    @NotNull
-    public String date;
-
-    public ConnectorStatus() {
-        this.status = Status.UNKNOWN;
-    }
-
-    public ConnectorStatus(Status status) {
-        this.status = status;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        this.date = dateFormat.format(now);
-        this.message = "";
-    }
-
-    public static ConnectorStatus connected() {
-        return new ConnectorStatus(Status.CONNECTED);
-    }
-
-    public static ConnectorStatus disconnected() {
-        return new ConnectorStatus(Status.DISCONNECTED);
-    }
-
-    public static ConnectorStatus enabled() {
-        return new ConnectorStatus(Status.ENABLED);
-    }
-
-    public static ConnectorStatus failed(String errorMessage) {
-        return new ConnectorStatus(Status.FAILED);
-    }
-
-    public static ConnectorStatus unknown() {
-        return new ConnectorStatus(Status.UNKNOWN);
-    }
-
-    public void updateStatus(Status st) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date now = new Date();
-        date = dateFormat.format(now);
-        status = st;
-    }
-
-    public void clearMessage() {
-        this.message = "";
-    }
+public enum ConnectorStatus {
+    UNKNOWN,
+    CONFIGURED,
+    ENABLED,
+    CONNECTING,
+    CONNECTED,
+    DISCONNECTED,
+    DISCONNECTING,
+    FAILED,
 }

@@ -21,15 +21,10 @@
 import * as _ from "lodash";
 import { PayloadProcessorOutbound } from "../payload-processor-outbound.service";
 import {
-  splitTopicExcludingSeparator,
-  TOKEN_TOPIC_LEVEL,
-  isNumeric,
-  whatIsIt,
-  TIME,
-  findDeviceIdentifier,
   Mapping,
   API,
   RepairStrategy,
+  whatIsIt,
 } from "../../../shared";
 import {
   ProcessingContext,
@@ -37,7 +32,7 @@ import {
   SubstituteValueType,
 } from "../prosessor.model";
 import { Injectable } from "@angular/core";
-import { map } from "rxjs/operators";
+import { TIME, TOKEN_TOPIC_LEVEL, findDeviceIdentifier, isNumeric, splitTopicExcludingSeparator } from "../../shared/util";
 
 @Injectable({ providedIn: "root" })
 export class JSONProcessorOutbound extends PayloadProcessorOutbound {

@@ -34,7 +34,8 @@ import { Direction, JsonEditor2Component, Mapping, getSchema } from "../../share
 import { MappingService } from "../core/mapping.service";
 import { C8YRequest } from "../processor/prosessor.model";
 import { StepperConfiguration } from "../step-main/stepper-model";
-import { isDisabled } from "../step-main/util";
+import { isDisabled } from "../shared/util";
+
 
 @Component({
   selector: "d11r-mapping-testing",
@@ -218,5 +219,9 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.response = JSON.parse("{}");
       this.testingModel.errorMsg = undefined;
     }
+  }
+
+  ngOnDestroy() {
+    this.selectedResult$.complete();
   }
 }

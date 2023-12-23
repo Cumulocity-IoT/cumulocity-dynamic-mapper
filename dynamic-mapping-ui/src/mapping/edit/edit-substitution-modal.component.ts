@@ -5,9 +5,10 @@ import {
   Direction,
   Mapping,
   MappingSubstitution,
-  RepairStrategy, definesDeviceIdentifier
+  RepairStrategy,
 } from "../../shared";
 import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
+import { definesDeviceIdentifier } from "../shared/util";
 
 @Component({
   selector: "d11y-edit-substitution-modal",
@@ -266,20 +267,8 @@ export class EditSubstitutionComponent implements OnInit {
     //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
+
+  ngOnDestroy(): void {
+    this.disabled$.complete();
+  }
 }
-
-// Showing modal:
-
-// import { BsModalService } from "ngx-bootstrap/modal";
-// import { ModalLabels } from "@c8y/ngx-components";
-
-// constructor(
-//  public bsModalService: BsModalService,
-// ) {}
-
-// showModal() {
-//  const modalRef = this.bsModalService.show(MyModalComponent);
-//  modalRef.content.closeSubject.subscribe(result => {
-//    console.log('results:', result);
-//  });
-// }

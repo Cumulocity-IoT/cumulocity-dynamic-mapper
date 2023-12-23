@@ -25,8 +25,7 @@ import { BsModalService } from "ngx-bootstrap/modal";
 import { BehaviorSubject, Observable } from "rxjs";
 import { shareReplay, switchMap, tap } from "rxjs/operators";
 import { ExtensionService } from "../share/extension.service";
-import { BrokerConfigurationService } from "../../configuration";
-import { Operation } from "../../shared";
+import { BrokerConfigurationService, Operation } from "../../configuration";
 import { AddExtensionComponent } from "../extension-modal/add-extension.component";
 
 @Component({
@@ -83,5 +82,9 @@ export class ExtensionComponent implements OnInit {
       this.reloadExtensions();
       modalRef.hide();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.reload$.complete();
   }
 }

@@ -42,7 +42,7 @@ export class MappingTreeComponent implements OnInit {
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
-      readOnly:true,
+      readOnly:false,
       name: 'root'
     };
     this.loadMappingTree();
