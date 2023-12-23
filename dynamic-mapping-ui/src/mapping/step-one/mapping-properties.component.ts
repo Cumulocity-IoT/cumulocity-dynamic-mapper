@@ -421,4 +421,8 @@ export class MappingStepPropertiesComponent implements OnInit {
       this.targetTemplateChanged.emit(getExternalTemplate(this.mapping));
     }
   }
+
+  ngOnDestroy() {
+    this.selectedResult$.complete();
+  }
 }

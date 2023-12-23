@@ -18,8 +18,13 @@
  *
  * @authors Christof Strack
  */
-import { Component, ViewChild, ViewEncapsulation } from "@angular/core";
-import { ApplicationService, IApplication, IManagedObject, IManagedObjectBinary } from "@c8y/client";
+import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
+import {
+  ApplicationService,
+  IApplication,
+  IManagedObject,
+  IManagedObjectBinary,
+} from "@c8y/client";
 import {
   AlertService,
   DropAreaComponent,
@@ -35,8 +40,7 @@ import { ExtensionService } from "../share/extension.service";
   styleUrls: ["./add-extension.component.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-export class AddExtensionComponent {
-
+export class AddExtensionComponent implements OnInit {
   @ViewChild(DropAreaComponent) dropAreaComponent;
 
   isLoading: boolean;
@@ -52,6 +56,12 @@ export class AddExtensionComponent {
     private alertService: AlertService,
     private applicationService: ApplicationService
   ) {}
+
+  ngOnInit(): void {}
+  
+  ngOnDestroy(): void {
+    this.closeSubject.complete();
+  }
 
   get progress(): BehaviorSubject<number> {
     return this.extensionService.progress;

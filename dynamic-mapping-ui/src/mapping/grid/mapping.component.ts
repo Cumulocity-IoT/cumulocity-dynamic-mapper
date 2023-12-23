@@ -49,7 +49,7 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
-  uuidCustom
+  uuidCustom, CamelCasePipe
 } from "../../shared";
 
 import { Router } from "@angular/router";

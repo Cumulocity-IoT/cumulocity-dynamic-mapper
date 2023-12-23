@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, ViewChild, ViewEncapsulation } from "@angular/core";
+import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
 import {
   AlertService,
   DropAreaComponent,
@@ -34,7 +34,7 @@ import { uuidCustom, Mapping } from "../../shared";
   styleUrls: ["./import.component.style.css"],
   encapsulation: ViewEncapsulation.None,
 })
-export class ImportMappingsComponent {
+export class ImportMappingsComponent implements OnInit {
   @ViewChild(DropAreaComponent) dropAreaComponent;
   private importCanceled: boolean = false;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
@@ -48,6 +48,8 @@ export class ImportMappingsComponent {
     private mappingService: MappingService,
     private alertService: AlertService
   ) {}
+
+  ngOnInit(): void {}
 
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
@@ -95,5 +97,9 @@ export class ImportMappingsComponent {
 
   private cancelFileUpload() {
     this.importCanceled = true;
+  }
+
+  ngOnDestroy() {
+    this.progress$.unsubscribe();
   }
 }

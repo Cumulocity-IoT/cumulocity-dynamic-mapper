@@ -79,4 +79,8 @@ export class MappingTypeComponent implements OnInit {
     this.closeSubject.next(this.mappingType);
     this.closeSubject.complete();
   }
+
+  ngOnDestroy() {
+    this.closeSubject.complete();
+  }
 }

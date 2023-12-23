@@ -8,3 +8,4 @@ export * from './shared.service';
 export * from './tab.factory';
 export * from "./overview.guard";
 export * from "./admin.guard";
+export * from "./camel-case.pipe";

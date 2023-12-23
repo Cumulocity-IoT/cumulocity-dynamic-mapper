@@ -81,6 +81,7 @@ export class BrokerConfigurationComponent implements OnInit {
     await this.loadData();
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
     this.feature = await this.sharedService.getFeatures();
+    this.brokerConfigurationService.startConnectorStatusSubscriptions();
   }
 
   public async refresh() {
@@ -271,6 +272,6 @@ export class BrokerConfigurationComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
-    console.log("Stop subscriptions");
+    this.brokerConfigurationService.stopConnectorStatusSubscriptions();
   }
 }
