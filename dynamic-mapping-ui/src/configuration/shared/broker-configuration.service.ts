@@ -241,7 +241,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  private updateConnectorStatus = (p: object) => {
+  private updateConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
     if (payload.type == this.statusLogEventType) {
       payload[CONNECTOR_FRAGMENT].type = payload.type;
@@ -250,11 +250,18 @@ export class BrokerConfigurationService {
 
     if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
       const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
-      this._connectorConfigurations?.forEach((cc) => {
+      const configurations = await this.getConnectorConfigurationsWithStatus();
+      for (let index = 0; index < configurations.length; index++) {
+        const cc = configurations[index];
         if (statusLog['connectorIdent'] == cc.ident) {
-          cc['status$'].next(statusLog.status);
+          if (!cc['status$']) {
+            cc['status$'] = new BehaviorSubject<string>(statusLog.status);
+          } else {
+            cc['status$'].next(statusLog.status);
+          }
         }
-      });
+        
+      }
     }
   };
 
