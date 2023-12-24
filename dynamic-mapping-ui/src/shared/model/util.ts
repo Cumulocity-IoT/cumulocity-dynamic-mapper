@@ -18,12 +18,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  API,
-  Direction,
-  Mapping,
-  MappingType,
-} from "./shared.model";
+import { API, Direction, Mapping, MappingType } from './shared.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
@@ -64,7 +59,7 @@ export const SAMPLE_TEMPLATES_C8Y = {
    \"deviceId\": \"909090\",
    \"decription\": \"New camera operation!\",
    \"type\": \"maker_Vibration_Sensor\"
-}`,
+}`
 };
 
 export const SAMPLE_TEMPLATES_EXTERNAL = {
@@ -99,224 +94,223 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
    \"decription\": \"New camera operation!\",
    \"type\": \"maker_Vibration_Sensor\"
   }`,
-  FLAT_FILE: `{\"message\":\"165, 14.5, \\\"2022-08-06T00:14:50.000+02:00\\\",\\\"c8y_FuelMeasurement\\\"\"}`,
-  GENERIC_BINARY: `{\"message\":\"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 \"}`,
+  FLAT_FILE: '{\"message\":\"165, 14.5, \\\"2022-08-06T00:14:50.000+02:00\\\",\\\"c8y_FuelMeasurement\\\"\"}',
+  GENERIC_BINARY: '{\"message\":\"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 \"}'
 };
 
 export const SCHEMA_EVENT = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "EVENT",
-  required: ["source", "type", "text", "time"],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'EVENT',
+  required: ['source', 'type', 'text', 'time'],
   properties: {
     source: {
-      $id: "#/properties/source",
-      type: "object",
-      title: "The managed object to which the event is associated.",
-      allOf: [{ required: ["id"] }],
+      $id: '#/properties/source',
+      type: 'object',
+      title: 'The managed object to which the event is associated.',
+      allOf: [{ required: ['id'] }],
       properties: {
         id: {
-          type: "string",
+          type: 'string',
           minLength: 1,
-          title: "SourceID",
-        },
-      },
+          title: 'SourceID'
+        }
+      }
     },
     type: {
-      $id: "#/properties/type",
-      type: "string",
-      title: "Type of the event.",
+      $id: '#/properties/type',
+      type: 'string',
+      title: 'Type of the event.'
     },
     text: {
-      $id: "#/properties/text",
-      type: "string",
-      title: "Text of the event.",
+      $id: '#/properties/text',
+      type: 'string',
+      title: 'Text of the event.'
     },
     time: {
-      $id: "#/properties/time",
-      type: "string",
-      title: "Type of the event.",
+      $id: '#/properties/time',
+      type: 'string',
+      title: 'Type of the event.',
       pattern:
-        "^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$",
-    },
-  },
+        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
+    }
+  }
 };
 
 export const SCHEMA_ALARM = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "ALARM",
-  required: ["source", "type", "text", "time", "severity"],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'ALARM',
+  required: ['source', 'type', 'text', 'time', 'severity'],
   properties: {
     source: {
-      $id: "#/properties/source",
-      type: "object",
-      title: "The managed object to which the alarm is associated.",
-      allOf: [{ required: ["id"] }],
+      $id: '#/properties/source',
+      type: 'object',
+      title: 'The managed object to which the alarm is associated.',
+      allOf: [{ required: ['id'] }],
       properties: {
         id: {
-          type: "string",
+          type: 'string',
           minLength: 1,
-          title: "SourceID",
-        },
-      },
+          title: 'SourceID'
+        }
+      }
     },
     type: {
-      $id: "#/properties/type",
-      type: "string",
-      title: "Type of the alarm.",
+      $id: '#/properties/type',
+      type: 'string',
+      title: 'Type of the alarm.'
     },
 
     severity: {
-      $id: "#/properties/severity",
-      type: "string",
-      title: "Severity of the alarm.",
-      pattern: "^((CRITICAL)|(MAJOR)|(MINOR)|(WARNING))$",
+      $id: '#/properties/severity',
+      type: 'string',
+      title: 'Severity of the alarm.',
+      pattern: '^((CRITICAL)|(MAJOR)|(MINOR)|(WARNING))$'
     },
     text: {
-      $id: "#/properties/text",
-      type: "string",
-      title: "Text of the alarm.",
+      $id: '#/properties/text',
+      type: 'string',
+      title: 'Text of the alarm.'
     },
     time: {
-      $id: "#/properties/time",
-      type: "string",
-      title: "Type of the alarm.",
+      $id: '#/properties/time',
+      type: 'string',
+      title: 'Type of the alarm.',
       pattern:
-        "^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$",
-    },
-  },
+        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
+    }
+  }
 };
 
 export const SCHEMA_MEASUREMENT = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "MEASUREMENT",
-  required: ["source", "type", "time"],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'MEASUREMENT',
+  required: ['source', 'type', 'time'],
   properties: {
     source: {
-      $id: "#/properties/source",
-      type: "object",
-      title: "The managed object to which the measurement is associated.",
-      allOf: [{ required: ["id"] }],
+      $id: '#/properties/source',
+      type: 'object',
+      title: 'The managed object to which the measurement is associated.',
+      allOf: [{ required: ['id'] }],
       properties: {
         id: {
-          type: "string",
+          type: 'string',
           minLength: 1,
-          title: "SourceID",
-        },
-      },
+          title: 'SourceID'
+        }
+      }
     },
     type: {
-      $id: "#/properties/type",
-      type: "string",
-      title: "Type of the measurement.",
+      $id: '#/properties/type',
+      type: 'string',
+      title: 'Type of the measurement.'
     },
     time: {
-      $id: "#/properties/time",
-      type: "string",
-      title: "Type of the measurement.",
+      $id: '#/properties/time',
+      type: 'string',
+      title: 'Type of the measurement.',
       pattern:
-        "^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$",
-    },
-  },
+        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
+    }
+  }
 };
 
 export const SCHEMA_INVENTORY = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "INVENTORY",
-  required: ["c8y_IsDevice", "type", "name", "id"],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'INVENTORY',
+  required: ['c8y_IsDevice', 'type', 'name', 'id'],
   properties: {
     c8y_IsDevice: {
-      $id: "#/properties/c8y_IsDevice",
-      type: "object",
-      title: "Mark as device.",
-      properties: {},
+      $id: '#/properties/c8y_IsDevice',
+      type: 'object',
+      title: 'Mark as device.',
+      properties: {}
     },
     type: {
-      $id: "#/properties/type",
-      type: "string",
-      title: "Type of the device.",
+      $id: '#/properties/type',
+      type: 'string',
+      title: 'Type of the device.'
     },
     name: {
-      $id: "#/properties/name",
-      type: "string",
-      title: "Name of the device.",
+      $id: '#/properties/name',
+      type: 'string',
+      title: 'Name of the device.'
     },
     id: {
-      $id: "#/properties/id",
-      type: "string",
-      title: "Cumulocity id of the device.",
-    },
-  },
+      $id: '#/properties/id',
+      type: 'string',
+      title: 'Cumulocity id of the device.'
+    }
+  }
 };
 
 export const SCHEMA_OPERATION = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "OPERATION",
-  required: ["deviceId"],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'OPERATION',
+  required: ['deviceId'],
   properties: {
     deviceId: {
-      $id: "#/properties/deviceId",
-      type: "string",
+      $id: '#/properties/deviceId',
+      type: 'string',
       title:
-        "Identifier of the target device where the operation should be performed..",
+        'Identifier of the target device where the operation should be performed..'
     },
     description: {
-      $id: "#/properties/description",
-      type: "string",
-      title: "Description of the operation.",
-    },
-  },
+      $id: '#/properties/description',
+      type: 'string',
+      title: 'Description of the operation.'
+    }
+  }
 };
 
 export const SCHEMA_PAYLOAD = {
   definitions: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
-  $id: "http://example.com/root.json",
-  type: "object",
-  title: "PAYLOAD",
-  required: [],
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  $id: 'http://example.com/root.json',
+  type: 'object',
+  title: 'PAYLOAD',
+  required: []
 };
 
-export const MAPPING_TYPE = "d11r_mapping";
-export const PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
-export const MAPPING_TEST_DEVICE_TYPE = "d11r_testDevice";
-export const MAPPING_TEST_DEVICE_FRAGMENT = "d11r_testDevice";
-export const MAPPING_FRAGMENT = "d11r_mapping";
-export const CONNECTOR_FRAGMENT = "d11r_connector";
+export const MAPPING_TYPE = 'd11r_mapping';
+export const PROCESSOR_EXTENSION_TYPE = 'd11r_processorExtension';
+export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
+export const MAPPING_TEST_DEVICE_FRAGMENT = 'd11r_testDevice';
+export const MAPPING_FRAGMENT = 'd11r_mapping';
+export const CONNECTOR_FRAGMENT = 'd11r_connector';
 // export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
 // export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
-export const MAPPING_GENERATED_TEST_DEVICE = "d11r_device_generatedType";
+export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
-export const BASE_URL = "service/dynamic-mapping-service";
-export const PATH_OPERATION_ENDPOINT = "operation";
-export const PATH_CONFIGURATION_CONNECTION_ENDPOINT =
-  "configuration/connector";
-export const PATH_CONFIGURATION_SERVICE_ENDPOINT = "configuration/service";
-export const PATH_MAPPING_TREE_ENDPOINT = "monitoring/tree";
-export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = "monitoring/tree";
-export const PATH_STATUS_CONNECTORS_ENDPOINT = "monitoring/status/connectors";
-export const PATH_FEATURE_ENDPOINT = "feature";
-export const PATH_EXTENSION_ENDPOINT = "extension";
-export const PATH_SUBSCRIPTION_ENDPOINT = "subscription";
-export const PATH_SUBSCRIPTIONS_ENDPOINT = "subscriptions";
-export const PATH_MAPPING_ENDPOINT = "mapping";
+export const BASE_URL = 'service/dynamic-mapping-service';
+export const PATH_OPERATION_ENDPOINT = 'operation';
+export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
+export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
+export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
+export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
+export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
+export const PATH_FEATURE_ENDPOINT = 'feature';
+export const PATH_EXTENSION_ENDPOINT = 'extension';
+export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
+export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';
+export const PATH_MAPPING_ENDPOINT = 'mapping';
 
-export const AGENT_ID = "d11r_mappingService";
-export const COLOR_HIGHLIGHTED: string = "lightgrey"; //#5FAEEC';
+export const AGENT_ID = 'd11r_mappingService';
+export const COLOR_HIGHLIGHTED: string = 'lightgrey';
 
 export function getExternalTemplate(mapping: Mapping): any {
   if (
@@ -354,27 +348,27 @@ export function getSchema(
 }
 
 export function whatIsIt(object) {
-  var stringConstructor = "test".constructor;
-  var arrayConstructor = [].constructor;
-  var objectConstructor = {}.constructor;
+  const stringConstructor = 'test'.constructor;
+  const arrayConstructor = [].constructor;
+  const objectConstructor = {}.constructor;
   if (object === null) {
-    return "null";
+    return 'null';
   } else if (object === undefined) {
-    return "undefined";
+    return 'undefined';
   } else if (object.constructor === stringConstructor) {
-    return "String";
+    return 'String';
   } else if (object.constructor === arrayConstructor) {
-    return "Array";
+    return 'Array';
   } else if (object.constructor === objectConstructor) {
-    return "Object";
-  } else if (typeof object === "number") {
-    return "number";
+    return 'Object';
+  } else if (typeof object === 'number') {
+    return 'number';
   } else {
     return "don't know";
   }
 }
 
 export function uuidCustom(): string {
-  let id = Math.random().toString(36).slice(-6);
+  const id = Math.random().toString(36).slice(-6);
   return id;
 }

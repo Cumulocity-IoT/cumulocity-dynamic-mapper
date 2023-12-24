@@ -1,9 +1,9 @@
-import { Component, OnInit } from "@angular/core";
-import { FieldWrapper } from "@ngx-formly/core";
+import { Component, OnInit } from '@angular/core';
+import { FieldWrapper } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-wrapper-form-field",
-  templateUrl: "./custom-form-field.wrapper.component.html",
+  selector: 'd11r-wrapper-form-field',
+  templateUrl: './custom-form-field.wrapper.component.html'
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WrapperCustomFormField extends FieldWrapper implements OnInit {
@@ -12,8 +12,8 @@ export class WrapperCustomFormField extends FieldWrapper implements OnInit {
 
   ngOnInit() {
     this.showDescriptionAsPopup =
-      this.field.type === "radio" ||
-      this.field.type === "typeahead" ||
+      this.field.type === 'radio' ||
+      this.field.type === 'typeahead' ||
       (this.to.description &&
         this.to.description.length > this.maxHelpBlockLength);
   }

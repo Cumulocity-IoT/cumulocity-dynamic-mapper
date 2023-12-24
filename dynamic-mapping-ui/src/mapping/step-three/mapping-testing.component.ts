@@ -23,27 +23,32 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  OnDestroy,
   OnInit,
   Output,
   ViewChild,
-  ViewEncapsulation,
-} from "@angular/core";
-import { AlertService } from "@c8y/ngx-components";
-import { BehaviorSubject } from "rxjs";
-import { Direction, JsonEditor2Component, Mapping, getSchema } from "../../shared/";
-import { MappingService } from "../core/mapping.service";
-import { C8YRequest } from "../processor/prosessor.model";
-import { StepperConfiguration } from "../step-main/stepper-model";
-import { isDisabled } from "../shared/util";
-
+  ViewEncapsulation
+} from '@angular/core';
+import { AlertService } from '@c8y/ngx-components';
+import { BehaviorSubject } from 'rxjs';
+import {
+  Direction,
+  JsonEditor2Component,
+  Mapping,
+  getSchema
+} from '../../shared/';
+import { MappingService } from '../core/mapping.service';
+import { C8YRequest } from '../processor/prosessor.model';
+import { StepperConfiguration } from '../step-main/stepper-model';
+import { isDisabled } from '../shared/util';
 
 @Component({
-  selector: "d11r-mapping-testing",
-  templateUrl: "mapping-testing.component.html",
-  styleUrls: ["../shared/mapping.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-testing',
+  templateUrl: 'mapping-testing.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class MappingStepTestingComponent implements OnInit {
+export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Input() stepperConfiguration: StepperConfiguration;
@@ -61,7 +66,7 @@ export class MappingStepTestingComponent implements OnInit {
     selectedResult: number;
   } = {
     results: [],
-    selectedResult: -1,
+    selectedResult: -1
   };
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
@@ -70,11 +75,11 @@ export class MappingStepTestingComponent implements OnInit {
   currentSourceTemplate: any;
   editorOptionsTesting: any = {};
 
-  @ViewChild("editorTestingPayload", { static: false })
+  @ViewChild('editorTestingPayload', { static: false })
   editorTestingPayload: JsonEditor2Component;
-  @ViewChild("editorTestingRequest", { static: false })
+  @ViewChild('editorTestingRequest', { static: false })
   editorTestingRequest: JsonEditor2Component;
-  @ViewChild("editorTestingResponse", { static: false })
+  @ViewChild('editorTestingResponse', { static: false })
   editorTestingResponse: JsonEditor2Component;
 
   constructor(
@@ -87,30 +92,30 @@ export class MappingStepTestingComponent implements OnInit {
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
-      this.mapping.direction == Direction.INBOUND ? "Cumulocity" : "Broker";
+      this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
-      this.mapping.direction == Direction.OUTBOUND ? "Cumulocity" : "Broker";
+      this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
     console.log(
-      "Mapping to be tested:",
+      'Mapping to be tested:',
       this.mapping,
       this.stepperConfiguration
     );
 
     this.editorOptionsTesting = {
       ...this.editorOptionsTesting,
-      mode: "tree",
+      mode: 'tree',
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
-      readOnly: true,
+      readOnly: true
     };
 
     this.editorTestingPayloadTemplateEmitter.subscribe((template) => {
       this.currentSourceTemplate = template;
       const editorTestingRequestRef =
-        this.elementRef.nativeElement.querySelector("#editorTestingRequest");
+        this.elementRef.nativeElement.querySelector('#editorTestingRequest');
       if (editorTestingRequestRef != null) {
-        //set schema for editors
+        // set schema for editors
         this.editorTestingRequest.setSchema(
           getSchema(this.mapping.targetAPI, this.mapping.direction, true)
         );
@@ -119,15 +124,15 @@ export class MappingStepTestingComponent implements OnInit {
           results: [],
           selectedResult: -1,
           request: {},
-          response: {},
+          response: {}
         };
       }
-      console.log("New test template:", this.currentSourceTemplate);
+      console.log('New test template:', this.currentSourceTemplate);
     });
   }
 
   async onTestTransformation() {
-    let testProcessingContext = await this.mappingService.testResult(
+    const testProcessingContext = await this.mappingService.testResult(
       this.mapping,
       false
     );
@@ -139,18 +144,18 @@ export class MappingStepTestingComponent implements OnInit {
       }
     });
     if (testProcessingContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successful!");
+      this.alertService.warning('Test tranformation was not successful!');
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
     } else {
-      this.alertService.success("Testing tranformation was successful!");
+      this.alertService.success('Testing tranformation was successful!');
     }
     this.onNextTestResult();
   }
 
   async onSendTest() {
-    let testProcessingContext = await this.mappingService.testResult(
+    const testProcessingContext = await this.mappingService.testResult(
       this.mapping,
       true
     );
@@ -162,7 +167,7 @@ export class MappingStepTestingComponent implements OnInit {
       }
     });
     if (testProcessingContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning("Test tranformation was not successful!");
+      this.alertService.warning('Test tranformation was not successful!');
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
@@ -172,7 +177,7 @@ export class MappingStepTestingComponent implements OnInit {
         `Sending tranformation was successful: ${testProcessingContext.requests[0].response.id}`
       );
       this.testResult.emit(true);
-      //console.log("RES", testProcessingContext.requests[0].response);
+      // console.log("RES", testProcessingContext.requests[0].response);
     }
     this.onNextTestResult();
   }
@@ -183,7 +188,7 @@ export class MappingStepTestingComponent implements OnInit {
       results: [],
       request: {},
       response: {},
-      selectedResult: -1,
+      selectedResult: -1
     };
     this.mappingService.initializeCache(this.mapping.direction);
   }
@@ -215,8 +220,8 @@ export class MappingStepTestingComponent implements OnInit {
       this.testingModel.errorMsg =
         this.testingModel.results[this.testingModel.selectedResult].error;
     } else {
-      this.testingModel.request = JSON.parse("{}");
-      this.testingModel.response = JSON.parse("{}");
+      this.testingModel.request = JSON.parse('{}');
+      this.testingModel.response = JSON.parse('{}');
       this.testingModel.errorMsg = undefined;
     }
   }

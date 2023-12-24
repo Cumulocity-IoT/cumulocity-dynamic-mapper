@@ -25,26 +25,26 @@ import { FieldType } from '@ngx-formly/core';
 @Component({
   selector: 'formly-field-input-custom',
   template: `<input
-  *ngIf="type !== 'number'; else numberTmp"
-  [type]="type"
-  [formControl]="formControl"
-  [class]="class"
-  [formlyAttributes]="field"
-  [required]="to.required"
-  [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
-  [class.is-invalid]="showError"
-/>
-<ng-template #numberTmp>
-  <input
-    type="number"
-    [formControl]="formControl"
-    [class]="class"
-    [formlyAttributes]="field"
-    [required]="to.required"
-    [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
-    [class.is-invalid]="showError"
-  />
-</ng-template>`,
+      *ngIf="type !== 'number'; else numberTmp"
+      [type]="type"
+      [formControl]="formControl"
+      [class]="class"
+      [formlyAttributes]="field"
+      [required]="to.required"
+      [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+      [class.is-invalid]="showError"
+    />
+    <ng-template #numberTmp>
+      <input
+        type="number"
+        [formControl]="formControl"
+        [class]="class"
+        [formlyAttributes]="field"
+        [required]="to.required"
+        [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+        [class.is-invalid]="showError"
+      />
+    </ng-template>`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FieldInputCustom extends FieldType {
@@ -56,4 +56,3 @@ export class FieldInputCustom extends FieldType {
     return `form-control ${this.to.class}`;
   }
 }
-

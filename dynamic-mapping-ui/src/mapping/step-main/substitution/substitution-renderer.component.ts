@@ -23,24 +23,20 @@ import {
   ElementRef,
   EventEmitter,
   Input,
-  OnInit,
   Output,
-  ViewEncapsulation,
-} from "@angular/core";
-import {
-  Direction,
-  MappingSubstitution,
-} from "../../../shared";
-import { definesDeviceIdentifier, isDisabled } from "../../shared/util";
-import { EditorMode } from "../stepper-model";
+  ViewEncapsulation
+} from '@angular/core';
+import { Direction, MappingSubstitution } from '../../../shared';
+import { definesDeviceIdentifier, isDisabled } from '../../shared/util';
+import { EditorMode } from '../stepper-model';
 
 @Component({
-  selector: "d11r-mapping-substitution-renderer",
-  templateUrl: "substitution-renderer.component.html",
-  styleUrls: ["./substitution-renderer.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-substitution-renderer',
+  templateUrl: 'substitution-renderer.component.html',
+  styleUrls: ['./substitution-renderer.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class SubstitutionRendererComponent implements OnInit {
+export class SubstitutionRendererComponent {
   @Input()
   substitutions: MappingSubstitution[] = [];
   @Input()
@@ -50,9 +46,9 @@ export class SubstitutionRendererComponent implements OnInit {
   @Input()
   direction: Direction;
 
-  @Output() onSelect = new EventEmitter<number>();
-  @Output() onDelete = new EventEmitter<number>();
-  @Output() onEdit = new EventEmitter<number>();
+  @Output() select = new EventEmitter<number>();
+  @Output() delete = new EventEmitter<number>();
+  @Output() edit = new EventEmitter<number>();
 
   public id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
@@ -61,14 +57,10 @@ export class SubstitutionRendererComponent implements OnInit {
 
   constructor(private elementRef: ElementRef) {}
 
-  ngOnInit() {
-    //console.log ("Setting for renderer:", this.setting)
-  }
-
   onSubstitutionSelect(index: number) {
-    console.log("Selected substitution:", index);
+    console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.onSelect.emit(index);
+    this.select.emit(index);
   }
 
   public scrollToSubstitution(i: number) {
@@ -76,16 +68,15 @@ export class SubstitutionRendererComponent implements OnInit {
     if (!i || i < 0 || i >= this.substitutions.length) {
       i = 0;
     }
-    console.log("Scroll to:", i);
+    console.log('Scroll to:', i);
     this.elementRef.nativeElement
       .querySelector(`#sub-${this.id}-${i}`)
       .scrollIntoView();
   }
 
   public onSubstitutionDelete(index: number) {
-    console.log("Delete substitution:", index);
+    console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.onDelete.emit(index);
+    this.delete.emit(index);
   }
-  
 }

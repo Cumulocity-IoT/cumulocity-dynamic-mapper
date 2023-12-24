@@ -18,29 +18,29 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
+import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import {
   ApplicationService,
   IApplication,
   IManagedObject,
-  IManagedObjectBinary,
-} from "@c8y/client";
+  IManagedObjectBinary
+} from '@c8y/client';
 import {
   AlertService,
   DropAreaComponent,
-  ModalLabels,
-} from "@c8y/ngx-components";
-import { BehaviorSubject, Subject } from "rxjs";
-import { ERROR_MESSAGES } from "../share/extension.constants";
-import { ExtensionService } from "../share/extension.service";
+  ModalLabels
+} from '@c8y/ngx-components';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { ERROR_MESSAGES } from '../share/extension.constants';
+import { ExtensionService } from '../share/extension.service';
 
 @Component({
-  selector: "d11r-mapping-add-extension",
-  templateUrl: "./add-extension.component.html",
-  styleUrls: ["./add-extension.component.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-add-extension',
+  templateUrl: './add-extension.component.html',
+  styleUrls: ['./add-extension.component.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class AddExtensionComponent implements OnInit {
+export class AddExtensionComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
 
   isLoading: boolean;
@@ -49,7 +49,7 @@ export class AddExtensionComponent implements OnInit {
   errorMessage: string;
   private uploadCanceled: boolean = false;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = { cancel: "Cancel", ok: "Done" };
+  labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
   constructor(
     private extensionService: ExtensionService,
@@ -57,8 +57,7 @@ export class AddExtensionComponent implements OnInit {
     private applicationService: ApplicationService
   ) {}
 
-  ngOnInit(): void {}
-  
+
   ngOnDestroy(): void {
     this.closeSubject.complete();
   }
@@ -69,7 +68,7 @@ export class AddExtensionComponent implements OnInit {
 
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
-      const file = event[0].file;
+      const [file] = event;
       this.onFile(file);
     }
   }
@@ -78,15 +77,15 @@ export class AddExtensionComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
     this.progress.next(0);
-    const nameUpload = file.name.split(".").slice(0, -1).join(".");
+    const nameUpload = file.name.split('.').slice(0, -1).join('.');
     // constant PROCESSOR_EXTENSION_TYPE
     try {
       this.createdApp = {
         d11r_processorExtension: {
           name: nameUpload,
-          external: true,
+          external: true
         },
-        name: nameUpload,
+        name: nameUpload
       };
       this.createdApp = await this.uploadExtension(file, this.createdApp);
       this.isAppCreated = true;

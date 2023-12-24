@@ -18,12 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { IAlarm, IResult, AlarmService, IFetchResponse } from "@c8y/client";
-import * as _ from "lodash";
-import { ProcessingContext } from "../processor/prosessor.model";
+import { Injectable } from '@angular/core';
+import { IAlarm, IResult, AlarmService, IFetchResponse } from '@c8y/client';
+import { ProcessingContext } from '../processor/prosessor.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class FacadeAlarmService {
   constructor(private alarm: AlarmService) {}
 
@@ -34,14 +33,14 @@ export class FacadeAlarmService {
     if (context.sendPayload) {
       return this.alarm.create(alarm);
     } else {
-      let copyAlarm = {
+      const copyAlarm = {
         ...alarm,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({
         data: copyAlarm,
-        res: { status: 200 } as IFetchResponse,
+        res: { status: 200 } as IFetchResponse
       });
       return promise;
     }

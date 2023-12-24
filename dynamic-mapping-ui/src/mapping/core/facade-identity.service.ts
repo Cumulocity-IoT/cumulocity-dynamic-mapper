@@ -18,18 +18,17 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 import {
   IdentityService,
   IExternalIdentity,
   IIdentified,
-  IResult,
-} from "@c8y/client";
-import * as _ from "lodash";
-import { ProcessingContext } from "../processor/prosessor.model";
-import { MockIdentityService } from "./mock/mock-identity.service";
+  IResult
+} from '@c8y/client';
+import { ProcessingContext } from '../processor/prosessor.model';
+import { MockIdentityService } from './mock/mock-identity.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class FacadeIdentityService {
   identityCache: Map<string, Map<string, IIdentified>>;
 
@@ -48,8 +47,8 @@ export class FacadeIdentityService {
     context: ProcessingContext
   ): Promise<IExternalIdentity> {
     if (context.sendPayload) {
-      let result: IExternalIdentity = undefined;
-      const res = await this.identity.list(managedObjectId);
+      const result: IExternalIdentity = undefined;
+      await this.identity.list(managedObjectId);
       // while (res.data.length) {
 
       //   if (externalId.getType().equals(idType)) {
@@ -76,7 +75,7 @@ export class FacadeIdentityService {
       // }
       return result;
     } else {
-      //return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
+      // return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
     }
   }
 

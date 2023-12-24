@@ -18,9 +18,9 @@
  *
  * @authors Christof Strack
  */
-import { Component, Inject } from "@angular/core";
-import { FilteringFormRendererContext } from "@c8y/ngx-components";
-import { TestingDeviceService, TypeFilteringModel } from "../testing.service";
+import { Component, Inject } from '@angular/core';
+import { FilteringFormRendererContext } from '@c8y/ngx-components';
+import { TestingDeviceService, TypeFilteringModel } from '../testing.service';
 
 /**
  * This is the example component for custom filtering form.
@@ -68,7 +68,7 @@ import { TestingDeviceService, TypeFilteringModel } from "../testing.service";
         Apply
       </button>
     </div>
-  `,
+  `
 })
 export class TypeFilteringFormRendererComponent {
   model: TypeFilteringModel;
@@ -90,8 +90,8 @@ export class TypeFilteringFormRendererComponent {
     this.context.applyFilter({
       externalFilterQuery: {
         model: this.model,
-        query: this.service.getTypeQuery(this.model),
-      },
+        query: this.service.getTypeQuery(this.model)
+      }
     });
   }
 

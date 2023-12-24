@@ -18,28 +18,25 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import {
   ConfirmModalComponent,
   gettext,
   ModalLabels,
   Status,
-  StatusType,
-} from "@c8y/ngx-components";
-import { TranslateService } from "@ngx-translate/core";
-import { Subject } from "rxjs";
-import {
-  Direction,
-  MappingSubstitution,
-} from "../../shared";
-import { definesDeviceIdentifier } from "../shared/util";
+  StatusType
+} from '@c8y/ngx-components';
+import { TranslateService } from '@ngx-translate/core';
+import { Subject } from 'rxjs';
+import { Direction, MappingSubstitution } from '../../shared';
+import { definesDeviceIdentifier } from '../shared/util';
 
 @Component({
-  selector: "d11r-mapping-overwrite-substitution-modal",
-  templateUrl: "overwrite-substitution-modal.component.html",
+  selector: 'd11r-mapping-overwrite-substitution-modal',
+  templateUrl: 'overwrite-substitution-modal.component.html'
 })
-export class OverwriteSubstitutionModalComponent implements OnInit {
-  @ViewChild("overwriteSubstitutionRef", { static: false })
+export class OverwriteSubstitutionModalComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('overwriteSubstitutionRef', { static: false })
   overwriteSubstitutionRef: ConfirmModalComponent;
 
   @Input()
@@ -51,26 +48,26 @@ export class OverwriteSubstitutionModalComponent implements OnInit {
   direction: Direction;
   substitutionText: string;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = { ok: gettext("Overwrite"), cancel: gettext("Cancel") };
-  title = gettext("Overwrite");
+  labels: ModalLabels = { ok: gettext('Overwrite'), cancel: gettext('Cancel') };
+  title = gettext('Overwrite');
   status: StatusType = Status.WARNING;
 
   constructor(private translateService: TranslateService) {}
 
   ngOnInit() {
     this.message1 = this.translateService.instant(
-      gettext("You are about to overwrite an exting substitution:")
+      gettext('You are about to overwrite an exting substitution:')
     );
     this.message2 = this.translateService.instant(
-      gettext("Do you want to proceed?")
+      gettext('Do you want to proceed?')
     );
-    let marksDeviceIdentifier = definesDeviceIdentifier(
+    const marksDeviceIdentifier = definesDeviceIdentifier(
       this.targetAPI,
       this.substitution,
       this.direction
     )
-      ? "* "
-      : "";
+      ? '* '
+      : '';
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
   }
 

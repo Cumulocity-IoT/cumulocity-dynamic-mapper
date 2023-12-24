@@ -18,11 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { FieldWrapper } from "@ngx-formly/core";
+import { Component } from '@angular/core';
+import { FieldWrapper } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-horizontal-wrapper",
+  selector: 'd11r-formly-horizontal-wrapper',
   template: `
     <div class="form-group row">
       <label [attr.for]="id" class="col-sm-2 col-form-label" *ngIf="to.label">
@@ -39,6 +39,6 @@ import { FieldWrapper } from "@ngx-formly/core";
         <formly-validation-message [field]="field"></formly-validation-message>
       </div>
     </div>
-  `,
+  `
 })
 export class FormlyHorizontalWrapper extends FieldWrapper {}

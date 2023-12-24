@@ -18,16 +18,16 @@
  *
  * @authors Christof Strack
  */
-import { Type } from "@angular/core";
+import { Type } from '@angular/core';
 import {
   Column,
   ColumnDataType,
   SortOrder,
-  FilterPredicateFunction,
-} from "@c8y/ngx-components";
-import { TypeHeaderCellRendererComponent } from "./type.header-cell-renderer.component";
-import { TypeCellRendererComponent } from "./type.cell-renderer.component";
-import { TypeFilteringFormRendererComponent } from "./type.filtering-form-renderer.component";
+  FilterPredicateFunction
+} from '@c8y/ngx-components';
+import { TypeHeaderCellRendererComponent } from './type.header-cell-renderer.component';
+import { TypeCellRendererComponent } from './type.cell-renderer.component';
+import { TypeFilteringFormRendererComponent } from './type.filtering-form-renderer.component';
 
 /**
  * Defines a class for custom Type column.
@@ -58,8 +58,8 @@ export class TypeDataGridColumn implements Column {
   externalFilterQuery?: string | object;
 
   constructor() {
-    this.name = "type";
-    this.header = "Type";
+    this.name = 'type';
+    this.header = 'Type';
 
     this.headerCellRendererComponent = TypeHeaderCellRendererComponent;
     this.cellRendererComponent = TypeCellRendererComponent;

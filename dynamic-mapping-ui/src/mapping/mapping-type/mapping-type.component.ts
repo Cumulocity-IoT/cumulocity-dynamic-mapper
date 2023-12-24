@@ -21,28 +21,29 @@
 import {
   Component,
   Input,
+  OnDestroy,
   OnInit,
   ViewChild,
-  ViewEncapsulation,
-} from "@angular/core";
-import { FormBuilder, FormGroup, Validators } from "@angular/forms";
-import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
-import { Subject } from "rxjs";
-import { Direction, MappingType } from "../../shared";
-import { isDisabled } from "../shared/util";
+  ViewEncapsulation
+} from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
+import { Subject } from 'rxjs';
+import { Direction, MappingType } from '../../shared';
+import { isDisabled } from '../shared/util';
 
 @Component({
-  selector: "d11r-mapping-type",
-  templateUrl: "./mapping-type.component.html",
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-type',
+  templateUrl: './mapping-type.component.html',
+  encapsulation: ViewEncapsulation.None
 })
-export class MappingTypeComponent implements OnInit {
+export class MappingTypeComponent implements OnInit, OnDestroy {
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
 
   @ViewChild(C8yStepper, { static: true })
   closeSubject: Subject<MappingType>;
-  labels: ModalLabels = { cancel: "Cancel" };
+  labels: ModalLabels = { cancel: 'Cancel' };
 
   @Input()
   direction: Direction;
@@ -58,9 +59,9 @@ export class MappingTypeComponent implements OnInit {
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
-    console.log("Subject:", this.closeSubject, this.labels);
+    console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
-      mappingType: ["", Validators.required],
+      mappingType: ['', Validators.required]
     });
   }
 

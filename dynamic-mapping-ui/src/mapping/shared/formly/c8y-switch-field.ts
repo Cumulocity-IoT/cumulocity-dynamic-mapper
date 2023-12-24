@@ -19,11 +19,11 @@
  * @authors Christof Strack
  */
 
-import { Component } from "@angular/core";
-import { FieldType } from "@ngx-formly/core";
+import { Component } from '@angular/core';
+import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-switch",
+  selector: 'd11r-formly-switch',
   template: `
     <div class="form-group row">
       <label class="c8y-switch" *ngIf="to.label">
@@ -39,6 +39,6 @@ import { FieldType } from "@ngx-formly/core";
         <formly-validation-message [field]="field"></formly-validation-message>
       </div>
     </div>
-  `,
+  `
 })
 export class C8YSwitchField extends FieldType {}

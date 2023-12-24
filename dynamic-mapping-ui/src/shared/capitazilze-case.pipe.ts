@@ -14,7 +14,7 @@ export class CapitalizeCasePipe implements PipeTransform {
     const words = value.split(' ');
 
     // Convert each word to lowercase and capitalize the first letter
-    const camelCaseWords = words.map((word, index) => {
+    const camelCaseWords = words.map((word) => {
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     });
 

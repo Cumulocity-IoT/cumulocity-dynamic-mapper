@@ -18,18 +18,18 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 
-import { AlertService } from "@c8y/ngx-components";
-import { FacadeIdentityService } from "./facade-identity.service";
-import { FacadeInventoryService } from "./facade-inventory.service";
-import { ProcessingContext } from "../processor/prosessor.model";
-import { FacadeAlarmService } from "./facade-alarm.service";
-import { FacadeEventService } from "./facade-event.service";
-import { FacadeMeasurementService } from "./facade-measurement.service";
-import { FacadeOperationService } from "./facade-operation.service";
+import { AlertService } from '@c8y/ngx-components';
+import { FacadeIdentityService } from './facade-identity.service';
+import { FacadeInventoryService } from './facade-inventory.service';
+import { ProcessingContext } from '../processor/prosessor.model';
+import { FacadeAlarmService } from './facade-alarm.service';
+import { FacadeEventService } from './facade-event.service';
+import { FacadeMeasurementService } from './facade-measurement.service';
+import { FacadeOperationService } from './facade-operation.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class MQTTClient {
   constructor(
     private inventory: FacadeInventoryService,
@@ -42,8 +42,7 @@ export class MQTTClient {
   ) {}
 
   async createMEAO(context: ProcessingContext) {
-    let result = context.requests[context.requests.length - 1].request;
+    const result = context.requests[context.requests.length - 1].request;
     return result;
   }
-
 }

@@ -18,13 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { FetchClient, InventoryService, Realtime } from "@c8y/client";
-import { BehaviorSubject, Observable } from "rxjs";
-import { MAPPING_FRAGMENT, MappingStatus, SharedService } from "../../shared";
-import { BrokerConfigurationService } from "../../configuration";
+import { Injectable } from '@angular/core';
+import { FetchClient, InventoryService, Realtime } from '@c8y/client';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class MonitoringService {
   constructor(
     private client: FetchClient,
@@ -42,12 +41,11 @@ export class MonitoringService {
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
-    const agentId =
-      await this.sharedService.getDynamicMappingServiceAgent();
-    console.log("Start subscription for monitoring:", agentId);
+    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    console.log('Start subscription for monitoring:', agentId);
 
-    let { data, res } = await this.inventory.detail(agentId);
-    let monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
+    const { data } = await this.inventory.detail(agentId);
+    const monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
     this.mappingStatus.next(monitoring);
     return this.realtime.subscribe(
       `/managedobjects/${agentId}`,
@@ -60,9 +58,9 @@ export class MonitoringService {
   }
 
   private updateStatus(p: object): void {
-    let payload = p["data"]["data"];
-    let monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
+    const payload = p['data']['data'];
+    const monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
     this.mappingStatus.next(monitoring);
-    //console.log("New statusMonitoring event", monitoring);
+    // console.log("New statusMonitoring event", monitoring);
   }
 }
