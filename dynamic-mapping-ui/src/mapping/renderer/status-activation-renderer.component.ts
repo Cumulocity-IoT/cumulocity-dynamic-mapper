@@ -18,8 +18,8 @@
  *
  * @authors Christof Strack
  */
-import { Component, Inject, ViewEncapsulation } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
+import { Component, ViewEncapsulation } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 /**
  * The example component for custom cell renderer.
@@ -31,14 +31,16 @@ import { CellRendererContext } from "@c8y/ngx-components";
   encapsulation: ViewEncapsulation.None,
   template: `
     <span [title]="context.item.active">
-      <i style= "text-align:center; width: 100%;" [c8yIcon]="!context.value ? 'circle-o' : 'plus-circle-o'" class="m-r-5"></i>
+      <i
+        style="text-align:center; width: 100%;"
+        [c8yIcon]="!context.value ? 'circle-o' : 'plus-circle-o'"
+        class="m-r-5"
+      ></i>
     </span>
-  `,
+  `
 })
 export class StatusActivationRendererComponent {
-  constructor(
-    public context: CellRendererContext,
-  ) {
-    //console.log("Status", context, context.value)
+  constructor(public context: CellRendererContext) {
+    // console.log("Status", context, context.value)
   }
 }

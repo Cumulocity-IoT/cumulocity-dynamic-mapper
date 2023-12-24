@@ -18,17 +18,16 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 import {
   IFetchResponse,
   IOperation,
   IResult,
-  OperationService,
-} from "@c8y/client";
-import * as _ from "lodash";
-import { ProcessingContext } from "../processor/prosessor.model";
+  OperationService
+} from '@c8y/client';
+import { ProcessingContext } from '../processor/prosessor.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class FacadeOperationService {
   constructor(private operation: OperationService) {}
 
@@ -39,14 +38,14 @@ export class FacadeOperationService {
     if (context.sendPayload) {
       return this.operation.create(operation);
     } else {
-      let copyOperation = {
+      const copyOperation = {
         ...operation,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({
         data: copyOperation,
-        res: { status: 200 } as IFetchResponse,
+        res: { status: 200 } as IFetchResponse
       });
       return promise;
     }

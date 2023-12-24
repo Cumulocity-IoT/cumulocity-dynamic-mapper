@@ -1,17 +1,17 @@
-import { Component, Input, OnInit } from "@angular/core";
-import { ModalLabels } from "@c8y/ngx-components";
-import { BehaviorSubject, Subject } from "rxjs";
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { ModalLabels } from '@c8y/ngx-components';
+import { BehaviorSubject, Subject } from 'rxjs';
 import {
   Direction,
   Mapping,
   MappingSubstitution,
-  RepairStrategy,
-} from "../../shared";
-import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
-import { definesDeviceIdentifier } from "../shared/util";
+  RepairStrategy
+} from '../../shared';
+import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
+import { definesDeviceIdentifier } from '../shared/util';
 
 @Component({
-  selector: "d11y-edit-substitution-modal",
+  selector: 'd11y-edit-substitution-modal',
   template: ` <c8y-modal
     title="Edit properties of substitution"
     (onClose)="onSave($event)"
@@ -24,7 +24,7 @@ import { definesDeviceIdentifier } from "../shared/util";
       <c8y-form-group *ngIf="duplicate">
         <div>
           <span>{{
-            "You are about to overwrite the existing substitution: #" +
+            'You are about to overwrite the existing substitution: #' +
               existingSubstitution | translate
           }}</span>
         </div>
@@ -35,7 +35,7 @@ import { definesDeviceIdentifier } from "../shared/util";
         </div>
         <br />
         <div>
-          <span>{{ "Do you want to proceed?" | translate }}</span>
+          <span>{{ 'Do you want to proceed?' | translate }}</span>
         </div>
         <label class="c8y-switch">
           <input
@@ -45,14 +45,14 @@ import { definesDeviceIdentifier } from "../shared/util";
           />
           <span></span>
           <span>
-            {{ "Overwrite existing subscription" | translate }}
+            {{ 'Overwrite existing subscription' | translate }}
           </span>
         </label>
       </c8y-form-group>
       <c8y-form-group>
         <label>
           <span>
-            {{ "Path source" | translate }}
+            {{ 'Path source' | translate }}
           </span>
         </label>
         <input
@@ -65,7 +65,7 @@ import { definesDeviceIdentifier } from "../shared/util";
       <c8y-form-group>
         <label>
           <span>
-            {{ "Path target" | translate }}
+            {{ 'Path target' | translate }}
           </span>
         </label>
         <input
@@ -88,7 +88,7 @@ import { definesDeviceIdentifier } from "../shared/util";
           />
           <span></span>
           <span>
-            {{ "Expand as array" | translate }}
+            {{ 'Expand as array' | translate }}
           </span>
         </label>
         <div class="d-inline">
@@ -124,7 +124,7 @@ import { definesDeviceIdentifier } from "../shared/util";
           />
           <span></span>
           <span>
-            {{ "Resolve to externalId" | translate }}
+            {{ 'Resolve to externalId' | translate }}
           </span>
         </label>
         <div class="d-inline">
@@ -176,11 +176,11 @@ import { definesDeviceIdentifier } from "../shared/util";
         </div>
       </c8y-form-group>
     </div>
-  </c8y-modal>`,
+  </c8y-modal>`
 })
-export class EditSubstitutionComponent implements OnInit {
+export class EditSubstitutionComponent implements OnInit, OnDestroy {
   closeSubject: Subject<MappingSubstitution> = new Subject();
-  labels: ModalLabels = { ok: "Save", cancel: "Dismiss" };
+  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: boolean;
   @Input() existingSubstitution: number;
@@ -195,46 +195,46 @@ export class EditSubstitutionComponent implements OnInit {
   ngOnInit(): void {
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
-      .filter((key) => key != "IGNORE" && key != "CREATE_IF_MISSING")
+      .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
       .map((key) => {
         return {
           label: key,
           value: key,
           disabled:
             (!this.substitution.expandArray &&
-              key != "DEFAULT" &&
-              (key == "USE_FIRST_VALUE_OF_ARRAY" ||
-                key == "USE_LAST_VALUE_OF_ARRAY")) ||
-            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              key != 'DEFAULT' &&
+              (key == 'USE_FIRST_VALUE_OF_ARRAY' ||
+                key == 'USE_LAST_VALUE_OF_ARRAY')) ||
+            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
         };
       });
 
-    let marksDeviceIdentifier = definesDeviceIdentifier(
+    const marksDeviceIdentifier = definesDeviceIdentifier(
       this.mapping.targetAPI,
       this.substitution,
       this.stepperConfiguration.direction
     )
-      ? "* "
-      : "";
+      ? '* '
+      : '';
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
     this.disabled$.next(this.duplicate);
-    //console.log("Repair Options:", this.repairStrategyOptions);
-    console.log("Existing substitution:", this.existingSubstitution);
+    // console.log("Repair Options:", this.repairStrategyOptions);
+    console.log('Existing substitution:', this.existingSubstitution);
   }
 
   onDismiss(event) {
-    console.log("Dismiss");
+    console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
   onSave(event) {
-    console.log("Save");
+    console.log('Save');
     this.closeSubject.next(this.editedSubstitution);
   }
 
   onOverrideChanged() {
-    let result = this.duplicate && !this.override;
-    console.log("Override:", result);
+    const result = this.duplicate && !this.override;
+    console.log('Override:', result);
     this.disabled$.next(result);
   }
 
@@ -246,9 +246,9 @@ export class EditSubstitutionComponent implements OnInit {
       this.substitution,
       this.mapping.direction
     );
-    //const r = d0 || d1 || (!d1 && d2);
+    // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
-    //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
+    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
 
@@ -256,7 +256,7 @@ export class EditSubstitutionComponent implements OnInit {
     const r =
       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
       this.stepperConfiguration.direction == Direction.INBOUND;
-    //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
+    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
 
@@ -264,7 +264,7 @@ export class EditSubstitutionComponent implements OnInit {
     const r =
       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
       this.stepperConfiguration.direction == Direction.OUTBOUND;
-    //console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
+    // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)
     return r;
   }
 

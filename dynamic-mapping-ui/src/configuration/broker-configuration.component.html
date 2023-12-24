@@ -109,8 +109,8 @@
                     <span
                       class="c8y-pulse animated pulse animation-slow"
                       [ngClass]="{
-                        active: (con.status$ | async) == 'CONNECTED',
-                        inactive: (con.status$ | async) != 'CONNECTED'
+                        active: (con.status$ | async) === 'CONNECTED',
+                        inactive: (con.status$ | async) !== 'CONNECTED'
                       }"
                     ></span
                     >{{ con.status$ | async }}

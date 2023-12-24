@@ -18,23 +18,24 @@
  *
  * @authors Christof Strack
  */
-import * as _ from "lodash";
-import { PayloadProcessorOutbound } from "../payload-processor-outbound.service";
-import {
-  Mapping,
-  API,
-  RepairStrategy,
-  whatIsIt,
-} from "../../../shared";
+import * as _ from 'lodash';
+import { PayloadProcessorOutbound } from '../payload-processor-outbound.service';
+import { Mapping, API, RepairStrategy, whatIsIt } from '../../../shared';
 import {
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType,
-} from "../prosessor.model";
-import { Injectable } from "@angular/core";
-import { TIME, TOKEN_TOPIC_LEVEL, findDeviceIdentifier, isNumeric, splitTopicExcludingSeparator } from "../../shared/util";
+  SubstituteValueType
+} from '../prosessor.model';
+import { Injectable } from '@angular/core';
+import {
+  TIME,
+  TOKEN_TOPIC_LEVEL,
+  findDeviceIdentifier,
+  isNumeric,
+  splitTopicExcludingSeparator
+} from '../../shared/util';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class JSONProcessorOutbound extends PayloadProcessorOutbound {
   public deserializePayload(
     context: ProcessingContext,
@@ -45,14 +46,13 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
   }
 
   public async extractFromSource(context: ProcessingContext) {
-    let mapping: Mapping = context.mapping;
-    let payloadJsonNode: JSON = context.payload;
-    let postProcessingCache: Map<string, SubstituteValue[]> =
-      context.postProcessingCache;
-    let topicLevels = splitTopicExcludingSeparator(context.topic);
+    const {mapping} = context;
+    const payloadJsonNode: JSON = context.payload;
+    const {postProcessingCache} = context;
+    const topicLevels = splitTopicExcludingSeparator(context.topic);
     payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
 
-    let payload: string = JSON.stringify(payloadJsonNode, null, 4);
+    const payload: string = JSON.stringify(payloadJsonNode, null, 4);
     let substitutionTimeExists: boolean = false;
 
     // iterate over substitutions BEGIN
@@ -66,22 +66,22 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
           substitution.pathSource
         );
 
-        //step 2 analyse exctracted content: textual, array
-        let postProcessingCacheEntry: SubstituteValue[] = _.get(
+        // step 2 analyse exctracted content: textual, array
+        const postProcessingCacheEntry: SubstituteValue[] = _.get(
           postProcessingCache,
           substitution.pathTarget,
           []
         );
         if (extractedSourceContent == undefined) {
           console.error(
-            "No substitution for: ",
+            'No substitution for: ',
             substitution.pathSource,
             payload
           );
           postProcessingCacheEntry.push({
             value: extractedSourceContent,
             type: SubstituteValueType.IGNORE,
-            repairStrategy: substitution.repairStrategy,
+            repairStrategy: substitution.repairStrategy
           });
           postProcessingCache.set(
             substitution.pathTarget,
@@ -97,19 +97,19 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                   postProcessingCacheEntry.push({
                     value: jn.toString(),
                     type: SubstituteValueType.NUMBER,
-                    repairStrategy: substitution.repairStrategy,
+                    repairStrategy: substitution.repairStrategy
                   });
-                } else if (whatIsIt(jn) == "String") {
+                } else if (whatIsIt(jn) == 'String') {
                   postProcessingCacheEntry.push({
                     value: jn,
                     type: SubstituteValueType.TEXTUAL,
-                    repairStrategy: substitution.repairStrategy,
+                    repairStrategy: substitution.repairStrategy
                   });
-                } else if (whatIsIt(jn) == "Array") {
+                } else if (whatIsIt(jn) == 'Array') {
                   postProcessingCacheEntry.push({
                     value: jn,
                     type: SubstituteValueType.ARRAY,
-                    repairStrategy: substitution.repairStrategy,
+                    repairStrategy: substitution.repairStrategy
                   });
                 } else {
                   console.warn(
@@ -131,7 +131,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
               postProcessingCacheEntry.push({
                 value: extractedSourceContent,
                 type: SubstituteValueType.ARRAY,
-                repairStrategy: substitution.repairStrategy,
+                repairStrategy: substitution.repairStrategy
               });
               postProcessingCache.set(
                 substitution.pathTarget,
@@ -160,11 +160,11 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 );
                 if (context.sendPayload) {
                   throw new Error(
-                    "External id " +
-                      extractedSourceContent +
-                      " for type " +
-                      mapping.externalIdType +
-                      " not found!"
+                    `External id ${
+                      extractedSourceContent
+                      } for type ${
+                      mapping.externalIdType
+                      } not found!`
                   );
                 }
                 externalId = extractedSourceContent;
@@ -173,20 +173,20 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
               postProcessingCacheEntry.push({
                 value: extractedSourceContent,
                 type: SubstituteValueType.TEXTUAL,
-                repairStrategy: substitution.repairStrategy,
+                repairStrategy: substitution.repairStrategy
               });
             } else {
               postProcessingCacheEntry.push({
                 value: extractedSourceContent,
                 type: SubstituteValueType.NUMBER,
-                repairStrategy: substitution.repairStrategy,
+                repairStrategy: substitution.repairStrategy
               });
             }
             postProcessingCache.set(
               substitution.pathTarget,
               postProcessingCacheEntry
             );
-          } else if (whatIsIt(extractedSourceContent) == "String") {
+          } else if (whatIsIt(extractedSourceContent) == 'String') {
             context.cardinality.set(substitution.pathTarget, 1);
 
             if (
@@ -194,7 +194,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 findDeviceIdentifier(mapping).pathSource &&
               substitution.resolve2ExternalId
             ) {
-              let externalId: string =
+              const externalId: string =
                 await this.c8yAgent.resolveGlobalId2ExternalId(
                   extractedSourceContent,
                   mapping.externalIdType,
@@ -202,11 +202,11 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 );
               if ((!externalId || externalId == null) && context.sendPayload) {
                 throw new Error(
-                  "External id " +
-                    extractedSourceContent +
-                    " for type " +
-                    mapping.externalIdType +
-                    " not found!"
+                  `External id ${
+                    extractedSourceContent
+                    } for type ${
+                    mapping.externalIdType
+                    } not found!`
                 );
               } else if (!externalId || externalId == null) {
                 extractedSourceContent = null;
@@ -218,7 +218,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
               type: SubstituteValueType.TEXTUAL,
-              repairStrategy: substitution.repairStrategy,
+              repairStrategy: substitution.repairStrategy
             });
             postProcessingCache.set(
               substitution.pathTarget,
@@ -232,7 +232,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
               type: SubstituteValueType.OBJECT,
-              repairStrategy: substitution.repairStrategy,
+              repairStrategy: substitution.repairStrategy
             });
             postProcessingCache.set(
               substitution.pathTarget,
@@ -255,7 +255,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
 
     // no substitution for the time property exists, then use the system time
     if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY.name) {
-      let postProcessingCacheEntry: SubstituteValue[] = _.get(
+      const postProcessingCacheEntry: SubstituteValue[] = _.get(
         postProcessingCache,
         TIME,
         []
@@ -263,7 +263,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
       postProcessingCacheEntry.push({
         value: new Date().toISOString(),
         type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT,
+        repairStrategy: RepairStrategy.DEFAULT
       });
 
       postProcessingCache.set(TIME, postProcessingCacheEntry);

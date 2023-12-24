@@ -35,7 +35,11 @@ import { map, startWith, switchMap } from 'rxjs/operators';
 export class SelectComponent extends FieldType implements OnInit {
   static readonly CONFIG: ConfigOption = {
     types: [
-      { name: 'select', component: SelectComponent, wrappers: ['c8y-form-field'] },
+      {
+        name: 'select',
+        component: SelectComponent,
+        wrappers: ['c8y-form-field']
+      },
       { name: 'enum', extends: 'select' }
     ]
   };
@@ -44,11 +48,13 @@ export class SelectComponent extends FieldType implements OnInit {
   valueProp = 'value';
 
   placeholder$ = defer(() => of(this.to?.placeholder)).pipe(
-    switchMap(placeholder =>
+    switchMap((placeholder) =>
       placeholder
         ? of(placeholder)
         : this.defaultPlaceholder$.pipe(
-            startWith(this.translateService.instant(gettext('Select your option')))
+            startWith(
+              this.translateService.instant(gettext('Select your option'))
+            )
           )
     )
   );
@@ -56,10 +62,12 @@ export class SelectComponent extends FieldType implements OnInit {
   defaultPlaceholder$ = defer(() =>
     isObservable(this.to?.options) ? this.to?.options : of(this.to?.options)
   ).pipe(
-    map(data => get(data[0], this.labelProp)),
-    map(example =>
+    map((data) => get(data[0], this.labelProp)),
+    map((example) =>
       this.translateService.instant(
-        !example ? gettext('No items') : gettext('Select your option, for example, {{ example }}'),
+        !example
+          ? gettext('No items')
+          : gettext('Select your option, for example, {{ example }}'),
         { example }
       )
     )

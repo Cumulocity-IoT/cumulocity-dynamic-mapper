@@ -18,8 +18,8 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 /**
  * The example component for custom header renderer.
@@ -33,7 +33,7 @@ import { CellRendererContext } from "@c8y/ngx-components";
     >
       {{ context.property.header }}
     </span>
-  `,
+  `
 })
 export class TypeHeaderCellRendererComponent {
   constructor(public context: CellRendererContext) {}

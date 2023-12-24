@@ -18,28 +18,28 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewEncapsulation } from "@angular/core";
+import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   ActionControl,
   AlertService,
   Column,
   ColumnDataType,
   DisplayOptions,
-  Pagination,
-} from "@c8y/ngx-components";
-import { Observable } from "rxjs";
-import { BrokerConfigurationService, Operation } from "../../configuration";
-import { NameRendererComponent } from "../../mapping";
-import { MappingStatus } from "../../shared";
-import { MonitoringService } from "../shared/monitoring.service";
+  Pagination
+} from '@c8y/ngx-components';
+import { Observable } from 'rxjs';
+import { BrokerConfigurationService, Operation } from '../../configuration';
+import { NameRendererComponent } from '../../mapping';
+import { MappingStatus } from '../../shared';
+import { MonitoringService } from '../shared/monitoring.service';
 
 @Component({
-  selector: "d11r-mapping-monitoring-grid",
-  templateUrl: "monitoring.component.html",
-  styleUrls: ["../../mapping/shared/mapping.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-monitoring-grid',
+  templateUrl: 'monitoring.component.html',
+  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class MonitoringComponent implements OnInit {
+export class MonitoringComponent implements OnInit, OnDestroy {
   mappingStatus$: Observable<MappingStatus[]>;
   subscription: object;
 
@@ -47,7 +47,7 @@ export class MonitoringComponent implements OnInit {
     bordered: true,
     striped: true,
     filter: false,
-    gridHeader: true,
+    gridHeader: true
   };
 
   columns: Column[] = [
@@ -62,67 +62,67 @@ export class MonitoringComponent implements OnInit {
     //   cellRendererComponent: IdRendererComponent,
     // },
     {
-      name: "name",
-      header: "Name",
-      path: "name",
+      name: 'name',
+      header: 'Name',
+      path: 'name',
       filterable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      visible: true,
+      visible: true
     },
     {
-      name: "subscriptionTopic",
-      header: "Subscription Topic",
-      path: "subscriptionTopic",
+      name: 'subscriptionTopic',
+      header: 'Subscription Topic',
+      path: 'subscriptionTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
-      gridTrackSize: "15%",
+      gridTrackSize: '15%'
     },
     {
-      name: "publishTopic",
-      header: "Publish Topic",
-      path: "publishTopic",
+      name: 'publishTopic',
+      header: 'Publish Topic',
+      path: 'publishTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
-      gridTrackSize: "15%",
+      gridTrackSize: '15%'
     },
     {
-      header: "# Errors",
-      name: "errors",
-      path: "errors",
+      header: '# Errors',
+      name: 'errors',
+      path: 'errors',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "15%",
+      gridTrackSize: '15%'
     },
     {
-      header: "# Messages Received",
-      name: "messagesReceived",
-      path: "messagesReceived",
+      header: '# Messages Received',
+      name: 'messagesReceived',
+      path: 'messagesReceived',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "15%",
+      gridTrackSize: '15%'
     },
     {
-      header: "# Snooped Templates Total",
-      name: "snoopedTemplatesTotal",
-      path: "snoopedTemplatesTotal",
+      header: '# Snooped Templates Total',
+      name: 'snoopedTemplatesTotal',
+      path: 'snoopedTemplatesTotal',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "15%",
+      gridTrackSize: '15%'
     },
     {
-      header: "# Snooped Templates Active",
-      name: "snoopedTemplatesActive",
-      path: "snoopedTemplatesActive",
+      header: '# Snooped Templates Active',
+      name: 'snoopedTemplatesActive',
+      path: 'snoopedTemplatesActive',
       filterable: true,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: "15%",
-    },
+      gridTrackSize: '15%'
+    }
   ];
 
   pagination: Pagination = {
     pageSize: 3,
-    currentPage: 1,
+    currentPage: 1
   };
 
   actionControls: ActionControl[] = [];
@@ -150,7 +150,7 @@ export class MonitoringComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
-    console.log("Stop subscription");
+    console.log('Stop subscription');
     this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
   }
 }

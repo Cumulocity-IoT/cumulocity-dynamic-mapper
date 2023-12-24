@@ -18,23 +18,23 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit, ViewChild, ViewEncapsulation } from "@angular/core";
+import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import {
   AlertService,
   DropAreaComponent,
-  ModalLabels,
-} from "@c8y/ngx-components";
-import { BehaviorSubject, Subject } from "rxjs";
-import { MappingService } from "../core/mapping.service";
-import { uuidCustom, Mapping } from "../../shared";
+  ModalLabels
+} from '@c8y/ngx-components';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { MappingService } from '../core/mapping.service';
+import { uuidCustom, Mapping } from '../../shared';
 
 @Component({
-  selector: "d11r-mapping-import-extension",
-  templateUrl: "./import.component.html",
-  styleUrls: ["./import.component.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-import-extension',
+  templateUrl: './import.component.html',
+  styleUrls: ['./import.component.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class ImportMappingsComponent implements OnInit {
+export class ImportMappingsComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
   private importCanceled: boolean = false;
   progress$: BehaviorSubject<number> = new BehaviorSubject<number>(null);
@@ -42,18 +42,16 @@ export class ImportMappingsComponent implements OnInit {
   isAppCreated: boolean;
   errorMessage: string;
   closeSubject: Subject<boolean> = new Subject();
-  labels: ModalLabels = { cancel: "Cancel", ok: "Done" };
+  labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService
   ) {}
 
-  ngOnInit(): void {}
-
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
-      const file = event[0].file;
+      const [file] = event;
       this.onFile(file);
     }
   }
@@ -65,7 +63,7 @@ export class ImportMappingsComponent implements OnInit {
     const ms = await file.text();
     const mappings: Mapping[] = JSON.parse(ms);
     const countMappings = mappings.length;
-    let errors = [];
+    const errors = [];
     mappings.forEach((m, i) => {
       try {
         m.ident = uuidCustom();

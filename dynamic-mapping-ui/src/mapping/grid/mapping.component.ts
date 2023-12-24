@@ -21,9 +21,10 @@
 import {
   Component,
   EventEmitter,
+  OnDestroy,
   OnInit,
-  ViewEncapsulation,
-} from "@angular/core";
+  ViewEncapsulation
+} from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -34,10 +35,10 @@ import {
   DisplayOptions,
   Pagination,
   Row,
-  gettext,
-} from "@c8y/ngx-components";
-import { saveAs } from "file-saver";
-import { BrokerConfigurationService, Operation } from "../../configuration";
+  gettext
+} from '@c8y/ngx-components';
+import { saveAs } from 'file-saver';
+import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   API,
   ConfirmationModalComponent,
@@ -49,33 +50,33 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
-  uuidCustom, CamelCasePipe
-} from "../../shared";
+  uuidCustom,
+} from '../../shared';
 
-import { Router } from "@angular/router";
-import { IIdentified } from "@c8y/client";
-import { BsModalRef, BsModalService } from "ngx-bootstrap/modal";
-import { Subject } from "rxjs";
-import { MappingService } from "../core/mapping.service";
-import { ImportMappingsComponent } from "../import-modal/import.component";
-import { MappingTypeComponent } from "../mapping-type/mapping-type.component";
-import { APIRendererComponent } from "../renderer/api.renderer.component";
-import { NameRendererComponent } from "../renderer/name.renderer.component";
-import { QOSRendererComponent } from "../renderer/qos-cell.renderer.component";
-import { StatusActivationRendererComponent } from "../renderer/status-activation-renderer.component";
-import { StatusRendererComponent } from "../renderer/status-cell.renderer.component";
-import { TemplateRendererComponent } from "../renderer/template.renderer.component";
-import { EditorMode, StepperConfiguration } from "../step-main/stepper-model";
-import { C8YAPISubscription, PayloadWrapper } from "../shared/mapping.model";
-import { isTemplateTopicUnique } from "../shared/util";
+import { Router } from '@angular/router';
+import { IIdentified } from '@c8y/client';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { Subject } from 'rxjs';
+import { MappingService } from '../core/mapping.service';
+import { ImportMappingsComponent } from '../import-modal/import.component';
+import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
+import { APIRendererComponent } from '../renderer/api.renderer.component';
+import { NameRendererComponent } from '../renderer/name.renderer.component';
+import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
+import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
+import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
+import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
+import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
+import { isTemplateTopicUnique } from '../shared/util';
 
 @Component({
-  selector: "d11r-mapping-mapping-grid",
-  templateUrl: "mapping.component.html",
-  styleUrls: ["../shared/mapping.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-mapping-grid',
+  templateUrl: 'mapping.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class MappingComponent implements OnInit {
+export class MappingComponent implements OnInit, OnDestroy {
   isSubstitutionValid: boolean;
 
   showConfigMapping: boolean = false;
@@ -89,7 +90,7 @@ export class MappingComponent implements OnInit {
   devices: IIdentified[] = [];
   Direction = Direction;
 
-  param = { name: "world" };
+  param = { name: 'world' };
 
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
@@ -99,16 +100,16 @@ export class MappingComponent implements OnInit {
     allowTestTransformation: true,
     allowTestSending: true,
     editorMode: EditorMode.UPDATE,
-    direction: Direction.INBOUND,
+    direction: Direction.INBOUND
   };
   titleMapping: string;
-  titleSubsription: string = `Subscription on devices for mapping OUTBOUND`;
+  titleSubsription: string = 'Subscription on devices for mapping OUTBOUND';
 
   displayOptions: DisplayOptions = {
     bordered: true,
     striped: true,
     filter: false,
-    gridHeader: true,
+    gridHeader: true
   };
 
   columnsMappings: Column[] = [
@@ -121,102 +122,102 @@ export class MappingComponent implements OnInit {
     //   visible: true,
     // },
     {
-      name: "name",
-      header: "Name",
-      path: "name",
+      name: 'name',
+      header: 'Name',
+      path: 'name',
       filterable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      visible: true,
+      visible: true
     },
     {
-      header: "Subscription Topic",
-      name: "subscriptionTopic",
-      path: "subscriptionTopic",
-      filterable: true,
+      header: 'Subscription Topic',
+      name: 'subscriptionTopic',
+      path: 'subscriptionTopic',
+      filterable: true
       // gridTrackSize: "12.5%",
     },
     {
-      header: "Template Topic",
-      name: "templateTopic",
-      path: "templateTopic",
-      filterable: true,
+      header: 'Template Topic',
+      name: 'templateTopic',
+      path: 'templateTopic',
+      filterable: true
       // gridTrackSize: "12.5%",
     },
     {
-      name: "targetAPI",
-      header: "API",
-      path: "targetAPI",
+      name: 'targetAPI',
+      header: 'API',
+      path: 'targetAPI',
       filterable: true,
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: APIRendererComponent,
-      gridTrackSize: "7%",
+      gridTrackSize: '7%'
     },
     {
-      header: "Sample payload",
-      name: "source",
-      path: "source",
+      header: 'Sample payload',
+      name: 'source',
+      path: 'source',
       filterable: true,
       sortable: false,
-      cellRendererComponent: TemplateRendererComponent,
+      cellRendererComponent: TemplateRendererComponent
       // gridTrackSize: "20%",
     },
     {
-      header: "Target",
-      name: "target",
-      path: "target",
+      header: 'Target',
+      name: 'target',
+      path: 'target',
       filterable: true,
       sortable: false,
-      cellRendererComponent: TemplateRendererComponent,
+      cellRendererComponent: TemplateRendererComponent
       // gridTrackSize: "20%",
     },
     {
-      header: "Test/Snoop",
-      name: "tested",
-      path: "tested",
+      header: 'Test/Snoop',
+      name: 'tested',
+      path: 'tested',
       filterable: false,
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
-      cellCSSClassName: "text-align-center",
-      gridTrackSize: "7%",
+      cellCSSClassName: 'text-align-center',
+      gridTrackSize: '7%'
     },
     {
-      header: "QOS",
-      name: "qos",
-      path: "qos",
+      header: 'QOS',
+      name: 'qos',
+      path: 'qos',
       filterable: true,
       sortable: false,
-      cellRendererComponent: QOSRendererComponent,
+      cellRendererComponent: QOSRendererComponent
       // gridTrackSize: "5%",
     },
     {
-      header: "Active",
-      name: "active",
-      path: "active",
+      header: 'Active',
+      name: 'active',
+      path: 'active',
       filterable: false,
       sortable: true,
       // cellRendererComponent: ActiveRendererComponent,
       cellRendererComponent: StatusActivationRendererComponent,
-      gridTrackSize: "7%",
-    },
+      gridTrackSize: '7%'
+    }
   ];
 
   columnsSubscriptions: Column[] = [
     {
-      name: "id",
-      header: "System ID",
-      path: "id",
+      name: 'id',
+      header: 'System ID',
+      path: 'id',
       filterable: false,
       dataType: ColumnDataType.TextShort,
-      visible: true,
+      visible: true
     },
     {
-      header: "Name",
-      name: "name",
-      path: "name",
-      filterable: true,
-    },
+      header: 'Name',
+      name: 'name',
+      path: 'name',
+      filterable: true
+    }
   ];
 
   value: string;
@@ -226,7 +227,7 @@ export class MappingComponent implements OnInit {
 
   pagination: Pagination = {
     pageSize: 3,
-    currentPage: 1,
+    currentPage: 1
   };
   actionControls: ActionControl[] = [];
   actionControlSubscription: ActionControl[] = [];
@@ -248,17 +249,17 @@ export class MappingComponent implements OnInit {
 
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
       this.columnsMappings[1] = {
-        header: "Publish Topic",
-        name: "publishTopic",
-        path: "publishTopic",
-        filterable: true,
+        header: 'Publish Topic',
+        name: 'publishTopic',
+        path: 'publishTopic',
+        filterable: true
         // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
-        header: "Template Topic Sample",
-        name: "templateTopicSample",
-        path: "templateTopicSample",
-        filterable: true,
+        header: 'Template Topic Sample',
+        name: 'templateTopicSample',
+        path: 'templateTopicSample',
+        filterable: true
         // gridTrackSize: "12.5%",
       };
     }
@@ -275,52 +276,52 @@ export class MappingComponent implements OnInit {
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
-        callback: this.updateMapping.bind(this),
+        callback: this.updateMapping.bind(this)
       },
       {
-        text: "Copy",
-        type: "COPY",
-        icon: "copy",
-        callback: this.copyMapping.bind(this),
+        text: 'Copy',
+        type: 'COPY',
+        icon: 'copy',
+        callback: this.copyMapping.bind(this)
       },
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingWithConfirmation.bind(this),
+        callback: this.deleteMappingWithConfirmation.bind(this)
       },
       {
-        type: "ACTIVATE",
-        text: "Toogle Activation",
-        icon: "toggle-on",
-        callback: this.activateMapping.bind(this),
+        type: 'ACTIVATE',
+        text: 'Toogle Activation',
+        icon: 'toggle-on',
+        callback: this.activateMapping.bind(this)
       },
       {
-        type: "EXPORT",
-        text: "Export Mapping",
-        icon: "export",
-        callback: this.exportSingle.bind(this),
+        type: 'EXPORT',
+        text: 'Export Mapping',
+        icon: 'export',
+        callback: this.exportSingle.bind(this)
       }
     );
     this.bulkActionControls.push(
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingBulkWithConfirmation.bind(this),
+        callback: this.deleteMappingBulkWithConfirmation.bind(this)
       },
       {
-        type: "ACTIVATE",
-        text: "Toogle Activation",
-        icon: "toggle-on",
-        callback: this.activateMappingBulk.bind(this),
+        type: 'ACTIVATE',
+        text: 'Toogle Activation',
+        icon: 'toggle-on',
+        callback: this.activateMappingBulk.bind(this)
       },
       {
-        type: "EXPORT",
-        text: "Export Mapping",
-        icon: "export",
-        callback: this.exportMappingBulk.bind(this),
+        type: 'EXPORT',
+        text: 'Export Mapping',
+        icon: 'export',
+        callback: this.exportMappingBulk.bind(this)
       }
     );
     this.actionControlSubscription.push({
       type: BuiltInActionType.Delete,
-      callback: this.deleteSubscription.bind(this),
+      callback: this.deleteSubscription.bind(this)
     });
 
     this.mappingService.listToReload().subscribe(() => {
@@ -329,19 +330,19 @@ export class MappingComponent implements OnInit {
   }
 
   onRowClick(mapping: Row) {
-    console.log("Row :");
+    console.log('Row :');
     this.updateMapping(mapping as Mapping);
   }
 
   onAddMapping() {
     const initialState = {
-      direction: this.stepperConfiguration.direction,
+      direction: this.stepperConfiguration.direction
     };
     const modalRef = this.bsModalService.show(MappingTypeComponent, {
-      initialState,
+      initialState
     });
     modalRef.content.closeSubject.subscribe((result) => {
-      console.log("Was selected:", result);
+      console.log('Was selected:', result);
       if (result) {
         this.mappingType = result;
         this.addMapping();
@@ -363,20 +364,20 @@ export class MappingComponent implements OnInit {
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: true,
-      editorMode: EditorMode.CREATE,
+      editorMode: EditorMode.CREATE
     };
 
-    let ident = uuidCustom();
-    let sub: MappingSubstitution[] = [];
+    const ident = uuidCustom();
+    const sub: MappingSubstitution[] = [];
     let mapping: Mapping = {
-      name: "Mapping - " + ident.substring(0, 7),
+      name: `Mapping - ${ ident.substring(0, 7)}`,
       id: ident,
       ident: ident,
-      subscriptionTopic: "",
-      templateTopic: "",
-      templateTopicSample: "",
+      subscriptionTopic: '',
+      templateTopic: '',
+      templateTopicSample: '',
       targetAPI: API.MEASUREMENT.name,
-      source: "{}",
+      source: '{}',
       target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
       active: false,
       tested: false,
@@ -386,27 +387,27 @@ export class MappingComponent implements OnInit {
       createNonExistingDevice: false,
       mappingType: this.mappingType,
       updateExistingDevice: false,
-      externalIdType: "c8y_Serial",
+      externalIdType: 'c8y_Serial',
       snoopStatus: SnoopStatus.NONE,
       snoopedTemplates: [],
       direction: this.stepperConfiguration.direction,
       autoAckOperation: true,
-      lastUpdate: Date.now(),
+      lastUpdate: Date.now()
     };
     mapping.target = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
-      let sampleSource = JSON.stringify({
-        message: "10,temp,1666963367",
+      const sampleSource = JSON.stringify({
+        message: '10,temp,1666963367'
       } as PayloadWrapper);
       mapping = {
         ...mapping,
-        source: sampleSource,
+        source: sampleSource
       };
     } else if (this.mappingType == MappingType.PROCESSOR_EXTENSION) {
       mapping.extension = {
         event: undefined,
         name: undefined,
-        message: undefined,
+        message: undefined
       };
     }
     this.setStepperConfiguration(
@@ -415,22 +416,22 @@ export class MappingComponent implements OnInit {
     );
 
     this.mappingToUpdate = mapping;
-    console.log("Add mappping", this.mappings);
+    console.log('Add mappping', this.mappings);
     this.refresh.emit();
     this.showConfigMapping = true;
   }
 
   async deleteSubscription(device: IIdentified) {
-    console.log("Delete device", device);
+    console.log('Delete device', device);
     try {
       await this.mappingService.deleteSubscriptions(device);
       this.alertService.success(
-        gettext("Subscription for this device deleted successfully")
+        gettext('Subscription for this device deleted successfully')
       );
       this.loadSubscriptions();
     } catch (error) {
       this.alertService.danger(
-        gettext("Failed to delete subscription:") + error
+        gettext('Failed to delete subscription:') + error
       );
     }
   }
@@ -446,7 +447,7 @@ export class MappingComponent implements OnInit {
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: true,
-      editorMode: EditorMode.UPDATE,
+      editorMode: EditorMode.UPDATE
     };
     if (mapping.active) {
       this.stepperConfiguration.editorMode = EditorMode.READ_ONLY;
@@ -461,7 +462,7 @@ export class MappingComponent implements OnInit {
       this.mappingToUpdate.direction == null
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
-    console.log("Editing mapping", this.mappingToUpdate);
+    console.log('Editing mapping', this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
@@ -474,25 +475,25 @@ export class MappingComponent implements OnInit {
       showProcessorExtensions: false,
       allowTestTransformation: true,
       allowTestSending: true,
-      editorMode: EditorMode.COPY,
+      editorMode: EditorMode.COPY
     };
     this.setStepperConfiguration(mapping.mappingType, mapping.direction);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
     this.mappingToUpdate.snoopedTemplates = [];
-    this.mappingToUpdate.name = this.mappingToUpdate.name + " - Copy";
+    this.mappingToUpdate.name = `${this.mappingToUpdate.name } - Copy`;
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
-    console.log("Copying mapping", this.mappingToUpdate);
+    console.log('Copying mapping', this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
   async activateMapping(mapping: Mapping) {
-    let newActive = !mapping.active;
-    let action = newActive ? "Activate" : "Deactivate";
-    this.alertService.success(action + " mapping: " + mapping.id + "!");
-    let parameter = { id: mapping.id, active: newActive };
+    const newActive = !mapping.active;
+    const action = newActive ? 'Activate' : 'Deactivate';
+    this.alertService.success(`${action } mapping: ${ mapping.id }!`);
+    const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
     this.loadMappings();
     this.refresh.emit();
@@ -504,17 +505,17 @@ export class MappingComponent implements OnInit {
     multiple: boolean = false
   ): Promise<boolean> {
     let result: boolean = false;
-    console.log("Deleting mapping before confirmation:", mapping);
+    console.log('Deleting mapping before confirmation:', mapping);
     if (confirmation) {
       const initialState = {
-        title: multiple ? "Delete mappings" : "Delete mapping",
+        title: multiple ? 'Delete mappings' : 'Delete mapping',
         message: multiple
-          ? "You are about to delete mappings. Do you want to proceed to delete ALL?"
-          : "You are about to delete a mapping. Do you want to proceed?",
+          ? 'You are about to delete mappings. Do you want to proceed to delete ALL?'
+          : 'You are about to delete a mapping. Do you want to proceed?',
         labels: {
-          ok: "Delete",
-          cancel: "Cancel",
-        },
+          ok: 'Delete',
+          cancel: 'Cancel'
+        }
       };
       const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
         ConfirmationModalComponent,
@@ -523,10 +524,10 @@ export class MappingComponent implements OnInit {
 
       result = await confirmDeletionModalRef.content.closeSubject.toPromise();
       if (result) {
-        console.log("DELETE mapping:", mapping, result);
+        console.log('DELETE mapping:', mapping, result);
         await this.deleteMapping(mapping);
       } else {
-        console.log("Canceled DELETE mapping", mapping, result);
+        console.log('Canceled DELETE mapping', mapping, result);
       }
       // confirmDeletionModalRef.content.closeSubject.subscribe(
       //   async (result: boolean) => {
@@ -547,13 +548,13 @@ export class MappingComponent implements OnInit {
   async deleteMapping(mapping: Mapping) {
     try {
       await this.mappingService.deleteMapping(mapping.id);
-      this.alertService.success(gettext("Mapping deleted successfully"));
+      this.alertService.success(gettext('Mapping deleted successfully'));
       this.isConnectionToMQTTEstablished = true;
       this.loadMappings();
       this.refresh.emit();
-      //this.activateMappings();
+      // this.activateMappings();
     } catch (error) {
-      this.alertService.danger(gettext("Failed to delete mapping:") + error);
+      this.alertService.danger(gettext('Failed to delete mapping:') + error);
     }
   }
 
@@ -561,14 +562,14 @@ export class MappingComponent implements OnInit {
     this.mappings = await this.mappingService.loadMappings(
       this.stepperConfiguration.direction
     );
-    //console.log("Updated mappings", this.mappings);
+    // console.log("Updated mappings", this.mappings);
   }
 
   async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was commited or if cancel
     mapping.lastUpdate = Date.now();
 
-    console.log("Changed mapping:", mapping);
+    console.log('Changed mapping:', mapping);
 
     if (
       (mapping.direction == Direction.INBOUND &&
@@ -578,52 +579,52 @@ export class MappingComponent implements OnInit {
       //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-        console.log("Update existing mapping:", mapping);
+        console.log('Update existing mapping:', mapping);
         try {
           await this.mappingService.updateMapping(mapping);
-          this.alertService.success(gettext("Mapping updated successfully"));
+          this.alertService.success(gettext('Mapping updated successfully'));
           this.loadMappings();
           this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
-            gettext("Failed to updated mapping:") + error
+            gettext('Failed to updated mapping:') + error
           );
         }
-        //this.activateMappings();
+        // this.activateMappings();
       } else if (
         this.stepperConfiguration.editorMode == EditorMode.CREATE ||
         this.stepperConfiguration.editorMode == EditorMode.COPY
       ) {
         // new mapping
-        console.log("Push new mapping:", mapping);
+        console.log('Push new mapping:', mapping);
         try {
           await this.mappingService.createMapping(mapping);
-          this.alertService.success(gettext("Mapping created successfully"));
+          this.alertService.success(gettext('Mapping created successfully'));
           this.loadMappings();
           this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
-            gettext("Failed to create mapping:") + error
+            gettext('Failed to create mapping:') + error
           );
         }
-        //this.activateMappings();
+        // this.activateMappings();
       }
       this.isConnectionToMQTTEstablished = true;
     } else {
       if (mapping.direction == Direction.INBOUND) {
         this.alertService.danger(
           gettext(
-            "Topic is already used: " +
-              mapping.subscriptionTopic +
-              ". Please use a different topic."
+            `Topic is already used: ${
+              mapping.subscriptionTopic
+              }. Please use a different topic.`
           )
         );
       } else {
         this.alertService.danger(
           gettext(
-            "FilterOutbound is already used: " +
-              mapping.filterOutbound +
-              ". Please use a different filter."
+            `FilterOutbound is already used: ${
+              mapping.filterOutbound
+              }. Please use a different filter.`
           )
         );
       }
@@ -634,15 +635,15 @@ export class MappingComponent implements OnInit {
   async onCommitSubscriptions(deviceList: IIdentified[]) {
     this.subscription = {
       api: API.ALL.name,
-      devices: deviceList,
+      devices: deviceList
     };
-    console.log("Changed deviceList:", this.subscription.devices);
+    console.log('Changed deviceList:', this.subscription.devices);
     try {
       await this.mappingService.updateSubscriptions(this.subscription);
-      this.alertService.success(gettext("Subscriptions updated successfully"));
+      this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
-        gettext("Failed to update subscriptions:") + error
+        gettext('Failed to update subscriptions:') + error
       );
     }
     this.showConfigSubscription = false;
@@ -666,12 +667,12 @@ export class MappingComponent implements OnInit {
   private async activateMappingBulk(ids: string[]) {
     for (let i = 0; i < this.mappings.length; i++) {
       if (ids.includes(this.mappings[i].id)) {
-        let newActive = !this.mappings[i].active;
-        let action = newActive ? "Activate" : "Deactivate";
-        let parameter = { id: this.mappings[i].id, active: newActive };
+        const newActive = !this.mappings[i].active;
+        const action = newActive ? 'Activate' : 'Deactivate';
+        const parameter = { id: this.mappings[i].id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
         this.alertService.success(
-          action + " mapping: " + this.mappings[i].id + "!"
+          `${action } mapping: ${ this.mappings[i].id }!`
         );
       }
     }
@@ -714,7 +715,7 @@ export class MappingComponent implements OnInit {
   async onImport() {
     const initialState = {};
     const modalRef = this.bsModalService.show(ImportMappingsComponent, {
-      initialState,
+      initialState
     });
     modalRef.content.closeSubject.subscribe(() => {
       this.loadMappings();
@@ -727,12 +728,12 @@ export class MappingComponent implements OnInit {
     const response2 = await this.brokerConfigurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );
-    console.log("Activate mapping response:", response2);
+    console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
-      //this.alertService.success(gettext('Mappings activated successfully'));
+      // this.alertService.success(gettext('Mappings activated successfully'));
       this.isConnectionToMQTTEstablished = true;
     } else {
-      this.alertService.danger(gettext("Failed to activate mappings"));
+      this.alertService.danger(gettext('Failed to activate mappings'));
     }
   }
 
@@ -745,7 +746,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: true,
+        allowTestSending: true
       };
     } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
       this.stepperConfiguration = {
@@ -755,7 +756,7 @@ export class MappingComponent implements OnInit {
         showEditorSource: false,
         allowNoDefinedIdentifier: true,
         allowTestTransformation: false,
-        allowTestSending: true,
+        allowTestSending: true
       };
     }
     if (direction == Direction.OUTBOUND)

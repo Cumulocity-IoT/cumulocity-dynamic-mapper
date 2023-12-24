@@ -18,12 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { IEvent, IResult, EventService, IFetchResponse } from "@c8y/client";
-import * as _ from "lodash";
-import { ProcessingContext } from "../processor/prosessor.model";
+import { Injectable } from '@angular/core';
+import { IEvent, IResult, EventService, IFetchResponse } from '@c8y/client';
+import { ProcessingContext } from '../processor/prosessor.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class FacadeEventService {
   constructor(private event: EventService) {}
 
@@ -34,14 +33,14 @@ export class FacadeEventService {
     if (context.sendPayload) {
       return this.event.create(event);
     } else {
-      let copyEvent = {
+      const copyEvent = {
         ...event,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
-        lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({
         data: copyEvent,
-        res: { status: 200 } as IFetchResponse,
+        res: { status: 200 } as IFetchResponse
       });
       return promise;
     }

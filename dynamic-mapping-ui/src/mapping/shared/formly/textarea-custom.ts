@@ -19,16 +19,12 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectionStrategy, Component, OnInit } from "@angular/core";
-import { FieldType, FieldTypeConfig, FormlyFieldProps } from "@ngx-formly/core";
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { FieldType } from '@ngx-formly/core';
 
-interface TextAreaProps extends FormlyFieldProps {
-  cols?: number;
-  rows?: number;
-}
 
 @Component({
-  selector: "d11r-formly-field-textarea",
+  selector: 'd11r-formly-field-textarea',
   template: `
     <textarea
       [class]="class"
@@ -39,7 +35,7 @@ interface TextAreaProps extends FormlyFieldProps {
  {{ to.value }}
 </textarea>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FieldTextareaCustom extends FieldType {
   get class() {

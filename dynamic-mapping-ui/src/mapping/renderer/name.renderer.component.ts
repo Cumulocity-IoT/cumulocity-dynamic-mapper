@@ -18,18 +18,14 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  template: `
-    <span title="{{ context.item.id }}">{{
-      context.value
-    }}</span>
-  `,
+  template: ' <span title="{{ context.item.id }}">{{ context.value }}</span> '
 })
 export class NameRendererComponent {
   constructor(public context: CellRendererContext) {
-    //console.log("Context:", context.item, context)
+    // console.log("Context:", context.item, context)
   }
 }

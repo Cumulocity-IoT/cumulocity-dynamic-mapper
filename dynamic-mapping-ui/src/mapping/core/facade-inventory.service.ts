@@ -18,13 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { IManagedObject, InventoryService, IResult } from "@c8y/client";
-import * as _ from "lodash";
-import { ProcessingContext } from "../processor/prosessor.model";
-import { MockInventoryService } from "./mock/mock-inventory.service";
+import { Injectable } from '@angular/core';
+import { IManagedObject, InventoryService, IResult } from '@c8y/client';
+import { ProcessingContext } from '../processor/prosessor.model';
+import { MockInventoryService } from './mock/mock-inventory.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class FacadeInventoryService {
   inventoryCache: Map<string, Map<string, string>>;
   constructor(

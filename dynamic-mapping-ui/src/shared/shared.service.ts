@@ -18,37 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import {
-  FetchClient,
-  IdentityService,
-  IExternalIdentity
-} from "@c8y/client";
-import {
-  AGENT_ID,
-  BASE_URL,
-  PATH_FEATURE_ENDPOINT
-} from ".";
+import { Injectable } from '@angular/core';
+import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
+import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
 
-import { Feature } from "../configuration/shared/configuration.model";
+import { Feature } from '../configuration/shared/configuration.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService,
-  ) {
-  }
+    private identity: IdentityService
+  ) {}
 
   private _agentId: Promise<string>;
   private _feature: Promise<Feature>;
 
-
   async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
       const identity: IExternalIdentity = {
-        type: "c8y_Serial",
-        externalId: AGENT_ID,
+        type: 'c8y_Serial',
+        externalId: AGENT_ID
       };
       const { data, res } = await this.identity.detail(identity);
       if (res.status < 300) {
@@ -64,7 +54,7 @@ export class SharedService {
       const response = await this.client.fetch(
         `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
         {
-          method: "GET",
+          method: 'GET'
         }
       );
       this._feature = await response.json();

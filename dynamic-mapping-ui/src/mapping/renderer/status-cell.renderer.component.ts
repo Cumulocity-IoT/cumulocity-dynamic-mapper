@@ -18,9 +18,9 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
-import { SnoopStatus } from "../../shared";
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
+import { SnoopStatus } from '../../shared';
 
 @Component({
   template: `
@@ -45,15 +45,15 @@ import { SnoopStatus } from "../../shared";
         class="c8y-pulse animated pulse"
         [ngClass]="{
           active:
-            context.item.snoopStatus == 'ENABLED' ||
-            context.item.snoopStatus == 'STARTED',
+            context.item.snoopStatus === 'ENABLED' ||
+            context.item.snoopStatus === 'STARTED',
           inactive:
-            context.item.snoopStatus == 'NONE' ||
-            context.item.snoopStatus == 'STOPPED'
+            context.item.snoopStatus === 'NONE' ||
+            context.item.snoopStatus === 'STOPPED'
         }"
       ></span>
     </div>
-  `,
+  `
 })
 export class StatusRendererComponent {
   constructor(public context: CellRendererContext) {}
