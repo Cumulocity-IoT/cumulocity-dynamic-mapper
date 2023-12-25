@@ -126,9 +126,10 @@ export class C8YAgent {
   }
 
   async upsertDevice(
-    identity: IExternalIdentity,
+    identityx: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IManagedObject> {
+    let identity = identityx;
     let deviceId: string;
     try {
       deviceId = await this.resolveExternalId2GlobalId(identity, context);

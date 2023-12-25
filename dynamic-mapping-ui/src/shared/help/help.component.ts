@@ -90,10 +90,11 @@ export class HelpComponent {
    * @param index This flag is used to call the index.json content of a guide. For example, "https://www.cumulocity.com/guides/users-guide/cockpit/index.json".
    */
   getUrl(src = '', index = false) {
-    const [url] = src.split('#');
+    let srx = src;
+    const [url] = srx.split('#');
 
     if (index) {
-      src = `${url}index.json`;
+      srx = `${url}index.json`;
     }
     // return `${src}`;
     return '.';

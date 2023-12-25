@@ -65,12 +65,12 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDismiss(event) {
+  onDismiss() {
     this.closeSubject.next(undefined);
     this.closeSubject.complete();
   }
 
-  onClose(event) {
+  onClose() {
     this.closeSubject.next(this.mappingType);
     this.closeSubject.complete();
   }

@@ -42,18 +42,21 @@ export const TIME = 'time';
  * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
  */
 export function splitTopicExcludingSeparator(topic: string): string[] {
-  topic = topic.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
-  return topic.split(/\//g);
+  let topix = topic;
+  topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+  return topix.split(/\//g);
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
-  return topic.split(/(?<=\/)|(?=\/)/g);
+  const topix = topic;
+  return topix.split(/(?<=\/)|(?=\/)/g);
 }
 
 export function normalizeTopic(topic: string) {
-  if (topic == undefined) topic = '';
+  let topix = topic;
+  if (topix == undefined) topix = '';
   // reduce multiple leading or trailing "/" to just one "/"
-  let nt = topic.trim().replace(/(\/{2,}$)|(^\/{2,})/g, '/');
+  let nt = topix.trim().replace(/(\/{2,}$)|(^\/{2,})/g, '/');
   // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
   // remove trailing "/" if topic is ends with "#"
   nt = nt.replace(/(#\/$)/g, '#');
@@ -61,29 +64,30 @@ export function normalizeTopic(topic: string) {
 }
 
 export function deriveTemplateTopicFromTopic(topic: string) {
-  if (topic == undefined) topic = '';
-  topic = normalizeTopic(topic);
+  let topix = topic;
+  if (topix == undefined) topix = '';
+  topix = normalizeTopic(topix);
   // replace trailing TOPIC_WILDCARD_MULTI "#" with TOPIC_WILDCARD_SINGLE "*"
-  const nt = topic.trim().replace(/\#+$/, '+');
+  const nt = topic.trim().replace(/#+$/, '+');
   return nt;
 }
 
 export function isTopicNameValid(topic: string): any {
-  topic = normalizeTopic(topic);
-
+  let topix = topic;
+  topix = normalizeTopic(topix);
   const errors = {};
   // count number of "#"
-  const count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
-  const count_single = (topic.match(/\+/g) || []).length;
+  const count_single = (topix.match(/\+/g) || []).length;
   if (count_single > 1)
     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
-    topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length
+    topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length
   )
     errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
@@ -91,23 +95,24 @@ export function isTopicNameValid(topic: string): any {
 }
 
 export function isTemplateTopicValid(topic: string): any {
+  let topix = topic;
   // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
   // TOPIC_WILDCARD_MULTI
-  topic = normalizeTopic(topic);
+  topix = normalizeTopic(topix);
 
   // let errors = {};
   // // count number of "#"
-  // let count_multi = (topic.match(/\#/g) || []).length;
+  // let count_multi = (topix.match(/\#/g) || []).length;
   // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // // count number of "+"
-  // let count_single = (topic.match(/\+/g) || []).length;
+  // let count_single = (topix.match(/\+/g) || []).length;
   // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  // if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+  // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
   const errors = {};
   // count number of "#"
-  const count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi >= 1)
     errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
       true;
@@ -116,21 +121,21 @@ export function isTemplateTopicValid(topic: string): any {
 }
 
 export function isSubscriptionTopicValid(topic: string): any {
-  topic = normalizeTopic(topic);
-
+  let topix = topic;
+  topix = normalizeTopic(topix);
   const errors = {};
   // count number of "#"
-  const count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
-  const count_single = (topic.match(/\+/g) || []).length;
+  const count_single = (topix.match(/\+/g) || []).length;
   if (count_single > 1)
     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
-    topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length
+    topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length
   )
     errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
@@ -156,10 +161,9 @@ export function isTemplateTopicUnique(
   mapping: Mapping,
   mappings: Mapping[]
 ): boolean {
-  const result = true;
-  // result = mappings.every(m => {
-  //   return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
-  // })
+  const result = mappings.every(m => {
+    return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
+  });
   return result;
 }
 
@@ -193,9 +197,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
     .reduce(
       (
         previousValue: number,
-        currentValue: number,
-        currentIndex: number,
-        array: number[]
+        currentValue: number
       ) => {
         return previousValue + currentValue;
       },
@@ -292,7 +294,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   }
 
   // count number of "#" in subscriptionTopic
-  let count_multi = (subscriptionTopic.value.match(/\#/g) || []).length;
+  let count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
@@ -331,7 +333,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   }
 
   // count number of "#" in templateTopic
-  count_multi = (templateTopic.value.match(/\#/g) || []).length;
+  count_multi = (templateTopic.value.match(/#/g) || []).length;
   if (count_multi >= 1) {
     errors = {
       ...errors,
@@ -424,7 +426,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
   }
 
   // count number of "#" in publishTopic
-  const count_multi = (publishTopic.value.match(/\#/g) || []).length;
+  const count_multi = (publishTopic.value.match(/#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
@@ -600,7 +602,7 @@ export function reduceSourceTemplate(t: object, patched: boolean): string {
   return tt;
 }
 
-export function reduceTargetTemplate(t: object, patched: boolean): string {
+export function reduceTargetTemplate(t: object): string {
   const tt = JSON.stringify(t);
   return tt;
 }

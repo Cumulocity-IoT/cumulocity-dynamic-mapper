@@ -260,7 +260,7 @@ export class BrokerConfigurationService {
             cc['status$'].next(statusLog.status);
           }
         }
-        
+
       }
     }
   };
@@ -307,14 +307,14 @@ export class BrokerConfigurationService {
     ).pipe(
       withLatestFrom(this.filterTrigger$),
       scan((acc, [val]) => {
-        // acc = acc.filter((event) => event.type == filterEventsType);
+        let sortedAcc;
         if (val[0].type == 'reset') {
           console.log('Reset loaded logs!');
-          acc = [];
+          sortedAcc = [];
         } else {
-          acc = val.concat(acc);
+          sortedAcc = val.concat(acc);
         }
-        const sortedAcc = acc.slice(0, 9);
+        sortedAcc = acc.slice(0, 9);
         return sortedAcc;
       }, [])
     );

@@ -82,13 +82,13 @@ export class ImportMappingsComponent implements OnDestroy {
     this.isLoading = false;
   }
 
-  onDismiss(event) {
+  onDismiss() {
     this.cancelFileUpload();
     this.closeSubject.next(true);
     this.closeSubject.complete();
   }
 
-  onDone(event) {
+  onDone() {
     this.closeSubject.next(true);
     this.closeSubject.complete();
   }

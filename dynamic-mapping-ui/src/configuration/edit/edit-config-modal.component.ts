@@ -10,11 +10,11 @@ import {
 } from '../shared/configuration.model';
 
 @Component({
-  selector: 'd11y-edit-connector-modal',
+  selector: 'd11r-edit-connector-modal',
   template: ` <c8y-modal
     title="Edit properties broker configuration"
-    (onClose)="onSave($event)"
-    (onDismiss)="onDismiss($event)"
+    (onClose)="onSave()"
+    (onDismiss)="onDismiss()"
     [labels]="labels"
     [headerClasses]="'modal-header dialog-header'"
   >
@@ -76,12 +76,12 @@ export class EditConfigurationComponent implements OnInit {
     }
   }
 
-  onDismiss(event) {
+  onDismiss() {
     console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
-  onSave(event) {
+  onSave() {
     console.log('Save');
     this.closeSubject.next(this.configuration);
   }

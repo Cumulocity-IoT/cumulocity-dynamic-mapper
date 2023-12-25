@@ -11,172 +11,8 @@ import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { definesDeviceIdentifier } from '../shared/util';
 
 @Component({
-  selector: 'd11y-edit-substitution-modal',
-  template: ` <c8y-modal
-    title="Edit properties of substitution"
-    (onClose)="onSave($event)"
-    (onDismiss)="onDismiss($event)"
-    [labels]="labels"
-    [disabled]="disabled$ | async"
-    [headerClasses]="'modal-header dialog-header'"
-  >
-    <div>
-      <c8y-form-group *ngIf="duplicate">
-        <div>
-          <span>{{
-            'You are about to overwrite the existing substitution: #' +
-              existingSubstitution | translate
-          }}</span>
-        </div>
-        <br />
-        <!--   <div style = "text-align: center;"><span>{{ substitutionText }}</span></div> -->
-        <div style="text-align: center">
-          <pre>{{ substitutionText }}</pre>
-        </div>
-        <br />
-        <div>
-          <span>{{ 'Do you want to proceed?' | translate }}</span>
-        </div>
-        <label class="c8y-switch">
-          <input
-            type="checkbox"
-            [(ngModel)]="override"
-            (change)="onOverrideChanged()"
-          />
-          <span></span>
-          <span>
-            {{ 'Overwrite existing subscription' | translate }}
-          </span>
-        </label>
-      </c8y-form-group>
-      <c8y-form-group>
-        <label>
-          <span>
-            {{ 'Path source' | translate }}
-          </span>
-        </label>
-        <input
-          type="text"
-          class="form-control"
-          readOnly
-          [(ngModel)]="editedSubstitution.pathSource"
-        />
-      </c8y-form-group>
-      <c8y-form-group>
-        <label>
-          <span>
-            {{ 'Path target' | translate }}
-          </span>
-        </label>
-        <input
-          type="text"
-          readOnly
-          [(ngModel)]="editedSubstitution.pathTarget"
-          class="form-control"
-        />
-      </c8y-form-group>
-      <c8y-form-group>
-        <label
-          class="c8y-switch d-inline"
-          title="Expand as array"
-          style="padding-top: 6px"
-        >
-          <input
-            type="checkbox"
-            [(ngModel)]="editedSubstitution.expandArray"
-            [disabled]="isExpandToArrayDisabled()"
-          />
-          <span></span>
-          <span>
-            {{ 'Expand as array' | translate }}
-          </span>
-        </label>
-        <div class="d-inline">
-          <ng-template #popTemplateExpandAsArray>
-            Current expression extracts an array. Consider to use the option
-            &quot;Expand Array&quot; if you want to create multiple
-            measurements, alarms, events or devices, i.e.
-            &quot;multi-device&quot; or &quot;multi-value&quot;
-          </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateExpandAsArray"
-            popoverTitle="Expand as array"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
-            <i c8yIcon="question-circle-o"></i>
-          </button>
-        </div>
-      </c8y-form-group>
-
-      <c8y-form-group>
-        <label
-          class="c8y-switch d-inline"
-          title="Resolve to externalId"
-          style="padding-top: 6px"
-        >
-          <input
-            type="checkbox"
-            [(ngModel)]="editedSubstitution.resolve2ExternalId"
-            [disabled]="isResolve2ExternalIdDisabled()"
-          />
-          <span></span>
-          <span>
-            {{ 'Resolve to externalId' | translate }}
-          </span>
-        </label>
-        <div class="d-inline">
-          <ng-template #popTemplateResolve>
-            Resolve system Cumulocity Id to externalId using externalIdType.
-            This can onlybe used for OUTBOUND mappings.
-          </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateResolve"
-            popoverTitle="Resolve to externalId"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
-            <i c8yIcon="question-circle-o"></i>
-          </button>
-        </div>
-      </c8y-form-group>
-      <c8y-form-group>
-        <label
-          ><span>RepairStrategy</span>
-          <span></span>
-          <ng-template #popTemplateRepair>
-            Strategy defining what should happen when extracted arrays in
-            different expressions do not have the same size. How are missing
-            values handled?
-          </ng-template>
-          <button
-            class="btn-clean text-primary"
-            [popover]="popTemplateRepair"
-            popoverTitle="Repair Strategy"
-            placement="right"
-            triggers="focus"
-            type="button"
-          >
-            <i c8yIcon="question-circle-o"></i></button
-        ></label>
-        <div class="c8y-select-wrapper">
-          <select
-            class="form-control"
-            [(ngModel)]="editedSubstitution.repairStrategy"
-            name="repairStrategy"
-          >
-            <option [value]="t.value" *ngFor="let t of repairStrategyOptions">
-              {{ t.label }}
-            </option>
-          </select>
-        </div>
-      </c8y-form-group>
-    </div>
-  </c8y-modal>`
+  selector: 'd11r-edit-substitution-modal',
+  templateUrl: './edit-substitution-modal.component.html'
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
   closeSubject: Subject<MappingSubstitution> = new Subject();
@@ -222,12 +58,12 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     console.log('Existing substitution:', this.existingSubstitution);
   }
 
-  onDismiss(event) {
+  onDismiss() {
     console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
-  onSave(event) {
+  onSave() {
     console.log('Save');
     this.closeSubject.next(this.editedSubstitution);
   }
@@ -241,11 +77,11 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   isExpandToArrayDisabled() {
     const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
     const d1 = this.mapping.direction == Direction.OUTBOUND;
-    const d2 = definesDeviceIdentifier(
-      this.mapping.targetAPI,
-      this.substitution,
-      this.mapping.direction
-    );
+    // const d2 = definesDeviceIdentifier(
+    //   this.mapping.targetAPI,
+    //   this.substitution,
+    //   this.mapping.direction
+    // );
     // const r = d0 || d1 || (!d1 && d2);
     const r = d0 || d1;
     // console.log("Evaluation", d0,d1,d2,d3, this.templateModel.currentSubstitution)

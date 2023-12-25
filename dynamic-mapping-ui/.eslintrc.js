@@ -118,7 +118,8 @@ module.exports = {
           'error',
           { type: 'element', prefix: ['c8y', 'd11r'], style: 'kebab-case' }
         ],
-        'import/no-unused-modules': 'error'
+        'import/no-unused-modules': 'error',
+        '@angular-eslint/component-class-suffix': 'off',
       }
     },
     {

@@ -119,7 +119,7 @@
                       [options]="editorOptionsSource"
                       [class]="'jse-main-small'"
                       (pathChanged)="onSelectedPathSourceChanged($event)"
-                      (initialized)="onEditorSourceInitialized($event)"
+                      (initialized)="onEditorSourceInitialized()"
                       [data]="templateSource"
                       #editorSource
                       id="editorSource"
@@ -262,7 +262,7 @@
                       [options]="editorOptionsTarget"
                       [class]="'jse-main-small'"
                       (pathChanged)="onSelectedPathTargetChanged($event)"
-                      (initialized)="onEditorTargetInitialized($event)"
+                      (initialized)="onEditorTargetInitialized()"
                       [data]="templateTarget"
                       #editorTarget
                       id="editorTarget"
@@ -353,9 +353,9 @@
                         editorMode: stepperConfiguration.editorMode
                       }"
                       [direction]="mapping.direction"
-                      (onSelect)="onSelectSubstitution($event)"
-                      (onDelete)="onDeleteSubstitution($event)"
-                      (onEdit)="onUpdateSubstitution()"
+                      (onSelectSub)="onSelectSubstitution($event)"
+                      (onDeleteSub)="onDeleteSubstitution($event)"
+                      (onEditSub)="onUpdateSubstitution()"
                     >
                     </d11r-mapping-substitution-renderer>
                   </div>

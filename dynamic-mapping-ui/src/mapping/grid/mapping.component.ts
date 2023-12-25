@@ -68,7 +68,6 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
-import { isTemplateTopicUnique } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -572,8 +571,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     console.log('Changed mapping:', mapping);
 
     if (
-      (mapping.direction == Direction.INBOUND &&
-        isTemplateTopicUnique(mapping, this.mappings)) ||
+      (mapping.direction == Direction.INBOUND) ||
       // test if we can attach multiple outbound mappings to the same filterOutbound
       mapping.direction == Direction.OUTBOUND
       //  && isFilterOutboundUnique(mapping, this.mappings)
