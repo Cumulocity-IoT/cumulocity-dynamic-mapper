@@ -29,7 +29,7 @@ import { MappingService } from '../core/mapping.service';
         <input
           type="checkbox"
           [(ngModel)]="active"
-          (change)="onActivate($event)"
+          (change)="onActivate()"
         />
         <span></span>
       </label>
@@ -48,7 +48,7 @@ export class ActiveRendererComponent {
 
   active: boolean;
 
-  async onActivate(event) {
+  async onActivate() {
     const action = this.active ? 'Activate' : 'Deactivate';
     this.alertService.success(
       `${action } mapping: ${ this.context.item.id }!`

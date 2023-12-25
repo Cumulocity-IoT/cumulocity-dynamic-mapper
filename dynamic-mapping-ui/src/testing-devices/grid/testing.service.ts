@@ -231,18 +231,19 @@ export class TestingDeviceService {
 
   /** Extends given query with a part based on the setup of given column. */
   private addColumnQuery(query: any, column: Column): void {
+    let queryx = query;
     // when a column is marked as filterable
     if (column.filterable) {
       // in the case of default filtering form, `filterPredicate` will contain the string entered by a user
       if (column.filterPredicate) {
         // so we use it as the expected value, * allow to search for it anywhere in the property
-        query.__filter[column.path] = `*${column.filterPredicate}*`;
+        queryx.__filter[column.path] = `*${column.filterPredicate}*`;
       }
 
-      // in the case of custom filtering form, we're storing the query in `externalFilterQuery.query`
+      // in the case of custom filtering form, we're storing the queryx in `externalFilterQuery.queryx`
       if (column.externalFilterQuery) {
-        query = this.queriesUtil.addAndFilter(
-          query,
+        queryx = this.queriesUtil.addAndFilter(
+          queryx,
           column.externalFilterQuery.query
         );
       }
@@ -251,12 +252,12 @@ export class TestingDeviceService {
     // when a column is sortable and has a specified sorting order
     if (column.sortable && column.sortOrder) {
       // add sorting condition for the configured column `path`
-      query.__orderby.push({
+      queryx.__orderby.push({
         [column.path]: column.sortOrder === 'asc' ? 1 : -1
       });
     }
 
-    return query;
+    return queryx;
   }
 
   async onItemDelete(m: Partial<IManagedObject>): Promise<void> {

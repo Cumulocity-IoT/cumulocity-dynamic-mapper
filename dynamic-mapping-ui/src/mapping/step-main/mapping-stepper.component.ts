@@ -425,13 +425,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionFormly.get('pathSource').setValue(path);
   }
 
-  public onEditorSourceInitialized(state: string) {
+  public onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, false)
     );
   }
 
-  public onEditorTargetInitialized(state: string) {
+  public onEditorTargetInitialized() {
     this.schemaUpdateTarget.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, true)
     );
@@ -543,7 +543,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.editorSource ? this.editorSource.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTarget?.get(), patched), // remove pachted attributes, since it should not be stored
+      target: reduceTargetTemplate(this.editorTarget?.get()), // remove pachted attributes, since it should not be stored
       lastUpdate: Date.now()
     };
   }
@@ -828,7 +828,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     console.log('Delete selected substitution', selected);
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
-      selected = -1;
     }
     this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
     console.log('Deleted substitution', this.mapping.substitutions.length);

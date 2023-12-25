@@ -46,9 +46,9 @@ export class SubstitutionRendererComponent {
   @Input()
   direction: Direction;
 
-  @Output() select = new EventEmitter<number>();
-  @Output() delete = new EventEmitter<number>();
-  @Output() edit = new EventEmitter<number>();
+  @Output() selectSub = new EventEmitter<number>();
+  @Output() deleteSub = new EventEmitter<number>();
+  @Output() editSub = new EventEmitter<number>();
 
   public id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
@@ -60,23 +60,24 @@ export class SubstitutionRendererComponent {
   onSubstitutionSelect(index: number) {
     console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.select.emit(index);
+    this.selectSub.emit(index);
   }
 
   public scrollToSubstitution(i: number) {
-    i++;
-    if (!i || i < 0 || i >= this.substitutions.length) {
-      i = 0;
+    let ix = i;
+    ix++;
+    if (!ix || ix < 0 || ix >= this.substitutions.length) {
+      ix = 0;
     }
-    console.log('Scroll to:', i);
+    console.log('Scroll to:', ix);
     this.elementRef.nativeElement
-      .querySelector(`#sub-${this.id}-${i}`)
+      .querySelector(`#sub-${this.id}-${ix}`)
       .scrollIntoView();
   }
 
   public onSubstitutionDelete(index: number) {
     console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.delete.emit(index);
+    this.deleteSub.emit(index);
   }
 }

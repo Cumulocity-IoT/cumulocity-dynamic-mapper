@@ -43,17 +43,17 @@ import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.ren
 import { StatusActivationRendererComponent } from './renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { FormlyFieldButton } from './shared/formly/button-type';
-import { C8YSwitchField } from './shared/formly/c8y-switch-field';
+import { FormlyFieldButton } from './shared/formly/button.type.component';
+import { C8YSwitchField } from './shared/formly/c8y-switch.type.component';
 import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component';
-import { FormlyFiller } from './shared/formly/filler';
-import { WrapperCustomFormField } from './shared/formly/form-field/custom-form-field-wrapper';
-import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper';
-import { FieldInputCustom } from './shared/formly/input-custom-field';
-import { MessageField } from './shared/formly/message-field';
+import { FormlyFiller } from './shared/formly/filler.type.component';
+import { WrapperCustomFormField } from './shared/formly/form-field/custom-form.type.component';
+import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper.type.component';
+import { FieldInputCustom } from './shared/formly/input-custom.type.component';
+import { MessageField } from './shared/formly/message.type.component';
 import { SelectComponent } from './shared/formly/select/select.type.component';
-import { FormlyTextField } from './shared/formly/text-field';
-import { FieldTextareaCustom } from './shared/formly/textarea-custom';
+import { FormlyTextField } from './shared/formly/text.type.component';
+import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
 import {
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid

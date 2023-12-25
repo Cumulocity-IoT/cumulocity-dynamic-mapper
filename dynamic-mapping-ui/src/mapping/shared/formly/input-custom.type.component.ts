@@ -23,7 +23,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: 'formly-field-input-custom',
+  selector: 'd11r-formly-field-input-custom',
   template: `<input
       *ngIf="type !== 'number'; else numberTmp"
       [type]="type"

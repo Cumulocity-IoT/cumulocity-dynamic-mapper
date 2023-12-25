@@ -22,80 +22,80 @@ import { API, Direction, Mapping, MappingType } from './shared.model';
 
 export const SAMPLE_TEMPLATES_C8Y = {
   MEASUREMENT: `{                                               
-    \"c8y_TemperatureMeasurement\": {
-        \"T\": {
-            \"value\": 110,
-              \"unit\": \"C\" }
+    "c8y_TemperatureMeasurement": {
+        "T": {
+            "value": 110,
+              "unit": "C" }
           },
-      \"time\":\"2022-08-05T00:14:49.389+02:00\",
-      \"source\": {
-        \"id\":\"909090\" },
-      \"type\": \"c8y_TemperatureMeasurement\"
+      "time":"2022-08-05T00:14:49.389+02:00",
+      "source": {
+        "id":"909090" },
+      "type": "c8y_TemperatureMeasurement"
   }`,
   ALARM: `{                                            
-    \"source\": {
-    \"id\": \"909090\"
+    "source": {
+    "id": "909090"
     },\
-    \"type\": \"c8y_TestAlarm\",
-    \"text\": \"This is a new test alarm!\",
-    \"severity\": \"MAJOR\",
-    \"status\": \"ACTIVE\",
-    \"time\": \"2022-08-05T00:14:49.389+02:00\"
+    "type": "c8y_TestAlarm",
+    "text": "This is a new test alarm!",
+    "severity": "MAJOR",
+    "status": "ACTIVE",
+    "time": "2022-08-05T00:14:49.389+02:00"
   }`,
   EVENT: `{ 
-    \"source\": {
-    \"id\": \"909090\"
+    "source": {
+    "id": "909090"
     },
-    \"text\": \"This is a new test event.\",
-    \"time\": \"2022-08-05T00:14:49.389+02:00\",
-    \"type\": \"c8y_TestEvent\"
+    "text": "This is a new test event.",
+    "time": "2022-08-05T00:14:49.389+02:00",
+    "type": "c8y_TestEvent"
  }`,
   INVENTORY: `{ 
-    \"c8y_IsDevice\": {},
-    \"name\": \"Vibration Sensor\",
-    \"type\": \"maker_Vibration_Sensor\"
+    "c8y_IsDevice": {},
+    "name": "Vibration Sensor",
+    "type": "maker_Vibration_Sensor"
  }`,
   OPERATION: `{ 
-   \"deviceId\": \"909090\",
-   \"decription\": \"New camera operation!\",
-   \"type\": \"maker_Vibration_Sensor\"
+   "deviceId": "909090",
+   "decription": "New camera operation!",
+   "type": "maker_Vibration_Sensor"
 }`
 };
 
 export const SAMPLE_TEMPLATES_EXTERNAL = {
   MEASUREMENT: `{                                               
-    \"Temperature\": {
-        \"value\": 110,
-        \"unit\": \"C\" },
-      \"time\":\"2022-08-05T00:14:49.389+02:00\",
-      \"deviceId\":\"909090\"
+    "Temperature": {
+        "value": 110,
+        "unit": "C" },
+      "time":"2022-08-05T00:14:49.389+02:00",
+      "deviceId":"909090"
   }`,
   ALARM: `{                                            
-    \"deviceId\":\"909090\",
-    \"alarmType\": \"TestAlarm\",
-    \"description\": \"This is a new test alarm!\",
-    \"severity\": \"MAJOR\",
-    \"status\": \"ACTIVE\",
-    \"time\": \"2022-08-05T00:14:49.389+02:00\"
+    "deviceId":"909090",
+    "alarmType": "TestAlarm",
+    "description": "This is a new test alarm!",
+    "severity": "MAJOR",
+    "status": "ACTIVE",
+    "time": "2022-08-05T00:14:49.389+02:00"
   }`,
   EVENT: `{ 
-    \"deviceId\":\"909090\",
-    \"description\": \"This is a new test event.\",
-    \"time\": \"2022-08-05T00:14:49.389+02:00\",
-    \"eventType\": \"TestEvent\"
+    "deviceId":"909090",
+    "description": "This is a new test event.",
+    "time": "2022-08-05T00:14:49.389+02:00",
+    "eventType": "TestEvent"
  }`,
   INVENTORY: `{ 
-    \"name\": \"Vibration Sensor\",
-    \"type\": \"maker_Vibration_Sensor\",
-    \"id\": \"909090\"
+    "name": "Vibration Sensor",
+    "type": "maker_Vibration_Sensor",
+    "id": "909090"
  }`,
   OPERATION: `{ 
-   \"deviceId\": \"909090\",
-   \"decription\": \"New camera operation!\",
-   \"type\": \"maker_Vibration_Sensor\"
+   "deviceId": "909090",
+   "decription": "New camera operation!",
+   "type": "maker_Vibration_Sensor"
   }`,
-  FLAT_FILE: '{\"message\":\"165, 14.5, \\\"2022-08-06T00:14:50.000+02:00\\\",\\\"c8y_FuelMeasurement\\\"\"}',
-  GENERIC_BINARY: '{\"message\":\"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 \"}'
+  FLAT_FILE: '{"message":"165, 14.5, \\"2022-08-06T00:14:50.000+02:00\\",\\"c8y_FuelMeasurement\\""}',
+  GENERIC_BINARY: '{"message":"3635 2c20 342e 352c 2022 3230 3232 2d30 382d 3036 5430 303a 3135 3a35 302e 3030 302b 3032 3a30 3022 2c22 6338 795f 4675 656c 4d65 6173 7572 656d 656e 7422 "}'
 };
 
 export const SCHEMA_EVENT = {

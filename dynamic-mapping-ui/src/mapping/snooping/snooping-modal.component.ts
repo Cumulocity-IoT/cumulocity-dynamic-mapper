@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { AfterViewInit, Component, Input, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, Input, ViewChild } from '@angular/core';
 import {
   ConfirmModalComponent,
   gettext,

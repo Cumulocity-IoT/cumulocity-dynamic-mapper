@@ -106,13 +106,13 @@ export class AddExtensionComponent implements OnDestroy {
     return this.applicationService.getHref(app);
   }
 
-  onDismiss(event) {
+  onDismiss() {
     this.cancelFileUpload();
     this.closeSubject.next(true);
     this.closeSubject.complete();
   }
 
-  onDone(event) {
+  onDone() {
     this.closeSubject.next(true);
     this.closeSubject.complete();
   }
