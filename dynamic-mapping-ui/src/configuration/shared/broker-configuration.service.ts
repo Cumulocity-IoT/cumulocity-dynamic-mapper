@@ -38,8 +38,23 @@ import {
   SharedService
 } from '../../shared';
 
-import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
-import { filter, map, scan, switchMap, withLatestFrom } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  combineLatest,
+  forkJoin,
+  from,
+  merge,
+  Observable,
+  Subject
+} from 'rxjs';
+import {
+  filter,
+  map,
+  scan,
+  switchMap,
+  tap,
+  withLatestFrom
+} from 'rxjs/operators';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
@@ -58,7 +73,8 @@ export class BrokerConfigurationService {
     private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
-    this.initializeConnectorLogsRealtime();
+    this.initConnectorLogsRealtime();
+    this.initConnectorConfigurations();
     // console.log("Constructor:BrokerConfigurationService");
   }
 
@@ -75,6 +91,8 @@ export class BrokerConfigurationService {
   );
   private mergeFilterTrigger$: Subject<any> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
+  private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
+  private reloadTrigger$: Subject<string> = new Subject();
 
   public getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
@@ -82,7 +100,7 @@ export class BrokerConfigurationService {
 
   public resetCache() {
     console.log('resetCache() :BrokerConfigurationService');
-    this._connectorConfigurations = undefined;
+    this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
   }
@@ -90,7 +108,6 @@ export class BrokerConfigurationService {
   async updateConnectorConfiguration(
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
-    this._connectorConfigurations = undefined;
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.ident}`,
       {
@@ -106,7 +123,6 @@ export class BrokerConfigurationService {
   async createConnectorConfiguration(
     configuration: ConnectorConfiguration
   ): Promise<IFetchResponse> {
-    this._connectorConfigurations = undefined;
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
       {
@@ -120,7 +136,6 @@ export class BrokerConfigurationService {
   }
 
   async deleteConnectorConfiguration(ident: string): Promise<IFetchResponse> {
-    this._connectorConfigurations = undefined;
     return this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${ident}`,
       {
@@ -133,42 +148,81 @@ export class BrokerConfigurationService {
     );
   }
 
-  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
-    if (!this._connectorConfigurations) {
-      // console.log("Load getConnectorConfigurations()")
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
-        {
-          headers: {
-            accept: 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-      this._connectorConfigurations = await response.json();
-    }
+  public reloadConnectorConfigurations() {
+    this.reloadTrigger$.next('');
+  }
+
+  async getConnectorConfigurationsRaw(): Promise<ConnectorConfiguration[]> {
+    // console.log("Load getConnectorConfigurations()")
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    this._connectorConfigurations = await response.json();
+
     return this._connectorConfigurations;
   }
 
-  async getConnectorConfigurationsWithStatus(): Promise<
-    ConnectorConfiguration[]
-  > {
-    const configurations: ConnectorConfiguration[] =
-      await this.getConnectorConfigurations();
-    let connectorStatus = undefined;
-    for (let index = 0; index < configurations.length; index++) {
-      const conf = configurations[index];
-      if (!connectorStatus) {
-        connectorStatus = await this.getConnectorStatus();
-      }
-      if (!conf['status$']) {
-        const status = connectorStatus[conf.ident]
-          ? connectorStatus[conf.ident].status
-          : ConnectorStatus.UNKNOWN;
-        conf['status$'] = new BehaviorSubject<string>(status);
-      }
-    }
-    return this._connectorConfigurations;
+  async initConnectorConfigurations() {
+    console.log('Calling initConnectorConfigurations!');
+    const connectorConfig$ = this.reloadTrigger$.pipe(
+      tap(() => console.log('New triger!')),
+      switchMap(() => {
+        const observable1 = from(this.getConnectorConfigurationsRaw());
+        const observable2 = from(this.getConnectorStatus());
+        return forkJoin([observable1, observable2]);
+      }),
+      map((vars) => {
+        const [configurations, connectorStatus] = vars;
+        for (let index = 0; index < configurations.length; index++) {
+          const conf = configurations[index];
+          const status = connectorStatus[conf.ident]
+            ? connectorStatus[conf.ident].status
+            : ConnectorStatus.UNKNOWN;
+          if (!conf['status$']) {
+            conf['status$'] = new BehaviorSubject<string>(status);
+          } else {
+            conf['status$'].next(status);
+          }
+        }
+        return configurations;
+      })
+    );
+    this.connectorConfigurations$ = combineLatest([
+      connectorConfig$,
+      this.incomingRealtime$
+    ]).pipe(
+      map((vars) => {
+        const [configurations, payload] = vars;
+        if (payload?.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
+          const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
+          configurations.forEach((cc) => {
+            if (statusLog['connectorIdent'] == cc.ident) {
+              if (!cc['status$']) {
+                cc['status$'] = new BehaviorSubject<string>(statusLog.status);
+              } else {
+                cc['status$'].next(statusLog.status);
+              }
+            }
+          });
+        }
+        return configurations;
+      })
+    );
+  }
+
+  public startConnectorConfigurations() {
+    this.incomingRealtime$.next({} as any);
+    this.reloadTrigger$.next('');
+  }
+
+  getConnectorConfigurations(): Observable<ConnectorConfiguration[]> {
+    return this.connectorConfigurations$;
   }
 
   async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
@@ -214,7 +268,7 @@ export class BrokerConfigurationService {
           'content-type': 'application/json'
         },
         body: JSON.stringify(configuration),
-        method: 'POST'
+        method: 'PUT'
       }
     );
   }
@@ -247,21 +301,6 @@ export class BrokerConfigurationService {
       payload[CONNECTOR_FRAGMENT].type = payload.type;
       this.incomingRealtime$.next(payload);
     }
-
-    if (payload.type == StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE) {
-      const statusLog: ConnectorStatusEvent = payload[CONNECTOR_FRAGMENT];
-      const configurations = await this.getConnectorConfigurationsWithStatus();
-      for (let index = 0; index < configurations.length; index++) {
-        const cc = configurations[index];
-        if (statusLog['connectorIdent'] == cc.ident) {
-          if (!cc['status$']) {
-            cc['status$'] = new BehaviorSubject<string>(statusLog.status);
-          } else {
-            cc['status$'].next(statusLog.status);
-          }
-        }
-      }
-    }
   };
 
   public updateStatusLogs(eventType: string) {
@@ -270,7 +309,7 @@ export class BrokerConfigurationService {
     this.statusLogEventType = eventType;
   }
 
-  async initializeConnectorLogsRealtime(): Promise<void> {
+  async initConnectorLogsRealtime(): Promise<void> {
     const agentId = await this.sharedService.getDynamicMappingServiceAgent();
     console.log('Agent Id', agentId);
 
@@ -313,7 +352,7 @@ export class BrokerConfigurationService {
         } else {
           sortedAcc = val.concat(acc);
         }
-        sortedAcc = acc.slice(0, 9);
+        sortedAcc = sortedAcc.slice(0, 9);
         return sortedAcc;
       }, [])
     );
@@ -331,8 +370,7 @@ export class BrokerConfigurationService {
     // this.incomingRealtime$.complete();
   }
 
-  public runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
-    this._connectorConfigurations = undefined;
+  async runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
     let body: any = {
       operation: op
     };
