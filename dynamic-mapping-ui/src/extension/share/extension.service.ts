@@ -97,7 +97,7 @@ export class ExtensionService {
   }
 
   async deleteExtension(app: IManagedObject): Promise<void> {
-    const {name} = app;
+    const { name } = app;
     await this.modal.confirm(
       gettext('Delete extension'),
       this.translateService.instant(

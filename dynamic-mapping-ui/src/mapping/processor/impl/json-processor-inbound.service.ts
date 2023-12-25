@@ -45,9 +45,9 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
   }
 
   public async extractFromSource(context: ProcessingContext) {
-    const {mapping} = context;
+    const { mapping } = context;
     const payloadJsonNode: JSON = context.payload;
-    const {postProcessingCache} = context;
+    const { postProcessingCache } = context;
     const topicLevels = splitTopicExcludingSeparator(context.topic);
     payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
 

@@ -37,10 +37,10 @@ import {
   </c8y-modal>`
 })
 export class EditConfigurationComponent implements OnInit {
-  @Output() closeSubject: Subject<any> = new Subject();
   @Input() add: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
+  @Output() closeSubject: Subject<any> = new Subject();
   brokerFormlyFields: FormlyFieldConfig[] = [];
   brokerFormly: FormGroup = new FormGroup({});
   dynamicFormlyFields: FormlyFieldConfig[] = [];
@@ -125,7 +125,7 @@ export class EditConfigurationComponent implements OnInit {
         const entry = sortedFields[index];
         // test if the property is a valid entry, this happens when the list of properties is not numbered consecutivly
         if (entry) {
-          const {property} = entry;
+          const { property } = entry;
           if (property.type == ConnectorPropertyType.NUMERIC_PROPERTY) {
             this.dynamicFormlyFields.push({
               // fieldGroupClassName: "row",

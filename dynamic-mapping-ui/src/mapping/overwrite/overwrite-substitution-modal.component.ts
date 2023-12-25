@@ -18,7 +18,14 @@
  *
  * @authors Christof Strack
  */
-import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  Input,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import {
   ConfirmModalComponent,
   gettext,
@@ -35,13 +42,12 @@ import { definesDeviceIdentifier } from '../shared/util';
   selector: 'd11r-mapping-overwrite-substitution-modal',
   templateUrl: 'overwrite-substitution-modal.component.html'
 })
-export class OverwriteSubstitutionModalComponent implements OnInit, AfterViewInit, OnDestroy {
+export class OverwriteSubstitutionModalComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
+  @Input() substitution: MappingSubstitution;
   @ViewChild('overwriteSubstitutionRef', { static: false })
   overwriteSubstitutionRef: ConfirmModalComponent;
-
-  @Input()
-  substitution: MappingSubstitution;
-
   message1: string;
   message2: string;
   targetAPI: string;

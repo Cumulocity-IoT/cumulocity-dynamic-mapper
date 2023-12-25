@@ -38,21 +38,16 @@ import { isDisabled } from '../shared/util';
   encapsulation: ViewEncapsulation.None
 })
 export class MappingTypeComponent implements OnInit, OnDestroy {
+  @Input() direction: Direction;
+
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
-
-  @ViewChild(C8yStepper, { static: true })
-  closeSubject: Subject<MappingType>;
+  @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<MappingType>;
   labels: ModalLabels = { cancel: 'Cancel' };
-
-  @Input()
-  direction: Direction;
-
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
-
   mappingType: MappingType.JSON;
 
   constructor(private fb: FormBuilder) {}

@@ -18,7 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import {
   ApplicationService,
   IApplication,
@@ -56,7 +61,6 @@ export class AddExtensionComponent implements OnDestroy {
     private alertService: AlertService,
     private applicationService: ApplicationService
   ) {}
-
 
   ngOnDestroy(): void {
     this.closeSubject.complete();

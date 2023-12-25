@@ -35,13 +35,12 @@ import { SnoopStatus } from '../../shared';
   templateUrl: 'snooping-modal.component.html'
 })
 export class SnoopingModalComponent implements AfterViewInit {
-  @ViewChild('snoopingRef', { static: false })
-  snoopingRef: ConfirmModalComponent;
-
   @Input()
   snoopStatus: SnoopStatus;
   @Input()
   numberSnooped: number;
+  @ViewChild('snoopingRef', { static: false })
+  snoopingRef: ConfirmModalComponent;
 
   SnoopStatus = SnoopStatus;
   labels: ModalLabels = { ok: gettext('Confirm') };

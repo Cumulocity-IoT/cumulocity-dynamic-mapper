@@ -18,7 +18,12 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import {
   AlertService,
   DropAreaComponent,

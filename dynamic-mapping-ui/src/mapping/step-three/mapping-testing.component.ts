@@ -50,9 +50,10 @@ import { isDisabled } from '../shared/util';
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
-  @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() editorTestingPayloadTemplateEmitter: EventEmitter<any>;
+
+  @Output() testResult: EventEmitter<boolean> = new EventEmitter<boolean>();
 
   Direction = Direction;
   isDisabled = isDisabled;

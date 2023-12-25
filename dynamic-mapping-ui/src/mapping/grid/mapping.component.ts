@@ -50,7 +50,7 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
-  uuidCustom,
+  uuidCustom
 } from '../../shared';
 
 import { Router } from '@angular/router';
@@ -369,7 +369,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const ident = uuidCustom();
     const sub: MappingSubstitution[] = [];
     let mapping: Mapping = {
-      name: `Mapping - ${ ident.substring(0, 7)}`,
+      name: `Mapping - ${ident.substring(0, 7)}`,
       id: ident,
       ident: ident,
       subscriptionTopic: '',
@@ -481,7 +481,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
     this.mappingToUpdate.snoopedTemplates = [];
-    this.mappingToUpdate.name = `${this.mappingToUpdate.name } - Copy`;
+    this.mappingToUpdate.name = `${this.mappingToUpdate.name} - Copy`;
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     console.log('Copying mapping', this.mappingToUpdate);
@@ -491,7 +491,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async activateMapping(mapping: Mapping) {
     const newActive = !mapping.active;
     const action = newActive ? 'Activate' : 'Deactivate';
-    this.alertService.success(`${action } mapping: ${ mapping.id }!`);
+    this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
     this.loadMappings();
@@ -571,7 +571,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     console.log('Changed mapping:', mapping);
 
     if (
-      (mapping.direction == Direction.INBOUND) ||
+      mapping.direction == Direction.INBOUND ||
       // test if we can attach multiple outbound mappings to the same filterOutbound
       mapping.direction == Direction.OUTBOUND
       //  && isFilterOutboundUnique(mapping, this.mappings)
@@ -612,17 +612,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (mapping.direction == Direction.INBOUND) {
         this.alertService.danger(
           gettext(
-            `Topic is already used: ${
-              mapping.subscriptionTopic
-              }. Please use a different topic.`
+            `Topic is already used: ${mapping.subscriptionTopic}. Please use a different topic.`
           )
         );
       } else {
         this.alertService.danger(
           gettext(
-            `FilterOutbound is already used: ${
-              mapping.filterOutbound
-              }. Please use a different filter.`
+            `FilterOutbound is already used: ${mapping.filterOutbound}. Please use a different filter.`
           )
         );
       }
@@ -669,9 +665,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         const action = newActive ? 'Activate' : 'Deactivate';
         const parameter = { id: this.mappings[i].id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(
-          `${action } mapping: ${ this.mappings[i].id }!`
-        );
+        this.alertService.success(`${action} mapping: ${this.mappings[i].id}!`);
       }
     }
     this.loadMappings();

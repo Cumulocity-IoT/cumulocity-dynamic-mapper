@@ -260,7 +260,6 @@ export class BrokerConfigurationService {
             cc['status$'].next(statusLog.status);
           }
         }
-
       }
     }
   };
