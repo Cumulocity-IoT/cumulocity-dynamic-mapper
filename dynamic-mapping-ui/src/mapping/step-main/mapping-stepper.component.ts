@@ -190,9 +190,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       : 0;
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success(
-        `Already ${
-          numberSnooped
-          } templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`
+        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`
       );
     }
 
@@ -512,11 +510,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.direction
       );
       if (definesDI) {
-        this.substitutionModel.targetExpression.msgTxt =
-          `${API[this.mapping.targetAPI].identifier
-          } is resolved using the external Id ${
+        this.substitutionModel.targetExpression.msgTxt = `${
+          API[this.mapping.targetAPI].identifier
+        } is resolved using the external Id ${
           this.mapping.externalIdType
-          } defined in the previous step.`;
+        } defined in the previous step.`;
         this.substitutionModel.targetExpression.severity = 'text-info';
       } else if (path == '$') {
         this.substitutionModel.targetExpression.msgTxt = `By specifying "$" you selected the root of the target 

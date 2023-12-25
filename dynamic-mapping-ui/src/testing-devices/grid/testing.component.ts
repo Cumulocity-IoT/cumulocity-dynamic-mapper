@@ -81,8 +81,6 @@ export class TestingComponent {
   async onDataSourceModifier(
     dataSourceModifier: DataSourceModifier
   ): Promise<ServerSideDataResult> {
-
-
     const { res, data, paging } = await this.service.getData(
       dataSourceModifier.columns,
       dataSourceModifier.pagination
@@ -93,7 +91,13 @@ export class TestingComponent {
     );
     const size: number = await this.service.getTotal();
 
-    const serverSideDataResult: ServerSideDataResult = { res, data, paging, filteredSize, size };
+    const serverSideDataResult: ServerSideDataResult = {
+      res,
+      data,
+      paging,
+      filteredSize,
+      size
+    };
 
     return serverSideDataResult;
   }

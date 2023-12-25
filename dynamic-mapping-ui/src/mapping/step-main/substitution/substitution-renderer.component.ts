@@ -50,7 +50,7 @@ export class SubstitutionRendererComponent {
   @Output() deleteSub = new EventEmitter<number>();
   @Output() editSub = new EventEmitter<number>();
 
-  public id = Math.floor(Math.random() * 1000000);
+  id = Math.floor(Math.random() * 1000000);
   definesDeviceIdentifier = definesDeviceIdentifier;
   isDisabled = isDisabled;
   EditorMode = EditorMode;

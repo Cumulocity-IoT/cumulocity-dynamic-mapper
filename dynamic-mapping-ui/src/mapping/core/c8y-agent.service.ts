@@ -58,34 +58,35 @@ export class C8YAgent {
   async createMEAO(context: ProcessingContext) {
     let result: any;
     let error: string = '';
-    const currentRequest = context.requests[context.requests.length - 1].request;
+    const currentRequest =
+      context.requests[context.requests.length - 1].request;
     if (context.mapping.targetAPI == API.EVENT.name) {
       const p: IEvent = currentRequest as any;
       if (p != null) {
         result = this.event.create(p, context);
       } else {
-        error = `Payload is not a valid:${ context.mapping.targetAPI}`;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.ALARM.name) {
       const p: IAlarm = currentRequest as any;
       if (p != null) {
         result = this.alarm.create(p, context);
       } else {
-        error = `Payload is not a valid:${ context.mapping.targetAPI}`;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.MEASUREMENT.name) {
       const p: IMeasurement = currentRequest as any;
       if (p != null) {
         result = this.measurement.create(p, context);
       } else {
-        error = `Payload is not a valid:${ context.mapping.targetAPI}`;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.OPERATION.name) {
       const p: IOperation = currentRequest as any;
       if (p != null) {
         result = this.operation.create(p, context);
       } else {
-        error = `Payload is not a valid:${ context.mapping.targetAPI}`;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else {
       const p: IManagedObject = currentRequest as any;
@@ -96,12 +97,12 @@ export class C8YAgent {
           result = this.inventory.create(p, context);
         }
       } else {
-        error = `Payload is not a valid:${ context.mapping.targetAPI}`;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     }
 
     if (error != '') {
-      this.alert.danger(`Failed to tested mapping: ${ error}`);
+      this.alert.danger(`Failed to tested mapping: ${error}`);
       return '';
     }
 
@@ -113,13 +114,13 @@ export class C8YAgent {
         return data;
       } else {
         const e = await res.text();
-        this.alert.danger(`Failed to tested mapping: ${ e}`);
+        this.alert.danger(`Failed to tested mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
         return '';
       }
     } catch (e) {
       const { data } = await e;
-      this.alert.danger(`Failed to tested mapping: ${ data}`);
+      this.alert.danger(`Failed to tested mapping: ${data}`);
       context.requests[context.requests.length - 1].error = e;
       return '';
     }
@@ -139,7 +140,8 @@ export class C8YAgent {
       );
     }
 
-    const currentRequest = context.requests[context.requests.length - 1].request;
+    const currentRequest =
+      context.requests[context.requests.length - 1].request;
     const device: Partial<IManagedObject> = {
       ...currentRequest,
       c8y_IsDevice: {},

@@ -15,13 +15,13 @@ import { definesDeviceIdentifier } from '../shared/util';
   templateUrl: './edit-substitution-modal.component.html'
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
-  closeSubject: Subject<MappingSubstitution> = new Subject();
-  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
   @Input() substitution: MappingSubstitution;
   @Input() duplicate: boolean;
   @Input() existingSubstitution: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
+  closeSubject: Subject<MappingSubstitution> = new Subject();
+  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
   override: boolean = false;
   repairStrategyOptions: any[];
   substitutionText: string;

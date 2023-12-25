@@ -44,7 +44,7 @@ import {
   isMultiSelection,
   createMultiSelection,
   TextContent,
-  isValueSelection,
+  isValueSelection
 } from 'vanilla-jsoneditor';
 
 @Component({
@@ -56,9 +56,6 @@ import {
   encapsulation: ViewEncapsulation.None
 })
 export class JsonEditor2Component implements OnInit, OnDestroy {
-  @ViewChild('jsonEditorContainer', { static: true })
-  jsonEditorContainer: ElementRef;
-
   @Input() options;
   @Input()
   set data(value: unknown) {
@@ -71,6 +68,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       this.ngOnInit();
     }
   }
+  @Input()
+  schemaUpdate: EventEmitter<string>;
+  @Input()
+  class: string;
 
   @Output()
   changeContent: EventEmitter<any> = new EventEmitter<any>();
@@ -78,15 +79,14 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
   @Output()
   initialized: EventEmitter<string> = new EventEmitter<string>();
-  @Input()
-  schemaUpdate: EventEmitter<string>;
-  @Input()
-  class: string;
+
+  @ViewChild('jsonEditorContainer', { static: true })
+  jsonEditorContainer: ElementRef;
 
   constructor(private elementRef: ElementRef) {}
 
   private editor: JSONEditor;
-  public id = `angjsoneditor${ Math.floor(Math.random() * 1000000)}`;
+  public id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
   content: Content = {
     text: undefined,
     json: {
@@ -95,7 +95,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   };
   ngOnInit() {
     if (!this.jsonEditorContainer.nativeElement) {
-      console.error('Can\'t find the ElementRef reference for jsoneditor)');
+      console.error("Can't find the ElementRef reference for jsoneditor)");
     }
     this.editor = new JSONEditor({
       target: this.jsonEditorContainer.nativeElement,
@@ -118,10 +118,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.changeContent.emit(updatedContent);
         },
         onSelect: this.onSelect.bind(this),
-        onRenderMenu(
-          items: MenuItem[]
-
-        ): MenuItem[] | undefined {
+        onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
           // console.log("MenuItems:", items);
           // remove buttons for table-mode, transform, sort
           items.splice(

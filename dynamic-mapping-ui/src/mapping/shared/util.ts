@@ -161,8 +161,12 @@ export function isTemplateTopicUnique(
   mapping: Mapping,
   mappings: Mapping[]
 ): boolean {
-  const result = mappings.every(m => {
-    return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
+  const result = mappings.every((m) => {
+    return (
+      (!mapping.templateTopic.startsWith(m.templateTopic) &&
+        !m.templateTopic.startsWith(mapping.templateTopic)) ||
+      mapping.id == m.id
+    );
   });
   return result;
 }
@@ -194,15 +198,9 @@ export function isSubstituionValid(mapping: Mapping): boolean {
       definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
     )
     .map(() => 1)
-    .reduce(
-      (
-        previousValue: number,
-        currentValue: number
-      ) => {
-        return previousValue + currentValue;
-      },
-      0
-    );
+    .reduce((previousValue: number, currentValue: number) => {
+      return previousValue + currentValue;
+    }, 0);
   return (
     (mapping.direction != Direction.OUTBOUND && count == 1) ||
     mapping.direction == Direction.OUTBOUND

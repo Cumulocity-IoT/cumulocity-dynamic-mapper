@@ -58,9 +58,9 @@ export abstract class PayloadProcessorInbound {
 
   public async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from inbound payload
-    const {mapping} = context;
+    const { mapping } = context;
 
-    const {postProcessingCache} = context;
+    const { postProcessingCache } = context;
     let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
     for (const entry of postProcessingCache.entries()) {
       if (postProcessingCache.get(maxEntry).length < entry[1].length) {
@@ -72,7 +72,8 @@ export abstract class PayloadProcessorInbound {
       findDeviceIdentifier(context.mapping).pathTarget
     );
 
-    const countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
+    const countMaxlistEntries: number =
+      postProcessingCache.get(maxEntry).length;
     const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
@@ -142,11 +143,7 @@ export abstract class PayloadProcessorInbound {
             if (!sourceId && mapping.createNonExistingDevice) {
               const request = {
                 c8y_IsDevice: {},
-                name:
-                  `device_${
-                  mapping.externalIdType
-                  }_${
-                  substituteValue.value}`,
+                name: `device_${mapping.externalIdType}_${substituteValue.value}`,
                 d11r_device_generatedType: {},
                 d11r_testDevice: {},
                 type: MAPPING_TEST_DEVICE_TYPE
@@ -175,11 +172,7 @@ export abstract class PayloadProcessorInbound {
               predecessor = newPredecessor;
             } else if (!sourceId && context.sendPayload) {
               throw new Error(
-                `External id ${
-                  substituteValue
-                  } for type ${
-                  mapping.externalIdType
-                  } not found!`
+                `External id ${substituteValue} for type ${mapping.externalIdType} not found!`
               );
             } else if (!sourceId) {
               substituteValue.value = substituteValue.value.toString();

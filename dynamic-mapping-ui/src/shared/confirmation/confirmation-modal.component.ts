@@ -18,7 +18,14 @@
  *
  * @authors Christof Strack
  */
-import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  Input,
+  OnDestroy,
+  OnInit,
+  ViewChild
+} from '@angular/core';
 import {
   ConfirmModalComponent,
   gettext,
@@ -33,7 +40,9 @@ import { Subject } from 'rxjs';
   selector: 'd11r-confirmation-modal',
   templateUrl: 'confirmation-modal.component.html'
 })
-export class ConfirmationModalComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ConfirmationModalComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   @Input() title: string;
   @Input() message: string;
   @ViewChild('modalRef', { static: false }) modalRef: ConfirmModalComponent;

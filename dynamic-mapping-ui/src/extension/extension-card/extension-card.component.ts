@@ -31,9 +31,8 @@ import { ExtensionService } from '../share/extension.service';
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;
-  @Output() appDeleted: EventEmitter<void> = new EventEmitter();
-
   @Input() loaded: any = true;
+  @Output() appDeleted: EventEmitter<void> = new EventEmitter();
   ExtensionStatus = ExtensionStatus;
   external: boolean = true;
 

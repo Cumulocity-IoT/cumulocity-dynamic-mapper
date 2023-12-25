@@ -92,7 +92,7 @@ export class MappingService {
       type: { __has: 'd11r_mapping' }
     });
 
-    const {data} = await this.inventory.listQuery(query, filter);
+    const { data } = await this.inventory.listQuery(query, filter);
     // const query = {
     //       'd11r_mapping.snoopStatus': direction
     // }

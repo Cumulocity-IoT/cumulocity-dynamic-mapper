@@ -46,9 +46,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
   }
 
   public async extractFromSource(context: ProcessingContext) {
-    const {mapping} = context;
+    const { mapping } = context;
     const payloadJsonNode: JSON = context.payload;
-    const {postProcessingCache} = context;
+    const { postProcessingCache } = context;
     const topicLevels = splitTopicExcludingSeparator(context.topic);
     payloadJsonNode[TOKEN_TOPIC_LEVEL] = topicLevels;
 
@@ -160,11 +160,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 );
                 if (context.sendPayload) {
                   throw new Error(
-                    `External id ${
-                      extractedSourceContent
-                      } for type ${
-                      mapping.externalIdType
-                      } not found!`
+                    `External id ${extractedSourceContent} for type ${mapping.externalIdType} not found!`
                   );
                 }
                 externalId = extractedSourceContent;
@@ -202,11 +198,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 );
               if ((!externalId || externalId == null) && context.sendPayload) {
                 throw new Error(
-                  `External id ${
-                    extractedSourceContent
-                    } for type ${
-                    mapping.externalIdType
-                    } not found!`
+                  `External id ${extractedSourceContent} for type ${mapping.externalIdType} not found!`
                 );
               } else if (!externalId || externalId == null) {
                 extractedSourceContent = null;

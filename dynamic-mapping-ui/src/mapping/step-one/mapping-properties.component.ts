@@ -57,6 +57,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
+
   @Output() targetTemplateChanged = new EventEmitter<any>();
 
   ValidationError = ValidationError;
@@ -93,9 +94,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       : 0;
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success(
-        `Already ${
-          numberSnooped
-          } templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`
+        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`
       );
     }
     this.propertyFormlyFields = [
@@ -386,7 +385,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               switchMode: true,
-              description: 'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
+              description:
+                'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
               indeterminate: false
             }
           },
