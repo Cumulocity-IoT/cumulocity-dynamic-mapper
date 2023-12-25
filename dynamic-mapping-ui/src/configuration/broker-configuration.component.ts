@@ -83,8 +83,14 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       sendSubscriptionEvents: new FormControl('')
     });
     await this.loadData();
+    this.brokerConfigurationService
+    .getConnectorConfigurations()
+    .subscribe((confs) => {
+      this.configurations = confs;
+    });
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
     this.feature = await this.sharedService.getFeatures();
+    this.brokerConfigurationService.startConnectorConfigurations();
     this.brokerConfigurationService.startConnectorStatusSubscriptions();
   }
 
@@ -92,14 +98,12 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     this.brokerConfigurationService.resetCache();
     await this.loadData();
   }
-
   public async loadData(): Promise<void> {
-    this.configurations =
-      await this.brokerConfigurationService.getConnectorConfigurationsWithStatus();
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
+      this.brokerConfigurationService.reloadConnectorConfigurations();
   }
 
   async clickedReconnect2NotificationEnpoint() {
@@ -148,8 +152,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             gettext('Failed to update connector configuration')
           );
         }
-        await this.loadData();
       }
+      await this.loadData();
     });
   }
 
@@ -188,6 +192,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
         confirmDeletionModalRef.hide();
       }
     );
+    await this.loadData();
   }
 
   public async onConfigurationAdd() {
@@ -226,9 +231,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             gettext('Failed to update connector configuration')
           );
         }
-        await this.loadData();
       }
     });
+    await this.loadData();
   }
 
   public async onConfigurationToogle(index) {
