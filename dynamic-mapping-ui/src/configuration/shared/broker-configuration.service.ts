@@ -84,8 +84,10 @@ export class BrokerConfigurationService {
   private realtime: Realtime;
   private statusLogs$: Observable<any[]>;
   private subscriptionEvents: any;
-  private statusLogEventType: string =
-    StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE;
+  private filterStatusLog = {
+    eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    connectorIdent: undefined
+  };
   private filterTrigger$: BehaviorSubject<string> = new BehaviorSubject(
     StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
   );
@@ -295,16 +297,16 @@ export class BrokerConfigurationService {
 
   private updateConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
-    if (payload.type == this.statusLogEventType) {
+    if (payload.type == this.filterStatusLog.eventType) {
       payload[CONNECTOR_FRAGMENT].type = payload.type;
       this.incomingRealtime$.next(payload);
     }
   };
 
-  public updateStatusLogs(eventType: string) {
-    this.filterTrigger$.next(eventType);
+  public updateStatusLogs(filter: any) {
+    this.filterTrigger$.next(filter.eventType);
     this.mergeFilterTrigger$.next([{ type: 'reset' }]);
-    this.statusLogEventType = eventType;
+    this.filterStatusLog = filter;
   }
 
   async initConnectorLogsRealtime(): Promise<void> {
@@ -327,12 +329,27 @@ export class BrokerConfigurationService {
           event[CONNECTOR_FRAGMENT].type = event.type;
           return event[CONNECTOR_FRAGMENT];
         })
+      ),
+      map((events) =>
+        events.filter((event) => {
+          return !this.filterStatusLog.connectorIdent
+            ? true
+            : event.connectorIdent == this.filterStatusLog.connectorIdent;
+        })
       )
       // tap((x) => console.log("Reload", x))
     );
 
     const sourceRealtime$ = this.incomingRealtime$.pipe(
-      filter((event) => event.type == this.statusLogEventType),
+      filter((event) => {
+        return (
+          event.type == this.filterStatusLog.eventType &&
+          (!this.filterStatusLog.connectorIdent
+            ? true
+            : event[CONNECTOR_FRAGMENT].connectorIdent ==
+              this.filterStatusLog.connectorIdent)
+        );
+      }),
       map((event) => [event[CONNECTOR_FRAGMENT]])
     );
 

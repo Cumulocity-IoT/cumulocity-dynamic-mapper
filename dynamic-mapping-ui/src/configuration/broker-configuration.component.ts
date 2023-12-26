@@ -43,6 +43,7 @@ import { BrokerConfigurationService } from './shared/broker-configuration.servic
 
 @Component({
   selector: 'd11r-mapping-broker-configuration',
+  styleUrls: ['./broker-configuration.component.style.css'],
   templateUrl: 'broker-configuration.component.html'
 })
 export class BrokerConfigurationComponent implements OnInit, OnDestroy {
@@ -54,6 +55,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   configurations: ConnectorConfiguration[];
   statusLogs$: Observable<any[]>;
   statusLogEventType: string = StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE;
+  statusLogConnector: string;
   StatusEventTypes = StatusEventTypes;
 
   serviceConfiguration: ServiceConfiguration = {
@@ -84,10 +86,10 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     });
     await this.loadData();
     this.brokerConfigurationService
-    .getConnectorConfigurationsLive()
-    .subscribe((confs) => {
-      this.configurations = confs;
-    });
+      .getConnectorConfigurationsLive()
+      .subscribe((confs) => {
+        this.configurations = confs;
+      });
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
     this.feature = await this.sharedService.getFeatures();
     this.brokerConfigurationService.startConnectorConfigurations();
@@ -103,7 +105,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
-      this.brokerConfigurationService.reloadConnectorConfigurations();
+    this.brokerConfigurationService.reloadConnectorConfigurations();
   }
 
   async clickedReconnect2NotificationEnpoint() {
@@ -277,7 +279,10 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   }
 
   updateStatusLogs() {
-    this.brokerConfigurationService.updateStatusLogs(this.statusLogEventType);
+    this.brokerConfigurationService.updateStatusLogs({
+      eventType: this.statusLogEventType,
+      connectorIdent: this.statusLogConnector
+    });
   }
 
   ngOnDestroy(): void {
