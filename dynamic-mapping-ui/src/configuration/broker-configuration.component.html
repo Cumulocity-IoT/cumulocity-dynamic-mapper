@@ -151,10 +151,8 @@
 
       <!-- export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
       export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";    -->
-      <div class="card-header separator j-c-between">
-        <h4 class="card-title">
-          {{ "Connector Logs" | translate }}
-        </h4>
+      <div class="legend form-block col-lg-12">
+        Connector Logs
       </div>
       <div class="card-block">
         <c8y-form-group>
@@ -196,7 +194,7 @@
             </button>
           </form>
         </c8y-form-group>
-        <div style="height: 430px; overflow: auto">
+        <div style="height: 340px; overflow: auto">
           <!-- <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length == 0"
             [icon]="'event'"
             [title]="'No logs found.' | translate"
