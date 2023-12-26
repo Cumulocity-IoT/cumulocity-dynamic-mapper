@@ -86,7 +86,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   constructor(private elementRef: ElementRef) {}
 
   private editor: JSONEditor;
-  public id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
+  id = `angjsoneditor${Math.floor(Math.random() * 1000000)}`;
   content: Content = {
     text: undefined,
     json: {
@@ -167,12 +167,12 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     }
   }
 
-  public setSchema(schema: any) {
+  setSchema(schema: any) {
     const validator = createAjvValidator({ schema });
     this.editor?.updateProps({ validator: validator });
   }
 
-  public setSelectionToPath(pathString: string) {
+  setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     console.log('Set selection to path:', pathString, path);
     const selection: any = createMultiSelection(path, path);
@@ -187,7 +187,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.pathChanged.emit(pathString);
   }
 
-  public get(): JSON {
+  get(): JSON {
     const content: Content = this.editor.get();
     if (isJSONContent(content)) {
       const j: any = (this.editor.get() as JSONContent).json;
@@ -199,7 +199,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     }
   }
 
-  public set(json: any) {
+  set(json: any) {
     const value: JSONContent = {
       json: json
     };

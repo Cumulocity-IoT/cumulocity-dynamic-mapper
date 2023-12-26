@@ -64,7 +64,7 @@ export class TestingDeviceService {
     this.queriesUtil = new QueriesUtil();
   }
 
-  public refreshData$ = new Subject<any>();
+  refreshData$ = new Subject<any>();
 
   /**
    * Returns a list of columns.

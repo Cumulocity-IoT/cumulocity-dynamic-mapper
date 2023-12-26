@@ -26,7 +26,7 @@ import { ProcessingContext } from '../processor/prosessor.model';
 export class FacadeAlarmService {
   constructor(private alarm: AlarmService) {}
 
-  public create(
+  create(
     alarm: IAlarm,
     context: ProcessingContext
   ): Promise<IResult<IAlarm>> {

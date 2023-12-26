@@ -30,7 +30,7 @@ export class MappingTreeService {
 
   constructor(
     protected inventoryService: InventoryService,
-    public alert: AlertService,
+    alert: AlertService,
     private client: FetchClient
   ) {}
 

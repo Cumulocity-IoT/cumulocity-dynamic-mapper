@@ -31,7 +31,7 @@ import { ProcessingContext } from '../processor/prosessor.model';
 export class FacadeOperationService {
   constructor(private operation: OperationService) {}
 
-  public create(
+  create(
     operation: IOperation,
     context: ProcessingContext
   ): Promise<IResult<IOperation>> {

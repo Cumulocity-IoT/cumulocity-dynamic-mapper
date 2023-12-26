@@ -36,7 +36,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class JSONProcessorInbound extends PayloadProcessorInbound {
-  public deserializePayload(
+  deserializePayload(
     context: ProcessingContext,
     mapping: Mapping
   ): ProcessingContext {
@@ -44,7 +44,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
     return context;
   }
 
-  public async extractFromSource(context: ProcessingContext) {
+  async extractFromSource(context: ProcessingContext) {
     const { mapping } = context;
     const payloadJsonNode: JSON = context.payload;
     const { postProcessingCache } = context;

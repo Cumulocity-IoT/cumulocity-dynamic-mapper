@@ -37,11 +37,11 @@ export class FacadeIdentityService {
     private identity: IdentityService
   ) {}
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.mockIdentity.initializeCache();
   }
 
-  public async resolveGlobalId2ExternalId(
+  async resolveGlobalId2ExternalId(
     managedObjectId: string,
     externalIdType: string,
     context: ProcessingContext
@@ -79,7 +79,7 @@ export class FacadeIdentityService {
     }
   }
 
-  public resolveExternalId2GlobalId(
+  resolveExternalId2GlobalId(
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IResult<IExternalIdentity>> {
@@ -90,7 +90,7 @@ export class FacadeIdentityService {
     }
   }
 
-  public create(
+  create(
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IResult<IExternalIdentity>> {

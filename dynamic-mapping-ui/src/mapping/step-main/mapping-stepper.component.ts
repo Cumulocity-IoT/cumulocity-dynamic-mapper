@@ -419,23 +419,23 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  public onSelectedPathSourceChanged(path: string) {
+  onSelectedPathSourceChanged(path: string) {
     this.substitutionFormly.get('pathSource').setValue(path);
   }
 
-  public onEditorSourceInitialized() {
+  onEditorSourceInitialized() {
     this.schemaUpdateSource.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, false)
     );
   }
 
-  public onEditorTargetInitialized() {
+  onEditorTargetInitialized() {
     this.schemaUpdateTarget.emit(
       getSchema(this.mapping.targetAPI, this.mapping.direction, true)
     );
   }
 
-  public async updateSourceExpressionResult(path: string) {
+  async updateSourceExpressionResult(path: string) {
     try {
       this.substitutionModel.sourceExpression = {
         msgTxt: '',
@@ -484,11 +484,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  public onSelectedPathTargetChanged(path: string) {
+  onSelectedPathTargetChanged(path: string) {
     this.substitutionFormly.get('pathTarget').setValue(path);
   }
 
-  public async updateTargetExpressionResult(path: string) {
+  async updateTargetExpressionResult(path: string) {
     try {
       this.substitutionModel.targetExpression = {
         msgTxt: '',
@@ -534,7 +534,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionModel = { ...this.substitutionModel };
   }
 
-  public getCurrentMapping(patched: boolean): Mapping {
+  getCurrentMapping(patched: boolean): Mapping {
     return {
       ...this.mapping,
       source: reduceSourceTemplate(
@@ -581,11 +581,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     );
   }
 
-  public async onStepChange(event): Promise<void> {
+  async onStepChange(event): Promise<void> {
     console.log('OnStepChange', event);
   }
 
-  public async onNextStep(event: {
+  async onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
@@ -689,7 +689,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  public async onBackStep(event: {
+  async onBackStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
@@ -803,7 +803,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.mapping.tested = result;
   }
 
-  public onAddSubstitution() {
+  onAddSubstitution() {
     if (this.isSubstitutionValid()) {
       this.substitutionModel.expandArray = false;
       this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
@@ -822,7 +822,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  public onDeleteSubstitution(selected: number) {
+  onDeleteSubstitution(selected: number) {
     console.log('Delete selected substitution', selected);
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
@@ -831,7 +831,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     console.log('Deleted substitution', this.mapping.substitutions.length);
   }
 
-  public onUpdateSubstitution() {
+  onUpdateSubstitution() {
     if (this.selectedSubstitution != -1) {
       const selected = this.selectedSubstitution;
       console.log('Edit selected substitution', selected);
@@ -894,7 +894,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-  public onSelectSubstitution(selected: number) {
+  onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
@@ -904,7 +904,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
   }
 
-  public onTemplateChanged(templateTarget: any): void {
+  onTemplateChanged(templateTarget: any): void {
     this.editorTarget.set(templateTarget);
   }
 
