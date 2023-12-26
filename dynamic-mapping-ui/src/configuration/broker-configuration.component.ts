@@ -54,8 +54,10 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
   statusLogs$: Observable<any[]>;
-  statusLogEventType: string = StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE;
-  statusLogConnector: string;
+  filterStatusLog = {
+    eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    connectorIdent: 'ALL'
+  };
   StatusEventTypes = StatusEventTypes;
 
   serviceConfiguration: ServiceConfiguration = {
@@ -279,10 +281,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   }
 
   updateStatusLogs() {
-    this.brokerConfigurationService.updateStatusLogs({
-      eventType: this.statusLogEventType,
-      connectorIdent: this.statusLogConnector
-    });
+    this.brokerConfigurationService.updateStatusLogs(this.filterStatusLog);
   }
 
   ngOnDestroy(): void {
