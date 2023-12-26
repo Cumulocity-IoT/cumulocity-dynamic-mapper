@@ -27,7 +27,7 @@
     (click)="clickedReconnect2NotificationEnpoint()"
   >
     <i c8yIcon="disconnected"></i>
-    {{ "Reconnect Notification Endpoint" | translate }}
+    {{ 'Reconnect Notification Endpoint' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -35,7 +35,7 @@
     (click)="resetStatusMapping()"
   >
     <i c8yIcon="reset"></i>
-    {{ "Reset Monitoring" | translate }}
+    {{ 'Reset Monitoring' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -43,7 +43,7 @@
     (click)="refresh()"
   >
     <i c8yIcon="refresh"></i>
-    {{ "Refresh" | translate }}
+    {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 
@@ -52,7 +52,7 @@
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ "Configured Brokers" | translate }}
+          {{ 'Configured Brokers' | translate }}
         </h4>
       </div>
       <div class="card-block">
@@ -75,7 +75,7 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Connector Id</th>
+                <th>Type</th>
                 <th>Name</th>
                 <th>Enabled</th>
                 <th>Status</th>
@@ -88,9 +88,7 @@
                   {{ i }}
                 </td>
                 <td width="10%" style="padding-top: 12px">
-                  <span class="text-12"
-                    >{{ con?.connectorType }}
-                  </span>
+                  <span class="text-12">{{ con?.connectorType }} </span>
                 </td>
                 <td width="40%" style="padding-top: 12px">
                   {{ con?.name }}
@@ -98,9 +96,7 @@
                 <td width="5%" style="padding-top: 12px">
                   <i
                     style="text-align: center; width: 100%"
-                    [c8yIcon]="
-                      !con?.enabled ? 'circle-o' : 'plus-circle-o'
-                    "
+                    [c8yIcon]="!con?.enabled ? 'circle-o' : 'plus-circle-o'"
                     class="m-r-5"
                   ></i>
                 </td>
@@ -151,9 +147,7 @@
 
       <!-- export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
       export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";    -->
-      <div class="legend form-block col-lg-12">
-        Connector Logs
-      </div>
+      <div class="legend form-block col-lg-12">Connector Logs</div>
       <div class="card-block">
         <c8y-form-group>
           <form class="form-inline">
@@ -185,6 +179,19 @@
               <span></span>
               <span>Subscriptions Events</span>
             </label>
+            <div class="c8y-select-wrapper button-bottom-margin">
+              <select
+                class="form-control"
+                style="width: 180px;"
+                [(ngModel)]="statusLogConnector"
+                name="repairStrategy"
+              >
+                <option [value]="undefined">ALL</option>
+                <option [value]="t.ident" *ngFor="let t of configurations">
+                  {{ t.name }}
+                </option>
+              </select>
+            </div>
             <button
               type="submit"
               (click)="updateStatusLogs()"
@@ -206,7 +213,7 @@
               *ngFor="let event of statusLogs$ | async"
             >
               <small class="timeline-item-date">
-                {{ event.date | date : "dd.MM.yy hh:mm:ss" }}
+                {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
               </small>
               <div class="timeline-item-content d-flex flex-wrap">
                 <div class="list-item-icon">
@@ -237,7 +244,7 @@
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ "Service Configuration" | translate }}
+          {{ 'Service Configuration' | translate }}
         </h4>
       </div>
       <div class="inner-scroll">
@@ -252,7 +259,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Payload" }}
+                  {{ 'Log Payload' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -265,7 +272,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Substitution" }}
+                  {{ 'Log Substitution' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -278,7 +285,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Connector Errors" }}
+                  {{ 'Log Connector Errors' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -291,7 +298,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Connector Lifcycle" }} <i c8yIcon="euro"></i>
+                  {{ 'Send Connector Lifcycle' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -304,7 +311,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Mapping Status" }} <i c8yIcon="euro"></i>
+                  {{ 'Send Mapping Status' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -317,7 +324,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Events on Topic Subscriptions" }}
+                  {{ 'Send Events on Topic Subscriptions' }}
                   <i c8yIcon="euro"></i>
                 </span>
               </label>
