@@ -194,7 +194,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.mappingService.initializeCache(this.mapping.direction);
   }
 
-  public onNextTestResult() {
+  onNextTestResult() {
     if (
       this.testingModel.selectedResult >=
       this.testingModel.results.length - 1

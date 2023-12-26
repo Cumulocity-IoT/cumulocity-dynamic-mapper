@@ -98,11 +98,11 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     this.brokerConfigurationService.startConnectorStatusSubscriptions();
   }
 
-  public async refresh() {
+  async refresh() {
     this.brokerConfigurationService.resetCache();
     await this.loadData();
   }
-  public async loadData(): Promise<void> {
+  async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
     this.specifications =
@@ -122,7 +122,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     }
   }
 
-  public async onConfigurationUpdate(index) {
+  async onConfigurationUpdate(index) {
     const configuration = this.configurations[index];
 
     const initialState = {
@@ -161,7 +161,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     });
   }
 
-  public async onConfigurationDelete(index) {
+  async onConfigurationDelete(index) {
     const configuration = this.configurations[index];
 
     const initialState = {
@@ -199,7 +199,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     await this.loadData();
   }
 
-  public async onConfigurationAdd() {
+  async onConfigurationAdd() {
     const configuration: Partial<ConnectorConfiguration> = {
       properties: {},
       ident: uuidCustom()
@@ -240,7 +240,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     await this.loadData();
   }
 
-  public async onConfigurationToogle(index) {
+  async onConfigurationToogle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.brokerConfigurationService.runOperation(
       configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
@@ -256,7 +256,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     await this.loadData();
   }
 
-  public async resetStatusMapping() {
+  async resetStatusMapping() {
     const res = await this.brokerConfigurationService.runOperation(
       Operation.RESET_STATUS_MAPPING
     );

@@ -96,11 +96,11 @@ export class BrokerConfigurationService {
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
   private reloadTrigger$: Subject<string> = new Subject();
 
-  public getStatusLogs(): Observable<any[]> {
+  getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
   }
 
-  public resetCache() {
+  resetCache() {
     console.log('resetCache() :BrokerConfigurationService');
     this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
@@ -150,7 +150,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  public reloadConnectorConfigurations() {
+  reloadConnectorConfigurations() {
     this.reloadTrigger$.next('');
   }
 
@@ -216,7 +216,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  public startConnectorConfigurations() {
+  startConnectorConfigurations() {
     this.incomingRealtime$.next({} as any);
     this.reloadTrigger$.next('');
   }
@@ -303,7 +303,7 @@ export class BrokerConfigurationService {
     }
   };
 
-  public updateStatusLogs(filter: any) {
+  updateStatusLogs(filter: any) {
     this.filterTrigger$.next(filter.eventType);
     this.mergeFilterTrigger$.next([{ type: 'reset' }]);
     this.filterStatusLog = filter;
@@ -373,11 +373,11 @@ export class BrokerConfigurationService {
     );
   }
 
-  public startConnectorStatusSubscriptions() {
+  startConnectorStatusSubscriptions() {
     this.startConnectorStatusCheck();
   }
 
-  public async stopConnectorStatusSubscriptions() {
+  async stopConnectorStatusSubscriptions() {
     const agentId = await this.sharedService.getDynamicMappingServiceAgent();
     console.log('Stop subscriptions:', agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);

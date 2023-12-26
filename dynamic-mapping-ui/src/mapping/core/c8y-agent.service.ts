@@ -50,7 +50,7 @@ export class C8YAgent {
     private alert: AlertService
   ) {}
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.inventory.initializeCache();
     this.identity.initializeCache();
   }

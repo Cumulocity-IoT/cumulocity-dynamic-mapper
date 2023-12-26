@@ -26,7 +26,7 @@ import { ProcessingContext } from '../processor/prosessor.model';
 export class FacadeEventService {
   constructor(private event: EventService) {}
 
-  public create(
+  create(
     event: IEvent,
     context: ProcessingContext
   ): Promise<IResult<IEvent>> {

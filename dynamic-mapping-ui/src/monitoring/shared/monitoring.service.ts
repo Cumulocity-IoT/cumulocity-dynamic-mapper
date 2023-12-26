@@ -36,7 +36,7 @@ export class MonitoringService {
   private mappingStatus = new BehaviorSubject<MappingStatus[]>([]);
   private _currentMappingStatus = this.mappingStatus.asObservable();
 
-  public getCurrentMappingStatus(): Observable<MappingStatus[]> {
+  getCurrentMappingStatus(): Observable<MappingStatus[]> {
     return this._currentMappingStatus;
   }
 

@@ -44,16 +44,16 @@ export abstract class PayloadProcessorOutbound {
     private mqttClient: MQTTClient
   ) {}
 
-  public abstract deserializePayload(
+  abstract deserializePayload(
     context: ProcessingContext,
     mapping: Mapping
   ): ProcessingContext;
 
-  public abstract extractFromSource(context: ProcessingContext): void;
+  abstract extractFromSource(context: ProcessingContext): void;
 
   protected JSONATA = require('jsonata');
 
-  public async substituteInTargetAndSend(context: ProcessingContext) {
+  async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from o payload
     const { mapping } = context;
 
@@ -156,7 +156,7 @@ export abstract class PayloadProcessorOutbound {
     );
   }
 
-  public substituteValueInObject(
+  substituteValueInObject(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
@@ -190,7 +190,7 @@ export abstract class PayloadProcessorOutbound {
     }
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);

@@ -66,14 +66,14 @@ export class MappingService {
 
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
-  public async changeActivationMapping(parameter: any) {
+  async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
   }
 
-  public async loadMappings(direction: Direction): Promise<Mapping[]> {
+  async loadMappings(direction: Direction): Promise<Mapping[]> {
     const result: Mapping[] = [];
 
     const filter: object = {
@@ -267,7 +267,7 @@ export class MappingService {
     return context;
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);

@@ -63,7 +63,7 @@ export class SubstitutionRendererComponent {
     this.selectSub.emit(index);
   }
 
-  public scrollToSubstitution(i: number) {
+  scrollToSubstitution(i: number) {
     let ix = i;
     ix++;
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
@@ -75,7 +75,7 @@ export class SubstitutionRendererComponent {
       .scrollIntoView();
   }
 
-  public onSubstitutionDelete(index: number) {
+  onSubstitutionDelete(index: number) {
     console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.deleteSub.emit(index);

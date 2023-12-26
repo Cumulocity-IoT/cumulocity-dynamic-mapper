@@ -29,11 +29,11 @@ export class MockInventoryService {
     this.initializeCache();
   }
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.inventoryCache = new Map<string, Map<string, IManagedObject>>();
   }
 
-  public update(
+  update(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
     let copyManagedObject: Partial<IManagedObject> = _.clone(managedObject);
@@ -49,7 +49,7 @@ export class MockInventoryService {
     return promise;
   }
 
-  public create(
+  create(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
     const copyManagedObject = {

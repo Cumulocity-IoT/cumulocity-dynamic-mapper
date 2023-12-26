@@ -31,7 +31,7 @@ import { ProcessingContext } from '../processor/prosessor.model';
 export class FacadeMeasurementService {
   constructor(private measurement: MeasurementService) {}
 
-  public create(
+  create(
     measurement: IMeasurement,
     context: ProcessingContext
   ): Promise<IResult<IMeasurement>> {

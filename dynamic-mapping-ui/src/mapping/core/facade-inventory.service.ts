@@ -31,11 +31,11 @@ export class FacadeInventoryService {
     private inventory: InventoryService
   ) {}
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.mockInventory.initializeCache();
   }
 
-  public update(
+  update(
     managedObject: Partial<IManagedObject>,
     context: ProcessingContext
   ): Promise<IResult<IManagedObject>> {
@@ -46,7 +46,7 @@ export class FacadeInventoryService {
     }
   }
 
-  public create(
+  create(
     managedObject: Partial<IManagedObject>,
     context: ProcessingContext
   ): Promise<IResult<IManagedObject>> {

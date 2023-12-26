@@ -43,20 +43,20 @@ export abstract class PayloadProcessorInbound {
     private c8yClient: C8YAgent
   ) {}
 
-  public abstract deserializePayload(
+  abstract deserializePayload(
     context: ProcessingContext,
     mapping: Mapping
   ): ProcessingContext;
 
-  public abstract extractFromSource(context: ProcessingContext): void;
+  abstract extractFromSource(context: ProcessingContext): void;
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.c8yClient.initializeCache();
   }
 
   protected JSONATA = require('jsonata');
 
-  public async substituteInTargetAndSend(context: ProcessingContext) {
+  async substituteInTargetAndSend(context: ProcessingContext) {
     // step 3 replace target with extract content from inbound payload
     const { mapping } = context;
 
@@ -249,7 +249,7 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  public substituteValueInObject(
+  substituteValueInObject(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
@@ -283,7 +283,7 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
     let result: any = '';
     if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);

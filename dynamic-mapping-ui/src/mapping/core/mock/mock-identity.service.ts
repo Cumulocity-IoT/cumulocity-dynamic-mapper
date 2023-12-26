@@ -34,11 +34,11 @@ export class MockIdentityService {
   constructor() {
     this.initializeCache();
   }
-  public initializeCache(): void {
+  initializeCache(): void {
     this.identityCache = new Map<string, Map<string, IIdentified>>();
   }
 
-  public detail(
+  detail(
     identity: IExternalIdentity
   ): Promise<IResult<IExternalIdentity>> {
     const externalIds = this.identityCache.get(identity.type);
@@ -64,7 +64,7 @@ export class MockIdentityService {
     }
   }
 
-  public create(
+  create(
     identity: IExternalIdentity
   ): Promise<IResult<IExternalIdentity>> {
     const id: number = Math.floor(100000 + Math.random() * 900000);

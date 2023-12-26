@@ -71,8 +71,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   targetSystem: string;
 
   constructor(
-    public mappingService: MappingService,
-    public configurationService: BrokerConfigurationService,
+    mappingService: MappingService,
+    configurationService: BrokerConfigurationService,
     private alertService: AlertService
   ) {}
 
