@@ -152,8 +152,7 @@ export class BrokerConfigurationService {
     this.reloadTrigger$.next('');
   }
 
-  async getConnectorConfigurationsRaw(): Promise<ConnectorConfiguration[]> {
-    // console.log("Load getConnectorConfigurations()")
+  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
       {
@@ -173,23 +172,22 @@ export class BrokerConfigurationService {
     const connectorConfig$ = this.reloadTrigger$.pipe(
       tap(() => console.log('New triger!')),
       switchMap(() => {
-        const observable1 = from(this.getConnectorConfigurationsRaw());
+        const observable1 = from(this.getConnectorConfigurations());
         const observable2 = from(this.getConnectorStatus());
         return forkJoin([observable1, observable2]);
       }),
       map((vars) => {
         const [configurations, connectorStatus] = vars;
-        for (let index = 0; index < configurations.length; index++) {
-          const conf = configurations[index];
-          const status = connectorStatus[conf.ident]
-            ? connectorStatus[conf.ident].status
+        configurations.forEach((cc) => {
+          const status = connectorStatus[cc.ident]
+            ? connectorStatus[cc.ident].status
             : ConnectorStatus.UNKNOWN;
-          if (!conf['status$']) {
-            conf['status$'] = new BehaviorSubject<string>(status);
+          if (!cc['status$']) {
+            cc['status$'] = new BehaviorSubject<string>(status);
           } else {
-            conf['status$'].next(status);
+            cc['status$'].next(status);
           }
-        }
+        });
         return configurations;
       })
     );
@@ -221,7 +219,7 @@ export class BrokerConfigurationService {
     this.reloadTrigger$.next('');
   }
 
-  getConnectorConfigurations(): Observable<ConnectorConfiguration[]> {
+  getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
     return this.connectorConfigurations$;
   }
 

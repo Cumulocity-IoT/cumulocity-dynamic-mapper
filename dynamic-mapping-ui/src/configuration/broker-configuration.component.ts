@@ -84,7 +84,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     });
     await this.loadData();
     this.brokerConfigurationService
-    .getConnectorConfigurations()
+    .getConnectorConfigurationsLive()
     .subscribe((confs) => {
       this.configurations = confs;
     });
