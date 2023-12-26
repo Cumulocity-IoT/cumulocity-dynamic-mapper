@@ -160,7 +160,7 @@
                 checked="checked"
                 name="c8y-group"
                 value="{{ StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE }}"
-                [(ngModel)]="statusLogEventType"
+                [(ngModel)]="filterStatusLog.eventType"
               />
               <span></span>
               <span>Connector Lifecycle</span>
@@ -174,7 +174,7 @@
                 checked="checked"
                 name="c8y-group"
                 value="{{ StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE }}"
-                [(ngModel)]="statusLogEventType"
+                [(ngModel)]="filterStatusLog.eventType"
               />
               <span></span>
               <span>Subscriptions Events</span>
@@ -182,11 +182,11 @@
             <div class="c8y-select-wrapper button-bottom-margin">
               <select
                 class="form-control"
-                style="width: 180px;"
-                [(ngModel)]="statusLogConnector"
-                name="repairStrategy"
+                style="width: 180px"
+                [(ngModel)]="filterStatusLog.connectorIdent"
+                name="connectorIdent"
               >
-                <option [value]="undefined">ALL</option>
+                <option [value]="'ALL'">ALL</option>
                 <option [value]="t.ident" *ngFor="let t of configurations">
                   {{ t.name }}
                 </option>

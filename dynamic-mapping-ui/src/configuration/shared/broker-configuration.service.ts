@@ -86,7 +86,7 @@ export class BrokerConfigurationService {
   private subscriptionEvents: any;
   private filterStatusLog = {
     eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
-    connectorIdent: undefined
+    connectorIdent: 'ALL'
   };
   private filterTrigger$: BehaviorSubject<string> = new BehaviorSubject(
     StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
@@ -332,7 +332,7 @@ export class BrokerConfigurationService {
       ),
       map((events) =>
         events.filter((event) => {
-          return !this.filterStatusLog.connectorIdent
+          return this.filterStatusLog.connectorIdent == 'ALL'
             ? true
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
@@ -344,7 +344,7 @@ export class BrokerConfigurationService {
       filter((event) => {
         return (
           event.type == this.filterStatusLog.eventType &&
-          (!this.filterStatusLog.connectorIdent
+          (this.filterStatusLog.connectorIdent == 'ALL'
             ? true
             : event[CONNECTOR_FRAGMENT].connectorIdent ==
               this.filterStatusLog.connectorIdent)
