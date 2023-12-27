@@ -294,8 +294,6 @@ export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
 export const MAPPING_TEST_DEVICE_FRAGMENT = 'd11r_testDevice';
 export const MAPPING_FRAGMENT = 'd11r_mapping';
 export const CONNECTOR_FRAGMENT = 'd11r_connector';
-// export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-// export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const BASE_URL = 'service/dynamic-mapping-service';
