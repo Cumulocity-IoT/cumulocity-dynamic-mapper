@@ -47,14 +47,7 @@ import {
   Observable,
   Subject
 } from 'rxjs';
-import {
-  filter,
-  map,
-  scan,
-  switchMap,
-  tap,
-  withLatestFrom
-} from 'rxjs/operators';
+import { filter, map, scan, switchMap, tap } from 'rxjs/operators';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
@@ -82,101 +75,60 @@ export class BrokerConfigurationService {
   private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
   private realtime: Realtime;
-  private statusLogs$: Observable<any[]>;
   private subscriptionEvents: any;
   private filterStatusLog = {
     eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
     connectorIdent: 'ALL'
   };
-  private filterTrigger$: BehaviorSubject<string> = new BehaviorSubject(
-    StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE
-  );
-  private mergeFilterTrigger$: Subject<any> = new Subject();
+  private triggerLogs$: Subject<any> = new Subject();
+  private triggerConfigurations$: Subject<string> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
-  private reloadTrigger$: Subject<string> = new Subject();
+  private statusLogs$: Observable<any[]>;
 
   getStatusLogs(): Observable<any[]> {
     return this.statusLogs$;
   }
 
+  getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
+    return this.connectorConfigurations$;
+  }
+
   resetCache() {
-    console.log('resetCache() :BrokerConfigurationService');
+    console.log('Calling: BrokerConfigurationService.resetCache() ');
     this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
   }
 
-  async updateConnectorConfiguration(
-    configuration: ConnectorConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.ident}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'PUT'
-      }
+  startConnectorConfigurations() {
+    this.triggerConfigurations$.next('');
+    this.incomingRealtime$.next({} as any);
+  }
+
+  startConnectorStatusCheck() {
+    this.startConnectorStatusSubscriptions();
+    this.triggerLogs$.next([{ type: 'reset' }]);
+    this.incomingRealtime$.next({} as any);
+  }
+  async stopConnectorStatusSubscriptions() {
+    const agentId = this.sharedService.getDynamicMappingServiceAgent();
+    console.log('Stop subscriptions:', agentId);
+    this.realtime.unsubscribe(this.subscriptionEvents);
+  }
+
+  initConnectorConfigurations() {
+    console.log(
+      'Calling BrokerConfigurationService.initConnectorConfigurations()'
     );
-  }
-
-  async createConnectorConfiguration(
-    configuration: ConnectorConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'POST'
-      }
-    );
-  }
-
-  async deleteConnectorConfiguration(ident: string): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${ident}`,
-      {
-        headers: {
-          accept: 'application/json',
-          'content-type': 'application/json'
-        },
-        method: 'DELETE'
-      }
-    );
-  }
-
-  reloadConnectorConfigurations() {
-    this.reloadTrigger$.next('');
-  }
-
-  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
-      {
-        headers: {
-          accept: 'application/json'
-        },
-        method: 'GET'
-      }
-    );
-    this._connectorConfigurations = await response.json();
-
-    return this._connectorConfigurations;
-  }
-
-  async initConnectorConfigurations() {
-    console.log('Calling initConnectorConfigurations!');
-    const connectorConfig$ = this.reloadTrigger$.pipe(
-      tap(() => console.log('New triger!')),
+    const connectorConfig$ = this.triggerConfigurations$.pipe(
+      tap(() => console.log('New triggerConfigurations!')),
       switchMap(() => {
-        const observable1 = from(this.getConnectorConfigurations());
-        const observable2 = from(this.getConnectorStatus());
-        return forkJoin([observable1, observable2]);
+        const observableConfigurations = from(
+          this.getConnectorConfigurations()
+        );
+        const observableStatus = from(this.getConnectorStatus());
+        return forkJoin([observableConfigurations, observableStatus]);
       }),
       map((vars) => {
         const [configurations, connectorStatus] = vars;
@@ -216,110 +168,24 @@ export class BrokerConfigurationService {
     );
   }
 
-  startConnectorConfigurations() {
-    this.incomingRealtime$.next({} as any);
-    this.reloadTrigger$.next('');
-  }
-
-  getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
-    return this.connectorConfigurations$;
-  }
-
-  async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
-    if (!this._connectorSpecifications) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
-        {
-          headers: {
-            accept: 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-      this._connectorSpecifications = await response.json();
-    }
-    return this._connectorSpecifications;
-  }
-
-  async getServiceConfiguration(): Promise<ServiceConfiguration> {
-    if (!this._serviceConfiguration) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
-        {
-          headers: {
-            accept: 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-      this._serviceConfiguration = await response.json();
-    }
-
-    return this._serviceConfiguration;
-  }
-
-  async updateServiceConfiguration(
-    configuration: ServiceConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'PUT'
-      }
-    );
-  }
-
-  async getConnectorStatus(): Promise<ConnectorStatus> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
-      {
-        method: 'GET'
-      }
-    );
-    const result = await response.json();
-    return result;
-  }
-
-  async startConnectorStatusCheck(): Promise<void> {
-    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Started subscriptions:', agentId);
-
-    // subscribe to event stream
-    this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${agentId}`,
-      this.updateConnectorStatus
-    );
-  }
-
-  private updateConnectorStatus = async (p: object) => {
-    const payload = p['data']['data'];
-    if (payload.type == this.filterStatusLog.eventType) {
-      payload[CONNECTOR_FRAGMENT].type = payload.type;
-      this.incomingRealtime$.next(payload);
-    }
-  };
-
   updateStatusLogs(filter: any) {
-    this.filterTrigger$.next(filter.eventType);
-    this.mergeFilterTrigger$.next([{ type: 'reset' }]);
+    this.triggerLogs$.next([{ type: 'reset' }]);
     this.filterStatusLog = filter;
   }
 
-  async initConnectorLogsRealtime(): Promise<void> {
-    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Agent Id', agentId);
-
-    const sourceList$ = this.filterTrigger$.pipe(
-      // tap((x) => console.log("Trigger", x)),
-      switchMap((type) =>
+   initConnectorLogsRealtime(){
+    const agentId = this.sharedService.getDynamicMappingServiceAgent();
+    console.log(
+      'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
+      agentId
+    );
+    const sourceList$ = this.triggerLogs$.pipe(
+      // tap((x) => console.log('TriggerLogs In', x)),
+      switchMap(() =>
         this.eventService.list({
           pageSize: 5,
           withTotalPages: true,
-          type: type,
+          type: this.filterStatusLog.eventType,
           source: agentId
         })
       ),
@@ -337,10 +203,11 @@ export class BrokerConfigurationService {
             : event.connectorIdent == this.filterStatusLog.connectorIdent;
         })
       )
-      // tap((x) => console.log("Reload", x))
+      // tap((x) => console.log('TriggerLogs Out', x))
     );
 
     const sourceRealtime$ = this.incomingRealtime$.pipe(
+      // tap((x) => console.log('IncomingRealtime In', x)),
       filter((event) => {
         return (
           event.type == this.filterStatusLog.eventType &&
@@ -350,16 +217,19 @@ export class BrokerConfigurationService {
               this.filterStatusLog.connectorIdent)
         );
       }),
-      map((event) => [event[CONNECTOR_FRAGMENT]])
+      map((event) => {
+        event[CONNECTOR_FRAGMENT].type = event.type;
+        return [event[CONNECTOR_FRAGMENT]];
+      })
     );
 
     this.statusLogs$ = merge(
       sourceList$,
       sourceRealtime$,
-      this.mergeFilterTrigger$
+      this.triggerLogs$
     ).pipe(
-      withLatestFrom(this.filterTrigger$),
-      scan((acc, [val]) => {
+      // tap((i) => console.log('Items', i)),
+      scan((acc, val) => {
         let sortedAcc;
         if (val[0].type == 'reset') {
           console.log('Reset loaded logs!');
@@ -373,17 +243,21 @@ export class BrokerConfigurationService {
     );
   }
 
-  startConnectorStatusSubscriptions() {
-    this.startConnectorStatusCheck();
+  async startConnectorStatusSubscriptions(): Promise<void> {
+    const agentId = this.sharedService.getDynamicMappingServiceAgent();
+    console.log('Started subscriptions:', agentId);
+
+    // subscribe to event stream
+    this.subscriptionEvents = this.realtime.subscribe(
+      `/events/${agentId}`,
+      this.updateConnectorStatus
+    );
   }
 
-  async stopConnectorStatusSubscriptions() {
-    const agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Stop subscriptions:', agentId);
-    this.realtime.unsubscribe(this.subscriptionEvents);
-    // this.mergeFilterTrigger$.complete();
-    // this.incomingRealtime$.complete();
-  }
+  private updateConnectorStatus = async (p: object) => {
+    const payload = p['data']['data'];
+    this.incomingRealtime$.next(payload);
+  };
 
   async runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
     let body: any = {
@@ -458,5 +332,122 @@ export class BrokerConfigurationService {
     }
     // let result =  (await response.json()) as string[];
     return response.json();
+  }
+
+  async getConnectorSpecifications(): Promise<ConnectorSpecification[]> {
+    if (!this._connectorSpecifications) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/specifications`,
+        {
+          headers: {
+            accept: 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+      this._connectorSpecifications = await response.json();
+    }
+    return this._connectorSpecifications;
+  }
+
+  async getServiceConfiguration(): Promise<ServiceConfiguration> {
+    if (!this._serviceConfiguration) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
+        {
+          headers: {
+            accept: 'application/json'
+          },
+          method: 'GET'
+        }
+      );
+      this._serviceConfiguration = await response.json();
+    }
+
+    return this._serviceConfiguration;
+  }
+
+  async updateServiceConfiguration(
+    configuration: ServiceConfiguration
+  ): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(configuration),
+        method: 'PUT'
+      }
+    );
+  }
+
+  async getConnectorStatus(): Promise<ConnectorStatus> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_STATUS_CONNECTORS_ENDPOINT}`,
+      {
+        method: 'GET'
+      }
+    );
+    const result = await response.json();
+    return result;
+  }
+
+  async updateConnectorConfiguration(
+    configuration: ConnectorConfiguration
+  ): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.ident}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(configuration),
+        method: 'PUT'
+      }
+    );
+  }
+
+  async createConnectorConfiguration(
+    configuration: ConnectorConfiguration
+  ): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(configuration),
+        method: 'POST'
+      }
+    );
+  }
+
+  async deleteConnectorConfiguration(ident: string): Promise<IFetchResponse> {
+    return this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${ident}`,
+      {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json'
+        },
+        method: 'DELETE'
+      }
+    );
+  }
+
+  async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instances`,
+      {
+        headers: {
+          accept: 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    this._connectorConfigurations = await response.json();
+
+    return this._connectorConfigurations;
   }
 }

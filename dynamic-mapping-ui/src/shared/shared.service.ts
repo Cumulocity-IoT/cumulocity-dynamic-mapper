@@ -23,30 +23,36 @@ import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
 import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
 
 import { Feature } from '../configuration/shared/configuration.model';
+import { from, Observable } from 'rxjs';
+import { map, take } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
     private identity: IdentityService
-  ) {}
+  ) {
+    this.getDynamicMappingServiceAgentRaw()
+      .pipe(take(1))
+      .subscribe((id) => (this._agentId = id));
+  }
 
-  private _agentId: Promise<string>;
+  private _agentId: string;
   private _feature: Promise<Feature>;
 
-  async getDynamicMappingServiceAgent(): Promise<string> {
-    if (!this._agentId) {
-      const identity: IExternalIdentity = {
-        type: 'c8y_Serial',
-        externalId: AGENT_ID
-      };
-      const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300) {
-        const agentId = data.managedObject.id.toString();
-        this._agentId = Promise.resolve(agentId);
-      }
-    }
+  getDynamicMappingServiceAgent(): string {
     return this._agentId;
+  }
+
+  private getDynamicMappingServiceAgentRaw(): Observable<any> {
+    const identity: IExternalIdentity = {
+      type: 'c8y_Serial',
+      externalId: AGENT_ID
+    };
+    const id = from(this.identity.detail(identity)).pipe(
+      map((response) => response.data.managedObject.id)
+    );
+    return id;
   }
 
   async getFeatures(): Promise<Feature> {

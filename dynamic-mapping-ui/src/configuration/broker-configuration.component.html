@@ -105,11 +105,11 @@
                     <span
                       class="c8y-pulse animated pulse animation-slow"
                       [ngClass]="{
-                        active: (con.status$ | async) === 'CONNECTED',
-                        inactive: (con.status$ | async) !== 'CONNECTED'
+                        active: (con.status$ | async ) === 'CONNECTED',
+                        inactive: (con.status$ | async ) !== 'CONNECTED'
                       }"
                     ></span
-                    >{{ con.status$ | async }}
+                    >{{ con.status$ | async  }}
                   </div>
                 </td>
                 <td width="20%">
@@ -145,8 +145,6 @@
         </div>
       </div>
 
-      <!-- export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-      export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";    -->
       <div class="legend form-block col-lg-12">Connector Logs</div>
       <div class="card-block">
         <c8y-form-group>
@@ -202,7 +200,7 @@
           </form>
         </c8y-form-group>
         <div style="height: 340px; overflow: auto">
-          <!-- <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length == 0"
+          <!-- <c8y-ui-empty-state *ngIf="(statusLogs)?.length === 0"
             [icon]="'event'"
             [title]="'No logs found.' | translate"
             [horizontal]="true"
@@ -210,7 +208,7 @@
           <div class="timeline-list list-condensed">
             <div
               class="timeline-list-item d-flex"
-              *ngFor="let event of statusLogs$ | async"
+              *ngFor="let event of statusLogs"
             >
               <small class="timeline-item-date">
                 {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}

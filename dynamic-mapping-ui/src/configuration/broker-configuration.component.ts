@@ -54,6 +54,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
   statusLogs$: Observable<any[]>;
+  statusLogs: any[] = [];
   filterStatusLog = {
     eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
     connectorIdent: 'ALL'
@@ -86,16 +87,20 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl('')
     });
-    await this.loadData();
+    this.feature = await this.sharedService.getFeatures();
+    this.specifications =
+      await this.brokerConfigurationService.getConnectorSpecifications();
     this.brokerConfigurationService
       .getConnectorConfigurationsLive()
       .subscribe((confs) => {
         this.configurations = confs;
       });
+    this.brokerConfigurationService.getStatusLogs().subscribe((logs) => {
+      this.statusLogs = logs;
+    });
+    await this.loadData();
+    this.brokerConfigurationService.startConnectorStatusCheck();
     this.statusLogs$ = this.brokerConfigurationService.getStatusLogs();
-    this.feature = await this.sharedService.getFeatures();
-    this.brokerConfigurationService.startConnectorConfigurations();
-    this.brokerConfigurationService.startConnectorStatusSubscriptions();
   }
 
   async refresh() {
@@ -105,9 +110,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.brokerConfigurationService.getServiceConfiguration();
-    this.specifications =
-      await this.brokerConfigurationService.getConnectorSpecifications();
-    this.brokerConfigurationService.reloadConnectorConfigurations();
+    await this.brokerConfigurationService.startConnectorConfigurations();
   }
 
   async clickedReconnect2NotificationEnpoint() {
