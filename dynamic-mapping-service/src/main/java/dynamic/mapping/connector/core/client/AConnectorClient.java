@@ -247,7 +247,7 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(),
+            mappingComponent.sendConnectorLifecycle(tenant, getConnectorIdent(),getConnectorStatus(), 
                     getConnectorName());
             sendConnectorLifecycle();
         } catch (Exception ex) {
