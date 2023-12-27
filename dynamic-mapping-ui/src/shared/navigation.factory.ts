@@ -47,18 +47,12 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     private sharedService: SharedService
   ) {}
 
-  async get() {
-    const feature: any = await this.sharedService.getFeatures();
-    if (feature.error) {
-      console.error(
-        'dynamic-mapping-service microservice not accessible',
-        feature
-      );
-    }
+  get() {
+    const feature: any = this.sharedService.getFeatures();
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
-      .then((result) => {
-        if (!(result && result.data) || !feature) {
+      .then((data) => {
+        if (!data.data || !feature) {
           this.alertService.danger(
             'Microservice:dynamic-mapping-service not subscribed. Please subscribe this service before using the mapping editor!'
           );

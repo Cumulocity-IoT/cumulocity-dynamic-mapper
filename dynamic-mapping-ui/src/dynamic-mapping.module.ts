@@ -30,9 +30,12 @@ import { MonitoringModule } from './monitoring/monitoring.module';
 import {
   MappingNavigationFactory,
   MappingTabFactory,
-  OverviewGuard
+  OverviewGuard,
+  SharedModule,
+  SharedService,
 } from './shared';
 import { TestingModule } from './testing-devices/testing.module';
+
 
 @NgModule({
   imports: [
@@ -45,13 +48,15 @@ import { TestingModule } from './testing-devices/testing.module';
     ExtensionModule,
     FormsModule,
     ModalModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    SharedModule
   ],
   exports: [],
   declarations: [],
   providers: [
     OverviewGuard,
     BsModalService,
+    SharedService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory)
   ]
