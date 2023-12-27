@@ -24,12 +24,14 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { AdminGuard, SharedModule } from '../shared';
 import { BrokerConfigurationComponent } from './broker-configuration.component';
 import { EditConfigurationComponent } from './edit/edit-config-modal.component';
+import { SharedService } from '../shared/shared.service';
 
 @NgModule({
   declarations: [BrokerConfigurationComponent, EditConfigurationComponent],
   imports: [CoreModule, SharedModule],
   exports: [],
   providers: [
+    SharedService,
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/configuration',
       component: BrokerConfigurationComponent,

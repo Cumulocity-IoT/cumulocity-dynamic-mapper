@@ -28,6 +28,7 @@ import { ExtensionCardComponent } from './extension-card/extension-card.componen
 import { AddExtensionComponent } from './extension-modal/add-extension.component';
 import { ExtensionComponent } from './grid/extension.component';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
+import { SharedService } from '../shared/shared.service';
 
 @NgModule({
   declarations: [
@@ -40,6 +41,7 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
   imports: [CoreModule, BsDropdownModule.forRoot(), CollapseModule.forRoot()],
   exports: [],
   providers: [
+    SharedService,
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/extensions',
       children: [

@@ -111,6 +111,12 @@ export class BrokerConfigurationService {
     this.triggerLogs$.next([{ type: 'reset' }]);
     this.incomingRealtime$.next({} as any);
   }
+
+  updateStatusLogs(filter: any) {
+    this.triggerLogs$.next([{ type: 'reset' }]);
+    this.filterStatusLog = filter;
+  }
+
   async stopConnectorStatusSubscriptions() {
     const agentId = this.sharedService.getDynamicMappingServiceAgent();
     console.log('Stop subscriptions:', agentId);
@@ -168,12 +174,7 @@ export class BrokerConfigurationService {
     );
   }
 
-  updateStatusLogs(filter: any) {
-    this.triggerLogs$.next([{ type: 'reset' }]);
-    this.filterStatusLog = filter;
-  }
-
-   initConnectorLogsRealtime(){
+  initConnectorLogsRealtime() {
     const agentId = this.sharedService.getDynamicMappingServiceAgent();
     console.log(
       'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',

@@ -21,10 +21,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
 import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
-
 import { Feature } from '../configuration/shared/configuration.model';
-import { from, Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
@@ -32,39 +29,32 @@ export class SharedService {
     private client: FetchClient,
     private identity: IdentityService
   ) {
-    this.getDynamicMappingServiceAgentRaw()
-      .pipe(take(1))
-      .subscribe((id) => (this._agentId = id));
+    this.initDynamicMappingServiceAgent().then((id) => (this._agentId = id));
   }
-
   private _agentId: string;
-  private _feature: Promise<Feature>;
+  private _feature: Feature;
 
   getDynamicMappingServiceAgent(): string {
     return this._agentId;
   }
 
-  private getDynamicMappingServiceAgentRaw(): Observable<any> {
+  async initDynamicMappingServiceAgent(): Promise<any> {
     const identity: IExternalIdentity = {
       type: 'c8y_Serial',
       externalId: AGENT_ID
     };
-    const id = from(this.identity.detail(identity)).pipe(
-      map((response) => response.data.managedObject.id)
-    );
-    return id;
+    const { data } = await this.identity.detail(identity);
+    return data.managedObject.id;
   }
 
   async getFeatures(): Promise<Feature> {
-    if (!this._feature) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-        {
-          method: 'GET'
-        }
-      );
-      this._feature = await response.json();
-    }
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+      {
+        method: 'GET'
+      }
+    );
+    this._feature = await response.json();
     return this._feature;
   }
 }
