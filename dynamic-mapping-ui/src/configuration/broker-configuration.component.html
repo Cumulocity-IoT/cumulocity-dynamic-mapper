@@ -131,6 +131,14 @@
                     <span class="sr-only" translate>Update configuration</span>
                   </button>
                   <button
+                  title="{{ 'Copy' | translate }}"
+                  class="btn btn-icon btn-clean p-r-4"
+                  (click)="onConfigurationCopy(i)"
+                >
+                  <i c8yIcon="copy" class="text-danger"></i>
+                  <span class="sr-only" translate>Copy configuration</span>
+                </button>
+                  <button
                     title="{{ 'Toggle Activation' | translate }}"
                     class="btn btn-icon btn-clean"
                     (click)="onConfigurationToogle(i)"
