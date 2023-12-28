@@ -32,6 +32,7 @@ import { BrokerConfigurationService, Operation } from '../../configuration';
 import { NameRendererComponent } from '../../mapping';
 import { MappingStatus } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
+import { NumberRendererComponent } from '../renderer/number.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -92,6 +93,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'errors',
       filterable: true,
       dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '15%'
     },
     {
@@ -100,6 +102,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'messagesReceived',
       filterable: true,
       dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '15%'
     },
     {
@@ -108,6 +111,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'snoopedTemplatesTotal',
       filterable: true,
       dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '15%'
     },
     {
@@ -116,6 +120,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       path: 'snoopedTemplatesActive',
       filterable: true,
       dataType: ColumnDataType.Numeric,
+      cellRendererComponent: NumberRendererComponent,
       gridTrackSize: '15%'
     }
   ];
