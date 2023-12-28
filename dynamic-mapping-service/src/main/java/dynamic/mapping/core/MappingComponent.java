@@ -32,8 +32,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import javax.swing.text.html.CSS;
-
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,7 +165,7 @@ public class MappingComponent {
                             ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
                         }
                     }
-                    service.put(MappingServiceRepresentation.MAPPING_FRAGMENT, ms);
+                    service.put(C8YAgent.MAPPING_FRAGMENT, ms);
                     ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                     updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                     updateMor.setAttrs(service);
@@ -197,7 +195,7 @@ public class MappingComponent {
                 ccs.put(connectorIdent, stMap);
                 consolidatedConnectorStatus.put(tenant, ccs);
                 Map<String, Object> service = new HashMap<String, Object>();
-                service.put(MappingServiceRepresentation.CONNECTOR_FRAGMENT, ccs);
+                service.put(C8YAgent.CONNECTOR_FRAGMENT, ccs);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);
