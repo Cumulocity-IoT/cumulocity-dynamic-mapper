@@ -40,6 +40,7 @@ import {
   StatusEventTypes
 } from './shared/configuration.model';
 import { BrokerConfigurationService } from './shared/broker-configuration.service';
+import * as _ from 'lodash';
 
 @Component({
   selector: 'd11r-mapping-broker-configuration',
@@ -150,6 +151,47 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
         };
         const response =
           await this.brokerConfigurationService.updateConnectorConfiguration(
+            clonedConfiguration
+          );
+        if (response.status < 300) {
+          this.alert.success(gettext('Update successful'));
+        } else {
+          this.alert.danger(
+            gettext('Failed to update connector configuration')
+          );
+        }
+      }
+      await this.loadData();
+    });
+  }
+
+  async onConfigurationCopy(index) {
+    const configuration = _.clone(this.configurations[index]);
+    configuration.ident = uuidCustom();
+    configuration.name = `${configuration.name}_copy`;
+
+    const initialState = {
+      add: false,
+      configuration: configuration,
+      specifications: this.specifications
+    };
+    const modalRef = this.bsModalService.show(EditConfigurationComponent, {
+      initialState
+    });
+    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
+      console.log('Configuration after edit:', editedConfiguration);
+      if (editedConfiguration) {
+        this.configurations[index] = editedConfiguration;
+        // avoid to include status$
+        const clonedConfiguration = {
+          ident: editedConfiguration.ident,
+          connectorType: editedConfiguration.connectorType,
+          enabled: editedConfiguration.enabled,
+          name: editedConfiguration.name,
+          properties: editedConfiguration.properties
+        };
+        const response =
+          await this.brokerConfigurationService.createConnectorConfiguration(
             clonedConfiguration
           );
         if (response.status < 300) {
