@@ -232,7 +232,7 @@ export class BrokerConfigurationService {
       // tap((i) => console.log('Items', i)),
       scan((acc, val) => {
         let sortedAcc;
-        if (val[0].type == 'reset') {
+        if (val[0]?.type == 'reset') {
           console.log('Reset loaded logs!');
           sortedAcc = [];
         } else {
