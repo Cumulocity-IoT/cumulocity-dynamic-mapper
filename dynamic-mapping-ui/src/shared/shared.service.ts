@@ -29,7 +29,9 @@ export class SharedService {
     private client: FetchClient,
     private identity: IdentityService
   ) {
-    this.initDynamicMappingServiceAgent().then((id) => (this._agentId = id));
+    this.initDynamicMappingServiceAgent()
+      .then((id) => (this._agentId = id))
+      .catch((e) => console.error('MappingService with id not subscribed!',e));
   }
   private _agentId: string;
   private _feature: Feature;
@@ -43,7 +45,11 @@ export class SharedService {
       type: 'c8y_Serial',
       externalId: AGENT_ID
     };
-    const { data } = await this.identity.detail(identity);
+    const { data, res } = await this.identity.detail(identity);
+    if (res.status == 404) {
+      console.error('MappingService with id not subscribed!', AGENT_ID);
+      return;
+    }
     return data.managedObject.id;
   }
 

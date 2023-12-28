@@ -159,7 +159,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
-
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
 
@@ -575,9 +574,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (mappingServiceIdRepresentation != null) {
             amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with ID {} already exists {} , {}", tenant,
+            log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation, amo);
+                    mappingServiceIdRepresentation, amo.getId());
+            log.info("Tenant {} - Agent representation {}", tenant,
+                    MappingServiceRepresentation.AGENT_ID,
+                    mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.set(new Agent());

@@ -247,8 +247,18 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorLifecycle(tenant, getConnectorIdent(),getConnectorStatus(), 
-                    getConnectorName());
+            // disable since the connector status is submitted as Events with the following
+            // method sendConnectorLifecycle()
+            // mappingComponent.sendConnectorLifecycle(tenant,
+            // getConnectorIdent(),getConnectorStatus(),
+            // getConnectorName());
+            
+            // check if connector is in DISCONNECTED state and then move it to CONFIGURED
+            // state.
+            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
+                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
+                connectorStatus.clearMessage();
+            }
             sendConnectorLifecycle();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
