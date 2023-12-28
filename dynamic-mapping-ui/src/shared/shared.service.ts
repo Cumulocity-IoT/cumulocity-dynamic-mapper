@@ -31,10 +31,10 @@ export class SharedService {
   ) {
     this.initDynamicMappingServiceAgent()
       .then((id) => (this._agentId = id))
-      .catch((e) => console.error('MappingService with id not subscribed!',e));
+      .catch((e) => console.error('MappingService with id not subscribed!', e));
   }
   private _agentId: string;
-  private _feature: Feature;
+  private _feature: Promise<Feature>;
 
   getDynamicMappingServiceAgent(): string {
     return this._agentId;
@@ -54,13 +54,15 @@ export class SharedService {
   }
 
   async getFeatures(): Promise<Feature> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-      {
-        method: 'GET'
-      }
-    );
-    this._feature = await response.json();
+    if (!this._feature) {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+        {
+          method: 'GET'
+        }
+      );
+      this._feature = await response.json();
+    }
     return this._feature;
   }
 }
