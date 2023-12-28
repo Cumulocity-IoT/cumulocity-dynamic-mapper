@@ -25,10 +25,11 @@ import { AdminGuard, SharedModule } from '../shared';
 import { BrokerConfigurationComponent } from './broker-configuration.component';
 import { EditConfigurationComponent } from './edit/edit-config-modal.component';
 import { SharedService } from '../shared/shared.service';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
   declarations: [BrokerConfigurationComponent, EditConfigurationComponent],
-  imports: [CoreModule, SharedModule],
+  imports: [CoreModule, SharedModule,BsDropdownModule.forRoot()],
   exports: [],
   providers: [
     SharedService,

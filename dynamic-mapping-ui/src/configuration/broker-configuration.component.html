@@ -105,47 +105,74 @@
                     <span
                       class="c8y-pulse animated pulse animation-slow"
                       [ngClass]="{
-                        active: (con.status$ | async ) === 'CONNECTED',
-                        inactive: (con.status$ | async ) !== 'CONNECTED'
+                        active: (con.status$ | async) === 'CONNECTED',
+                        inactive: (con.status$ | async) !== 'CONNECTED'
                       }"
                     ></span
-                    >{{ con.status$ | async  }}
+                    >{{ con.status$ | async }}
                   </div>
                 </td>
-                <td width="20%">
-                  <button
-                    title="{{ 'Remove' | translate }}"
-                    class="btn btn-icon btn-clean p-r-4"
-                    (click)="onConfigurationDelete(i)"
-                    [disabled]="con?.enabled"
-                  >
-                    <i c8yIcon="trash-o" class="text-danger"></i>
-                    <span class="sr-only" translate>Remove configuration</span>
-                  </button>
-                  <button
-                    title="{{ 'Update' | translate }}"
-                    class="btn btn-icon btn-clean p-r-4"
-                    (click)="onConfigurationUpdate(i)"
-                  >
-                    <i c8yIcon="pencil" class="text-danger"></i>
-                    <span class="sr-only" translate>Update configuration</span>
-                  </button>
-                  <button
-                  title="{{ 'Copy' | translate }}"
-                  class="btn btn-icon btn-clean p-r-4"
-                  (click)="onConfigurationCopy(i)"
-                >
-                  <i c8yIcon="copy" class="text-danger"></i>
-                  <span class="sr-only" translate>Copy configuration</span>
-                </button>
-                  <button
-                    title="{{ 'Toggle Activation' | translate }}"
-                    class="btn btn-icon btn-clean"
-                    (click)="onConfigurationToogle(i)"
-                  >
-                    <i c8yIcon="toggle-on" class="text-danger"></i>
-                    <span class="sr-only" translate>Toogle activation</span>
-                  </button>
+                <td width="10%">
+                  <div class="d-flex">
+                    <button
+                      container="body"
+                      style="padding-bottom: 4px"
+                      title="{{ 'Toggle Activation' | translate }}"
+                      class="btn btn-icon btn-clean"
+                      (click)="onConfigurationToogle(i)"
+                    >
+                      <i c8yIcon="toggle-on"></i>
+                    </button>
+
+                    <div
+                      style="padding-top: 0px"
+                      placement="bottom right"
+                      class="dropdown"
+                      dropdown
+                    >
+                      <button
+                        type="button"
+                        title="Actions"
+                        dropdownToggle
+                        class="dropdown-toggle c8y-dropdown"
+                      >
+                        <i c8yIcon="ellipsis-v"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-right"
+                        *dropdownMenu
+                      >
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationUpdate(i)"
+                          >
+                            <i c8yIcon="pencil"></i>
+                            Update configuration
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationCopy(i)"
+                          >
+                            <i c8yIcon="copy"></i>
+                            Copy configuration
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationDelete(i)"
+                            [disabled]="con?.enabled"
+                          >
+                            <i c8yIcon="trash-o"></i>
+                            Remove configuration
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
