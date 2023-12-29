@@ -181,7 +181,7 @@ export class BrokerConfigurationService {
       agentId
     );
     const sourceList$ = this.triggerLogs$.pipe(
-      // tap((x) => console.log('TriggerLogs In', x)),
+      tap((x) => console.log('TriggerLogs In', x)),
       switchMap(() =>
         this.eventService.list({
           pageSize: 5,

@@ -113,25 +113,20 @@
                   </div>
                 </td>
                 <td width="10%">
-                  <div class="d-flex">
+                  <div class="d-flex" style="position: absolute">
                     <button
                       container="body"
-                      style="padding-bottom: 4px"
+                      style="padding-bottom: 6px"
                       title="{{ 'Toggle Activation' | translate }}"
-                      class="btn btn-icon btn-clean"
+                      class="btn btn-dot"
                       (click)="onConfigurationToogle(i)"
                     >
                       <i c8yIcon="toggle-on"></i>
                     </button>
-
-                    <div
-                      style="padding-top: 0px"
-                      placement="bottom right"
-                      class="dropdown"
-                      dropdown
-                    >
+                    <div placement="bottom right" class="dropdown" dropdown>
                       <button
                         type="button"
+                        style="padding-top: 6px"
                         title="Actions"
                         dropdownToggle
                         class="dropdown-toggle c8y-dropdown"
@@ -219,7 +214,7 @@
                 [(ngModel)]="filterStatusLog.connectorIdent"
                 name="connectorIdent"
               >
-                <option [value]="'ALL'">ALL</option>
+                <option [value]="'ALL'">ALL configurations</option>
                 <option [value]="t.ident" *ngFor="let t of configurations">
                   {{ t.name }}
                 </option>
