@@ -26,7 +26,6 @@ import {
   DataGridComponent,
   DataSourceModifier,
   DisplayOptions,
-  GridConfig,
   LoadMoreMode,
   Pagination,
   ServerSideDataResult
@@ -100,26 +99,6 @@ export class TestingComponent {
     };
 
     return serverSideDataResult;
-  }
-
-  onColumnsChange(columns: Column[]): void {
-    // the columns list contains the current setup of the columns in the grid:
-
-    // eslint-disable-next-line no-console
-    console.log({ columns });
-  }
-
-  onDeviceQueryStringChange(deviceQueryString: string): void {
-    // the query string is based on currently selected filters and sorting in columns:
-
-    // eslint-disable-next-line no-console
-    console.log({ deviceQueryString });
-  }
-
-  /** Executes an action on grid config change. */
-  onConfigChange(gridConfig: GridConfig) {
-    console.log('grid config changed:');
-    console.dir(gridConfig);
   }
 
   /** Executes an action on refresh event. */

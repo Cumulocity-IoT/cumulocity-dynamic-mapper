@@ -36,7 +36,6 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 
-import { TypeDataGridColumn } from './type-data-grid-column/type.data-grid-column';
 import { Subject } from 'rxjs';
 import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
 import { MAPPING_TEST_DEVICE_TYPE } from '../../shared';
@@ -97,7 +96,13 @@ export class TestingDeviceService {
         filterable: true,
         sortable: true
       },
-      new TypeDataGridColumn()
+      {
+        name: 'type',
+        header: 'Type',
+        path: 'type',
+        filterable: true,
+        sortable: true
+      },
     ];
 
     return columns;
