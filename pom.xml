@@ -28,7 +28,11 @@
     <groupId>com.softwareag.c8y.mapping</groupId>
     <artifactId>dynamic-mapping-solution</artifactId>
     <!-- <version>${revision}</version> -->
-    <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly -->
+    <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly
+    use instead:
+        mvn versions:set -DnewVersion=4.1.2-SNAPSHOT
+        mvn versions:commit
+    -->
     <version>4.1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
