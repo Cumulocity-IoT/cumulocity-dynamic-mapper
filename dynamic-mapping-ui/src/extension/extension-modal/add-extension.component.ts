@@ -73,7 +73,7 @@ export class AddExtensionComponent implements OnDestroy {
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
       const [file] = event;
-      this.onFile(file);
+      this.onFile(file.file);
     }
   }
 
