@@ -24,45 +24,23 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <!-- 
-    run the following command to install the original jar, since the other jar has the wrong layout
-    mqtt.mapping.service-1.89.jar
-    ++BOOT-INF.classes.mqtt.mapping
-    ++BOOT-INF.classes.mqtt.mapping.configuration
-    ++ *
-    mqtt.mapping.service-1.89.jar.original
-    ++mqtt.mapping
-    ++mqtt.mapping.configuration
-    ++ *
-    mvn install:install-file -Dfile=backend/target/mqtt.mapping.service-1.89.jar.original -DgroupId=com.softwareag.c8y.integration.mqtt -DartifactId=mqtt.mapping.service -Dversion=1.89 -Dpackaging=jar
-   -->
 
     <groupId>com.softwareag.c8y.mapping</groupId>
     <artifactId>dynamic-mapping-extension</artifactId>
-    <packaging>jar</packaging>
 
     <parent>
         <groupId>com.softwareag.c8y.mapping</groupId>
         <artifactId>dynamic-mapping-solution</artifactId>
-        <version>${revision}</version>
+        <!-- <version>${revision}</version> -->
+        <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly -->
+        <version>4.1.1-SNAPSHOT</version>
     </parent>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-    </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>com.softwareag.c8y.mapping</groupId>
                 <artifactId>dynamic-mapping-interface</artifactId>
-                <version>${revision}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.softwareag.c8y.mapping</groupId>
-                <artifactId>dynamic-mapping-solution</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -82,7 +60,7 @@
         <dependency>
             <groupId>com.softwareag.c8y.mapping</groupId>
             <artifactId>dynamic-mapping-interface</artifactId>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -108,63 +86,28 @@
 
     <build>
         <finalName>dynamic-mapping-extension</finalName>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.3.1</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.0</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M7</version>
-                    <configuration>
-                        <includes>
-                            <include>**/*Test.java</include>
-                        </includes>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-install-plugin</artifactId>
-                    <version>3.1.1</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-deploy-plugin</artifactId>
-                    <version>3.1.1</version>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>single</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addClasspath>true</addClasspath>
-                            </manifest>
-                        </archive>
-                        <descriptorRefs>
-                            <descriptorRef>jar-with-dependencies</descriptorRef>
-                        </descriptorRefs>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+        <plugins>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>
