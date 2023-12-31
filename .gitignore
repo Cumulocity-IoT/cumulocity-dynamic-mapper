@@ -42,3 +42,4 @@ dynamic-mapping-interface/.factorypath
 dynamic-mapping-service/.factorypath
 set.sh
 dynamic-mapping-ui/.env
+**/.flattened-pom.xml
