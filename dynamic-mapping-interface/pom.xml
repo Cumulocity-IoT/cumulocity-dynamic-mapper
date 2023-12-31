@@ -115,51 +115,16 @@
 						<include>dynamic/mapping/model/*</include>
 						<include>dynamic/mapping/processor/model/*</include>
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
-						<include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
-						<include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
-						<include>
-                                        dynamic/mapping/processor/ProcessingException.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
+						<include>dynamic/mapping/processor/ProcessingException.*</include>
 					</includes>
-				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
 				</configuration>
 			</plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <configuration>
-                </configuration>
-                <executions>
-                  <execution>
-                    <id>flatten</id>
-                    <phase>process-resources</phase>
-                    <goals>
-                      <goal>flatten</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
+            </plugin>
 		</plugins>
 	</build>
 </project>

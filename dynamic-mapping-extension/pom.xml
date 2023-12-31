@@ -109,18 +109,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <configuration>
-                </configuration>
-                <executions>
-                  <execution>
-                    <id>flatten</id>
-                    <phase>process-resources</phase>
-                    <goals>
-                      <goal>flatten</goal>
-                    </goals>
-                  </execution>
-                </executions>
-              </plugin>
+            </plugin>
         </plugins>
     </build>
 </project>
