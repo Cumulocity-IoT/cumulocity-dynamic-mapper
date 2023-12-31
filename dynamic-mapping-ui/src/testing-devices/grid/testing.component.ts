@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, ViewChild } from "@angular/core";
+import { Component, EventEmitter, ViewChild } from '@angular/core';
 import {
   ActionControl,
   BulkActionControl,
@@ -26,35 +26,34 @@ import {
   DataGridComponent,
   DataSourceModifier,
   DisplayOptions,
-  GridConfig,
   LoadMoreMode,
   Pagination,
-  ServerSideDataResult,
-} from "@c8y/ngx-components";
-import { TestingDeviceService } from "./testing.service";
+  ServerSideDataResult
+} from '@c8y/ngx-components';
+import { TestingDeviceService } from './testing.service';
 
 @Component({
-  selector: "d11r-mapping-testing-grid",
-  templateUrl: "testing.component.html",
-  styleUrls: ["../../mapping/shared/mapping.style.css"],
+  selector: 'd11r-mapping-testing-grid',
+  templateUrl: 'testing.component.html',
+  styleUrls: ['../../mapping/shared/mapping.style.css']
 })
 export class TestingComponent {
   @ViewChild(DataGridComponent, { static: false })
   deviceGrid: DataGridComponent;
 
-  loadMoreItemsLabel: string = "Load more managed objects";
-  loadingItemsLabel: string = "Loading managed objects…";
+  loadMoreItemsLabel: string = 'Load more managed objects';
+  loadingItemsLabel: string = 'Loading managed objects…';
 
   displayOptions: DisplayOptions = {
     bordered: false,
     striped: true,
     filter: true,
-    gridHeader: true,
+    gridHeader: true
   };
 
   columns: Column[] = this.service.getColumns();
   pagination: Pagination = this.service.getPagination();
-  infiniteScroll: LoadMoreMode = "auto";
+  infiniteScroll: LoadMoreMode = 'auto';
   serverSideDataCallback: any;
 
   refresh: EventEmitter<any> = new EventEmitter<any>();
@@ -68,7 +67,7 @@ export class TestingComponent {
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
     // we're setting up `onRefreshClick` to be executed on refresh event
     this.refresh.subscribe(() => this.onRefreshClick());
-    this.service.refreshData$.subscribe((v) => {
+    this.service.refreshData$.subscribe(() => {
       this.deviceGrid.reload();
     });
   }
@@ -81,8 +80,6 @@ export class TestingComponent {
   async onDataSourceModifier(
     dataSourceModifier: DataSourceModifier
   ): Promise<ServerSideDataResult> {
-    let serverSideDataResult: ServerSideDataResult;
-
     const { res, data, paging } = await this.service.getData(
       dataSourceModifier.columns,
       dataSourceModifier.pagination
@@ -93,33 +90,19 @@ export class TestingComponent {
     );
     const size: number = await this.service.getTotal();
 
-    serverSideDataResult = { res, data, paging, filteredSize, size };
+    const serverSideDataResult: ServerSideDataResult = {
+      res,
+      data,
+      paging,
+      filteredSize,
+      size
+    };
 
     return serverSideDataResult;
   }
 
-  onColumnsChange(columns: Column[]): void {
-    // the columns list contains the current setup of the columns in the grid:
-
-    // eslint-disable-next-line no-console
-    console.log({ columns });
-  }
-
-  onDeviceQueryStringChange(deviceQueryString: string): void {
-    // the query string is based on currently selected filters and sorting in columns:
-
-    // eslint-disable-next-line no-console
-    console.log({ deviceQueryString });
-  }
-
-  /** Executes an action on grid config change. */
-  onConfigChange(gridConfig: GridConfig) {
-    console.log("grid config changed:");
-    console.dir(gridConfig);
-  }
-
   /** Executes an action on refresh event. */
   onRefreshClick() {
-    console.log("refresh clicked");
+    console.log('refresh clicked');
   }
 }

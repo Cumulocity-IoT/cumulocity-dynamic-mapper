@@ -82,7 +82,7 @@
           <c8y-ui-empty-state
             *ngIf="
               !extension.extensionEntries ||
-              extension.extensionEntries.length == 0
+              extension.extensionEntries.length === 0
             "
             [icon]="'plugin'"
             [title]="'No entries for this extension, try to reload extensions.'"

@@ -26,13 +26,13 @@
         <div class="text-center">
           Mapping Type: {{ mapping.mappingType }}&nbsp;
           <span
-            *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
+            *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY"
             class="label label-primary"
             >{{ "Read Only" }}</span
           >
           <span
             class="hidden-xs hidden-sm m-l-4"
-            *ngIf="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
+            *ngIf="stepperConfiguration.editorMode === EditorMode.READ_ONLY"
           >
             <ng-template #popReadOnly
               >To edit this mapping deactivate the mapping first in mapping

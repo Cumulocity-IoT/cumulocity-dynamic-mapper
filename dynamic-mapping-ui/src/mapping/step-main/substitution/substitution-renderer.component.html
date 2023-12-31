@@ -57,7 +57,7 @@
         *ngFor="let sub of substitutions; let i = index"
         id="{{ 'sub-' + id + '-' + i }}"
         [style.background]="
-          i == settings.selectedSubstitutionIndex ? settings.color : 'none'
+          i === settings.selectedSubstitutionIndex ? settings.color : 'none'
         "
         (click)="onSubstitutionSelect(i)"
       >
@@ -93,7 +93,7 @@
             class="btn btn-icon btn-clean"
             (click)="onSubstitutionDelete(i)"
             [attr.disabled]="
-              isDisabled(settings.editorMode == EditorMode.READ_ONLY)
+              isDisabled(settings.editorMode === EditorMode.READ_ONLY)
             "
           >
             <i c8yIcon="trash-o" class="text-danger"></i>

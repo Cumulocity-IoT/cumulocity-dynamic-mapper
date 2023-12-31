@@ -104,7 +104,6 @@ public class BootstrapService {
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         // Executed for each tenant subscribed
         String tenant = event.getCredentials().getTenant();
-        MicroserviceCredentials credentials = event.getCredentials();
         log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingServiceObject(tenant);
@@ -126,7 +125,7 @@ public class BootstrapService {
                         .getConnectorConfigurations(tenant);
                 // For each connector configuration create a new instance of the connector
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration, credentials,
+                    initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
                             tenant);
                 }
             }
@@ -138,8 +137,7 @@ public class BootstrapService {
     }
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
-            ServiceConfiguration serviceConfiguration,
-            Credentials credentials, String tenant) throws ConnectorRegistryException {
+            ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
         AConnectorClient client = null;
 
         if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {

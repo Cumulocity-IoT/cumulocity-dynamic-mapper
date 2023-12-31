@@ -18,11 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { CanActivate } from "@angular/router";
-import { BrokerConfigurationService } from "../../configuration";
+import { Injectable } from '@angular/core';
+import { CanActivate } from '@angular/router';
+import { BrokerConfigurationService } from '../../configuration';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ExtensionGuard implements CanActivate {
   private activateExtensionNavigationPromise: Promise<boolean>;
 
@@ -33,7 +33,7 @@ export class ExtensionGuard implements CanActivate {
       this.activateExtensionNavigationPromise = this.brokerConfigurationService
         .getServiceConfiguration()
         .then((conf) => {
-          console.log("External Extension :", conf.externalExtensionEnabled);
+          console.log('External Extension :', conf.externalExtensionEnabled);
           return conf.externalExtensionEnabled;
         });
     }

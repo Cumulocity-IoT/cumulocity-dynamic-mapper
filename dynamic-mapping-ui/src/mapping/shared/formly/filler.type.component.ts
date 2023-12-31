@@ -19,30 +19,11 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectionStrategy, Component, OnInit } from "@angular/core";
-import { FieldType, FieldTypeConfig, FormlyFieldProps } from "@ngx-formly/core";
-
-interface TextAreaProps extends FormlyFieldProps {
-  cols?: number;
-  rows?: number;
-}
+import { Component } from '@angular/core';
+import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-field-textarea",
-  template: `
-    <textarea
-      [class]="class"
-      [class.is-invalid]="showError"
-      [attr.aria-describedby]="id + '-formly-validation-error'"
-      [attr.aria-invalid]="showError"
-    >
- {{ to.value }}
-</textarea>
-  `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'd11r-formly-filler',
+  template: ' <div class="form-group row" style="height:80px"></div> '
 })
-export class FieldTextareaCustom extends FieldType {
-  get class() {
-    return `form-control ${this.to.class}`;
-  }
-}
+export class FormlyFiller extends FieldType {}

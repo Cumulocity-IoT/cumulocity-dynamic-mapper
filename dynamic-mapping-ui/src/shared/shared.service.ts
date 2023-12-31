@@ -18,45 +18,39 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import {
-  FetchClient,
-  IdentityService,
-  IExternalIdentity
-} from "@c8y/client";
-import {
-  AGENT_ID,
-  BASE_URL,
-  PATH_FEATURE_ENDPOINT
-} from ".";
+import { Injectable } from '@angular/core';
+import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
+import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
+import { Feature } from '../configuration/shared/configuration.model';
 
-import { Feature } from "../configuration/shared/configuration.model";
-
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService,
+    private identity: IdentityService
   ) {
+    this.initDynamicMappingServiceAgent()
+      .then((id) => (this._agentId = id))
+      .catch((e) => console.error('MappingService with id not subscribed!', e));
   }
-
-  private _agentId: Promise<string>;
+  private _agentId: string;
   private _feature: Promise<Feature>;
 
-
-  async getDynamicMappingServiceAgent(): Promise<string> {
-    if (!this._agentId) {
-      const identity: IExternalIdentity = {
-        type: "c8y_Serial",
-        externalId: AGENT_ID,
-      };
-      const { data, res } = await this.identity.detail(identity);
-      if (res.status < 300) {
-        const agentId = data.managedObject.id.toString();
-        this._agentId = Promise.resolve(agentId);
-      }
-    }
+  getDynamicMappingServiceAgent(): string {
     return this._agentId;
+  }
+
+  async initDynamicMappingServiceAgent(): Promise<any> {
+    const identity: IExternalIdentity = {
+      type: 'c8y_Serial',
+      externalId: AGENT_ID
+    };
+    const { data, res } = await this.identity.detail(identity);
+    if (res.status == 404) {
+      console.error('MappingService with id not subscribed!', AGENT_ID);
+      return;
+    }
+    return data.managedObject.id;
   }
 
   async getFeatures(): Promise<Feature> {
@@ -64,7 +58,7 @@ export class SharedService {
       const response = await this.client.fetch(
         `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
         {
-          method: "GET",
+          method: 'GET'
         }
       );
       this._feature = await response.json();

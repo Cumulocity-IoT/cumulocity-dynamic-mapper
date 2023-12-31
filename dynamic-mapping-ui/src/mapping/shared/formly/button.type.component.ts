@@ -1,4 +1,3 @@
-import { Component } from "@angular/core";
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -19,10 +18,24 @@ import { Component } from "@angular/core";
  *
  * @authors Christof Strack
  */
-import { FieldType } from "@ngx-formly/core";
+
+import { Component } from '@angular/core';
+import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-text",
-  template: `{{ to.label }}`,
+  selector: 'd11r-formly-field-button',
+  template: `
+    <div>
+      <button class="btn btn-default" (click)="onClick($event)">
+        {{ to.text }}
+      </button>
+    </div>
+  `
 })
-export class FormlyTextField extends FieldType {}
+export class FormlyFieldButton extends FieldType {
+  onClick($event) {
+    if (this.to.onClick) {
+      this.to.onClick($event);
+    }
+  }
+}

@@ -1,5 +1,3 @@
-import { IIdentified } from "@c8y/client";
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -58,25 +56,25 @@ export interface Mapping {
 }
 
 export enum RepairStrategy {
-  DEFAULT = "DEFAULT",
-  USE_FIRST_VALUE_OF_ARRAY = "USE_FIRST_VALUE_OF_ARRAY",
-  USE_LAST_VALUE_OF_ARRAY = "USE_LAST_VALUE_OF_ARRAY",
-  IGNORE = "IGNORE",
-  REMOVE_IF_MISSING = "REMOVE_IF_MISSING",
-  REMOVE_IF_NULL = "REMOVE_IF_NULL",
-  CREATE_IF_MISSING = "CREATE_IF_MISSING",
+  DEFAULT = 'DEFAULT',
+  USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
+  USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
+  IGNORE = 'IGNORE',
+  REMOVE_IF_MISSING = 'REMOVE_IF_MISSING',
+  REMOVE_IF_NULL = 'REMOVE_IF_NULL',
+  CREATE_IF_MISSING = 'CREATE_IF_MISSING'
 }
 
 export enum Direction {
-  INBOUND = "INBOUND",
-  OUTBOUND = "OUTBOUND",
+  INBOUND = 'INBOUND',
+  OUTBOUND = 'OUTBOUND'
 }
 
 export enum SnoopStatus {
-  NONE = "NONE",
-  ENABLED = "ENABLED",
-  STARTED = "STARTED",
-  STOPPED = "STOPPED",
+  NONE = 'NONE',
+  ENABLED = 'ENABLED',
+  STARTED = 'STARTED',
+  STOPPED = 'STOPPED'
 }
 
 export interface ExtensionEntry {
@@ -87,32 +85,32 @@ export interface ExtensionEntry {
 }
 
 export enum QOS {
-  AT_MOST_ONCE = "AT_MOST_ONCE",
-  AT_LEAST_ONCE = "AT_LEAST_ONCE",
-  EXACTLY_ONCE = "EXACTLY_ONCE",
+  AT_MOST_ONCE = 'AT_MOST_ONCE',
+  AT_LEAST_ONCE = 'AT_LEAST_ONCE',
+  EXACTLY_ONCE = 'EXACTLY_ONCE'
 }
 
 export enum MappingType {
-  JSON = "JSON",
-  FLAT_FILE = "FLAT_FILE",
-  GENERIC_BINARY = "GENERIC_BINARY",
-  PROTOBUF_STATIC = "PROTOBUF_STATIC",
-  PROCESSOR_EXTENSION = "PROCESSOR_EXTENSION",
+  JSON = 'JSON',
+  FLAT_FILE = 'FLAT_FILE',
+  GENERIC_BINARY = 'GENERIC_BINARY',
+  PROTOBUF_STATIC = 'PROTOBUF_STATIC',
+  PROCESSOR_EXTENSION = 'PROCESSOR_EXTENSION'
 }
 
 export interface Extension {
   id?: string;
   name: string;
-  extensionEntries: Map<String, ExtensionEntry>;
+  extensionEntries: Map<string, ExtensionEntry>;
   loaded: boolean;
   external: boolean;
 }
 
 export enum ExtensionStatus {
-  COMPLETE = "COMPLETE",
-  PARTIALLY = "PARTIALLY",
-  NOT_LOADED = "NOT_LOADED",
-  UNKNOWN = "UNKNOWN",
+  COMPLETE = 'COMPLETE',
+  PARTIALLY = 'PARTIALLY',
+  NOT_LOADED = 'NOT_LOADED',
+  UNKNOWN = 'UNKNOWN'
 }
 
 export interface MappingStatus {
@@ -128,29 +126,29 @@ export interface MappingStatus {
 
 export const API = {
   ALARM: {
-    name: "ALARM",
-    identifier: "source.id",
-    notificationFilter: "alarms",
+    name: 'ALARM',
+    identifier: 'source.id',
+    notificationFilter: 'alarms'
   },
   EVENT: {
-    name: "EVENT",
-    identifier: "source.id",
-    notificationFilter: "events",
+    name: 'EVENT',
+    identifier: 'source.id',
+    notificationFilter: 'events'
   },
   MEASUREMENT: {
-    name: "MEASUREMENT",
-    identifier: "source.id",
-    notificationFilter: "measurements",
+    name: 'MEASUREMENT',
+    identifier: 'source.id',
+    notificationFilter: 'measurements'
   },
   INVENTORY: {
-    name: "INVENTORY",
-    identifier: "id",
-    notificationFilter: "managedObjects",
+    name: 'INVENTORY',
+    identifier: 'id',
+    notificationFilter: 'managedObjects'
   },
   OPERATION: {
-    name: "OPERATION",
-    identifier: "deviceId",
-    notificationFilter: "operations",
+    name: 'OPERATION',
+    identifier: 'deviceId',
+    notificationFilter: 'operations'
   },
-  ALL: { name: "ALL", identifier: "*", notificationFilter: "*" },
+  ALL: { name: 'ALL', identifier: '*', notificationFilter: '*' }
 };

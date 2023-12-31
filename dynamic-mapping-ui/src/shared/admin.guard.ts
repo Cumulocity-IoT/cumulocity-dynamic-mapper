@@ -18,11 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { CanActivate } from "@angular/router";
-import { SharedService } from "./shared.service";
+import { Injectable } from '@angular/core';
+import { CanActivate } from '@angular/router';
+import { SharedService } from './shared.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class AdminGuard implements CanActivate {
   private adminPromise: Promise<boolean>;
 

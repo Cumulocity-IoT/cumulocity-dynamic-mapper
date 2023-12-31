@@ -18,48 +18,48 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { IFetchResponse, IManagedObject, IResult } from "@c8y/client";
-import * as _ from "lodash";
+import { Injectable } from '@angular/core';
+import { IFetchResponse, IManagedObject, IResult } from '@c8y/client';
+import * as _ from 'lodash';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class MockInventoryService {
   inventoryCache: Map<string, Map<string, any>>;
   constructor() {
     this.initializeCache();
   }
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.inventoryCache = new Map<string, Map<string, IManagedObject>>();
   }
 
-  public update(
+  update(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
     let copyManagedObject: Partial<IManagedObject> = _.clone(managedObject);
     copyManagedObject = {
       ...this.inventoryCache.get(managedObject.id),
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
     };
     copyManagedObject.lastUpdated = new Date().toISOString();
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: { status: 200 } as IFetchResponse,
+      res: { status: 200 } as IFetchResponse
     });
     return promise;
   }
 
-  public create(
+  create(
     managedObject: Partial<IManagedObject>
   ): Promise<IResult<IManagedObject>> {
-    let copyManagedObject = {
+    const copyManagedObject = {
       ...managedObject,
       id: Math.floor(100000 + Math.random() * 900000).toString(),
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
     };
     const promise = Promise.resolve({
       data: copyManagedObject as IManagedObject,
-      res: { status: 200 } as IFetchResponse,
+      res: { status: 200 } as IFetchResponse
     });
     return promise;
   }

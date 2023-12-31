@@ -19,28 +19,28 @@
  * @authors Christof Strack
  */
 
-import { EventEmitter, Injectable } from "@angular/core";
+import { EventEmitter, Injectable } from '@angular/core';
 import {
   IManagedObject,
   IManagedObjectBinary,
   InventoryBinaryService,
-  InventoryService,
-} from "@c8y/client";
+  InventoryService
+} from '@c8y/client';
 
 import {
   AlertService,
   gettext,
   ModalService,
-  Status,
-} from "@c8y/ngx-components";
-import * as _ from "lodash";
+  Status
+} from '@c8y/ngx-components';
+import * as _ from 'lodash';
 
-import { TranslateService } from "@ngx-translate/core";
-import { BehaviorSubject } from "rxjs";
-import { PROCESSOR_EXTENSION_TYPE, ExtensionStatus } from "../../shared";
-import { BrokerConfigurationService } from "../../configuration";
+import { TranslateService } from '@ngx-translate/core';
+import { BehaviorSubject } from 'rxjs';
+import { PROCESSOR_EXTENSION_TYPE, ExtensionStatus } from '../../shared';
+import { BrokerConfigurationService } from '../../configuration';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ExtensionService {
   appDeleted = new EventEmitter<IManagedObject>();
   progress: BehaviorSubject<number> = new BehaviorSubject<number>(null);
@@ -58,7 +58,7 @@ export class ExtensionService {
     const filter: object = {
       pageSize: 100,
       withTotalPages: true,
-      fragmentType: PROCESSOR_EXTENSION_TYPE,
+      fragmentType: PROCESSOR_EXTENSION_TYPE
     };
 
     let result = [];
@@ -71,19 +71,19 @@ export class ExtensionService {
   }
 
   async getExtensionsEnriched(extensionId: string): Promise<IManagedObject[]> {
-    let listOfExtensionsInventory: Promise<IManagedObject[]> =
+    const listOfExtensionsInventory: Promise<IManagedObject[]> =
       this.getExtensions(extensionId);
-    let listOfExtensionsBackend: Promise<Object> =
+    const listOfExtensionsBackend: Promise<unknown> =
       this.brokerConfigurationService.getProcessorExtensions();
-    let combinedResult = Promise.all([
+    const combinedResult = Promise.all([
       listOfExtensionsInventory,
-      listOfExtensionsBackend,
+      listOfExtensionsBackend
     ]).then(([listOfExtensionsInventory, listOfExtensionsBackend]) => {
       listOfExtensionsInventory.forEach((ext) => {
         if (listOfExtensionsBackend[ext.name]?.loaded) {
           ext.loaded = listOfExtensionsBackend[ext.name].loaded;
           ext.external = listOfExtensionsBackend[ext.name].external;
-          let exts = _.values(
+          const exts = _.values(
             listOfExtensionsBackend[ext.name].extensionEntries
           );
           ext.extensionEntries = exts;
@@ -97,22 +97,22 @@ export class ExtensionService {
   }
 
   async deleteExtension(app: IManagedObject): Promise<void> {
-    let name = app.name;
+    const { name } = app;
     await this.modal.confirm(
-      gettext("Delete extension"),
+      gettext('Delete extension'),
       this.translateService.instant(
         gettext(
-          `You are about to delete extension "{{name}}". Do you want to proceed?`
+          'You are about to delete extension "{{name}}". Do you want to proceed?'
         ),
         { name }
       ),
       Status.DANGER,
-      { ok: gettext("Delete"), cancel: gettext("Cancel") }
+      { ok: gettext('Delete'), cancel: gettext('Cancel') }
     );
-    //TODO this needs to be changed: create
-    //await this.inventoryBinaryService.delete(app.id);
+    // TODO this needs to be changed: create
+    // await this.inventoryBinaryService.delete(app.id);
     await this.brokerConfigurationService.deleteProcessorExtension(app.name);
-    this.alertService.success(gettext("Extension deleted."));
+    this.alertService.success(gettext('Extension deleted.'));
     this.appDeleted.emit(app);
   }
 

@@ -25,7 +25,7 @@
   [labels]="labels"
   #snoopingRef
 >
-  <div *ngIf="snoopStatus == SnoopStatus.ENABLED">
+  <div *ngIf="snoopStatus === SnoopStatus.ENABLED">
     <div>The snooping for payloads starts.</div>
     <div>
       The wizzard closes at this step and can be continued, when payloads on the
@@ -33,7 +33,7 @@
     </div>
   </div>
 
-  <div *ngIf="snoopStatus == SnoopStatus.STARTED">
+  <div *ngIf="snoopStatus === SnoopStatus.STARTED">
     <div>
       The snooping for payloads started. Already {{ numberSnooped }} templates
       exist.

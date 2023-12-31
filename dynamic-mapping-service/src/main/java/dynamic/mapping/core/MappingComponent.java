@@ -78,7 +78,8 @@ public class MappingComponent {
     private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
 
     @Autowired
-    public void setMappingServiceRepresentations(Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
+    public void setMappingServiceRepresentations(
+            Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
         this.mappingServiceRepresentations = mappingServiceRepresentations;
     }
 
@@ -145,7 +146,7 @@ public class MappingComponent {
     }
 
     public void sendMappingStatus(String tenant) {
-        if(serviceConfigurations.get(tenant).sendMappingStatus) {
+        if (serviceConfigurations.get(tenant).sendMappingStatus) {
             subscriptionsService.runForTenant(tenant, () -> {
                 boolean initialized = this.initialized.get(tenant);
                 Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
@@ -164,7 +165,7 @@ public class MappingComponent {
                             ms[index].name = cacheMappingOutbound.get(tenant).get(ms[index].id).name;
                         }
                     }
-                    service.put(MappingServiceRepresentation.MAPPING_FRAGMENT, ms);
+                    service.put(C8YAgent.MAPPING_FRAGMENT, ms);
                     ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                     updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                     updateMor.setAttrs(service);
@@ -175,25 +176,26 @@ public class MappingComponent {
                             initialized);
                 }
             });
-        } 
+        }
     }
 
-    public void sendConnectorLifecycle(String tenant, ConnectorStatusEvent connectorStatus, String connectorIdent,
+    public void sendConnectorLifecycle(String tenant, String connectorIdent, ConnectorStatusEvent connectorStatus,
             String connectorName) {
         if (serviceConfigurations.get(tenant).sendConnectorLifecycle) {
             subscriptionsService.runForTenant(tenant, () -> {
                 MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
-                log.debug("Tenant {} - Sending status connector: {}", tenant, connectorStatus);
                 Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
                         new HashMap<String, Map<String, String>>());
+                log.debug("Tenant {} - Sending status connector: {}", tenant, ccs);
                 Map<String, String> stMap = Map.ofEntries(
                         entry("status", connectorStatus.getStatus().name()),
                         entry("message", connectorStatus.message),
                         entry("connectorName", connectorName),
                         entry("date", connectorStatus.date));
                 ccs.put(connectorIdent, stMap);
+                consolidatedConnectorStatus.put(tenant, ccs);
                 Map<String, Object> service = new HashMap<String, Object>();
-                service.put(MappingServiceRepresentation.CONNECTOR_FRAGMENT, ccs);
+                service.put(C8YAgent.CONNECTOR_FRAGMENT, ccs);
                 ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
                 updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
                 updateMor.setAttrs(service);

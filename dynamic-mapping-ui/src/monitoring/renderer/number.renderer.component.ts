@@ -18,24 +18,13 @@
  *
  * @authors Christof Strack
  */
-
-import { Component } from "@angular/core";
-import { FieldType } from "@ngx-formly/core";
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  selector: "d11r-formly-field-button",
-  template: `
-    <div>
-      <button class="btn btn-default" (click)="onClick($event)">
-        {{ to.text }}
-      </button>
-    </div>
-  `,
+  template: ' <span title="{{ context.value }}">{{ context.value }}</span> '
 })
-export class FormlyFieldButton extends FieldType {
-  onClick($event) {
-    if (this.to.onClick) {
-      this.to.onClick($event);
-    }
+export class NumberRendererComponent {
+  constructor(public context: CellRendererContext) {
   }
 }

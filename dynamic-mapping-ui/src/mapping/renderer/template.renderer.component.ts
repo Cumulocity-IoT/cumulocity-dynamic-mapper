@@ -18,8 +18,8 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   template: `
@@ -32,11 +32,11 @@ import { CellRendererContext } from "@c8y/ngx-components";
       readonly
       >{{ json }}</textarea
     >
-  `,
+  `
 })
 export class TemplateRendererComponent {
-  public json: string;
-  constructor(public context: CellRendererContext) {
+  json: string;
+  constructor(context: CellRendererContext) {
     this.json = JSON.stringify(JSON.parse(context.value), null, 4);
   }
 }

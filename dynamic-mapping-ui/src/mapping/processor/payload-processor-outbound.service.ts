@@ -18,25 +18,25 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { AlertService } from "@c8y/ngx-components";
-import * as _ from "lodash";
+import { Injectable } from '@angular/core';
+import { AlertService } from '@c8y/ngx-components';
+import * as _ from 'lodash';
+import { API, Mapping, MappingType, RepairStrategy } from '../../shared';
 import {
-  API,
-  Mapping,
-  MappingType,
-  RepairStrategy,
-} from "../../shared";
-import { TOKEN_TOPIC_LEVEL, getTypedValue, splitTopicExcludingSeparator, splitTopicIncludingSeparator } from "../shared/util";
-import { C8YAgent } from "../core/c8y-agent.service";
+  TOKEN_TOPIC_LEVEL,
+  getTypedValue,
+  splitTopicExcludingSeparator,
+  splitTopicIncludingSeparator
+} from '../shared/util';
+import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType,
-} from "./prosessor.model";
-import { MQTTClient } from "../core/mqtt-client.service";
+  SubstituteValueType
+} from './prosessor.model';
+import { MQTTClient } from '../core/mqtt-client.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessorOutbound {
   constructor(
     private alert: AlertService,
@@ -44,21 +44,20 @@ export abstract class PayloadProcessorOutbound {
     private mqttClient: MQTTClient
   ) {}
 
-  public abstract deserializePayload(
+  abstract deserializePayload(
     context: ProcessingContext,
     mapping: Mapping
   ): ProcessingContext;
 
-  public abstract extractFromSource(context: ProcessingContext): void;
+  abstract extractFromSource(context: ProcessingContext): void;
 
-  protected JSONATA = require("jsonata");
+  protected JSONATA = require('jsonata');
 
-  public async substituteInTargetAndSend(context: ProcessingContext) {
-    //step 3 replace target with extract content from o payload
-    let mapping = context.mapping;
+  async substituteInTargetAndSend(context: ProcessingContext) {
+    // step 3 replace target with extract content from o payload
+    const { mapping } = context;
 
-    let postProcessingCache: Map<string, SubstituteValue[]> =
-      context.postProcessingCache;
+    const { postProcessingCache } = context;
     const pathTargets = postProcessingCache.keys();
 
     let predecessor: number = -1;
@@ -66,7 +65,7 @@ export abstract class PayloadProcessorOutbound {
     try {
       payloadTarget = JSON.parse(mapping.target);
     } catch (e) {
-      this.alert.warning("Target Payload is not a valid json object!");
+      this.alert.warning('Target Payload is not a valid json object!');
       throw e;
     }
 
@@ -78,13 +77,13 @@ export abstract class PayloadProcessorOutbound {
       context.topic
     );
     payloadTarget[TOKEN_TOPIC_LEVEL] = splitTopicExAsList;
-    let deviceSource: string = "undefined";
+    const deviceSource: string = 'undefined';
 
-    for (let pathTarget of pathTargets) {
+    for (const pathTarget of pathTargets) {
       let substituteValue: SubstituteValue = {
-        value: "NOT_DEFINED" as any,
+        value: 'NOT_DEFINED' as any,
         type: SubstituteValueType.TEXTUAL,
-        repairStrategy: RepairStrategy.DEFAULT,
+        repairStrategy: RepairStrategy.DEFAULT
       };
       if (postProcessingCache.get(pathTarget).length > 0) {
         substituteValue = _.clone(postProcessingCache.get(pathTarget)[0]);
@@ -103,17 +102,17 @@ export abstract class PayloadProcessorOutbound {
      */
 
     if (mapping.targetAPI != API.INVENTORY.name) {
-      let topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
+      const topicLevels: string[] = payloadTarget[TOKEN_TOPIC_LEVEL];
       if (!topicLevels && topicLevels.length > 0) {
         // now merge the replaced topic levels
         let c: number = 0;
-        let splitTopicInAsList: string[] = splitTopicIncludingSeparator(
+        const splitTopicInAsList: string[] = splitTopicIncludingSeparator(
           context.topic
         );
         topicLevels.forEach((tl) => {
           while (
             c < splitTopicInAsList.length &&
-            "/" == splitTopicInAsList[c]
+            '/' == splitTopicInAsList[c]
           ) {
             c++;
           }
@@ -121,7 +120,7 @@ export abstract class PayloadProcessorOutbound {
           c++;
         });
 
-        let resolvedPublishTopic: string = "";
+        const resolvedPublishTopic: string = '';
         for (let d: number = 0; d < splitTopicInAsList.length; d++) {
           resolvedPublishTopic.concat(splitTopicInAsList[d]);
         }
@@ -131,17 +130,17 @@ export abstract class PayloadProcessorOutbound {
       }
 
       // leave the topic for debugging purposes
-      //_.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
-      let newPredecessor = context.requests.push({
+      // _.unset(payloadTarget, TOKEN_TOPIC_LEVEL);
+      const newPredecessor = context.requests.push({
         predecessor: predecessor,
-        method: "POST",
+        method: 'POST',
         source: deviceSource,
         externalIdType: mapping.externalIdType,
         request: payloadTarget,
-        targetAPI: API[mapping.targetAPI].name,
+        targetAPI: API[mapping.targetAPI].name
       });
       try {
-        let response = await this.mqttClient.createMEAO(context);
+        const response = await this.mqttClient.createMEAO(context);
         context.requests[newPredecessor - 1].response = response;
       } catch (e) {
         context.requests[newPredecessor - 1].error = e;
@@ -149,7 +148,7 @@ export abstract class PayloadProcessorOutbound {
       predecessor = context.requests.length;
     } else {
       console.warn(
-        "Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}"
+        'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
       );
     }
     console.log(
@@ -157,19 +156,19 @@ export abstract class PayloadProcessorOutbound {
     );
   }
 
-  public substituteValueInObject(
+  substituteValueInObject(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
     keys: string
   ) {
-    let subValueMissing: boolean = sub.value == null;
-    let subValueNull: boolean =
+    const subValueMissing: boolean = sub.value == null;
+    const subValueNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
-    if (keys == "$") {
+    if (keys == '$') {
       Object.keys(getTypedValue(sub)).forEach((key) => {
-        jsonObject[key] = getTypedValue(sub)[key as keyof Object];
+        jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
       });
     } else {
       if (
@@ -179,11 +178,11 @@ export abstract class PayloadProcessorOutbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
         if (pathIsNested) {
-          throw new Error("Can only crrate new nodes ion the root level!");
+          throw new Error('Can only crrate new nodes ion the root level!');
         }
-        //jsonObject.put("$", keys, sub.typedValue());
+        // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {
         _.set(jsonObject, keys, getTypedValue(sub));
@@ -191,9 +190,9 @@ export abstract class PayloadProcessorOutbound {
     }
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
-    let result: any = "";
-    if (path != undefined && path != "" && json != undefined) {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+    let result: any = '';
+    if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);
       result = (await expression.evaluate(json)) as JSON;
     }

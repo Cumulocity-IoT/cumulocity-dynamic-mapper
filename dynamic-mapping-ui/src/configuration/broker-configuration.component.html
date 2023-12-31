@@ -27,7 +27,7 @@
     (click)="clickedReconnect2NotificationEnpoint()"
   >
     <i c8yIcon="disconnected"></i>
-    {{ "Reconnect Notification Endpoint" | translate }}
+    {{ 'Reconnect Notification Endpoint' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -35,7 +35,7 @@
     (click)="resetStatusMapping()"
   >
     <i c8yIcon="reset"></i>
-    {{ "Reset Monitoring" | translate }}
+    {{ 'Reset Monitoring' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -43,7 +43,7 @@
     (click)="refresh()"
   >
     <i c8yIcon="refresh"></i>
-    {{ "Refresh" | translate }}
+    {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 
@@ -52,7 +52,7 @@
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ "Configured Brokers" | translate }}
+          {{ 'Configured Brokers' | translate }}
         </h4>
       </div>
       <div class="card-block">
@@ -75,7 +75,7 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Connector Id</th>
+                <th>Type</th>
                 <th>Name</th>
                 <th>Enabled</th>
                 <th>Status</th>
@@ -88,9 +88,7 @@
                   {{ i }}
                 </td>
                 <td width="10%" style="padding-top: 12px">
-                  <span class="text-12"
-                    >{{ con?.connectorType }}
-                  </span>
+                  <span class="text-12">{{ con?.connectorType }} </span>
                 </td>
                 <td width="40%" style="padding-top: 12px">
                   {{ con?.name }}
@@ -98,9 +96,7 @@
                 <td width="5%" style="padding-top: 12px">
                   <i
                     style="text-align: center; width: 100%"
-                    [c8yIcon]="
-                      !con?.enabled ? 'circle-o' : 'plus-circle-o'
-                    "
+                    [c8yIcon]="!con?.enabled ? 'circle-o' : 'plus-circle-o'"
                     class="m-r-5"
                   ></i>
                 </td>
@@ -109,39 +105,69 @@
                     <span
                       class="c8y-pulse animated pulse animation-slow"
                       [ngClass]="{
-                        active: (con.status$ | async) == 'CONNECTED',
-                        inactive: (con.status$ | async) != 'CONNECTED'
+                        active: (con.status$ | async) === 'CONNECTED',
+                        inactive: (con.status$ | async) !== 'CONNECTED'
                       }"
                     ></span
                     >{{ con.status$ | async }}
                   </div>
                 </td>
-                <td width="20%">
-                  <button
-                    title="{{ 'Remove' | translate }}"
-                    class="btn btn-icon btn-clean p-r-4"
-                    (click)="onConfigurationDelete(i)"
-                    [disabled]="con?.enabled"
-                  >
-                    <i c8yIcon="trash-o" class="text-danger"></i>
-                    <span class="sr-only" translate>Remove configuration</span>
-                  </button>
-                  <button
-                    title="{{ 'Update' | translate }}"
-                    class="btn btn-icon btn-clean p-r-4"
-                    (click)="onConfigurationUpdate(i)"
-                  >
-                    <i c8yIcon="pencil" class="text-danger"></i>
-                    <span class="sr-only" translate>Update configuration</span>
-                  </button>
-                  <button
-                    title="{{ 'Toggle Activation' | translate }}"
-                    class="btn btn-icon btn-clean"
-                    (click)="onConfigurationToogle(i)"
-                  >
-                    <i c8yIcon="toggle-on" class="text-danger"></i>
-                    <span class="sr-only" translate>Toogle activation</span>
-                  </button>
+                <td width="10%">
+                  <div class="d-flex" style="position: absolute">
+                    <button
+                      container="body"
+                      style="padding-bottom: 6px"
+                      title="{{ 'Toggle Activation' | translate }}"
+                      class="btn btn-dot"
+                      (click)="onConfigurationToogle(i)"
+                    >
+                      <i c8yIcon="toggle-on"></i>
+                    </button>
+                    <div placement="bottom right" class="dropdown" dropdown>
+                      <button
+                        type="button"
+                        style="padding-top: 6px"
+                        title="Actions"
+                        dropdownToggle
+                        class="dropdown-toggle c8y-dropdown"
+                      >
+                        <i c8yIcon="ellipsis-v"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-right"
+                        *dropdownMenu
+                      >
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationUpdate(i)"
+                          >
+                            <i c8yIcon="pencil"></i>
+                            Update configuration
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationCopy(i)"
+                          >
+                            <i c8yIcon="copy"></i>
+                            Copy configuration
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            (click)="onConfigurationDelete(i)"
+                            [disabled]="con?.enabled"
+                          >
+                            <i c8yIcon="trash-o"></i>
+                            Remove configuration
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -149,13 +175,7 @@
         </div>
       </div>
 
-      <!-- export const STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-      export const STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";    -->
-      <div class="card-header separator j-c-between">
-        <h4 class="card-title">
-          {{ "Connector Logs" | translate }}
-        </h4>
-      </div>
+      <div class="legend form-block col-lg-12">Connector Logs</div>
       <div class="card-block">
         <c8y-form-group>
           <form class="form-inline">
@@ -168,7 +188,7 @@
                 checked="checked"
                 name="c8y-group"
                 value="{{ StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE }}"
-                [(ngModel)]="statusLogEventType"
+                [(ngModel)]="filterStatusLog.eventType"
               />
               <span></span>
               <span>Connector Lifecycle</span>
@@ -182,11 +202,24 @@
                 checked="checked"
                 name="c8y-group"
                 value="{{ StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE }}"
-                [(ngModel)]="statusLogEventType"
+                [(ngModel)]="filterStatusLog.eventType"
               />
               <span></span>
               <span>Subscriptions Events</span>
             </label>
+            <div class="c8y-select-wrapper button-bottom-margin">
+              <select
+                class="form-control"
+                style="width: 180px"
+                [(ngModel)]="filterStatusLog.connectorIdent"
+                name="connectorIdent"
+              >
+                <option [value]="'ALL'">ALL configurations</option>
+                <option [value]="t.ident" *ngFor="let t of configurations">
+                  {{ t.name }}
+                </option>
+              </select>
+            </div>
             <button
               type="submit"
               (click)="updateStatusLogs()"
@@ -196,8 +229,8 @@
             </button>
           </form>
         </c8y-form-group>
-        <div style="height: 430px; overflow: auto">
-          <!-- <c8y-ui-empty-state *ngIf="(statusLogs$ | async)?.length == 0"
+        <div style="height: 340px; overflow: auto">
+          <!-- <c8y-ui-empty-state *ngIf="(statusLogs)?.length === 0"
             [icon]="'event'"
             [title]="'No logs found.' | translate"
             [horizontal]="true"
@@ -205,10 +238,10 @@
           <div class="timeline-list list-condensed">
             <div
               class="timeline-list-item d-flex"
-              *ngFor="let event of statusLogs$ | async"
+              *ngFor="let event of statusLogs"
             >
               <small class="timeline-item-date">
-                {{ event.date | date : "dd.MM.yy hh:mm:ss" }}
+                {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
               </small>
               <div class="timeline-item-content d-flex flex-wrap">
                 <div class="list-item-icon">
@@ -239,7 +272,7 @@
     <div class="card">
       <div class="card-header separator j-c-between">
         <h4 class="card-title">
-          {{ "Service Configuration" | translate }}
+          {{ 'Service Configuration' | translate }}
         </h4>
       </div>
       <div class="inner-scroll">
@@ -254,7 +287,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Payload" }}
+                  {{ 'Log Payload' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -267,7 +300,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Substitution" }}
+                  {{ 'Log Substitution' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -280,7 +313,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Log Connector Errors" }}
+                  {{ 'Log Connector Errors' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -293,7 +326,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Connector Lifcycle" }} <i c8yIcon="euro"></i>
+                  {{ 'Send Connector Lifcycle' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -306,7 +339,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Mapping Status" }} <i c8yIcon="euro"></i>
+                  {{ 'Send Mapping Status' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -319,7 +352,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ "Send Events on Topic Subscriptions" }}
+                  {{ 'Send Events on Topic Subscriptions' }}
                   <i c8yIcon="euro"></i>
                 </span>
               </label>

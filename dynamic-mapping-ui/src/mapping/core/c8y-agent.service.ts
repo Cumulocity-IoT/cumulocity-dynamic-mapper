@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 import {
   IEvent,
   IAlarm,
@@ -26,19 +26,19 @@ import {
   IManagedObject,
   IResult,
   IExternalIdentity,
-  IOperation,
-} from "@c8y/client";
-import { AlertService } from "@c8y/ngx-components";
-import { API } from "../../shared";
-import { FacadeIdentityService } from "./facade-identity.service";
-import { FacadeInventoryService } from "./facade-inventory.service";
-import { ProcessingContext } from "../processor/prosessor.model";
-import { FacadeAlarmService } from "./facade-alarm.service";
-import { FacadeEventService } from "./facade-event.service";
-import { FacadeMeasurementService } from "./facade-measurement.service";
-import { FacadeOperationService } from "./facade-operation.service";
+  IOperation
+} from '@c8y/client';
+import { AlertService } from '@c8y/ngx-components';
+import { API } from '../../shared';
+import { FacadeIdentityService } from './facade-identity.service';
+import { FacadeInventoryService } from './facade-inventory.service';
+import { ProcessingContext } from '../processor/prosessor.model';
+import { FacadeAlarmService } from './facade-alarm.service';
+import { FacadeEventService } from './facade-event.service';
+import { FacadeMeasurementService } from './facade-measurement.service';
+import { FacadeOperationService } from './facade-operation.service';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class C8YAgent {
   constructor(
     private inventory: FacadeInventoryService,
@@ -50,46 +50,46 @@ export class C8YAgent {
     private alert: AlertService
   ) {}
 
-
-  public initializeCache(): void {
+  initializeCache(): void {
     this.inventory.initializeCache();
     this.identity.initializeCache();
   }
 
   async createMEAO(context: ProcessingContext) {
     let result: any;
-    let error: string = "";
-    let currentRequest = context.requests[context.requests.length - 1].request;
+    let error: string = '';
+    const currentRequest =
+      context.requests[context.requests.length - 1].request;
     if (context.mapping.targetAPI == API.EVENT.name) {
-      let p: IEvent = currentRequest as any;
+      const p: IEvent = currentRequest as any;
       if (p != null) {
         result = this.event.create(p, context);
       } else {
-        error = "Payload is not a valid:" + context.mapping.targetAPI;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.ALARM.name) {
-      let p: IAlarm = currentRequest as any;
+      const p: IAlarm = currentRequest as any;
       if (p != null) {
         result = this.alarm.create(p, context);
       } else {
-        error = "Payload is not a valid:" + context.mapping.targetAPI;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.MEASUREMENT.name) {
-      let p: IMeasurement = currentRequest as any;
+      const p: IMeasurement = currentRequest as any;
       if (p != null) {
         result = this.measurement.create(p, context);
       } else {
-        error = "Payload is not a valid:" + context.mapping.targetAPI;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else if (context.mapping.targetAPI == API.OPERATION.name) {
-      let p: IOperation = currentRequest as any;
+      const p: IOperation = currentRequest as any;
       if (p != null) {
         result = this.operation.create(p, context);
       } else {
-        error = "Payload is not a valid:" + context.mapping.targetAPI;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     } else {
-      let p: IManagedObject = currentRequest as any;
+      const p: IManagedObject = currentRequest as any;
       if (p != null) {
         if (context.mapping.updateExistingDevice) {
           result = this.inventory.update(p, context);
@@ -97,39 +97,40 @@ export class C8YAgent {
           result = this.inventory.create(p, context);
         }
       } else {
-        error = "Payload is not a valid:" + context.mapping.targetAPI;
+        error = `Payload is not a valid:${context.mapping.targetAPI}`;
       }
     }
 
-    if (error != "") {
-      this.alert.danger("Failed to tested mapping: " + error);
-      return "";
+    if (error != '') {
+      this.alert.danger(`Failed to tested mapping: ${error}`);
+      return '';
     }
 
     try {
-      let { data, res } = await result;
-      //console.log ("My data:", data );
+      const { data, res } = await result;
+      // console.log ("My data:", data );
       if (res.status == 200 || res.status == 201) {
-        //this.alert.success("Successfully tested mapping!");
+        // this.alert.success("Successfully tested mapping!");
         return data;
       } else {
-        let e = await res.text();
-        this.alert.danger("Failed to tested mapping: " + e);
+        const e = await res.text();
+        this.alert.danger(`Failed to tested mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
-        return "";
+        return '';
       }
     } catch (e) {
-      let { data, res } = await e;
-      this.alert.danger("Failed to tested mapping: " + data);
+      const { data } = await e;
+      this.alert.danger(`Failed to tested mapping: ${data}`);
       context.requests[context.requests.length - 1].error = e;
-      return "";
+      return '';
     }
   }
 
   async upsertDevice(
-    identity: IExternalIdentity,
+    identityx: IExternalIdentity,
     context: ProcessingContext
   ): Promise<IManagedObject> {
+    let identity = identityx;
     let deviceId: string;
     try {
       deviceId = await this.resolveExternalId2GlobalId(identity, context);
@@ -139,36 +140,37 @@ export class C8YAgent {
       );
     }
 
-    let currentRequest = context.requests[context.requests.length - 1].request;
-    let device: Partial<IManagedObject> = {
+    const currentRequest =
+      context.requests[context.requests.length - 1].request;
+    const device: Partial<IManagedObject> = {
       ...currentRequest,
       c8y_IsDevice: {},
       d11r_testDevice: {},
-      com_cumulocity_model_Agent: {},
+      com_cumulocity_model_Agent: {}
     };
     // remove device identifier
-    
+
     if (deviceId) {
       device.id = deviceId;
       const response: IResult<IManagedObject> = await this.inventory.update(
         device,
         context
-        );
-        return response.data;
-      } else {
+      );
+      return response.data;
+    } else {
       delete device[API.INVENTORY.identifier];
       const response: IResult<IManagedObject> = await this.inventory.create(
         device,
         context
       );
-      //create identity for mo
+      // create identity for mo
       identity = {
         ...identity,
         managedObject: {
-          id: response.data.id,
-        },
+          id: response.data.id
+        }
       };
-      const { data, res } = await this.identity.create(identity, context);
+      await this.identity.create(identity, context);
       return response.data;
     }
   }
@@ -177,7 +179,7 @@ export class C8YAgent {
     identity: IExternalIdentity,
     context: ProcessingContext
   ): Promise<string> {
-    const { data, res } = await this.identity.resolveExternalId2GlobalId(
+    const { data } = await this.identity.resolveExternalId2GlobalId(
       identity,
       context
     );

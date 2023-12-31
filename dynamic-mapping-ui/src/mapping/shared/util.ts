@@ -18,13 +18,13 @@
  *
  * @authors Christof Strack
  */
-import { AbstractControl } from "@angular/forms";
-import { API, Direction, Mapping, MappingSubstitution } from "../../shared";
+import { AbstractControl } from '@angular/forms';
+import { API, Direction, Mapping, MappingSubstitution } from '../../shared';
 import {
   SubstituteValue,
-  SubstituteValueType,
-} from "../processor/prosessor.model";
-import { ValidationError, ValidationFormlyError } from "./mapping.model";
+  SubstituteValueType
+} from '../processor/prosessor.model';
+import { ValidationError, ValidationFormlyError } from './mapping.model';
 
 export function getTypedValue(subValue: SubstituteValue): any {
   if (subValue.type == SubstituteValueType.NUMBER) {
@@ -36,54 +36,58 @@ export function getTypedValue(subValue: SubstituteValue): any {
   }
 }
 
-export const TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
-export const TIME = "time";
+export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
+export const TIME = 'time';
 /*
  * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
  */
 export function splitTopicExcludingSeparator(topic: string): string[] {
-  topic = topic.trim().replace(/(\/{1,}$)|(^\/{1,})/g, "");
-  return topic.split(/\//g);
+  let topix = topic;
+  topix = topix.trim().replace(/(\/{1,}$)|(^\/{1,})/g, '');
+  return topix.split(/\//g);
 }
 
 export function splitTopicIncludingSeparator(topic: string): string[] {
-  return topic.split(/(?<=\/)|(?=\/)/g);
+  const topix = topic;
+  return topix.split(/(?<=\/)|(?=\/)/g);
 }
 
 export function normalizeTopic(topic: string) {
-  if (topic == undefined) topic = "";
+  let topix = topic;
+  if (topix == undefined) topix = '';
   // reduce multiple leading or trailing "/" to just one "/"
-  let nt = topic.trim().replace(/(\/{2,}$)|(^\/{2,})/g, "/");
+  let nt = topix.trim().replace(/(\/{2,}$)|(^\/{2,})/g, '/');
   // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
   // remove trailing "/" if topic is ends with "#"
-  nt = nt.replace(/(#\/$)/g, "#");
+  nt = nt.replace(/(#\/$)/g, '#');
   return nt;
 }
 
 export function deriveTemplateTopicFromTopic(topic: string) {
-  if (topic == undefined) topic = "";
-  topic = normalizeTopic(topic);
+  let topix = topic;
+  if (topix == undefined) topix = '';
+  topix = normalizeTopic(topix);
   // replace trailing TOPIC_WILDCARD_MULTI "#" with TOPIC_WILDCARD_SINGLE "*"
-  let nt = topic.trim().replace(/\#+$/, "+");
+  const nt = topic.trim().replace(/#+$/, '+');
   return nt;
 }
 
 export function isTopicNameValid(topic: string): any {
-  topic = normalizeTopic(topic);
-
-  let errors = {};
+  let topix = topic;
+  topix = normalizeTopic(topix);
+  const errors = {};
   // count number of "#"
-  let count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
-  let count_single = (topic.match(/\+/g) || []).length;
+  const count_single = (topix.match(/\+/g) || []).length;
   if (count_single > 1)
     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
-    topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length
+    topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length
   )
     errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
@@ -91,23 +95,24 @@ export function isTopicNameValid(topic: string): any {
 }
 
 export function isTemplateTopicValid(topic: string): any {
+  let topix = topic;
   // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
   // TOPIC_WILDCARD_MULTI
-  topic = normalizeTopic(topic);
+  topix = normalizeTopic(topix);
 
   // let errors = {};
   // // count number of "#"
-  // let count_multi = (topic.match(/\#/g) || []).length;
+  // let count_multi = (topix.match(/\#/g) || []).length;
   // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // // count number of "+"
-  // let count_single = (topic.match(/\+/g) || []).length;
+  // let count_single = (topix.match(/\+/g) || []).length;
   // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  // if (count_multi >= 1 && topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+  // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
-  let errors = {};
+  const errors = {};
   // count number of "#"
-  let count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi >= 1)
     errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
       true;
@@ -116,21 +121,21 @@ export function isTemplateTopicValid(topic: string): any {
 }
 
 export function isSubscriptionTopicValid(topic: string): any {
-  topic = normalizeTopic(topic);
-
-  let errors = {};
+  let topix = topic;
+  topix = normalizeTopic(topix);
+  const errors = {};
   // count number of "#"
-  let count_multi = (topic.match(/\#/g) || []).length;
+  const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
   // count number of "+"
-  let count_single = (topic.match(/\+/g) || []).length;
+  const count_single = (topix.match(/\+/g) || []).length;
   if (count_single > 1)
     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
-    topic.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topic.length
+    topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length
   )
     errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
@@ -156,10 +161,13 @@ export function isTemplateTopicUnique(
   mapping: Mapping,
   mappings: Mapping[]
 ): boolean {
-  let result = true;
-  // result = mappings.every(m => {
-  //   return ((!mapping.templateTopic.startsWith(m.templateTopic) && !m.templateTopic.startsWith(mapping.templateTopic)) || mapping.id == m.id);
-  // })
+  const result = mappings.every((m) => {
+    return (
+      (!mapping.templateTopic.startsWith(m.templateTopic) &&
+        !m.templateTopic.startsWith(mapping.templateTopic)) ||
+      mapping.id == m.id
+    );
+  });
   return result;
 }
 
@@ -174,8 +182,8 @@ export function isFilterOutboundUnique(
   return result;
 }
 
-export const TOPIC_WILDCARD_MULTI = "#";
-export const TOPIC_WILDCARD_SINGLE = "+";
+export const TOPIC_WILDCARD_MULTI = '#';
+export const TOPIC_WILDCARD_SINGLE = '+';
 
 export function isWildcardTopic(topic: string): boolean {
   const result =
@@ -185,22 +193,14 @@ export function isWildcardTopic(topic: string): boolean {
 }
 
 export function isSubstituionValid(mapping: Mapping): boolean {
-  let count = mapping.substitutions
+  const count = mapping.substitutions
     .filter((sub) =>
       definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
     )
-    .map((m) => 1)
-    .reduce(
-      (
-        previousValue: number,
-        currentValue: number,
-        currentIndex: number,
-        array: number[]
-      ) => {
-        return previousValue + currentValue;
-      },
-      0
-    );
+    .map(() => 1)
+    .reduce((previousValue: number, currentValue: number) => {
+      return previousValue + currentValue;
+    }, 0);
   return (
     (mapping.direction != Direction.OUTBOUND && count == 1) ||
     mapping.direction == Direction.OUTBOUND
@@ -230,7 +230,7 @@ export function isSubstituionValid(mapping: Mapping): boolean {
 //   }
 // } else {
 // }
-//console.log(stepperConfiguration, mapping.mappingType)
+// console.log(stepperConfiguration, mapping.mappingType)
 //   //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
 //   return Object.keys(errors).length > 0 ? errors : null;
 // }
@@ -246,16 +246,16 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   let error: boolean = false;
 
   const { templateTopic, templateTopicSample, subscriptionTopic } =
-    control["controls"];
+    control['controls'];
   templateTopic.setErrors(null);
   templateTopicSample.setErrors(null);
   subscriptionTopic.setErrors(null);
 
   // avoid displaying the message error when values are empty
   if (
-    templateTopic.value == "" ||
-    templateTopicSample.value == "" ||
-    subscriptionTopic.value == ""
+    templateTopic.value == '' ||
+    templateTopicSample.value == '' ||
+    subscriptionTopic.value == ''
   ) {
     return { required: false };
   }
@@ -272,46 +272,46 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   //    +       /topic/+/value          /topic/important/value
   //    +       device/#                device/+/rom/
 
-  //let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-  //error = !f(subscriptionTopic, templateTopic);
-  let f = (t) => (s) =>
+  // let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
+  // error = !f(subscriptionTopic, templateTopic);
+  const f = (t) => (s) =>
     new RegExp(
-      s.concat("@").split("+").join("[^/]+").split("#").join(".+")
-    ).test(t.concat("@"));
+      s.concat('@').split('+').join('[^/]+').split('#').join('.+')
+    ).test(t.concat('@'));
   error = !f(templateTopic.value)(subscriptionTopic.value);
   if (error) {
     errors = {
       ...errors,
       TemplateTopic_Must_Match_The_SubscriptionTopic: {
         ...ValidationFormlyError[
-          "TemplateTopic_Must_Match_The_SubscriptionTopic"
+          'TemplateTopic_Must_Match_The_SubscriptionTopic'
         ],
-        errorPath: "templateTopic",
-      },
+        errorPath: 'templateTopic'
+      }
     };
   }
 
   // count number of "#" in subscriptionTopic
-  let count_multi = (subscriptionTopic.value.match(/\#/g) || []).length;
+  let count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
       Only_One_Multi_Level_Wildcard: {
-        ...ValidationFormlyError["Only_One_Multi_Level_Wildcard"],
-        errorPath: "subscriptionTopic",
-      },
+        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+        errorPath: 'subscriptionTopic'
+      }
     };
   }
 
   // count number of "+" in subscriptionTopic
-  let count_single = (subscriptionTopic.value.match(/\+/g) || []).length;
+  const count_single = (subscriptionTopic.value.match(/\+/g) || []).length;
   if (count_single > 1) {
     errors = {
       ...errors,
       Only_One_Single_Level_Wildcard: {
-        ...ValidationFormlyError["Only_One_Single_Level_Wildcard"],
-        errorPath: "subscriptionTopic",
-      },
+        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+        errorPath: 'subscriptionTopic'
+      }
     };
   }
 
@@ -324,28 +324,28 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     errors = {
       ...errors,
       Multi_Level_Wildcard_Only_At_End: {
-        ...ValidationFormlyError["Multi_Level_Wildcard_Only_At_End"],
-        errorPath: "subscriptionTopic",
-      },
+        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+        errorPath: 'subscriptionTopic'
+      }
     };
   }
 
   // count number of "#" in templateTopic
-  count_multi = (templateTopic.value.match(/\#/g) || []).length;
+  count_multi = (templateTopic.value.match(/#/g) || []).length;
   if (count_multi >= 1) {
     errors = {
       ...errors,
       No_Multi_Level_Wildcard_Allowed_In_TemplateTopic: {
         ...ValidationFormlyError[
-          "No_Multi_Level_Wildcard_Allowed_In_TemplateTopic"
+          'No_Multi_Level_Wildcard_Allowed_In_TemplateTopic'
         ],
-        errorPath: "templateTopic",
-      },
+        errorPath: 'templateTopic'
+      }
     };
   }
 
-  let splitTT: String[] = splitTopicExcludingSeparator(templateTopic.value);
-  let splitTTS: String[] = splitTopicExcludingSeparator(
+  const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
+  const splitTTS: string[] = splitTopicExcludingSeparator(
     templateTopicSample.value
   );
   if (splitTT.length != splitTTS.length) {
@@ -354,43 +354,43 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
       TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
         {
           ...ValidationFormlyError[
-            "TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name"
+            'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
           ],
-          errorPath: "templateTopicSample",
-        },
+          errorPath: 'templateTopicSample'
+        }
     };
   } else {
     for (let i = 0; i < splitTT.length; i++) {
-      if ("/" == splitTT[i] && !("/" == splitTTS[i])) {
+      if ('/' == splitTT[i] && !('/' == splitTTS[i])) {
         errors = {
           ...errors,
           TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                "TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: "templateTopicSample",
-            },
+              errorPath: 'templateTopicSample'
+            }
         };
         break;
       }
-      if ("/" == splitTTS[i] && !("/" == splitTT[i])) {
+      if ('/' == splitTTS[i] && !('/' == splitTT[i])) {
         errors = {
           ...errors,
           TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                "TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: "templateTopicSample",
-            },
+              errorPath: 'templateTopicSample'
+            }
         };
         break;
       }
       if (
-        !("/" == splitTT[i]) &&
-        !("+" == splitTT[i]) &&
-        !("#" == splitTT[i])
+        !('/' == splitTT[i]) &&
+        !('+' == splitTT[i]) &&
+        !('#' == splitTT[i])
       ) {
         if (splitTT[i] != splitTTS[i]) {
           errors = {
@@ -398,10 +398,10 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
             TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
               {
                 ...ValidationFormlyError[
-                  "TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                  'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: "templateTopicSample",
-              },
+                errorPath: 'templateTopicSample'
+              }
           };
           break;
         }
@@ -414,36 +414,36 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
 
-  const { publishTopic, templateTopicSample } = control["controls"];
+  const { publishTopic, templateTopicSample } = control['controls'];
   publishTopic.setErrors(null);
   templateTopicSample.setErrors(null);
 
   // avoid displaying the message error when values are empty
-  if (publishTopic.value == "" || templateTopicSample.value == "") {
+  if (publishTopic.value == '' || templateTopicSample.value == '') {
     return null;
   }
 
   // count number of "#" in publishTopic
-  let count_multi = (publishTopic.value.match(/\#/g) || []).length;
+  const count_multi = (publishTopic.value.match(/#/g) || []).length;
   if (count_multi > 1) {
     errors = {
       ...errors,
       Only_One_Multi_Level_Wildcard: {
-        ...ValidationFormlyError["Only_One_Multi_Level_Wildcard"],
-        errorPath: "publishTopic",
-      },
+        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+        errorPath: 'publishTopic'
+      }
     };
   }
 
   // count number of "+" in publishTopic
-  let count_single = (publishTopic.value.match(/\+/g) || []).length;
+  const count_single = (publishTopic.value.match(/\+/g) || []).length;
   if (count_single > 1) {
     errors = {
       ...errors,
       Only_One_Single_Level_Wildcard: {
-        ...ValidationFormlyError["Only_One_Single_Level_Wildcard"],
-        errorPath: "publishTopic",
-      },
+        ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
+        errorPath: 'publishTopic'
+      }
     };
   }
 
@@ -456,14 +456,14 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     errors = {
       ...errors,
       Multi_Level_Wildcard_Only_At_End: {
-        ...ValidationFormlyError["Multi_Level_Wildcard_Only_At_End"],
-        errorPath: "publishTopic",
-      },
+        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+        errorPath: 'publishTopic'
+      }
     };
   }
 
-  let splitPT: String[] = splitTopicExcludingSeparator(publishTopic.value);
-  let splitTTS: String[] = splitTopicExcludingSeparator(
+  const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value);
+  const splitTTS: string[] = splitTopicExcludingSeparator(
     templateTopicSample.value
   );
   if (splitPT.length != splitTTS.length) {
@@ -472,43 +472,43 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
       PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
         {
           ...ValidationFormlyError[
-            "PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name"
+            'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
           ],
-          errorPath: "templateTopicSample",
-        },
+          errorPath: 'templateTopicSample'
+        }
     };
   } else {
     for (let i = 0; i < splitPT.length; i++) {
-      if ("/" == splitPT[i] && !("/" == splitTTS[i])) {
+      if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
         errors = {
           ...errors,
           PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                "PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: "templateTopicSample",
-            },
+              errorPath: 'templateTopicSample'
+            }
         };
         break;
       }
-      if ("/" == splitTTS[i] && !("/" == splitPT[i])) {
+      if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
         errors = {
           ...errors,
           PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                "PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: "templateTopicSample",
-            },
+              errorPath: 'templateTopicSample'
+            }
         };
         break;
       }
       if (
-        !("/" == splitPT[i]) &&
-        !("+" == splitPT[i]) &&
-        !("#" == splitPT[i])
+        !('/' == splitPT[i]) &&
+        !('+' == splitPT[i]) &&
+        !('#' == splitPT[i])
       ) {
         if (splitPT[i] != splitTTS[i]) {
           errors = {
@@ -516,10 +516,10 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
             PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
               {
                 ...ValidationFormlyError[
-                  "PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name"
+                  'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: "templateTopicSample",
-              },
+                errorPath: 'templateTopicSample'
+              }
           };
           break;
         }
@@ -530,7 +530,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 }
 
 export const isNumeric = (num: any) =>
-  (typeof num === "number" || (typeof num === "string" && num.trim() !== "")) &&
+  (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) &&
   !isNaN(num as number);
 
 export function definesDeviceIdentifier(
@@ -564,21 +564,21 @@ export function cloneSubstitution(
     pathTarget: sub.pathTarget,
     repairStrategy: sub.repairStrategy,
     expandArray: sub.expandArray,
-    resolve2ExternalId: sub.resolve2ExternalId,
+    resolve2ExternalId: sub.resolve2ExternalId
   };
 }
 
 export function expandExternalTemplate(
   t: object,
   m: Mapping,
-  levels: String[]
+  levels: string[]
 ): object {
   if (Array.isArray(t)) {
     return t;
   } else {
     return {
       ...t,
-      _TOPIC_LEVEL_: levels,
+      _TOPIC_LEVEL_: levels
     };
   }
 }
@@ -587,7 +587,7 @@ export function expandC8YTemplate(t: object, m: Mapping): object {
   if (m.targetAPI == API.INVENTORY.name) {
     return {
       ...t,
-      id: "909090",
+      id: '909090'
     };
   } else {
     return t;
@@ -596,15 +596,15 @@ export function expandC8YTemplate(t: object, m: Mapping): object {
 
 export function reduceSourceTemplate(t: object, patched: boolean): string {
   if (!patched) delete t[TOKEN_TOPIC_LEVEL];
-  let tt = JSON.stringify(t);
+  const tt = JSON.stringify(t);
   return tt;
 }
 
-export function reduceTargetTemplate(t: object, patched: boolean): string {
-  let tt = JSON.stringify(t);
+export function reduceTargetTemplate(t: object): string {
+  const tt = JSON.stringify(t);
   return tt;
 }
 
 export function isDisabled(condition: boolean) {
-  return condition ? "" : null;
+  return condition ? '' : null;
 }

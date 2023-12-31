@@ -27,7 +27,13 @@
 
     <groupId>com.softwareag.c8y.mapping</groupId>
     <artifactId>dynamic-mapping-solution</artifactId>
-    <version>${revision}</version>
+    <!-- <version>${revision}</version> -->
+    <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly
+    use instead:
+        mvn versions:set -DnewVersion=4.1.2-SNAPSHOT
+        mvn versions:commit
+    -->
+    <version>4.1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -65,13 +71,11 @@
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-joda</artifactId>
                 <version>2.12.7</version>
             </dependency>
-
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
@@ -124,31 +128,31 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>5.9.0</version>
             </dependency>
-
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.java-websocket</groupId>
                 <artifactId>Java-WebSocket</artifactId>
                 <version>1.5.3</version>
             </dependency>
-
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.json</groupId>
+                <artifactId>json</artifactId>
+                <version>20231013</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
