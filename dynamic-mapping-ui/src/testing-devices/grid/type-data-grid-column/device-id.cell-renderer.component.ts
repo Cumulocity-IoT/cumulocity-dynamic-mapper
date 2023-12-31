@@ -18,9 +18,9 @@
  *
  * @authors Christof Strack
  */
-import { Component, Inject } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
-import { TestingDeviceService } from "../testing.service";
+import { Component, Inject } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
+import { TestingDeviceService } from '../testing.service';
 
 /**
  * The example component for custom cell renderer.
@@ -41,7 +41,7 @@ import { TestingDeviceService } from "../testing.service";
         >{{ context.item.id }}</a
       >
     </span>
-  `,
+  `
 })
 export class DeviceIdCellRendererComponent {
   constructor(

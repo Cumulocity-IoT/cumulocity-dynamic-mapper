@@ -23,37 +23,21 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: 'formly-field-input-custom',
-  template: `<input
-  *ngIf="type !== 'number'; else numberTmp"
-  [type]="type"
-  [formControl]="formControl"
-  [class]="class"
-  [formlyAttributes]="field"
-  [required]="to.required"
-  [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
-  [class.is-invalid]="showError"
-/>
-<ng-template #numberTmp>
-  <input
-    type="number"
-    [formControl]="formControl"
-    [class]="class"
-    [formlyAttributes]="field"
-    [required]="to.required"
-    [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
-    [class.is-invalid]="showError"
-  />
-</ng-template>`,
+  selector: 'd11r-formly-field-textarea',
+  template: `
+    <textarea
+      [class]="class"
+      [class.is-invalid]="showError"
+      [attr.aria-describedby]="id + '-formly-validation-error'"
+      [attr.aria-invalid]="showError"
+    >
+ {{ to.value }}
+</textarea>
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FieldInputCustom extends FieldType {
-  get type() {
-    return this.to.type || 'text';
-  }
-
+export class FieldTextareaCustom extends FieldType {
   get class() {
     return `form-control ${this.to.class}`;
   }
 }
-

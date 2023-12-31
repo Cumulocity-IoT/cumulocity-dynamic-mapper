@@ -25,8 +25,8 @@
 </div>
 
 <c8y-modal
-  (onClose)="onClose($event)"
-  (onDismiss)="onDismiss($event)"
+  (onClose)="onClose()"
+  (onDismiss)="onDismiss()"
   [labels]="labels"
   [disabled]="true"
   #addMappingRef
@@ -38,7 +38,7 @@
     <div class="list-group list-group-links" [formGroup]="formGroupStep">
       <ng-container *ngFor="let q of MappingType | keyvalue">
         <button
-          *ngIf="direction != Direction.OUTBOUND || q.value == 'JSON'"
+          *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
           class="list-group-item"
           title="{{ q.value }}"
           (click)="onSelectMappingType(q.value)"

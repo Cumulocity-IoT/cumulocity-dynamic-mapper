@@ -19,21 +19,22 @@
  * @authors Christof Strack
  */
 
-import { NgModule } from "@angular/core";
-import { CoreModule, hookRoute } from "@c8y/ngx-components";
-import { MonitoringComponent } from "./grid/monitoring.component";
-import { IdRendererComponent } from "./renderer/id-cell.renderer.component";
-import { BrokerConfigurationModule } from "../configuration";
+import { NgModule } from '@angular/core';
+import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { MonitoringComponent } from './grid/monitoring.component';
+import { IdRendererComponent } from './renderer/id-cell.renderer.component';
+import { BrokerConfigurationModule } from '../configuration';
+import { NumberRendererComponent } from './renderer/number.renderer.component';
 
 @NgModule({
-  declarations: [MonitoringComponent, IdRendererComponent],
+  declarations: [MonitoringComponent, IdRendererComponent, NumberRendererComponent],
   imports: [CoreModule, BrokerConfigurationModule],
   exports: [],
   providers: [
     hookRoute({
-      path: "sag-ps-pkg-dynamic-mapping/monitoring",
-      component: MonitoringComponent,
-    }),
-  ],
+      path: 'sag-ps-pkg-dynamic-mapping/monitoring',
+      component: MonitoringComponent
+    })
+  ]
 })
 export class MonitoringModule {}

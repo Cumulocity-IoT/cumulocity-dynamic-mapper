@@ -41,7 +41,7 @@
     {{ "Reload mappings" | translate }}
   </button>
   <button
-    *ngIf="stepperConfiguration.direction == Direction.OUTBOUND"
+    *ngIf="stepperConfiguration.direction === Direction.OUTBOUND"
     class="btn btn-link"
     title="{{ 'Manage subscriptions' | translate }}"
     (click)="onDefineSubscription()"
@@ -107,7 +107,7 @@
   </div>
 </div>
 
-<div class="card" *ngIf="stepperConfiguration.direction == Direction.OUTBOUND">
+<div class="card" *ngIf="stepperConfiguration.direction === Direction.OUTBOUND">
   <div class="card-block">
     <c8y-data-grid
       [title]="titleSubsription | translate"
@@ -125,8 +125,8 @@
   <div class="bottom-drawer">
     <d11r-mapping-stepper
       *ngIf="showConfigMapping"
-      (onCancel)="showConfigMapping = false"
-      (onCommit)="onCommitMapping($event)"
+      (cancel)="showConfigMapping = false"
+      (commit)="onCommitMapping($event)"
       [mapping]="mappingToUpdate"
       [mappings]="mappings"
       [stepperConfiguration]="stepperConfiguration"

@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -18,23 +19,10 @@
  *
  * @authors Christof Strack
  */
-import { Component } from "@angular/core";
-import { CellRendererContext } from "@c8y/ngx-components";
+import { FieldType } from '@ngx-formly/core';
 
-/**
- * The example component for custom header renderer.
- * The header text is taken from `this.context.property` which contains current column object.
- * Additionally the header has custom icon element and styled span element.
- */
 @Component({
-  template: `
-    <span
-      style="text-transform: uppercase; font-variant: small-caps; text-decoration: underline;"
-    >
-      {{ context.property.header }}
-    </span>
-  `,
+  selector: 'd11r-formly-text',
+  template: '{{ to.label }}'
 })
-export class TypeHeaderCellRendererComponent {
-  constructor(public context: CellRendererContext) {}
-}
+export class FormlyTextField extends FieldType {}

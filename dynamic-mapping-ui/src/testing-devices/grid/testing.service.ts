@@ -18,28 +18,27 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { transform } from "lodash-es";
+import { Injectable } from '@angular/core';
+import { transform } from 'lodash-es';
 
 import {
   IManagedObject,
   InventoryService,
   IResult,
-  QueriesUtil,
-} from "@c8y/client";
+  QueriesUtil
+} from '@c8y/client';
 import {
   ActionControl,
   AlertService,
   BuiltInActionType,
   BulkActionControl,
   Column,
-  Pagination,
-} from "@c8y/ngx-components";
+  Pagination
+} from '@c8y/ngx-components';
 
-import { TypeDataGridColumn } from "./type-data-grid-column/type.data-grid-column";
-import { Subject } from "rxjs";
-import { DeviceIdCellRendererComponent } from "./type-data-grid-column/device-id.cell-renderer.component";
-import { MAPPING_TEST_DEVICE_TYPE } from "../../shared";
+import { Subject } from 'rxjs';
+import { DeviceIdCellRendererComponent } from './type-data-grid-column/device-id.cell-renderer.component';
+import { MAPPING_TEST_DEVICE_TYPE } from '../../shared';
 
 /** Model for custom type filtering form. */
 export interface TypeFilteringModel {
@@ -52,7 +51,7 @@ export interface TypeFilteringModel {
  * provides the list of columns, initial pagination object, actions;
  * as well as performs the query for data based on the current grid setup.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class TestingDeviceService {
   /** This will be used to build the inventory queries. */
   protected queriesUtil: QueriesUtil;
@@ -64,7 +63,7 @@ export class TestingDeviceService {
     this.queriesUtil = new QueriesUtil();
   }
 
-  public refreshData$ = new Subject<any>();
+  refreshData$ = new Subject<any>();
 
   /**
    * Returns a list of columns.
@@ -76,28 +75,34 @@ export class TestingDeviceService {
   getColumns(): Column[] {
     const columns = [
       {
-        name: "id",
-        header: "ID",
-        path: "id",
+        name: 'id',
+        header: 'ID',
+        path: 'id',
         filterable: true,
         sortable: true,
-        cellRendererComponent: DeviceIdCellRendererComponent,
+        cellRendererComponent: DeviceIdCellRendererComponent
       },
       {
-        name: "name",
-        header: "Name",
-        path: "name",
+        name: 'name',
+        header: 'Name',
+        path: 'name',
         filterable: true,
-        sortable: true,
+        sortable: true
       },
       {
-        name: "creationTime",
-        header: "Date Created",
-        path: "creationTime",
+        name: 'creationTime',
+        header: 'Date Created',
+        path: 'creationTime',
         filterable: true,
-        sortable: true,
+        sortable: true
       },
-      new TypeDataGridColumn(),
+      {
+        name: 'type',
+        header: 'Type',
+        path: 'type',
+        filterable: true,
+        sortable: true
+      },
     ];
 
     return columns;
@@ -107,7 +112,7 @@ export class TestingDeviceService {
   getPagination(): Pagination {
     return {
       pageSize: 10,
-      currentPage: 1,
+      currentPage: 1
     };
   }
 
@@ -117,8 +122,8 @@ export class TestingDeviceService {
       // { type: BuiltInActionType.Delete, callback: (item) => console.dir(item) },
       {
         type: BuiltInActionType.Delete,
-        callback: (item) => this.onItemDelete(item),
-      },
+        callback: (item) => this.onItemDelete(item)
+      }
     ];
   }
 
@@ -127,8 +132,8 @@ export class TestingDeviceService {
     return [
       {
         type: BuiltInActionType.Delete,
-        callback: (selectedItemIds) => this.onItemsDelete(selectedItemIds),
-      },
+        callback: (selectedItemIds) => this.onItemsDelete(selectedItemIds)
+      }
     ];
   }
 
@@ -147,7 +152,7 @@ export class TestingDeviceService {
       ...this.getFilters(columns, pagination),
       // but we only need the number of items, not the items themselves
       pageSize: 1,
-      currentPage: 1,
+      currentPage: 1
     };
     return (await this.inventoryService.list(filters)).paging.totalPages;
   }
@@ -156,24 +161,24 @@ export class TestingDeviceService {
   async getTotal(): Promise<number> {
     const filters = {
       pageSize: 1,
-      withTotalPages: true,
+      withTotalPages: true
     };
     return (await this.inventoryService.list(filters)).paging.totalPages;
   }
 
   /** Returns an icon and label representing the type of the managed object. */
   getTypeIconAndLabel(mo: IManagedObject): { icon: string; label: string } {
-    let icon: string = "question";
-    let label: string = "Other";
+    let icon: string = 'question';
+    let label: string = 'Other';
 
-    if (mo.type === "c8y_DeviceGroup") {
-      icon = "c8y-group";
-      label = "Group";
+    if (mo.type === 'c8y_DeviceGroup') {
+      icon = 'c8y-group';
+      label = 'Group';
     }
 
     if (mo.c8y_IsDevice !== undefined) {
-      icon = "exchange";
-      label = "Device";
+      icon = 'exchange';
+      label = 'Device';
     }
 
     return { icon, label };
@@ -184,11 +189,11 @@ export class TestingDeviceService {
     let query: any = {};
 
     if (model.group) {
-      query = this.queriesUtil.addOrFilter(query, { type: "c8y_DeviceGroup" });
+      query = this.queriesUtil.addOrFilter(query, { type: 'c8y_DeviceGroup' });
     }
 
     if (model.device) {
-      query = this.queriesUtil.addOrFilter(query, { __has: "c8y_IsDevice" });
+      query = this.queriesUtil.addOrFilter(query, { __has: 'c8y_IsDevice' });
     }
 
     return query;
@@ -196,17 +201,17 @@ export class TestingDeviceService {
 
   /** Returns filters for given columns and pagination setup. */
   private getFilters(columns: Column[], pagination: Pagination) {
-    let query1: any = this.getQueryString(columns);
-    let query2 = this.queriesUtil.addAndFilter(query1, {
-      __has: MAPPING_TEST_DEVICE_TYPE,
+    const query1: any = this.getQueryString(columns);
+    const query2 = this.queriesUtil.addAndFilter(query1, {
+      __has: MAPPING_TEST_DEVICE_TYPE
     });
-    let queryBuilt = this.queriesUtil.buildQuery(query2);
+    const queryBuilt = this.queriesUtil.buildQuery(query2);
     return {
       query: queryBuilt,
       pageSize: pagination.pageSize,
       currentPage: pagination.currentPage,
       withChildren: false,
-      withTotalPages: true,
+      withTotalPages: true
     };
   }
 
@@ -224,25 +229,26 @@ export class TestingDeviceService {
       (query, column) => this.addColumnQuery(query, column),
       {
         __filter: {},
-        __orderby: [],
+        __orderby: []
       }
     );
   }
 
   /** Extends given query with a part based on the setup of given column. */
   private addColumnQuery(query: any, column: Column): void {
+    let queryx = query;
     // when a column is marked as filterable
     if (column.filterable) {
       // in the case of default filtering form, `filterPredicate` will contain the string entered by a user
       if (column.filterPredicate) {
         // so we use it as the expected value, * allow to search for it anywhere in the property
-        query.__filter[column.path] = `*${column.filterPredicate}*`;
+        queryx.__filter[column.path] = `*${column.filterPredicate}*`;
       }
 
-      // in the case of custom filtering form, we're storing the query in `externalFilterQuery.query`
+      // in the case of custom filtering form, we're storing the queryx in `externalFilterQuery.queryx`
       if (column.externalFilterQuery) {
-        query = this.queriesUtil.addAndFilter(
-          query,
+        queryx = this.queriesUtil.addAndFilter(
+          queryx,
           column.externalFilterQuery.query
         );
       }
@@ -251,34 +257,34 @@ export class TestingDeviceService {
     // when a column is sortable and has a specified sorting order
     if (column.sortable && column.sortOrder) {
       // add sorting condition for the configured column `path`
-      query.__orderby.push({
-        [column.path]: column.sortOrder === "asc" ? 1 : -1,
+      queryx.__orderby.push({
+        [column.path]: column.sortOrder === 'asc' ? 1 : -1
       });
     }
 
-    return query;
+    return queryx;
   }
 
   async onItemDelete(m: Partial<IManagedObject>): Promise<void> {
     const params: any = {
-      cascade: true,
+      cascade: true
     };
     await this.inventoryService.delete(m.id, params);
     this.refreshData$.next(true);
-    this.alert.success("Test Devices are deleted!");
+    this.alert.success('Test Devices are deleted!');
   }
 
   async onItemsDelete(ms: string[]): Promise<void> {
     const params: any = {
-      cascade: true,
+      cascade: true
     };
-    let deletePromises: Promise<IResult<any>>[] = [];
+    const deletePromises: Promise<IResult<any>>[] = [];
     ms.forEach(async (m) => {
       deletePromises.push(this.inventoryService.delete(m, params));
     });
     Promise.all(deletePromises).then(() => {
       this.refreshData$.next(true);
     });
-    this.alert.success("Test Devices are deleted!");
+    this.alert.success('Test Devices are deleted!');
   }
 }

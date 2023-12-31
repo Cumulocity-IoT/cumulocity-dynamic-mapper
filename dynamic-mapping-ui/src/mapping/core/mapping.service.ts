@@ -18,17 +18,16 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 import {
   FetchClient,
   IFetchResponse,
   IIdentified,
   InventoryService,
-  QueriesUtil,
-} from "@c8y/client";
-import * as _ from "lodash";
-import { BehaviorSubject } from "rxjs";
-import { BrokerConfigurationService, Operation } from "../../configuration";
+  QueriesUtil
+} from '@c8y/client';
+import { BehaviorSubject } from 'rxjs';
+import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   BASE_URL,
   MAPPING_FRAGMENT,
@@ -38,18 +37,18 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   Direction,
   Mapping,
-  SharedService,
-} from "../../shared";
-import { JSONProcessorInbound } from "../processor/impl/json-processor-inbound.service";
-import { JSONProcessorOutbound } from "../processor/impl/json-processor-outbound.service";
+  SharedService
+} from '../../shared';
+import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
+import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
 import {
   ProcessingContext,
   ProcessingType,
-  SubstituteValue,
-} from "../processor/prosessor.model";
-import { C8YAPISubscription } from "../shared/mapping.model";
+  SubstituteValue
+} from '../processor/prosessor.model';
+import { C8YAPISubscription } from '../shared/mapping.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class MappingService {
   constructor(
     private inventory: InventoryService,
@@ -63,46 +62,46 @@ export class MappingService {
   }
 
   queriesUtil: QueriesUtil;
-  protected JSONATA = require("jsonata");
+  protected JSONATA = require('jsonata');
 
   private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
 
-  public async changeActivationMapping(parameter: any) {
+  async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
   }
 
-  public async loadMappings(direction: Direction): Promise<Mapping[]> {
-    let result: Mapping[] = [];
+  async loadMappings(direction: Direction): Promise<Mapping[]> {
+    const result: Mapping[] = [];
 
     const filter: object = {
       pageSize: 100,
       withTotalPages: true,
-      type: MAPPING_TYPE,
+      type: MAPPING_TYPE
     };
-    let query: any = { "d11r_mapping.direction": direction };
+    let query: any = { 'd11r_mapping.direction': direction };
 
     if (direction == Direction.INBOUND) {
       query = this.queriesUtil.addOrFilter(query, {
-        __not: { __has: "d11r_mapping.direction" },
+        __not: { __has: 'd11r_mapping.direction' }
       });
     }
     query = this.queriesUtil.addAndFilter(query, {
-      type: { __has: "d11r_mapping" },
+      type: { __has: 'd11r_mapping' }
     });
 
-    let data = (await this.inventory.listQuery(query, filter)).data;
+    const { data } = await this.inventory.listQuery(query, filter);
     // const query = {
     //       'd11r_mapping.snoopStatus': direction
     // }
-    //let data = (await this.inventory.list(filter)).data;
+    // let data = (await this.inventory.list(filter)).data;
 
     data.forEach((m) =>
       result.push({
         ...m[MAPPING_FRAGMENT],
-        id: m.id,
+        id: m.id
       })
     );
     return result;
@@ -123,35 +122,35 @@ export class MappingService {
   }
 
   async updateSubscriptions(sub: C8YAPISubscription): Promise<any> {
-    let response = this.client.fetch(
+    const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
       {
         headers: {
-          "content-type": "application/json",
+          'content-type': 'application/json'
         },
         body: JSON.stringify(sub),
-        method: "PUT",
+        method: 'PUT'
       }
     );
-    let data = await response;
+    const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    let m = await data.text();
+    const m = await data.text();
     return m;
   }
 
   async deleteSubscriptions(device: IIdentified): Promise<any> {
-    let response = this.client.fetch(
+    const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/${device.id}`,
       {
         headers: {
-          "content-type": "application/json",
+          'content-type': 'application/json'
         },
-        method: "DELETE",
+        method: 'DELETE'
       }
     );
-    let data = await response;
+    const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    let m = await data.text();
+    const m = await data.text();
     return m;
   }
 
@@ -163,9 +162,9 @@ export class MappingService {
         `${BASE_URL}/${PATH_SUBSCRIPTIONS_ENDPOINT}`,
         {
           headers: {
-            "content-type": "application/json",
+            'content-type': 'application/json'
           },
-          method: "GET",
+          method: 'GET'
         }
       );
       const data = await res.json();
@@ -179,55 +178,55 @@ export class MappingService {
     mappings.forEach((m) => {
       this.inventory.update({
         d11r_mapping: m,
-        id: m.id,
+        id: m.id
       });
     });
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
-    let response = this.client.fetch(
+    const response = this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
       {
         headers: {
-          "content-type": "application/json",
+          'content-type': 'application/json'
         },
         body: JSON.stringify(mapping),
-        method: "PUT",
+        method: 'PUT'
       }
     );
-    let data = await response;
+    const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    let m = await data.json();
+    const m = await data.json();
     return m;
   }
 
   async deleteMapping(id: string): Promise<string> {
-    //let result = this.inventory.delete(mapping.id)
-    let response = await this.client.fetch(
+    // let result = this.inventory.delete(mapping.id)
+    const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
       {
         headers: {
-          "content-type": "application/json",
+          'content-type': 'application/json'
         },
-        method: "DELETE",
+        method: 'DELETE'
       }
     );
-    let data = await response;
+    const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     return data.text();
   }
 
   async createMapping(mapping: Mapping): Promise<Mapping> {
-    let response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
+    const response = this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
       headers: {
-        "content-type": "application/json",
+        'content-type': 'application/json'
       },
       body: JSON.stringify(mapping),
-      method: "POST",
+      method: 'POST'
     });
-    let data = await response;
+    const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    let m = await data.json();
+    const m = await data.json();
     return m;
   }
 
@@ -235,7 +234,7 @@ export class MappingService {
     mapping: Mapping,
     sendPayload: boolean
   ): ProcessingContext {
-    let ctx: ProcessingContext = {
+    const ctx: ProcessingContext = {
       mapping: mapping,
       topic: mapping.templateTopicSample,
       processingType: ProcessingType.UNDEFINED,
@@ -244,7 +243,7 @@ export class MappingService {
       mappingType: mapping.mappingType,
       postProcessingCache: new Map<string, SubstituteValue[]>(),
       sendPayload: sendPayload,
-      requests: [],
+      requests: []
     };
     return ctx;
   }
@@ -253,7 +252,7 @@ export class MappingService {
     mapping: Mapping,
     sendPayload: boolean
   ): Promise<ProcessingContext> {
-    let context = this.initializeContext(mapping, sendPayload);
+    const context = this.initializeContext(mapping, sendPayload);
     if (mapping.direction == Direction.INBOUND) {
       this.jsonProcessorInbound.deserializePayload(context, mapping);
       await this.jsonProcessorInbound.extractFromSource(context);
@@ -268,9 +267,9 @@ export class MappingService {
     return context;
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
-    let result: any = "";
-    if (path != undefined && path != "" && json != undefined) {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+    let result: any = '';
+    if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);
       result = expression.evaluate(json) as JSON;
     }

@@ -24,23 +24,24 @@ import {
   Input,
   OnInit,
   Output,
-  ViewEncapsulation,
-} from "@angular/core";
-import { IIdentified } from "@c8y/client";
+  ViewEncapsulation
+} from '@angular/core';
+import { IIdentified } from '@c8y/client';
 
 @Component({
-  selector: "d11r-mapping-subscription",
-  templateUrl: "mapping-subscription.component.html",
-  styleUrls: ["../shared/mapping.style.css"],
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-subscription',
+  templateUrl: 'mapping-subscription.component.html',
+  styleUrls: ['../shared/mapping.style.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class MappingSubscriptionComponent implements OnInit {
   @Input() deviceList: IIdentified[];
-  @Output() onCancel = new EventEmitter<any>();
-  @Output() onCommit = new EventEmitter<IIdentified>();
+
+  @Output() cancel = new EventEmitter<any>();
+  @Output() commit = new EventEmitter<IIdentified>();
 
   ngOnInit(): void {
-    console.log("MappingSubscription:", this.deviceList);
+    console.log('MappingSubscription:', this.deviceList);
   }
 
   selectionChanged(e) {
@@ -48,10 +49,10 @@ export class MappingSubscriptionComponent implements OnInit {
   }
 
   clickedUpdateSubscription() {
-    this.onCommit.emit(this.deviceList);
+    this.commit.emit(this.deviceList);
   }
 
   clickedCancel() {
-    this.onCancel.emit();
+    this.cancel.emit();
   }
 }

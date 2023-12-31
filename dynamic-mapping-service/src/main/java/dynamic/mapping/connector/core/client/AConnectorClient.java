@@ -67,10 +67,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
-    public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
-    public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
-    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
-
     @Getter
     @Setter
     public String tenant;
@@ -247,8 +243,18 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            mappingComponent.sendConnectorLifecycle(tenant, getConnectorStatus(), getConnectorIdent(),
-                    getConnectorName());
+            // disable since the connector status is submitted as Events with the following
+            // method sendConnectorLifecycle()
+            // mappingComponent.sendConnectorLifecycle(tenant,
+            // getConnectorIdent(),getConnectorStatus(),
+            // getConnectorName());
+
+            // check if connector is in DISCONNECTED state and then move it to CONFIGURED
+            // state.
+            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
+                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
+                connectorStatus.clearMessage();
+            }
             sendConnectorLifecycle();
         } catch (Exception ex) {
             log.error("Error during house keeping execution: {}", ex);
@@ -420,7 +426,7 @@ public abstract class AConnectorClient {
                     entry("connectorIdent", getConnectorIdent()),
                     entry("date", date));
             c8yAgent.createEvent("Connector status:" + connectorStatus.status,
-                    STATUS_CONNECTOR_EVENT_TYPE,
+                    C8YAgent.STATUS_CONNECTOR_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
         }
     }
@@ -436,7 +442,7 @@ public abstract class AConnectorClient {
                     entry("connectorName", getConnectorName()),
                     entry("date", date));
             c8yAgent.createEvent(msg,
-                    STATUS_SUBSCRIPTION_EVENT_TYPE,
+                    C8YAgent.STATUS_SUBSCRIPTION_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
         }
     }

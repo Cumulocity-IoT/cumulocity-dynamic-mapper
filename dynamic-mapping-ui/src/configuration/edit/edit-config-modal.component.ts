@@ -1,16 +1,20 @@
-import { Component, Input, OnInit, Output } from "@angular/core";
-import { ModalLabels } from "@c8y/ngx-components";
-import { Subject } from "rxjs";
-import { FormlyFieldConfig } from "@ngx-formly/core";
-import { FormGroup } from "@angular/forms";
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorPropertyType } from "../shared/configuration.model";
+import { Component, Input, OnInit, Output } from '@angular/core';
+import { ModalLabels } from '@c8y/ngx-components';
+import { Subject } from 'rxjs';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { FormGroup } from '@angular/forms';
+import {
+  ConnectorConfiguration,
+  ConnectorSpecification,
+  ConnectorPropertyType
+} from '../shared/configuration.model';
 
 @Component({
-  selector: "d11y-edit-connector-modal",
+  selector: 'd11r-edit-connector-modal',
   template: ` <c8y-modal
     title="Edit properties broker configuration"
-    (onClose)="onSave($event)"
-    (onDismiss)="onDismiss($event)"
+    (onClose)="onSave()"
+    (onDismiss)="onDismiss()"
     [labels]="labels"
     [headerClasses]="'modal-header dialog-header'"
   >
@@ -30,53 +34,55 @@ import { ConnectorConfiguration, ConnectorSpecification, ConnectorPropertyType }
         ></formly-form>
       </div>
     </div>
-  </c8y-modal>`,
+  </c8y-modal>`
 })
 export class EditConfigurationComponent implements OnInit {
-  @Output() closeSubject: Subject<any> = new Subject();
   @Input() add: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
+  @Output() closeSubject: Subject<any> = new Subject();
   brokerFormlyFields: FormlyFieldConfig[] = [];
   brokerFormly: FormGroup = new FormGroup({});
   dynamicFormlyFields: FormlyFieldConfig[] = [];
   dynamicFormly: FormGroup = new FormGroup({});
-  labels: ModalLabels = { ok: "Save", cancel: "Dismiss" };
+  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
 
   ngOnInit(): void {
     this.brokerFormlyFields = [
       {
-        className: "col-lg-12",
-        key: "connectorType",
-        type: "select",
-        wrappers: ["c8y-form-field"],
+        className: 'col-lg-12',
+        key: 'connectorType',
+        type: 'select',
+        wrappers: ['c8y-form-field'],
         templateOptions: {
-          label: "Connector Id",
+          label: 'Connector Id',
           options: this.specifications.map((sp) => {
             return {
               label: sp.connectorType,
-              value: sp.connectorType,
+              value: sp.connectorType
             };
           }),
-          change: (field: FormlyFieldConfig, event?: any) => {
-            this.createDynamicForm(this.brokerFormly.get("connectorType").value);
+          change: () => {
+            this.createDynamicForm(
+              this.brokerFormly.get('connectorType').value
+            );
           },
-          required: true,
-        },
-      },
+          required: true
+        }
+      }
     ];
     if (!this.add) {
       this.createDynamicForm(this.configuration.connectorType);
     }
   }
 
-  onDismiss(event) {
-    console.log("Dismiss");
+  onDismiss() {
+    console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
-  onSave(event) {
-    console.log("Save");
+  onSave() {
+    console.log('Save');
     this.closeSubject.next(this.configuration);
   }
 
@@ -90,16 +96,16 @@ export class EditConfigurationComponent implements OnInit {
     this.dynamicFormlyFields.push({
       fieldGroup: [
         {
-          className: "col-lg-12",
-          key: "name",
-          type: "input",
-          wrappers: ["c8y-form-field"],
+          className: 'col-lg-12',
+          key: 'name',
+          type: 'input',
+          wrappers: ['c8y-form-field'],
           templateOptions: {
-            label: "Name",
-            required: true,
-          },
-        },
-      ],
+            label: 'Name',
+            required: true
+          }
+        }
+      ]
     });
     if (dynamicFields) {
       const numberFields = Object.keys(dynamicFields.properties).length;
@@ -114,47 +120,44 @@ export class EditConfigurationComponent implements OnInit {
             sortedFields.push({ key: key, property: property });
           }
         }
-        const element = dynamicFields.properties[key];
       }
       for (let index = 0; index < sortedFields.length; index++) {
         const entry = sortedFields[index];
         // test if the property is a valid entry, this happens when the list of properties is not numbered consecutivly
         if (entry) {
-          const property = entry.property;
+          const { property } = entry;
           if (property.type == ConnectorPropertyType.NUMERIC_PROPERTY) {
             this.dynamicFormlyFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
-                  className: "col-lg-12",
+                  className: 'col-lg-12',
                   key: `properties.${entry.key}`,
-                  type: "input",
-                  wrappers: ["c8y-form-field"],
+                  type: 'input',
+                  wrappers: ['c8y-form-field'],
                   templateOptions: {
-                    type: "number",
+                    type: 'number',
                     label: entry.key,
-                    required: property.required,
-                  },
-                },
-              ],
+                    required: property.required
+                  }
+                }
+              ]
             });
-          } else if (
-            property.type == ConnectorPropertyType.STRING_PROPERTY
-          ) {
+          } else if (property.type == ConnectorPropertyType.STRING_PROPERTY) {
             this.dynamicFormlyFields.push({
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
-                  className: "col-lg-12",
+                  className: 'col-lg-12',
                   key: `properties.${entry.key}`,
-                  type: "input",
-                  wrappers: ["c8y-form-field"],
+                  type: 'input',
+                  wrappers: ['c8y-form-field'],
                   templateOptions: {
                     label: entry.key,
-                    required: property.required,
-                  },
-                },
-              ],
+                    required: property.required
+                  }
+                }
+              ]
             });
           } else if (
             property.type == ConnectorPropertyType.SENSITIVE_STRING_PROPERTY
@@ -163,35 +166,33 @@ export class EditConfigurationComponent implements OnInit {
               // fieldGroupClassName: "row",
               fieldGroup: [
                 {
-                  className: "col-lg-12",
+                  className: 'col-lg-12',
                   key: `properties.${entry.key}`,
-                  type: "input",
-                  wrappers: ["c8y-form-field"],
+                  type: 'input',
+                  wrappers: ['c8y-form-field'],
                   templateOptions: {
-                    type: "password",
+                    type: 'password',
                     label: entry.key,
-                    required: property.required,
-                  },
-                },
-              ],
+                    required: property.required
+                  }
+                }
+              ]
             });
-          } else if (
-            property.type == ConnectorPropertyType.BOOLEAN_PROPERTY
-          ) {
+          } else if (property.type == ConnectorPropertyType.BOOLEAN_PROPERTY) {
             this.dynamicFormlyFields.push({
-              //fieldGroupClassName: "row",
+              // fieldGroupClassName: "row",
               fieldGroup: [
                 {
-                  className: "col-lg-12",
+                  className: 'col-lg-12',
                   key: `properties.${entry.key}`,
-                  type: "switch",
-                  wrappers: ["c8y-form-field"],
+                  type: 'switch',
+                  wrappers: ['c8y-form-field'],
                   templateOptions: {
                     label: entry.key,
-                    required: property.required,
-                  },
-                },
-              ],
+                    required: property.required
+                  }
+                }
+              ]
             });
           }
         }

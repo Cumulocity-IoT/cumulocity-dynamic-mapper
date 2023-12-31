@@ -19,13 +19,13 @@
  * @authors Christof Strack
  */
 
-import { Direction } from "../../shared";
+import { Direction } from '../../shared';
 
 export enum EditorMode {
-  CREATE = "CREATE",
-  UPDATE = "UPDATE",
-  READ_ONLY = "READ_ONLY",
-  COPY = "COPY",
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  READ_ONLY = 'READ_ONLY',
+  COPY = 'COPY'
 }
 
 export interface StepperConfiguration {

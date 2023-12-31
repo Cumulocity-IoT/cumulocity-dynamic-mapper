@@ -163,10 +163,8 @@ public class MappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            ServiceConfiguration serviceConfiguration = new ServiceConfiguration();
-            serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
-            bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
-                    contextService.getContext(), tenant);
+            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+            bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
@@ -301,7 +299,7 @@ public class MappingRestController {
         }
     }
 
-    @RequestMapping(value = "/configuration/service", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/configuration/service", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<HttpStatus> configureConnectionToBroker(
             @Valid @RequestBody ServiceConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();

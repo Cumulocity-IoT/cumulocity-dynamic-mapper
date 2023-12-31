@@ -18,18 +18,27 @@
  *
  * @authors Christof Strack
  */
-
-import { Component } from "@angular/core";
-import { FieldType } from "@ngx-formly/core";
+import { Component } from '@angular/core';
+import { FieldWrapper } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-field-message",
+  selector: 'd11r-formly-horizontal-wrapper',
   template: `
-    <c8y-messages>
-      <c8y-message [class]="to.textClass" *ngIf="to.enabled">
-        {{ to.content }}
-      </c8y-message>
-    </c8y-messages>
-  `,
+    <div class="form-group row">
+      <label [attr.for]="id" class="col-sm-2 col-form-label" *ngIf="to.label">
+        {{ to.label }}
+        <ng-container *ngIf="to.required && to.hideRequiredMarker !== true"
+          >*</ng-container
+        >
+      </label>
+      <div class="col-sm-7">
+        <ng-template #fieldComponent></ng-template>
+      </div>
+
+      <div *ngIf="showError" class="col-sm-3 invalid-feedback d-block">
+        <formly-validation-message [field]="field"></formly-validation-message>
+      </div>
+    </div>
+  `
 })
-export class MessageField extends FieldType {}
+export class FormlyHorizontalWrapper extends FieldWrapper {}

@@ -64,18 +64,18 @@
     </div>
   </div>
   <div class="card-footer separator card-column-30">
-    <div *ngIf="app.loaded == ExtensionStatus.COMPLETE">
+    <div *ngIf="app.loaded === ExtensionStatus.COMPLETE">
       <span class="badge badge-success"> {{ app.extensionEntries.length }}</span
       ><span class="text-muted">&nbsp;Loaded</span>
     </div>
-    <div *ngIf="app.loaded == ExtensionStatus.NOT_LOADED">
+    <div *ngIf="app.loaded === ExtensionStatus.NOT_LOADED">
       <span class="text-muted">Not Loaded</span>
     </div>
-    <div *ngIf="app.loaded == ExtensionStatus.PARTIALLY">
+    <div *ngIf="app.loaded === ExtensionStatus.PARTIALLY">
       <span class="badge badge-success"> {{ app.extensionEntries.length }}</span
       ><span class="text-muted">Partially&nbsp;</span>
     </div>
-    <div *ngIf="app.loaded == ExtensionStatus.UNKNOWN">
+    <div *ngIf="app.loaded === ExtensionStatus.UNKNOWN">
       <span class="text-muted">Not Known</span>
     </div>
   </div>

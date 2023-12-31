@@ -19,13 +19,26 @@
  * @authors Christof Strack
  */
 
-import { Component } from "@angular/core";
-import { FieldType } from "@ngx-formly/core";
+import { Component } from '@angular/core';
+import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: "d11r-formly-filler",
+  selector: 'd11r-formly-switch',
   template: `
-    <div class="form-group row" style="height:80px"></div>
-  `,
+    <div class="form-group row">
+      <label class="c8y-switch" *ngIf="to.label">
+        <input
+          type="checkbox"
+          [formControl]="formControl"
+          [formlyAttributes]="field"
+        />
+        <span></span>
+        {{ to.label }}
+      </label>
+      <div *ngIf="showError" class="col-sm-3 invalid-feedback d-block">
+        <formly-validation-message [field]="field"></formly-validation-message>
+      </div>
+    </div>
+  `
 })
-export class FormlyFiller extends FieldType {}
+export class C8YSwitchField extends FieldType {}

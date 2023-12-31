@@ -18,11 +18,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Mapping,
-  MappingType,
-  RepairStrategy,
-} from "../../shared";
+import { Mapping, MappingType, RepairStrategy } from '../../shared';
 
 export interface C8YRequest {
   predecessor?: number;
@@ -55,7 +51,7 @@ export enum ProcessingType {
   ONE_DEVICE_ONE_VALUE,
   ONE_DEVICE_MULTIPLE_VALUE,
   MULTIPLE_DEVICE_ONE_VALUE,
-  MULTIPLE_DEVICE_MULTIPLE_VALUE,
+  MULTIPLE_DEVICE_MULTIPLE_VALUE
 }
 
 export enum SubstituteValueType {
@@ -63,7 +59,7 @@ export enum SubstituteValueType {
   TEXTUAL,
   OBJECT,
   IGNORE,
-  ARRAY,
+  ARRAY
 }
 
 export interface SubstituteValue {

@@ -18,79 +18,82 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from "@angular/core";
-import { AlertService } from "@c8y/ngx-components";
-import * as _ from "lodash";
+import { Injectable } from '@angular/core';
+import { AlertService } from '@c8y/ngx-components';
+import * as _ from 'lodash';
 import {
   API,
   Mapping,
   MappingType,
   RepairStrategy,
-  MAPPING_TEST_DEVICE_TYPE,
-} from "../../shared";
-import { findDeviceIdentifier, getTypedValue } from "../shared/util";
-import { C8YAgent } from "../core/c8y-agent.service";
+  MAPPING_TEST_DEVICE_TYPE
+} from '../../shared';
+import { findDeviceIdentifier, getTypedValue } from '../shared/util';
+import { C8YAgent } from '../core/c8y-agent.service';
 import {
   ProcessingContext,
   SubstituteValue,
-  SubstituteValueType,
-} from "./prosessor.model";
+  SubstituteValueType
+} from './prosessor.model';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessorInbound {
-  constructor(private alert: AlertService, private c8yClient: C8YAgent) {}
+  constructor(
+    private alert: AlertService,
+    private c8yClient: C8YAgent
+  ) {}
 
-  public abstract deserializePayload(
+  abstract deserializePayload(
     context: ProcessingContext,
     mapping: Mapping
   ): ProcessingContext;
 
-  public abstract extractFromSource(context: ProcessingContext): void;
+  abstract extractFromSource(context: ProcessingContext): void;
 
-  public initializeCache(): void {
+  initializeCache(): void {
     this.c8yClient.initializeCache();
   }
 
-  protected JSONATA = require("jsonata");
+  protected JSONATA = require('jsonata');
 
-  public async substituteInTargetAndSend(context: ProcessingContext) {
-    //step 3 replace target with extract content from inbound payload
-    let mapping = context.mapping;
+  async substituteInTargetAndSend(context: ProcessingContext) {
+    // step 3 replace target with extract content from inbound payload
+    const { mapping } = context;
 
-    let postProcessingCache: Map<string, SubstituteValue[]> =
-      context.postProcessingCache;
+    const { postProcessingCache } = context;
     let maxEntry: string = findDeviceIdentifier(context.mapping).pathTarget;
-    for (let entry of postProcessingCache.entries()) {
+    for (const entry of postProcessingCache.entries()) {
       if (postProcessingCache.get(maxEntry).length < entry[1].length) {
         maxEntry = entry[0];
       }
     }
 
-    let deviceEntries: SubstituteValue[] = postProcessingCache.get(
+    const deviceEntries: SubstituteValue[] = postProcessingCache.get(
       findDeviceIdentifier(context.mapping).pathTarget
     );
 
-    let countMaxlistEntries: number = postProcessingCache.get(maxEntry).length;
-    let toDouble: SubstituteValue = deviceEntries[0];
+    const countMaxlistEntries: number =
+      postProcessingCache.get(maxEntry).length;
+    const [toDouble] = deviceEntries;
     while (deviceEntries.length < countMaxlistEntries) {
       deviceEntries.push(toDouble);
     }
 
     let i: number = 0;
-    for (let device of deviceEntries) {
+    for (const device of deviceEntries) {
       let predecessor: number = -1;
       let payloadTarget: JSON = null;
       try {
         payloadTarget = JSON.parse(mapping.target);
       } catch (e) {
-        this.alert.warning("Target Payload is not a valid json object!");
+        this.alert.warning('Target Payload is not a valid json object!');
         throw e;
       }
-      for (let pathTarget of postProcessingCache.keys()) {
+      for (const pathTarget of postProcessingCache.keys()) {
         let substituteValue: SubstituteValue = {
-          value: "NOT_DEFINED" as any,
+          value: 'NOT_DEFINED' as any,
           type: SubstituteValueType.TEXTUAL,
-          repairStrategy: RepairStrategy.DEFAULT,
+          repairStrategy: RepairStrategy.DEFAULT
         };
         if (i < postProcessingCache.get(pathTarget).length) {
           substituteValue = _.clone(postProcessingCache.get(pathTarget)[i]);
@@ -107,7 +110,7 @@ export abstract class PayloadProcessorInbound {
             substituteValue.repairStrategy ==
             RepairStrategy.USE_LAST_VALUE_OF_ARRAY
           ) {
-            let last: number = postProcessingCache.get(pathTarget).length - 1;
+            const last: number = postProcessingCache.get(pathTarget).length - 1;
             substituteValue = _.clone(
               postProcessingCache.get(pathTarget)[last]
             );
@@ -125,7 +128,7 @@ export abstract class PayloadProcessorInbound {
             let sourceId: string;
             const identity = {
               externalId: substituteValue.value.toString(),
-              type: mapping.externalIdType,
+              type: mapping.externalIdType
             };
             try {
               sourceId = await this.c8yClient.resolveExternalId2GlobalId(
@@ -138,30 +141,26 @@ export abstract class PayloadProcessorInbound {
               );
             }
             if (!sourceId && mapping.createNonExistingDevice) {
-              let request = {
+              const request = {
                 c8y_IsDevice: {},
-                name:
-                  "device_" +
-                  mapping.externalIdType +
-                  "_" +
-                  substituteValue.value,
+                name: `device_${mapping.externalIdType}_${substituteValue.value}`,
                 d11r_device_generatedType: {},
                 d11r_testDevice: {},
-                type: MAPPING_TEST_DEVICE_TYPE,
+                type: MAPPING_TEST_DEVICE_TYPE
               };
-              let newPredecessor = context.requests.push({
+              const newPredecessor = context.requests.push({
                 predecessor: predecessor,
-                method: "PATCH",
+                method: 'PATCH',
                 source: device.value,
                 externalIdType: mapping.externalIdType,
                 request: request,
-                targetAPI: API.INVENTORY.name,
+                targetAPI: API.INVENTORY.name
               });
               try {
-                let response = await this.c8yClient.upsertDevice(
+                const response = await this.c8yClient.upsertDevice(
                   {
                     externalId: substituteValue.value.toString(),
-                    type: mapping.externalIdType,
+                    type: mapping.externalIdType
                   },
                   context
                 );
@@ -173,11 +172,7 @@ export abstract class PayloadProcessorInbound {
               predecessor = newPredecessor;
             } else if (!sourceId && context.sendPayload) {
               throw new Error(
-                "External id " +
-                  substituteValue +
-                  " for type " +
-                  mapping.externalIdType +
-                  " not found!"
+                `External id ${substituteValue} for type ${mapping.externalIdType} not found!`
               );
             } else if (!sourceId) {
               substituteValue.value = substituteValue.value.toString();
@@ -191,7 +186,7 @@ export abstract class PayloadProcessorInbound {
             payloadTarget,
             pathTarget
           );
-          //} else if (pathTarget != API[mapping.targetAPI].identifier) {
+          // } else if (pathTarget != API[mapping.targetAPI].identifier) {
         } else {
           this.substituteValueInObject(
             mapping.mappingType,
@@ -205,19 +200,19 @@ export abstract class PayloadProcessorInbound {
        * step 4 prepare target payload for sending to c8y
        */
       if (mapping.targetAPI == API.INVENTORY.name) {
-        let newPredecessor = context.requests.push({
+        const newPredecessor = context.requests.push({
           predecessor: predecessor,
-          method: "PATCH",
+          method: 'PATCH',
           source: device.value,
           externalIdType: mapping.externalIdType,
           request: payloadTarget,
-          targetAPI: API.INVENTORY.name,
+          targetAPI: API.INVENTORY.name
         });
         try {
-          let response = await this.c8yClient.upsertDevice(
+          const response = await this.c8yClient.upsertDevice(
             {
               externalId: getTypedValue(device),
-              type: mapping.externalIdType,
+              type: mapping.externalIdType
             },
             context
           );
@@ -227,16 +222,16 @@ export abstract class PayloadProcessorInbound {
         }
         predecessor = context.requests.length;
       } else if (mapping.targetAPI != API.INVENTORY.name) {
-        let newPredecessor = context.requests.push({
+        const newPredecessor = context.requests.push({
           predecessor: predecessor,
-          method: "POST",
+          method: 'POST',
           source: device.value,
           externalIdType: mapping.externalIdType,
           request: payloadTarget,
-          targetAPI: API[mapping.targetAPI].name,
+          targetAPI: API[mapping.targetAPI].name
         });
         try {
-          let response = await this.c8yClient.createMEAO(context);
+          const response = await this.c8yClient.createMEAO(context);
           context.requests[newPredecessor - 1].response = response;
         } catch (e) {
           context.requests[newPredecessor - 1].error = e;
@@ -244,7 +239,7 @@ export abstract class PayloadProcessorInbound {
         predecessor = context.requests.length;
       } else {
         console.warn(
-          "Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}"
+          'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
         );
       }
       console.log(
@@ -254,19 +249,19 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  public substituteValueInObject(
+  substituteValueInObject(
     type: MappingType,
     sub: SubstituteValue,
     jsonObject: JSON,
     keys: string
   ) {
-    let subValueMissing: boolean = sub.value == null;
-    let subValueNull: boolean =
+    const subValueMissing: boolean = sub.value == null;
+    const subValueNull: boolean =
       sub.value == null || (sub.value != null && sub.value != undefined);
 
-    if (keys == "$") {
+    if (keys == '$') {
       Object.keys(getTypedValue(sub)).forEach((key) => {
-        jsonObject[key] = getTypedValue(sub)[key as keyof Object];
+        jsonObject[key] = getTypedValue(sub)[key as keyof unknown];
       });
     } else {
       if (
@@ -276,11 +271,11 @@ export abstract class PayloadProcessorInbound {
       ) {
         _.unset(jsonObject, keys);
       } else if (sub.repairStrategy == RepairStrategy.CREATE_IF_MISSING) {
-        let pathIsNested: boolean = keys.includes(".") || keys.includes("[");
+        const pathIsNested: boolean = keys.includes('.') || keys.includes('[');
         if (pathIsNested) {
-          throw new Error("Can only crrate new nodes ion the root level!");
+          throw new Error('Can only crrate new nodes ion the root level!');
         }
-        //jsonObject.put("$", keys, sub.typedValue());
+        // jsonObject.put("$", keys, sub.typedValue());
         _.set(jsonObject, keys, getTypedValue(sub));
       } else {
         _.set(jsonObject, keys, getTypedValue(sub));
@@ -288,9 +283,9 @@ export abstract class PayloadProcessorInbound {
     }
   }
 
-  public async evaluateExpression(json: JSON, path: string): Promise<JSON> {
-    let result: any = "";
-    if (path != undefined && path != "" && json != undefined) {
+  async evaluateExpression(json: JSON, path: string): Promise<JSON> {
+    let result: any = '';
+    if (path != undefined && path != '' && json != undefined) {
       const expression = this.JSONATA(path);
       result = expression.evaluate(json) as JSON;
     }

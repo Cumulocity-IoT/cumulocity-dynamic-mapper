@@ -21,55 +21,51 @@
 import {
   Component,
   Input,
+  OnDestroy,
   OnInit,
   ViewChild,
-  ViewEncapsulation,
-} from "@angular/core";
-import { FormBuilder, FormGroup, Validators } from "@angular/forms";
-import { C8yStepper, ModalLabels } from "@c8y/ngx-components";
-import { Subject } from "rxjs";
-import { Direction, MappingType } from "../../shared";
-import { isDisabled } from "../shared/util";
+  ViewEncapsulation
+} from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
+import { Subject } from 'rxjs';
+import { Direction, MappingType } from '../../shared';
+import { isDisabled } from '../shared/util';
 
 @Component({
-  selector: "d11r-mapping-type",
-  templateUrl: "./mapping-type.component.html",
-  encapsulation: ViewEncapsulation.None,
+  selector: 'd11r-mapping-type',
+  templateUrl: './mapping-type.component.html',
+  encapsulation: ViewEncapsulation.None
 })
-export class MappingTypeComponent implements OnInit {
+export class MappingTypeComponent implements OnInit, OnDestroy {
+  @Input() direction: Direction;
+
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
-
-  @ViewChild(C8yStepper, { static: true })
-  closeSubject: Subject<MappingType>;
-  labels: ModalLabels = { cancel: "Cancel" };
-
-  @Input()
-  direction: Direction;
-
+  @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<MappingType>;
+  labels: ModalLabels = { cancel: 'Cancel' };
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
-
   mappingType: MappingType.JSON;
 
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
-    console.log("Subject:", this.closeSubject, this.labels);
+    console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
-      mappingType: ["", Validators.required],
+      mappingType: ['', Validators.required]
     });
   }
 
-  onDismiss(event) {
+  onDismiss() {
     this.closeSubject.next(undefined);
     this.closeSubject.complete();
   }
 
-  onClose(event) {
+  onClose() {
     this.closeSubject.next(this.mappingType);
     this.closeSubject.complete();
   }

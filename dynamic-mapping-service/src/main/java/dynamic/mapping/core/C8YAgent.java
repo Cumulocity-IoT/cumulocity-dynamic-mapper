@@ -96,8 +96,6 @@ import dynamic.mapping.notification.C8YAPISubscriber;
 @Service
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
-    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
-
     @Autowired
     private EventApi eventApi;
 
@@ -159,9 +157,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
+    public static final String MAPPING_FRAGMENT = "d11r_mapping";
+
+    public static final String CONNECTOR_FRAGMENT = "d11r_connector";
+
+    public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
+
+    public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
+
+    private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
             ProcessingContext<?> context) {
@@ -242,7 +249,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             er.setDateTime(eventTime);
             er.setType(type);
             if (properties != null) {
-                er.setProperty(AConnectorClient.CONNECTOR_FRAGMENT, properties);
+                er.setProperty(C8YAgent.CONNECTOR_FRAGMENT, properties);
             }
             this.eventApi.createAsync(er);
         });
@@ -575,14 +582,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (mappingServiceIdRepresentation != null) {
             amo = inventoryApi.get(mappingServiceIdRepresentation.getManagedObject().getId());
-            log.info("Tenant {} - Agent with ID {} already exists {} , {}", tenant,
+            log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation, amo);
+                    mappingServiceIdRepresentation, amo.getId());
+            log.info("Tenant {} - Agent representation {}", tenant,
+                    MappingServiceRepresentation.AGENT_ID,
+                    mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.set(new Agent());
             amo.set(new IsDevice());
-            amo.setProperty(MappingServiceRepresentation.MAPPING_FRAGMENT,
+            amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());
             amo = inventoryApi.create(amo, null);
             log.info("Tenant {} - Agent has been created with ID {}", tenant, amo.getId());

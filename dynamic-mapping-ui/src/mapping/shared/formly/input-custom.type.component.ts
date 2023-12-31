@@ -20,41 +20,39 @@
  */
 
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { ConfigOption, FieldType } from '@ngx-formly/core';
+import { FieldType } from '@ngx-formly/core';
 
 @Component({
-  selector: 'c8y-field-checkbox',
-  templateUrl: './checkbox.type.component.html',
+  selector: 'd11r-formly-field-input-custom',
+  template: `<input
+      *ngIf="type !== 'number'; else numberTmp"
+      [type]="type"
+      [formControl]="formControl"
+      [class]="class"
+      [formlyAttributes]="field"
+      [required]="to.required"
+      [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+      [class.is-invalid]="showError"
+    />
+    <ng-template #numberTmp>
+      <input
+        type="number"
+        [formControl]="formControl"
+        [class]="class"
+        [formlyAttributes]="field"
+        [required]="to.required"
+        [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+        [class.is-invalid]="showError"
+      />
+    </ng-template>`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FieldCheckbox extends FieldType {
-  static readonly CONFIG: ConfigOption = {
-    types: [
-      {
-        name: 'checkbox',
-        component: FieldCheckbox
-      },
-      {
-        name: 'boolean',
-        extends: 'checkbox'
-      },
-      {
-        name: 'switch',
-        extends: 'checkbox',
-        defaultOptions: {
-          templateOptions: {
-            switchMode: false,
-            indeterminate: false
-          }
-        }
-      }
-    ]
-  };
+export class FieldInputCustom extends FieldType {
+  get type() {
+    return this.to.type || 'text';
+  }
 
-  defaultOptions = {
-    templateOptions: {
-      indeterminate: true,
-      formCheck: 'custom' // 'custom' | 'custom-inline' | 'custom-switch' | 'stacked' | 'inline' | 'nolabel'
-    }
-  };
+  get class() {
+    return `form-control ${this.to.class}`;
+  }
 }
