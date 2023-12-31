@@ -29,9 +29,7 @@
 	<parent>
 		<groupId>com.softwareag.c8y.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
-        <!-- <version>${revision}</version> -->
-        <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly -->
-		<version>4.1.1-SNAPSHOT</version>
+        <version>${revision}</version>
 	</parent>
 	<dependencies>
 		<dependency>
@@ -147,6 +145,21 @@
 					</descriptorRefs>
 				</configuration>
 			</plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <configuration>
+                </configuration>
+                <executions>
+                  <execution>
+                    <id>flatten</id>
+                    <phase>process-resources</phase>
+                    <goals>
+                      <goal>flatten</goal>
+                    </goals>
+                  </execution>
+                </executions>
+              </plugin>
 		</plugins>
 	</build>
 </project>
