@@ -142,6 +142,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 //context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
+                log.error("Tenant {} - Error during publishing outbound message: {}", tenant, e);
             }
             predecessor = newPredecessor;
         } else {

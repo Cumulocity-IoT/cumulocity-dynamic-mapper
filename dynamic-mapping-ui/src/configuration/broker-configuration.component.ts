@@ -68,7 +68,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     logConnectorErrorInBackend: false,
     sendConnectorLifecycle: false,
     sendMappingStatus: false,
-    sendSubscriptionEvents: false
+    sendSubscriptionEvents: false,
+    sendNotificationLifecycle: false,
   };
 
   constructor(
@@ -86,7 +87,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       logConnectorErrorInBackend: new FormControl(''),
       sendConnectorLifecycle: new FormControl(''),
       sendMappingStatus: new FormControl(''),
-      sendSubscriptionEvents: new FormControl('')
+      sendSubscriptionEvents: new FormControl(''),
+      sendNotificationLifecycle: new FormControl(''),
     });
     this.feature = await this.sharedService.getFeatures();
     this.specifications =

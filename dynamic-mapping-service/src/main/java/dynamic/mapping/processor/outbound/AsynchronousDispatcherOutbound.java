@@ -55,8 +55,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-//@Service
-//Not a service anymore, manually instantiated by the C8YSubscriber
+// @Service
+// Not a service anymore, manually instantiated by the C8YSubscriber
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
@@ -88,16 +88,16 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("Connection was closed.");
         if (reason.contains("401"))
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),401);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),0);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 0);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
         return notificationHeaders.get(0).split("/")[1];
     }
 
-    public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
+    public static class MappingProcessorOutbound<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
@@ -109,7 +109,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         ObjectMapper objectMapper;
         String tenant;
 
-        public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
+        public MappingProcessorOutbound(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound, boolean sendPayload,
                 C8YMessage c8yMessage, ObjectMapper objectMapper, String tenant) {
             this.resolvedMappings = mappings;
@@ -209,38 +209,46 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
 
     }
+
     @Getter
     protected AConnectorClient connectorClient;
 
-    //The Outbound Dispatcher is hardly connected to the Connector otherwise it is not possible to correlate messages received bei Notification API to the correct Connector
-    public AsynchronousDispatcherOutbound(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent) {
+    private PayloadProcessor payloadProcessor;
+
+    // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
+    // not possible to correlate messages received bei Notification API to the
+    // correct Connector
+    public AsynchronousDispatcherOutbound(ObjectMapper objectMapper, C8YAgent c8YAgent,
+            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
+            PayloadProcessor payloadProcessor) {
         this.connectorClient = connectorClient;
         this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;
         this.cachedThreadPool = cachedThreadPool;
         this.mappingComponent = mappingComponent;
+        this.payloadProcessor = payloadProcessor;
     }
 
-    //@Autowired
+    // @Autowired
     @Setter
     protected C8YAgent c8yAgent;
 
-    //@Autowired
-    //@Setter
-    //protected ConnectorRegistry connectorRegistry;
+    // @Autowired
+    // @Setter
+    // protected ConnectorRegistry connectorRegistry;
 
     @Setter
     protected ObjectMapper objectMapper;
 
-    //@Autowired
-    //Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
+    // @Autowired
+    // Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
 
-    //@Autowired
-    //@Qualifier("cachedThreadPool")
+    // @Autowired
+    // @Qualifier("cachedThreadPool")
     @Setter
     private ExecutorService cachedThreadPool;
 
-    //@Autowired
+    // @Autowired
     @Setter
     MappingComponent mappingComponent;
 
@@ -272,10 +280,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         } else {
             return futureProcessingResult;
         }
-        //Here we correlate the connector of the Dispatcher to the processor
-        PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
+
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessor.getPayloadProcessorsOutbound(),
+                new MappingProcessorOutbound(resolvedMappings, mappingComponent, c8yAgent,
+                        payloadProcessor.getPayloadProcessorsOutbound(),
                         sendPayload, c8yMessage, objectMapper, tenant));
 
         if (op != null) {

@@ -111,6 +111,8 @@ public class ConnectorRegistry {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if (connectorMap.get(ident) != null) {
                 AConnectorClient client = connectorMap.get(ident);
+                // to avoid memory leaks
+                client.setDispatcher(null);
                 client.disconnect();
                 client.stopHouskeepingAndClose();
                 connectorMap.remove(ident);
