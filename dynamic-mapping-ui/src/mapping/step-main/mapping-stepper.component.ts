@@ -601,17 +601,23 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       console.log(
         'Templates from mapping:',
         this.mapping.target,
-        this.mapping.source
+        this.mapping.source,
+        this.mapping
       );
       this.enrichTemplates();
       this.extensions =
-        (await this.brokerConfigurationService.getProcessorExtensions()) as any;
+        await this.brokerConfigurationService.getProcessorExtensions() as any;
       if (this.mapping?.extension?.name) {
-        this.extensionEvents$.next(
-          Object.keys(
-            this.extensions[this.mapping?.extension?.name].extensionEntries
-          )
-        );
+        if (!this.extensions[this.mapping.extension.name]) {
+          const msg = `The extension ${this.mapping.extension.name} is not loaded. Please load the extension or choose a different one.`;
+          this.alertService.warning(msg);
+        } else {
+          this.extensionEvents$.next(
+            Object.keys(
+              this.extensions[this.mapping.extension.name].extensionEntries
+            )
+          );
+        }
       }
 
       const numberSnooped = this.mapping.snoopedTemplates
