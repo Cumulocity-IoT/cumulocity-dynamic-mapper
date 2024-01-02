@@ -609,7 +609,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         await this.brokerConfigurationService.getProcessorExtensions() as any;
       if (this.mapping?.extension?.name) {
         if (!this.extensions[this.mapping.extension.name]) {
-          const msg = `The extension ${this.mapping.extension.name} is not loaded. Please load the extension or choose a different one.`;
+          const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;
           this.alertService.warning(msg);
         } else {
           this.extensionEvents$.next(

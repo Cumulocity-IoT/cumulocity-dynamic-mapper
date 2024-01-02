@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-// @Service
 public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte[]> {
 
     private Map<String, Extension> extensions = new HashMap<>();

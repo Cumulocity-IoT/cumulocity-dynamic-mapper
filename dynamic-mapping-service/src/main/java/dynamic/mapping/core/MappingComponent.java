@@ -33,7 +33,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -126,7 +125,7 @@ public class MappingComponent {
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
                                     : mappingServiceRepresentation.getMappingStatus().size()));
-            Map<String, MappingStatus> mappingStatus = new HashedMap();
+            Map<String, MappingStatus> mappingStatus = new HashMap<>();
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 mappingStatus.put(ms.ident, ms);
             });
