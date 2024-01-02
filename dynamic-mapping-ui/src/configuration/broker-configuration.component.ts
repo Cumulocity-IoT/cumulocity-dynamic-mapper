@@ -171,6 +171,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const configuration = _.clone(this.configurations[index]);
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
+    this.alert.warning(
+      gettext('Review properies carefully,e.g. client_id must be different across different client connectors to the same broker.')
+    );
 
     const initialState = {
       add: false,

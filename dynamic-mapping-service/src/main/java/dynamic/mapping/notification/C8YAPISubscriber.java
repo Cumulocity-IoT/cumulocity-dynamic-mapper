@@ -495,7 +495,6 @@ public class C8YAPISubscriber {
     }
 
     public NotificationSubscriptionRepresentation createTenantSubscription() {
-
         final String subscriptionName = TENANT_SUBSCRIPTION;
         String tenant = subscriptionsService.getTenant();
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
@@ -630,7 +629,7 @@ public class C8YAPISubscriber {
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         String tenant = subscriptionsService.getTenant();
-        c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTED, null);
+        c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
