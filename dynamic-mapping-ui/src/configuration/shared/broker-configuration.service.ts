@@ -185,8 +185,8 @@ export class BrokerConfigurationService {
       switchMap(() => {
         const filter = {
           pageSize: 5,
-          withTotalPages: true,
-          source: agentId
+          withTotalPages: false,
+          source: agentId,
         };
         if (this.filterStatusLog.eventType !== 'ALL') {
           filter['type'] = this.filterStatusLog.eventType;

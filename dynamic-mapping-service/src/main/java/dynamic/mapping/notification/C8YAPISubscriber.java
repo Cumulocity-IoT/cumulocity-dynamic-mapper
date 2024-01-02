@@ -33,9 +33,6 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
-import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.connector.core.registry.ConnectorRegistry;
-import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.model.C8YAPISubscription;
@@ -49,7 +46,6 @@ import dynamic.mapping.model.API;
 import dynamic.mapping.notification.websocket.Notification;
 import org.apache.commons.collections.ArrayStack;
 import org.java_websocket.enums.ReadyState;
-import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,8 +53,6 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -82,9 +76,6 @@ public class C8YAPISubscriber {
     @Autowired
     @Qualifier("cachedThreadPool")
     private ExecutorService cachedThreadPool;
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
 
     // structure: <tenant, <connectorIdent, asynchronousDispatcherOutbound>>
     @Getter
