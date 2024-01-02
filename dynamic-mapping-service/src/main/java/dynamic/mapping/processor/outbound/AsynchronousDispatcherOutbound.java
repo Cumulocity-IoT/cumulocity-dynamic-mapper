@@ -70,8 +70,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         // We don't care about UPDATES nor DELETES
         if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-            log.info("Tenant - {} Notification received: <{}>", tenant, notification.getMessage());
-            log.info("Tenant - {} Notification headers: <{}>", tenant, notification.getNotificationHeaders());
+            log.info("Tenant {} - Notification received: <{}>", tenant, notification.getMessage());
+            log.info("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
             C8YMessage message = new C8YMessage();
             message.setPayload(notification.getMessage());
             message.setApi(notification.getApi());
@@ -187,7 +187,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
-                                // processor.substituteInTargetAndSend(context);
                                 List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
@@ -221,11 +220,11 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public AsynchronousDispatcherOutbound(ObjectMapper objectMapper, C8YAgent c8YAgent,
             MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
             PayloadProcessor payloadProcessor) {
-        this.connectorClient = connectorClient;
-        this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;
-        this.cachedThreadPool = cachedThreadPool;
+        this.c8yAgent = c8YAgent;
         this.mappingComponent = mappingComponent;
+        this.cachedThreadPool = cachedThreadPool;
+        this.connectorClient = connectorClient;
         this.payloadProcessor = payloadProcessor;
     }
 
@@ -302,7 +301,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     // No Mapping found
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
                             "No Mapping found for operation " + op.toJSON());
-
                 }
             } catch (InterruptedException e) {
                 c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
@@ -311,7 +309,5 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             }
         }
         return futureProcessingResult;
-
     }
-
 }

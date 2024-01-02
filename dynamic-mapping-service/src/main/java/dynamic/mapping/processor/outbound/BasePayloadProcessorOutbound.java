@@ -129,7 +129,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
             } else {
                 context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
             }
-            AbstractExtensibleRepresentation attocRequest = null;
             // remove TOPIC_LEVEL
             payloadTarget.delete(Mapping.TOKEN_TOPIC_LEVEL);
             var newPredecessor = context.addRequest(

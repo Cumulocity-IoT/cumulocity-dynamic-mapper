@@ -45,7 +45,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
-        log.info("WebSocket closed " + (remote ? "by server. " : "") + " Code:" + statusCode + ", reason: " + reason);
+        log.info("WebSocket closed " + (remote ? "by server." : "") + " Code:" + statusCode + ", reason: " + reason);
         if (this.executorService != null)
             this.executorService.shutdownNow();
         this.callback.onClose(statusCode, reason);
