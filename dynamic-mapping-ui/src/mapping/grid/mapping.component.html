@@ -139,8 +139,8 @@
   <div class="bottom-drawer">
     <d11r-mapping-subscription
       *ngIf="showConfigSubscription"
-      (onCancel)="showConfigSubscription = false"
-      (onCommit)="onCommitSubscriptions($event)"
+      (cancel)="showConfigSubscription = false"
+      (commit)="onCommitSubscriptions($event)"
       [deviceList]="subscription.devices"
     >
     </d11r-mapping-subscription>
