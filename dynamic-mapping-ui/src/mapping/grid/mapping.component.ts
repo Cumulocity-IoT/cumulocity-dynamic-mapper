@@ -117,6 +117,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       filterable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
+      sortOrder: 'asc',
       visible: true
     },
     {
