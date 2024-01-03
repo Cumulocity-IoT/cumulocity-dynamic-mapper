@@ -20,35 +20,21 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared';
+import { Direction } from '../../shared/model/shared.model';
 
 @Component({
   template: `
-    <div class="c8y-realtime" title="Tested">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active: context.item.tested,
-          inactive: !context.item.tested
-        }"
-      ></span>
-    </div>
-    <div class="c8y-realtime" title="Snooping">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active:
-            context.item.snoopStatus === 'ENABLED' ||
-            context.item.snoopStatus === 'STARTED',
-          inactive:
-            context.item.snoopStatus === 'NONE' ||
-            context.item.snoopStatus === 'STOPPED'
-        }"
-      ></span>
-    </div>
-  `
+  <span [title]="context.value.direction">
+    <i
+      style="text-align:center; width: 100%;"
+      [c8yIcon]="context.value.direction === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
+      class="m-r-5"
+    ></i>
+  </span>
+`
 })
-export class StatusRendererComponent {
-  constructor(public context: CellRendererContext) {}
-  SnoopStatus: SnoopStatus;
+export class DirectionRendererComponent {
+  Direction = Direction;
+  constructor(public context: CellRendererContext) {
+  }
 }

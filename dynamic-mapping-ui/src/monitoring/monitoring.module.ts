@@ -25,9 +25,15 @@ import { MonitoringComponent } from './grid/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
 import { BrokerConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
+import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 
 @NgModule({
-  declarations: [MonitoringComponent, IdRendererComponent, NumberRendererComponent],
+  declarations: [
+    MonitoringComponent,
+    IdRendererComponent,
+    NumberRendererComponent,
+    DirectionRendererComponent
+  ],
   imports: [CoreModule, BrokerConfigurationModule],
   exports: [],
   providers: [

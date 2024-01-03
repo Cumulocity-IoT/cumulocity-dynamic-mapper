@@ -33,6 +33,7 @@ import { NameRendererComponent } from '../../mapping';
 import { MappingStatus } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
+import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -52,16 +53,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   };
 
   columns: Column[] = [
-    // {
-    //   name: "id",
-    //   header: "System ID",
-    //   path: "id",
-    //   filterable: false,
-    //   dataType: ColumnDataType.TextShort,
-    //   sortOrder: "asc",
-    //   gridTrackSize: "10%",
-    //   cellRendererComponent: IdRendererComponent,
-    // },
     {
       name: 'name',
       header: 'Name',
@@ -69,6 +60,15 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
+      visible: true
+    },
+    {
+      name: 'direction',
+      header: 'Direction',
+      path: 'direction',
+      filterable: false,
+      dataType: ColumnDataType.Icon,
+      cellRendererComponent: DirectionRendererComponent,
       visible: true
     },
     {
@@ -94,7 +94,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Messages Received',
@@ -103,7 +103,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Snooped Templates Total',
@@ -112,7 +112,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Snooped Templates Active',
@@ -121,7 +121,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     }
   ];
 
