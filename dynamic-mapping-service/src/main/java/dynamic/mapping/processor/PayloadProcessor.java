@@ -20,9 +20,6 @@ import java.util.Map;
 
 @Slf4j
 public class PayloadProcessor {
-    private C8YAgent c8YAgent;
-    private ObjectMapper mapper;
-    private String tenant;
     @Setter
     private AConnectorClient connectorClient;
     @Getter

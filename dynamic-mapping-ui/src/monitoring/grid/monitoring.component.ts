@@ -58,6 +58,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Name',
       path: 'name',
       filterable: false,
+      sortOrder: 'asc',
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
       visible: true

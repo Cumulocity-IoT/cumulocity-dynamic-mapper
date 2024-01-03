@@ -35,8 +35,7 @@ import {
   SharedService,
 } from './shared';
 import { TestingModule } from './testing-devices/testing.module';
-
-
+import './shared/styles/shared.css';
 @NgModule({
   imports: [
     CoreModule,

@@ -428,7 +428,7 @@ public class C8YAPISubscriber {
                         tenantWSStatusCode.put(tenant, 0);
                 }
             };
-            CustomWebSocketClient tenant_client = connect(tenantToken, tenantCallback);
+            connect(tenantToken, tenantCallback);
             // tenantClientMap.put(tenant, tenant_client);
         } catch (URISyntaxException e) {
             e.printStackTrace();

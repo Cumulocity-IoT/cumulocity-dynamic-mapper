@@ -24,17 +24,18 @@ import { Direction } from '../../shared/model/shared.model';
 
 @Component({
   template: `
-  <span [title]="context.value.direction">
-    <i
-      style="text-align:center; width: 100%;"
-      [c8yIcon]="context.value.direction === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
-      class="m-r-5"
-    ></i>
-  </span>
-`
+    <span [title]="context.value">
+      <i
+        [style]="context.value === 'OUTBOUND' ? 'width: 100%; color: orange' : 'width: 100%; color: green'"
+        [c8yIcon]="context.value === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
+        class="m-r-5"
+      ></i>
+    </span>
+  `
 })
 export class DirectionRendererComponent {
   Direction = Direction;
   constructor(public context: CellRendererContext) {
+    console.log('Item', context.value);
   }
 }
