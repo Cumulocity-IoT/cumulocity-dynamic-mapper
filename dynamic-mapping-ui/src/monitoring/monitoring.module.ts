@@ -26,13 +26,15 @@ import { IdRendererComponent } from './renderer/id-cell.renderer.component';
 import { BrokerConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
+import { ChartComponent } from './chart/chart.component';
 
 @NgModule({
   declarations: [
     MonitoringComponent,
     IdRendererComponent,
     NumberRendererComponent,
-    DirectionRendererComponent
+    DirectionRendererComponent,
+    ChartComponent
   ],
   imports: [CoreModule, BrokerConfigurationModule],
   exports: [],

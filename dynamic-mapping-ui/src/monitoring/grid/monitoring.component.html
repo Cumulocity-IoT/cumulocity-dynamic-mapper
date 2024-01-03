@@ -27,7 +27,7 @@
     (click)="refreshMappingStatus()"
   >
     <i c8yIcon="refresh"></i>
-    {{ "Refresh" | translate }}
+    {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
@@ -42,5 +42,12 @@
       >
       </c8y-data-grid>
     </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-lg-8 col-lg-offset-3">
+    <d11r-monitoring-chart
+      [mappingStatus]="mappingStatus$"
+    ></d11r-monitoring-chart>
   </div>
 </div>

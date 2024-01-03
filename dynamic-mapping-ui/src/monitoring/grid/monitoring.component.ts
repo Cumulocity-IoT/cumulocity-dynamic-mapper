@@ -27,7 +27,7 @@ import {
   DisplayOptions,
   Pagination
 } from '@c8y/ngx-components';
-import { Observable } from 'rxjs';
+import { Subject } from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import { NameRendererComponent } from '../../mapping';
 import { MappingStatus } from '../../shared';
@@ -42,7 +42,7 @@ import { DirectionRendererComponent } from '../renderer/direction.renderer.compo
   encapsulation: ViewEncapsulation.None
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  mappingStatus$: Observable<MappingStatus[]>;
+  mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
   subscription: object;
 
   displayOptions: DisplayOptions = {
@@ -152,7 +152,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private async initializeMonitoringService() {
     this.subscription =
       await this.monitoringService.subscribeMonitoringChannel();
-    this.mappingStatus$ = this.monitoringService.getCurrentMappingStatus();
+    this.monitoringService
+      .getCurrentMappingStatus()
+      .subscribe((status) => this.mappingStatus$.next(status));
   }
 
   ngOnDestroy(): void {

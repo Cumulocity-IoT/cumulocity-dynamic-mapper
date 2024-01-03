@@ -36,6 +36,6 @@ import { Direction } from '../../shared/model/shared.model';
 export class DirectionRendererComponent {
   Direction = Direction;
   constructor(public context: CellRendererContext) {
-    console.log('Item', context.value);
+   //  console.log('Item', context.value);
   }
 }
