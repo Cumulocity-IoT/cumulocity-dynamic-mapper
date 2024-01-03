@@ -502,7 +502,7 @@ public class MappingRestController {
                 });
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Deleting active mappings is not allowed {}", tenant, ex);
+            log.error("Tenant {} - Exception when deleting mappping {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
         log.info("Tenant {} - After Delete mapping: {}", tenant, id);

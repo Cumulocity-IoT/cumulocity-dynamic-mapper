@@ -35,7 +35,6 @@ import { MappingComponent } from './grid/mapping.component';
 import { ImportMappingsComponent } from './import-modal/import.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
 import { OverwriteSubstitutionModalComponent } from './overwrite/overwrite-substitution-modal.component';
-import { ActiveRendererComponent } from './renderer/active.renderer.component';
 import { APIRendererComponent } from './renderer/api.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
@@ -83,7 +82,6 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     StatusActivationRendererComponent,
     APIRendererComponent,
     NameRendererComponent,
-    ActiveRendererComponent,
     SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,

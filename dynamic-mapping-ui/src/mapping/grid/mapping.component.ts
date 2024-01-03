@@ -20,7 +20,6 @@
  */
 import {
   Component,
-  EventEmitter,
   OnDestroy,
   OnInit,
   ViewEncapsulation
@@ -34,7 +33,6 @@ import {
   ColumnDataType,
   DisplayOptions,
   Pagination,
-  Row,
   gettext
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
@@ -112,14 +110,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
 
   columnsMappings: Column[] = [
-    // {
-    //   name: "id",
-    //   header: "System ID",
-    //   path: "id",
-    //   filterable: false,
-    //   dataType: ColumnDataType.TextShort,
-    //   visible: true,
-    // },
     {
       name: 'name',
       header: 'Name',
@@ -134,14 +124,12 @@ export class MappingComponent implements OnInit, OnDestroy {
       name: 'subscriptionTopic',
       path: 'subscriptionTopic',
       filterable: true
-      // gridTrackSize: "12.5%",
     },
     {
       header: 'Template Topic',
       name: 'templateTopic',
       path: 'templateTopic',
       filterable: true
-      // gridTrackSize: "12.5%",
     },
     {
       name: 'targetAPI',
@@ -160,7 +148,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       filterable: true,
       sortable: false,
       cellRendererComponent: TemplateRendererComponent
-      // gridTrackSize: "20%",
     },
     {
       header: 'Target',
@@ -169,7 +156,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       filterable: true,
       sortable: false,
       cellRendererComponent: TemplateRendererComponent
-      // gridTrackSize: "20%",
     },
     {
       header: 'Test/Snoop',
@@ -188,7 +174,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       filterable: true,
       sortable: false,
       cellRendererComponent: QOSRendererComponent
-      // gridTrackSize: "5%",
     },
     {
       header: 'Active',
@@ -196,7 +181,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       path: 'active',
       filterable: false,
       sortable: true,
-      // cellRendererComponent: ActiveRendererComponent,
       cellRendererComponent: StatusActivationRendererComponent,
       gridTrackSize: '7%'
     }
@@ -222,7 +206,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
-  refresh: EventEmitter<any> = new EventEmitter();
+  // refresh: EventEmitter<any> = new EventEmitter();
 
   pagination: Pagination = {
     pageSize: 3,
@@ -271,7 +255,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    this.loadMappings();
+    this.getMappings();
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
@@ -285,7 +269,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: BuiltInActionType.Delete,
-        callback: this.deleteMappingWithConfirmation.bind(this)
+        callback: this.deleteMappingWithConfirmation.bind(this),
+        showIf: (mapping) => !mapping.active
       },
       {
         type: 'ACTIVATE',
@@ -322,15 +307,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscription.bind(this)
     });
-
-    this.mappingService.listToReload().subscribe(() => {
-      this.loadMappings();
-    });
-  }
-
-  onRowClick(mapping: Row) {
-    console.log('Row :');
-    this.updateMapping(mapping as Mapping);
   }
 
   onAddMapping() {
@@ -416,7 +392,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.mappingToUpdate = mapping;
     console.log('Add mappping', this.mappings);
-    this.refresh.emit();
+    // this.refresh.emit();
     this.showConfigMapping = true;
   }
 
@@ -494,8 +470,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
-    this.loadMappings();
-    this.refresh.emit();
+    this.reloadMappings();
   }
 
   async deleteMappingWithConfirmation(
@@ -528,16 +503,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       } else {
         console.log('Canceled DELETE mapping', mapping, result);
       }
-      // confirmDeletionModalRef.content.closeSubject.subscribe(
-      //   async (result: boolean) => {
-      //     continueDelete = result;
-      //     console.log("Confirmation result:", result);
-      //     if (!!result) {
-      //       //await this.deleteMapping(mapping);
-      //     }
-      //     confirmDeletionModalRef.hide();
-      //   }
-      // );
     } else {
       // await this.deleteMapping(mapping);
     }
@@ -549,19 +514,21 @@ export class MappingComponent implements OnInit, OnDestroy {
       await this.mappingService.deleteMapping(mapping.id);
       this.alertService.success(gettext('Mapping deleted successfully'));
       this.isConnectionToMQTTEstablished = true;
-      this.loadMappings();
-      this.refresh.emit();
-      // this.activateMappings();
+      this.reloadMappings();
     } catch (error) {
       this.alertService.danger(gettext('Failed to delete mapping:') + error);
     }
   }
 
-  async loadMappings(): Promise<void> {
-    this.mappings = await this.mappingService.loadMappings(
+  async getMappings(): Promise<void> {
+    this.mappings = await this.mappingService.getMappings(
       this.stepperConfiguration.direction
     );
-    // console.log("Updated mappings", this.mappings);
+  }
+
+  async reloadMappings(): Promise<void> {
+    this.mappingService.resetCache();
+    this.getMappings();
   }
 
   async onCommitMapping(mapping: Mapping) {
@@ -581,8 +548,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.updateMapping(mapping);
           this.alertService.success(gettext('Mapping updated successfully'));
-          this.loadMappings();
-          this.refresh.emit();
+          this.reloadMappings();
+          // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
             gettext('Failed to updated mapping:') + error
@@ -598,8 +565,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.createMapping(mapping);
           this.alertService.success(gettext('Mapping created successfully'));
-          this.loadMappings();
-          this.refresh.emit();
+          this.reloadMappings();
+          // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
             gettext('Failed to create mapping:') + error
@@ -624,6 +591,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
     this.showConfigMapping = false;
+    this.reloadMappings();
   }
 
   async onCommitSubscriptions(deviceList: IIdentified[]) {
@@ -644,7 +612,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onReload() {
-    this.reloadMappings();
+    this.reloadMappingsInBackend();
   }
 
   private exportMappings(mappings2Export: Mapping[]) {
@@ -668,8 +636,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.alertService.success(`${action} mapping: ${this.mappings[i].id}!`);
       }
     }
-    this.loadMappings();
-    this.refresh.emit();
+    this.reloadMappings();
   }
 
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
@@ -688,8 +655,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
     this.isConnectionToMQTTEstablished = true;
-    this.loadMappings();
-    this.refresh.emit();
+    this.reloadMappings();
   }
 
   async onExportAll() {
@@ -710,13 +676,12 @@ export class MappingComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(() => {
-      this.loadMappings();
-      this.refresh.emit();
+      this.reloadMappings();
       modalRef.hide();
     });
   }
 
-  private async reloadMappings() {
+  private async reloadMappingsInBackend() {
     const response2 = await this.brokerConfigurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );

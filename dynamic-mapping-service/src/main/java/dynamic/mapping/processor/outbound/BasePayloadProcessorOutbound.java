@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.outbound;
 
-import com.cumulocity.rest.representation.AbstractExtensibleRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
@@ -48,10 +47,11 @@ import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-//@Service
+// @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
+            String tenant) {
         this.objectMapper = objectMapper;
         this.connectorClient = connectorClient;
         this.c8yAgent = c8yAgent;
@@ -96,7 +96,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
         String deviceSource = "undefined";
 
         for (String pathTarget : pathTargets) {
-            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+            MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
+                    new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                     RepairStrategy.DEFAULT);
             if (postProcessingCache.get(pathTarget).size() > 0) {
                 substituteValue = postProcessingCache.get(pathTarget).get(0).clone();
@@ -136,9 +137,11 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                connectorClient.publishMEAO(context);
-                //var response = objectMapper.writeValueAsString(attocRequest);
-                //context.getCurrentRequest().setResponse(response);
+                if (connectorClient.isConnected()) {
+                    connectorClient.publishMEAO(context);
+                }
+                // var response = objectMapper.writeValueAsString(attocRequest);
+                // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
                 log.error("Tenant {} - Error during publishing outbound message: {}", tenant, e);
@@ -155,22 +158,26 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
     }
 
-    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub, DocumentContext jsonObject, String keys)
+    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
+            DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
-        boolean subValueNull =  (sub.value == null) || ( sub.value != null && sub.value.isNull());
-        // variant where the default strategy for PROCESSOR_EXTENSION is REMOVE_IF_MISSING
-        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+        boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
+        // variant where the default strategy for PROCESSOR_EXTENSION is
+        // REMOVE_IF_MISSING
+        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) &&
+        // subValueMissing) ||
         // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-        // ((type.equals(MappingType.PROCESSOR_EXTENSION) || type.equals(MappingType.PROTOBUF_STATIC))
-        //         && (subValueMissing || subValueNull)))
+        // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
+        // type.equals(MappingType.PROTOBUF_STATIC))
+        // && (subValueMissing || subValueNull)))
         if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
                 (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
             jsonObject.delete(keys);
-        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING) ) {
-            boolean pathIsNested =  keys.contains(".") ||  keys.contains("[") ;
+        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+            boolean pathIsNested = keys.contains(".") || keys.contains("[");
             if (pathIsNested) {
-                throw new JSONException ("Can only crrate new nodes ion the root level!");
+                throw new JSONException("Can only crrate new nodes ion the root level!");
             }
             jsonObject.put("$", keys, sub.typedValue());
         } else {

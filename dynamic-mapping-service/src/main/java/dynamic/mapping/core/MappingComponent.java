@@ -117,6 +117,13 @@ public class MappingComponent {
     @Getter
     private Map<String, InnerNode> resolverMappingInbound = new HashMap<>();
 
+    public void initializeMappingCaches(String tenant) {
+        cacheMappingInbound.put(tenant, new HashMap<>());
+        cacheMappingOutbound.put(tenant, new HashMap<>());
+        resolverMappingOutbound.put(tenant, new HashMap<>());
+        resolverMappingInbound.put(tenant, InnerNode.createRootNode());
+    }
+
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
@@ -210,7 +217,8 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Tenant {} - Adding: {}", tenant, m.ident);
-            ms = new MappingStatus(m.id, m.name, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.name, m.ident, m.direction.name(), m.subscriptionTopic, m.publishTopic, 0, 0,
+                    0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
@@ -419,6 +427,9 @@ public class MappingComponent {
     public Mapping deleteFromMappingCache(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             Mapping deletedMapping = cacheMappingOutbound.get(tenant).remove(mapping.id);
+            log.info("Tenant {} - Preparing to delete {} {}", tenant, resolverMappingOutbound.get(tenant),
+                    mapping.filterOutbound);
+
             List<Mapping> cmo = resolverMappingOutbound.get(tenant).get(mapping.filterOutbound);
             cmo.removeIf(m -> mapping.id.equals(m.id));
             return deletedMapping;
