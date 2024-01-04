@@ -298,7 +298,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         }
                         for (int index = 0; index < certificatesList.size(); index++) {
                             TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
-                            log.info("--- Found certificate with fingerprint: {} with name: {}",
+                            log.info("Tenant {} - Found certificate with fingerprint: {} with name: {}", tenant,
                                     certificateIterate.getFingerprint(),
                                     certificateIterate.getName());
                             if (certificateIterate.getName().equals(certificateName)

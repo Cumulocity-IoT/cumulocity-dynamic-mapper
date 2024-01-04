@@ -208,7 +208,7 @@ public class C8YAPISubscriber {
      * NotificationSubscriptionRepresentation notRep = null;
      * while (deviceIt.hasNext()) {
      * ManagedObjectRepresentation mor = deviceIt.next();
-     * log.info("Found device " + mor.getName());
+     * log.info("Tenant {} - Found device {}", tenant, mor.getName());
      * try {
      * notRep = subscribeDevice(mor, API.OPERATION).get();
      * } catch (InterruptedException e) {
@@ -249,7 +249,9 @@ public class C8YAPISubscriber {
                 try {
                     // Add Dispatcher for each Connector
                     if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
-                        log.info("No Outbound dispatcher for any connector is registered, add a connector first!");
+                        log.info(
+                                "Tenant {} - No Outbound dispatcher for any connector is registered, add a connector first!",
+                                tenant);
 
                     for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
                             .values()) {
@@ -390,7 +392,7 @@ public class C8YAPISubscriber {
                                 .parse(ManagedObjectRepresentation.class, notification.getMessage());
                         /*
                          * if (notification.getNotificationHeaders().contains("CREATE")) {
-                         * log.info("New Device created with name {} and id {}", mor.getName(),
+                         * log.info("Tenant {} - New Device created with name {} and id {}", tenant, mor.getName(),
                          * mor.getId().getValue());
                          * final ManagedObjectRepresentation morRetrieved =
                          * c8YAgent.getManagedObjectForId(mor.getId().getValue());
@@ -487,7 +489,7 @@ public class C8YAPISubscriber {
                 c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTED, null);
             } catch (Exception e) {
                 log.error("Error reconnecting to Notification Service: {}", e.getLocalizedMessage());
-                c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.FAILED,  e.getLocalizedMessage());
+                c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
                 e.printStackTrace();
             }
         });
@@ -511,7 +513,7 @@ public class C8YAPISubscriber {
                 return notification;
             }
         }
-        // log.info("Subscription does not exist. Creating ...");
+        // log.info("Tenant {} - Subscription does not exist. Creating ...", tenant);
         notification = new NotificationSubscriptionRepresentation();
         final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
         filterRepresentation.setApis(List.of("managedobjects"));
@@ -523,6 +525,7 @@ public class C8YAPISubscriber {
     }
 
     public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
+        String tenant = subscriptionsService.getTenant();
         final String subscriptionName = DEVICE_SUBSCRIPTION;
 
         Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
@@ -533,13 +536,13 @@ public class C8YAPISubscriber {
         while (subIt.hasNext()) {
             notification = subIt.next();
             if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                log.info("Subscription with ID {} and Source {} already exists.", notification.getId().getValue(),
+                log.info("Tenant {} - Subscription with ID {} and Source {} already exists.", tenant,
+                        notification.getId().getValue(),
                         notification.getSource().getId().getValue());
                 return notification;
             }
         }
 
-        // log.info("Subscription does not exist. Creating ...");
         notification = new NotificationSubscriptionRepresentation();
         notification.setSource(mor);
         final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
@@ -591,7 +594,7 @@ public class C8YAPISubscriber {
         if (onlyDeviceClient != null && onlyDeviceClient) {
             for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                 if (device_client != null && device_client.isOpen()) {
-                    log.info("Disconnecting WS Device Client {}", device_client.toString());
+                    log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
                     device_client.close();
 
                 }
@@ -604,7 +607,7 @@ public class C8YAPISubscriber {
             if (deviceClientMap.get(tenant) != null) {
                 for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                     if (device_client != null && device_client.isOpen()) {
-                        log.info("Disconnecting WS Device Client {}", device_client.toString());
+                        log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
                         device_client.close();
                     }
                 }
@@ -614,7 +617,7 @@ public class C8YAPISubscriber {
             if (tenantClientMap.get(tenant) != null) {
                 CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
                 if (tenant_client != null && tenant_client.isOpen()) {
-                    log.info("Disconnecting WS Tenant Client {}", tenant_client.toString());
+                    log.info("Tenant {} - Disconnecting WS Tenant Client {}", tenant, tenant_client.toString());
                     tenant_client.close();
                     tenantClientMap.remove(tenant);
                 }

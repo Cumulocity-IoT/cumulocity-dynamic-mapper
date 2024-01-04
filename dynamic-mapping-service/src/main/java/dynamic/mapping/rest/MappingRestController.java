@@ -112,6 +112,7 @@ public class MappingRestController {
 
     @Getter
     private C8YAPISubscriber notificationSubscriber;
+
     @Autowired
     public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
         this.notificationSubscriber = notificationSubscriber;
@@ -207,8 +208,8 @@ public class MappingRestController {
 
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
-        log.info("Delete connection instance {}", ident);
         String tenant = contextService.getContext().getTenant();
+        log.info("Tenant {} - Delete connection instance {}", tenant, ident);
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -226,7 +227,7 @@ public class MappingRestController {
             bootstrapService.shutdownConnector(tenant, ident);
             connectorConfigurationComponent.deleteConnectorConfiguration(ident);
         } catch (Exception ex) {
-            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(ident);
