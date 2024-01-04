@@ -1,4 +1,7 @@
 #divChart{
-    width: 800px;
-    height: 300px;
+    /* width: 900px;
+    height: 400px; */
+    position: relative; 
+    height:40vh; 
+    width:90vw
 }

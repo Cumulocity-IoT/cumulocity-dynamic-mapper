@@ -127,7 +127,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   ];
 
   pagination: Pagination = {
-    pageSize: 3,
+    pageSize: 5,
     currentPage: 1
   };
 

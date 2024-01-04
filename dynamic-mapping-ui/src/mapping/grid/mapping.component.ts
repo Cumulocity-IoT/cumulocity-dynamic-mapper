@@ -224,6 +224,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     private bsModalService: BsModalService,
     private router: Router
   ) {
+    console.log('constructor');
     const href = this.router.url;
     this.stepperConfiguration.direction = href.match(
       /sag-ps-pkg-dynamic-mapping\/mappings\/inbound/g
@@ -256,6 +257,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    console.log('ngOnInit');
     this.getMappings();
     this.actionControls.push(
       {
