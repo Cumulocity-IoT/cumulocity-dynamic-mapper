@@ -29,9 +29,7 @@
 	<parent>
 		<groupId>com.softwareag.c8y.mapping</groupId>
 		<artifactId>dynamic-mapping-solution</artifactId>
-        <!-- <version>${revision}</version> -->
-        <!-- referencing the parent pom by ${revision} does not work and leads to errors, hence we have to reference it directly -->
-		<version>4.1.1-SNAPSHOT</version>
+        <version>${revision}</version>
 	</parent>
 	<dependencies>
 		<dependency>
@@ -117,36 +115,16 @@
 						<include>dynamic/mapping/model/*</include>
 						<include>dynamic/mapping/processor/model/*</include>
 						<include>dynamic/mapping/processor/model/ProcessingContext.*</include>
-						<include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
-						<include>
-                                    dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
-						<include>
-                                        dynamic/mapping/processor/ProcessingException.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionInbound.*</include>
+						<include>dynamic/mapping/processor/extension/ProcessorExtensionOutbound.*</include>
+						<include>dynamic/mapping/processor/ProcessingException.*</include>
 					</includes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
-			</plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+            </plugin>
 		</plugins>
 	</build>
 </project>

@@ -46,10 +46,11 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-//@Service
+// @Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
-    public JSONProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent, String tenant) {
+    public JSONProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
+            String tenant) {
         super(objectMapper, connectorClient, c8yAgent, tenant);
     }
 
@@ -69,7 +70,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         String payload = payloadJsonNode.toPrettyString();
-        // log.info("Patched payload: {}", payload);
+        // log.info("Tenant {} -Patched payload: {}", tenant, payload);
 
         for (MappingSubstitution substitution : mapping.substitutions) {
             JsonNode extractedSourceContent = null;
@@ -82,22 +83,24 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 Expressions expr = Expressions.parse(ps);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Exception for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("EvaluateRuntimeException for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
              * step 2 analyse exctracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
+            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+                    substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
                 log.error("No substitution for: {}, {}", substitution.pathSource,
                         payload);
                 postProcessingCacheEntry
-                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
+                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
                 postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
             } else {
                 if (extractedSourceContent.isArray()) {
@@ -107,10 +110,14 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         for (JsonNode jn : extractedSourceContent) {
                             if (jn.isTextual()) {
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                                substitution.repairStrategy));
                             } else if (jn.isNumber()) {
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.NUMBER,
+                                                substitution.repairStrategy));
                             } else {
                                 log.warn("Since result is not textual or number it is ignored: {}",
                                         jn.asText());
@@ -123,14 +130,16 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         // substitution
                         context.addCardinality(substitution.pathTarget, 1);
                         postProcessingCacheEntry
-                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.ARRAY,
+                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                        MappingSubstitution.SubstituteValue.TYPE.ARRAY,
                                         substitution.repairStrategy));
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
                     if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
-                        log.info("Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}", ps, extractedSourceContent.toPrettyString(), extractedSourceContent.asText());
+                        log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}",
+                                tenant, ps, extractedSourceContent.toPrettyString(), extractedSourceContent.asText());
                         ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(tenant,
                                 new GId(extractedSourceContent.asText()), mapping.externalIdType,
                                 context);
@@ -140,28 +149,32 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                         } else if (externalId == null) {
                             extractedSourceContent = null;
                         } else {
-                            extractedSourceContent= new TextNode(externalId.getExternalId());
+                            extractedSourceContent = new TextNode(externalId.getExternalId());
                         }
                     }
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry.add(
-                            new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
+                            new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else if (extractedSourceContent.isNumber()) {
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
+                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
                     log.info("This substitution, involves an objects for: {}, {}",
                             substitution.pathSource, extractedSourceContent.toString());
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
+                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
                 if (c8yAgent.getServiceConfigurations().get(tenant).logSubstitution) {
-                    log.info("Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                    log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                            tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
             }

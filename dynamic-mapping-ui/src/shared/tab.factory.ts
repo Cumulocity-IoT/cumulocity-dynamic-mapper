@@ -29,21 +29,20 @@ export class MappingTabFactory implements TabFactory {
     private sharedService: SharedService
   ) {}
 
-   async get() {
+  async get() {
     // console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
     const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
-      if (feature?.userHasMappingAdminRole) {
-        tabs.push({
-          path: 'sag-ps-pkg-dynamic-mapping/configuration',
-          priority: 930,
-          label: 'Configuration',
-          icon: 'cog',
-          orientation: 'horizontal'
-        } as Tab);
-      }
+      tabs.push({
+        path: 'sag-ps-pkg-dynamic-mapping/configuration',
+        priority: 930,
+        label: 'Configuration',
+        icon: 'cog',
+        orientation: 'horizontal',
+        hide: !feature?.userHasMappingAdminRole
+      } as Tab);
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
         priority: 920,
@@ -52,15 +51,14 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal'
       } as Tab);
       this.sharedService.getFeatures();
-      if (feature?.outputMappingEnabled) {
-        tabs.push({
-          path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
-          priority: 920,
-          label: 'Mapping Outbound',
-          icon: 'swipe-left',
-          orientation: 'horizontal'
-        } as Tab);
-      }
+      tabs.push({
+        path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+        priority: 920,
+        label: 'Mapping Outbound',
+        icon: 'swipe-left',
+        orientation: 'horizontal',
+        hide: !feature?.outputMappingEnabled
+      } as Tab);
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/monitoring',
         priority: 910,
@@ -82,15 +80,14 @@ export class MappingTabFactory implements TabFactory {
         icon: 'tree-structure',
         orientation: 'horizontal'
       } as Tab);
-      if (feature?.userHasMappingAdminRole) {
-        tabs.push({
-          path: 'sag-ps-pkg-dynamic-mapping/extensions',
-          priority: 880,
-          label: 'Processor Extension',
-          icon: 'plugin',
-          orientation: 'horizontal'
-        } as Tab);
-      }
+      tabs.push({
+        path: 'sag-ps-pkg-dynamic-mapping/extensions',
+        priority: 880,
+        label: 'Processor Extension',
+        icon: 'plugin',
+        orientation: 'horizontal',
+        hide: !feature?.userHasMappingAdminRole
+      } as Tab);
     }
     return tabs;
   }

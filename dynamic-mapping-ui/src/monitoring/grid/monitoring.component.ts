@@ -27,12 +27,13 @@ import {
   DisplayOptions,
   Pagination
 } from '@c8y/ngx-components';
-import { Observable } from 'rxjs';
+import { Subject } from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import { NameRendererComponent } from '../../mapping';
 import { MappingStatus } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
+import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -41,7 +42,7 @@ import { NumberRendererComponent } from '../renderer/number.renderer.component';
   encapsulation: ViewEncapsulation.None
 })
 export class MonitoringComponent implements OnInit, OnDestroy {
-  mappingStatus$: Observable<MappingStatus[]>;
+  mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
   subscription: object;
 
   displayOptions: DisplayOptions = {
@@ -52,23 +53,23 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   };
 
   columns: Column[] = [
-    // {
-    //   name: "id",
-    //   header: "System ID",
-    //   path: "id",
-    //   filterable: false,
-    //   dataType: ColumnDataType.TextShort,
-    //   sortOrder: "asc",
-    //   gridTrackSize: "10%",
-    //   cellRendererComponent: IdRendererComponent,
-    // },
     {
       name: 'name',
       header: 'Name',
       path: 'name',
       filterable: false,
+      sortOrder: 'asc',
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
+      visible: true
+    },
+    {
+      name: 'direction',
+      header: 'Direction',
+      path: 'direction',
+      filterable: false,
+      dataType: ColumnDataType.Icon,
+      cellRendererComponent: DirectionRendererComponent,
       visible: true
     },
     {
@@ -94,7 +95,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Messages Received',
@@ -103,7 +104,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Snooped Templates Total',
@@ -112,7 +113,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     },
     {
       header: '# Snooped Templates Active',
@@ -121,12 +122,12 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: true,
       dataType: ColumnDataType.Numeric,
       cellRendererComponent: NumberRendererComponent,
-      gridTrackSize: '15%'
+      gridTrackSize: '12.5%'
     }
   ];
 
   pagination: Pagination = {
-    pageSize: 3,
+    pageSize: 5,
     currentPage: 1
   };
 
@@ -151,7 +152,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   private async initializeMonitoringService() {
     this.subscription =
       await this.monitoringService.subscribeMonitoringChannel();
-    this.mappingStatus$ = this.monitoringService.getCurrentMappingStatus();
+    this.monitoringService
+      .getCurrentMappingStatus()
+      .subscribe((status) => this.mappingStatus$.next(status));
   }
 
   ngOnDestroy(): void {

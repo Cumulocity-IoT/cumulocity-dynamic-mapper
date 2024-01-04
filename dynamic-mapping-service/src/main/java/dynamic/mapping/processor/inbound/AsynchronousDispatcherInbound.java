@@ -37,7 +37,6 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
-import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +47,7 @@ import java.util.concurrent.Future;
 
 @Slf4j
 public class AsynchronousDispatcherInbound implements GenericMessageCallback {
-    public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
+    public static class MappingProcessorInbound<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
@@ -60,7 +59,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
 
-        public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
+        public MappingProcessorInbound(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
                 String topic, String tenant,
                 Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound, boolean sendPayload,
                 ConnectorMessage message, ObjectMapper objectMapper) {
@@ -195,12 +194,15 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
     //@Autowired
     //ServiceConfigurationComponent serviceConfigurationComponent;
 
-    public AsynchronousDispatcherInbound(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent)  {
+    private PayloadProcessor payloadProcessor;
+
+    public AsynchronousDispatcherInbound(ObjectMapper objectMapper, C8YAgent c8YAgent, MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient, PayloadProcessor payloadProcessor)  {
         this.connectorClient = connectorClient;
         this.c8yAgent = c8YAgent;
         this.objectMapper = objectMapper;
         this.cachedThreadPool = cachedThreadPool;
         this.mappingComponent = mappingComponent;
+        this.payloadProcessor = payloadProcessor;
     }
 
     public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent, String topic, ConnectorMessage message,
@@ -225,10 +227,9 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
-        PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, topic, tenant,
+                new MappingProcessorInbound(resolvedMappings, mappingComponent, c8yAgent, topic, tenant,
                         payloadProcessor.getPayloadProcessorsInbound(),
                         sendPayload, message, objectMapper));
 

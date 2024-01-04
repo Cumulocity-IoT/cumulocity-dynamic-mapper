@@ -179,7 +179,7 @@
       <div class="card-block">
         <c8y-form-group>
           <form class="form-inline">
-            <label
+            <!-- <label
               class="c8y-radio radio-inline"
               title="{{ 'Connector Lifecycle' }}"
             >
@@ -206,8 +206,21 @@
               />
               <span></span>
               <span>Subscriptions Events</span>
-            </label>
+            </label> -->
             <div class="c8y-select-wrapper button-bottom-margin">
+              <select
+                class="form-control"
+                style="width: 180px"
+                [(ngModel)]="filterStatusLog.eventType"
+                name="eventType"
+              >
+                <option [value]="'ALL'">ALL types</option>
+                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">Connector Lifecycle</option>
+                <option [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE">Subscriptions Events</option>
+                <option [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE">Notification Lifecycle</option>
+              </select>
+            </div>
+            <div class="c8y-select-wrapper button-bottom-margin m-l-16">
               <select
                 class="form-control"
                 style="width: 180px"
@@ -354,6 +367,19 @@
                 <span>
                   {{ 'Send Events on Topic Subscriptions' }}
                   <i c8yIcon="euro"></i>
+                </span>
+              </label>
+            </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="sendNotificationLifecycle"
+                  [(ngModel)]="serviceConfiguration.sendNotificationLifecycle"
+                />
+                <span></span>
+                <span>
+                  {{ 'Send Notification Lifcycle' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>

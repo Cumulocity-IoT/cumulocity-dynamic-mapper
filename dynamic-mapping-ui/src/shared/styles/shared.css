@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -16,23 +17,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ * @authors Christof Strack
  */
 
-package dynamic.mapping.core.mock;
-
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import org.springframework.stereotype.Service;
-
-@Service
-public class MockInventory {
-
-    public ManagedObjectRepresentation create(ManagedObjectRepresentation mor) {
-        return null;
-    }
-
-    public ManagedObjectRepresentation update(ManagedObjectRepresentation mor) {
-        return null;
-    }
-
+ #app div a i.dlt-c8y-icon-swipe-right {
+  color: green !important;
 }
+
+#app div a i.dlt-c8y-icon-swipe-left{
+  color: orange !important;
+}
+
+/* #app > c8y-bootstrap > div > c8y-tabs-outlet > div.tabContainer.hidden-xs > div > div.active > a > i
+{
+  color: orange !important;
+  background-color: aquamarine !important;
+}
+
+.dlt-c8y-icon-swipe-left*/
+

@@ -24,13 +24,6 @@ import { SnoopStatus } from '../../shared';
 
 @Component({
   template: `
-    <!-- <div class="c8y-realtime" title="Active">
-      <span class="c8y-pulse animated pulse" [ngClass]="{
-      active: context.item.active,
-      inactive: !context.item.active
-    }"></span>
-    </div>
- -->
     <div class="c8y-realtime" title="Tested">
       <span
         class="c8y-pulse animated pulse"

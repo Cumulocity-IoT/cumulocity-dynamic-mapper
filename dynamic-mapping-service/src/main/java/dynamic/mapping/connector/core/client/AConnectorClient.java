@@ -57,6 +57,7 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -81,9 +82,13 @@ public abstract class AConnectorClient {
     public ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Getter
+    public ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Getter
     public C8YAgent c8yAgent;
 
     @Getter
+    @Setter
     public AsynchronousDispatcherInbound dispatcher;
 
     public ObjectMapper objectMapper;
@@ -116,7 +121,7 @@ public abstract class AConnectorClient {
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
-        log.info("Tenant {} - Called initialize(): {}", initializeTask == null || initializeTask.isDone(), tenant);
+        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone() );
         if ((initializeTask == null || initializeTask.isDone())) {
             initializeTask = cachedThreadPool.submit(() -> initialize());
         }
@@ -128,6 +133,8 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        serviceConfiguration =  c8yAgent.getServiceConfigurations().get(tenant);
+
         connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
         connectorStatus.clearMessage();
         sendConnectorLifecycle();
@@ -270,9 +277,6 @@ public abstract class AConnectorClient {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
         message.setPayload(payloadMessage.getBytes());
-        if (dispatcher == null)
-            dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper, cachedThreadPool,
-                    mappingComponent);
         return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
     }
 
@@ -291,7 +295,7 @@ public abstract class AConnectorClient {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
                 } catch (Exception e) {
-                    log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic,
+                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, mapping.subscriptionTopic,
                             e);
                 }
             }
@@ -330,7 +334,7 @@ public abstract class AConnectorClient {
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (MqttException e1) {
-                    log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
+                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, mapping.subscriptionTopic, e1);
                 }
             } else if (subscriptionTopicChanged && activeMapping != null) {
                 MutableInt activeMappingSubs = getActiveSubscriptions()

@@ -28,7 +28,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
-import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.MappingType;
@@ -42,8 +41,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
-//@Service
 public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
 
     public StaticProtobufProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
@@ -107,5 +104,4 @@ public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]>
 
         }
     }
-
 }

@@ -55,13 +55,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 @Slf4j
-//@Service
-//Not a service anymore, manually instantiated by the C8YSubscriber
+// Not a service anymore, manually instantiated by the C8YSubscriber
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("Connected to Cumulocity notification service over WebSocket " + serverUri);
+        log.info("Tenant {} - Connected to Cumulocity notification service over WebSocket {}", connectorClient.tenant,
+                serverUri);
         c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
 
@@ -70,8 +70,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         // We don't care about UPDATES nor DELETES
         if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-            log.info("Tenant - {} Notification received: <{}>", tenant, notification.getMessage());
-            log.info("Tenant - {} Notification headers: <{}>", tenant, notification.getNotificationHeaders());
+            log.info("Tenant {} - Notification received: <{}>", tenant, notification.getMessage());
+            log.info("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
             C8YMessage message = new C8YMessage();
             message.setPayload(notification.getMessage());
             message.setApi(notification.getApi());
@@ -81,23 +81,23 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onError(Throwable t) {
-        log.error("We got an exception: " + t);
+        log.error("Tenant {} - We got an exception: {}", connectorClient.tenant, t);
     }
 
     @Override
     public void onClose(int statusCode, String reason) {
-        log.info("Connection was closed.");
+        log.info("Tenant {} - Connection was closed.", connectorClient.tenant);
         if (reason.contains("401"))
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),401);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(),0);
+            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 0);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
         return notificationHeaders.get(0).split("/")[1];
     }
 
-    public static class MappingProcessor<T> implements Callable<List<ProcessingContext<?>>> {
+    public static class MappingProcessorOutbound<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
@@ -109,7 +109,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         ObjectMapper objectMapper;
         String tenant;
 
-        public MappingProcessor(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
+        public MappingProcessorOutbound(List<Mapping> mappings, MappingComponent mappingStatusComponent,
+                C8YAgent c8yAgent,
                 Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound, boolean sendPayload,
                 C8YMessage c8yMessage, ObjectMapper objectMapper, String tenant) {
             this.resolvedMappings = mappings;
@@ -150,10 +151,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                         try {
                             processor.deserializePayload(context, c8yMessage);
                             if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
-                                log.info("New message on topic: '{}', wrapped message: {}", context.getTopic(),
+                                log.info("Tenant {} - New message on topic: '{}', wrapped message: {}",
+                                        tenant,
+                                        context.getTopic(),
                                         context.getPayload().toString());
                             } else {
-                                log.info("New message on topic: '{}'", context.getTopic());
+                                log.info("Tenant {} - New message on topic: '{}'", tenant, context.getTopic());
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -174,33 +177,36 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mappingStatus.snoopedTemplatesActive++;
 
-                                    log.debug("Adding snoopedTemplate to map: {},{},{}", mapping.subscriptionTopic,
+                                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant,
+                                            mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
                                     mappingStatusComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
-                                            "Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            tenant,
                                             context.getPayload().getClass());
                                 }
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
-                                // processor.substituteInTargetAndSend(context);
                                 List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }
                         } catch (Exception e) {
-                            log.warn("Message could NOT be parsed, ignoring this message: {}", e.getMessage());
-                            log.debug("Message Stacktrace:", e);
+                            log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
+                                    e.getMessage());
+                            log.debug("Tenant {} - Message Stacktrace:", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {
                         mappingStatusUnspecified.errors++;
-                        log.error("No process for MessageType: {} registered, ignoring this message!", mappingType);
+                        log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
+                                tenant, mappingType);
                     }
                     processingResult.add(context);
                 }
@@ -209,38 +215,46 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
 
     }
+
     @Getter
     protected AConnectorClient connectorClient;
 
-    //The Outbound Dispatcher is hardly connected to the Connector otherwise it is not possible to correlate messages received bei Notification API to the correct Connector
-    public AsynchronousDispatcherOutbound(AConnectorClient connectorClient, C8YAgent c8YAgent, ObjectMapper objectMapper, ExecutorService cachedThreadPool, MappingComponent mappingComponent) {
-        this.connectorClient = connectorClient;
-        this.c8yAgent = c8YAgent;
+    private PayloadProcessor payloadProcessor;
+
+    // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
+    // not possible to correlate messages received bei Notification API to the
+    // correct Connector
+    public AsynchronousDispatcherOutbound(ObjectMapper objectMapper, C8YAgent c8YAgent,
+            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
+            PayloadProcessor payloadProcessor) {
         this.objectMapper = objectMapper;
-        this.cachedThreadPool = cachedThreadPool;
+        this.c8yAgent = c8YAgent;
         this.mappingComponent = mappingComponent;
+        this.cachedThreadPool = cachedThreadPool;
+        this.connectorClient = connectorClient;
+        this.payloadProcessor = payloadProcessor;
     }
 
-    //@Autowired
+    // @Autowired
     @Setter
     protected C8YAgent c8yAgent;
 
-    //@Autowired
-    //@Setter
-    //protected ConnectorRegistry connectorRegistry;
+    // @Autowired
+    // @Setter
+    // protected ConnectorRegistry connectorRegistry;
 
     @Setter
     protected ObjectMapper objectMapper;
 
-    //@Autowired
-    //Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
+    // @Autowired
+    // Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
 
-    //@Autowired
-    //@Qualifier("cachedThreadPool")
+    // @Autowired
+    // @Qualifier("cachedThreadPool")
     @Setter
     private ExecutorService cachedThreadPool;
 
-    //@Autowired
+    // @Autowired
     @Setter
     MappingComponent mappingComponent;
 
@@ -263,8 +277,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
                 resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, message, c8yMessage.getApi());
             } catch (Exception e) {
-                log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
-                log.debug(e.getMessage(), e);
+                log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
+                        tenant);
+                log.debug(e.getMessage(), tenant);
                 if (op != null)
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
@@ -272,10 +287,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         } else {
             return futureProcessingResult;
         }
-        //Here we correlate the connector of the Dispatcher to the processor
-        PayloadProcessor payloadProcessor = new PayloadProcessor(objectMapper, c8yAgent, tenant, connectorClient);
+
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessor(resolvedMappings, mappingComponent, c8yAgent, payloadProcessor.getPayloadProcessorsOutbound(),
+                new MappingProcessorOutbound(resolvedMappings, mappingComponent, c8yAgent,
+                        payloadProcessor.getPayloadProcessorsOutbound(),
                         sendPayload, c8yMessage, objectMapper, tenant));
 
         if (op != null) {
@@ -294,7 +309,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     // No Mapping found
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
                             "No Mapping found for operation " + op.toJSON());
-
                 }
             } catch (InterruptedException e) {
                 c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
@@ -303,7 +317,5 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             }
         }
         return futureProcessingResult;
-
     }
-
 }

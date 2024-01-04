@@ -27,12 +27,11 @@
     (click)="refreshMappingStatus()"
   >
     <i c8yIcon="refresh"></i>
-    {{ "Refresh" | translate }}
+    {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
 <div class="card">
-  <div class="col-lg-12 bg-white">
-    <div class="card-block">
+    <div class="card-block" style="max-height: 350px; overflow: auto">
       <c8y-data-grid
         [title]="'Mapping Monitoring' | translate"
         [columns]="columns"
@@ -41,6 +40,12 @@
         [actionControls]="actionControls"
       >
       </c8y-data-grid>
-    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-lg-10 col-lg-offset-1">
+    <d11r-monitoring-chart
+      [mappingStatus]="mappingStatus$"
+    ></d11r-monitoring-chart>
   </div>
 </div>

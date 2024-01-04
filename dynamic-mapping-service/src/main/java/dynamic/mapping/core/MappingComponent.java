@@ -22,6 +22,7 @@
 package dynamic.mapping.core;
 
 import static java.util.Map.entry;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,7 +33,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -117,6 +117,13 @@ public class MappingComponent {
     @Getter
     private Map<String, InnerNode> resolverMappingInbound = new HashMap<>();
 
+    public void initializeMappingCaches(String tenant) {
+        cacheMappingInbound.put(tenant, new HashMap<>());
+        cacheMappingOutbound.put(tenant, new HashMap<>());
+        resolverMappingOutbound.put(tenant, new HashMap<>());
+        resolverMappingInbound.put(tenant, InnerNode.createRootNode());
+    }
+
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
@@ -125,7 +132,7 @@ public class MappingComponent {
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
                                     : mappingServiceRepresentation.getMappingStatus().size()));
-            Map<String, MappingStatus> mappingStatus = new HashedMap();
+            Map<String, MappingStatus> mappingStatus = new HashMap<>();
             mappingServiceRepresentation.getMappingStatus().forEach(ms -> {
                 mappingStatus.put(ms.ident, ms);
             });
@@ -143,6 +150,11 @@ public class MappingComponent {
             cacheMappingInbound.put(tenant, new HashMap<>());
         if (cacheMappingOutbound.get(tenant) == null)
             cacheMappingOutbound.put(tenant, new HashMap<>());
+    }
+
+    public void cleanMappingStatus(String tenant) {
+        resolverMappingInbound.remove(tenant);
+        tenantStatusMapping.remove(tenant);
     }
 
     public void sendMappingStatus(String tenant) {
@@ -210,7 +222,8 @@ public class MappingComponent {
         MappingStatus ms = statusMapping.get(m.ident);
         if (ms == null) {
             log.info("Tenant {} - Adding: {}", tenant, m.ident);
-            ms = new MappingStatus(m.id, m.name, m.ident, m.subscriptionTopic, m.publishTopic, 0, 0, 0, 0);
+            ms = new MappingStatus(m.id, m.name, m.ident, m.direction.name(), m.subscriptionTopic, m.publishTopic, 0, 0,
+                    0, 0);
             statusMapping.put(m.ident, ms);
         }
         return ms;
@@ -419,6 +432,9 @@ public class MappingComponent {
     public Mapping deleteFromMappingCache(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.direction)) {
             Mapping deletedMapping = cacheMappingOutbound.get(tenant).remove(mapping.id);
+            log.info("Tenant {} - Preparing to delete {} {}", tenant, resolverMappingOutbound.get(tenant),
+                    mapping.filterOutbound);
+
             List<Mapping> cmo = resolverMappingOutbound.get(tenant).get(mapping.filterOutbound);
             cmo.removeIf(m -> mapping.id.equals(m.id));
             return deletedMapping;

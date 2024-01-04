@@ -68,7 +68,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     logConnectorErrorInBackend: false,
     sendConnectorLifecycle: false,
     sendMappingStatus: false,
-    sendSubscriptionEvents: false
+    sendSubscriptionEvents: false,
+    sendNotificationLifecycle: false,
   };
 
   constructor(
@@ -86,7 +87,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       logConnectorErrorInBackend: new FormControl(''),
       sendConnectorLifecycle: new FormControl(''),
       sendMappingStatus: new FormControl(''),
-      sendSubscriptionEvents: new FormControl('')
+      sendSubscriptionEvents: new FormControl(''),
+      sendNotificationLifecycle: new FormControl(''),
     });
     this.feature = await this.sharedService.getFeatures();
     this.specifications =
@@ -169,6 +171,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const configuration = _.clone(this.configurations[index]);
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
+    this.alert.warning(
+      gettext('Review properies carefully, e.g. client_id must be different across different client connectors to the same broker.')
+    );
 
     const initialState = {
       add: false,

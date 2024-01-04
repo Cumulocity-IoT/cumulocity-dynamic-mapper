@@ -21,6 +21,8 @@
 
 package dynamic.mapping.core;
 
+import static java.util.Map.entry;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,7 +31,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -46,13 +51,11 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.processor.PayloadProcessor;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import dynamic.mapping.processor.extension.ExtensionsComponent;
 import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
@@ -95,6 +98,8 @@ import dynamic.mapping.notification.C8YAPISubscriber;
 @Slf4j
 @Service
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
+
+
 
     @Autowired
     private EventApi eventApi;
@@ -153,6 +158,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         this.serviceConfigurations = serviceConfigurations;
     }
 
+    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
+
+    @Autowired
+    public void setMappingServiceRepresentations(
+            Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
+        this.mappingServiceRepresentations = mappingServiceRepresentations;
+    }
+
+    // structure: <tenant, <extensibleProcessorInbound>>
+    @Getter
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
@@ -162,11 +177,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public static final String CONNECTOR_FRAGMENT = "d11r_connector";
 
     public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
-
     public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
+    public static final String STATUS_NOTIFICATION_EVENT_TYPE = "d11r_notificationStatusEvent";
+
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
+
+    private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
     private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
 
@@ -280,8 +298,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                         }
                         for (int index = 0; index < certificatesList.size(); index++) {
                             TrustedCertificateRepresentation certificateIterate = certificatesList.get(index);
-                            log.debug("--- Found certificate: {}", certificateIterate.getName());
-                            log.debug("--- Found certificate with fingerprint: {} with name: {}",
+                            log.info("Tenant {} - Found certificate with fingerprint: {} with name: {}", tenant,
                                     certificateIterate.getFingerprint(),
                                     certificateIterate.getName());
                             if (certificateIterate.getName().equals(certificateName)
@@ -564,15 +581,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public void notificationSubscriberReconnect(String tenant) {
-        subscriptionsService.runForTenant(tenant, () -> {
-            // notificationSubscriber.disconnect(false);
-            // notificationSubscriber.reconnect();
-            notificationSubscriber.disconnect(tenant, false);
-            notificationSubscriber.init();
-        });
-    }
-
     public ManagedObjectRepresentation createMappingServiceObject(String tenant) {
         ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MappingServiceRepresentation.AGENT_ID),
@@ -605,14 +613,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void checkExtensions(String tenant, PayloadProcessor payloadProcessor) {
-
-        ExtensibleProcessorInbound extensibleProcessor = (ExtensibleProcessorInbound) payloadProcessor
-                .getPayloadProcessorsInbound()
-                .get(MappingType.PROCESSOR_EXTENSION);
+    public void createExtensibleProsessorForTenant(String tenant) {
+        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(objectMapper, this, tenant);
         extensibleProcessors.put(tenant, extensibleProcessor);
+        log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
 
-        // test if managedObject for internal mapping extension exists
+        // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
         ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
         if (internalExtension == null || internalExtension.size() == 0) {
@@ -630,4 +636,23 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }
+
+    public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
+        if (getServiceConfigurations().get(tenant).sendNotificationLifecycle) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date now = new Date();
+            String date = dateFormat.format(now);
+            Map<String, String> stMap = Map.ofEntries(
+                    entry("status", connectorStatus.name()),
+                    entry("message", message == null? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name(): message),
+                    entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
+                    entry("connectorIdent", "000000"),
+                    entry("date", date)
+                    );
+            createEvent("Connector status:" + connectorStatus.name(),
+                    C8YAgent.STATUS_NOTIFICATION_EVENT_TYPE,
+                    DateTime.now(), mappingServiceRepresentations.get(tenant), tenant, stMap);
+        }
+    }
+
 }
