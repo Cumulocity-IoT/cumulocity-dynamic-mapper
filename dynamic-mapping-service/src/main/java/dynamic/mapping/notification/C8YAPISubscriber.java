@@ -633,7 +633,7 @@ public class C8YAPISubscriber {
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-            final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback);
+            final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
             client.setConnectionLostTimeout(30);
             client.connect();
             // wsClientList.add(client);
@@ -647,7 +647,7 @@ public class C8YAPISubscriber {
             }
             return client;
         } catch (Exception e) {
-            log.error("Error on connect to WS {}", e.getLocalizedMessage());
+            log.error("Tenant {} - Error on connect to WS {}", tenant, e.getLocalizedMessage());
         }
         return null;
     }
