@@ -49,6 +49,6 @@ export class MappingTreeComponent implements OnInit {
   }
   async loadMappingTree() {
     this.templateTree = await this.service.loadMappingTree();
-    console.log('MappingTree:', this.templateTree);
+    // console.log('MappingTree:', this.templateTree);
   }
 }
