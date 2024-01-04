@@ -117,6 +117,7 @@ export class ChartComponent implements OnInit {
       data: data,
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         layout: {
           padding: {
             left: 0,
