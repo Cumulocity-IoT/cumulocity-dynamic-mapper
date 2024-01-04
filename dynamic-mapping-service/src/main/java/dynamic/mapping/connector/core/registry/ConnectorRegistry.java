@@ -43,11 +43,11 @@ public class ConnectorRegistry {
         } else {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if (connectorMap.get(client.getConnectorIdent()) == null) {
-                log.info("Adding new client for tenant {} with id {}...", tenant, client.getConnectorIdent());
+                log.info("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdent());
                 connectorMap.put(client.getConnectorIdent(), client);
                 connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.info("Client {} is already registered for tenant {}!", client.getConnectorIdent(), tenant);
+                log.info("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdent());
             }
         }
 
@@ -59,7 +59,7 @@ public class ConnectorRegistry {
         if (connectorTenantMap.get(tenant) != null) {
             return connectorTenantMap.get(tenant);
         } else {
-            log.info("No Client is registered for tenant {}", tenant);
+            log.info("Tenant {} - No Client is registered!", tenant);
             return null;
         }
     }
@@ -74,11 +74,11 @@ public class ConnectorRegistry {
             if (connectorMap.get(ident) != null)
                 return connectorMap.get(ident);
             else {
-                log.info("No Client is registered for tenant {} and connector ident {}", tenant, ident);
+                log.info("Tenant {} - No Client is registered for connector ident {}", tenant, ident);
                 return null;
             }
         } else {
-            log.info("No Client is registered for tenant {}", tenant);
+            log.info("Tenant {} - No Client is registered!", tenant);
             return null;
         }
     }
@@ -117,10 +117,10 @@ public class ConnectorRegistry {
                 client.stopHouskeepingAndClose();
                 connectorMap.remove(ident);
             } else {
-                log.warn("Client {} is not registered", ident);
+                log.warn("Tenant {} - Client {} is not registered", tenant, ident);
             }
         } else {
-            log.warn("Client {} is not registered", ident);
+            log.warn("Tenant {} - Client {} is not registered", tenant, ident);
         }
     }
 }
