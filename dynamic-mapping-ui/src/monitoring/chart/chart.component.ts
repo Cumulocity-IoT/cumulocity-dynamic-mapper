@@ -1,5 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { Chart, ChartType, LayoutPosition, registerables } from 'chart.js';
+import {
+  Chart,
+  ChartType,
+  registerables
+} from 'chart.js';
 import { CHART_COLORS, transparentize } from './util';
 import { Subject } from 'rxjs';
 import { Direction, MappingStatus } from '../../shared';
@@ -15,50 +19,57 @@ export class ChartComponent implements OnInit {
   @Input()
   mappingStatus: Subject<MappingStatus[]>;
 
-  statusMappingChart: Chart;
-  public lineChartType: ChartType = 'bar';
-  public positionChart: LayoutPosition = 'left';
+  private statusMappingChart: Chart;
+  private lineChartType: ChartType = 'bar';
 
   ngOnInit() {
     const statistic = [0, 0, 0, 0];
     const data = {
       labels: [
-        '# Errors',
-        '# Messages Received',
-        '# Snooped Templates Total',
-        '# Snooped Templates Active'
+        'Errors',
+        'Messages Received',
+        'Snooped Templates Total',
+        'Snooped Templates Active'
       ],
       datasets: [
         {
           label: 'Inbound',
           data: statistic,
-          backgroundColor: transparentize(CHART_COLORS.green, 0.1)
+          backgroundColor: transparentize(CHART_COLORS.green, 0.3)
         },
         {
           label: 'Outbound',
           data: statistic,
-          backgroundColor: transparentize(CHART_COLORS.orange, 0.1)
-        },
+          backgroundColor: transparentize(CHART_COLORS.orange, 0.3)
+        }
       ]
     };
     this.mappingStatus
       .pipe(
         map((data01) => {
           // console.log('data01', acc01, data01);
-          return data01.reduce(
+          return data01?.reduce(
             (acc02, data02) => {
               const [inbound, outbound] = acc02;
               // console.log('data02', acc02, data02);
               if (data02.direction == Direction.INBOUND || !data02.direction) {
                 inbound.errors = inbound.errors + data02.errors;
-                inbound.messagesReceived = inbound.messagesReceived + data02.messagesReceived;
-                inbound.snoopedTemplatesTotal = inbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
-                inbound.snoopedTemplatesActive = inbound.snoopedTemplatesActive + data02.snoopedTemplatesActive;
+                inbound.messagesReceived =
+                  inbound.messagesReceived + data02.messagesReceived;
+                inbound.snoopedTemplatesTotal =
+                  inbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
+                inbound.snoopedTemplatesActive =
+                  inbound.snoopedTemplatesActive +
+                  data02.snoopedTemplatesActive;
               } else {
                 outbound.errors = outbound.errors + data02.errors;
-                outbound.messagesReceived = outbound.messagesReceived + data02.messagesReceived;
-                outbound.snoopedTemplatesTotal = outbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
-                outbound.snoopedTemplatesActive = outbound.snoopedTemplatesActive + data02.snoopedTemplatesActive;
+                outbound.messagesReceived =
+                  outbound.messagesReceived + data02.messagesReceived;
+                outbound.snoopedTemplatesTotal =
+                  outbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
+                outbound.snoopedTemplatesActive =
+                  outbound.snoopedTemplatesActive +
+                  data02.snoopedTemplatesActive;
               }
               return [inbound, outbound];
             },
@@ -83,24 +94,22 @@ export class ChartComponent implements OnInit {
       )
       .subscribe((total) => {
         // console.log('Statistic', total);
-        const [inbound, outbound] = total;
-        data.datasets[0].data = [
-          inbound.errors,
-          inbound.messagesReceived,
-          inbound.snoopedTemplatesTotal,
-          inbound.snoopedTemplatesActive
-        ];
-        data.datasets[1].data = [
-          outbound.errors,
-          outbound.messagesReceived,
-          outbound.snoopedTemplatesTotal,
-          outbound.snoopedTemplatesActive
-        ];
-        // statistic[0] = total.errors;
-        // statistic[1] = total.messagesReceived;
-        // statistic[2] = total.snoopedTemplatesTotal;
-        // statistic[3] = total.snoopedTemplatesActive;
-        this.statusMappingChart.update();
+        if (total) {
+          const [inbound, outbound] = total;
+          data.datasets[0].data = [
+            inbound.errors,
+            inbound.messagesReceived,
+            inbound.snoopedTemplatesTotal,
+            inbound.snoopedTemplatesActive
+          ];
+          data.datasets[1].data = [
+            outbound.errors,
+            outbound.messagesReceived,
+            outbound.snoopedTemplatesTotal,
+            outbound.snoopedTemplatesActive
+          ];
+          this.statusMappingChart.update();
+        }
       });
 
     const config = {
@@ -108,24 +117,54 @@ export class ChartComponent implements OnInit {
       data: data,
       options: {
         responsive: true,
+        layout: {
+          padding: {
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0
+          }
+        },
         plugins: {
           legend: {
             display: true,
-            position: this.positionChart
+            position: 'left' as any,
+          },
+          title: {
+            align: 'left' as any,
+            display: true,
+            text: 'Messages Inbound & Outbound',
+            position: 'top' as any,
+            font: {
+              size: 14,
+              weight: 'normal' as any
+            }
+          }
+        },
+        indexAxis: 'y' as any,
+        scales: {
+          y: {
+            grid: {
+              display: true
+            },
+            ticks: {
+              sampleSize: 4,
+            }
           }
         }
         // scales: {
-        //   xAxes: [
-        //     {
-        //       ticks: {
-        //         maxRotation: 90,
-        //         minRotation: 80
-        //       }
-        //     }
-        //   ]
+        //   // xAxes: [
+        //   //   {
+        //   //     ticks: {
+        //   //       maxRotation: 90,
+        //   //       minRotation: 80
+        //   //     }
+        //   //   }
+        //   // ]
+
         // }
       }
     };
-    this.statusMappingChart = new Chart('myChart', config);
+    this.statusMappingChart = new Chart('monitoringChart', config);
   }
 }
