@@ -46,6 +46,7 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
 import dynamic.mapping.core.C8YAgent;
@@ -75,6 +77,7 @@ import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.InnerNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import dynamic.mapping.notification.C8YAPISubscriber;
 
 @Slf4j
 @RestController
@@ -106,6 +109,14 @@ public class MappingRestController {
 
     @Autowired
     private MappingComponent mappingStatusComponent;
+
+    @Getter
+    private C8YAPISubscriber notificationSubscriber;
+
+    @Autowired
+    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
+        this.notificationSubscriber = notificationSubscriber;
+    }
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
@@ -197,8 +208,8 @@ public class MappingRestController {
 
     @RequestMapping(value = "/configuration/connector/instance/{ident}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> deleteConnectionConfiguration(@PathVariable String ident) {
-        log.info("Delete connection instance {}", ident);
         String tenant = contextService.getContext().getTenant();
+        log.info("Tenant {} - Delete connection instance {}", tenant, ident);
         if (!userHasMappingAdminRole()) {
             log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
                     tenant);
@@ -216,7 +227,7 @@ public class MappingRestController {
             bootstrapService.shutdownConnector(tenant, ident);
             connectorConfigurationComponent.deleteConnectorConfiguration(ident);
         } catch (Exception ex) {
-            log.error("Tenant {} -Error getting mqtt broker configuration {}", tenant, ex);
+            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(ident);
@@ -373,7 +384,7 @@ public class MappingRestController {
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-                c8yAgent.notificationSubscriberReconnect(tenant);
+                notificationSubscriber.notificationSubscriberReconnect(tenant);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -492,7 +503,7 @@ public class MappingRestController {
                 });
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Deleting active mappings is not allowed {}", tenant, ex);
+            log.error("Tenant {} - Exception when deleting mappping {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
         log.info("Tenant {} - After Delete mapping: {}", tenant, id);

@@ -76,11 +76,13 @@ import dynamic.mapping.core.ConnectorStatus;
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
 
-    public MQTTClient(String tenant, MappingComponent mappingComponent,
+    public MQTTClient(String tenant,
+            ObjectMapper objectMapper, C8YAgent c8YAgent, MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
-            ConnectorConfiguration connectorConfiguration, C8YAgent c8YAgent, ExecutorService cachedThreadPool,
-            ObjectMapper objectMapper, String additionalSubscriptionIdTest,
-            MappingServiceRepresentation mappingServiceRepresentation, ServiceConfiguration serviceConfiguration) {
+            ConnectorConfiguration connectorConfiguration, ServiceConfiguration serviceConfiguration,
+            ExecutorService cachedThreadPool,
+            MappingServiceRepresentation mappingServiceRepresentation,
+            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest) {
         // setConfigProperties();
         this.tenant = tenant;
         this.mappingComponent = mappingComponent;
@@ -93,7 +95,9 @@ public class MQTTClient extends AConnectorClient {
         this.cachedThreadPool = cachedThreadPool;
         this.objectMapper = objectMapper;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = mappingServiceRepresentation;        this.serviceConfiguration = serviceConfiguration;
+        this.mappingServiceRepresentation = mappingServiceRepresentation;
+        this.serviceConfiguration = serviceConfiguration;
+        this.dispatcher = dispatcher;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -235,10 +239,6 @@ public class MQTTClient extends AConnectorClient {
                     if (mqttClient != null) {
                         mqttClient.close(true);
                     }
-                    if (dispatcher == null)
-                        this.dispatcher = new AsynchronousDispatcherInbound(this, c8yAgent, objectMapper,
-                                cachedThreadPool,
-                                mappingComponent);
                     mqttClient = new MqttClient(broker,
                             clientId + additionalSubscriptionIdTest,
                             new MemoryPersistence());

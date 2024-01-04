@@ -182,14 +182,17 @@ export class BrokerConfigurationService {
     );
     const sourceList$ = this.triggerLogs$.pipe(
       tap((x) => console.log('TriggerLogs In', x)),
-      switchMap(() =>
-        this.eventService.list({
+      switchMap(() => {
+        const filter = {
           pageSize: 5,
-          withTotalPages: true,
-          type: this.filterStatusLog.eventType,
-          source: agentId
-        })
-      ),
+          withTotalPages: false,
+          source: agentId,
+        };
+        if (this.filterStatusLog.eventType !== 'ALL') {
+          filter['type'] = this.filterStatusLog.eventType;
+        }
+        return this.eventService.list(filter);
+      }),
       map((data) => data.data),
       map((events) =>
         events.map((event) => {
@@ -211,7 +214,9 @@ export class BrokerConfigurationService {
       // tap((x) => console.log('IncomingRealtime In', x)),
       filter((event) => {
         return (
-          event.type == this.filterStatusLog.eventType &&
+          (this.filterStatusLog.eventType == 'ALL'
+            ? true
+            : event.type == this.filterStatusLog.eventType) &&
           (this.filterStatusLog.connectorIdent == 'ALL'
             ? true
             : event[CONNECTOR_FRAGMENT].connectorIdent ==

@@ -16,23 +16,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @authors Christof Strack, Stefan Witschel
+ * @authors Christof Strack
  */
+import { Component } from '@angular/core';
+import { CellRendererContext } from '@c8y/ngx-components';
+import { Direction } from '../../shared/model/shared.model';
 
-package dynamic.mapping.core.mock;
-
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import org.springframework.stereotype.Service;
-
-@Service
-public class MockInventory {
-
-    public ManagedObjectRepresentation create(ManagedObjectRepresentation mor) {
-        return null;
-    }
-
-    public ManagedObjectRepresentation update(ManagedObjectRepresentation mor) {
-        return null;
-    }
-
+@Component({
+  template: `
+    <span [title]="context.value">
+      <i
+        [style]="context.value === 'OUTBOUND' ? 'width: 100%; color: orange' : 'width: 100%; color: green'"
+        [c8yIcon]="context.value === 'OUTBOUND' ? 'swipe-left' : 'swipe-right'"
+        class="m-r-5"
+      ></i>
+    </span>
+  `
+})
+export class DirectionRendererComponent {
+  Direction = Direction;
+  constructor(public context: CellRendererContext) {
+   //  console.log('Item', context.value);
+  }
 }

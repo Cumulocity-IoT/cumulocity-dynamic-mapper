@@ -117,6 +117,7 @@ export interface MappingStatus {
   id: number;
   name: string;
   ident: string;
+  direction: Direction;
   subscriptionTopic: string;
   errors: number;
   messagesReceived: number;

@@ -12,16 +12,14 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class CustomWebSocketClient extends WebSocketClient {
-
     private final NotificationCallback callback;
-
-
     private ScheduledExecutorService executorService = null;
+    private String tenant;
 
-
-    public CustomWebSocketClient(URI serverUri, NotificationCallback callback) {
+    public CustomWebSocketClient(URI serverUri, NotificationCallback callback, String tenant) {
         super(serverUri);
         this.callback = callback;
+        this.tenant = tenant;
     }
 
     @Override
@@ -45,7 +43,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
-        log.info("WebSocket closed " + (remote ? "by server. " : "") + " Code:" + statusCode + ", reason: " + reason);
+        log.info("Tenant {} - WebSocket closed {} statusCode: {}, reason: {}", tenant, remote ? "by server." : "", statusCode, reason);
         if (this.executorService != null)
             this.executorService.shutdownNow();
         this.callback.onClose(statusCode, reason);
@@ -53,7 +51,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onError(Exception e) {
-        log.error("WebSocket error:" + e);
+        log.error("Tenant {} - WebSocket error:", tenant, e);
         this.callback.onError(e);
     }
 }

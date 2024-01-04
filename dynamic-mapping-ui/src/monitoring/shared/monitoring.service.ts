@@ -22,22 +22,24 @@ import { Injectable } from '@angular/core';
 import { FetchClient, InventoryService, Realtime } from '@c8y/client';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
+import { MappingService } from '../../mapping/core/mapping.service';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
   constructor(
     private client: FetchClient,
     private inventory: InventoryService,
+    private mappingService: MappingService,
     private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
   }
+
   private realtime: Realtime;
-  private mappingStatus = new BehaviorSubject<MappingStatus[]>([]);
-  private _currentMappingStatus = this.mappingStatus.asObservable();
+  private mappingStatus$ = new BehaviorSubject<MappingStatus[]>([]);
 
   getCurrentMappingStatus(): Observable<MappingStatus[]> {
-    return this._currentMappingStatus;
+    return this.mappingStatus$;
   }
 
   async subscribeMonitoringChannel(): Promise<object> {
@@ -46,7 +48,7 @@ export class MonitoringService {
 
     const { data } = await this.inventory.detail(agentId);
     const monitoring: MappingStatus[] = data[MAPPING_FRAGMENT];
-    this.mappingStatus.next(monitoring);
+    this.mappingStatus$.next(monitoring);
     return this.realtime.subscribe(
       `/managedobjects/${agentId}`,
       this.updateStatus.bind(this)
@@ -60,7 +62,6 @@ export class MonitoringService {
   private updateStatus(p: object): void {
     const payload = p['data']['data'];
     const monitoring: MappingStatus[] = payload[MAPPING_FRAGMENT];
-    this.mappingStatus.next(monitoring);
-    // console.log("New statusMonitoring event", monitoring);
+    this.mappingStatus$.next(monitoring);
   }
 }

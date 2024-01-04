@@ -26,7 +26,7 @@ import {
   InventoryService,
   QueriesUtil
 } from '@c8y/client';
-import { BehaviorSubject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   BASE_URL,
@@ -64,7 +64,9 @@ export class MappingService {
   queriesUtil: QueriesUtil;
   protected JSONATA = require('jsonata');
 
-  private reload$: BehaviorSubject<void> = new BehaviorSubject(null);
+  private _mappingsInbound: Promise<Mapping[]>;
+  private _mappingsOutbound: Promise<Mapping[]>;
+  private reload$: Subject<void> = new Subject();
 
   async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
@@ -73,46 +75,57 @@ export class MappingService {
     );
   }
 
-  async loadMappings(direction: Direction): Promise<Mapping[]> {
-    const result: Mapping[] = [];
+  resetCache() {
+    this._mappingsInbound = undefined;
+    this._mappingsOutbound = undefined;
+  }
 
-    const filter: object = {
-      pageSize: 100,
-      withTotalPages: true,
-      type: MAPPING_TYPE
-    };
-    let query: any = { 'd11r_mapping.direction': direction };
+  async getMappings(direction: Direction): Promise<Mapping[]> {
+    let mappings: Promise<Mapping[]>;
+    if (
+      (direction == Direction.INBOUND && !this._mappingsInbound) ||
+      (direction == Direction.OUTBOUND && !this._mappingsOutbound)
+    ) {
+      const result: Mapping[] = [];
+      const filter: object = {
+        pageSize: 100,
+        withTotalPages: true,
+        type: MAPPING_TYPE
+      };
+      let query: any = { 'd11r_mapping.direction': direction };
 
-    if (direction == Direction.INBOUND) {
-      query = this.queriesUtil.addOrFilter(query, {
-        __not: { __has: 'd11r_mapping.direction' }
+      if (direction == Direction.INBOUND) {
+        query = this.queriesUtil.addOrFilter(query, {
+          __not: { __has: 'd11r_mapping.direction' }
+        });
+      }
+      query = this.queriesUtil.addAndFilter(query, {
+        type: { __has: 'd11r_mapping' }
       });
+
+      const { data } = await this.inventory.listQuery(query, filter);
+
+      data.forEach((m) =>
+        result.push({
+          ...m[MAPPING_FRAGMENT],
+          id: m.id
+        })
+      );
+
+      mappings = Promise.resolve(result);
+      if (direction == Direction.INBOUND) {
+        this._mappingsInbound = mappings;
+      } else {
+        this._mappingsOutbound = mappings;
+      }
+    } else {
+      if (direction == Direction.INBOUND) {
+        mappings = this._mappingsInbound;
+      } else {
+        mappings = this._mappingsOutbound;
+      }
     }
-    query = this.queriesUtil.addAndFilter(query, {
-      type: { __has: 'd11r_mapping' }
-    });
-
-    const { data } = await this.inventory.listQuery(query, filter);
-    // const query = {
-    //       'd11r_mapping.snoopStatus': direction
-    // }
-    // let data = (await this.inventory.list(filter)).data;
-
-    data.forEach((m) =>
-      result.push({
-        ...m[MAPPING_FRAGMENT],
-        id: m.id
-      })
-    );
-    return result;
-  }
-
-  reloadMappings() {
-    this.reload$.next();
-  }
-
-  listToReload(): BehaviorSubject<void> {
-    return this.reload$;
+    return mappings;
   }
 
   initializeCache(dir: Direction): void {
@@ -181,6 +194,7 @@ export class MappingService {
         id: m.id
       });
     });
+    this.reload$.next();
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
@@ -197,6 +211,7 @@ export class MappingService {
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     const m = await data.json();
+    this.reload$.next();
     return m;
   }
 
@@ -213,6 +228,7 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
+    this.reload$.next();
     return data.text();
   }
 
@@ -227,6 +243,7 @@ export class MappingService {
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     const m = await data.json();
+    this.reload$.next();
     return m;
   }
 
