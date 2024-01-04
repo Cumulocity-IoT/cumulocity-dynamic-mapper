@@ -152,6 +152,11 @@ public class MappingComponent {
             cacheMappingOutbound.put(tenant, new HashMap<>());
     }
 
+    public void cleanMappingStatus(String tenant) {
+        resolverMappingInbound.remove(tenant);
+        tenantStatusMapping.remove(tenant);
+    }
+
     public void sendMappingStatus(String tenant) {
         if (serviceConfigurations.get(tenant).sendMappingStatus) {
             subscriptionsService.runForTenant(tenant, () -> {
