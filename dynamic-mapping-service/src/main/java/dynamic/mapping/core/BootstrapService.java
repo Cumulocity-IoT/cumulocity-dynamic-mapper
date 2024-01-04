@@ -112,6 +112,11 @@ public class BootstrapService {
         } catch (ConnectorRegistryException e) {
             log.error("Error on cleaning up connector clients");
         }
+
+        // delete configurations
+        serviceConfigurations.remove(tenant);
+        mappingServiceRepresentations.remove(tenant);
+        mappingComponent.cleanMappingStatus(tenant);
     }
 
     @EventListener
