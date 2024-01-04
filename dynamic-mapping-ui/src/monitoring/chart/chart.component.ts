@@ -1,8 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Chart, ChartType, LayoutPosition, registerables } from 'chart.js';
-import { CHART_COLORS } from './util';
+import { CHART_COLORS, transparentize } from './util';
 import { Subject } from 'rxjs';
-import { MappingStatus } from '../../shared';
+import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
 Chart.register(...registerables);
 @Component({
@@ -30,9 +30,15 @@ export class ChartComponent implements OnInit {
       ],
       datasets: [
         {
+          label: 'Inbound',
           data: statistic,
-          backgroundColor: Object.values(CHART_COLORS)
-        }
+          backgroundColor: transparentize(CHART_COLORS.green, 0.1)
+        },
+        {
+          label: 'Outbound',
+          data: statistic,
+          backgroundColor: transparentize(CHART_COLORS.orange, 0.1)
+        },
       ]
     };
     this.mappingStatus
@@ -41,33 +47,54 @@ export class ChartComponent implements OnInit {
           // console.log('data01', acc01, data01);
           return data01.reduce(
             (acc02, data02) => {
+              const [inbound, outbound] = acc02;
               // console.log('data02', acc02, data02);
-              return {
-                errors: acc02.errors + data02.errors,
-                messagesReceived:
-                  acc02.messagesReceived + data02.messagesReceived,
-                snoopedTemplatesTotal:
-                  acc02.snoopedTemplatesTotal + data02.snoopedTemplatesTotal,
-                snoopedTemplatesActive:
-                  acc02.snoopedTemplatesActive + data02.snoopedTemplatesActive
-              } as Partial<MappingStatus>;
+              if (data02.direction == Direction.INBOUND || !data02.direction) {
+                inbound.errors = inbound.errors + data02.errors;
+                inbound.messagesReceived = inbound.messagesReceived + data02.messagesReceived;
+                inbound.snoopedTemplatesTotal = inbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
+                inbound.snoopedTemplatesActive = inbound.snoopedTemplatesActive + data02.snoopedTemplatesActive;
+              } else {
+                outbound.errors = outbound.errors + data02.errors;
+                outbound.messagesReceived = outbound.messagesReceived + data02.messagesReceived;
+                outbound.snoopedTemplatesTotal = outbound.snoopedTemplatesTotal + data02.snoopedTemplatesTotal;
+                outbound.snoopedTemplatesActive = outbound.snoopedTemplatesActive + data02.snoopedTemplatesActive;
+              }
+              return [inbound, outbound];
             },
-            {
-              errors: 0,
-              messagesReceived: 0,
-              snoopedTemplatesTotal: 0,
-              snoopedTemplatesActive: 0
-            } as Partial<MappingStatus>
+            [
+              {
+                direction: Direction.INBOUND,
+                errors: 0,
+                messagesReceived: 0,
+                snoopedTemplatesTotal: 0,
+                snoopedTemplatesActive: 0
+              } as Partial<MappingStatus>,
+              {
+                direction: Direction.OUTBOUND,
+                errors: 0,
+                messagesReceived: 0,
+                snoopedTemplatesTotal: 0,
+                snoopedTemplatesActive: 0
+              } as Partial<MappingStatus>
+            ]
           );
         })
       )
       .subscribe((total) => {
         // console.log('Statistic', total);
+        const [inbound, outbound] = total;
         data.datasets[0].data = [
-          total.errors,
-          total.messagesReceived,
-          total.snoopedTemplatesTotal,
-          total.snoopedTemplatesActive
+          inbound.errors,
+          inbound.messagesReceived,
+          inbound.snoopedTemplatesTotal,
+          inbound.snoopedTemplatesActive
+        ];
+        data.datasets[1].data = [
+          outbound.errors,
+          outbound.messagesReceived,
+          outbound.snoopedTemplatesTotal,
+          outbound.snoopedTemplatesActive
         ];
         // statistic[0] = total.errors;
         // statistic[1] = total.messagesReceived;
@@ -83,9 +110,10 @@ export class ChartComponent implements OnInit {
         responsive: true,
         plugins: {
           legend: {
-            display: false
+            display: true,
+            position: this.positionChart
           }
-        },
+        }
         // scales: {
         //   xAxes: [
         //     {
