@@ -3,11 +3,12 @@ package dynamic.mapping.rest;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.model.C8YAPISubscription;
 import dynamic.mapping.model.Device;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,7 @@ public class DeviceSubscriptionRestController {
     private ContextService<UserCredentials> contextService;
 
     @Autowired
-    private ConnectorRegistry connectorRegistry;
+    private ConfigurationRegistry configurationRegistry;
 
     @Value("${APP.outputMappingEnabled}")
     private boolean outputMappingEnabled;
@@ -46,7 +47,7 @@ public class DeviceSubscriptionRestController {
                         .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
                     // Creates subscription for each connector
-                    c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                    configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
 
                 } else {
                     log.warn("Could not subscribe device with id " + device.getId() + ". Device does not exists!");
@@ -68,7 +69,7 @@ public class DeviceSubscriptionRestController {
             String tenant = contextService.getContext().getTenant();
             // List<NotificationSubscriptionRepresentation> deviceSubscriptions =
             // c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
-            C8YAPISubscription c8ySubscription = c8yAgent.getNotificationSubscriber().getDeviceSubscriptions(tenant,
+            C8YAPISubscription c8ySubscription = configurationRegistry.getNotificationSubscriber().getDeviceSubscriptions(tenant,
                     null, null);
             // 3 cases -
             // 1. Device exists in subscription and active subscription --> Do nothing
@@ -91,7 +92,7 @@ public class DeviceSubscriptionRestController {
                 if (mor != null) {
                     try {
                         // Creates subscription for each connector
-                        c8yAgent.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                        configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -104,7 +105,7 @@ public class DeviceSubscriptionRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        c8yAgent.getNotificationSubscriber().unsubscribeDevice(mor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -125,7 +126,7 @@ public class DeviceSubscriptionRestController {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            C8YAPISubscription c8YAPISubscription = c8yAgent.getNotificationSubscriber()
+            C8YAPISubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
                     .getDeviceSubscriptions(contextService.getContext().getTenant(), deviceId, subscriptionName);
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
@@ -141,7 +142,7 @@ public class DeviceSubscriptionRestController {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(),
                     deviceId);
             if (mor != null) {
-                c8yAgent.getNotificationSubscriber().unsubscribeDevice(mor);
+                configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
             } else {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Could not delete subscription for device with id " + deviceId + ". Device not found");

@@ -26,6 +26,8 @@ import com.cumulocity.model.operation.OperationStatus;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
@@ -38,9 +40,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.SnoopStatus;
+import dynamic.mapping.notification.C8YAPISubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
 import org.apache.commons.codec.binary.Hex;
@@ -58,11 +62,47 @@ import java.util.concurrent.Future;
 // Not a service anymore, manually instantiated by the C8YSubscriber
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
+    @Getter
+    protected AConnectorClient connectorClient;
+
+    protected PayloadProcessor payloadProcessor;
+
+    protected C8YAPISubscriber notificationSubscriber;
+
+    @Setter
+    protected C8YAgent c8yAgent;
+
+    @Setter
+    protected ObjectMapper objectMapper;
+
+    @Setter
+    private ExecutorService cachedThreadPool;
+
+    private MappingComponent mappingComponent;
+
+    private ConfigurationRegistry configurationRegistry;
+
+    // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
+    // not possible to correlate messages received bei Notification API to the
+    // correct Connector
+    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
+            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
+            PayloadProcessor payloadProcessor) {
+        this.objectMapper = configurationRegistry.getObjectMapper();
+        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.mappingComponent = mappingComponent;
+        this.cachedThreadPool = cachedThreadPool;
+        this.connectorClient = connectorClient;
+        this.payloadProcessor = payloadProcessor;
+        this.configurationRegistry = configurationRegistry;
+        this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+    }
+
     @Override
     public void onOpen(URI serverUri) {
         log.info("Tenant {} - Connected to Cumulocity notification service over WebSocket {}", connectorClient.tenant,
                 serverUri);
-        c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 200);
+        notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
 
     @Override
@@ -88,16 +128,16 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("Tenant {} - Connection was closed.", connectorClient.tenant);
         if (reason.contains("401"))
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 401);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
-            c8yAgent.getNotificationSubscriber().setDeviceConnectionStatus(connectorClient.getTenant(), 0);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 0);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
         return notificationHeaders.get(0).split("/")[1];
     }
 
-    public static class MappingProcessorOutbound<T> implements Callable<List<ProcessingContext<?>>> {
+    public static class MappingOutboundTask<T> implements Callable<List<ProcessingContext<?>>> {
 
         List<Mapping> resolvedMappings;
         String topic;
@@ -108,18 +148,20 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         String tenant;
+        ServiceConfiguration serviceConfiguration;
 
-        public MappingProcessorOutbound(List<Mapping> mappings, MappingComponent mappingStatusComponent,
-                C8YAgent c8yAgent,
+        public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> mappings,
+                MappingComponent mappingStatusComponent,
                 Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound, boolean sendPayload,
-                C8YMessage c8yMessage, ObjectMapper objectMapper, String tenant) {
+                C8YMessage c8yMessage, String tenant) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
-            this.c8yAgent = c8yAgent;
+            this.c8yAgent = configurationRegistry.getC8yAgent();
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
             this.sendPayload = sendPayload;
             this.c8yMessage = c8yMessage;
-            this.objectMapper = objectMapper;
+            this.objectMapper = configurationRegistry.getObjectMapper();
+            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
             this.tenant = tenant;
         }
 
@@ -150,7 +192,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, c8yMessage);
-                            if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
+                            if (serviceConfiguration.logPayload) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}",
                                         tenant,
                                         context.getTopic(),
@@ -216,48 +258,6 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     }
 
-    @Getter
-    protected AConnectorClient connectorClient;
-
-    private PayloadProcessor payloadProcessor;
-
-    // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
-    // not possible to correlate messages received bei Notification API to the
-    // correct Connector
-    public AsynchronousDispatcherOutbound(ObjectMapper objectMapper, C8YAgent c8YAgent,
-            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
-            PayloadProcessor payloadProcessor) {
-        this.objectMapper = objectMapper;
-        this.c8yAgent = c8YAgent;
-        this.mappingComponent = mappingComponent;
-        this.cachedThreadPool = cachedThreadPool;
-        this.connectorClient = connectorClient;
-        this.payloadProcessor = payloadProcessor;
-    }
-
-    // @Autowired
-    @Setter
-    protected C8YAgent c8yAgent;
-
-    // @Autowired
-    // @Setter
-    // protected ConnectorRegistry connectorRegistry;
-
-    @Setter
-    protected ObjectMapper objectMapper;
-
-    // @Autowired
-    // Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
-
-    // @Autowired
-    // @Qualifier("cachedThreadPool")
-    @Setter
-    private ExecutorService cachedThreadPool;
-
-    // @Autowired
-    @Setter
-    MappingComponent mappingComponent;
-
     public Future<List<ProcessingContext<?>>> processMessage(String tenant, C8YMessage c8yMessage,
             boolean sendPayload) {
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
@@ -289,9 +289,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessorOutbound(resolvedMappings, mappingComponent, c8yAgent,
+                new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
                         payloadProcessor.getPayloadProcessorsOutbound(),
-                        sendPayload, c8yMessage, objectMapper, tenant));
+                        sendPayload, c8yMessage, tenant));
 
         if (op != null) {
             // Blocking for Operations to receive the processing result to update operation

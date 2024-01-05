@@ -46,7 +46,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -63,10 +62,9 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.RoleService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.BootstrapService;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.Operation;
@@ -77,7 +75,6 @@ import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.InnerNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
-import dynamic.mapping.notification.C8YAPISubscriber;
 
 @Slf4j
 @RestController
@@ -85,9 +82,6 @@ public class MappingRestController {
 
     @Autowired
     ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    C8YAgent c8yAgent;
 
     @Autowired
     MappingComponent mappingComponent;
@@ -106,17 +100,12 @@ public class MappingRestController {
 
     @Autowired
     private ContextService<UserCredentials> contextService;
+    
+    @Autowired
+    private ConfigurationRegistry configurationRegistry;
 
     @Autowired
     private MappingComponent mappingStatusComponent;
-
-    @Getter
-    private C8YAPISubscriber notificationSubscriber;
-
-    @Autowired
-    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
-        this.notificationSubscriber = notificationSubscriber;
-    }
 
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
@@ -326,7 +315,7 @@ public class MappingRestController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(configuration);
-            c8yAgent.getServiceConfigurations().put(tenant, configuration);
+            configurationRegistry.getServiceConfigurations().put(tenant, configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("Error getting mqtt broker configuration {}", ex);
@@ -378,13 +367,13 @@ public class MappingRestController {
             } else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
                 mappingComponent.initializeMappingStatus(tenant, true);
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
-                c8yAgent.reloadExtensions(tenant);
+                configurationRegistry.getC8yAgent().reloadExtensions(tenant);
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
-                notificationSubscriber.notificationSubscriberReconnect(tenant);
+                configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -603,14 +592,14 @@ public class MappingRestController {
     @RequestMapping(value = "/extension", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
         String tenant = contextService.getContext().getTenant();
-        Map<String, Extension> result = c8yAgent.getProcessorExtensions(tenant);
+        Map<String, Extension> result = configurationRegistry.getC8yAgent().getProcessorExtensions(tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
     @RequestMapping(value = "/extension/{extensionName}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
-        Extension result = c8yAgent.getProcessorExtension(tenant, extensionName);
+        Extension result = configurationRegistry.getC8yAgent().getProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");
@@ -625,7 +614,7 @@ public class MappingRestController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }
-        Extension result = c8yAgent.deleteProcessorExtension(tenant, extensionName);
+        Extension result = configurationRegistry.getC8yAgent().deleteProcessorExtension(tenant, extensionName);
         if (result == null)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Extension with id " + extensionName + " could not be found.");

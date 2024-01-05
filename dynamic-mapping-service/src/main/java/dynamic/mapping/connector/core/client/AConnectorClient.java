@@ -60,6 +60,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
@@ -91,7 +92,9 @@ public abstract class AConnectorClient {
     @Setter
     public AsynchronousDispatcherInbound dispatcher;
 
-    public ObjectMapper objectMapper;
+    protected ObjectMapper objectMapper;
+
+    protected ConfigurationRegistry configurationRegistry;
 
     @Getter
     public ExecutorService cachedThreadPool;
@@ -121,7 +124,7 @@ public abstract class AConnectorClient {
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
-        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone() );
+        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
         if ((initializeTask == null || initializeTask.isDone())) {
             initializeTask = cachedThreadPool.submit(() -> initialize());
         }
@@ -133,8 +136,7 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
-        serviceConfiguration =  c8yAgent.getServiceConfigurations().get(tenant);
-
+        serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
         connectorStatus.clearMessage();
         sendConnectorLifecycle();
@@ -295,7 +297,8 @@ public abstract class AConnectorClient {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
                 } catch (Exception e) {
-                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, mapping.subscriptionTopic,
+                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
+                            mapping.subscriptionTopic,
                             e);
                 }
             }
@@ -334,7 +337,8 @@ public abstract class AConnectorClient {
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (MqttException e1) {
-                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, mapping.subscriptionTopic, e1);
+                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
+                            mapping.subscriptionTopic, e1);
                 }
             } else if (subscriptionTopicChanged && activeMapping != null) {
                 MutableInt activeMappingSubs = getActiveSubscriptions()

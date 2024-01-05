@@ -44,11 +44,9 @@ import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.InnerNode;
@@ -68,28 +66,8 @@ public class MappingComponent {
 
     private Map<String, Set<Mapping>> dirtyMappings = new HashMap<>();
 
-    private ObjectMapper objectMapper;
-
     @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
-
-    @Autowired
-    public void setMappingServiceRepresentations(
-            Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
-        this.mappingServiceRepresentations = mappingServiceRepresentations;
-    }
-
-    @Getter
-    public Map<String, ServiceConfiguration> serviceConfigurations;
-
-    @Autowired
-    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
-        this.serviceConfigurations = serviceConfigurations;
-    }
+    ConfigurationRegistry configurationRegistry;
 
     @Autowired
     private InventoryApi inventoryApi;
@@ -125,7 +103,8 @@ public class MappingComponent {
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
-        MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
+        MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+                .getMappingServiceRepresentations().get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
             log.info("Tenant {} - Initializing status: {}, {} ", tenant,
                     mappingServiceRepresentation.getMappingStatus(),
@@ -158,11 +137,12 @@ public class MappingComponent {
     }
 
     public void sendMappingStatus(String tenant) {
-        if (serviceConfigurations.get(tenant).sendMappingStatus) {
+        if (configurationRegistry.getServiceConfigurations().get(tenant).sendMappingStatus) {
             subscriptionsService.runForTenant(tenant, () -> {
                 boolean initialized = this.initialized.get(tenant);
                 Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
-                MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
+                MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+                        .getMappingServiceRepresentations().get(tenant);
                 // avoid sending empty monitoring events
                 if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
                     log.debug("Sending monitoring: {}", statusMapping.values().size());
@@ -193,9 +173,10 @@ public class MappingComponent {
 
     public void sendConnectorLifecycle(String tenant, String connectorIdent, ConnectorStatusEvent connectorStatus,
             String connectorName) {
-        if (serviceConfigurations.get(tenant).sendConnectorLifecycle) {
+        if (configurationRegistry.getServiceConfigurations().get(tenant).sendConnectorLifecycle) {
             subscriptionsService.runForTenant(tenant, () -> {
-                MappingServiceRepresentation mappingServiceRepresentation = mappingServiceRepresentations.get(tenant);
+                MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+                        .getMappingServiceRepresentations().get(tenant);
                 Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
                         new HashMap<String, Map<String, String>>());
                 log.debug("Tenant {} - Sending status connector: {}", tenant, ccs);
@@ -363,11 +344,11 @@ public class MappingComponent {
     }
 
     private ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
-        return objectMapper.convertValue(mr, ManagedObjectRepresentation.class);
+        return configurationRegistry.getObjectMapper().convertValue(mr, ManagedObjectRepresentation.class);
     }
 
     private MappingRepresentation toMappingObject(ManagedObjectRepresentation mor) {
-        return objectMapper.convertValue(mor, MappingRepresentation.class);
+        return configurationRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
     }
 
     private void deleteMappingStatus(String tenant, String id) {

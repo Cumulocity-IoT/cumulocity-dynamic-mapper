@@ -6,7 +6,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
-
 public class MQTTCallback implements MqttCallback {
     GenericMessageCallback genericMessageCallback;
     String tenant;
@@ -17,16 +16,17 @@ public class MQTTCallback implements MqttCallback {
         this.tenant = tenant;
         this.connectorIdent = connectorIdent;
     }
+
     @Override
     public void connectionLost(Throwable throwable) {
-        genericMessageCallback.onClose(null,throwable);
+        genericMessageCallback.onClose(null, throwable);
     }
 
     @Override
-    public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+    public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         ConnectorMessage connectorMessage = new ConnectorMessage();
         connectorMessage.setPayload(mqttMessage.getPayload());
-        genericMessageCallback.onMessage(s,connectorMessage);
+        genericMessageCallback.onMessage(topic, connectorMessage);
     }
 
     @Override

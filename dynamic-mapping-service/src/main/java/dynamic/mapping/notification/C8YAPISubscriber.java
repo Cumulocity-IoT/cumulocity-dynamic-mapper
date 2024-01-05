@@ -33,7 +33,7 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.model.C8YAPISubscription;
 import dynamic.mapping.model.Device;
@@ -49,7 +49,8 @@ import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -57,7 +58,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 @Slf4j
-@Service
+@Component
 public class C8YAPISubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
 
@@ -70,8 +71,12 @@ public class C8YAPISubscriber {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
+    @Getter
+    private ConfigurationRegistry configurationRegistry;
     @Autowired
-    private C8YAgent c8YAgent;
+    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry){
+        this.configurationRegistry = configurationRegistry;
+    }
 
     @Autowired
     @Qualifier("cachedThreadPool")
@@ -299,8 +304,7 @@ public class C8YAPISubscriber {
                     log.debug("Subscription with ID {} retrieved", notification.getId().getValue());
                     Device device = new Device();
                     device.setId(notification.getSource().getId().getValue());
-                    ManagedObjectRepresentation mor = c8YAgent
-                            .getManagedObjectForId(tenant, notification.getSource().getId().getValue());
+                    ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant, notification.getSource().getId().getValue());
                     if (mor != null)
                         device.setName(mor.getName());
                     else
@@ -404,7 +408,7 @@ public class C8YAPISubscriber {
                         if (notification.getNotificationHeaders().contains("DELETE")) {
                             log.info("Tenant {} - Device deleted with name {} and id {}", tenant, mor.getName(),
                                     mor.getId().getValue());
-                            final ManagedObjectRepresentation morRetrieved = c8YAgent
+                            final ManagedObjectRepresentation morRetrieved = configurationRegistry.getC8yAgent()
                                     .getManagedObjectForId(tenant, mor.getId().getValue());
                             if (morRetrieved != null) {
                                 unsubscribeDevice(morRetrieved);
@@ -486,10 +490,10 @@ public class C8YAPISubscriber {
                         }
                     }
                 }
-                c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTED, null);
+                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTED, null);
             } catch (Exception e) {
                 log.error("Error reconnecting to Notification Service: {}", e.getLocalizedMessage());
-                c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
+                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
                 e.printStackTrace();
             }
         });
@@ -623,7 +627,7 @@ public class C8YAPISubscriber {
                 }
             }
         }
-        c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
+        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
     }
 
     public void setDeviceConnectionStatus(String tenant, int status) {
@@ -632,7 +636,7 @@ public class C8YAPISubscriber {
 
     public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
         String tenant = subscriptionsService.getTenant();
-        c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
+        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
         try {
             baseUrl = baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
@@ -643,7 +647,7 @@ public class C8YAPISubscriber {
             // Only start it once
             if (this.executorService == null) {
                 this.executorService = Executors.newScheduledThreadPool(1);
-                c8YAgent.sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
+                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
                 this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
                 }, 30, 30, TimeUnit.SECONDS);

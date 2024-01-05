@@ -3,14 +3,15 @@ package dynamic.mapping.connector.core.registry;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
-import org.springframework.stereotype.Service;
+
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-@Service
+@Component
 @Slf4j
 public class ConnectorRegistry {
 

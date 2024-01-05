@@ -44,7 +44,6 @@ import java.util.Properties;
 import javax.ws.rs.core.MediaType;
 
 import dynamic.mapping.App;
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -62,7 +61,7 @@ import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.svenson.JSONParser;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -87,19 +86,15 @@ import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import c8y.IsDevice;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
-import dynamic.mapping.notification.C8YAPISubscriber;
 
 @Slf4j
-@Service
+@Component
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
-
-
 
     @Autowired
     private EventApi eventApi;
@@ -128,47 +123,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    private ObjectMapper objectMapper;
+    private ExtensionsComponent extensionsComponent;
 
     @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    private ExtensionsComponent extensions;
-
-    @Autowired
-    public void setExtensions(ExtensionsComponent extensions) {
-        this.extensions = extensions;
+    public void setExtensionsComponent(ExtensionsComponent extensionsComponent) {
+        this.extensionsComponent = extensionsComponent;
     }
 
     @Getter
-    private C8YAPISubscriber notificationSubscriber;
-
+    private ConfigurationRegistry configurationRegistry;
     @Autowired
-    public void setNotificationSubscriber(@Lazy C8YAPISubscriber notificationSubscriber) {
-        this.notificationSubscriber = notificationSubscriber;
+    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry){
+        this.configurationRegistry = configurationRegistry;
     }
-
-    @Getter
-    public Map<String, ServiceConfiguration> serviceConfigurations;
-
-    @Autowired
-    public void setServiceConfigurations(Map<String, ServiceConfiguration> serviceConfigurations) {
-        this.serviceConfigurations = serviceConfigurations;
-    }
-
-    private Map<String, MappingServiceRepresentation> mappingServiceRepresentations;
-
-    @Autowired
-    public void setMappingServiceRepresentations(
-            Map<String, MappingServiceRepresentation> mappingServiceRepresentations) {
-        this.mappingServiceRepresentations = mappingServiceRepresentations;
-    }
-
-    // structure: <tenant, <extensibleProcessorInbound>>
-    @Getter
-    private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     private JSONParser jsonParser = JSONBase.getJSONParser();
 
@@ -179,7 +146,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
     public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
     public static final String STATUS_NOTIFICATION_EVENT_TYPE = "d11r_notificationStatusEvent";
-
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.properties";
@@ -338,12 +304,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             AbstractExtensibleRepresentation rt = null;
             try {
                 if (targetAPI.equals(API.EVENT)) {
-                    EventRepresentation eventRepresentation = objectMapper.readValue(payload,
+                    EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
                             EventRepresentation.class);
                     rt = eventApi.create(eventRepresentation);
                     log.info("Tenant {} - New event posted: {}", tenant, rt);
                 } else if (targetAPI.equals(API.ALARM)) {
-                    AlarmRepresentation alarmRepresentation = objectMapper.readValue(payload,
+                    AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
                             AlarmRepresentation.class);
                     rt = alarmApi.create(alarmRepresentation);
                     log.info("Tenant {} - New alarm posted: {}", tenant, rt);
@@ -380,7 +346,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
-            ManagedObjectRepresentation mor = objectMapper.readValue(currentRequest.getRequest(),
+            ManagedObjectRepresentation mor = configurationRegistry.getObjectMapper().readValue(
+                    currentRequest.getRequest(),
                     ManagedObjectRepresentation.class);
             try {
                 ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
@@ -418,7 +385,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         ClassLoader inernalClassloader = C8YAgent.class.getClassLoader();
         ClassLoader externalClassLoader = null;
 
-        for (ManagedObjectRepresentation extension : extensions.get()) {
+        for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
@@ -459,7 +426,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private void registerExtensionInProcessor(String tenant, String id, String extName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.addExtension(id, extName, external);
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
@@ -526,18 +493,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtensions();
     }
 
     public Extension getProcessorExtension(String tenant, String extension) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         return extensibleProcessor.getExtension(extension);
     }
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
-        for (ManagedObjectRepresentation extensionRepresentation : extensions.get()) {
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
+        for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
             if (extensionName.equals(extensionRepresentation.getName())) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
                 log.info("Tenant {} - Deleted extension: {} permanently!", tenant, extensionName);
@@ -547,7 +514,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void reloadExtensions(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = extensibleProcessors.get(tenant);
+        ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.deleteExtensions();
         loadProcessorExtensions(tenant);
     }
@@ -614,12 +581,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProsessor(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(objectMapper, this, tenant);
-        extensibleProcessors.put(tenant, extensibleProcessor);
+        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry, tenant);
+        configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
         log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
-        List<ManagedObjectRepresentation> internalExtension = extensions.getInternal();
+        List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
         ManagedObjectRepresentation ie = new ManagedObjectRepresentation();
         if (internalExtension == null || internalExtension.size() == 0) {
             Map<String, ?> props = Map.of("name",
@@ -638,20 +605,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (getServiceConfigurations().get(tenant).sendNotificationLifecycle) {
+        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle) {
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);
             Map<String, String> stMap = Map.ofEntries(
                     entry("status", connectorStatus.name()),
-                    entry("message", message == null? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name(): message),
+                    entry("message",
+                            message == null ? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name() : message),
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
                     entry("connectorIdent", "000000"),
-                    entry("date", date)
-                    );
+                    entry("date", date));
             createEvent("Connector status:" + connectorStatus.name(),
                     C8YAgent.STATUS_NOTIFICATION_EVENT_TYPE,
-                    DateTime.now(), mappingServiceRepresentations.get(tenant), tenant, stMap);
+                    DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+                    stMap);
         }
     }
 

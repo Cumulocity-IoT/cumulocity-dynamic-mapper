@@ -33,8 +33,10 @@ import com.jayway.jsonpath.JsonPath;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.processor.ProcessingException;
@@ -50,22 +52,23 @@ import java.util.*;
 import java.util.Map.Entry;
 
 @Slf4j
-//@Service
 public abstract class BasePayloadProcessorInbound<T> {
 
-    public BasePayloadProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
-        this.objectMapper = objectMapper;
-        //this.connectorClient = connectorClient;
+    public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant) {
+        this.objectMapper = configurationRegistry.getObjectMapper();
+        // this.connectorClient = connectorClient;
         this.tenant = tenant;
-        this.c8yAgent = c8yAgent;
+        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
     }
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
-    //protected IConnectorClient connectorClient;
 
     protected String tenant;
+
+    protected ServiceConfiguration serviceConfiguration;
 
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
             throws IOException;
@@ -92,7 +95,8 @@ public abstract class BasePayloadProcessorInbound<T> {
         // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
         // using alternative method
         String deviceIdentifierMapped2PathTarget2 = mapping.targetAPI.identifier;
-        List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache.get(deviceIdentifierMapped2PathTarget2);
+        List<MappingSubstitution.SubstituteValue> deviceEntries = postProcessingCache
+                .get(deviceIdentifierMapped2PathTarget2);
         int countMaxlistEntries = postProcessingCache.get(maxEntry).size();
         MappingSubstitution.SubstituteValue toDouble = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxlistEntries) {
@@ -106,7 +110,8 @@ public abstract class BasePayloadProcessorInbound<T> {
             int predecessor = -1;
             DocumentContext payloadTarget = JsonPath.parse(mapping.target);
             for (String pathTarget : pathTargets) {
-                MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
+                        new TextNode("NOT_DEFINED"), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                         RepairStrategy.DEFAULT);
                 if (i < postProcessingCache.get(pathTarget).size()) {
                     substituteValue = postProcessingCache.get(pathTarget).get(i).clone();
@@ -209,7 +214,8 @@ public abstract class BasePayloadProcessorInbound<T> {
         return context;
     }
 
-    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub, DocumentContext jsonObject, String keys)
+    public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,
+            DocumentContext jsonObject, String keys)
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
@@ -227,7 +233,7 @@ public abstract class BasePayloadProcessorInbound<T> {
             if (replacement instanceof Map<?, ?>) {
                 Map<String, Object> rm = (Map<String, Object>) replacement;
                 for (Map.Entry<String, Object> entry : rm.entrySet()) {
-                    jsonObject.put("$",entry.getKey(), entry.getValue());
+                    jsonObject.put("$", entry.getKey(), entry.getValue());
                 }
             }
         } else {
