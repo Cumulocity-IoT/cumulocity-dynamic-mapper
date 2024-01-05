@@ -43,7 +43,7 @@
     "run": "^1.4.0",
     "rxjs": "~6.6.3",
     "style-loader": "^3.3.1",
-    "vanilla-jsoneditor": "^0.20.0",
+    "vanilla-jsoneditor": "^0.21.0",
     "zone.js": "~0.11.7"
   },
   "devDependencies": {
