@@ -44,7 +44,8 @@ import {
   isMultiSelection,
   createMultiSelection,
   TextContent,
-  isValueSelection
+  isValueSelection,
+  ContextMenuItem
 } from 'vanilla-jsoneditor';
 
 @Component({
@@ -134,7 +135,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             1
           );
           return items;
-        }
+        },
+        onRenderContextMenu: this.onRenderContextMenu.bind(this)
       }
     });
 
@@ -147,6 +149,42 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.editor?.destroy();
+  }
+
+  removeItem(items: ContextMenuItem[], textToRemove: string) {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const item = items[i];
+      if (item.type === 'button') {
+        if (item.text === textToRemove) {
+          // Remove the item with name 'NotUsed'
+          items.splice(i, 1);
+        }
+      } else if (item.type === 'row' || item.type === ('column' as any)) {
+        // Recursively remove items with name 'NotUsed' from the nested array
+        this.removeItem(item['items'] as any, textToRemove);
+        // Remove the entire parent item if it becomes empty after removal
+        if (item['items'].length === 0) {
+          items.splice(i, 1);
+        }
+      } else if (item.type === 'dropdown-button') {
+        // Recursively remove items with name 'NotUsed' from the nested array
+        this.removeItem(item['items'] as any, textToRemove);
+        this.removeItem([item['main']] as any, textToRemove);
+        // Remove the entire parent item if it becomes empty after removal
+        if (item.items.length === 0) {
+          items.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  private onRenderContextMenu(
+    items: ContextMenuItem[],
+    context: { mode: 'tree' | 'text' | 'table'; modal: boolean }
+  ): ContextMenuItem[] | undefined {
+    console.log('ContextMenü', items, context);
+    this.removeItem(items, 'Transform');
+    return items;
   }
 
   private onSelect(selection: JSONEditorSelection | undefined) {
