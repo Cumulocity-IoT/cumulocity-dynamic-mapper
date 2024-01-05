@@ -28,8 +28,10 @@ import com.jayway.jsonpath.JsonPath;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
@@ -50,12 +52,13 @@ import java.util.Set;
 // @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
+    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
             String tenant) {
-        this.objectMapper = objectMapper;
+        this.objectMapper = configurationRegistry.getObjectMapper();
         this.connectorClient = connectorClient;
-        this.c8yAgent = c8yAgent;
+        this.c8yAgent = configurationRegistry.getC8yAgent();
         this.tenant = tenant;
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
     }
 
     protected C8YAgent c8yAgent;
@@ -65,6 +68,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
     protected AConnectorClient connectorClient;
 
     protected String tenant;
+
+    protected ServiceConfiguration serviceConfiguration;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";

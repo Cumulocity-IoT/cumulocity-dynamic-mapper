@@ -21,7 +21,6 @@
 
 package dynamic.mapping.processor.extension;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
@@ -30,7 +29,7 @@ import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,8 +40,8 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
-        super(objectMapper, c8yAgent, tenant);
+    public ExtensibleProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant) {
+        super(configurationRegistry, tenant);
     }
 
     @Override

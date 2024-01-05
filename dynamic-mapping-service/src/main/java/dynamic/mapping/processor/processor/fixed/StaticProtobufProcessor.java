@@ -21,14 +21,13 @@
 
 package dynamic.mapping.processor.processor.fixed;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.FloatNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.model.MappingSubstitution;
 import dynamic.mapping.processor.inbound.BasePayloadProcessorInbound;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -43,8 +42,8 @@ import java.util.Map;
 
 public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
 
-    public StaticProtobufProcessor(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
-        super(objectMapper, c8yAgent, tenant);
+    public StaticProtobufProcessor(ConfigurationRegistry configurationRegistry, String tenant) {
+        super(configurationRegistry, tenant);
     }
 
     @Override

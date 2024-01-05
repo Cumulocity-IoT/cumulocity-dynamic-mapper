@@ -45,7 +45,6 @@ import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
-import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -57,15 +56,12 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
 
@@ -76,28 +72,27 @@ import dynamic.mapping.core.ConnectorStatus;
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
 
-    public MQTTClient(String tenant,
-            ObjectMapper objectMapper, C8YAgent c8YAgent, MappingComponent mappingComponent,
+    public MQTTClient(ConfigurationRegistry configurationRegistry,
+            MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
-            ConnectorConfiguration connectorConfiguration, ServiceConfiguration serviceConfiguration,
+            ConnectorConfiguration connectorConfiguration,
             ExecutorService cachedThreadPool,
-            MappingServiceRepresentation mappingServiceRepresentation,
-            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest) {
-        // setConfigProperties();
-        this.tenant = tenant;
+            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+        this.configurationRegistry = configurationRegistry;
         this.mappingComponent = mappingComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
         this.configuration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
         this.connectorName = connectorConfiguration.name;
-        this.c8yAgent = c8YAgent;
+        this.c8yAgent = configurationRegistry.getC8yAgent();
         this.cachedThreadPool = cachedThreadPool;
-        this.objectMapper = objectMapper;
+        this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-        this.mappingServiceRepresentation = mappingServiceRepresentation;
-        this.serviceConfiguration = serviceConfiguration;
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
+        this.tenant = tenant;
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -267,7 +262,7 @@ public class MQTTClient extends AConnectorClient {
                     log.error("Error on reconnect: {}", e.getMessage());
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
-                    if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
+                    if (serviceConfiguration.logConnectorErrorInBackend) {
                         log.error("Stacktrace:", e);
                     }
                 }
@@ -298,7 +293,7 @@ public class MQTTClient extends AConnectorClient {
                 log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
-                if (c8yAgent.getServiceConfigurations().get(tenant).logConnectorErrorInBackend) {
+                if (serviceConfiguration.logConnectorErrorInBackend) {
                     log.error("Stacktrace:", e);
                 }
                 successful = false;

@@ -28,14 +28,13 @@ import com.api.jsonata4java.expressions.ParseException;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -49,9 +48,9 @@ import java.util.Map;
 // @Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
-    public JSONProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
+    public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
             String tenant) {
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+        super(configurationRegistry, connectorClient, tenant);
     }
 
     @Override
@@ -172,7 +171,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (c8yAgent.getServiceConfigurations().get(tenant).logSubstitution) {
+                if (serviceConfiguration.logSubstitution) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
