@@ -125,11 +125,11 @@ public class BootstrapService {
         String tenant = event.getCredentials().getTenant();
         log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        ManagedObjectRepresentation mappingServiceMOR = c8YAgent.createMappingServiceObject(tenant);
+        ManagedObjectRepresentation mappingServiceMOR = c8YAgent.initializeMappingServiceObject(tenant);
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
         serviceConfigurations.put(tenant, serviceConfiguration);
-        c8YAgent.createExtensibleProsessorForTenant(tenant);
+        c8YAgent.createExtensibleProsessor(tenant);
         c8YAgent.loadProcessorExtensions(tenant);
         MappingServiceRepresentation mappingServiceRepresentation = objectMapper.convertValue(mappingServiceMOR,
                 MappingServiceRepresentation.class);

@@ -1,28 +1,38 @@
-import { Component, Input, OnInit } from '@angular/core';
-import {
-  Chart,
-  ChartType,
-  registerables
-} from 'chart.js';
+import { Component, ElementRef, Input, OnInit } from '@angular/core';
+import { Chart, registerables } from 'chart.js';
 import { CHART_COLORS, transparentize } from './util';
 import { Subject } from 'rxjs';
 import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
 Chart.register(...registerables);
+// Chart.defaults.font.family = 'Roboto, Helvetica, Arial, sans-serif';
+// Chart.defaults.color = 'green';
+
 @Component({
   selector: 'd11r-monitoring-chart',
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.css']
 })
 export class ChartComponent implements OnInit {
-  constructor() {}
+  constructor(private el: ElementRef) {}
   @Input()
   mappingStatus: Subject<MappingStatus[]>;
 
   private statusMappingChart: Chart;
-  private lineChartType: ChartType = 'bar';
+  private textColor;
+  private fontFamiliy;
+  private fontWeight;
+  private fontSize;
 
   ngOnInit() {
+    const root = this.el.nativeElement.ownerDocument.documentElement;
+    this.textColor = getComputedStyle(root).getPropertyValue('--c8y-text-color').trim();
+    this.fontFamiliy = getComputedStyle(root).getPropertyValue('--c8y-font-family-sans-serif').trim();
+    this.fontWeight = getComputedStyle(root).getPropertyValue('--c8y-font-weight-headings').trim();
+    this.fontSize = getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim();
+    // rgb(100, 31, 61), 'Roboto, Helvetica, Arial, sans-serif'
+    // console.log('Text Color', this.textColor);
+
     const statistic = [0, 0, 0, 0];
     const data = {
       labels: [
@@ -113,7 +123,7 @@ export class ChartComponent implements OnInit {
       });
 
     const config = {
-      type: this.lineChartType,
+      type: 'bar' as any,
       data: data,
       options: {
         responsive: true,
@@ -130,40 +140,39 @@ export class ChartComponent implements OnInit {
           legend: {
             display: true,
             position: 'left' as any,
-          },
-          title: {
-            align: 'left' as any,
-            display: true,
-            text: 'Messages Inbound & Outbound',
-            position: 'top' as any,
             font: {
-              size: 14,
+              family: this.fontFamiliy,
               weight: 'normal' as any
             }
-          }
+          },
+          // title: {
+          //   align: 'left' as any,
+          //   display: true,
+          //   text: 'Messages Inbound & Outbound',
+          //   position: 'top' as any,
+          //   color: this.textColor as any,
+
+          //   // styling is applied through css to match tehrest of the Cumulocity UI
+          //   font: {
+          //     size: this.fontSize,
+          //     weight: this.fontWeight
+          //   }
+          // }
         },
         indexAxis: 'y' as any,
+        color: this.textColor as any,
         scales: {
           y: {
-            grid: {
-              display: true
-            },
             ticks: {
-              sampleSize: 4,
+              color: this.textColor as any
+            }
+          },
+          x: {
+            ticks: {
+              color: this.textColor as any
             }
           }
         }
-        // scales: {
-        //   // xAxes: [
-        //   //   {
-        //   //     ticks: {
-        //   //       maxRotation: 90,
-        //   //       minRotation: 80
-        //   //     }
-        //   //   }
-        //   // ]
-
-        // }
       }
     };
     this.statusMappingChart = new Chart('monitoringChart', config);

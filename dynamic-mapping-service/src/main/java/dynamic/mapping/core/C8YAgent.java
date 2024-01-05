@@ -581,7 +581,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         });
     }
 
-    public ManagedObjectRepresentation createMappingServiceObject(String tenant) {
+    public ManagedObjectRepresentation initializeMappingServiceObject(String tenant) {
         ExternalIDRepresentation mappingServiceIdRepresentation = resolveExternalId2GlobalId(tenant,
                 new ID(null, MappingServiceRepresentation.AGENT_ID),
                 null);
@@ -613,7 +613,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void createExtensibleProsessorForTenant(String tenant) {
+    public void createExtensibleProsessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(objectMapper, this, tenant);
         extensibleProcessors.put(tenant, extensibleProcessor);
         log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
