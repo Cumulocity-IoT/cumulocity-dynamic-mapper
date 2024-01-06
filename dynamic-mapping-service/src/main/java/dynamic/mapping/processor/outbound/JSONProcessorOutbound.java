@@ -48,9 +48,8 @@ import java.util.Map;
 // @Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
-    public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
-            String tenant) {
-        super(configurationRegistry, connectorClient, tenant);
+    public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+        super(configurationRegistry, connectorClient);
     }
 
     @Override
@@ -82,10 +81,11 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 Expressions expr = Expressions.parse(ps);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}", context.getTenant(), substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", context.getTenant(),
+                        substitution.pathSource,
                         payload, e);
             }
             /*
@@ -138,8 +138,9 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                     if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
                         log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}",
-                                tenant, ps, extractedSourceContent.toPrettyString(), extractedSourceContent.asText());
-                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(tenant,
+                                context.getTenant(), ps, extractedSourceContent.toPrettyString(),
+                                extractedSourceContent.asText());
+                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                                 new GId(extractedSourceContent.asText()), mapping.externalIdType,
                                 context);
                         if (externalId == null && context.isSendPayload()) {
@@ -171,9 +172,9 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (serviceConfiguration.logSubstitution) {
+                if (context.getServiceConfiguration().logSubstitution) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                            tenant,
+                            context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
             }

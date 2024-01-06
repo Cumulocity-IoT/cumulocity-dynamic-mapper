@@ -47,6 +47,8 @@ import dynamic.mapping.App;
 import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
 import dynamic.mapping.configuration.TrustedCertificateRepresentation;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.facade.IdentityFacade;
+import dynamic.mapping.core.facade.InventoryFacade;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.ExtensionEntry;
 import dynamic.mapping.model.MappingServiceRepresentation;

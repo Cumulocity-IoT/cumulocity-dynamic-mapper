@@ -52,13 +52,10 @@ import java.util.Set;
 // @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
-            String tenant) {
+    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.connectorClient = connectorClient;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.tenant = tenant;
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
     }
 
     protected C8YAgent c8yAgent;
@@ -66,10 +63,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     protected ObjectMapper objectMapper;
 
     protected AConnectorClient connectorClient;
-
-    protected String tenant;
-
-    protected ServiceConfiguration serviceConfiguration;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
@@ -149,7 +142,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
-                log.error("Tenant {} - Error during publishing outbound message: {}", tenant, e);
+                log.error("Tenant {} - Error during publishing outbound message: {}", context.getTenant(), e);
             }
             predecessor = newPredecessor;
         } else {
