@@ -95,7 +95,7 @@ export class BrokerConfigurationService {
   }
 
   resetCache() {
-    console.log('Calling: BrokerConfigurationService.resetCache() ');
+    // console.log('Calling: BrokerConfigurationService.resetCache()');
     this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
@@ -124,9 +124,9 @@ export class BrokerConfigurationService {
   }
 
   initConnectorConfigurations() {
-    console.log(
-      'Calling BrokerConfigurationService.initConnectorConfigurations()'
-    );
+    // console.log(
+    //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
+    // );
     const connectorConfig$ = this.triggerConfigurations$.pipe(
       tap(() => console.log('New triggerConfigurations!')),
       switchMap(() => {
@@ -219,7 +219,7 @@ export class BrokerConfigurationService {
             : event.type == this.filterStatusLog.eventType) &&
           (this.filterStatusLog.connectorIdent == 'ALL'
             ? true
-            : event[CONNECTOR_FRAGMENT].connectorIdent ==
+            : event[CONNECTOR_FRAGMENT]?.connectorIdent ==
               this.filterStatusLog.connectorIdent)
         );
       }),

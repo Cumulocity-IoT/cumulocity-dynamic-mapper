@@ -34,7 +34,7 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.SnoopStatus;
-import dynamic.mapping.processor.PayloadProcessor;
+import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -47,6 +47,27 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+/**
+ * AsynchronousDispatcherInbound
+ * 
+ * This class implements the <code>GenericMessageCallback</code> which is then
+ * registered as a listener when new messages arrive.
+ * It processes INBOUND messages and works asynchronously.
+ * A task <code>GenericMessageCallback.MappingInboundTask</code> is added the
+ * ExecutorService, to not block new arriving messages.
+ * The call method in
+ * <code>AsynchronousDispatcherInbound.MappingInboundTask</code> is the core of
+ * the message processing.
+ * For all resolved mapppings the following steps are performed for new
+ * messages:
+ * ** deserialize the payload
+ * ** extract the content from the payload based on the defined substitution in
+ * the mapping and add these to a post processing cache
+ * ** substitute in the defined target template of the mapping the extracted
+ * content from the cache
+ * ** send the resulting target payload to Cumulocity
+ */
+
 @Slf4j
 public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
@@ -58,20 +79,19 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    private PayloadProcessor payloadProcessor;
+    private ProcessorRegister processorRegister;
 
     public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
             MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
-            PayloadProcessor payloadProcessor) {
+            ProcessorRegister processorRegister) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = cachedThreadPool;
         this.mappingComponent = mappingComponent;
-        this.payloadProcessor = payloadProcessor;
+        this.processorRegister = processorRegister;
         this.configurationRegistry = configurationRegistry;
     }
 
     public static class MappingInboundTask<T> implements Callable<List<ProcessingContext<?>>> {
-
         List<Mapping> resolvedMappings;
         String topic;
         String tenant;
@@ -169,7 +189,6 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
-                                // processor.substituteInTargetAndSend(context);
                                 List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
@@ -221,7 +240,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent, topic, tenant,
-                        payloadProcessor.getPayloadProcessorsInbound(),
+                        processorRegister.getPayloadProcessorsInbound(),
                         sendPayload, message));
 
         return futureProcessingResult;

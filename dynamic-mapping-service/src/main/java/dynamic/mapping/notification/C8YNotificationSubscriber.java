@@ -59,7 +59,7 @@ import java.util.concurrent.*;
 
 @Slf4j
 @Component
-public class C8YAPISubscriber {
+public class C8YNotificationSubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
 
     @Autowired
@@ -124,7 +124,7 @@ public class C8YAPISubscriber {
     // // for (AConnectorClient connectorClient : connectorMap.values()) {
     // // AsynchronousDispatcherOutbound dispatcherOutbound = new
     // AsynchronousDispatcherOutbound(objectMapper, c8YAgent, mappingComponent,
-    // cachedThreadPool, connectorClient, payloadProcessor);
+    // cachedThreadPool, connectorClient, processorRegister);
     // // dispatcherOutboundMap.get(tenant).put(connectorClient.getConnectorIdent(),
     // dispatcherOutbound);
     // // }
@@ -152,7 +152,7 @@ public class C8YAPISubscriber {
             disconnect(tenant, false);
     }
 
-    public void addConnector(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
+    public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
         Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
         if (dispatcherOutboundMap == null) {
             dispatcherOutboundMap = new HashMap<>();

@@ -41,7 +41,7 @@ import { MonitoringTabFactory } from './monitoring-tab.factory';
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/monitoring',
+      path: 'sag-ps-pkg-dynamic-mapping/monitoring/grid',
       component: MonitoringComponent
     }),
     hookRoute({

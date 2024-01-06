@@ -18,7 +18,7 @@ import dynamic.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import java.util.Map;
 
 @Slf4j
-public class PayloadProcessor {
+public class ProcessorRegister {
     @Setter
     private AConnectorClient connectorClient;
     @Getter
@@ -26,7 +26,7 @@ public class PayloadProcessor {
     @Getter
     private Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound = null;
 
-    public PayloadProcessor(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
+    public ProcessorRegister(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient,
             String tenant) {
         this.payloadProcessorsInbound = payloadProcessorsInbound(configurationRegistry, tenant);
         this.payloadProcessorsOutbound = payloadProcessorsOutbound(configurationRegistry, connectorClient, tenant);

@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.notification.C8YAPISubscriber;
+import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
 import lombok.Getter;
 
@@ -40,9 +40,9 @@ public class ConfigurationRegistry {
     }
 
     @Getter
-    private C8YAPISubscriber notificationSubscriber;
+    private C8YNotificationSubscriber notificationSubscriber;
     @Autowired
-        public void setC8yAgent(C8YAPISubscriber notificationSubscriber){
+        public void setC8yAgent(C8YNotificationSubscriber notificationSubscriber){
         this.notificationSubscriber = notificationSubscriber;
     }
 

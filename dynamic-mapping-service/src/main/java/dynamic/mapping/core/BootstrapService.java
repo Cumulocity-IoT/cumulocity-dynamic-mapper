@@ -10,7 +10,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.processor.PayloadProcessor;
+import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 
@@ -148,10 +148,10 @@ public class BootstrapService {
         }
 
         // initialize AsynchronousDispatcherInbound
-        PayloadProcessor payloadProcessor = new PayloadProcessor(configurationRegistry,
+        ProcessorRegister processorRegister = new ProcessorRegister(configurationRegistry,
                 client, tenant);
         AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
-                mappingComponent, cachedThreadPool, client, payloadProcessor);
+                mappingComponent, cachedThreadPool, client, processorRegister);
         client.setDispatcher(dispatcherInbound);
         client.reconnect();
         client.submitHouskeeping();
@@ -159,10 +159,10 @@ public class BootstrapService {
         if (outputMappingEnabled) {
             // initialize AsynchronousDispatcherOutbound
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
-                    configurationRegistry, mappingComponent, cachedThreadPool, client, payloadProcessor);
-            configurationRegistry.getNotificationSubscriber().addConnector(tenant, client.getConnectorIdent(),
+                    configurationRegistry, mappingComponent, cachedThreadPool, client, processorRegister);
+            configurationRegistry.getNotificationSubscriber().addSubscriber(tenant, client.getConnectorIdent(),
                     dispatcherOutbound);
-            // Subscriber must be new initialmqized for the new added connector
+            // Subscriber must be new initialized for the new added connector
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
         return client;

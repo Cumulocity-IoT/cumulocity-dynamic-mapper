@@ -19,28 +19,39 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
+import {
+  FetchClient,
+  IdentityService,
+  IExternalIdentity,
+} from '@c8y/client';
 import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
 import { Feature } from '../configuration/shared/configuration.model';
+import { AlertService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService
+    private identity: IdentityService,
+    private alertService: AlertService
   ) {
     this.initDynamicMappingServiceAgent()
-      .then((id) => (this._agentId = id))
+      .then((id) => {
+        this._agentId = id;
+      })
       .catch((e) => console.error('MappingService with id not subscribed!', e));
   }
   private _agentId: string;
   private _feature: Promise<Feature>;
 
   getDynamicMappingServiceAgent(): string {
+    if (!this._agentId) {
+      this.alertService.warning('Monitoring service not intialized correctly!');
+    }
     return this._agentId;
   }
 
-  async initDynamicMappingServiceAgent(): Promise<any> {
+  private async initDynamicMappingServiceAgent(): Promise<any> {
     const identity: IExternalIdentity = {
       type: 'c8y_Serial',
       externalId: AGENT_ID
@@ -50,6 +61,7 @@ export class SharedService {
       console.error('MappingService with id not subscribed!', AGENT_ID);
       return;
     }
+    // this._agentId = data.managedObject.id as string;
     return data.managedObject.id;
   }
 
