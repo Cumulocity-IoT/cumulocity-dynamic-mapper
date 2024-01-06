@@ -5,7 +5,7 @@ export * from './model/util';
 export * from './model/shared.model';
 export * from './navigation.factory';
 export * from './shared.service';
-export * from './tab.factory';
+export * from './mapping-tab.factory';
 export * from './overview.guard';
 export * from './admin.guard';
 export * from './camel-case.pipe';

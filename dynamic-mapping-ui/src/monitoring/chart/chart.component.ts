@@ -1,9 +1,11 @@
-import { Component, ElementRef, Input, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import { CHART_COLORS, transparentize } from './util';
 import { Subject } from 'rxjs';
 import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
+import { MonitoringService } from '../shared/monitoring.service';
+import { BrokerConfigurationService } from '../../configuration';
 Chart.register(...registerables);
 // Chart.defaults.font.family = 'Roboto, Helvetica, Arial, sans-serif';
 // Chart.defaults.color = 'green';
@@ -13,23 +15,38 @@ Chart.register(...registerables);
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.css']
 })
-export class ChartComponent implements OnInit {
-  constructor(private el: ElementRef) {}
-  @Input()
-  mappingStatus: Subject<MappingStatus[]>;
+export class MonitoringChartComponent implements OnInit, OnDestroy {
+  constructor(
+    private el: ElementRef,
+    public monitoringService: MonitoringService,
+    public brokerConfigurationService: BrokerConfigurationService
+  ) {}
 
-  private statusMappingChart: Chart;
-  private textColor;
-  private fontFamiliy;
-  private fontWeight;
-  private fontSize;
+  mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();
+  subscription: object;
+  statusMappingChart: Chart;
+  textColor: string;
+  fontFamiliy: string;
+  fontWeight: string;
+  fontSize: number;
 
   ngOnInit() {
+    this.initializeMonitoringService();
+
     const root = this.el.nativeElement.ownerDocument.documentElement;
-    this.textColor = getComputedStyle(root).getPropertyValue('--c8y-text-color').trim();
-    this.fontFamiliy = getComputedStyle(root).getPropertyValue('--c8y-font-family-sans-serif').trim();
-    this.fontWeight = getComputedStyle(root).getPropertyValue('--c8y-font-weight-headings').trim();
-    this.fontSize = getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim();
+    this.textColor = getComputedStyle(root)
+      .getPropertyValue('--c8y-text-color')
+      .trim();
+    this.fontFamiliy = getComputedStyle(root)
+      .getPropertyValue('--c8y-font-family-sans-serif')
+      .trim();
+    this.fontWeight = getComputedStyle(root)
+      .getPropertyValue('--c8y-font-weight-headings')
+      .trim();
+    this.fontSize = parseInt(
+      getComputedStyle(root).getPropertyValue('--c8y-font-size-base').trim(),
+      12
+    );
     // rgb(100, 31, 61), 'Roboto, Helvetica, Arial, sans-serif'
     // console.log('Text Color', this.textColor);
 
@@ -54,7 +71,7 @@ export class ChartComponent implements OnInit {
         }
       ]
     };
-    this.mappingStatus
+    this.mappingStatus$
       .pipe(
         map((data01) => {
           // console.log('data01', acc01, data01);
@@ -144,7 +161,7 @@ export class ChartComponent implements OnInit {
               family: this.fontFamiliy,
               weight: 'normal' as any
             }
-          },
+          }
           // title: {
           //   align: 'left' as any,
           //   display: true,
@@ -176,5 +193,18 @@ export class ChartComponent implements OnInit {
       }
     };
     this.statusMappingChart = new Chart('monitoringChart', config);
+  }
+
+  private async initializeMonitoringService() {
+    this.subscription =
+      await this.monitoringService.subscribeMonitoringChannel();
+    this.monitoringService
+      .getCurrentMappingStatus()
+      .subscribe((status) => this.mappingStatus$.next(status));
+  }
+
+  ngOnDestroy(): void {
+    console.log('Stop subscription');
+    this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
   }
 }
