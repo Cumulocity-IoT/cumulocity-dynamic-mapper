@@ -69,12 +69,11 @@ public class ServiceConfigurationComponent {
         tenantOptionApi.save(optionRepresentation);
     }
 
-    public ServiceConfiguration loadServiceConfiguration() {
+    public ServiceConfiguration getServiceConfiguration(String tenant) {
         final OptionPK option = new OptionPK();
         option.setCategory(OPTION_CATEGORY_CONFIGURATION);
         option.setKey(OPTION_KEY_SERVICE_CONFIGURATION);
-        ServiceConfiguration result = subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
-            String tenant = subscriptionsService.getTenant();
+        ServiceConfiguration result = subscriptionsService.callForTenant(tenant, () -> {
             ServiceConfiguration rt = null;
             try {
                 final OptionRepresentation optionRepresentation = tenantOptionApi.getOption(option);

@@ -89,9 +89,10 @@ public class BootstrapService {
         String tenant = event.getCredentials().getTenant();
         log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
-        ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent().initializeMappingServiceObject(tenant);
+        ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()
+                .initializeMappingServiceObject(tenant);
 
-        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
         configurationRegistry.getC8yAgent().createExtensibleProsessor(tenant);
         configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
@@ -137,7 +138,8 @@ public class BootstrapService {
                     connectorConfiguration.getIdent());
             MQTTClient mqttClient = new MQTTClient(configurationRegistry,
                     mappingComponent,
-                    connectorConfigurationComponent, connectorConfiguration, cachedThreadPool,
+                    connectorConfigurationComponent, serviceConfigurationComponent, connectorConfiguration,
+                    cachedThreadPool,
                     null,
                     additionalSubscriptionIdTest, tenant);
 

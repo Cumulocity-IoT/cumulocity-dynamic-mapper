@@ -73,14 +73,11 @@ public class ConnectorStatusEvent implements Serializable {
         return new ConnectorStatusEvent(ConnectorStatus.UNKNOWN);
     }
 
-    public void updateStatus(ConnectorStatus st) {
+    public void updateStatus(ConnectorStatus st, boolean clearMessage) {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date now = new Date();
         date = dateFormat.format(now);
         status = st;
-    }
-
-    public void clearMessage() {
-        this.message = "";
+        if (clearMessage) message = "";
     }
 }

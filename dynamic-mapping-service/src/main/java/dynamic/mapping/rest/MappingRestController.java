@@ -163,7 +163,7 @@ public class MappingRestController {
         log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
             connectorConfigurationComponent.saveConnectorConfiguration(configuration);
-            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.loadServiceConfiguration();
+            ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -287,7 +287,7 @@ public class MappingRestController {
         log.info("Tenant {} - Get connection details", tenant);
 
         try {
-            final ServiceConfiguration configuration = serviceConfigurationComponent.loadServiceConfiguration();
+            final ServiceConfiguration configuration = serviceConfigurationComponent.getServiceConfiguration(tenant);
             if (configuration == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Service connection not available");
             }

@@ -60,6 +60,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
@@ -75,11 +76,13 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient(ConfigurationRegistry configurationRegistry,
             MappingComponent mappingComponent,
             ConnectorConfigurationComponent connectorConfigurationComponent,
+            ServiceConfigurationComponent serviceConfigurationComponent,
             ConnectorConfiguration connectorConfiguration,
             ExecutorService cachedThreadPool,
             AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this.configurationRegistry = configurationRegistry;
         this.mappingComponent = mappingComponent;
+        this.serviceConfigurationComponent = serviceConfigurationComponent;
         this.connectorConfigurationComponent = connectorConfigurationComponent;
         this.configuration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
@@ -255,8 +258,7 @@ public class MQTTClient extends AConnectorClient {
                     mqttClient.connect(connOpts);
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getServerURI());
-                    connectorStatus.updateStatus(ConnectorStatus.CONNECTED);
-                    connectorStatus.clearMessage();
+                    connectorStatus.updateStatus(ConnectorStatus.CONNECTED, true);
                     sendConnectorLifecycle();
                 } catch (MqttException e) {
                     log.error("Error on reconnect: {}", e.getMessage());
@@ -308,7 +310,7 @@ public class MQTTClient extends AConnectorClient {
             msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
         }
         connectorStatus.setMessage(msg);
-        connectorStatus.updateStatus(ConnectorStatus.FAILED);
+        connectorStatus.updateStatus(ConnectorStatus.FAILED, false);
     }
 
     @Override
@@ -370,8 +372,7 @@ public class MQTTClient extends AConnectorClient {
                 });
                 mqttClient.unsubscribe("$SYS");
                 mqttClient.disconnect();
-                connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED);
-                connectorStatus.clearMessage();
+                connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
                 sendConnectorLifecycle();
                 log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant, mqttClient.getServerURI());
             }

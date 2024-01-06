@@ -136,13 +136,13 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
-        serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
-        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
-        connectorStatus.clearMessage();
+        // get the latest serviceConfiguration from the Cumulocity backend in case someone changed it in the meantime
+        // update the  in the registry
+        serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
+
+        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
         sendConnectorLifecycle();
-        // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
-        // configuration,
-        // configuration.properties);
     }
 
     public void submitConnect() {
@@ -153,8 +153,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.CONNECTING);
-        connectorStatus.clearMessage();
+        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
         sendConnectorLifecycle();
     }
 
@@ -166,8 +165,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING);
-        connectorStatus.clearMessage();
+        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
         sendConnectorLifecycle();
     }
 
@@ -261,8 +259,7 @@ public abstract class AConnectorClient {
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
-                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
-                connectorStatus.clearMessage();
+                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
             }
             sendConnectorLifecycle();
         } catch (Exception ex) {
