@@ -32,19 +32,18 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.notification.websocket.NotificationCallback;
-import dynamic.mapping.processor.PayloadProcessor;
+import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.SnoopStatus;
-import dynamic.mapping.notification.C8YAPISubscriber;
+import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.notification.websocket.Notification;
 import dynamic.mapping.processor.C8YMessage;
 import org.apache.commons.codec.binary.Hex;
@@ -58,24 +57,41 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+/**
+ * AsynchronousDispatcherOutbound
+ * 
+ * This class implements the <code>NotificationCallback</code> which is then
+ * registered as a listener in the <code>C8YNotificationSubscriber </code> when
+ * new messages arrive.
+ * It processes OUTBOUND messages and works asynchronously.
+ * A task <code>AsynchronousDispatcherOutbound.MappingOutboundTask</code> is
+ * added the ExecutorService, to not block new arriving messages.
+ * The call method in
+ * <code>AsynchronousDispatcherOutbound.MappingOutboundTask</code> is the core
+ * of the message processing.
+ * For all resolved mapppings the following steps are performed for new
+ * messages:
+ * ** deserialize the payload
+ * ** extract the content from the payload based on the defined substitution in
+ * the mapping and add these to a post processing cache
+ * ** substitute in the defined target template of the mapping the extracted
+ * content from the cache
+ * ** send the resulting target payload to connectorClient, e.g. MQTT broker
+ */
 @Slf4j
-// Not a service anymore, manually instantiated by the C8YSubscriber
 public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Getter
     protected AConnectorClient connectorClient;
 
-    protected PayloadProcessor payloadProcessor;
+    protected ProcessorRegister processorRegister;
 
-    protected C8YAPISubscriber notificationSubscriber;
+    protected C8YNotificationSubscriber notificationSubscriber;
 
-    @Setter
     protected C8YAgent c8yAgent;
 
-    @Setter
     protected ObjectMapper objectMapper;
 
-    @Setter
     private ExecutorService cachedThreadPool;
 
     private MappingComponent mappingComponent;
@@ -87,13 +103,13 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     // correct Connector
     public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
             MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
-            PayloadProcessor payloadProcessor) {
+            ProcessorRegister processorRegister) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.mappingComponent = mappingComponent;
         this.cachedThreadPool = cachedThreadPool;
         this.connectorClient = connectorClient;
-        this.payloadProcessor = payloadProcessor;
+        this.processorRegister = processorRegister;
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
     }
@@ -290,7 +306,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
-                        payloadProcessor.getPayloadProcessorsOutbound(),
+                        processorRegister.getPayloadProcessorsOutbound(),
                         sendPayload, c8yMessage, tenant));
 
         if (op != null) {

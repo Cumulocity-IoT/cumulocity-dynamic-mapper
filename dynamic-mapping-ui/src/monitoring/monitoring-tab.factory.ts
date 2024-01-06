@@ -34,7 +34,7 @@ export class MonitoringTabFactory implements TabFactory {
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring',
+        path: 'sag-ps-pkg-dynamic-mapping/monitoring/grid',
         priority: 910,
         label: 'Monitoring',
         icon: 'monitoring',
