@@ -20,8 +20,8 @@
  */
 import { Injectable } from '@angular/core';
 import { IManagedObject, InventoryService, IResult } from '@c8y/client';
-import { ProcessingContext } from '../processor/prosessor.model';
-import { MockInventoryService } from './mock/mock-inventory.service';
+import { ProcessingContext } from '../../processor/prosessor.model';
+import { MockInventoryService } from '../mock/mock-inventory.service';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeInventoryService {

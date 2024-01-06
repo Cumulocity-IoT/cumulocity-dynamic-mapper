@@ -34,7 +34,6 @@ import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.SnoopStatus;
-import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -79,15 +78,11 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    private ProcessorRegister processorRegister;
-
     public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
-            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
-            ProcessorRegister processorRegister) {
+            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = cachedThreadPool;
         this.mappingComponent = mappingComponent;
-        this.processorRegister = processorRegister;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -95,7 +90,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         List<Mapping> resolvedMappings;
         String topic;
         String tenant;
-        Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound;
+        Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound;
         boolean sendPayload;
         ConnectorMessage message;
         MappingComponent mappingStatusComponent;
@@ -105,15 +100,14 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> mappings,
                 MappingComponent mappingStatusComponent,
-                String topic, String tenant,
-                Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound, boolean sendPayload,
+                String topic, String tenant, boolean sendPayload,
                 ConnectorMessage message) {
             this.resolvedMappings = mappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.topic = topic;
             this.tenant = tenant;
-            this.payloadProcessorsInbound = payloadProcessorsInbound;
+            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound().get(tenant);
             this.sendPayload = sendPayload;
             this.message = message;
             this.objectMapper = configurationRegistry.getObjectMapper();
@@ -141,6 +135,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
+                    context.setTenant(tenant);
+                    context.setServiceConfiguration(serviceConfiguration);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mappingType);
@@ -239,9 +235,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent, topic, tenant,
-                        processorRegister.getPayloadProcessorsInbound(),
-                        sendPayload, message));
+                new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent, topic, tenant, sendPayload, message));
 
         return futureProcessingResult;
 

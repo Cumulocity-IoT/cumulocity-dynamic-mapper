@@ -1,5 +1,6 @@
 package dynamic.mapping.core;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -10,7 +11,6 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 
@@ -81,6 +81,8 @@ public class BootstrapService {
         configurationRegistry.getServiceConfigurations().remove(tenant);
         configurationRegistry.getMappingServiceRepresentations().remove(tenant);
         mappingComponent.cleanMappingStatus(tenant);
+        configurationRegistry.getPayloadProcessorsInbound().remove(tenant);
+        configurationRegistry.getPayloadProcessorsOutbound().remove(tenant);
     }
 
     @EventListener
@@ -96,6 +98,7 @@ public class BootstrapService {
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
         configurationRegistry.getC8yAgent().createExtensibleProsessor(tenant);
         configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
+
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
                 .convertValue(mappingServiceMOR,
                         MappingServiceRepresentation.class);
@@ -131,7 +134,7 @@ public class BootstrapService {
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
             ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
-        AConnectorClient client = null;
+        AConnectorClient connectorClient = null;
 
         if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
@@ -144,28 +147,29 @@ public class BootstrapService {
                     additionalSubscriptionIdTest, tenant);
 
             connectorRegistry.registerClient(tenant, mqttClient);
-            client = mqttClient;
+            connectorClient = mqttClient;
         }
 
         // initialize AsynchronousDispatcherInbound
-        ProcessorRegister processorRegister = new ProcessorRegister(configurationRegistry,
-                client, tenant);
         AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
-                mappingComponent, cachedThreadPool, client, processorRegister);
-        client.setDispatcher(dispatcherInbound);
-        client.reconnect();
-        client.submitHouskeeping();
+                mappingComponent, cachedThreadPool, connectorClient);
+        configurationRegistry.initializePayloadProcessorsInbound(tenant);
+        connectorClient.setDispatcher(dispatcherInbound);
+        connectorClient.reconnect();
+        connectorClient.submitHouskeeping();
 
         if (outputMappingEnabled) {
             // initialize AsynchronousDispatcherOutbound
+            configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
-                    configurationRegistry, mappingComponent, cachedThreadPool, client, processorRegister);
-            configurationRegistry.getNotificationSubscriber().addSubscriber(tenant, client.getConnectorIdent(),
+                    configurationRegistry, mappingComponent, cachedThreadPool, connectorClient);
+            configurationRegistry.getNotificationSubscriber().addSubscriber(tenant, connectorClient.getConnectorIdent(),
                     dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+
         }
-        return client;
+        return connectorClient;
     }
 
     public void shutdownConnector(String tenant, String ident) throws ConnectorRegistryException {

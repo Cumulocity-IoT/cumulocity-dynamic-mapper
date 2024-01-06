@@ -32,7 +32,6 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.notification.websocket.NotificationCallback;
-import dynamic.mapping.processor.ProcessorRegister;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -84,39 +83,45 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     @Getter
     protected AConnectorClient connectorClient;
 
-    protected ProcessorRegister processorRegister;
-
     protected C8YNotificationSubscriber notificationSubscriber;
 
     protected C8YAgent c8yAgent;
 
     protected ObjectMapper objectMapper;
 
-    private ExecutorService cachedThreadPool;
+    protected ExecutorService cachedThreadPool;
 
-    private MappingComponent mappingComponent;
+    protected MappingComponent mappingComponent;
 
-    private ConfigurationRegistry configurationRegistry;
+    protected ConfigurationRegistry configurationRegistry;
+
+    protected Map<MappingType, BasePayloadProcessorOutbound<?>> payloadProcessorsOutbound;
 
     // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
     // not possible to correlate messages received bei Notification API to the
     // correct Connector
     public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
-            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient,
-            ProcessorRegister processorRegister) {
+            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.mappingComponent = mappingComponent;
         this.cachedThreadPool = cachedThreadPool;
         this.connectorClient = connectorClient;
-        this.processorRegister = processorRegister;
+        // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
+        //         configurationRegistry.getPayloadProcessorsOutbound());
+        // log.info("Tenant {} - HIER II {} {}", connectorClient.getTenant(),
+        //         configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
+        this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound()
+                .get(connectorClient.getTenant())
+                .get(connectorClient.getConnectorIdent());
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
     }
 
     @Override
     public void onOpen(URI serverUri) {
-        log.info("Tenant {} - Connected to Cumulocity notification service over WebSocket {}", connectorClient.tenant,
+        log.info("Tenant {} - Connected to Cumulocity notification service over WebSocket {}",
+                connectorClient.getTenant(),
                 serverUri);
         notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
@@ -201,6 +206,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
+                    context.setTenant(tenant);
+                    context.setServiceConfiguration(serviceConfiguration);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mappingType);
@@ -306,7 +313,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
-                        processorRegister.getPayloadProcessorsOutbound(),
+                        payloadProcessorsOutbound,
                         sendPayload, c8yMessage, tenant));
 
         if (op != null) {
