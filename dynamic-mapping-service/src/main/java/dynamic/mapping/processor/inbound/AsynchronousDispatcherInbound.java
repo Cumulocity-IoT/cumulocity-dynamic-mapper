@@ -78,11 +78,10 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
-            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient) {
+    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
-        this.cachedThreadPool = cachedThreadPool;
-        this.mappingComponent = mappingComponent;
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+        this.mappingComponent = configurationRegistry.getMappingComponent();;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -90,16 +89,15 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         List<Mapping> resolvedMappings;
         Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound;
         ConnectorMessage connectorMessage;
-        MappingComponent mappingStatusComponent;
+        MappingComponent mappingComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
-                MappingComponent mappingStatusComponent,
                 ConnectorMessage message) {
             this.resolvedMappings = resolvedMappings;
-            this.mappingStatusComponent = mappingStatusComponent;
+            this.mappingComponent = configurationRegistry.getMappingComponent();
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound()
                     .get(message.getTenant());
@@ -115,12 +113,12 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
             boolean sendPayload = connectorMessage.isSendPayload();
 
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingStatusComponent
+            MappingStatus mappingStatusUnspecified = mappingComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.isActive()) {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
+                    MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -171,7 +169,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                             mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(tenant, mapping);
+                                    mappingComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
@@ -230,7 +228,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent,
+                new MappingInboundTask(configurationRegistry, resolvedMappings,
                         message));
 
         return futureProcessingResult;
@@ -257,6 +255,5 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onError(Throwable errorException) {
-
     }
 }

@@ -100,12 +100,11 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
     // not possible to correlate messages received bei Notification API to the
     // correct Connector
-    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
-            MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient) {
+    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.mappingComponent = mappingComponent;
-        this.cachedThreadPool = cachedThreadPool;
+        this.mappingComponent = configurationRegistry.getMappingComponent();
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.connectorClient = connectorClient;
         // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
         //         configurationRegistry.getPayloadProcessorsOutbound());
@@ -144,12 +143,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onError(Throwable t) {
-        log.error("Tenant {} - We got an exception: {}", connectorClient.tenant, t);
+        log.error("Tenant {} - We got an exception: {}", connectorClient.getTenant(), t);
     }
 
     @Override
     public void onClose(int statusCode, String reason) {
-        log.info("Tenant {} - Connection was closed.", connectorClient.tenant);
+        log.info("Tenant {} - Connection was closed.", connectorClient.getTenant());
         if (reason.contains("401"))
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else

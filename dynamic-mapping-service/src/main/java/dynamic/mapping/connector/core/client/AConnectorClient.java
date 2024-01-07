@@ -35,7 +35,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -69,42 +68,45 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
-    @Getter
-    @Setter
-    public String tenant;
+    protected String connectorIdent;
 
-    @Getter
-    public MappingComponent mappingComponent;
-
-    @Getter
-    public MappingServiceRepresentation mappingServiceRepresentation;
-
-    @Getter
-    public ConnectorConfigurationComponent connectorConfigurationComponent;
-
-    @Getter
-    public ServiceConfigurationComponent serviceConfigurationComponent;
-
-    @Getter
-    public C8YAgent c8yAgent;
+    protected String connectorName;
 
     @Getter
     @Setter
-    public AsynchronousDispatcherInbound dispatcher;
+    protected String tenant;
+
+    @Getter
+    protected MappingComponent mappingComponent;
+
+    @Getter
+    protected MappingServiceRepresentation mappingServiceRepresentation;
+
+    @Getter
+    protected ConnectorConfigurationComponent connectorConfigurationComponent;
+
+    @Getter
+    protected ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Getter
+    protected C8YAgent c8yAgent;
+
+    @Getter
+    @Setter
+    protected AsynchronousDispatcherInbound dispatcher;
 
     protected ObjectMapper objectMapper;
 
     protected ConfigurationRegistry configurationRegistry;
 
     @Getter
-    public ExecutorService cachedThreadPool;
+    protected ExecutorService cachedThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
-    private ScheduledFuture<?> housekeepingTask;
 
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
@@ -172,7 +174,7 @@ public abstract class AConnectorClient {
 
     public void submitHouskeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
+        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
                 TimeUnit.SECONDS);
     }
 

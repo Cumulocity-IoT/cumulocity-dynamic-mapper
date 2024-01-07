@@ -63,10 +63,6 @@ public abstract class BasePayloadProcessorInbound<T> {
 
     protected ObjectMapper objectMapper;
 
-    protected String tenant;
-
-    protected ServiceConfiguration serviceConfiguration;
-
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, ConnectorMessage message)
             throws IOException;
 
@@ -77,6 +73,7 @@ public abstract class BasePayloadProcessorInbound<T> {
          * step 3 replace target with extract content from inbound payload
          */
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
         // if there are to little device idenfified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();

@@ -29,7 +29,6 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
 import org.joda.time.DateTime;
-import org.springframework.stereotype.Component;
 
 import javax.ws.rs.ProcessingException;
 import java.util.ArrayList;
@@ -37,9 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-
 @Slf4j
-@Component
 public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtensionInbound<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
@@ -51,7 +48,8 @@ public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtension
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
+                .getPostProcessingCache();
 
         postProcessingCache.put("time",
                 new ArrayList<MappingSubstitution.SubstituteValue>(
@@ -63,7 +61,8 @@ public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtension
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("text",
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                        new MappingSubstitution.SubstituteValue(new TextNode(payloadProtobuf.getTxt()),
+                        new MappingSubstitution.SubstituteValue(
+                                new TextNode(payloadProtobuf.getTxt()),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("type",
@@ -80,9 +79,9 @@ public class ProcessorExtensionInternalCustomAlarm implements ProcessorExtension
                                 new TextNode(payloadProtobuf.getExternalId()),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
-        log.info("New alarm over protobuf: {}, {}, {}, {}, {}", payloadProtobuf.getTimestamp(),
+        log.info("Tenant {} - New alarm over protobuf: {}, {}, {}, {}, {}", context.getTenant(),
+                payloadProtobuf.getTimestamp(),
                 payloadProtobuf.getTxt(), payloadProtobuf.getAlarmType(),
                 payloadProtobuf.getExternalId(), payloadProtobuf.getSeverity());
     }
-
 }
