@@ -72,7 +72,7 @@ import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
-import dynamic.mapping.model.InnerNode;
+import dynamic.mapping.model.TreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 
@@ -100,7 +100,7 @@ public class MappingRestController {
 
     @Autowired
     private ContextService<UserCredentials> contextService;
-    
+
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
@@ -318,7 +318,7 @@ public class MappingRestController {
             configurationRegistry.getServiceConfigurations().put(tenant, configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
-            log.error("Error getting mqtt broker configuration {}", ex);
+            log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
     }
@@ -425,9 +425,9 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<InnerNode> getInboundMappingTree() {
+    public ResponseEntity<TreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
-        InnerNode result = mappingComponent.getResolverMappingInbound().get(tenant);
+        TreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
         log.info("Tenant {} - Get mapping tree!", tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
@@ -534,8 +534,8 @@ public class MappingRestController {
 
     @RequestMapping(value = "/mapping/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> updateMapping(@PathVariable String id, @Valid @RequestBody Mapping mapping) {
+        String tenant = contextService.getContext().getTenant();
         try {
-            String tenant = contextService.getContext().getTenant();
             log.info("Tenant {} - Update mapping: {}, {}", mapping, id);
             final Mapping updatedMapping = mappingComponent.updateMapping(tenant, mapping, false, false);
             if (Direction.OUTBOUND.equals(mapping.direction)) {
@@ -552,7 +552,7 @@ public class MappingRestController {
             return ResponseEntity.status(HttpStatus.OK).body(mapping);
         } catch (Exception ex) {
             if (ex instanceof IllegalArgumentException) {
-                log.error("Updating active mappings is not allowed {}", ex);
+                log.error("Tenant {} - Updating active mappings is not allowed {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
             } else if (ex instanceof RuntimeException)
                 throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getLocalizedMessage());
@@ -572,7 +572,6 @@ public class MappingRestController {
         String tenant = contextService.getContext().getTenant();
         log.info("Tenant {} - Test payload: {}, {}, {}", tenant, path, method,
                 payload);
-
         try {
             boolean send = ("send").equals(method);
             try {
@@ -584,7 +583,7 @@ public class MappingRestController {
             }
             return new ResponseEntity<List<ProcessingContext<?>>>(result, HttpStatus.OK);
         } catch (Exception ex) {
-            log.error("Error transforming payload: {}", ex);
+            log.error("Tenant {} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
         }
     }
@@ -610,7 +609,7 @@ public class MappingRestController {
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
-            log.error("Insufficient Permission, user does not have required permission to access this API");
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API", tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }

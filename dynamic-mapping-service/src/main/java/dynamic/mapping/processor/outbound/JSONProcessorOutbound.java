@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-// @Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
     public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
@@ -95,7 +94,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                     substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("No substitution for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - No substitution for: {}, {}", context.getTenant(), substitution.pathSource,
                         payload);
                 postProcessingCacheEntry
                         .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
@@ -118,7 +117,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                                 MappingSubstitution.SubstituteValue.TYPE.NUMBER,
                                                 substitution.repairStrategy));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}",
+                                log.warn("Tenant {} - Since result is not textual or number it is ignored: {}", context.getTenant(),
                                         jn.asText());
                             }
                         }
@@ -164,7 +163,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
-                    log.info("This substitution, involves an objects for: {}, {}",
+                    log.info("Tenant {} - This substitution, involves an objects for: {}, {}", context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString());
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry

@@ -67,9 +67,6 @@ import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
-// @EnableScheduling
-// @Configuration
-// @Service
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
 
@@ -252,7 +249,7 @@ public class MQTTClient extends AConnectorClient {
                         connOpts.setPassword(password.toCharArray());
                     }
                     if (useSelfSignedCertificate) {
-                        log.debug("Using certificate: {}", cert.getCertInPemFormat());
+                        log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
                         connOpts.setSocketFactory(sslSocketFactory);
                     }
                     mqttClient.connect(connOpts);
@@ -261,11 +258,11 @@ public class MQTTClient extends AConnectorClient {
                     connectorStatus.updateStatus(ConnectorStatus.CONNECTED, true);
                     sendConnectorLifecycle();
                 } catch (MqttException e) {
-                    log.error("Error on reconnect: {}", e.getMessage());
+                    log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
                     updateConnectorStatusToFailed(e);
                     sendConnectorLifecycle();
                     if (serviceConfiguration.logConnectorErrorInBackend) {
-                        log.error("Stacktrace:", e);
+                        log.error("Tenant {} - Stacktrace:", tenant, e);
                     }
                 }
                 firstRun = false;
@@ -296,7 +293,7 @@ public class MQTTClient extends AConnectorClient {
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Stacktrace:", e);
+                    log.error("Tenant {} - Stacktrace:", tenant, e);
                 }
                 successful = false;
             }
@@ -365,7 +362,7 @@ public class MQTTClient extends AConnectorClient {
                         try {
                             mqttClient.unsubscribe(topic);
                         } catch (MqttException e) {
-                            log.error("Exception when unsubscribing from topic: {}, {}", topic, e);
+                            log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, topic, e);
                         }
 
                     }
@@ -390,17 +387,17 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, Integer qos) throws MqttException {
-        log.debug("Subscribing on topic: {}", topic);
+        log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Subscribing");
         if (qos != null)
             mqttClient.subscribe(topic, qos);
         else
             mqttClient.subscribe(topic);
-        log.debug("Successfully subscribed on topic: {}", topic);
+        log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
         mqttClient.unsubscribe(topic);
     }

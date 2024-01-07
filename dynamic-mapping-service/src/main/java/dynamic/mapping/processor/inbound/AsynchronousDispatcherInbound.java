@@ -205,9 +205,10 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent,
-            ConnectorMessage message) throws Exception {
+    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) throws Exception {
         String topic = message.getTopic();
+        String tenant = message.getTenant();
+
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
@@ -217,8 +218,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                 } catch (Exception e) {
-                    log.warn("Error resolving appropriate map for topic \"" + topic
-                            + "\". Could NOT be parsed. Ignoring this message!");
+                    log.warn("Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!", tenant, topic);
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
@@ -252,9 +252,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onMessage(ConnectorMessage message) throws Exception {
-        String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConnectorIdent();
-        processMessage(tenant, connectorIdent, message);
+        processMessage(message);
     }
 
     @Override

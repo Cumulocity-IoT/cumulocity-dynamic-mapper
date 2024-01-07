@@ -39,6 +39,7 @@ public class DeviceSubscriptionRestController {
 
     @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
+        String tenant = contextService.getContext().getTenant();
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
@@ -50,9 +51,8 @@ public class DeviceSubscriptionRestController {
                     configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
 
                 } else {
-                    log.warn("Could not subscribe device with id " + device.getId() + ". Device does not exists!");
-                    // throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Managed Object with
-                    // id " + device.getId() + " not found" );
+                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                            device.getId());
                 }
             }
         } catch (Exception e) {
@@ -63,14 +63,15 @@ public class DeviceSubscriptionRestController {
 
     @RequestMapping(value = "/subscription", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionUpdate(@Valid @RequestBody C8YAPISubscription subscription) {
+        String tenant = contextService.getContext().getTenant();
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            String tenant = contextService.getContext().getTenant();
             // List<NotificationSubscriptionRepresentation> deviceSubscriptions =
             // c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
-            C8YAPISubscription c8ySubscription = configurationRegistry.getNotificationSubscriber().getDeviceSubscriptions(tenant,
-                    null, null);
+            C8YAPISubscription c8ySubscription = configurationRegistry.getNotificationSubscriber()
+                    .getDeviceSubscriptions(tenant,
+                            null, null);
             // 3 cases -
             // 1. Device exists in subscription and active subscription --> Do nothing
             // 2. Device exists in subscription and does not have an active subscription -->
@@ -97,7 +98,8 @@ public class DeviceSubscriptionRestController {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
                 } else {
-                    log.warn("Could not subscribe device with id " + device.getId() + ". Device does not exists!");
+                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                            device.getId());
                 }
             }
 
@@ -110,7 +112,8 @@ public class DeviceSubscriptionRestController {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
                 } else {
-                    log.warn("Could not unsubscribe device with id " + device.getId() + ". Device does not exists!");
+                    log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
+                            device.getId());
                 }
             }
 

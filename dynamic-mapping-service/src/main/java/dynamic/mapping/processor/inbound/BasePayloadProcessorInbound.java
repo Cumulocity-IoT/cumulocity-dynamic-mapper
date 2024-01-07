@@ -122,7 +122,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                         int last = postProcessingCache.get(pathTarget).size() - 1;
                         substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
                     }
-                    log.warn("During the processing of this pathTarget: {} a repair strategy: {} was used.",
+                    log.warn("Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",tenant,
                             pathTarget, substituteValue.repairStrategy);
                 }
 
@@ -203,10 +203,10 @@ public abstract class BasePayloadProcessorInbound<T> {
                 }
                 predecessor = newPredecessor;
             } else {
-                log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+                log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                         postProcessingCache.size());
             }
-            log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+            log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget, mapping.targetAPI,
                     deviceEntries.size());
             i++;
         }

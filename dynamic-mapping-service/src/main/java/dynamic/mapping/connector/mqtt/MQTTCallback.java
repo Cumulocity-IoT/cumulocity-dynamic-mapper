@@ -29,6 +29,7 @@ public class MQTTCallback implements MqttCallback {
         connectorMessage.setTenant(tenant);
         connectorMessage.setSendPayload(true); 
         connectorMessage.setTopic(topic);
+        connectorMessage.setConnectorIdent(connectorIdent);
         genericMessageCallback.onMessage(connectorMessage);
     }
 

@@ -405,7 +405,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
                     String pathWithProtocol = "file://".concat(tempFile.getPath());
-                    log.debug("CanonicalPath: {}, Path: {}, PathWithProtocol: {}", canonicalPath, path,
+                    log.debug("Tenant {} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath, path,
                             pathWithProtocol);
                     FileOutputStream outputStream = new FileOutputStream(tempFile);
                     IOUtils.copy(downloadInputStream, outputStream);

@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-// @Service
 public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
 
     public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
@@ -96,10 +95,10 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                 Expressions expr = Expressions.parse(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Exception for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("EvaluateRuntimeException for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
@@ -137,7 +136,8 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                                                 MappingSubstitution.SubstituteValue.TYPE.ARRAY,
                                                 substitution.repairStrategy));
                             } else {
-                                // log.warn("Since result is not textual or number it is ignored: {}",
+                                // log.warn("Tenant {} - Since result is not textual or number it is ignored:
+                                // {}", tenant
                                 // jn.asText());
                                 postProcessingCacheEntry
                                         .add(new MappingSubstitution.SubstituteValue(jn,
