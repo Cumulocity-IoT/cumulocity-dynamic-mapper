@@ -24,15 +24,12 @@ package dynamic.mapping;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import dynamic.mapping.configuration.ServiceConfiguration;
-import dynamic.mapping.model.InnerNode;
-import dynamic.mapping.model.InnerNodeSerializer;
-import dynamic.mapping.model.MappingServiceRepresentation;
+import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.TreeNodeSerializer;
 
 import org.joda.time.DateTime;
 import org.springframework.boot.SpringApplication;
@@ -77,14 +74,11 @@ import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
-@Slf4j
 public class App {
 
     @Bean
@@ -106,21 +100,9 @@ public class App {
         ObjectMapper objectMapper = baseObjectMapper();
         objectMapper.registerModule(cumulocityModule());
         SimpleModule module = new SimpleModule();
-        module.addSerializer(InnerNode.class, new InnerNodeSerializer());
+        module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         objectMapper.registerModule(module);
         return objectMapper;
-    }
-
-    @Bean
-    public Map<String, MappingServiceRepresentation> mappingServiceRepresentations() {
-        Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
-        return mappingServiceRepresentations;
-    }
-
-    @Bean
-    public Map<String, ServiceConfiguration> serviceConfigurations() {
-        Map<String, ServiceConfiguration> serviceConfigurations = new HashMap<>();
-        return serviceConfigurations;
     }
 
     public static ObjectMapper baseObjectMapper() {

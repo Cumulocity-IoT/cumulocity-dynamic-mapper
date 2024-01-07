@@ -19,7 +19,7 @@
  * @authors Christof Strack, Stefan Witschel
  */
 
-package dynamic.mapping.core;
+package dynamic.mapping.core.facade;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

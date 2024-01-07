@@ -26,15 +26,15 @@ import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -47,16 +47,15 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-//@Service
 public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
 
-    public JSONProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant) {
-        super(objectMapper, c8yAgent, tenant);
+    public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
+        super(configurationRegistry);
     }
 
     @Override
     public ProcessingContext<JsonNode> deserializePayload(ProcessingContext<JsonNode> context,
-                                                          ConnectorMessage message) throws IOException {
+            ConnectorMessage message) throws IOException {
         JsonNode jsonNode = objectMapper.readTree(message.getPayload());
         context.setPayload(jsonNode);
         return context;
@@ -65,7 +64,10 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
     @Override
     public void extractFromSource(ProcessingContext<JsonNode> context)
             throws ProcessingException {
+        String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
@@ -79,7 +81,8 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         if (payloadJsonNode instanceof ObjectNode) {
             ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
         } else {
-            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!", tenant);
+            log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
+                    tenant);
         }
 
         String payload = payloadJsonNode.toPrettyString();
@@ -95,22 +98,24 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                 Expressions expr = Expressions.parse(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Exception for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("EvaluateRuntimeException for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
              * step 2 analyse exctracted content: textual, array
              */
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(substitution.pathTarget,
+            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+                    substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("Tenant {} - No substitution for: {}, {}", substitution.pathSource, tenant,
+                log.error("Tenant {} - No substitution for: {}, {}", tenant, substitution.pathSource,
                         payload);
                 postProcessingCacheEntry
-                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
+                        .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
                 postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
             } else {
                 if (extractedSourceContent.isArray()) {
@@ -120,18 +125,27 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                         for (JsonNode jn : extractedSourceContent) {
                             if (jn.isTextual()) {
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
+                                                substitution.repairStrategy));
                             } else if (jn.isNumber()) {
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.NUMBER,
+                                                substitution.repairStrategy));
                             } else if (jn.isArray()) {
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.ARRAY, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.ARRAY,
+                                                substitution.repairStrategy));
                             } else {
-                                // log.warn("Since result is not textual or number it is ignored: {}",
+                                // log.warn("Tenant {} - Since result is not textual or number it is ignored:
+                                // {}", tenant
                                 // jn.asText());
                                 postProcessingCacheEntry
-                                        .add(new MappingSubstitution.SubstituteValue(jn, MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
+                                        .add(new MappingSubstitution.SubstituteValue(jn,
+                                                MappingSubstitution.SubstituteValue.TYPE.OBJECT,
+                                                substitution.repairStrategy));
                             }
                         }
                         context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
@@ -141,30 +155,35 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                         // substitution
                         context.addCardinality(substitution.pathTarget, 1);
                         postProcessingCacheEntry
-                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.ARRAY,
+                                .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                        MappingSubstitution.SubstituteValue.TYPE.ARRAY,
                                         substitution.repairStrategy));
                         postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                     }
                 } else if (extractedSourceContent.isTextual()) {
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry.add(
-                            new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
+                            new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else if (extractedSourceContent.isNumber()) {
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
+                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
                     log.info("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
                             substitution.pathSource, extractedSourceContent.toString());
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
-                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent, MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
+                            .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
+                                    MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (c8yAgent.getServiceConfigurations().get(tenant).logSubstitution) {
-                    log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})", tenant,
+                if (serviceConfiguration.logSubstitution) {
+                    log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+                            tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
             }
@@ -176,10 +195,12 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 
         // no substitution for the time property exists, then use the system time
         if (!substitutionTimeExists && mapping.targetAPI != API.INVENTORY && mapping.targetAPI != API.OPERATION) {
-            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(Mapping.TIME,
+            List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
+                    Mapping.TIME,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             postProcessingCacheEntry.add(
-                    new MappingSubstitution.SubstituteValue(new TextNode(new DateTime().toString()), MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
+                    new MappingSubstitution.SubstituteValue(new TextNode(new DateTime().toString()),
+                            MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT));
             postProcessingCache.put(Mapping.TIME, postProcessingCacheEntry);
         }
     }

@@ -26,13 +26,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.connector.core.callback.GenericMessageCallback;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.model.SnoopStatus;
-import dynamic.mapping.processor.PayloadProcessor;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -45,44 +46,79 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+/**
+ * AsynchronousDispatcherInbound
+ * 
+ * This class implements the <code>GenericMessageCallback</code> which is then
+ * registered as a listener when new messages arrive.
+ * It processes INBOUND messages and works asynchronously.
+ * A task <code>GenericMessageCallback.MappingInboundTask</code> is added the
+ * ExecutorService, to not block new arriving messages.
+ * The call method in
+ * <code>AsynchronousDispatcherInbound.MappingInboundTask</code> is the core of
+ * the message processing.
+ * For all resolved mapppings the following steps are performed for new
+ * messages:
+ * ** deserialize the payload
+ * ** extract the content from the payload based on the defined substitution in
+ * the mapping and add these to a post processing cache
+ * ** substitute in the defined target template of the mapping the extracted
+ * content from the cache
+ * ** send the resulting target payload to Cumulocity
+ */
+
 @Slf4j
 public class AsynchronousDispatcherInbound implements GenericMessageCallback {
-    public static class MappingProcessorInbound<T> implements Callable<List<ProcessingContext<?>>> {
 
+    private AConnectorClient connectorClient;
+
+    private ExecutorService cachedThreadPool;
+
+    private MappingComponent mappingComponent;
+
+    private ConfigurationRegistry configurationRegistry;
+
+    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+        this.connectorClient = connectorClient;
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+        this.mappingComponent = configurationRegistry.getMappingComponent();;
+        this.configurationRegistry = configurationRegistry;
+    }
+
+    public static class MappingInboundTask<T> implements Callable<List<ProcessingContext<?>>> {
         List<Mapping> resolvedMappings;
-        String topic;
-        String tenant;
-        Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound;
-        boolean sendPayload;
-        ConnectorMessage message;
-        MappingComponent mappingStatusComponent;
+        Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound;
+        ConnectorMessage connectorMessage;
+        MappingComponent mappingComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
+        ServiceConfiguration serviceConfiguration;
 
-        public MappingProcessorInbound(List<Mapping> mappings, MappingComponent mappingStatusComponent, C8YAgent c8yAgent,
-                String topic, String tenant,
-                Map<MappingType, BasePayloadProcessorInbound<T>> payloadProcessorsInbound, boolean sendPayload,
-                ConnectorMessage message, ObjectMapper objectMapper) {
-            this.resolvedMappings = mappings;
-            this.mappingStatusComponent = mappingStatusComponent;
-            this.c8yAgent = c8yAgent;
-            this.topic = topic;
-            this.tenant = tenant;
-            this.payloadProcessorsInbound = payloadProcessorsInbound;
-            this.sendPayload = sendPayload;
-            this.message = message;
-            this.objectMapper = objectMapper;
+        public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
+                ConnectorMessage message) {
+            this.resolvedMappings = resolvedMappings;
+            this.mappingComponent = configurationRegistry.getMappingComponent();
+            this.c8yAgent = configurationRegistry.getC8yAgent();
+            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound()
+                    .get(message.getTenant());
+            this.connectorMessage = message;
+            this.objectMapper = configurationRegistry.getObjectMapper();
+            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
+            String tenant = connectorMessage.getTenant();
+            String topic = connectorMessage.getTopic();
+            boolean sendPayload = connectorMessage.isSendPayload();
+
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
-            MappingStatus mappingStatusUnspecified = mappingStatusComponent
+            MappingStatus mappingStatusUnspecified = mappingComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             resolvedMappings.forEach(mapping -> {
                 // only process active mappings
                 if (mapping.isActive()) {
-                    MappingStatus mappingStatus = mappingStatusComponent.getMappingStatus(tenant, mapping);
+                    MappingStatus mappingStatus = mappingComponent.getMappingStatus(tenant, mapping);
 
                     ProcessingContext<?> context;
                     if (mapping.mappingType.payloadType.equals(String.class)) {
@@ -94,15 +130,18 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
+                    context.setTenant(tenant);
+                    context.setServiceConfiguration(serviceConfiguration);
                     // identify the corect processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mappingType);
 
                     if (processor != null) {
                         try {
-                            processor.deserializePayload(context, message);
-                            if (c8yAgent.getServiceConfigurations().get(tenant).logPayload) {
-                                log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant, context.getTopic(),
+                            processor.deserializePayload(context, connectorMessage);
+                            if (serviceConfiguration.logPayload) {
+                                log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant,
+                                        context.getTopic(),
                                         context.getPayload().toString());
                             } else {
                                 log.info("Tenant {} - New message on topic: '{}'", tenant, context.getTopic());
@@ -126,87 +165,48 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                     mappingStatus.snoopedTemplatesTotal = mapping.snoopedTemplates.size();
                                     mappingStatus.snoopedTemplatesActive++;
 
-                                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant, mapping.subscriptionTopic,
+                                    log.debug("Tenant {} - Adding snoopedTemplate to map: {},{},{}", tenant,
+                                            mapping.subscriptionTopic,
                                             mapping.snoopedTemplates.size(),
                                             mapping.snoopStatus);
-                                    mappingStatusComponent.addDirtyMapping(tenant, mapping);
+                                    mappingComponent.addDirtyMapping(tenant, mapping);
 
                                 } else {
                                     log.warn(
-                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}", tenant,
+                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            tenant,
                                             context.getPayload().getClass());
                                 }
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
-                                // processor.substituteInTargetAndSend(context);
                                 List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;
                                 }
                             }
                         } catch (Exception e) {
-                            log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant, e.getMessage());
-                            log.info("Tenant {} - Message Stacktrace: {}",tenant, e);
+                            log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
+                                    e.getMessage());
+                            log.info("Tenant {} - Message Stacktrace: {}", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {
                         mappingStatusUnspecified.errors++;
-                        log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!", tenant, mappingType);
+                        log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
+                                tenant, mappingType);
                     }
                     processingResult.add(context);
                 }
-
             });
             return processingResult;
         }
-
     }
 
-    private static final Object TOPIC_PERFORMANCE_METRIC = "__TOPIC_PERFORMANCE_METRIC";
+    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) throws Exception {
+        String topic = message.getTopic();
+        String tenant = message.getTenant();
 
-    private C8YAgent c8yAgent;
-
-    //@Autowired
-    //public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-    //    this.c8yAgent = c8yAgent;
-    //}
-
-    private AConnectorClient connectorClient;
-
-    private ObjectMapper objectMapper;
-
-    //@Autowired
-    //public void setObjectMapper(@Lazy ObjectMapper objectMapper) {
-    //    this.objectMapper = objectMapper;
-    //}
-
-    //@Autowired
-    //Map<MappingType, BasePayloadProcessor<?>> payloadProcessorsInbound;
-
-    //@Autowired
-    //@Qualifier("cachedThreadPool")
-    private ExecutorService cachedThreadPool;
-
-    //@Autowired
-    MappingComponent mappingComponent;
-
-    //@Autowired
-    //ServiceConfigurationComponent serviceConfigurationComponent;
-
-    private PayloadProcessor payloadProcessor;
-
-    public AsynchronousDispatcherInbound(ObjectMapper objectMapper, C8YAgent c8YAgent, MappingComponent mappingComponent, ExecutorService cachedThreadPool, AConnectorClient connectorClient, PayloadProcessor payloadProcessor)  {
-        this.connectorClient = connectorClient;
-        this.c8yAgent = c8YAgent;
-        this.objectMapper = objectMapper;
-        this.cachedThreadPool = cachedThreadPool;
-        this.mappingComponent = mappingComponent;
-        this.payloadProcessor = payloadProcessor;
-    }
-
-    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent, String topic, ConnectorMessage message,
-            boolean sendPayload) throws Exception {
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
@@ -216,8 +216,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                 } catch (Exception e) {
-                    log.warn("Error resolving appropriate map for topic \"" + topic
-                            + "\". Could NOT be parsed. Ignoring this message!");
+                    log.warn("Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!", tenant, topic);
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
@@ -229,40 +228,32 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingProcessorInbound(resolvedMappings, mappingComponent, c8yAgent, topic, tenant,
-                        payloadProcessor.getPayloadProcessorsInbound(),
-                        sendPayload, message, objectMapper));
+                new MappingInboundTask(configurationRegistry, resolvedMappings,
+                        message));
 
         return futureProcessingResult;
 
     }
 
     @Override
-    public void onClose( String closeMessage, Throwable closeException) {
+    public void onClose(String closeMessage, Throwable closeException) {
         String tenant = connectorClient.getTenant();
         String connectorIdent = connectorClient.getConnectorIdent();
         if (closeException != null)
-            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent, closeException.getMessage());
+            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent,
+                    closeException.getMessage());
         closeException.printStackTrace();
-        if(closeMessage != null)
+        if (closeMessage != null)
             log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
         connectorClient.reconnect();
     }
 
     @Override
-    public void onMessage(String topic, ConnectorMessage message) throws Exception {
-        String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConnectorIdent();
-        if ((TOPIC_PERFORMANCE_METRIC.equals(topic))) {
-            // REPORT MAINTENANCE METRIC
-        } else {
-            processMessage(tenant, connectorIdent, topic, message, true);
-        }
+    public void onMessage(ConnectorMessage message) throws Exception {
+        processMessage(message);
     }
 
     @Override
-    public void onError( Throwable errorException) {
-
+    public void onError(Throwable errorException) {
     }
-
 }

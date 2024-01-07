@@ -28,14 +28,13 @@ import com.api.jsonata4java.expressions.ParseException;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -46,12 +45,10 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-// @Service
 public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode> {
 
-    public JSONProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
-            String tenant) {
-        super(objectMapper, connectorClient, c8yAgent, tenant);
+    public JSONProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+        super(configurationRegistry, connectorClient);
     }
 
     @Override
@@ -83,10 +80,11 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 Expressions expr = Expressions.parse(ps);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}", context.getTenant(), substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", context.getTenant(),
+                        substitution.pathSource,
                         payload, e);
             }
             /*
@@ -96,7 +94,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                     substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("No substitution for: {}, {}", substitution.pathSource,
+                log.error("Tenant {} - No substitution for: {}, {}", context.getTenant(), substitution.pathSource,
                         payload);
                 postProcessingCacheEntry
                         .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
@@ -119,7 +117,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                                 MappingSubstitution.SubstituteValue.TYPE.NUMBER,
                                                 substitution.repairStrategy));
                             } else {
-                                log.warn("Since result is not textual or number it is ignored: {}",
+                                log.warn("Tenant {} - Since result is not textual or number it is ignored: {}", context.getTenant(),
                                         jn.asText());
                             }
                         }
@@ -139,8 +137,9 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                     if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
                         log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}",
-                                tenant, ps, extractedSourceContent.toPrettyString(), extractedSourceContent.asText());
-                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(tenant,
+                                context.getTenant(), ps, extractedSourceContent.toPrettyString(),
+                                extractedSourceContent.asText());
+                        ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                                 new GId(extractedSourceContent.asText()), mapping.externalIdType,
                                 context);
                         if (externalId == null && context.isSendPayload()) {
@@ -164,7 +163,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.NUMBER, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 } else {
-                    log.info("This substitution, involves an objects for: {}, {}",
+                    log.info("Tenant {} - This substitution, involves an objects for: {}, {}", context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString());
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry
@@ -172,9 +171,9 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (c8yAgent.getServiceConfigurations().get(tenant).logSubstitution) {
+                if (context.getServiceConfiguration().logSubstitution) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
-                            tenant,
+                            context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
                 }
             }

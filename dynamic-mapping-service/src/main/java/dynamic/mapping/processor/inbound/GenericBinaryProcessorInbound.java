@@ -22,9 +22,8 @@
 package dynamic.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.model.PayloadWrapper;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.codec.binary.Hex;
@@ -34,8 +33,8 @@ import java.io.IOException;
 //@Service
 public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
 
-    public GenericBinaryProcessorInbound (ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
-        super(objectMapper, c8yAgent, tenant);
+    public GenericBinaryProcessorInbound (ConfigurationRegistry configurationRegistry){
+        super(configurationRegistry);
     }
 
     @Override

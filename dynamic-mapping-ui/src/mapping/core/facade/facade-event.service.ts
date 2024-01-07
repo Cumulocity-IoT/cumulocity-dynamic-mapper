@@ -19,32 +19,27 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import {
-  IFetchResponse,
-  IMeasurement,
-  IResult,
-  MeasurementService
-} from '@c8y/client';
-import { ProcessingContext } from '../processor/prosessor.model';
+import { IEvent, IResult, EventService, IFetchResponse } from '@c8y/client';
+import { ProcessingContext } from '../../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
-export class FacadeMeasurementService {
-  constructor(private measurement: MeasurementService) {}
+export class FacadeEventService {
+  constructor(private event: EventService) {}
 
   create(
-    measurement: IMeasurement,
+    event: IEvent,
     context: ProcessingContext
-  ): Promise<IResult<IMeasurement>> {
+  ): Promise<IResult<IEvent>> {
     if (context.sendPayload) {
-      return this.measurement.create(measurement);
+      return this.event.create(event);
     } else {
-      const copyMeasurement: IMeasurement = {
-        ...measurement,
+      const copyEvent = {
+        ...event,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
         lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({
-        data: copyMeasurement,
+        data: copyEvent,
         res: { status: 200 } as IFetchResponse
       });
       return promise;

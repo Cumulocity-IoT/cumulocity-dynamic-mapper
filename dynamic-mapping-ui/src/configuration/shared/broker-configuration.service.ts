@@ -74,6 +74,7 @@ export class BrokerConfigurationService {
   private _connectorConfigurations: ConnectorConfiguration[];
   private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
+  private _agentId : string;
   private realtime: Realtime;
   private subscriptionEvents: any;
   private filterStatusLog = {
@@ -95,7 +96,7 @@ export class BrokerConfigurationService {
   }
 
   resetCache() {
-    console.log('Calling: BrokerConfigurationService.resetCache() ');
+    // console.log('Calling: BrokerConfigurationService.resetCache()');
     this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
     this._serviceConfiguration = undefined;
@@ -118,15 +119,17 @@ export class BrokerConfigurationService {
   }
 
   async stopConnectorStatusSubscriptions() {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Stop subscriptions:', agentId);
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
+    console.log('Stop subscriptions:', this._agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
   initConnectorConfigurations() {
-    console.log(
-      'Calling BrokerConfigurationService.initConnectorConfigurations()'
-    );
+    // console.log(
+    //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
+    // );
     const connectorConfig$ = this.triggerConfigurations$.pipe(
       tap(() => console.log('New triggerConfigurations!')),
       switchMap(() => {
@@ -175,10 +178,12 @@ export class BrokerConfigurationService {
   }
 
   initConnectorLogsRealtime() {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
     console.log(
       'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
-      agentId
+      this._agentId
     );
     const sourceList$ = this.triggerLogs$.pipe(
       tap((x) => console.log('TriggerLogs In', x)),
@@ -186,7 +191,7 @@ export class BrokerConfigurationService {
         const filter = {
           pageSize: 5,
           withTotalPages: false,
-          source: agentId,
+          source: this._agentId,
         };
         if (this.filterStatusLog.eventType !== 'ALL') {
           filter['type'] = this.filterStatusLog.eventType;
@@ -219,7 +224,7 @@ export class BrokerConfigurationService {
             : event.type == this.filterStatusLog.eventType) &&
           (this.filterStatusLog.connectorIdent == 'ALL'
             ? true
-            : event[CONNECTOR_FRAGMENT].connectorIdent ==
+            : event[CONNECTOR_FRAGMENT]?.connectorIdent ==
               this.filterStatusLog.connectorIdent)
         );
       }),
@@ -250,12 +255,14 @@ export class BrokerConfigurationService {
   }
 
   async startConnectorStatusSubscriptions(): Promise<void> {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Started subscriptions:', agentId);
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
+    console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${agentId}`,
+      `/events/${this._agentId}`,
       this.updateConnectorStatus
     );
   }

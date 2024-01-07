@@ -20,13 +20,14 @@
  */
 
 import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CoreModule, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './grid/monitoring.component';
 import { IdRendererComponent } from './renderer/id-cell.renderer.component';
 import { BrokerConfigurationModule } from '../configuration';
 import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
-import { ChartComponent } from './chart/chart.component';
+import { MonitoringChartComponent } from './chart/chart.component';
+import { MonitoringTabFactory } from './monitoring-tab.factory';
 
 @NgModule({
   declarations: [
@@ -34,15 +35,20 @@ import { ChartComponent } from './chart/chart.component';
     IdRendererComponent,
     NumberRendererComponent,
     DirectionRendererComponent,
-    ChartComponent
+    MonitoringChartComponent
   ],
   imports: [CoreModule, BrokerConfigurationModule],
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/monitoring',
+      path: 'sag-ps-pkg-dynamic-mapping/monitoring/grid',
       component: MonitoringComponent
-    })
+    }),
+    hookRoute({
+      path: 'sag-ps-pkg-dynamic-mapping/monitoring/chart',
+      component: MonitoringChartComponent
+    }),
+    hookTab(MonitoringTabFactory)
   ]
 })
 export class MonitoringModule {}

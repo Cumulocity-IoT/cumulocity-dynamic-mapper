@@ -30,6 +30,7 @@ import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
 import dynamic.mapping.processor.C8YMessage;
 import dynamic.mapping.processor.ProcessingException;
@@ -47,15 +48,12 @@ import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-// @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
-    public BasePayloadProcessorOutbound(ObjectMapper objectMapper, AConnectorClient connectorClient, C8YAgent c8yAgent,
-            String tenant) {
-        this.objectMapper = objectMapper;
+    public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+        this.objectMapper = configurationRegistry.getObjectMapper();
         this.connectorClient = connectorClient;
-        this.c8yAgent = c8yAgent;
-        this.tenant = tenant;
+        this.c8yAgent = configurationRegistry.getC8yAgent();
     }
 
     protected C8YAgent c8yAgent;
@@ -63,8 +61,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     protected ObjectMapper objectMapper;
 
     protected AConnectorClient connectorClient;
-
-    protected String tenant;
 
     public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
     public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
@@ -79,6 +75,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * step 3 replace target with extract content from outbound payload
          */
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
         // if there are to little device idenfified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
@@ -137,7 +134,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                if (connectorClient.isConnected()) {
+                if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
@@ -148,14 +145,13 @@ public abstract class BasePayloadProcessorOutbound<T> {
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     postProcessingCache.size());
         }
-        log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                mapping.targetAPI,
                 1);
-
         return context;
-
     }
 
     public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,

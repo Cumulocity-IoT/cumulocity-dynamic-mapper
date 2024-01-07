@@ -19,27 +19,27 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { IEvent, IResult, EventService, IFetchResponse } from '@c8y/client';
-import { ProcessingContext } from '../processor/prosessor.model';
+import { IAlarm, IResult, AlarmService, IFetchResponse } from '@c8y/client';
+import { ProcessingContext } from '../../processor/prosessor.model';
 
 @Injectable({ providedIn: 'root' })
-export class FacadeEventService {
-  constructor(private event: EventService) {}
+export class FacadeAlarmService {
+  constructor(private alarm: AlarmService) {}
 
   create(
-    event: IEvent,
+    alarm: IAlarm,
     context: ProcessingContext
-  ): Promise<IResult<IEvent>> {
+  ): Promise<IResult<IAlarm>> {
     if (context.sendPayload) {
-      return this.event.create(event);
+      return this.alarm.create(alarm);
     } else {
-      const copyEvent = {
-        ...event,
+      const copyAlarm = {
+        ...alarm,
         id: Math.floor(100000 + Math.random() * 900000).toString(),
         lastUpdated: new Date().toISOString()
       };
       const promise = Promise.resolve({
-        data: copyEvent,
+        data: copyAlarm,
         res: { status: 200 } as IFetchResponse
       });
       return promise;

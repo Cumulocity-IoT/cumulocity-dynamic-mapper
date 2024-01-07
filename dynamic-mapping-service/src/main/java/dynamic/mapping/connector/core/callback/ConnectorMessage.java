@@ -1,22 +1,15 @@
 package dynamic.mapping.connector.core.callback;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class ConnectorMessage {
     byte[] payload;
     String[] headers;
-
-    public byte[] getPayload() {
-        return payload;
-    }
-
-    public void setPayload(byte[] payload) {
-        this.payload = payload;
-    }
-
-    public String[] getHeaders() {
-        return headers;
-    }
-
-    public void setHeaders(String[] headers) {
-        this.headers = headers;
-    }
+    String tenant;
+    String topic;
+    String connectorIdent;
+    boolean sendPayload;
 }

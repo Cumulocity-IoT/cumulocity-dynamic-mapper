@@ -35,7 +35,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
@@ -60,6 +59,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
@@ -68,40 +68,45 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
-    @Getter
-    @Setter
-    public String tenant;
+    protected String connectorIdent;
 
-    @Getter
-    public MappingComponent mappingComponent;
-
-    @Getter
-    public MappingServiceRepresentation mappingServiceRepresentation;
-
-    @Getter
-    public ConnectorConfigurationComponent connectorConfigurationComponent;
-
-    @Getter
-    public ServiceConfigurationComponent serviceConfigurationComponent;
-
-    @Getter
-    public C8YAgent c8yAgent;
+    protected String connectorName;
 
     @Getter
     @Setter
-    public AsynchronousDispatcherInbound dispatcher;
-
-    public ObjectMapper objectMapper;
+    protected String tenant;
 
     @Getter
-    public ExecutorService cachedThreadPool;
+    protected MappingComponent mappingComponent;
+
+    @Getter
+    protected MappingServiceRepresentation mappingServiceRepresentation;
+
+    @Getter
+    protected ConnectorConfigurationComponent connectorConfigurationComponent;
+
+    @Getter
+    protected ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Getter
+    protected C8YAgent c8yAgent;
+
+    @Getter
+    @Setter
+    protected AsynchronousDispatcherInbound dispatcher;
+
+    protected ObjectMapper objectMapper;
+
+    protected ConfigurationRegistry configurationRegistry;
+
+    @Getter
+    protected ExecutorService cachedThreadPool;
 
     private Future<?> connectTask;
     private ScheduledExecutorService housekeepingExecutor = Executors
             .newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
     private Future<?> initializeTask;
-    private ScheduledFuture<?> housekeepingTask;
 
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
@@ -121,7 +126,7 @@ public abstract class AConnectorClient {
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
-        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone() );
+        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
         if ((initializeTask == null || initializeTask.isDone())) {
             initializeTask = cachedThreadPool.submit(() -> initialize());
         }
@@ -133,14 +138,14 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
-        serviceConfiguration =  c8yAgent.getServiceConfigurations().get(tenant);
+        // get the latest serviceConfiguration from the Cumulocity backend in case
+        // someone changed it in the meantime
+        // update the in the registry
+        serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 
-        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
-        connectorStatus.clearMessage();
+        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
         sendConnectorLifecycle();
-        // log.info("Tenant {} - DANGEROUS-LOG reload configuration: {} , {}", tenant,
-        // configuration,
-        // configuration.properties);
     }
 
     public void submitConnect() {
@@ -151,8 +156,7 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.CONNECTING);
-        connectorStatus.clearMessage();
+        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
         sendConnectorLifecycle();
     }
 
@@ -164,14 +168,13 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING);
-        connectorStatus.clearMessage();
+        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
         sendConnectorLifecycle();
     }
 
     public void submitHouskeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        this.housekeepingTask = housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
+        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
                 TimeUnit.SECONDS);
     }
 
@@ -259,12 +262,11 @@ public abstract class AConnectorClient {
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
-                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED);
-                connectorStatus.clearMessage();
+                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
             }
             sendConnectorLifecycle();
         } catch (Exception ex) {
-            log.error("Error during house keeping execution: {}", ex);
+            log.error("Tenant {} - Error during house keeping execution: {}", tenant, ex);
         }
     }
 
@@ -272,12 +274,16 @@ public abstract class AConnectorClient {
         return !(connectorStatus.status).equals(ConnectorStatus.FAILED);
     }
 
-    public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
+    public List<ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
+        message.setTenant(tenant);
+        message.setTopic(topic);
+        message.setSendPayload(sendPayload);
+        message.setConnectorIdent(getConnectorIdent());
         message.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
+        return dispatcher.processMessage(message).get();
     }
 
     public void reconnect() {
@@ -295,7 +301,8 @@ public abstract class AConnectorClient {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
                 } catch (Exception e) {
-                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, mapping.subscriptionTopic,
+                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
+                            mapping.subscriptionTopic,
                             e);
                 }
             }
@@ -329,12 +336,13 @@ public abstract class AConnectorClient {
             if (create) {
                 updatedMappingSubs.add(1);
                 ;
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                         mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (MqttException e1) {
-                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, mapping.subscriptionTopic, e1);
+                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
+                            mapping.subscriptionTopic, e1);
                 }
             } else if (subscriptionTopicChanged && activeMapping != null) {
                 MutableInt activeMappingSubs = getActiveSubscriptions()
@@ -344,7 +352,8 @@ public abstract class AConnectorClient {
                     try {
                         unsubscribe(mapping.subscriptionTopic);
                     } catch (Exception e) {
-                        log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
+                                mapping.subscriptionTopic, e);
                     }
                 }
                 updatedMappingSubs.add(1);
@@ -354,7 +363,8 @@ public abstract class AConnectorClient {
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                     } catch (MqttException e1) {
-                        log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
+                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
+                                mapping.subscriptionTopic, e1);
                     }
                 }
             }
@@ -397,7 +407,7 @@ public abstract class AConnectorClient {
                     try {
                         subscribe(topic, qos);
                     } catch (MqttException e1) {
-                        log.error("Exception when subscribing to topic: {}, {}", topic, e1);
+                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, topic, e1);
                         throw new RuntimeException(e1);
                     }
                 }
