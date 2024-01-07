@@ -110,7 +110,7 @@
   </div>
   <div *ngFor="let app of extensions$ | async" class="col-sm-3">
     <d11r-mapping-extension-card
-      (onAppDeleted)="loadExtensions()"
+      (appDeleted)="loadExtensions()"
       [app]="app"
       [loaded]="loaded"
       class="d-contents"
