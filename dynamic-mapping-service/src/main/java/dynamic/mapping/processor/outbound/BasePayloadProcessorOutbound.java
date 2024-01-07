@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-// @Service
 public abstract class BasePayloadProcessorOutbound<T> {
 
     public BasePayloadProcessorOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
@@ -76,6 +75,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * step 3 replace target with extract content from outbound payload
          */
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
 
         // if there are to little device idenfified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
@@ -141,18 +141,17 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 // context.getCurrentRequest().setResponse(response);
             } catch (Exception e) {
                 context.getCurrentRequest().setError(e);
-                log.error("Tenant {} - Error during publishing outbound message: {}", context.getTenant(), e);
+                log.error("Tenant {} - Error during publishing outbound message: {}", tenant, e);
             }
             predecessor = newPredecessor;
         } else {
-            log.warn("Ignoring payload: {}, {}, {}", payloadTarget, mapping.targetAPI,
+            log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     postProcessingCache.size());
         }
-        log.debug("Added payload for sending: {}, {}, numberDevices: {}", payloadTarget, mapping.targetAPI,
+        log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                mapping.targetAPI,
                 1);
-
         return context;
-
     }
 
     public void substituteValueInObject(MappingType type, MappingSubstitution.SubstituteValue sub,

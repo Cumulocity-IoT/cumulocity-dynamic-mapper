@@ -136,8 +136,9 @@ public abstract class AConnectorClient {
 
     public void loadConfiguration() {
         configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
-        // get the latest serviceConfiguration from the Cumulocity backend in case someone changed it in the meantime
-        // update the  in the registry
+        // get the latest serviceConfiguration from the Cumulocity backend in case
+        // someone changed it in the meantime
+        // update the in the registry
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 
@@ -263,7 +264,7 @@ public abstract class AConnectorClient {
             }
             sendConnectorLifecycle();
         } catch (Exception ex) {
-            log.error("Error during house keeping execution: {}", ex);
+            log.error("Tenant {} - Error during house keeping execution: {}", tenant, ex);
         }
     }
 
@@ -278,8 +279,9 @@ public abstract class AConnectorClient {
         message.setTenant(tenant);
         message.setTopic(topic);
         message.setSendPayload(sendPayload);
+        message.setConnectorIdent(getConnectorIdent());
         message.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(tenant, this.getConnectorIdent(), message).get();
+        return dispatcher.processMessage(message).get();
     }
 
     public void reconnect() {
@@ -332,7 +334,7 @@ public abstract class AConnectorClient {
             if (create) {
                 updatedMappingSubs.add(1);
                 ;
-                log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                         mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
@@ -348,7 +350,8 @@ public abstract class AConnectorClient {
                     try {
                         unsubscribe(mapping.subscriptionTopic);
                     } catch (Exception e) {
-                        log.error("Exception when unsubscribing from topic: {}, {}", mapping.subscriptionTopic, e);
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
+                                mapping.subscriptionTopic, e);
                     }
                 }
                 updatedMappingSubs.add(1);
@@ -358,7 +361,8 @@ public abstract class AConnectorClient {
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                     } catch (MqttException e1) {
-                        log.error("Exception when subscribing to topic: {}, {}", mapping.subscriptionTopic, e1);
+                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
+                                mapping.subscriptionTopic, e1);
                     }
                 }
             }
@@ -401,7 +405,7 @@ public abstract class AConnectorClient {
                     try {
                         subscribe(topic, qos);
                     } catch (MqttException e1) {
-                        log.error("Exception when subscribing to topic: {}, {}", topic, e1);
+                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, topic, e1);
                         throw new RuntimeException(e1);
                     }
                 }

@@ -74,7 +74,7 @@ public class BootstrapService {
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
         } catch (ConnectorRegistryException e) {
-            log.error("Error on cleaning up connector clients");
+            log.error("Tenant {} - Error on cleaning up connector clients", event.getTenant());
         }
 
         // delete configurations
@@ -121,7 +121,7 @@ public class BootstrapService {
             }
 
         } catch (Exception e) {
-            log.error("Error on initializing connectors: ", e);
+            log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
             // mqttClient.submitConnect();
         }
 

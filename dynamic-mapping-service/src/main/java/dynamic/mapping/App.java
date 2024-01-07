@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import dynamic.mapping.model.InnerNode;
-import dynamic.mapping.model.InnerNodeSerializer;
+import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.TreeNodeSerializer;
 
 import org.joda.time.DateTime;
 import org.springframework.boot.SpringApplication;
@@ -100,7 +100,7 @@ public class App {
         ObjectMapper objectMapper = baseObjectMapper();
         objectMapper.registerModule(cumulocityModule());
         SimpleModule module = new SimpleModule();
-        module.addSerializer(InnerNode.class, new InnerNodeSerializer());
+        module.addSerializer(TreeNode.class, new TreeNodeSerializer());
         objectMapper.registerModule(module);
         return objectMapper;
     }

@@ -133,12 +133,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
             log.info("Tenant {} - Notification received: <{}>", tenant, notification.getMessage());
             log.info("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
-            C8YMessage message = new C8YMessage();
-            message.setPayload(notification.getMessage());
-            message.setApi(notification.getApi());
-            message.setTenant(tenant);
-            message.setSendPayload(true);
-            processMessage(tenant, message, true);
+            C8YMessage c8yMessage = new C8YMessage();
+            c8yMessage.setPayload(notification.getMessage());
+            c8yMessage.setApi(notification.getApi());
+            c8yMessage.setTenant(tenant);
+            c8yMessage.setSendPayload(true);
+            processMessage(c8yMessage);
         }
     }
 
@@ -280,8 +280,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(String tenant, C8YMessage c8yMessage,
-            boolean sendPayload) {
+    public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
+        String tenant = c8yMessage.getTenant();
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();

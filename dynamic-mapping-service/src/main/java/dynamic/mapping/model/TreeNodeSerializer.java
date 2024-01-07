@@ -30,19 +30,19 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 
 @Slf4j
-public class InnerNodeSerializer extends StdSerializer<InnerNode> {
+public class TreeNodeSerializer extends StdSerializer<TreeNode> {
 
-    public InnerNodeSerializer() {
+    public TreeNodeSerializer() {
         this(null);
     }
 
-    public InnerNodeSerializer(Class<InnerNode> t) {
+    public TreeNodeSerializer(Class<TreeNode> t) {
         super(t);
     }
 
     @Override
     public void serialize(
-            InnerNode value, JsonGenerator jgen, SerializerProvider provider)
+            TreeNode value, JsonGenerator jgen, SerializerProvider provider)
             throws IOException, JsonProcessingException {
         log.debug("Serializing node {}, {}", value.getLevel(), value.getAbsolutePath());
         jgen.writeStartObject();

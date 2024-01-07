@@ -49,7 +49,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
-import dynamic.mapping.model.InnerNode;
+import dynamic.mapping.model.TreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -93,13 +93,13 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    private Map<String, InnerNode> resolverMappingInbound = new HashMap<>();
+    private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
 
     public void initializeMappingCaches(String tenant) {
         cacheMappingInbound.put(tenant, new HashMap<>());
         cacheMappingOutbound.put(tenant, new HashMap<>());
         resolverMappingOutbound.put(tenant, new HashMap<>());
-        resolverMappingInbound.put(tenant, InnerNode.createRootNode());
+        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
@@ -124,7 +124,7 @@ public class MappingComponent {
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initialized.put(tenant, true);
-        resolverMappingInbound.put(tenant, InnerNode.createRootNode());
+        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
         if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
         if (cacheMappingOutbound.get(tenant) == null)
@@ -145,7 +145,7 @@ public class MappingComponent {
                         .getMappingServiceRepresentations().get(tenant);
                 // avoid sending empty monitoring events
                 if (statusMapping.values().size() > 0 && mappingServiceRepresentation != null && initialized) {
-                    log.debug("Sending monitoring: {}", statusMapping.values().size());
+                    log.debug("Tenant {} - Sending monitoring: {}", tenant, statusMapping.values().size());
                     Map<String, Object> service = new HashMap<String, Object>();
                     MappingStatus[] ms = statusMapping.values().toArray(new MappingStatus[0]);
                     // add current name of mappings to the status messages
@@ -426,13 +426,13 @@ public class MappingComponent {
         }
     }
 
-    public InnerNode rebuildMappingTree(List<Mapping> mappings) {
-        InnerNode in = InnerNode.createRootNode();
+    public TreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
+        TreeNode in = TreeNode.createRootNode(tenant);
         mappings.forEach(m -> {
             try {
                 in.addMapping(m);
             } catch (ResolveException e) {
-                log.error("Could not add mapping {}, ignoring mapping", m);
+                log.error("Tenant {} - Could not add mapping {}, ignoring mapping", tenant, m);
             }
         });
         return in;
@@ -443,7 +443,7 @@ public class MappingComponent {
         cacheMappingInbound.replace(tenant, updatedMappings.stream()
                 .collect(Collectors.toMap(Mapping::getId, Function.identity())));
         // update mappings tree
-        resolverMappingInbound.replace(tenant, rebuildMappingTree(updatedMappings));
+        resolverMappingInbound.replace(tenant, rebuildMappingTree(updatedMappings, tenant));
         return updatedMappings;
     }
 
@@ -482,7 +482,7 @@ public class MappingComponent {
 
     public void cleanDirtyMappings(String tenant) throws Exception {
         // test if for this tenant dirty mappings exist
-        log.debug("Testing for dirty maps");
+        log.debug("Tenant {} - Testing for dirty maps", tenant);
         if (dirtyMappings.get(tenant) != null) {
             for (Mapping mapping : dirtyMappings.get(tenant)) {
                 log.info("Tenant {} - Found mapping to be saved: {}, {}", tenant, mapping.id, mapping.snoopStatus);
@@ -508,7 +508,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<InnerNode> resolvedMappings = getResolverMappingInbound().get(tenant)
+        List<TreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
                 .map(mn -> mn.getMapping()).collect(Collectors.toList());
