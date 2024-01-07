@@ -112,7 +112,7 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
     }
 
     public void addExtensionEntry(String tenant, String extensionName, ExtensionEntry entry) {
-        if (extensions.containsKey(extensionName)) {
+        if (!extensions.containsKey(extensionName)) {
             log.warn("Tenant {} - Cannot add extension entry. Create first an extension!", tenant);
         } else {
             extensions.get(extensionName).getExtensionEntries().put(entry.getEvent(), entry);
@@ -120,7 +120,7 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
     }
 
     public void addExtension(String tenant, Extension extension) {
-        if (extensions.containsKey(extension.getName())) {
+        if (!extensions.containsKey(extension.getName())) {
             log.warn("Tenant {} - Extension with this name {} already exits, override existing extension!", tenant,
                     extension.getName());
         } else {
