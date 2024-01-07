@@ -139,10 +139,7 @@ public class BootstrapService {
         if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
                     connectorConfiguration.getIdent());
-            MQTTClient mqttClient = new MQTTClient(configurationRegistry,
-                    mappingComponent,
-                    connectorConfigurationComponent, serviceConfigurationComponent, connectorConfiguration,
-                    cachedThreadPool,
+            MQTTClient mqttClient = new MQTTClient(configurationRegistry, connectorConfiguration,
                     null,
                     additionalSubscriptionIdTest, tenant);
 
@@ -151,8 +148,7 @@ public class BootstrapService {
         }
 
         // initialize AsynchronousDispatcherInbound
-        AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
-                mappingComponent, cachedThreadPool, connectorClient);
+        AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry, connectorClient);
         configurationRegistry.initializePayloadProcessorsInbound(tenant);
         connectorClient.setDispatcher(dispatcherInbound);
         connectorClient.reconnect();
@@ -162,7 +158,7 @@ public class BootstrapService {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
-                    configurationRegistry, mappingComponent, cachedThreadPool, connectorClient);
+                    configurationRegistry, connectorClient);
             configurationRegistry.getNotificationSubscriber().addSubscriber(tenant, connectorClient.getConnectorIdent(),
                     dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector

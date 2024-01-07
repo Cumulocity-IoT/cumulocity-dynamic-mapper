@@ -34,7 +34,6 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -59,11 +58,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
-import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
-import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
@@ -71,22 +67,18 @@ import dynamic.mapping.core.ConnectorStatus;
 public class MQTTClient extends AConnectorClient {
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
-            MappingComponent mappingComponent,
-            ConnectorConfigurationComponent connectorConfigurationComponent,
-            ServiceConfigurationComponent serviceConfigurationComponent,
             ConnectorConfiguration connectorConfiguration,
-            ExecutorService cachedThreadPool,
             AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
         this.configurationRegistry = configurationRegistry;
-        this.mappingComponent = mappingComponent;
-        this.serviceConfigurationComponent = serviceConfigurationComponent;
-        this.connectorConfigurationComponent = connectorConfigurationComponent;
+        this.mappingComponent = configurationRegistry.getMappingComponent();
+        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
+        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
         this.configuration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
         this.connectorName = connectorConfiguration.name;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.cachedThreadPool = cachedThreadPool;
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
@@ -99,9 +91,6 @@ public class MQTTClient extends AConnectorClient {
 
     @Getter
     private static final String connectorType = "MQTT";
-
-    private String connectorIdent = null;
-    private String connectorName = null;
 
     @Getter
     public static ConnectorSpecification spec;

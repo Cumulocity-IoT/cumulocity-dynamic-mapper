@@ -2,13 +2,17 @@ package dynamic.mapping.core;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
@@ -22,13 +26,14 @@ import dynamic.mapping.processor.outbound.BasePayloadProcessorOutbound;
 import dynamic.mapping.processor.outbound.JSONProcessorOutbound;
 import dynamic.mapping.processor.processor.fixed.StaticProtobufProcessor;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class ConfigurationRegistry {
 
-     // structure: <tenant, <mappingType, mappingServiceRepresentation>>
+    // structure: <tenant, <mappingType, mappingServiceRepresentation>>
     @Getter
     private Map<String, MappingServiceRepresentation> mappingServiceRepresentations = new HashMap<>();
 
@@ -49,10 +54,6 @@ public class ConfigurationRegistry {
     private Map<String, ExtensibleProcessorInbound> extensibleProcessors = new HashMap<>();
 
     @Getter
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Getter
     private C8YAgent c8yAgent;
 
     @Autowired
@@ -68,10 +69,42 @@ public class ConfigurationRegistry {
         this.notificationSubscriber = notificationSubscriber;
     }
 
+    @Getter
+    private ObjectMapper objectMapper;
+
     @Autowired
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
+
+    @Getter
+    private MappingComponent mappingComponent;
+
+    @Autowired
+    public void setMappingComponent(@Lazy MappingComponent mappingComponent) {
+        this.mappingComponent = mappingComponent;
+    }
+
+    @Getter
+    private ConnectorConfigurationComponent connectorConfigurationComponent;
+
+    @Autowired
+    public void setMappingComponent(@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
+        this.connectorConfigurationComponent = connectorConfigurationComponent;
+    }
+
+    @Getter
+    public ServiceConfigurationComponent serviceConfigurationComponent;
+
+    @Autowired
+    public void setMappingComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
+        this.serviceConfigurationComponent = serviceConfigurationComponent;
+    }
+
+    @Getter
+    @Setter
+    @Autowired
+    private ExecutorService cachedThreadPool;
 
     public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);

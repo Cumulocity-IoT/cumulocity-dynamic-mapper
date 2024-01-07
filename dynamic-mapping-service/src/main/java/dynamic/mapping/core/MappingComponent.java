@@ -77,6 +77,7 @@ public class MappingComponent {
 
     private Map<String, Boolean> initialized = new HashMap<>();
 
+    // structure: <tenant, < mappingId , status>>
     @Getter
     private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 

@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.API;
@@ -65,6 +66,8 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
             throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 

@@ -134,8 +134,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Getter
     private ConfigurationRegistry configurationRegistry;
+
     @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry){
+    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -405,7 +406,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
                     String pathWithProtocol = "file://".concat(tempFile.getPath());
-                    log.debug("Tenant {} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath, path,
+                    log.debug("Tenant {} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath,
+                            path,
                             pathWithProtocol);
                     FileOutputStream outputStream = new FileOutputStream(tempFile);
                     IOUtils.copy(downloadInputStream, outputStream);
@@ -426,11 +428,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    private void registerExtensionInProcessor(String tenant, String id, String extName, ClassLoader dynamicLoader,
+    private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
         ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
-        extensibleProcessor.addExtension(id, extName, external);
+        extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
         InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
         InputStreamReader in = null;
@@ -456,7 +458,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Class<?> clazz;
             ExtensionEntry extensionEntry = new ExtensionEntry(key, newExtensions.getProperty(key),
                     null, true, "OK");
-            extensibleProcessor.addExtensionEntry(extName, extensionEntry);
+            extensibleProcessor.addExtensionEntry(tenant, extensionName, extensionEntry);
 
             try {
                 clazz = dynamicLoader.loadClass(newExtensions.getProperty(key));
@@ -492,7 +494,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 extensionEntry.setLoaded(false);
             }
         }
-        extensibleProcessor.updateStatusExtension(extName);
+        extensibleProcessor.updateStatusExtension(extensionName);
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {

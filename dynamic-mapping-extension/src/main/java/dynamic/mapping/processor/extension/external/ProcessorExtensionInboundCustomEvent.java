@@ -33,35 +33,35 @@ import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
-import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import lombok.extern.slf4j.Slf4j;
 
-
 @Slf4j
-@Component
 public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionInbound<byte[]> {
     @Override
     public void extractFromSource(ProcessingContext<byte[]> context)
             throws ProcessingException {
         CustomEventOuter.CustomEvent payloadProtobuf;
         try {
-                byte[] payload = context.getPayload();
-                if (payload == null) {
-                   log.info("Preparing new event failed, payload == null");
+            byte[] payload = context.getPayload();
+            if (payload == null) {
+                log.info("Tenant {} - Preparing new event failed, payload == null",
+                        context.getTenant());
 
-                } else {
-                   log.info("Preparing new event: {}", new String(payload));
-                }
-                payloadProtobuf = CustomEventOuter.CustomEvent
+            } else {
+                log.info("Tenant {} - Preparing new event: {}", context.getTenant(),
+                        new String(payload));
+            }
+            payloadProtobuf = CustomEventOuter.CustomEvent
                     .parseFrom(payload);
         } catch (InvalidProtocolBufferException e) {
             throw new ProcessingException(e.getMessage());
         }
-        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
+        Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context
+                .getPostProcessingCache();
 
         postProcessingCache.put("time",
                 new ArrayList<MappingSubstitution.SubstituteValue>(
@@ -73,7 +73,8 @@ public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionI
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("text",
                 new ArrayList<MappingSubstitution.SubstituteValue>(Arrays.asList(
-                        new MappingSubstitution.SubstituteValue(new TextNode(payloadProtobuf.getTxt()),
+                        new MappingSubstitution.SubstituteValue(
+                                new TextNode(payloadProtobuf.getTxt()),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
         postProcessingCache.put("type",
@@ -90,9 +91,9 @@ public class ProcessorExtensionInboundCustomEvent implements ProcessorExtensionI
                                 new TextNode(payloadProtobuf.getExternalId()),
                                 MappingSubstitution.SubstituteValue.TYPE.TEXTUAL,
                                 RepairStrategy.DEFAULT))));
-        log.info("New event over protobuf: {}, {}, {}, {}", payloadProtobuf.getTimestamp(),
+        log.info("Tenant {} - New event over protobuf: {}, {}, {}, {}", context.getTenant(),
+                payloadProtobuf.getTimestamp(),
                 payloadProtobuf.getTxt(), payloadProtobuf.getEventType(),
                 payloadProtobuf.getExternalId());
     }
-
 }
