@@ -34,7 +34,6 @@ public enum MappingType {
     private MappingType (String name, Class<?> payloadType){
         this.name = name;
         this.payloadType = payloadType;
- 
     }
 
     public String getName() {

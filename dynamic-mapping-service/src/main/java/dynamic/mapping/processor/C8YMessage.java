@@ -16,4 +16,10 @@ public class C8YMessage {
     
     @NotNull
     private API api; 
+
+    @NotNull
+    private String tenant; 
+
+    @NotNull
+    private boolean sendPayload; 
 }

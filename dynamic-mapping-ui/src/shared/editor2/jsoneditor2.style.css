@@ -56,6 +56,6 @@ body .jsoneditor2 {
   overflow: auto;
 }
 /* remove the 'transform' option from the context menu */
-div.jse-absolute-popup div:nth-child(5) > div:nth-child(1) > button:nth-child(4) {
+/* div.jse-absolute-popup div:nth-child(5) > div:nth-child(1) > button:nth-child(4) {
   display:none;
-}
+} */

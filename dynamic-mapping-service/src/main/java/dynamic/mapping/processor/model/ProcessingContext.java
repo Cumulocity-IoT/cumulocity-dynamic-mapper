@@ -21,6 +21,7 @@
 
 package dynamic.mapping.processor.model;
 
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.Getter;
@@ -69,6 +70,10 @@ public class ProcessingContext<O> {
     private boolean sendPayload = false;
 
     private boolean needsRepair = false;
+
+    private String tenant;
+
+    private ServiceConfiguration serviceConfiguration;
 
     public static final String SOURCE_ID = "source.id";
 

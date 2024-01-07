@@ -613,6 +613,13 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 </p>
 <br/>
 
+A chart shows a summary with numbers of all sucessfully processed messages and those raising errors. 
+
+<p align="center">
+<img src="resources/image/Generic_Mapping_MonitoringChart.png"  style="width: 70%;" />
+</p>
+<br/>
+
 #### Mapping Tree
 
 On the tab ```Mapping Tree``` you can see how the registered mappings are organised in a tree. This can be very helpful in case of tracing any errors.

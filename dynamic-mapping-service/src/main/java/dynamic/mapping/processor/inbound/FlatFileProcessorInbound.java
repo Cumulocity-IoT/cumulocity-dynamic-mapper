@@ -22,9 +22,8 @@
 package dynamic.mapping.processor.inbound;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.core.C8YAgent;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.model.PayloadWrapper;
 import dynamic.mapping.processor.model.ProcessingContext;
 
@@ -35,8 +34,8 @@ import java.nio.charset.Charset;
 public class FlatFileProcessorInbound extends JSONProcessorInbound {
 
 
-    public FlatFileProcessorInbound(ObjectMapper objectMapper, C8YAgent c8yAgent, String tenant){
-        super(objectMapper, c8yAgent, tenant);
+    public FlatFileProcessorInbound(ConfigurationRegistry configurationRegistry){
+        super(configurationRegistry);
     }
 
     @Override

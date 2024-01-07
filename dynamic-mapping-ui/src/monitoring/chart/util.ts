@@ -1,6 +1,4 @@
 import colorLib from '@kurkle/color';
-import { DateTime } from 'luxon';
-import 'chartjs-adapter-luxon';
 
 // Adapted from http://indiegamr.com/generate-repeatable-random-numbers-in-js/
 let _seed = Date.now();
@@ -44,19 +42,6 @@ export function numbers(config) {
   return data;
 }
 
-export function points(config) {
-  const xs = numbers(config);
-  const ys = numbers(config);
-  return xs.map((x, i) => ({ x, y: ys[i], r: 100 }));
-}
-
-export function bubbles(config) {
-  return points(config).map((pt) => {
-    pt.r = rand(config.rmin, config.rmax);
-    return pt;
-  });
-}
-
 export function labels(config) {
   const cfg = config || {};
   const min = cfg.min || 0;
@@ -71,36 +56,6 @@ export function labels(config) {
 
   for (i = min; i < max; i += step) {
     values.push(prefix + Math.round(dfactor * i) / dfactor);
-  }
-
-  return values;
-}
-
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December'
-];
-
-export function months(config) {
-  const cfg = config || {};
-  const count = cfg.count || 12;
-  const { section } = cfg;
-  const values = [];
-  let i, value;
-
-  for (i = 0; i < count; ++i) {
-    value = MONTHS[Math.ceil(i) % 12];
-    values.push(value.substring(0, section));
   }
 
   return values;
@@ -159,16 +114,4 @@ const NAMED_COLORS = [
 
 export function namedColor(index) {
   return NAMED_COLORS[index % NAMED_COLORS.length];
-}
-
-export function newDate(days) {
-  return DateTime.now().plus({ days }).toJSDate();
-}
-
-export function newDateString(days) {
-  return DateTime.now().plus({ days }).toISO();
-}
-
-export function parseISODate(str) {
-  return DateTime.fromISO(str);
 }

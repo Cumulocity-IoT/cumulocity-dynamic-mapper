@@ -50,7 +50,6 @@ export class MappingTabFactory implements TabFactory {
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
-      this.sharedService.getFeatures();
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
         priority: 920,
@@ -59,13 +58,13 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal',
         hide: !feature?.outputMappingEnabled
       } as Tab);
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring',
-        priority: 910,
-        label: 'Monitoring',
-        icon: 'monitoring',
-        orientation: 'horizontal'
-      } as Tab);
+      // tabs.push({
+      //   path: 'sag-ps-pkg-dynamic-mapping/monitoring',
+      //   priority: 910,
+      //   label: 'Monitoring',
+      //   icon: 'monitoring',
+      //   orientation: 'horizontal'
+      // } as Tab);
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/testing',
         priority: 900,
