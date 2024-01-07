@@ -49,8 +49,8 @@ import java.util.Map;
 // @Service
 public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> {
 
-    public JSONProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant) {
-        super(configurationRegistry, tenant);
+    public JSONProcessorInbound(ConfigurationRegistry configurationRegistry) {
+        super(configurationRegistry);
     }
 
     @Override
@@ -64,6 +64,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
     @Override
     public void extractFromSource(ProcessingContext<JsonNode> context)
             throws ProcessingException {
+        String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();

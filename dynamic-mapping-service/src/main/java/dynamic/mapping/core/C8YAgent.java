@@ -296,8 +296,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         }
     }
 
-    public AbstractExtensibleRepresentation createMEAO(String tenant, ProcessingContext<?> context)
+    public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context)
             throws ProcessingException {
+        String tenant = context.getTenant();
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
@@ -583,7 +584,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void createExtensibleProsessor(String tenant) {
-        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry, tenant);
+        ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
         log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
 

@@ -88,35 +88,32 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     public static class MappingInboundTask<T> implements Callable<List<ProcessingContext<?>>> {
         List<Mapping> resolvedMappings;
-        String topic;
-        String tenant;
         Map<MappingType, BasePayloadProcessorInbound<?>> payloadProcessorsInbound;
-        boolean sendPayload;
-        ConnectorMessage message;
+        ConnectorMessage connectorMessage;
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
 
-        public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> mappings,
+        public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 MappingComponent mappingStatusComponent,
-                String topic, String tenant, boolean sendPayload,
                 ConnectorMessage message) {
-            this.resolvedMappings = mappings;
+            this.resolvedMappings = resolvedMappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = configurationRegistry.getC8yAgent();
-            this.topic = topic;
-            this.tenant = tenant;
-            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound().get(tenant);
-            this.sendPayload = sendPayload;
-            this.message = message;
+            this.payloadProcessorsInbound = configurationRegistry.getPayloadProcessorsInbound()
+                    .get(message.getTenant());
+            this.connectorMessage = message;
             this.objectMapper = configurationRegistry.getObjectMapper();
-            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
-
+            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
+            String tenant = connectorMessage.getTenant();
+            String topic = connectorMessage.getTopic();
+            boolean sendPayload = connectorMessage.isSendPayload();
+
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingStatusComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
@@ -143,7 +140,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
                     if (processor != null) {
                         try {
-                            processor.deserializePayload(context, message);
+                            processor.deserializePayload(context, connectorMessage);
                             if (serviceConfiguration.logPayload) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant,
                                         context.getTopic(),
@@ -203,16 +200,14 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     }
                     processingResult.add(context);
                 }
-
             });
             return processingResult;
         }
-
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent, String topic,
-            ConnectorMessage message,
-            boolean sendPayload) throws Exception {
+    public Future<List<ProcessingContext<?>>> processMessage(String tenant, String connectorIdent,
+            ConnectorMessage message) throws Exception {
+        String topic = message.getTopic();
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         Future<List<ProcessingContext<?>>> futureProcessingResult = null;
         List<Mapping> resolvedMappings = new ArrayList<>();
@@ -235,7 +230,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
 
         futureProcessingResult = cachedThreadPool.submit(
-                new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent, topic, tenant, sendPayload, message));
+                new MappingInboundTask(configurationRegistry, resolvedMappings, mappingComponent,
+                        message));
 
         return futureProcessingResult;
 
@@ -255,10 +251,10 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public void onMessage(String topic, ConnectorMessage message) throws Exception {
+    public void onMessage(ConnectorMessage message) throws Exception {
         String tenant = connectorClient.getTenant();
         String connectorIdent = connectorClient.getConnectorIdent();
-        processMessage(tenant, connectorIdent, topic, message, true);
+        processMessage(tenant, connectorIdent, message);
     }
 
     @Override
