@@ -120,7 +120,8 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
     }
 
     public void addExtension(String tenant, Extension extension) {
-        if (!extensions.containsKey(extension.getName())) {
+        Extension ext = extensions.get(extension.getName());
+        if (ext != null) {
             log.warn("Tenant {} - Extension with this name {} already exits, override existing extension!", tenant,
                     extension.getName());
         } else {

@@ -38,13 +38,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   reload$: BehaviorSubject<void> = new BehaviorSubject(null);
   externalExtensionEnabled: boolean = true;
 
-  extensions$: Observable<IResultList<IManagedObject>> = this.reload$.pipe(
-    tap(() => (this.reloading = true)),
-    switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
-    tap(console.log),
-    tap(() => (this.reloading = false)),
-    shareReplay()
-  );
+  extensions$: Observable<IResultList<IManagedObject>>;
 
   listClass: string;
 
@@ -55,6 +49,13 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
+    this.extensions$ = this.reload$.pipe(
+        tap(() => (this.reloading = true)),
+        switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
+        tap(console.log),
+        tap(() => (this.reloading = false)),
+        shareReplay()
+      );
     this.loadExtensions();
     this.extensions$.subscribe((exts) => {
       console.log('New extenions:', exts);
@@ -83,6 +84,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe(() => {
       this.reloadExtensions();
       modalRef.hide();
+      this.reload$.next();
     });
   }
 

@@ -74,6 +74,7 @@ export class BrokerConfigurationService {
   private _connectorConfigurations: ConnectorConfiguration[];
   private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
+  private _agentId : string;
   private realtime: Realtime;
   private subscriptionEvents: any;
   private filterStatusLog = {
@@ -118,8 +119,10 @@ export class BrokerConfigurationService {
   }
 
   async stopConnectorStatusSubscriptions() {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Stop subscriptions:', agentId);
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
+    console.log('Stop subscriptions:', this._agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
@@ -175,10 +178,12 @@ export class BrokerConfigurationService {
   }
 
   initConnectorLogsRealtime() {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
     console.log(
       'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
-      agentId
+      this._agentId
     );
     const sourceList$ = this.triggerLogs$.pipe(
       tap((x) => console.log('TriggerLogs In', x)),
@@ -186,7 +191,7 @@ export class BrokerConfigurationService {
         const filter = {
           pageSize: 5,
           withTotalPages: false,
-          source: agentId,
+          source: this._agentId,
         };
         if (this.filterStatusLog.eventType !== 'ALL') {
           filter['type'] = this.filterStatusLog.eventType;
@@ -250,12 +255,14 @@ export class BrokerConfigurationService {
   }
 
   async startConnectorStatusSubscriptions(): Promise<void> {
-    const agentId = this.sharedService.getDynamicMappingServiceAgent();
-    console.log('Started subscriptions:', agentId);
+    if (!this._agentId) {
+        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+    }
+    console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${agentId}`,
+      `/events/${this._agentId}`,
       this.updateConnectorStatus
     );
   }
