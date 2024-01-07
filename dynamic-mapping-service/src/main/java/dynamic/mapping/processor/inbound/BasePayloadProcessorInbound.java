@@ -54,12 +54,9 @@ import java.util.Map.Entry;
 @Slf4j
 public abstract class BasePayloadProcessorInbound<T> {
 
-    public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant) {
+    public BasePayloadProcessorInbound(ConfigurationRegistry configurationRegistry) {
         this.objectMapper = configurationRegistry.getObjectMapper();
-        // this.connectorClient = connectorClient;
-        this.tenant = tenant;
         this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
     }
 
     protected C8YAgent c8yAgent;
@@ -196,7 +193,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                                 payloadTarget.jsonString(),
                                 null, mapping.targetAPI, null));
                 try {
-                    attocRequest = c8yAgent.createMEAO(tenant, context);
+                    if (context.isSendPayload()) {
+                        attocRequest = c8yAgent.createMEAO(context);
+                    }
                     var response = objectMapper.writeValueAsString(attocRequest);
                     context.getCurrentRequest().setResponse(response);
                 } catch (Exception e) {

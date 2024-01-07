@@ -271,12 +271,15 @@ public abstract class AConnectorClient {
         return !(connectorStatus.status).equals(ConnectorStatus.FAILED);
     }
 
-    public List<ProcessingContext<?>> test(String topic, boolean send, Map<String, Object> payload)
+    public List<ProcessingContext<?>> test(String topic, boolean sendPayload, Map<String, Object> payload)
             throws Exception {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
+        message.setTenant(tenant);
+        message.setTopic(topic);
+        message.setSendPayload(sendPayload);
         message.setPayload(payloadMessage.getBytes());
-        return dispatcher.processMessage(tenant, this.getConnectorIdent(), topic, message, send).get();
+        return dispatcher.processMessage(tenant, this.getConnectorIdent(), message).get();
     }
 
     public void reconnect() {

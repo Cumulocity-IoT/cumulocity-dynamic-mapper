@@ -28,7 +28,6 @@ import com.jayway.jsonpath.JsonPath;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -135,7 +134,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                if (connectorClient.isConnected()) {
+                if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);

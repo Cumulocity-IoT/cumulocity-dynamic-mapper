@@ -34,8 +34,8 @@ import java.nio.charset.Charset;
 public class FlatFileProcessorInbound extends JSONProcessorInbound {
 
 
-    public FlatFileProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant){
-        super(configurationRegistry, tenant);
+    public FlatFileProcessorInbound(ConfigurationRegistry configurationRegistry){
+        super(configurationRegistry);
     }
 
     @Override

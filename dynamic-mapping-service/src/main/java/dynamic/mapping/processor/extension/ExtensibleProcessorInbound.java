@@ -40,8 +40,8 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
 
     private Map<String, Extension> extensions = new HashMap<>();
 
-    public ExtensibleProcessorInbound(ConfigurationRegistry configurationRegistry, String tenant) {
-        super(configurationRegistry, tenant);
+    public ExtensibleProcessorInbound(ConfigurationRegistry configurationRegistry) {
+        super(configurationRegistry);
     }
 
     @Override

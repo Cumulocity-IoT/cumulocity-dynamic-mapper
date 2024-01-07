@@ -42,8 +42,8 @@ import java.util.Map;
 
 public class StaticProtobufProcessor extends BasePayloadProcessorInbound<byte[]> {
 
-    public StaticProtobufProcessor(ConfigurationRegistry configurationRegistry, String tenant) {
-        super(configurationRegistry, tenant);
+    public StaticProtobufProcessor(ConfigurationRegistry configurationRegistry) {
+        super(configurationRegistry);
     }
 
     @Override

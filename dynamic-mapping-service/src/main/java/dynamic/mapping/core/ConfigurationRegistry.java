@@ -77,10 +77,10 @@ public class ConfigurationRegistry {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
         log.info("Tenant {} - payloadProcessorsInbound {}", tenant, extensibleProcessor);
         return Map.of(
-                MappingType.JSON, new JSONProcessorInbound(this, tenant),
-                MappingType.FLAT_FILE, new FlatFileProcessorInbound(this, tenant),
-                MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this, tenant),
-                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this, tenant),
+                MappingType.JSON, new JSONProcessorInbound(this),
+                MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
+                MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
+                MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
                 MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
     }
 

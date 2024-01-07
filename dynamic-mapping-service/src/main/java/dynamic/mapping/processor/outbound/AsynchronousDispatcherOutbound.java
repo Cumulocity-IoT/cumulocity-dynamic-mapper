@@ -136,6 +136,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             C8YMessage message = new C8YMessage();
             message.setPayload(notification.getMessage());
             message.setApi(notification.getApi());
+            message.setTenant(tenant);
+            message.setSendPayload(true);
             processMessage(tenant, message, true);
         }
     }
@@ -159,35 +161,32 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     }
 
     public static class MappingOutboundTask<T> implements Callable<List<ProcessingContext<?>>> {
-
         List<Mapping> resolvedMappings;
-        String topic;
         Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound;
-        boolean sendPayload;
         C8YMessage c8yMessage;
         MappingComponent mappingStatusComponent;
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
-        String tenant;
         ServiceConfiguration serviceConfiguration;
 
-        public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> mappings,
+        public MappingOutboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 MappingComponent mappingStatusComponent,
-                Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound, boolean sendPayload,
-                C8YMessage c8yMessage, String tenant) {
-            this.resolvedMappings = mappings;
+                Map<MappingType, BasePayloadProcessorOutbound<T>> payloadProcessorsOutbound,
+                C8YMessage c8yMessage) {
+            this.resolvedMappings = resolvedMappings;
             this.mappingStatusComponent = mappingStatusComponent;
             this.c8yAgent = configurationRegistry.getC8yAgent();
             this.payloadProcessorsOutbound = payloadProcessorsOutbound;
-            this.sendPayload = sendPayload;
             this.c8yMessage = c8yMessage;
             this.objectMapper = configurationRegistry.getObjectMapper();
-            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
-            this.tenant = tenant;
+            this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
+            String tenant = c8yMessage.getTenant();
+            boolean sendPayload = c8yMessage.isSendPayload();
+
             List<ProcessingContext<?>> processingResult = new ArrayList<>();
             MappingStatus mappingStatusUnspecified = mappingStatusComponent
                     .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
@@ -313,8 +312,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
         futureProcessingResult = cachedThreadPool.submit(
                 new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
-                        payloadProcessorsOutbound,
-                        sendPayload, c8yMessage, tenant));
+                        payloadProcessorsOutbound, c8yMessage));
 
         if (op != null) {
             // Blocking for Operations to receive the processing result to update operation

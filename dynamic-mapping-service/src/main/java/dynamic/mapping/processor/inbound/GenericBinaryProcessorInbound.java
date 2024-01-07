@@ -33,8 +33,8 @@ import java.io.IOException;
 //@Service
 public class GenericBinaryProcessorInbound extends JSONProcessorInbound {
 
-    public GenericBinaryProcessorInbound (ConfigurationRegistry configurationRegistry, String tenant){
-        super(configurationRegistry, tenant);
+    public GenericBinaryProcessorInbound (ConfigurationRegistry configurationRegistry){
+        super(configurationRegistry);
     }
 
     @Override

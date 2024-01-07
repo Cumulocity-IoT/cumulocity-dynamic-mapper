@@ -26,7 +26,10 @@ public class MQTTCallback implements MqttCallback {
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         ConnectorMessage connectorMessage = new ConnectorMessage();
         connectorMessage.setPayload(mqttMessage.getPayload());
-        genericMessageCallback.onMessage(topic, connectorMessage);
+        connectorMessage.setTenant(tenant);
+        connectorMessage.setSendPayload(true); 
+        connectorMessage.setTopic(topic);
+        genericMessageCallback.onMessage(connectorMessage);
     }
 
     @Override
