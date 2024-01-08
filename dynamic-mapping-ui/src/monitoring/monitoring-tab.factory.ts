@@ -21,12 +21,10 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import { SharedService } from '../shared';
 @Injectable()
 export class MonitoringTabFactory implements TabFactory {
   constructor(
-    public router: Router,
-    private sharedService: SharedService
+    public router: Router
   ) {}
 
   async get() {

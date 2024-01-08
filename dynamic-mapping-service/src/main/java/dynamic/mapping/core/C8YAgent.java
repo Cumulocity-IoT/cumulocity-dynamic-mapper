@@ -570,6 +570,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
+            amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
             amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,

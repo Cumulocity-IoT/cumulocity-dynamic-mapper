@@ -210,7 +210,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   // refresh: EventEmitter<any> = new EventEmitter();
 
   pagination: Pagination = {
-    pageSize: 3,
+    pageSize: 30,
     currentPage: 1
   };
   actionControls: ActionControl[] = [];

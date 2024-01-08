@@ -26,17 +26,16 @@ import {
 } from '@c8y/client';
 import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
 import { Feature } from '../configuration/shared/configuration.model';
-import { AlertService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService,
-    private alertService: AlertService
+    private identity: IdentityService
   ) {
     this.initDynamicMappingServiceAgent()
       .then((id) => {
+        console.log('Loading now!');
         this._agentId = id;
       })
       .catch((e) => console.error('MappingService with id not subscribed!', e));
@@ -46,7 +45,7 @@ export class SharedService {
 
   getDynamicMappingServiceAgent(): string {
     if (!this._agentId) {
-      this.alertService.warning('Monitoring service not intialized correctly!');
+      console.log('Monitoring service not intialized correctly!');
     }
     return this._agentId;
   }

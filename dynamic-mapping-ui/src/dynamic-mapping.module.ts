@@ -32,7 +32,6 @@ import {
   MappingTabFactory,
   OverviewGuard,
   SharedModule,
-  SharedService,
 } from './shared';
 import { TestingModule } from './testing-devices/testing.module';
 import './shared/styles/shared.css';
@@ -55,7 +54,6 @@ import './shared/styles/shared.css';
   providers: [
     OverviewGuard,
     BsModalService,
-    SharedService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory)
   ]
