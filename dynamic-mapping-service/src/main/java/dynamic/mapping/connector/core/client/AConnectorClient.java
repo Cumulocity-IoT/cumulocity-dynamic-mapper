@@ -108,6 +108,7 @@ public abstract class AConnectorClient {
 
     private Future<?> initializeTask;
 
+    // structure < subscriptionTopic, numberMappings >
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     private Instant start = Instant.now();
@@ -358,7 +359,7 @@ public abstract class AConnectorClient {
                 }
                 updatedMappingSubs.add(1);
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos.ordinal());
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
@@ -388,7 +389,7 @@ public abstract class AConnectorClient {
             // unsubscribe topics not used
             getActiveSubscriptions().keySet().forEach((topic) -> {
                 if (!updatedSubscriptionCache.containsKey(topic)) {
-                    log.info("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
+                    log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
                     try {
                         unsubscribe(topic);
                     } catch (Exception e1) {
@@ -403,7 +404,7 @@ public abstract class AConnectorClient {
                 if (!getActiveSubscriptions().containsKey(topic)) {
                     int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
+                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
                     } catch (MqttException e1) {
@@ -413,7 +414,8 @@ public abstract class AConnectorClient {
                 }
             });
             activeSubscriptions = updatedSubscriptionCache;
-            log.info("Tenant {} - Updating subscriptions to topics was successful", tenant);
+            log.info("Tenant {} - Updating subscriptions to topics was successful, activeSubscriptions on topic {}",
+                    tenant, getActiveSubscriptions().size());
         }
     }
 
