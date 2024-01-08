@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class C8YAPISubscription {
+public class C8YNotificationSubscription {
 
     @NotNull
     private API api;

@@ -35,7 +35,7 @@ import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
-import dynamic.mapping.model.C8YAPISubscription;
+import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import dynamic.mapping.notification.websocket.CustomWebSocketClient;
 import dynamic.mapping.notification.websocket.NotificationCallback;
@@ -66,7 +66,7 @@ public class C8YNotificationSubscriber {
     private TokenApi tokenApi;
 
     @Autowired
-    private NotificationSubscriptionApi subscriptionApi;
+    private NotificationSubscriptionApi subscriptionAPI;
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
@@ -124,7 +124,7 @@ public class C8YNotificationSubscriber {
     // if(connectorMap != null) {
     // // for (AConnectorClient connectorClient : connectorMap.values()) {
     // // AsynchronousDispatcherOutbound dispatcherOutbound = new
-    // AsynchronousDispatcherOutbound(objectMapper, c8YAgent, mappingComponent,
+    // AsynchronousDispatcherOutbound(objectMapper, c8yAgent, mappingComponent,
     // cachedThreadPool, connectorClient, processorRegister);
     // // dispatcherOutboundMap.get(tenant).put(connectorClient.getConnectorIdent(),
     // dispatcherOutbound);
@@ -280,7 +280,7 @@ public class C8YNotificationSubscriber {
         return notificationFut;
     }
 
-    public C8YAPISubscription getDeviceSubscriptions(String tenant, String deviceId, String deviceSubscription) {
+    public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId, String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -294,10 +294,10 @@ public class C8YNotificationSubscriber {
         }
         filter = filter.byContext("mo");
         NotificationSubscriptionFilter finalFilter = filter;
-        C8YAPISubscription c8YAPISubscription = new C8YAPISubscription();
+        C8YNotificationSubscription c8yNotificationSubscription = new C8YNotificationSubscription();
         List<Device> devices = new ArrayStack();
         subscriptionsService.runForTenant(tenant, () -> {
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                     .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
             while (subIt.hasNext()) {
@@ -316,13 +316,13 @@ public class C8YNotificationSubscriber {
                     devices.add(device);
                     if (notification.getSubscriptionFilter().getApis().size() > 0) {
                         API api = API.fromString(notification.getSubscriptionFilter().getApis().get(0));
-                        c8YAPISubscription.setApi(api);
+                        c8yNotificationSubscription.setApi(api);
                     }
                 }
             }
         });
-        c8YAPISubscription.setDevices(devices);
-        return c8YAPISubscription;
+        c8yNotificationSubscription.setDevices(devices);
+        return c8yNotificationSubscription;
     }
 
     public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId,
@@ -344,7 +344,7 @@ public class C8YNotificationSubscriber {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
             String tenant = subscriptionsService.getTenant();
             List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                     .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
             NotificationSubscriptionRepresentation notification = null;
             while (subIt.hasNext()) {
@@ -404,7 +404,7 @@ public class C8YNotificationSubscriber {
                          * mor.getName(),
                          * mor.getId().getValue());
                          * final ManagedObjectRepresentation morRetrieved =
-                         * c8YAgent.getManagedObjectForId(mor.getId().getValue());
+                         * c8yAgent.getManagedObjectForId(mor.getId().getValue());
                          * if (morRetrieved != null) {
                          * subscribeDevice(morRetrieved);
                          * }
@@ -455,22 +455,22 @@ public class C8YNotificationSubscriber {
                 if (tenantClientMap != null) {
                     for (String currentTenant : tenantClientMap.keySet()) {
                         if (currentTenant.equals(tenant)) {
-                            CustomWebSocketClient tenant_client = tenantClientMap.get(currentTenant);
-                            if (tenant_client != null) {
+                            CustomWebSocketClient tenantClient = tenantClientMap.get(currentTenant);
+                            if (tenantClient != null) {
                                 log.debug("Tenant {} - Running ws reconnect... tenant client: {}, tenant_isOpen: {}",
-                                        tenant, tenant_client,
-                                        tenant_client.isOpen());
-                                if (!tenant_client.isOpen()) {
+                                        tenant, tenantClient,
+                                        tenantClient.isOpen());
+                                if (!tenantClient.isOpen()) {
                                     if (tenantWSStatusCode.get(tenant) == 401
-                                            || tenant_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                            || tenantClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                         log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
                                         subscriptionsService.runForEachTenant(() -> {
                                             initTenantClient();
                                         });
-                                    } else if (tenant_client.getReadyState().equals(ReadyState.CLOSING)
-                                            || tenant_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                    } else if (tenantClient.getReadyState().equals(ReadyState.CLOSING)
+                                            || tenantClient.getReadyState().equals(ReadyState.CLOSED)) {
                                         log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
-                                        tenant_client.reconnect();
+                                        tenantClient.reconnect();
                                     }
                                 }
                             }
@@ -478,19 +478,19 @@ public class C8YNotificationSubscriber {
                     }
                 }
                 if (deviceClientMap.get(tenant) != null) {
-                    for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                        if (device_client != null) {
-                            if (!device_client.isOpen()) {
+                    for (CustomWebSocketClient deviceClient : deviceClientMap.get(tenant).values()) {
+                        if (deviceClient != null) {
+                            if (!deviceClient.isOpen()) {
                                 if (deviceWSStatusCode.get(tenant) == 401
-                                        || device_client.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
+                                        || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                     log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
                                     subscriptionsService.runForEachTenant(() -> {
                                         initDeviceClient();
                                     });
-                                } else if (device_client.getReadyState().equals(ReadyState.CLOSING)
-                                        || device_client.getReadyState().equals(ReadyState.CLOSED)) {
+                                } else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
+                                        || deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
                                     log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-                                    device_client.reconnect();
+                                    deviceClient.reconnect();
                                 }
                             }
                         }
@@ -511,7 +511,7 @@ public class C8YNotificationSubscriber {
     public NotificationSubscriptionRepresentation createTenantSubscription() {
         final String subscriptionName = TENANT_SUBSCRIPTION;
         String tenant = subscriptionsService.getTenant();
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                 .getSubscriptionsByFilter(
                         new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
                 .get().allPages().iterator();
@@ -532,7 +532,7 @@ public class C8YNotificationSubscriber {
         notification.setContext("tenant");
         notification.setSubscription(subscriptionName);
         notification.setSubscriptionFilter(filterRepresentation);
-        notification = subscriptionApi.subscribe(notification);
+        notification = subscriptionAPI.subscribe(notification);
         return notification;
     }
 
@@ -540,7 +540,7 @@ public class C8YNotificationSubscriber {
         String tenant = subscriptionsService.getTenant();
         final String subscriptionName = DEVICE_SUBSCRIPTION;
 
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionApi
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                 .getSubscriptionsByFilter(
                         new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId()))
                 .get().allPages().iterator();
@@ -563,7 +563,7 @@ public class C8YNotificationSubscriber {
         notification.setContext("mo");
         notification.setSubscription(subscriptionName);
         notification.setSubscriptionFilter(filterRepresentation);
-        notification = subscriptionApi.subscribe(notification);
+        notification = subscriptionAPI.subscribe(notification);
         return notification;
     }
 
@@ -578,7 +578,7 @@ public class C8YNotificationSubscriber {
 
     public void unsubscribe() {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            subscriptionApi.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
+            subscriptionAPI.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
         });
     }
 
@@ -591,9 +591,9 @@ public class C8YNotificationSubscriber {
 
     public void unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
         subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            subscriptionApi.deleteByFilter(
+            subscriptionAPI.deleteByFilter(
                     new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
-            if (!subscriptionApi
+            if (!subscriptionAPI
                     .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
                     .get().allPages().iterator().hasNext()) {
                 disconnect(subscriptionsService.getTenant(), true);
