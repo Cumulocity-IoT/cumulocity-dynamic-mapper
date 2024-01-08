@@ -159,6 +159,9 @@
                     <configuration>
                         <updatePomFile>true</updatePomFile>
                         <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                        <pomElements>
+                            <dependencyManagement>expand</dependencyManagement>
+                        </pomElements>
                     </configuration>
                     <executions>
                         <execution>
@@ -183,7 +186,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-              </plugin>
+            </plugin>
         </plugins>
-      </build>
+    </build>
 </project>
