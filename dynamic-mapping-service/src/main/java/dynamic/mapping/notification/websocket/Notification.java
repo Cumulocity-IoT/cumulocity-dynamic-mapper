@@ -55,7 +55,12 @@ public class Notification {
             default:
                 break;
         }
-        return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())), message, api);
+        return new Notification(headers.get(0), Collections.unmodifiableList(headers.subList(1, headers.size())),
+                message, api);
+    }
+
+    public String getTenantFromNotificationHeaders() {
+        return notificationHeaders.get(0).split("/")[0];
     }
 
 }

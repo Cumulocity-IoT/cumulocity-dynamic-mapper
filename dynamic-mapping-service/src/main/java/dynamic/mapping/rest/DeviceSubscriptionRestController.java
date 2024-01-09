@@ -48,7 +48,7 @@ public class DeviceSubscriptionRestController {
                         .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
                     // Creates subscription for each connector
-                    configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(mor, subscription.getApi());
 
                 } else {
                     log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
@@ -93,7 +93,7 @@ public class DeviceSubscriptionRestController {
                 if (mor != null) {
                     try {
                         // Creates subscription for each connector
-                        configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                        configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(mor, subscription.getApi());
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -107,7 +107,7 @@ public class DeviceSubscriptionRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -145,7 +145,7 @@ public class DeviceSubscriptionRestController {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(),
                     deviceId);
             if (mor != null) {
-                configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
+                configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
             } else {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Could not delete subscription for device with id " + deviceId + ". Device not found");
