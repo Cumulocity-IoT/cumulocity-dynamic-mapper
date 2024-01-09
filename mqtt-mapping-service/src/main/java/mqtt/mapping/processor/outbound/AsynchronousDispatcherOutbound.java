@@ -247,20 +247,26 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         //Handle C8Y Operation Status
         //TODO Add OperationAutoAck Status to activate/deactive
         OperationRepresentation op = null;
-        // 
+        //
         if (c8yMessage.getApi().equals(API.OPERATION)) {
             op = JSONBase.getJSONParser().parse(OperationRepresentation.class, c8yMessage.getPayload());
-            c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
+            //Only update status of operation when mapping exists...
+            //c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
         }
         if (c8yMessage.getPayload() != null) {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
                 resolvedMappings = mqttClient.resolveOutboundMappings(message, c8yMessage.getApi());
+                if (resolvedMappings.size() > 0) {
+                    if (op != null)
+                        c8yAgent.updateOperationStatus(op, OperationStatus.EXECUTING, null);
+                }
             } catch (Exception e) {
                 log.warn("Error resolving appropriate map. Could NOT be parsed. Ignoring this message!");
                 log.debug(e.getMessage(), e);
-                if (op != null)
-                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                //Only update status of operation when mapping exists...
+                //if (op != null)
+                //    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
@@ -283,13 +289,13 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     }
                 } else {
                     //No Mapping found
-                    c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, "No Mapping found for operation "+op.toJSON());
+                    //c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, "No Mapping found for operation "+op.toJSON());
 
                 }
             } catch (InterruptedException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                //c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
             } catch (ExecutionException e) {
-                c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
+                //c8yAgent.updateOperationStatus(op, OperationStatus.FAILED, e.getLocalizedMessage());
             }
         }
         return futureProcessingResult;
