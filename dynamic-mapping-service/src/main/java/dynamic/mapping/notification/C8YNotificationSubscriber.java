@@ -112,7 +112,7 @@ public class C8YNotificationSubscriber {
     private Map<String, String> tenantToken = new HashMap<>();
 
     //
-    // section: initializing tenant client and device client
+    // section 1: initializing tenant client and device client
     //
 
     public void initTenantClient() {
@@ -167,7 +167,7 @@ public class C8YNotificationSubscriber {
     }
 
     //
-    // section: handle subscription on tenant scope
+    // section 2: handle subscription on tenant scope
     //
 
     public void subscribeTenantAndConnect(String tenant) {
@@ -265,7 +265,7 @@ public class C8YNotificationSubscriber {
     }
 
     //
-    // section: handle subscription on device scope
+    // section 3: handle subscription on device scope
     //
 
     public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
@@ -457,7 +457,7 @@ public class C8YNotificationSubscriber {
     }
 
     //
-    // section: general helper methods
+    // section 4: general helper methods
     //
 
     public String createToken(String subscription, String subscriber) {
@@ -474,7 +474,7 @@ public class C8YNotificationSubscriber {
     }
 
     //
-    // section: add remove connectors
+    // section 5: add, remove connectors
     //
 
     public void removeConnector(String tenant, String connectorIdent) {
@@ -503,7 +503,7 @@ public class C8YNotificationSubscriber {
     }
 
     //
-    // section: handle websocket connections: connect, disconnect, reconnect, ...
+    // section 6: handle websocket connections: connect, disconnect, reconnect, ...
     //
 
     public void disconnect(String tenant, Boolean onlyDeviceClient) {
