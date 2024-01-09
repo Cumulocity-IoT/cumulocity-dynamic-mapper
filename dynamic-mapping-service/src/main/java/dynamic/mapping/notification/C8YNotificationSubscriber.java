@@ -102,86 +102,38 @@ public class C8YNotificationSubscriber {
     private final String TENANT_SUBSCRIBER = "DynamicMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "DynamicMapperTenantSubscription";
 
-    // List<CustomWebSocketClient> wsClientList = new ArrayList<>();
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
     private Map<String, CustomWebSocketClient> tenantClientMap = new HashMap<>();
     private Map<String, Integer> tenantWSStatusCode = new HashMap<>();
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
 
-    private Map<String, String> tenantDeviceToken = new HashMap<>();
+     // structure: <tenant, <connectorIdent, tokenSeed>>
+    private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
     private Map<String, String> tenantToken = new HashMap<>();
-    // private int deviceWSStatusCode = 0;
 
-    // public void init() {
-    // //Assuming this can be only changed for all tenants!
-    // String tenant = subscriptionsService.getTenant();
-    // if(deviceClientMap.get(tenant) == null)
-    // deviceClientMap.put(tenant, new HashMap<>());
-    // try {
-    // HashMap<String, AConnectorClient> connectorMap =
-    // connectorRegistry.getClientsForTenant(tenant);
-    // //For multiple connectors register for each a separate dispatcher
-    // if(connectorMap != null) {
-    // // for (AConnectorClient connectorClient : connectorMap.values()) {
-    // // AsynchronousDispatcherOutbound dispatcherOutbound = new
-    // AsynchronousDispatcherOutbound(objectMapper, c8yAgent, mappingComponent,
-    // cachedThreadPool, connectorClient, processorRegister);
-    // // dispatcherOutboundMap.get(tenant).put(connectorClient.getConnectorIdent(),
-    // dispatcherOutbound);
-    // // }
-    // log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant,
-    // outputMappingEnabled);
-    // if (outputMappingEnabled) {
-    // initTenantClient();
-    // initDeviceClient();
-    // }
-    // }
-    // } catch (ConnectorRegistryException e) {
-    // throw new RuntimeException(e);
-    // }
-
-    // }
-
-    public void removeConnector(String tenant, String ident) {
-        // Remove Dispatcher from list
-        this.dispatcherOutboundMaps.get(tenant).remove(ident);
-        // Close WS connection for connector
-        this.deviceClientMap.get(tenant).get(ident).close();
-        // Remove client from client Map
-        this.deviceClientMap.get(tenant).remove(ident);
-        if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
-            disconnect(tenant, false);
-    }
-
-    public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
-        Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
-        if (dispatcherOutboundMap == null) {
-            dispatcherOutboundMap = new HashMap<>();
-            getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
-        }
-        dispatcherOutboundMap.put(ident, dispatcherOutbound);
-    }
+    //
+    // section: initializing tenant client and device client
+    //
 
     public void initTenantClient() {
         // Subscribe on Tenant do get informed when devices get deleted/added
         String tenant = subscriptionsService.getTenant();
         log.info("Tenant {} - Initializing Operation Subscriptions...", tenant);
-        subscribeTenant(subscriptionsService.getTenant());
+        subscribeTenantAndConnect(subscriptionsService.getTenant());
     }
 
     public void initDeviceClient() {
         String tenant = subscriptionsService.getTenant();
+        Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
         if (deviceClientMap.get(tenant) == null)
             deviceClientMap.put(tenant, new HashMap<>());
         List<NotificationSubscriptionRepresentation> deviceSubList = null;
 
         try {
             // Getting existing subscriptions
-            deviceSubList = getNotificationSubscriptions(null, DEVICE_SUBSCRIPTION).get();
+            deviceSubList = getNotificationSubscriptionForDevices(null, DEVICE_SUBSCRIPTION).get();
             log.info("Tenant {} - Subscribing to devices {}", tenant, deviceSubList);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        } catch (InterruptedException | ExecutionException e  ) {
             throw new RuntimeException(e);
         }
         // When one subscription exists, connect...
@@ -189,179 +141,20 @@ public class C8YNotificationSubscriber {
             try {
                 // For each dispatcher/connector create a new connection
                 for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant).values()) {
+                    String tokenSeed = DEVICE_SUBSCRIBER
+                            + dispatcherOutbound.getConnectorClient().getConnectorIdent()
+                            + additionalSubscriptionIdTest;
                     String token = createToken(DEVICE_SUBSCRIPTION,
-                            DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent()
-                                    + additionalSubscriptionIdTest);
-                    tenantDeviceToken.put(tenant, token);
+                            tokenSeed);
+                    deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
                     CustomWebSocketClient client = connect(token, dispatcherOutbound);
                     deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
                             client);
                 }
-
             } catch (URISyntaxException e) {
                 log.error("Tenant {} - Error connecting device subscription: {}", tenant, e.getLocalizedMessage());
             }
         }
-    }
-
-    /*
-     * public void subscribeAllDevices() {
-     * InventoryFilter filter = new InventoryFilter();
-     * filter.byFragmentType("c8y_IsDevice");
-     * Iterator<ManagedObjectRepresentation> deviceIt =
-     * inventoryApi.getManagedObjectsByFilter(filter).get().allPages()
-     * .iterator();
-     * NotificationSubscriptionRepresentation notRep = null;
-     * while (deviceIt.hasNext()) {
-     * ManagedObjectRepresentation mor = deviceIt.next();
-     * log.info("Tenant {} - Found device {}", tenant, mor.getName());
-     * try {
-     * notRep = subscribeDevice(mor, API.OPERATION).get();
-     * } catch (InterruptedException e) {
-     * throw new RuntimeException(e);
-     * } catch (ExecutionException e) {
-     * throw new RuntimeException(e);
-     * }
-     * }
-     * if (notRep != null) {
-     * String deviceToken = createToken(DEVICE_SUBSCRIPTION, DEVICE_SUBSCRIBER +
-     * additionalSubscriptionIdTest);
-     * 
-     * try {
-     * device_client = connect(deviceToken, dispatcherOutbound);
-     * } catch (URISyntaxException e) {
-     * e.printStackTrace();
-     * }
-     * }
-     * }
-     * 
-     */
-
-    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDevice(ManagedObjectRepresentation mor,
-            API api) throws ExecutionException, InterruptedException {
-        /* Connect to all devices */
-        String tenant = subscriptionsService.getTenant();
-        String deviceName = mor.getName();
-        log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
-                mor.getId().getValue());
-        CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
-        subscriptionsService.runForTenant(tenant, () -> {
-            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
-            notificationFut.complete(notification);
-            if (deviceWSStatusCode.get(tenant) == null
-                    || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
-                log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
-
-                try {
-                    // Add Dispatcher for each Connector
-                    if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
-                        log.info(
-                                "Tenant {} - No Outbound dispatcher for any connector is registered, add a connector first!",
-                                tenant);
-
-                    for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
-                            .values()) {
-                        String token = createToken(DEVICE_SUBSCRIPTION,
-                                DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent()
-                                        + additionalSubscriptionIdTest);
-                        tenantDeviceToken.put(tenant, token);
-                        CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-                                client);
-                    }
-
-                } catch (URISyntaxException e) {
-                    log.error("Tenant {} - Error on connecting to Notification Service: {}", tenant,
-                            e.getLocalizedMessage());
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-        return notificationFut;
-    }
-
-    public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId, String deviceSubscription) {
-        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
-        if (deviceSubscription != null)
-            filter = filter.bySubscription(deviceSubscription);
-        else
-            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
-
-        if (deviceId != null) {
-            GId id = new GId();
-            id.setValue(deviceId);
-            filter = filter.bySource(id);
-        }
-        filter = filter.byContext("mo");
-        NotificationSubscriptionFilter finalFilter = filter;
-        C8YNotificationSubscription c8yNotificationSubscription = new C8YNotificationSubscription();
-        List<Device> devices = new ArrayStack();
-        subscriptionsService.runForTenant(tenant, () -> {
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
-            NotificationSubscriptionRepresentation notification = null;
-            while (subIt.hasNext()) {
-                notification = subIt.next();
-                if (!"tenant".equals(notification.getContext())) {
-                    log.debug("Tenant {} - Subscription with ID {} retrieved", tenant, notification.getId().getValue());
-                    Device device = new Device();
-                    device.setId(notification.getSource().getId().getValue());
-                    ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
-                            notification.getSource().getId().getValue());
-                    if (mor != null)
-                        device.setName(mor.getName());
-                    else
-                        log.warn("Tenant {} - Device with ID {} does not exists!", tenant,
-                                notification.getSource().getId().getValue());
-                    devices.add(device);
-                    if (notification.getSubscriptionFilter().getApis().size() > 0) {
-                        API api = API.fromString(notification.getSubscriptionFilter().getApis().get(0));
-                        c8yNotificationSubscription.setApi(api);
-                    }
-                }
-            }
-        });
-        c8yNotificationSubscription.setDevices(devices);
-        return c8yNotificationSubscription;
-    }
-
-    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptions(String deviceId,
-            String deviceSubscription) {
-        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
-        if (deviceSubscription != null)
-            filter = filter.bySubscription(deviceSubscription);
-        else
-            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
-
-        if (deviceId != null) {
-            GId id = new GId();
-            id.setValue(deviceId);
-            filter = filter.bySource(id);
-        }
-        filter = filter.byContext("mo");
-        NotificationSubscriptionFilter finalFilter = filter;
-        CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            String tenant = subscriptionsService.getTenant();
-            List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
-            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
-            NotificationSubscriptionRepresentation notification = null;
-            while (subIt.hasNext()) {
-                notification = subIt.next();
-                if (!"tenant".equals(notification.getContext())) {
-                    log.info("Tenant {} - Subscription with ID {} retrieved", tenant, notification.getId().getValue());
-                    deviceSubList.add(notification);
-                }
-            }
-            deviceSubListFut.complete(deviceSubList);
-        });
-
-        return deviceSubListFut;
-    }
-
-    public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {
-        return notificationHeaders.get(0).split("/")[0];
     }
 
     public void notificationSubscriberReconnect(String tenant) {
@@ -373,10 +166,14 @@ public class C8YNotificationSubscriber {
         });
     }
 
-    public void subscribeTenant(String tenant) {
+    //
+    // section: handle subscription on tenant scope
+    //
+
+    public void subscribeTenantAndConnect(String tenant) {
         log.info("Tenant {} - Creating new Tenant Subscription", tenant);
-        NotificationSubscriptionRepresentation notification = createTenantSubscription();
-        String tenantToken = createToken(notification.getSubscription(),
+        NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = createTenantSubscription();
+        String tenantToken = createToken(notificationSubscriptionRepresentation.getSubscription(),
                 TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
         this.tenantToken.put(tenant, tenantToken);
 
@@ -395,32 +192,20 @@ public class C8YNotificationSubscriber {
                         log.debug("Tenant {} - Tenant Notification received: <{}>", tenant, notification.getMessage());
                         log.debug("Tenant {} - Notification headers: <{}>", tenant,
                                 notification.getNotificationHeaders());
-                        String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
+                        String tenant = notification.getTenantFromNotificationHeaders();
                         ManagedObjectRepresentation mor = JSONBase.getJSONParser()
                                 .parse(ManagedObjectRepresentation.class, notification.getMessage());
-                        /*
-                         * if (notification.getNotificationHeaders().contains("CREATE")) {
-                         * log.info("Tenant {} - New Device created with name {} and id {}", tenant,
-                         * mor.getName(),
-                         * mor.getId().getValue());
-                         * final ManagedObjectRepresentation morRetrieved =
-                         * c8yAgent.getManagedObjectForId(mor.getId().getValue());
-                         * if (morRetrieved != null) {
-                         * subscribeDevice(morRetrieved);
-                         * }
-                         * }
-                         */
                         if (notification.getNotificationHeaders().contains("DELETE")) {
                             log.info("Tenant {} - Device deleted with name {} and id {}", tenant, mor.getName(),
                                     mor.getId().getValue());
                             final ManagedObjectRepresentation morRetrieved = configurationRegistry.getC8yAgent()
                                     .getManagedObjectForId(tenant, mor.getId().getValue());
                             if (morRetrieved != null) {
-                                unsubscribeDevice(morRetrieved);
+                                unsubscribeDeviceAndDisconnect(morRetrieved);
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Error on processing Tenant Notification {}: {}", tenant, notification,
+                        log.error("Tenant {} - Error on processing Tenant Notification {}: {}", tenant, notification.getMessage(),
                                 e.getLocalizedMessage());
                     }
                 }
@@ -444,7 +229,343 @@ public class C8YNotificationSubscriber {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+    }
 
+    public NotificationSubscriptionRepresentation createTenantSubscription() {
+        final String subscriptionName = TENANT_SUBSCRIPTION;
+        String tenant = subscriptionsService.getTenant();
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
+                .get().allPages().iterator();
+        NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
+        while (subIt.hasNext()) {
+            notificationSubscriptionRepresentation = subIt.next();
+            // Needed for 1015 releases
+            if (TENANT_SUBSCRIPTION.equals(notificationSubscriptionRepresentation.getSubscription())) {
+                log.info("Tenant {} - Subscription with ID {} already exists.", tenant,
+                        notificationSubscriptionRepresentation.getId().getValue());
+                return notificationSubscriptionRepresentation;
+            }
+        }
+        // log.info("Tenant {} - Subscription does not exist. Creating ...", tenant);
+        notificationSubscriptionRepresentation = new NotificationSubscriptionRepresentation();
+        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+        filterRepresentation.setApis(List.of("managedobjects"));
+        notificationSubscriptionRepresentation.setContext("tenant");
+        notificationSubscriptionRepresentation.setSubscription(subscriptionName);
+        notificationSubscriptionRepresentation.setSubscriptionFilter(filterRepresentation);
+        notificationSubscriptionRepresentation = subscriptionAPI.subscribe(notificationSubscriptionRepresentation);
+        return notificationSubscriptionRepresentation;
+    }
+
+    public void unsubscribeTenantSubscriber(String tenant) {
+        if (tenantToken.get(tenant) != null)
+            tokenApi.unsubscribe(new Token(tenantToken.get(tenant)));
+    }
+
+    //
+    // section: handle subscription on device scope
+    //
+
+    public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
+        String tenant = subscriptionsService.getTenant();
+        final String subscriptionName = DEVICE_SUBSCRIPTION;
+
+        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId()))
+                .get().allPages().iterator();
+        NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
+        while (subIt.hasNext()) {
+            notificationSubscriptionRepresentation = subIt.next();
+            if (DEVICE_SUBSCRIPTION.equals(notificationSubscriptionRepresentation.getSubscription())) {
+                log.info("Tenant {} - Subscription with ID {} and Source {} already exists.", tenant,
+                        notificationSubscriptionRepresentation.getId().getValue(),
+                        notificationSubscriptionRepresentation.getSource().getId().getValue());
+                return notificationSubscriptionRepresentation;
+            }
+        }
+
+        notificationSubscriptionRepresentation = new NotificationSubscriptionRepresentation();
+        notificationSubscriptionRepresentation.setSource(mor);
+        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
+        // filterRepresentation.setApis(List.of("operations"));
+        filterRepresentation.setApis(List.of(api.notificationFilter));
+        notificationSubscriptionRepresentation.setContext("mo");
+        notificationSubscriptionRepresentation.setSubscription(subscriptionName);
+        notificationSubscriptionRepresentation.setSubscriptionFilter(filterRepresentation);
+        notificationSubscriptionRepresentation = subscriptionAPI.subscribe(notificationSubscriptionRepresentation);
+        return notificationSubscriptionRepresentation;
+    }
+
+    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            ManagedObjectRepresentation mor,
+            API api) throws ExecutionException, InterruptedException {
+        /* Connect to all devices */
+        String tenant = subscriptionsService.getTenant();
+        String deviceName = mor.getName();
+        log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
+                mor.getId().getValue());
+        CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
+        subscriptionsService.runForTenant(tenant, () -> {
+            Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
+            NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
+            notificationFut.complete(notification);
+            if (deviceWSStatusCode.get(tenant) == null
+                    || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
+                log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
+
+                try {
+                    // Add Dispatcher for each Connector
+                    if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
+                        log.info(
+                                "Tenant {} - No Outbound dispatcher for any connector is registered, add a connector first!",
+                                tenant);
+
+                    for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant)
+                            .values()) {
+                        String tokenSeed = DEVICE_SUBSCRIBER
+                                + dispatcherOutbound.getConnectorClient().getConnectorIdent()
+                                + additionalSubscriptionIdTest;
+                        String token = createToken(DEVICE_SUBSCRIPTION,
+                                tokenSeed);
+                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
+                        CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+                                client);
+                    }
+
+                } catch (URISyntaxException e) {
+                    log.error("Tenant {} - Error on connecting to Notification Service: {}", tenant,
+                            e.getLocalizedMessage());
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        return notificationFut;
+    }
+
+    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
+            String deviceId,
+            String deviceSubscription) {
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
+        if (deviceSubscription != null)
+            filter = filter.bySubscription(deviceSubscription);
+        else
+            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
+
+        if (deviceId != null) {
+            GId id = new GId();
+            id.setValue(deviceId);
+            filter = filter.bySource(id);
+        }
+        filter = filter.byContext("mo");
+        NotificationSubscriptionFilter finalFilter = filter;
+        CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            String tenant = subscriptionsService.getTenant();
+            List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
+            while (subIt.hasNext()) {
+                notificationSubscriptionRepresentation = subIt.next();
+                if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
+                    log.info("Tenant {} - Subscription with ID {} retrieved", tenant,
+                            notificationSubscriptionRepresentation.getId().getValue());
+                    deviceSubList.add(notificationSubscriptionRepresentation);
+                }
+            }
+            deviceSubListFut.complete(deviceSubList);
+        });
+
+        return deviceSubListFut;
+    }
+
+    public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
+            String deviceSubscription) {
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
+        if (deviceSubscription != null)
+            filter = filter.bySubscription(deviceSubscription);
+        else
+            filter = filter.bySubscription(DEVICE_SUBSCRIPTION);
+
+        if (deviceId != null) {
+            GId id = new GId();
+            id.setValue(deviceId);
+            filter = filter.bySource(id);
+        }
+        filter = filter.byContext("mo");
+        NotificationSubscriptionFilter finalFilter = filter;
+        C8YNotificationSubscription c8yNotificationSubscription = new C8YNotificationSubscription();
+        List<Device> devices = new ArrayStack();
+        subscriptionsService.runForTenant(tenant, () -> {
+            Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                    .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
+            NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
+            while (subIt.hasNext()) {
+                notificationSubscriptionRepresentation = subIt.next();
+                if (!"tenant".equals(notificationSubscriptionRepresentation.getContext())) {
+                    log.debug("Tenant {} - Subscription with ID {} retrieved", tenant,
+                            notificationSubscriptionRepresentation.getId().getValue());
+                    Device device = new Device();
+                    device.setId(notificationSubscriptionRepresentation.getSource().getId().getValue());
+                    ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
+                            notificationSubscriptionRepresentation.getSource().getId().getValue());
+                    if (mor != null)
+                        device.setName(mor.getName());
+                    else
+                        log.warn("Tenant {} - Device with ID {} does not exists!", tenant,
+                                notificationSubscriptionRepresentation.getSource().getId().getValue());
+                    devices.add(device);
+                    if (notificationSubscriptionRepresentation.getSubscriptionFilter().getApis().size() > 0) {
+                        API api = API.fromString(
+                                notificationSubscriptionRepresentation.getSubscriptionFilter().getApis().get(0));
+                        c8yNotificationSubscription.setApi(api);
+                    }
+                }
+            }
+        });
+        c8yNotificationSubscription.setDevices(devices);
+        return c8yNotificationSubscription;
+    }
+
+    public void unsubscribeDeviceAndDisconnect(ManagedObjectRepresentation mor) throws SDKException {
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            subscriptionAPI.deleteByFilter(
+                    new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
+            if (!subscriptionAPI
+                    .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator().hasNext()) {
+                disconnect(subscriptionsService.getTenant(), true);
+            }
+        });
+    }
+
+    public void unsubscribeAllDevices() {
+        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+            subscriptionAPI.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
+        });
+    }
+
+    public void unsubscribeDeviceSubscriber(String tenant) {
+        if (deviceTokenPerConnector.get(tenant) != null)
+            for (String token : deviceTokenPerConnector.get(tenant).values()) {
+                tokenApi.unsubscribe(new Token(token));
+            }
+    }
+
+    //
+    // section: general helper methods
+    //
+
+    public String createToken(String subscription, String subscriber) {
+        final NotificationTokenRequestRepresentation tokenRequestRepresentation = new NotificationTokenRequestRepresentation(
+                subscriber,
+                subscription,
+                1440,
+                false);
+        return tokenApi.create(tokenRequestRepresentation).getTokenString();
+    }
+
+    public void setDeviceConnectionStatus(String tenant, int status) {
+        deviceWSStatusCode.put(tenant, status);
+    }
+
+    //
+    // section: add remove connectors
+    //
+
+    public void removeConnector(String tenant, String connectorIdent) {
+        // Remove Dispatcher from list
+        this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);
+        // Close WS connection for connector
+        this.deviceClientMap.get(tenant).get(connectorIdent).close();
+        // Remove client from client Map
+        this.deviceClientMap.get(tenant).remove(connectorIdent);
+        if (dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
+            disconnect(tenant, false);
+    }
+
+    public void addConnector(String tenant, String connectorIdent, AsynchronousDispatcherOutbound dispatcherOutbound) {
+        Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+        if (dispatcherOutboundMap == null) {
+            dispatcherOutboundMap = new HashMap<>();
+            getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
+        }
+        Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
+        if (deviceTokens == null) {
+            deviceTokens = new HashMap<>();
+            deviceTokenPerConnector.put(tenant, deviceTokens);
+        }
+        dispatcherOutboundMap.put(connectorIdent, dispatcherOutbound);
+    }
+
+    //
+    // section: handle websocket connections: connect, disconnect, reconnect, ...
+    //
+
+    public void disconnect(String tenant, Boolean onlyDeviceClient) {
+        // Stop WS Reconnect Thread
+        if (onlyDeviceClient != null && onlyDeviceClient) {
+            for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                if (device_client != null && device_client.isOpen()) {
+                    log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
+                    device_client.close();
+
+                }
+            }
+            deviceClientMap.put(tenant, new HashMap<>());
+            // dispatcherOutboundMap.put(tenant, new HashMap<>());
+        } else {
+            if (this.executorService != null)
+                this.executorService.shutdownNow();
+            if (deviceClientMap.get(tenant) != null) {
+                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
+                    if (device_client != null && device_client.isOpen()) {
+                        log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
+                        device_client.close();
+                    }
+                }
+                deviceClientMap.put(tenant, new HashMap<>());
+            }
+            // dispatcherOutboundMap.put(tenant, new HashMap<>());
+            if (tenantClientMap.get(tenant) != null) {
+                CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
+                if (tenant_client != null && tenant_client.isOpen()) {
+                    log.info("Tenant {} - Disconnecting WS Tenant Client {}", tenant, tenant_client.toString());
+                    tenant_client.close();
+                    tenantClientMap.remove(tenant);
+                }
+            }
+        }
+        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
+    }
+
+    public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
+        String tenant = subscriptionsService.getTenant();
+        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
+        try {
+            baseUrl = baseUrl.replace("http", "ws");
+            URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
+            final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
+            client.setConnectionLostTimeout(30);
+            client.connect();
+            // wsClientList.add(client);
+            // Only start it once
+            if (this.executorService == null) {
+                this.executorService = Executors.newScheduledThreadPool(1);
+                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
+                this.executorService.scheduleAtFixedRate(() -> {
+                    reconnect();
+                }, 30, 30, TimeUnit.SECONDS);
+            }
+            return client;
+        } catch (Exception e) {
+            log.error("Tenant {} - Error on connect to WS {}", tenant, e.getLocalizedMessage());
+        }
+        return null;
     }
 
     // @Scheduled(fixedRate = 30000, initialDelay = 30000)
@@ -505,165 +626,5 @@ public class C8YNotificationSubscriber {
                 e.printStackTrace();
             }
         });
-
-    }
-
-    public NotificationSubscriptionRepresentation createTenantSubscription() {
-        final String subscriptionName = TENANT_SUBSCRIPTION;
-        String tenant = subscriptionsService.getTenant();
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                .getSubscriptionsByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
-                .get().allPages().iterator();
-        NotificationSubscriptionRepresentation notification = null;
-        while (subIt.hasNext()) {
-            notification = subIt.next();
-            // Needed for 1015 releases
-            if (TENANT_SUBSCRIPTION.equals(notification.getSubscription())) {
-                log.info("Tenant {} - Subscription with ID {} already exists.", tenant,
-                        notification.getId().getValue());
-                return notification;
-            }
-        }
-        // log.info("Tenant {} - Subscription does not exist. Creating ...", tenant);
-        notification = new NotificationSubscriptionRepresentation();
-        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        filterRepresentation.setApis(List.of("managedobjects"));
-        notification.setContext("tenant");
-        notification.setSubscription(subscriptionName);
-        notification.setSubscriptionFilter(filterRepresentation);
-        notification = subscriptionAPI.subscribe(notification);
-        return notification;
-    }
-
-    public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
-        String tenant = subscriptionsService.getTenant();
-        final String subscriptionName = DEVICE_SUBSCRIPTION;
-
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                .getSubscriptionsByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).bySource(mor.getId()))
-                .get().allPages().iterator();
-        NotificationSubscriptionRepresentation notification = null;
-        while (subIt.hasNext()) {
-            notification = subIt.next();
-            if (DEVICE_SUBSCRIPTION.equals(notification.getSubscription())) {
-                log.info("Tenant {} - Subscription with ID {} and Source {} already exists.", tenant,
-                        notification.getId().getValue(),
-                        notification.getSource().getId().getValue());
-                return notification;
-            }
-        }
-
-        notification = new NotificationSubscriptionRepresentation();
-        notification.setSource(mor);
-        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        // filterRepresentation.setApis(List.of("operations"));
-        filterRepresentation.setApis(List.of(api.notificationFilter));
-        notification.setContext("mo");
-        notification.setSubscription(subscriptionName);
-        notification.setSubscriptionFilter(filterRepresentation);
-        notification = subscriptionAPI.subscribe(notification);
-        return notification;
-    }
-
-    public String createToken(String subscription, String subscriber) {
-        final NotificationTokenRequestRepresentation tokenRequestRepresentation = new NotificationTokenRequestRepresentation(
-                subscriber,
-                subscription,
-                1440,
-                false);
-        return tokenApi.create(tokenRequestRepresentation).getTokenString();
-    }
-
-    public void unsubscribe() {
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            subscriptionAPI.deleteByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION));
-        });
-    }
-
-    public void deleteAllSubscriptions(String tenant) {
-        if (tenantDeviceToken.get(tenant) != null)
-            tokenApi.unsubscribe(new Token(tenantDeviceToken.get(tenant)));
-        if (tenantToken.get(tenant) != null)
-            tokenApi.unsubscribe(new Token(tenantToken.get(tenant)));
-    }
-
-    public void unsubscribeDevice(ManagedObjectRepresentation mor) throws SDKException {
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
-            subscriptionAPI.deleteByFilter(
-                    new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION).bySource(mor.getId()));
-            if (!subscriptionAPI
-                    .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
-                    .get().allPages().iterator().hasNext()) {
-                disconnect(subscriptionsService.getTenant(), true);
-            }
-        });
-    }
-
-    public void disconnect(String tenant, Boolean onlyDeviceClient) {
-        // Stop WS Reconnect Thread
-        if (onlyDeviceClient != null && onlyDeviceClient) {
-            for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                if (device_client != null && device_client.isOpen()) {
-                    log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
-                    device_client.close();
-
-                }
-            }
-            deviceClientMap.put(tenant, new HashMap<>());
-            // dispatcherOutboundMap.put(tenant, new HashMap<>());
-        } else {
-            if (this.executorService != null)
-                this.executorService.shutdownNow();
-            if (deviceClientMap.get(tenant) != null) {
-                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                    if (device_client != null && device_client.isOpen()) {
-                        log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
-                        device_client.close();
-                    }
-                }
-                deviceClientMap.put(tenant, new HashMap<>());
-            }
-            // dispatcherOutboundMap.put(tenant, new HashMap<>());
-            if (tenantClientMap.get(tenant) != null) {
-                CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
-                if (tenant_client != null && tenant_client.isOpen()) {
-                    log.info("Tenant {} - Disconnecting WS Tenant Client {}", tenant, tenant_client.toString());
-                    tenant_client.close();
-                    tenantClientMap.remove(tenant);
-                }
-            }
-        }
-        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
-    }
-
-    public void setDeviceConnectionStatus(String tenant, int status) {
-        deviceWSStatusCode.put(tenant, status);
-    }
-
-    public CustomWebSocketClient connect(String token, NotificationCallback callback) throws URISyntaxException {
-        String tenant = subscriptionsService.getTenant();
-        configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
-        try {
-            baseUrl = baseUrl.replace("http", "ws");
-            URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
-            final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
-            client.setConnectionLostTimeout(30);
-            client.connect();
-            // wsClientList.add(client);
-            // Only start it once
-            if (this.executorService == null) {
-                this.executorService = Executors.newScheduledThreadPool(1);
-                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
-                this.executorService.scheduleAtFixedRate(() -> {
-                    reconnect();
-                }, 30, 30, TimeUnit.SECONDS);
-            }
-            return client;
-        } catch (Exception e) {
-            log.error("Tenant {} - Error on connect to WS {}", tenant, e.getLocalizedMessage());
-        }
-        return null;
     }
 }
