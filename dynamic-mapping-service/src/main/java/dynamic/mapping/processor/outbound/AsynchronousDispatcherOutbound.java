@@ -219,7 +219,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                         context.getTopic(),
                                         context.getPayload().toString());
                             } else {
-                                log.info("Tenant {} - New message on topic: '{}'", tenant, context.getTopic());
+                                log.info("Tenant {} - New message on topic: '{}', sendPayload: {}", tenant, context.getTopic(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
