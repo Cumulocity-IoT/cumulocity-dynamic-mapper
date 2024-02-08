@@ -6,6 +6,7 @@ Strack = "Strack"
 Witschel = "Witschel"
 mor = "mor"
 MOR = "MOR"
+ser = "ser"
 
 [files]
-extend-exclude = ["**/mappings**.json"]
+extend-exclude = ["**/mappings**.json", "**/*Mappings**.json"]
