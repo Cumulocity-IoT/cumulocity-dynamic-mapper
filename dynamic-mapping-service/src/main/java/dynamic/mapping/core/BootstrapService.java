@@ -154,7 +154,7 @@ public class BootstrapService {
         configurationRegistry.initializePayloadProcessorsInbound(tenant);
         connectorClient.setDispatcher(dispatcherInbound);
         connectorClient.reconnect();
-        connectorClient.submitHouskeeping();
+        connectorClient.submitHousekeeping();
 
         if (outputMappingEnabled) {
             // initialize AsynchronousDispatcherOutbound

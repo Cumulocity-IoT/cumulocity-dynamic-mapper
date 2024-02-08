@@ -386,7 +386,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void loadProcessorExtensions(String tenant) {
-        ClassLoader inernalClassloader = C8YAgent.class.getClassLoader();
+        ClassLoader internalClassloader = C8YAgent.class.getClassLoader();
         ClassLoader externalClassLoader = null;
 
         for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
@@ -412,13 +412,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     FileOutputStream outputStream = new FileOutputStream(tempFile);
                     IOUtils.copy(downloadInputStream, outputStream);
 
-                    // step 3 parse list of extentions
+                    // step 3 parse list of extensions
                     URL[] urls = { tempFile.toURI().toURL() };
                     externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
                             external);
                 } else {
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, inernalClassloader,
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
                             external);
                 }
             } catch (IOException e) {

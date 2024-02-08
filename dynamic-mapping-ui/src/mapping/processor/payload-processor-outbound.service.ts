@@ -33,7 +33,7 @@ import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
-} from './prosessor.model';
+} from './processor.model';
 import { MQTTClient } from '../core/mqtt-client.service';
 
 @Injectable({ providedIn: 'root' })

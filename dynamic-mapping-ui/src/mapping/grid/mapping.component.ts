@@ -394,7 +394,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     this.mappingToUpdate = mapping;
-    console.log('Add mappping', this.mappings);
+    console.log('Add mapping', this.mappings);
     // this.refresh.emit();
     this.showConfigMapping = true;
   }
@@ -668,8 +668,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.exportMappings(mappings2Export);
   }
 
-  async exportSingle(mappping: Mapping) {
-    const mappings2Export = [mappping];
+  async exportSingle(mapping: Mapping) {
+    const mappings2Export = [mapping];
     this.exportMappings(mappings2Export);
   }
 

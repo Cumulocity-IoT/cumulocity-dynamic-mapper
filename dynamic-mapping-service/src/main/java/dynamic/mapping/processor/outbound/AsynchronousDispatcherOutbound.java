@@ -68,7 +68,7 @@ import java.util.concurrent.Future;
  * The call method in
  * <code>AsynchronousDispatcherOutbound.MappingOutboundTask</code> is the core
  * of the message processing.
- * For all resolved mapppings the following steps are performed for new
+ * For all resolved mappings the following steps are performed for new
  * messages:
  * ** deserialize the payload
  * ** extract the content from the payload based on the defined substitution in
@@ -206,7 +206,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
                     context.setServiceConfiguration(serviceConfiguration);
-                    // identify the corect processor based on the mapping type
+                    // identify the correct processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessorOutbound processor = payloadProcessorsOutbound.get(mappingType);
 

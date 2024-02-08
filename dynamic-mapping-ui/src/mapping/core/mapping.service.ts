@@ -45,7 +45,7 @@ import {
   ProcessingContext,
   ProcessingType,
   SubstituteValue
-} from '../processor/prosessor.model';
+} from '../processor/processor.model';
 import { C8YAPISubscription } from '../shared/mapping.model';
 
 @Injectable({ providedIn: 'root' })

@@ -26,7 +26,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   subscription: object;
   statusMappingChart: Chart;
   textColor: string;
-  fontFamiliy: string;
+  fontFamily: string;
   fontWeight: string;
   fontSize: number;
 
@@ -37,7 +37,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     this.textColor = getComputedStyle(root)
       .getPropertyValue('--c8y-text-color')
       .trim();
-    this.fontFamiliy = getComputedStyle(root)
+    this.fontFamily = getComputedStyle(root)
       .getPropertyValue('--c8y-font-family-sans-serif')
       .trim();
     this.fontWeight = getComputedStyle(root)
@@ -158,7 +158,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
             display: true,
             position: 'left' as any,
             font: {
-              family: this.fontFamiliy,
+              family: this.fontFamily,
               weight: 'normal' as any
             }
           }

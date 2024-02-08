@@ -378,7 +378,7 @@ In order to record JSON payloads on the defined topic a subscription records the
 
 The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
 
-If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
+If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mapping table, where the number of payloads snooped so far is shown.
 
 ##### Enable snooping payloads on source topic
 
@@ -445,7 +445,7 @@ To define a new substitution the following steps have to be performed:
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
->2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+>2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same property exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 
 To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
@@ -613,7 +613,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 </p>
 <br/>
 
-A chart shows a summary with numbers of all sucessfully processed messages and those raising errors. 
+A chart shows a summary with numbers of all successfully processed messages and those raising errors. 
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_MonitoringChart.png"  style="width: 70%;" />
