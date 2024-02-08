@@ -388,7 +388,7 @@ public class MappingComponent {
     public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterOutbound to identify the matching
         // mappings.
-        // the need to be returend in a list
+        // the need to be returned in a list
         List<Mapping> result = new ArrayList<>();
         try {
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {
