@@ -1,0 +1,9 @@
+[default.extend-words]
+mosquitto = "mosquitto"
+serie = "serie"
+inferrable = "inferrable"
+Strack = "Strack"
+Witschel = "Witschel"
+
+[files]
+extend-exclude = ["**/connector_config_**.json"]

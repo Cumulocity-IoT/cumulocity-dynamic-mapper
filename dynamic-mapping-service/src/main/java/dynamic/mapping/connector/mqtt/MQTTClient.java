@@ -333,6 +333,12 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public boolean isConnected() {
+        // log.info("Tenant {} - TESTING isConnected I:,s  {},  {}", tenant, mqttClient, getConnectorIdent(),
+        //         getConnectorName());
+        // if (mqttClient != null)
+        //     log.info("Tenant {} - TESTING isConnected II: {}", tenant, mqttClient.isConnected());
+        // else
+        //     log.info("Tenant {} - TESTING isConnected II: {}, mqttClient is null", tenant);
         return mqttClient != null ? mqttClient.isConnected() : false;
     }
 
