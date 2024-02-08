@@ -8,4 +8,4 @@ mor = "mor"
 MOR = "MOR"
 
 [files]
-extend-exclude = ["**/connector_config_**.json"]
+extend-exclude = ["**/mappings**.json"]
