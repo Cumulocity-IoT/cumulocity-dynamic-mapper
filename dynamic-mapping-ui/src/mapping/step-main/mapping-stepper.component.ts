@@ -113,7 +113,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     selectedResult: -1
   };
 
-  countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
+  countDeviceIdentifiers$: BehaviorSubject<number> = new BehaviorSubject<number>(
     0
   );
   propertyFormly: FormGroup = new FormGroup({});
@@ -391,7 +391,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       readOnly: true
     };
 
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
 
     this.extensionEvents$.subscribe((events) => {
       console.log('New events from extension', events);
@@ -833,7 +833,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
     console.log('Deleted substitution', this.mapping.substitutions.length);
   }
 
@@ -866,7 +866,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.substitutionModel.pathTarget = editedSub.pathTarget;
         }
       });
-      this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
       console.log('Edited substitution', this.mapping.substitutions.length);
     }
   }
@@ -915,7 +915,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.countDeviceIdentifers$.complete();
+    this.countDeviceIdentifiers$.complete();
     this.extensionEvents$.complete();
     this.onDestroy$.complete();
   }

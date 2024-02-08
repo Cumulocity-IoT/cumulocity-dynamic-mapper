@@ -120,7 +120,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
             } else {
                 if (extractedSourceContent.isArray()) {
                     if (substitution.expandArray) {
-                        // extracted result from sourcPayload is an array, so we potentially have to
+                        // extracted result from sourcePayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
                         for (JsonNode jn : extractedSourceContent) {
                             if (jn.isTextual()) {

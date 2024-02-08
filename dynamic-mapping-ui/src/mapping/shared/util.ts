@@ -192,7 +192,7 @@ export function isWildcardTopic(topic: string): boolean {
   return result;
 }
 
-export function isSubstituionValid(mapping: Mapping): boolean {
+export function isSubstitutionValid(mapping: Mapping): boolean {
   const count = mapping.substitutions
     .filter((sub) =>
       definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
