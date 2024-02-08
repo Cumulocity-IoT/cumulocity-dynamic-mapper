@@ -1,5 +1,5 @@
 /**
- * This module holds all the externally loaded processor extenions.
+ * This module holds all the externally loaded processor extensions.
  * External processor extensions have to:
  * 1. implement the interface <code>ProcessorExtensionInbound<O></code>
  * 2. be registered in the properties file <code>/dynamic-mapping-extension/src/main/resources/extension-external.properties</code>

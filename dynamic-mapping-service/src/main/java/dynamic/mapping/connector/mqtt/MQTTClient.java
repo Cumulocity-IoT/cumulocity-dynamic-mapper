@@ -314,7 +314,7 @@ public class MQTTClient extends AConnectorClient {
     public boolean isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
-        // if using selfsignied certificate additional proprties have to be set
+        // if using selfsignied certificate additional properties have to be set
         Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
         if (useSelfSignedCertificate && (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null

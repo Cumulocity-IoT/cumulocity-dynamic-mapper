@@ -368,7 +368,7 @@ The levels of the Template Topic are split and added to the payload:
   ]
 ```
 The entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Id.
-The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
+The additional property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
 
 ##### Snooping payloads on source topic
 
@@ -392,7 +392,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 ##### Map Device Identifier
 
-Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id tpye.
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id type.
 
 
 ##### Define templates and substitutions for source and target payload
@@ -448,7 +448,7 @@ To define a new substitution the following steps have to be performed:
 >2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same property exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 
-To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
+To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if required properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
 
@@ -642,7 +642,7 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 6. ```.../monitoring/tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 7. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
 8. ```.../mapping```: retrieve, create, delete, update mappings
-9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
+9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingContext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
 10. ```.../extension/```: endpoint to retieve a list of all extensions
 11. ```.../extension/{extension-name}```: endpoint to retrieve/delete a specific extension
 

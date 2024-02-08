@@ -501,7 +501,7 @@ public class MappingRestController {
     }
 
     // TODO We might need to add the connector ID here to correlate mappings to
-    // excactly one connector
+    // exactly one connector
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {

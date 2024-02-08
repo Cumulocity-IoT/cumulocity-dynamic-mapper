@@ -89,7 +89,7 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
         } else {
           if (Array.isArray(extractedSourceContent)) {
             if (substitution.expandArray) {
-              // extracted result from sourcPayload is an array, so we potentially have to
+              // extracted result from sourcePayload is an array, so we potentially have to
               // iterate over the result, e.g. creating multiple devices
               extractedSourceContent.forEach((jn) => {
                 if (isNumeric(jn)) {

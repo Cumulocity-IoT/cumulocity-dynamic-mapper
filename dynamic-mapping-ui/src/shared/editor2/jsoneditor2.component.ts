@@ -189,7 +189,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   private onSelect(selection: JSONEditorSelection | undefined) {
     const c: any = selection;
-    // ignore emitting change events when the path was set progamatically to avoid circles
+    // ignore emitting change events when the path was set programmatically to avoid circles
     if (!c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
         const st = stringifyJSONPath((selection as any).path);
@@ -214,7 +214,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     const path = parseJSONPath(pathString);
     console.log('Set selection to path:', pathString, path);
     const selection: any = createMultiSelection(path, path);
-    // marker to ignore emitting change events when the path was set progamatically
+    // marker to ignore emitting change events when the path was set programmatically
     selection.triggeredSelection = true;
 
     try {
