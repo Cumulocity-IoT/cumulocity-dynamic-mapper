@@ -36,11 +36,10 @@ logs/
 bin/
 attic/*
 
-dynamic-mapping-extension/.factorypath
-dynamic-mapping-interface/.factorypath
-dynamic-mapping-service/.factorypath
+.factorypath
 set.sh
 dynamic-mapping-ui/.env
-**/.flattened-pom.xml
+.flattened-pom.xml
 dist
 node_modules
+.angular
