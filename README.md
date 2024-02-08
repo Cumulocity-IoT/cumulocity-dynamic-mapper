@@ -462,7 +462,7 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
 1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
      * **if** only one device is identified in the payload \
-      **then** only one Cumulocity MEA-resquest is generated from this payload.\
+      **then** only one Cumulocity MEA-request is generated from this payload.\
      This is a **single-device-single-value** mapping.
      * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024"]``` in the payload \
       **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
@@ -507,7 +507,7 @@ ___
 #### Test transformation from source to target format
 
 To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any errors are displayed.
-On test transformation can result in multiple Cumulocity reqests, e.g. when a measurement is created for a device that is implicitly created, then two requests result from this transformation.
+On test transformation can result in multiple Cumulocity requests, e.g. when a measurement is created for a device that is implicitly created, then two requests result from this transformation.
 To iterate and show all results press the button ```Show Next Test Result```.
 
 
