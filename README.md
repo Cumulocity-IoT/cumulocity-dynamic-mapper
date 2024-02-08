@@ -162,7 +162,7 @@ Follow the steps from the point above to assign the plugin to your Administratio
 Make sure that [Docker](https://www.docker.com/), [Apache Maven](https://maven.apache.org/) and [Node.js](https://nodejs.org/) are installed and running on your computer.
 
 ### Backend - Microservice
-Run `mvn clean package` in folder `dyanmic-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Run `mvn clean package` in folder `dynamic-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frontend - Plugin
@@ -214,7 +214,7 @@ The table of configured connectors to different brokers can be:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the choosen connector type:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the chosen connector type:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
@@ -314,7 +314,7 @@ $parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
 ___
 
 1. Define the properties of the topic and API to be used
-2. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+2. Define the templates for the source and target, in JSON format. The source payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 3. Test the mapping by applying the transformation and send the result to a test device.
 
 ##### Define topic properties
@@ -329,7 +329,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
-                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
+                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
                       applied.
 2. `publishTopic`: MQTT topic to publish outbound messages to.
 
@@ -594,7 +594,7 @@ Using the tab ```Processor Extension``` you can upload your own processor extens
 </p>
 <br/>
 
-The following guide lays out hte steps to create and use a processor extension:
+The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
@@ -643,7 +643,7 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 7. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
 8. ```.../mapping```: retrieve, create, delete, update mappings
 9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingContext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
-10. ```.../extension/```: endpoint to retieve a list of all extensions
+10. ```.../extension/```: endpoint to retrieve a list of all extensions
 11. ```.../extension/{extension-name}```: endpoint to retrieve/delete a specific extension
 
 ## Tests & Sample Data

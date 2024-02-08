@@ -422,7 +422,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occured, When loading extension, starting without extensions!", tenant,
+                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions!", tenant,
                         e);
             }
         }
@@ -586,10 +586,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void createExtensibleProsessor(String tenant) {
+    public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
-        log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
+        log.info("Tenant {} - create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();

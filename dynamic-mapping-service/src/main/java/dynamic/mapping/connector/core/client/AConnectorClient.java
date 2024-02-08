@@ -427,7 +427,7 @@ public abstract class AConnectorClient {
         List<Runnable> stoppedTask = this.housekeepingExecutor.shutdownNow();
         // release all resources
         close();
-        log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
+        log.info("Tenant {} - Shutdown housekeepingTasks: {}", tenant, stoppedTask);
     }
 
     public void sendConnectorLifecycle() {

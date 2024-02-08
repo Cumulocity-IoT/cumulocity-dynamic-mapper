@@ -98,7 +98,7 @@ public class BootstrapService {
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
-        configurationRegistry.getC8yAgent().createExtensibleProsessor(tenant);
+        configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
         configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
 
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
