@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "ng serve",
-    "start:admin": "npm start -- --shell administration",
+    "start:admin": "npm start -- --shell administration -u https://ck2.eu-latest.cumulocity.com",
     "build": "ng build",
     "deploy": "ng deploy",
     "format": "prettier --write 'src/**/*.ts'",

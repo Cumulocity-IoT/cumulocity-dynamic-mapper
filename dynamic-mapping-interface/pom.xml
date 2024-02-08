@@ -52,10 +52,10 @@
 			<groupId>com.ibm.jsonata4java</groupId>
 			<artifactId>JSONata4Java</artifactId>
 		</dependency>
-		<dependency>
+		<!-- <dependency>
 			<groupId>javax.validation</groupId>
 			<artifactId>validation-api</artifactId>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
