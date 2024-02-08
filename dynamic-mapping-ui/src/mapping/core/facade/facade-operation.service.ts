@@ -25,7 +25,7 @@ import {
   IResult,
   OperationService
 } from '@c8y/client';
-import { ProcessingContext } from '../../processor/prosessor.model';
+import { ProcessingContext } from '../../processor/processor.model';
 
 @Injectable({ providedIn: 'root' })
 export class FacadeOperationService {

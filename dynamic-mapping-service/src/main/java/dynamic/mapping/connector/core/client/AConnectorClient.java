@@ -173,9 +173,9 @@ public abstract class AConnectorClient {
         sendConnectorLifecycle();
     }
 
-    public void submitHouskeeping() {
+    public void submitHousekeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
+        housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, 30,
                 TimeUnit.SECONDS);
     }
 
@@ -239,7 +239,7 @@ public abstract class AConnectorClient {
      ***/
     public abstract void publishMEAO(ProcessingContext<?> context);
 
-    public void runHouskeeping() {
+    public void runHousekeeping() {
         try {
             Instant now = Instant.now();
             // only log this for the first 180 seconds to reduce log amount
@@ -423,7 +423,7 @@ public abstract class AConnectorClient {
         return activeSubscriptions;
     }
 
-    public void stopHouskeepingAndClose() {
+    public void stopHousekeepingAndClose() {
         List<Runnable> stoppedTask = this.housekeepingExecutor.shutdownNow();
         // release all resources
         close();

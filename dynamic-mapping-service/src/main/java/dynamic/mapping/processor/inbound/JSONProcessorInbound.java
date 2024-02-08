@@ -105,7 +105,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                         payload, e);
             }
             /*
-             * step 2 analyse exctracted content: textual, array
+             * step 2 analyse extracted content: textual, array
              */
             List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
                     substitution.pathTarget,

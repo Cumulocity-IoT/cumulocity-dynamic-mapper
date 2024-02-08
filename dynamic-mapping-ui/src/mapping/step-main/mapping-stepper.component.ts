@@ -54,7 +54,7 @@ import {
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
 import { EditSubstitutionComponent } from '../edit/edit-substitution-modal.component';
-import { C8YRequest } from '../processor/prosessor.model';
+import { C8YRequest } from '../processor/processor.model';
 import { ValidationError } from '../shared/mapping.model';
 import {
   countDeviceIdentifiers,
