@@ -35,6 +35,7 @@ export interface ConnectorConfiguration {
   ident: string;
   connectorType: string;
   enabled: boolean;
+  status?: any;
   name: string;
   properties: { [name: string]: any };
 }

@@ -19,23 +19,23 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>Broker Configuration</c8y-title>
+<c8y-title>Broker configuration</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
-    title="{{ 'Reconnect Notification Endpoint' | translate }}"
+    title="{{ 'Reconnect notification endpoint' | translate }}"
     (click)="clickedReconnect2NotificationEndpoint()"
   >
     <i c8yIcon="disconnected"></i>
-    {{ 'Reconnect Notification Endpoint' | translate }}
+    {{ 'Reconnect notification endpoint' | translate }}
   </button>
   <button
     class="btn btn-link"
-    title="{{ 'Reset Monitoring' | translate }}"
+    title="{{ 'Reset monitoring' | translate }}"
     (click)="resetStatusMapping()"
   >
     <i c8yIcon="reset"></i>
-    {{ 'Reset Monitoring' | translate }}
+    {{ 'Reset monitoring' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -52,7 +52,7 @@
     <div class="card">
       <div class="card-header p-l-32 separator j-c-between">
         <h4 class="card-title">
-          {{ 'Configured Brokers' | translate }}
+          {{ 'Brokers' | translate }}
         </h4>
       </div>
       <div class="card-block">
@@ -162,7 +162,7 @@
                             [disabled]="con?.enabled"
                           >
                             <i c8yIcon="trash-o"></i>
-                            Remove configuration
+                            Delete configuration
                           </button>
                         </li>
                       </ul>
@@ -179,34 +179,6 @@
       <div class="card-block">
         <c8y-form-group>
           <form class="form-inline">
-            <!-- <label
-              class="c8y-radio radio-inline"
-              title="{{ 'Connector Lifecycle' }}"
-            >
-              <input
-                type="radio"
-                checked="checked"
-                name="c8y-group"
-                value="{{ StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE }}"
-                [(ngModel)]="filterStatusLog.eventType"
-              />
-              <span></span>
-              <span>Connector Lifecycle</span>
-            </label>
-            <label
-              class="c8y-radio radio-inline"
-              title="{{ 'Connector Lifecycle' }}"
-            >
-              <input
-                type="radio"
-                checked="checked"
-                name="c8y-group"
-                value="{{ StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE }}"
-                [(ngModel)]="filterStatusLog.eventType"
-              />
-              <span></span>
-              <span>Subscriptions Events</span>
-            </label> -->
             <div class="c8y-select-wrapper button-bottom-margin">
               <select
                 class="form-control"
@@ -215,9 +187,9 @@
                 name="eventType"
               >
                 <option [value]="'ALL'">ALL types</option>
-                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">Connector Lifecycle</option>
-                <option [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE">Subscriptions Events</option>
-                <option [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE">Notification Lifecycle</option>
+                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">Connector lifecycle</option>
+                <option [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE">Subscription events</option>
+                <option [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE">Notification lifecycle</option>
               </select>
             </div>
             <div class="c8y-select-wrapper button-bottom-margin m-l-16">
@@ -285,7 +257,7 @@
     <div class="card">
       <div class="card-header p-l-32 separator j-c-between">
         <h4 class="card-title">
-          {{ 'Service Configuration' | translate }}
+          {{ 'Service configuration' | translate }}
         </h4>
       </div>
       <div class="inner-scroll">
@@ -300,7 +272,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Log Payload' }}
+                  {{ 'Log payload' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -313,7 +285,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Log Substitution' }}
+                  {{ 'Log substitution' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -326,7 +298,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Log Connector Errors' }}
+                  {{ 'Log connector errors' }}
                 </span>
               </label>
             </c8y-form-group>
@@ -339,7 +311,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Send Connector Lifcycle' }} <i c8yIcon="euro"></i>
+                  {{ 'Send connector lifcycle' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -352,7 +324,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Send Mapping Status' }} <i c8yIcon="euro"></i>
+                  {{ 'Send mapping status' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>
@@ -365,7 +337,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Send Events on Topic Subscriptions' }}
+                  {{ 'Send events on topic subscriptions' }}
                   <i c8yIcon="euro"></i>
                 </span>
               </label>
@@ -379,7 +351,7 @@
                 />
                 <span></span>
                 <span>
-                  {{ 'Send Notification Lifcycle' }} <i c8yIcon="euro"></i>
+                  {{ 'Send notification lifcycle' }} <i c8yIcon="euro"></i>
                 </span>
               </label>
             </c8y-form-group>

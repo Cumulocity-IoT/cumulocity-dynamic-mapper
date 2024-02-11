@@ -32,7 +32,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { FormlyFieldConfig } from '@ngx-formly/core';
+import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -70,6 +70,11 @@ import {
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { EditorMode, StepperConfiguration } from './stepper-model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
+import { MessageField } from '../shared/formly/message.type.component';
+import { FormlyTextField } from '../shared/formly/text.type.component';
+import { WrapperCustomFormField } from '../shared/formly/form-field/custom-form.type.component';
+import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
+import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -113,9 +118,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     selectedResult: -1
   };
 
-  countDeviceIdentifiers$: BehaviorSubject<number> = new BehaviorSubject<number>(
-    0
-  );
+  countDeviceIdentifiers$: BehaviorSubject<number> =
+    new BehaviorSubject<number>(0);
   propertyFormly: FormGroup = new FormGroup({});
   sourceSystem: string;
   targetSystem: string;
@@ -145,10 +149,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     public mappingService: MappingService,
     public brokerConfigurationService: BrokerConfigurationService,
     private alertService: AlertService,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+    private configService: FormlyConfig
   ) {}
 
   ngOnInit() {
+    console.log('Formly to be updated:', this.configService);
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
@@ -201,8 +207,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace column-right-border',
             key: 'pathSource',
-            type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldInputCustom, // 'input-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Source',
               class: 'input-sm animate-background',
@@ -248,8 +254,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-5 text-monospace column-left-border',
             key: 'pathTarget',
-            type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldInputCustom, // 'input-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Target',
               disabled:
@@ -289,7 +295,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className:
               'col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24',
-            type: 'message-field',
+            type: MessageField, //  'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.sourceExpression.msgTxt,
@@ -301,7 +307,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             // message field target
             className: 'col-lg-5 reduced-top column-left-border not-p-b-24',
-            type: 'message-field',
+            type: MessageField, //  'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.targetExpression.msgTxt,
@@ -319,14 +325,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             // dummy row to start new row
             className: 'row',
             key: 'textField',
-            type: 'text'
+            type: FormlyTextField // 'text'
           },
           {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
             key: 'sourceExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldTextareaCustom, // 'textarea-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               class: 'input-sm',
               disabled: true,
@@ -344,8 +350,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 text-monospace font-smaller column-left-border',
             key: 'targetExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldTextareaCustom, // 'textarea-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               class: 'input-sm',
               disabled: true,
@@ -606,7 +612,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
       this.enrichTemplates();
       this.extensions =
-        await this.brokerConfigurationService.getProcessorExtensions() as any;
+        (await this.brokerConfigurationService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
         if (!this.extensions[this.mapping.extension.name]) {
           const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;
