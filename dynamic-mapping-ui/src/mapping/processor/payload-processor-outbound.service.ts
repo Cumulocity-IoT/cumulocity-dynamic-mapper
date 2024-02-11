@@ -65,7 +65,7 @@ export abstract class PayloadProcessorOutbound {
     try {
       payloadTarget = JSON.parse(mapping.target);
     } catch (e) {
-      this.alert.warning('Target Payload is not a valid json object!');
+      this.alert.warning('Target payload is not a valid json object!');
       throw e;
     }
 
