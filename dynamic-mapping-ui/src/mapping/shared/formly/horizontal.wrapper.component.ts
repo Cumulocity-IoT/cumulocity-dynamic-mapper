@@ -18,24 +18,27 @@
  *
  * @authors Christof Strack
  */
-
 import { Component } from '@angular/core';
-import { FieldType } from '@ngx-formly/core';
+import { FieldWrapper } from '@ngx-formly/core';
 
 @Component({
-  selector: 'd11r-formly-field-button',
+  selector: 'd11r-formly-horizontal-wrapper',
   template: `
-    <div>
-      <button class="btn btn-default" (click)="onClick($event)">
-        {{ to.text }}
-      </button>
+    <div class="form-group row">
+      <label [attr.for]="id" class="col-sm-2 col-form-label" *ngIf="to.label">
+        {{ to.label }}
+        <ng-container *ngIf="to.required && to.hideRequiredMarker !== true"
+          >*</ng-container
+        >
+      </label>
+      <div class="col-sm-7">
+        <ng-template #fieldComponent></ng-template>
+      </div>
+
+      <div *ngIf="showError" class="col-sm-3 invalid-feedback d-block">
+        <formly-validation-message [field]="field"></formly-validation-message>
+      </div>
     </div>
   `
 })
-export class FormlyFieldButton extends FieldType {
-  onClick($event) {
-    if (this.to.onClick) {
-      this.to.onClick($event);
-    }
-  }
-}
+export class WrapperFormlyHorizontal extends FieldWrapper {}

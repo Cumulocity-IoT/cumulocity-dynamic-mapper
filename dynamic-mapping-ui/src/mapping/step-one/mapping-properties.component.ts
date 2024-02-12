@@ -216,7 +216,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           // filler when template topic is not shown
           {
             className: 'col-lg-6',
-            type: 'filler',
+            template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
