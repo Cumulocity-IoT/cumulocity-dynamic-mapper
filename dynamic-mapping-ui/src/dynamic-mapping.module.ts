@@ -48,17 +48,12 @@ import {
   checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid
 } from './mapping/shared/util';
-import { SelectComponent } from './mapping/shared/formly/select/select.type.component';
-import { FieldCheckbox } from './mapping/shared/formly/checkbox/checkbox.type.component';
-import { FormlyFieldButton } from './mapping/shared/formly/button.type.component';
-import { C8YSwitchField } from './mapping/shared/formly/c8y-switch.type.component';
-import { FormlyFiller } from './mapping/shared/formly/filler.type.component';
-import { WrapperCustomFormField } from './mapping/shared/formly/form-field/custom-form.type.component';
-import { FormlyHorizontalWrapper } from './mapping/shared/formly/horizontal-wrapper.type.component';
+import { WrapperFormlyHorizontal } from './mapping/shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './mapping/shared/formly/input-custom.type.component';
 import { MessageField } from './mapping/shared/formly/message.type.component';
 import { FormlyTextField } from './mapping/shared/formly/text.type.component';
 import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.component';
+import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-field.wrapper.component';
 
 @NgModule({
   imports: [
@@ -101,24 +96,15 @@ import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.compo
         ],
         types: [
           { name: 'text', component: FormlyTextField },
-          { name: 'filler', component: FormlyFiller },
           { name: 'textarea-custom', component: FieldTextareaCustom },
           { name: 'input-custom', component: FieldInputCustom },
-          { name: 'button', component: FormlyFieldButton },
           { name: 'message-field', component: MessageField },
-          { name: 'c8y-switch', component: C8YSwitchField },
-          {
-            name: 'select',
-            component: SelectComponent,
-            wrappers: ['c8y-form-field']
-          },
           { name: 'enum', extends: 'select' },
-          { name: 'checkbox', component: FieldCheckbox },
           { name: 'boolean', extends: 'checkbox' }
         ],
         wrappers: [
-          { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
-          { name: 'custom-form-field', component: WrapperCustomFormField }
+          { name: 'form-field-horizontal', component: WrapperFormlyHorizontal },
+          { name: 'custom-form-field', component: WrapperCustomFormField },
         ]
       }
     }

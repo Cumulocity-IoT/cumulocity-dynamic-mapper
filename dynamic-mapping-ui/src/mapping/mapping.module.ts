@@ -41,19 +41,16 @@ import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.ren
 import { StatusActivationRendererComponent } from './renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { C8YSwitchField } from './shared/formly/c8y-switch.type.component';
-import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component';
-import { WrapperCustomFormField } from './shared/formly/form-field/custom-form.type.component';
-import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper.type.component';
+import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
-import { SelectComponent } from './shared/formly/select/select.type.component';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { MappingStepperComponent } from './step-main/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './step-main/substitution/substitution-renderer.component';
 import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
+import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 
 @NgModule({
   declarations: [
@@ -76,11 +73,8 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,
-    FormlyHorizontalWrapper,
+    WrapperFormlyHorizontal,
     WrapperCustomFormField,
-    C8YSwitchField,
-    SelectComponent,
-    FieldCheckbox,
     FieldInputCustom
   ],
   imports: [

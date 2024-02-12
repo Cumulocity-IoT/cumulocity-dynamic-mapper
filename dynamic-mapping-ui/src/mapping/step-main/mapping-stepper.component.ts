@@ -71,10 +71,9 @@ import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { EditorMode, StepperConfiguration } from './stepper-model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { MessageField } from '../shared/formly/message.type.component';
-import { FormlyTextField } from '../shared/formly/text.type.component';
-import { WrapperCustomFormField } from '../shared/formly/form-field/custom-form.type.component';
 import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
 import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
+import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -321,12 +320,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       {
         fieldGroup: [
-          {
-            // dummy row to start new row
-            className: 'row',
-            key: 'textField',
-            type: FormlyTextField // 'text'
-          },
           {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
