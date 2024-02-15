@@ -1,10 +1,11 @@
 import { EnvironmentOptions } from '@c8y/devkit/dist/options';
-import { author, description, version } from './package.json';
+import { author, description, version, license } from './package.json';
 
 export default {
   runTime: {
     author,
     description,
+    license,
     version,
     name: 'dynamic-mapping-ui',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
