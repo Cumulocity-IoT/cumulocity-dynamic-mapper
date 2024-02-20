@@ -43,3 +43,6 @@ dynamic-mapping-ui/.env
 dist
 node_modules
 .angular
+dynamic-mapping-ui/cypress.env.js
+dynamic-mapping-ui/cypress/videos
+dynamic-mapping-ui/cypress/screenshots

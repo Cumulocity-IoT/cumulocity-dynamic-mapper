@@ -8,8 +8,8 @@
     "url": "git@github.com:SoftwareAG/cumulocity-dynamic-mapper.git"
   },
   "scripts": {
-    "start": "ng serve",
-    "start:admin": "npm start -- --shell administration",
+    "start": "ng serve --host 0.0.0.0",
+    "start:admin": "npm start -- --shell administration -u https://ck2.eu-latest.cumulocity.com",
     "build": "ng build",
     "deploy": "ng deploy",
     "format": "prettier --write 'src/**/*.ts'",
@@ -55,6 +55,8 @@
     "@c8y/devkit": "1019.4.11",
     "@c8y/widget-plugin": "1019.4.11",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "cumulocity-cypress": "^0.2.4",
+    "cypress": "^13.6.4",
     "eslint-plugin-import": "^2.29.1",
     "file-loader": "^6.2.0",
     "prettier": "^3.1.1",

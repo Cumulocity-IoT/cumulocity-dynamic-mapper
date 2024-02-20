@@ -53,9 +53,10 @@ export class EditConfigurationComponent implements OnInit {
         className: 'col-lg-12',
         key: 'connectorType',
         type: 'select',
+        id:'connectorType',
         wrappers: ['c8y-form-field'],
         templateOptions: {
-          label: 'Connector Id',
+          label: 'Connector type',
           options: this.specifications.map((sp) => {
             return {
               label: sp.connectorType,
@@ -98,6 +99,7 @@ export class EditConfigurationComponent implements OnInit {
         {
           className: 'col-lg-12',
           key: 'name',
+          id: 'name',
           type: 'input',
           wrappers: ['c8y-form-field'],
           templateOptions: {
@@ -123,7 +125,7 @@ export class EditConfigurationComponent implements OnInit {
       }
       for (let index = 0; index < sortedFields.length; index++) {
         const entry = sortedFields[index];
-        // test if the property is a valid entry, this happens when the list of properties is not numbered consecutivly
+        // test if the property is a valid entry, this happens when the list of properties is not numbered consecutively
         if (entry) {
           const { property } = entry;
           if (property.type == ConnectorPropertyType.NUMERIC_PROPERTY) {
@@ -133,6 +135,7 @@ export class EditConfigurationComponent implements OnInit {
                 {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
                   templateOptions: {
@@ -150,6 +153,7 @@ export class EditConfigurationComponent implements OnInit {
                 {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
                   templateOptions: {
@@ -168,6 +172,7 @@ export class EditConfigurationComponent implements OnInit {
                 {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
                   templateOptions: {
@@ -185,6 +190,7 @@ export class EditConfigurationComponent implements OnInit {
                 {
                   className: 'col-lg-12',
                   key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
                   type: 'switch',
                   wrappers: ['c8y-form-field'],
                   templateOptions: {
