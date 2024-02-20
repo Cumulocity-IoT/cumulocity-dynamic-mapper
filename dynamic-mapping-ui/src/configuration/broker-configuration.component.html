@@ -61,6 +61,7 @@
             <button
               type="button"
               name="addConfiguration"
+              id="addConfiguration"
               class="btn btn-default btn-sm"
               (click)="onConfigurationAdd()"
               translate
@@ -70,8 +71,11 @@
             </button>
           </div>
         </div>
-        <div style="xheight: 200px; overflow-y: auto">
-          <table class="table table-condensed table-striped fixTableHead">
+        <div>
+          <table
+            class="table table-condensed table-striped fixTableHead"
+            id="connectorConfigurations"
+          >
             <thead>
               <tr>
                 <th>#</th>
@@ -112,7 +116,7 @@
                     >{{ con.status$ | async }}
                   </div>
                 </td>
-                <td width="10%">
+                <td width="10%" id="{{ 'connector_' + con?.ident }}">
                   <div class="d-flex" style="position: absolute">
                     <button
                       container="body"
@@ -139,6 +143,7 @@
                       >
                         <li>
                           <button
+                            id="update"
                             type="button"
                             (click)="onConfigurationUpdate(i)"
                           >
@@ -148,6 +153,7 @@
                         </li>
                         <li>
                           <button
+                            id="copy"
                             type="button"
                             (click)="onConfigurationCopy(i)"
                           >
@@ -157,6 +163,7 @@
                         </li>
                         <li>
                           <button
+                            id="delete"
                             type="button"
                             (click)="onConfigurationDelete(i)"
                             [disabled]="con?.enabled"
@@ -187,9 +194,19 @@
                 name="eventType"
               >
                 <option [value]="'ALL'">ALL types</option>
-                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">Connector lifecycle</option>
-                <option [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE">Subscription events</option>
-                <option [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE">Notification lifecycle</option>
+                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">
+                  Connector lifecycle
+                </option>
+                <option
+                  [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE"
+                >
+                  Subscription events
+                </option>
+                <option
+                  [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE"
+                >
+                  Notification lifecycle
+                </option>
               </select>
             </div>
             <div class="c8y-select-wrapper button-bottom-margin m-l-16">

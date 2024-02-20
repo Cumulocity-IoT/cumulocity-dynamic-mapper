@@ -1,0 +1,8 @@
+{
+  "name": "Cypress MQTT",
+  "mqttHost": "dummyHost",
+  "mqttPort": 8883,
+  "user": "test",
+  "password": "testPassword",
+  "clientId": "cypressId"
+}
