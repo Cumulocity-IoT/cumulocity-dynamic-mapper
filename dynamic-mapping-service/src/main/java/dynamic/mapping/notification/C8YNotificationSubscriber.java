@@ -115,13 +115,15 @@ public class C8YNotificationSubscriber {
     // section 1: initializing tenant client and device client
     //
 
+    /* Not needed anymore */
+    /**
     public void initTenantClient() {
         // Subscribe on Tenant do get informed when devices get deleted/added
         String tenant = subscriptionsService.getTenant();
         log.info("Tenant {} - Initializing Operation Subscriptions...", tenant);
         subscribeTenantAndConnect(subscriptionsService.getTenant());
     }
-
+     **/
     public void initDeviceClient() {
         String tenant = subscriptionsService.getTenant();
         Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
@@ -161,7 +163,7 @@ public class C8YNotificationSubscriber {
         subscriptionsService.runForTenant(tenant, () -> {
             disconnect(tenant, false);
             // notificationSubscriber.init();
-            initTenantClient();
+            //initTenantClient();
             initDeviceClient();
         });
     }
@@ -170,6 +172,8 @@ public class C8YNotificationSubscriber {
     // section 2: handle subscription on tenant scope
     //
 
+    // Not needed anymore
+    /**
     public void subscribeTenantAndConnect(String tenant) {
         log.info("Tenant {} - Creating new Tenant Subscription", tenant);
         NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = createTenantSubscription();
@@ -230,6 +234,7 @@ public class C8YNotificationSubscriber {
             e.printStackTrace();
         }
     }
+     **/
 
     public NotificationSubscriptionRepresentation createTenantSubscription() {
         final String subscriptionName = TENANT_SUBSCRIPTION;
@@ -585,9 +590,9 @@ public class C8YNotificationSubscriber {
                                     if (tenantWSStatusCode.get(tenant) == 401
                                             || tenantClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                         log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
-                                        subscriptionsService.runForEachTenant(() -> {
-                                            initTenantClient();
-                                        });
+                                        //subscriptionsService.runForEachTenant(() -> {
+                                        //    initTenantClient();
+                                        //});
                                     } else if (tenantClient.getReadyState().equals(ReadyState.CLOSING)
                                             || tenantClient.getReadyState().equals(ReadyState.CLOSED)) {
                                         log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
