@@ -39,7 +39,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <revision>4.1.3-SNAPSHOT</revision>
-        <c8y.version>1018.0.261</c8y.version>
+        <c8y.version>1020.73.0</c8y.version>
         <lombok.version>1.18.30</lombok.version>
         <slf4j.version>1.7.36</slf4j.version>
         <maven.compiler.source>11</maven.compiler.source>
