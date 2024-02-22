@@ -113,7 +113,7 @@
             <plugin>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
                 <artifactId>microservice-package-maven-plugin</artifactId>
-                <version>1018.0.220</version>
+                <version>1020.73.0</version>
                 <executions>
                     <execution>
                         <id>package</id>
