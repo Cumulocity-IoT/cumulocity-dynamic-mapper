@@ -115,7 +115,7 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
-    public ConnectorConfiguration configuration;
+    public ConnectorConfiguration connectorConfiguration;
 
     @Getter
     @Setter
@@ -138,7 +138,7 @@ public abstract class AConnectorClient {
     public abstract ConnectorSpecification getSpecification();
 
     public void loadConfiguration() {
-        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -189,7 +189,7 @@ public abstract class AConnectorClient {
      * valid
      ***/
     public boolean shouldConnect() {
-        return isConfigValid(configuration) && configuration.isEnabled();
+        return isConfigValid(connectorConfiguration) && connectorConfiguration.isEnabled();
     }
 
     /***
@@ -262,7 +262,7 @@ public abstract class AConnectorClient {
 
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
-            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
+            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
                 connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
             }
             sendConnectorLifecycle();
@@ -431,7 +431,8 @@ public abstract class AConnectorClient {
     }
 
     public void sendConnectorLifecycle() {
-        if (serviceConfiguration.sendConnectorLifecycle) {
+        // stop sending lifecycle event if connector is disabled
+        if (serviceConfiguration.sendConnectorLifecycle && connectorConfiguration.enabled) {
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);

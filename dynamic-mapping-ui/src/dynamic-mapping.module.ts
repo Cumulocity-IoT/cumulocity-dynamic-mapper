@@ -20,21 +20,41 @@
  */
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { CoreModule, hookNavigator, hookTab } from '@c8y/ngx-components';
+import {
+  CommonModule,
+  CoreModule,
+  DynamicFormsModule,
+  hookNavigator,
+  hookTab
+} from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
 import { BrokerConfigurationModule } from './configuration/broker-configuration.module';
 import { ExtensionModule } from './extension/extension.module';
 import { MappingTreeModule } from './mapping-tree/tree.module';
 import { MappingModule } from './mapping/mapping.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { FormlyPresetModule } from '@ngx-formly/core/preset';
+
 import {
   MappingNavigationFactory,
   MappingTabFactory,
   OverviewGuard,
-  SharedModule,
+  SharedModule
 } from './shared';
 import { TestingModule } from './testing-devices/testing.module';
 import './shared/styles/shared.css';
+import {
+  checkTopicsInboundAreValid,
+  checkTopicsOutboundAreValid
+} from './mapping/shared/util';
+import { WrapperFormlyHorizontal } from './mapping/shared/formly/horizontal.wrapper.component';
+import { FieldInputCustom } from './mapping/shared/formly/input-custom.type.component';
+import { MessageField } from './mapping/shared/formly/message.type.component';
+import { FormlyTextField } from './mapping/shared/formly/text.type.component';
+import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.component';
+import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-field.wrapper.component';
+
 @NgModule({
   imports: [
     CoreModule,
@@ -47,6 +67,10 @@ import './shared/styles/shared.css';
     FormsModule,
     ModalModule,
     ReactiveFormsModule,
+    DynamicFormsModule,
+    CommonModule,
+    DynamicFormsModule,
+    FormlyPresetModule,
     SharedModule
   ],
   exports: [],
@@ -55,7 +79,35 @@ import './shared/styles/shared.css';
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
-    hookTab(MappingTabFactory)
+    hookTab(MappingTabFactory),
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        validators: [
+          {
+            name: 'checkTopicsInboundAreValid',
+            validation: checkTopicsInboundAreValid
+          },
+          {
+            name: 'checkTopicsOutboundAreValid',
+            validation: checkTopicsOutboundAreValid
+          }
+        ],
+        types: [
+          { name: 'text', component: FormlyTextField },
+          { name: 'textarea-custom', component: FieldTextareaCustom },
+          { name: 'input-custom', component: FieldInputCustom },
+          { name: 'message-field', component: MessageField },
+          { name: 'enum', extends: 'select' },
+          { name: 'boolean', extends: 'checkbox' }
+        ],
+        wrappers: [
+          { name: 'form-field-horizontal', component: WrapperFormlyHorizontal },
+          { name: 'custom-form-field', component: WrapperCustomFormField },
+        ]
+      }
+    }
   ]
 })
 export class DynamicMappingModule {

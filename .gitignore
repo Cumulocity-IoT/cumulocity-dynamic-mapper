@@ -36,11 +36,14 @@ logs/
 bin/
 attic/*
 
-dynamic-mapping-extension/.factorypath
-dynamic-mapping-interface/.factorypath
-dynamic-mapping-service/.factorypath
+.factorypath
 set.sh
 dynamic-mapping-ui/.env
-**/.flattened-pom.xml
+.flattened-pom.xml
 dist
 node_modules
+.angular
+dynamic-mapping-ui/cypress.env.js
+dynamic-mapping-ui/cypress/videos
+dynamic-mapping-ui/cypress/screenshots
+dynamic-mapping-ui/cypress/fixtures/mqttConnectionPostRequest.json
