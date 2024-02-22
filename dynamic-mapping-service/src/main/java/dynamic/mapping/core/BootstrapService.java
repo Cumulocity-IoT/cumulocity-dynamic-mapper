@@ -129,7 +129,7 @@ public class BootstrapService {
 
         log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
         if (outputMappingEnabled) {
-            configurationRegistry.getNotificationSubscriber().initTenantClient();
+            //configurationRegistry.getNotificationSubscriber().initTenantClient();
             configurationRegistry.getNotificationSubscriber().initDeviceClient();
         }
     }
