@@ -54,9 +54,9 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     const data = {
       labels: [
         'Errors',
-        'Messages Received',
-        'Snooped Templates Total',
-        'Snooped Templates Active'
+        'Messages received',
+        'Snooped templates total',
+        'Snooped templates active'
       ],
       datasets: [
         {
@@ -162,19 +162,6 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
               weight: 'normal' as any
             }
           }
-          // title: {
-          //   align: 'left' as any,
-          //   display: true,
-          //   text: 'Messages Inbound & Outbound',
-          //   position: 'top' as any,
-          //   color: this.textColor as any,
-
-          //   // styling is applied through css to match tehrest of the Cumulocity UI
-          //   font: {
-          //     size: this.fontSize,
-          //     weight: this.fontWeight
-          //   }
-          // }
         },
         indexAxis: 'y' as any,
         color: this.textColor as any,

@@ -103,6 +103,9 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
             } catch (EvaluateRuntimeException e) {
                 log.error("Tenant {} - EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
                         payload, e);
+            } catch (Exception e) {
+                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                        payload, e);
             }
             /*
              * step 2 analyse extracted content: textual, array
