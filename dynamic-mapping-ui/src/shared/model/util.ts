@@ -57,7 +57,7 @@ export const SAMPLE_TEMPLATES_C8Y = {
  }`,
   OPERATION: `{ 
    "deviceId": "909090",
-   "decription": "New camera operation!",
+   "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
 }`
 };
@@ -91,7 +91,7 @@ export const SAMPLE_TEMPLATES_EXTERNAL = {
  }`,
   OPERATION: `{ 
    "deviceId": "909090",
-   "decription": "New camera operation!",
+   "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
   }`,
   FLAT_FILE:

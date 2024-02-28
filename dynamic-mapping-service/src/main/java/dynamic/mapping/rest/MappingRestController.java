@@ -372,7 +372,7 @@ public class MappingRestController {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
-            } else if (operation.getOperation().equals(Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS)) {
+            } else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
                 configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
             }
             return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -492,7 +492,7 @@ public class MappingRestController {
                 });
             }
         } catch (Exception ex) {
-            log.error("Tenant {} - Exception when deleting mappping {}", tenant, ex);
+            log.error("Tenant {} - Exception when deleting mapping {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
         log.info("Tenant {} - After Delete mapping: {}", tenant, id);
@@ -501,7 +501,7 @@ public class MappingRestController {
     }
 
     // TODO We might need to add the connector ID here to correlate mappings to
-    // excactly one connector
+    // exactly one connector
     @RequestMapping(value = "/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {

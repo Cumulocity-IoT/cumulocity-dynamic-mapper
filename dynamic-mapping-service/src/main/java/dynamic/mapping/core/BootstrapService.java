@@ -69,7 +69,9 @@ public class BootstrapService {
         log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
         String tenant = event.getTenant();
         configurationRegistry.getNotificationSubscriber().disconnect(tenant, false);
-        configurationRegistry.getNotificationSubscriber().deleteAllSubscriptions(tenant);
+        configurationRegistry.getNotificationSubscriber().unsubscribeTenantSubscriber(tenant);
+        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
+
 
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
@@ -96,7 +98,7 @@ public class BootstrapService {
 
         ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
-        configurationRegistry.getC8yAgent().createExtensibleProsessor(tenant);
+        configurationRegistry.getC8yAgent().createExtensibleProcessor(tenant);
         configurationRegistry.getC8yAgent().loadProcessorExtensions(tenant);
 
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry.getObjectMapper()
@@ -127,7 +129,7 @@ public class BootstrapService {
 
         log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
         if (outputMappingEnabled) {
-            configurationRegistry.getNotificationSubscriber().initTenantClient();
+            //configurationRegistry.getNotificationSubscriber().initTenantClient();
             configurationRegistry.getNotificationSubscriber().initDeviceClient();
         }
     }
@@ -152,14 +154,14 @@ public class BootstrapService {
         configurationRegistry.initializePayloadProcessorsInbound(tenant);
         connectorClient.setDispatcher(dispatcherInbound);
         connectorClient.reconnect();
-        connectorClient.submitHouskeeping();
+        connectorClient.submitHousekeeping();
 
         if (outputMappingEnabled) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
                     configurationRegistry, connectorClient);
-            configurationRegistry.getNotificationSubscriber().addSubscriber(tenant, connectorClient.getConnectorIdent(),
+            configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
                     dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
             configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
@@ -168,10 +170,10 @@ public class BootstrapService {
         return connectorClient;
     }
 
-    public void shutdownConnector(String tenant, String ident) throws ConnectorRegistryException {
-        connectorRegistry.unregisterClient(tenant, ident);
+    public void shutdownConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
+        connectorRegistry.unregisterClient(tenant, connectorIdent);
         if (outputMappingEnabled) {
-            configurationRegistry.getNotificationSubscriber().removeConnector(tenant, ident);
+            configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
         }
     }
 }

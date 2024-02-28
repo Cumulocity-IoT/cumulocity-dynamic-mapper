@@ -75,9 +75,10 @@ public class MappingComponent {
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
 
-    private Map<String, Boolean> initialized = new HashMap<>();
+    // structure: <tenant, initialized>
+    private Map<String, Boolean> initializedMappingStatus = new HashMap<>();
 
-    // structure: <tenant, < mappingId , status>>
+    // structure: <tenant, < connectorIdent , <connectorProperty , connectorValue>>>
     @Getter
     private Map<String, Map<String, Map<String, String>>> consolidatedConnectorStatus = new HashMap<>();
 
@@ -124,7 +125,7 @@ public class MappingComponent {
             tenantStatusMapping.get(tenant).put(MappingStatus.UNSPECIFIED_MAPPING_STATUS.ident,
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
-        initialized.put(tenant, true);
+        initializedMappingStatus.put(tenant, true);
         resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
         if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
@@ -140,7 +141,7 @@ public class MappingComponent {
     public void sendMappingStatus(String tenant) {
         if (configurationRegistry.getServiceConfigurations().get(tenant).sendMappingStatus) {
             subscriptionsService.runForTenant(tenant, () -> {
-                boolean initialized = this.initialized.get(tenant);
+                boolean initialized = this.initializedMappingStatus.get(tenant);
                 Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
                 MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                         .getMappingServiceRepresentations().get(tenant);
@@ -387,7 +388,7 @@ public class MappingComponent {
     public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {
         // use mappingCacheOutbound and the key filterOutbound to identify the matching
         // mappings.
-        // the need to be returend in a list
+        // the need to be returned in a list
         List<Mapping> result = new ArrayList<>();
         try {
             for (Mapping m : cacheMappingOutbound.get(tenant).values()) {

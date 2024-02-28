@@ -79,7 +79,7 @@ export class MappingTreeService {
       removeSet.forEach((property) => {
         _.unset(tree, property);
       });
-      // // if tree contains childNodes as a property, promote the childes one hierarchie up
+      // // if tree contains childNodes as a property, promote the childes one hierarchy up
       // if ("childNodes" in tree) {
       //   const childNodes = tree["childNodes"] as any;
       //   _.unset(tree, "childNodes");

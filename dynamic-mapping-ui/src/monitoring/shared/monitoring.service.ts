@@ -22,14 +22,12 @@ import { Injectable } from '@angular/core';
 import { FetchClient, InventoryService, Realtime } from '@c8y/client';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
-import { MappingService } from '../../mapping/core/mapping.service';
 
 @Injectable({ providedIn: 'root' })
 export class MonitoringService {
   constructor(
     private client: FetchClient,
     private inventory: InventoryService,
-    private mappingService: MappingService,
     private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);

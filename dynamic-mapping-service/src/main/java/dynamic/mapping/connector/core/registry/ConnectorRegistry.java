@@ -93,7 +93,7 @@ public class ConnectorRegistry {
             while (iterator.hasNext()) {
                 Entry<String, AConnectorClient> entryNext = iterator.next();
                 entryNext.getValue().disconnect();
-                entryNext.getValue().stopHouskeepingAndClose();
+                entryNext.getValue().stopHousekeepingAndClose();
                 iterator.remove();
             }
             // for (AConnectorClient client : connectorMap.values()) {
@@ -115,7 +115,7 @@ public class ConnectorRegistry {
                 // to avoid memory leaks
                 client.setDispatcher(null);
                 client.disconnect();
-                client.stopHouskeepingAndClose();
+                client.stopHousekeepingAndClose();
                 connectorMap.remove(ident);
             } else {
                 log.warn("Tenant {} - Client {} is not registered", tenant, ident);
