@@ -157,9 +157,12 @@ public class C8YNotificationSubscriber {
         Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
         if (dispatcherOutboundMap == null) {
             dispatcherOutboundMap = new HashMap<>();
+            dispatcherOutboundMap.put(ident, dispatcherOutbound);
             getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
+        } else {
+            dispatcherOutboundMap.put(ident, dispatcherOutbound);
         }
-        dispatcherOutboundMap.put(ident, dispatcherOutbound);
+
     }
 
     public void initTenantClient() {
@@ -188,14 +191,16 @@ public class C8YNotificationSubscriber {
         if (deviceSubList.size() > 0) {
             try {
                 // For each dispatcher/connector create a new connection
-                for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant).values()) {
-                    String token = createToken(DEVICE_SUBSCRIPTION,
-                            DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent()
-                                    + additionalSubscriptionIdTest);
-                    tenantDeviceToken.put(tenant, token);
-                    CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-                            client);
+                if (dispatcherOutboundMaps.get(tenant) != null) {
+                    for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant).values()) {
+                        String token = createToken(DEVICE_SUBSCRIPTION,
+                                DEVICE_SUBSCRIBER + dispatcherOutbound.getConnectorClient().getConnectorIdent()
+                                        + additionalSubscriptionIdTest);
+                        tenantDeviceToken.put(tenant, token);
+                        CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                        deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+                                client);
+                    }
                 }
 
             } catch (URISyntaxException e) {
