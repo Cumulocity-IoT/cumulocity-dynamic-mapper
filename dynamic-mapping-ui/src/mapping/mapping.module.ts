@@ -26,7 +26,6 @@ import {
   ModalModule
 } from '@c8y/ngx-components';
 import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BrokerConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
@@ -42,27 +41,16 @@ import { SnoopedTemplateRendererComponent } from './renderer/snoopedTemplate.ren
 import { StatusActivationRendererComponent } from './renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from './renderer/status-cell.renderer.component';
 import { TemplateRendererComponent } from './renderer/template.renderer.component';
-import { FormlyFieldButton } from './shared/formly/button.type.component';
-import { C8YSwitchField } from './shared/formly/c8y-switch.type.component';
-import { FieldCheckbox } from './shared/formly/checkbox/checkbox.type.component';
-import { FormlyFiller } from './shared/formly/filler.type.component';
-import { WrapperCustomFormField } from './shared/formly/form-field/custom-form.type.component';
-import { FormlyHorizontalWrapper } from './shared/formly/horizontal-wrapper.type.component';
+import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
-import { SelectComponent } from './shared/formly/select/select.type.component';
-import { FormlyTextField } from './shared/formly/text.type.component';
-import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
-import {
-  checkTopicsInboundAreValid,
-  checkTopicsOutboundAreValid
-} from './shared/util';
 import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { MappingStepperComponent } from './step-main/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './step-main/substitution/substitution-renderer.component';
 import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
+import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 
 @NgModule({
   declarations: [
@@ -85,11 +73,8 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,
-    FormlyHorizontalWrapper,
+    WrapperFormlyHorizontal,
     WrapperCustomFormField,
-    C8YSwitchField,
-    SelectComponent,
-    FieldCheckbox,
     FieldInputCustom
   ],
   imports: [
@@ -99,7 +84,7 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    BrokerConfigurationModule
+    BrokerConfigurationModule,
   ],
   exports: [],
   providers: [
@@ -111,43 +96,7 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
       path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
       component: MappingComponent
     }),
-    {
-      provide: FORMLY_CONFIG,
-      multi: true,
-      useValue: {
-        validators: [
-          {
-            name: 'checkTopicsInboundAreValid',
-            validation: checkTopicsInboundAreValid
-          },
-          {
-            name: 'checkTopicsOutboundAreValid',
-            validation: checkTopicsOutboundAreValid
-          }
-        ],
-        types: [
-          { name: 'text', component: FormlyTextField },
-          { name: 'filler', component: FormlyFiller },
-          { name: 'textarea-custom', component: FieldTextareaCustom },
-          { name: 'input-custom', component: FieldInputCustom },
-          { name: 'button', component: FormlyFieldButton },
-          { name: 'message-field', component: MessageField },
-          { name: 'c8y-switch', component: C8YSwitchField },
-          {
-            name: 'select',
-            component: SelectComponent,
-            wrappers: ['c8y-form-field']
-          },
-          { name: 'enum', extends: 'select' },
-          { name: 'checkbox', component: FieldCheckbox },
-          { name: 'boolean', extends: 'checkbox' }
-        ],
-        wrappers: [
-          { name: 'form-field-horizontal', component: FormlyHorizontalWrapper },
-          { name: 'custom-form-field', component: WrapperCustomFormField }
-        ]
-      }
-    }
   ]
 })
 export class MappingModule {}
+

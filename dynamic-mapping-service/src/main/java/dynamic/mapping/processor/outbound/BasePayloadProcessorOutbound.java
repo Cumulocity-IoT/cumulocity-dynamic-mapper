@@ -136,6 +136,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
             try {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
+                } else {
+                    log.warn("Tenant {} - Not sending message : connected {}, sendPayload {}", tenant, connectorClient.isConnected(), context.isSendPayload());
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
                 // context.getCurrentRequest().setResponse(response);

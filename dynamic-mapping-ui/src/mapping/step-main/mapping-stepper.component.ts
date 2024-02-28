@@ -32,7 +32,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { FormlyFieldConfig } from '@ngx-formly/core';
+import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -54,7 +54,7 @@ import {
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
 import { EditSubstitutionComponent } from '../edit/edit-substitution-modal.component';
-import { C8YRequest } from '../processor/prosessor.model';
+import { C8YRequest } from '../processor/processor.model';
 import { ValidationError } from '../shared/mapping.model';
 import {
   countDeviceIdentifiers,
@@ -70,6 +70,10 @@ import {
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
 import { EditorMode, StepperConfiguration } from './stepper-model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
+import { MessageField } from '../shared/formly/message.type.component';
+import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
+import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
+import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -113,9 +117,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     selectedResult: -1
   };
 
-  countDeviceIdentifers$: BehaviorSubject<number> = new BehaviorSubject<number>(
-    0
-  );
+  countDeviceIdentifiers$: BehaviorSubject<number> =
+    new BehaviorSubject<number>(0);
   propertyFormly: FormGroup = new FormGroup({});
   sourceSystem: string;
   targetSystem: string;
@@ -145,10 +148,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     public mappingService: MappingService,
     public brokerConfigurationService: BrokerConfigurationService,
     private alertService: AlertService,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+    private configService: FormlyConfig
   ) {}
 
   ngOnInit() {
+    console.log('Formly to be updated:', this.configService);
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
@@ -201,8 +206,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace column-right-border',
             key: 'pathSource',
-            type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldInputCustom, // 'input-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Source',
               class: 'input-sm animate-background',
@@ -248,8 +253,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-5 text-monospace column-left-border',
             key: 'pathTarget',
-            type: 'input-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldInputCustom, // 'input-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Target',
               disabled:
@@ -289,7 +294,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className:
               'col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24',
-            type: 'message-field',
+            type: MessageField, //  'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.sourceExpression.msgTxt,
@@ -301,7 +306,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             // message field target
             className: 'col-lg-5 reduced-top column-left-border not-p-b-24',
-            type: 'message-field',
+            type: MessageField, //  'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.targetExpression.msgTxt,
@@ -316,17 +321,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            // dummy row to start new row
-            className: 'row',
-            key: 'textField',
-            type: 'text'
-          },
-          {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
             key: 'sourceExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldTextareaCustom, // 'textarea-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               class: 'input-sm',
               disabled: true,
@@ -344,8 +343,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 text-monospace font-smaller column-left-border',
             key: 'targetExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-field'],
+            type: FieldTextareaCustom, // 'textarea-custom',
+            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               class: 'input-sm',
               disabled: true,
@@ -391,7 +390,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       readOnly: true
     };
 
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
 
     this.extensionEvents$.subscribe((events) => {
       console.log('New events from extension', events);
@@ -606,7 +605,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
       this.enrichTemplates();
       this.extensions =
-        await this.brokerConfigurationService.getProcessorExtensions() as any;
+        (await this.brokerConfigurationService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
         if (!this.extensions[this.mapping.extension.name]) {
           const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;
@@ -833,7 +832,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
-    this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+    this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
     console.log('Deleted substitution', this.mapping.substitutions.length);
   }
 
@@ -866,7 +865,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           this.substitutionModel.pathTarget = editedSub.pathTarget;
         }
       });
-      this.countDeviceIdentifers$.next(countDeviceIdentifiers(this.mapping));
+      this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
       console.log('Edited substitution', this.mapping.substitutions.length);
     }
   }
@@ -915,7 +914,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.countDeviceIdentifers$.complete();
+    this.countDeviceIdentifiers$.complete();
     this.extensionEvents$.complete();
     this.onDestroy$.complete();
   }

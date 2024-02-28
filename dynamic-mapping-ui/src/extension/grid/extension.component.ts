@@ -58,7 +58,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
       );
     this.loadExtensions();
     this.extensions$.subscribe((exts) => {
-      console.log('New extenions:', exts);
+      console.log('New extensions:', exts);
     });
     this.externalExtensionEnabled = (
       await this.brokerConfigurationService.getServiceConfiguration()

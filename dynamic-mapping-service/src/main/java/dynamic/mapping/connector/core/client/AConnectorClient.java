@@ -108,13 +108,14 @@ public abstract class AConnectorClient {
 
     private Future<?> initializeTask;
 
+    // structure < subscriptionTopic, numberMappings >
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     private Instant start = Instant.now();
 
     @Getter
     @Setter
-    public ConnectorConfiguration configuration;
+    public ConnectorConfiguration connectorConfiguration;
 
     @Getter
     @Setter
@@ -137,7 +138,7 @@ public abstract class AConnectorClient {
     public abstract ConnectorSpecification getSpecification();
 
     public void loadConfiguration() {
-        configuration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -172,9 +173,9 @@ public abstract class AConnectorClient {
         sendConnectorLifecycle();
     }
 
-    public void submitHouskeeping() {
+    public void submitHousekeeping() {
         log.info("Tenant {} - Called submitHousekeeping()", tenant);
-        housekeepingExecutor.scheduleAtFixedRate(() -> runHouskeeping(), 0, 30,
+        housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, 30,
                 TimeUnit.SECONDS);
     }
 
@@ -188,7 +189,7 @@ public abstract class AConnectorClient {
      * valid
      ***/
     public boolean shouldConnect() {
-        return isConfigValid(configuration) && configuration.isEnabled();
+        return isConfigValid(connectorConfiguration) && connectorConfiguration.isEnabled();
     }
 
     /***
@@ -238,7 +239,7 @@ public abstract class AConnectorClient {
      ***/
     public abstract void publishMEAO(ProcessingContext<?> context);
 
-    public void runHouskeeping() {
+    public void runHousekeeping() {
         try {
             Instant now = Instant.now();
             // only log this for the first 180 seconds to reduce log amount
@@ -261,7 +262,7 @@ public abstract class AConnectorClient {
 
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
-            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(configuration)) {
+            if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
                 connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
             }
             sendConnectorLifecycle();
@@ -358,7 +359,7 @@ public abstract class AConnectorClient {
                 }
                 updatedMappingSubs.add(1);
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos.ordinal());
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
@@ -388,7 +389,7 @@ public abstract class AConnectorClient {
             // unsubscribe topics not used
             getActiveSubscriptions().keySet().forEach((topic) -> {
                 if (!updatedSubscriptionCache.containsKey(topic)) {
-                    log.info("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
+                    log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
                     try {
                         unsubscribe(topic);
                     } catch (Exception e1) {
@@ -403,7 +404,7 @@ public abstract class AConnectorClient {
                 if (!getActiveSubscriptions().containsKey(topic)) {
                     int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
-                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
+                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
                     } catch (MqttException e1) {
@@ -413,7 +414,8 @@ public abstract class AConnectorClient {
                 }
             });
             activeSubscriptions = updatedSubscriptionCache;
-            log.info("Tenant {} - Updating subscriptions to topics was successful", tenant);
+            log.info("Tenant {} - Updating subscriptions to topics was successful, activeSubscriptions on topic {}",
+                    tenant, getActiveSubscriptions().size());
         }
     }
 
@@ -421,15 +423,16 @@ public abstract class AConnectorClient {
         return activeSubscriptions;
     }
 
-    public void stopHouskeepingAndClose() {
+    public void stopHousekeepingAndClose() {
         List<Runnable> stoppedTask = this.housekeepingExecutor.shutdownNow();
         // release all resources
         close();
-        log.info("Tenant {} - Shutdown houskeepingTasks: {}", tenant, stoppedTask);
+        log.info("Tenant {} - Shutdown housekeepingTasks: {}", tenant, stoppedTask);
     }
 
     public void sendConnectorLifecycle() {
-        if (serviceConfiguration.sendConnectorLifecycle) {
+        // stop sending lifecycle event if connector is disabled
+        if (serviceConfiguration.sendConnectorLifecycle && connectorConfiguration.enabled) {
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);

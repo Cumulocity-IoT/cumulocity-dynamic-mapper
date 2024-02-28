@@ -81,7 +81,7 @@
       {
         "resolve2ExternalId": false,
         "pathSource": "bus_opp",
-        "pathTarget": "decription",
+        "pathTarget": "description",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },
@@ -104,7 +104,7 @@
     "targetAPI": "OPERATION",
     "filterOutbound": "bus_opp",
     "publishTopic": "opp/outbound/#",
-    "target": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation!\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
+    "target": "{\"c8y_Id\":\"909090\",\"description\":\"dummy operation!\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
     "templateTopic": "",
     "updateExistingDevice": false,
     "mappingType": "JSON",

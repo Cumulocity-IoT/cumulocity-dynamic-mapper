@@ -35,6 +35,7 @@ export interface ConnectorConfiguration {
   ident: string;
   connectorType: string;
   enabled: boolean;
+  status?: any;
   name: string;
   properties: { [name: string]: any };
 }
@@ -87,7 +88,7 @@ export enum Operation {
   RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
   RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
   RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
-  REFRESH_NOTFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTFICATIONS_SUBSCRIPTIONS'
+  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS'
 }
 
 export enum StatusEventTypes {

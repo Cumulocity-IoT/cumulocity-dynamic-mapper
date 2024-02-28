@@ -40,7 +40,7 @@ public class C8YRequest {
     private API targetAPI;
     private Exception error;
     // this property documents if a C8Y request was already submitted and is created only for documentation/testing purpose.
-    // this happend when a device is created implicitly with mapping.createNonExistingDevice == true
+    // this happens when a device is created implicitly with mapping.createNonExistingDevice == true
     // private boolean alreadySubmitted;
     public boolean hasError() {
         return error != null;

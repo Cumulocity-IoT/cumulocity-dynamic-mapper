@@ -84,7 +84,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                         .compareTo(e2.getValue()))
                 .get().getKey();
 
-        // the following stmt does not wokr for mapping_type protobuf
+        // the following stmt does not work for mapping_type protobuf
         // String deviceIdentifierMapped2PathTarget2 =
         // MappingRepresentation.findDeviceIdentifier(mapping).pathTarget;
         // using alternative method

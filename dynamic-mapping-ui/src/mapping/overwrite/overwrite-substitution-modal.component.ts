@@ -62,7 +62,7 @@ export class OverwriteSubstitutionModalComponent
 
   ngOnInit() {
     this.message1 = this.translateService.instant(
-      gettext('You are about to overwrite an exting substitution:')
+      gettext('You are about to overwrite an existing substitution:')
     );
     this.message2 = this.translateService.instant(
       gettext('Do you want to proceed?')

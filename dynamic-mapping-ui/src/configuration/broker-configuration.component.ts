@@ -116,11 +116,11 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     await this.brokerConfigurationService.startConnectorConfigurations();
   }
 
-  async clickedReconnect2NotificationEnpoint() {
+  async clickedReconnect2NotificationEndpoint() {
     const response1 = await this.brokerConfigurationService.runOperation(
-      Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS
+      Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
     );
-    console.log('Details reconnect2NotificationEnpoint', response1);
+    console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === 201) {
       this.alert.success(gettext('Reconnect successful!'));
     } else {
@@ -172,7 +172,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alert.warning(
-      gettext('Review properies carefully, e.g. client_id must be different across different client connectors to the same broker.')
+      gettext('Review properties, e.g. client_id must be different across different client connectors to the same broker.')
     );
 
     const initialState = {
@@ -290,13 +290,13 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     await this.loadData();
   }
 
-  async onConfigurationToogle(index) {
+  async onConfigurationToggle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.brokerConfigurationService.runOperation(
       configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
       { connectorIdent: configuration.ident }
     );
-    console.log('Details toogle activation to broker', response1);
+    console.log('Details toggle activation to broker', response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
       this.alert.success(gettext('Connection updated successful'));

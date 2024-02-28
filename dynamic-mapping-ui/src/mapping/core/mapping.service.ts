@@ -45,7 +45,7 @@ import {
   ProcessingContext,
   ProcessingType,
   SubstituteValue
-} from '../processor/prosessor.model';
+} from '../processor/processor.model';
 import { C8YAPISubscription } from '../shared/mapping.model';
 
 @Injectable({ providedIn: 'root' })
@@ -88,20 +88,24 @@ export class MappingService {
     ) {
       const result: Mapping[] = [];
       const filter: object = {
-        pageSize: 100,
+        pageSize: 200,
         withTotalPages: true,
-        type: MAPPING_TYPE
       };
-      let query: any = { 'd11r_mapping.direction': direction };
+      const query: any = {
+        __and: [
+          { 'd11r_mapping.direction': direction },
+          { 'type': MAPPING_TYPE }
+        ]
+      };
 
-      if (direction == Direction.INBOUND) {
-        query = this.queriesUtil.addOrFilter(query, {
-          __not: { __has: 'd11r_mapping.direction' }
-        });
-      }
-      query = this.queriesUtil.addAndFilter(query, {
-        type: { __has: 'd11r_mapping' }
-      });
+    //   if (direction == Direction.INBOUND) {
+    //     query = this.queriesUtil.addOrFilter(query, {
+    //       __not: { __has: 'd11r_mapping.direction' }
+    //     });
+    //   }
+    //   query = this.queriesUtil.addAndFilter(query, {
+    //     type: { __has: 'd11r_mapping' }
+    //   });
 
       const { data } = await this.inventory.listQuery(query, filter);
 

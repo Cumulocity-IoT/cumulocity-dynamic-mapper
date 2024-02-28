@@ -26,7 +26,6 @@ import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
-import { SharedService } from './shared.service';
 
 @NgModule({
   declarations: [
@@ -41,9 +40,6 @@ import { SharedService } from './shared.service';
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe
-  ],
-  providers:[SharedService]
+  ]
 })
 export class SharedModule {}
-
-
