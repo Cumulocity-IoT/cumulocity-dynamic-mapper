@@ -246,7 +246,6 @@ public class MQTTClient extends AConnectorClient {
                             + mqttPort;
                     // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
                     // MemoryPersistence());
-
                     Mqtt3SimpleAuthBuilder simpleAuthBuilder = Mqtt3SimpleAuth.builder();
                     Complete simpleAuthComplete = null;
                     if (!StringUtils.isEmpty(user)) {
@@ -397,7 +396,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        log.info("Tenant {} - Diconnecting from MQTT broker: {}", tenant,
+        log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
         try {
             if (isConnected()) {
@@ -440,39 +439,27 @@ public class MQTTClient extends AConnectorClient {
         log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
         Mqtt3SubAck subAck = null;
         sendSubscriptionEvents(topic, "Subscribing");
-        // if (qos != null) {
-        // Mqtt3BlockingClient.Mqtt3Publishes publishes =
-        // mqttClient.subscribeWith().addSubscription().;
-        // Mqtt3Subscribe subscribe = Mqtt3Subscribe.builder()
-        // .addSubscription(Mqtt3Subscription.builder()
-        // .
-        // .topicFilter("topic").qos(MqttQos.AT_LEAST_ONCE)
-        // .build())
-        // .build();
-
-        // Mqtt3Subscribe sub =
-        // Mqtt3Subscribe.builder().topicFilter(topic).qos(MqttQos.fromCode(qos)).build();
-        // subAck = mqttClient.subscribe(sub);
-        // .callback(publish -> {
-        // boolean success = false;
-
-        // // Some logic & conditions
-
-        // if (success) {
-        // publish.acknowledge(); // Conditionally acknowledge the message
-        // }
-        // })
-        // .send().join();
-        // ack = mqttClient.subscribe(topic, qos);
-
-        // }
-
-        // else
-        // ack = mqttClient.subscribe(topic);
-        // log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
-        // if (!subAck..equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
-        // throw new ConnectorException(ack.getReturnCode().toString());
-        // }
+        if (qos != null) {
+            //We don't need to add a handler on subscribe using hive client
+            mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send();
+            Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send().thenRun(() -> {
+                log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+            }).exceptionally(throwable -> {
+                log.error("Tenant {} - Failed to subscribe on topic {} with error: ",tenant,topic,throwable.getMessage());
+                return null;
+            });
+        } else {
+            //We don't need to add a handler on subscribe using hive client
+            mqttClient.subscribeWith().topicFilter(topic).send();
+            Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send().thenRun(() -> {
+                log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+            }).exceptionally(throwable -> {
+                log.error("Tenant {} - Failed to subscribe on topic {} with error: ",tenant,topic,throwable.getMessage());
+                return null;
+            });
+        }
     }
 
     public void unsubscribe(String topic) throws Exception {
