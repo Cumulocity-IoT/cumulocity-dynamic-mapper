@@ -127,13 +127,15 @@ public class C8YNotificationSubscriber {
     //
     // section 1: initializing tenant client and device client
     //
+    /**
     public void initTenantClient() {
         // Subscribe on Tenant do get informed when devices get deleted/added
         String tenant = subscriptionsService.getTenant();
         log.info("Tenant {} - Initializing Operation Subscriptions...", tenant);
-        subscribeTenantAndConnect(subscriptionsService.getTenant());
+        //subscribeTenantAndConnect(subscriptionsService.getTenant());
     }
      **/
+
     public void initDeviceClient() {
         String tenant = subscriptionsService.getTenant();
         Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
