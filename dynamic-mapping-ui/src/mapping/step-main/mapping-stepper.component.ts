@@ -290,6 +290,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       },
       {
+        fieldGroupClassName: 'row',
         fieldGroup: [
           {
             className:
