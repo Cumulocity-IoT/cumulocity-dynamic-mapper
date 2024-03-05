@@ -111,12 +111,22 @@ public class C8YNotificationSubscriber {
     private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
     private Map<String, String> tenantToken = new HashMap<>();
 
+
+    public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
+        Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
+        if (dispatcherOutboundMap == null) {
+            dispatcherOutboundMap = new HashMap<>();
+            dispatcherOutboundMap.put(ident, dispatcherOutbound);
+            getDispatcherOutboundMaps().put(tenant, dispatcherOutboundMap);
+        } else {
+            dispatcherOutboundMap.put(ident, dispatcherOutbound);
+        }
+
+    }
+
     //
     // section 1: initializing tenant client and device client
     //
-
-    /* Not needed anymore */
-    /**
     public void initTenantClient() {
         // Subscribe on Tenant do get informed when devices get deleted/added
         String tenant = subscriptionsService.getTenant();
@@ -142,16 +152,19 @@ public class C8YNotificationSubscriber {
         if (deviceSubList.size() > 0) {
             try {
                 // For each dispatcher/connector create a new connection
-                for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant).values()) {
-                    String tokenSeed = DEVICE_SUBSCRIBER
-                            + dispatcherOutbound.getConnectorClient().getConnectorIdent()
-                            + additionalSubscriptionIdTest;
-                    String token = createToken(DEVICE_SUBSCRIPTION,
-                            tokenSeed);
-                    deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
-                    CustomWebSocketClient client = connect(token, dispatcherOutbound);
-                    deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
-                            client);
+                if (dispatcherOutboundMaps.get(tenant) != null) {
+                    for (AsynchronousDispatcherOutbound dispatcherOutbound : dispatcherOutboundMaps.get(tenant).values()) {
+                      String tokenSeed = DEVICE_SUBSCRIBER
+                              + dispatcherOutbound.getConnectorClient().getConnectorIdent()
+                              + additionalSubscriptionIdTest;
+                      String token = createToken(DEVICE_SUBSCRIPTION,
+                              tokenSeed);
+                      deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
+                      CustomWebSocketClient client = connect(token, dispatcherOutbound);
+                      deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
+                              client);
+
+                  }
                 }
             } catch (URISyntaxException e) {
                 log.error("Tenant {} - Error connecting device subscription: {}", tenant, e.getLocalizedMessage());
