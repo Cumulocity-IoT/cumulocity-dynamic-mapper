@@ -232,11 +232,10 @@ public class MQTTClient extends AConnectorClient {
                     connOpts.setCleanSession(true);
                     connOpts.setAutomaticReconnect(false);
                     // log.info("Tenant {} - DANGEROUS-LOG password: {}", tenant, password);
-                    if (!StringUtils.isEmpty(user)
-                            && !StringUtils.isEmpty(password)) {
+                    if (!StringUtils.isEmpty(user))
                         connOpts.setUserName(user);
+                    if ( !StringUtils.isEmpty(password))
                         connOpts.setPassword(password.toCharArray());
-                    }
                     if (useSelfSignedCertificate) {
                         log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
                         connOpts.setSocketFactory(sslSocketFactory);
