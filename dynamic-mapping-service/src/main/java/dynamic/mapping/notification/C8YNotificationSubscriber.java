@@ -501,11 +501,12 @@ public class C8YNotificationSubscriber {
         // Remove Dispatcher from list
         if(this.dispatcherOutboundMaps.get(tenant) != null)
             this.dispatcherOutboundMaps.get(tenant).remove(connectorIdent);
-        if(this.deviceClientMap.get(tenant) != null)
+        if(this.deviceClientMap.get(tenant) != null) {
             // Close WS connection for connector
             this.deviceClientMap.get(tenant).get(connectorIdent).close();
             // Remove client from client Map
             this.deviceClientMap.get(tenant).remove(connectorIdent);
+        }
         if (this.dispatcherOutboundMaps.get(tenant) != null && dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
             disconnect(tenant, false);
     }
