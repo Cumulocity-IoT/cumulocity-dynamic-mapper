@@ -267,7 +267,7 @@ public abstract class AConnectorClient {
             }
             sendConnectorLifecycle();
         } catch (Exception ex) {
-            log.error("Tenant {} - Error during house keeping execution: {}", tenant, ex);
+            log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
     }
 
@@ -302,7 +302,7 @@ public abstract class AConnectorClient {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
                 } catch (Exception e) {
-                    log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
+                    log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
                             mapping.subscriptionTopic,
                             e);
                 }
@@ -341,9 +341,9 @@ public abstract class AConnectorClient {
                         mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (MqttException e1) {
-                    log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
-                            mapping.subscriptionTopic, e1);
+                } catch (MqttException exp) {
+                    log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
+                            mapping.subscriptionTopic, exp);
                 }
             } else if (subscriptionTopicChanged && activeMapping != null) {
                 MutableInt activeMappingSubs = getActiveSubscriptions()
@@ -352,9 +352,9 @@ public abstract class AConnectorClient {
                 if (activeMappingSubs.intValue() <= 0) {
                     try {
                         unsubscribe(mapping.subscriptionTopic);
-                    } catch (Exception e) {
-                        log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant,
-                                mapping.subscriptionTopic, e);
+                    } catch (Exception exp) {
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
+                                mapping.subscriptionTopic, exp);
                     }
                 }
                 updatedMappingSubs.add(1);
@@ -363,9 +363,9 @@ public abstract class AConnectorClient {
                             mapping.qos.ordinal());
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                    } catch (MqttException e1) {
-                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant,
-                                mapping.subscriptionTopic, e1);
+                    } catch (MqttException exp) {
+                        log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
+                                mapping.subscriptionTopic, exp);
                     }
                 }
             }
@@ -392,9 +392,9 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
                     try {
                         unsubscribe(topic);
-                    } catch (Exception e1) {
-                        log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", topic, e1);
-                        throw new RuntimeException(e1);
+                    } catch (Exception exp) {
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", topic, exp);
+                        throw new RuntimeException(exp);
                     }
                 }
             });
@@ -407,9 +407,9 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
-                    } catch (MqttException e1) {
-                        log.error("Tenant {} - Exception when subscribing to topic: {}, {}", tenant, topic, e1);
-                        throw new RuntimeException(e1);
+                    } catch (MqttException exp) {
+                        log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
+                        throw new RuntimeException(exp);
                     }
                 }
             });

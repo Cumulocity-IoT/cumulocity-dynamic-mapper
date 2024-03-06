@@ -157,13 +157,13 @@ public class MQTTClient extends AConnectorClient {
                 sslSocketFactory = sslContext.getSocketFactory();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
-                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS!", tenant,
+                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
@@ -277,11 +277,11 @@ public class MQTTClient extends AConnectorClient {
                 }
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace:", tenant, e);
+                    log.error("Tenant {} - Stacktrace: ", tenant, e);
                 }
                 successful = false;
             }
@@ -304,7 +304,7 @@ public class MQTTClient extends AConnectorClient {
             try {
                 mqttClient.close();
             } catch (MqttException e) {
-                log.error("Tenant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on closing mqttClient {}: ", tenant, e.getMessage(), e);
             }
         }
     }
@@ -356,7 +356,7 @@ public class MQTTClient extends AConnectorClient {
                         try {
                             mqttClient.unsubscribe(topic);
                         } catch (MqttException e) {
-                            log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, topic, e);
+                            log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant, topic, e);
                         }
 
                     }

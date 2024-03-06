@@ -51,7 +51,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onError(Exception e) {
-        log.error("Tenant {} - WebSocket error:", tenant, e);
+        log.error("Tenant {} - WebSocket error: ", tenant, e);
         this.callback.onError(e);
     }
 }

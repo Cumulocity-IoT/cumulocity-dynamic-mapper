@@ -143,7 +143,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onError(Throwable t) {
-        log.error("Tenant {} - We got an exception: {}", connectorClient.getTenant(), t);
+        log.error("Tenant {} - We got an exception: ", connectorClient.getTenant(), t);
     }
 
     @Override
@@ -263,7 +263,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                     e.getMessage());
-                            log.debug("Tenant {} - Message Stacktrace:", tenant, e);
+                            log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {

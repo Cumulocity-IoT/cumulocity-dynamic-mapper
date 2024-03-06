@@ -80,10 +80,10 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 Expressions expr = Expressions.parse(ps);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}", context.getTenant(), substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}: ", context.getTenant(), substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}", context.getTenant(),
+                log.error("Tenant {} -EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
                         substitution.pathSource,
                         payload, e);
             }

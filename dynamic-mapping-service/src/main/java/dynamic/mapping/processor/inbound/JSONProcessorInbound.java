@@ -98,13 +98,13 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                 Expressions expr = Expressions.parse(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             } catch (Exception e) {
-                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
