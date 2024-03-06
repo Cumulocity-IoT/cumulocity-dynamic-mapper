@@ -279,7 +279,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                        log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
@@ -334,7 +334,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
                 error.append("Could not map payload: " + targetAPI + "/" + payload);
             } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {} {} {}", tenant, targetAPI, payload, s);
+                log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
                 error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
             }
             return rt;
@@ -374,7 +374,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     log.info("Tenant {} - Device updated: {}", tenant, mor);
                 }
             } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {} {}", tenant, currentRequest.getRequest(), s);
+                log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(), s);
                 error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
             }
             return mor;
@@ -422,7 +422,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions!", tenant,
+                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ", tenant,
                         e);
             }
         }
