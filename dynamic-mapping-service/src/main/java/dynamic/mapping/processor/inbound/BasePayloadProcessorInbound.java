@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
+
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -119,7 +122,8 @@ public abstract class BasePayloadProcessorInbound<T> {
                         int last = postProcessingCache.get(pathTarget).size() - 1;
                         substituteValue = postProcessingCache.get(pathTarget).get(last).clone();
                     }
-                    log.warn("Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",tenant,
+                    log.warn("Tenant {} - During the processing of this pathTarget: {} a repair strategy: {} was used.",
+                            tenant,
                             pathTarget, substituteValue.repairStrategy);
                 }
 
@@ -203,7 +207,8 @@ public abstract class BasePayloadProcessorInbound<T> {
                 log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                         postProcessingCache.size());
             }
-            log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget, mapping.targetAPI,
+            log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
+                    mapping.targetAPI,
                     deviceEntries.size());
             i++;
         }
@@ -224,27 +229,31 @@ public abstract class BasePayloadProcessorInbound<T> {
         // type.equals(MappingType.PROTOBUF_STATIC))
         // && (subValueMissing || subValueNull)))
 
-        if ("$".equals(keys)) {
-            Object replacement = sub.typedValue();
-            if (replacement instanceof Map<?, ?>) {
-                Map<String, Object> rm = (Map<String, Object>) replacement;
-                for (Map.Entry<String, Object> entry : rm.entrySet()) {
-                    jsonObject.put("$", entry.getKey(), entry.getValue());
+        try {
+            if ("$".equals(keys)) {
+                Object replacement = sub.typedValue();
+                if (replacement instanceof Map<?, ?>) {
+                    Map<String, Object> rm = (Map<String, Object>) replacement;
+                    for (Map.Entry<String, Object> entry : rm.entrySet()) {
+                        jsonObject.put("$", entry.getKey(), entry.getValue());
+                    }
                 }
-            }
-        } else {
-            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-                jsonObject.delete(keys);
-            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-                boolean pathIsNested = keys.contains(".") || keys.contains("[");
-                if (pathIsNested) {
-                    throw new JSONException("Can only create new nodes ion the root level!");
-                }
-                jsonObject.put("$", keys, sub.typedValue());
             } else {
-                jsonObject.set(keys, sub.typedValue());
+                if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                        (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+                    jsonObject.delete(keys);
+                } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                    boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                    if (pathIsNested) {
+                        throw new JSONException("Can only create new nodes ion the root level!");
+                    }
+                    jsonObject.put("$", keys, sub.typedValue());
+                } else {
+                    jsonObject.set(keys, sub.typedValue());
+                }
             }
+        } catch (PathNotFoundException e) {
+            throw new PathNotFoundException(MessageFormat.format("Path: \"{0}\" not found!", keys));
         }
     }
 

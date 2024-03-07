@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
+
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,7 +140,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
-                    log.warn("Tenant {} - Not sending message : connected {}, sendPayload {}", tenant, connectorClient.isConnected(), context.isSendPayload());
+                    log.warn("Tenant {} - Not sending message : connected {}, sendPayload {}", tenant,
+                            connectorClient.isConnected(), context.isSendPayload());
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
                 // context.getCurrentRequest().setResponse(response);
@@ -169,17 +173,21 @@ public abstract class BasePayloadProcessorOutbound<T> {
         // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
         // type.equals(MappingType.PROTOBUF_STATIC))
         // && (subValueMissing || subValueNull)))
-        if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
-                (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
-            jsonObject.delete(keys);
-        } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
-            boolean pathIsNested = keys.contains(".") || keys.contains("[");
-            if (pathIsNested) {
-                throw new JSONException("Can only crrate new nodes ion the root level!");
+        try {
+            if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
+                    (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
+                jsonObject.delete(keys);
+            } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                boolean pathIsNested = keys.contains(".") || keys.contains("[");
+                if (pathIsNested) {
+                    throw new JSONException("Can only crrate new nodes ion the root level!");
+                }
+                jsonObject.put("$", keys, sub.typedValue());
+            } else {
+                jsonObject.set(keys, sub.typedValue());
             }
-            jsonObject.put("$", keys, sub.typedValue());
-        } else {
-            jsonObject.set(keys, sub.typedValue());
+        } catch (PathNotFoundException e) {
+            throw new PathNotFoundException(MessageFormat.format("Path: \"{0}\" not found!", keys));
         }
     }
 
