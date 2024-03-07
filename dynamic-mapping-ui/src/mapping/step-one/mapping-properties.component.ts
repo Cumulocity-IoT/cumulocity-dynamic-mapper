@@ -291,7 +291,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Create Non Existing Device',
+              label: 'Create non existing device',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
@@ -394,7 +394,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Map Device Identifier',
+              label: 'Map device identifier',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               switchMode: true,
