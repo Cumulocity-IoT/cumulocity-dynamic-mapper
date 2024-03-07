@@ -131,6 +131,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   snoopedTemplateCounter: number = 0;
   step: any;
+  templatesInitialized: boolean = false;
 
   @ViewChild('editorSource', { static: false })
   editorSource: JsonEditor2Component;
@@ -488,6 +489,16 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionFormly.get('pathTarget').setValue(path);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onTemplateSourceChanged(content: any) {
+    // console.log(`onTemplateSourceChanged changed: ${JSON.stringify(content.text)}`,content );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onTemplateTargetChanged(content: any) {
+    // console.log(`onTemplateTargetChanged changed: ${JSON.stringify(content)}`);
+  }
+
   async updateTargetExpressionResult(path: string) {
     try {
       this.substitutionModel.targetExpression = {
@@ -707,6 +718,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
+    } else if (this.step == 'Define templates and substitutions') {
+      this.mapping = this.getCurrentMapping(false);
     }
     event.stepper.previous();
   }
@@ -716,7 +729,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping.templateTopicSample
     );
 
-    if (this.stepperConfiguration.editorMode == EditorMode.CREATE) {
+    if (
+      this.stepperConfiguration.editorMode == EditorMode.CREATE &&
+      this.templatesInitialized == false
+    ) {
+      this.templatesInitialized = true;
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.templateSource = expandExternalTemplate(
           JSON.parse(getExternalTemplate(this.mapping)),

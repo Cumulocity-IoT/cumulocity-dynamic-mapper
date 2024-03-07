@@ -98,6 +98,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
+    delete (this.content as any).text;
     this.editor = new JSONEditor({
       target: this.jsonEditorContainer.nativeElement,
       props: {
@@ -126,10 +127,6 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             items.findIndex((i) => i['text'] === 'table'),
             1
           );
-          // items.splice(
-          //   items.findIndex((i) => i["className"] === "jse-sort"),
-          //   1
-          // );
           items.splice(
             items.findIndex((i) => i['className'] === 'jse-transform'),
             1
