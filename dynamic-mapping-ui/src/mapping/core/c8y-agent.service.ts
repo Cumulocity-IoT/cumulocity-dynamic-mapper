@@ -32,7 +32,7 @@ import { AlertService } from '@c8y/ngx-components';
 import { API } from '../../shared';
 import { FacadeIdentityService } from './facade/facade-identity.service';
 import { FacadeInventoryService } from './facade/facade-inventory.service';
-import { ProcessingContext } from '../processor/prosessor.model';
+import { ProcessingContext } from '../processor/processor.model';
 import { FacadeAlarmService } from './facade/facade-alarm.service';
 import { FacadeEventService } from './facade/facade-event.service';
 import { FacadeMeasurementService } from './facade/facade-measurement.service';

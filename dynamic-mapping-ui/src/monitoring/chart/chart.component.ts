@@ -26,7 +26,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   subscription: object;
   statusMappingChart: Chart;
   textColor: string;
-  fontFamiliy: string;
+  fontFamily: string;
   fontWeight: string;
   fontSize: number;
 
@@ -37,7 +37,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     this.textColor = getComputedStyle(root)
       .getPropertyValue('--c8y-text-color')
       .trim();
-    this.fontFamiliy = getComputedStyle(root)
+    this.fontFamily = getComputedStyle(root)
       .getPropertyValue('--c8y-font-family-sans-serif')
       .trim();
     this.fontWeight = getComputedStyle(root)
@@ -54,9 +54,9 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
     const data = {
       labels: [
         'Errors',
-        'Messages Received',
-        'Snooped Templates Total',
-        'Snooped Templates Active'
+        'Messages received',
+        'Snooped templates total',
+        'Snooped templates active'
       ],
       datasets: [
         {
@@ -158,23 +158,10 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
             display: true,
             position: 'left' as any,
             font: {
-              family: this.fontFamiliy,
+              family: this.fontFamily,
               weight: 'normal' as any
             }
           }
-          // title: {
-          //   align: 'left' as any,
-          //   display: true,
-          //   text: 'Messages Inbound & Outbound',
-          //   position: 'top' as any,
-          //   color: this.textColor as any,
-
-          //   // styling is applied through css to match tehrest of the Cumulocity UI
-          //   font: {
-          //     size: this.fontSize,
-          //     weight: this.fontWeight
-          //   }
-          // }
         },
         indexAxis: 'y' as any,
         color: this.textColor as any,

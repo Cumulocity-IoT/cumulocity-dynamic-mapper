@@ -279,7 +279,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             }
                         }
                     } catch (Exception e) {
-                        log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                        log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
                                 connectorName, e);
                     }
                     return certResult;
@@ -334,7 +334,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                 log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
                 error.append("Could not map payload: " + targetAPI + "/" + payload);
             } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {} {} {}", tenant, targetAPI, payload, s);
+                log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
                 error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
             }
             return rt;
@@ -374,7 +374,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     log.info("Tenant {} - Device updated: {}", tenant, mor);
                 }
             } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {} {}", tenant, currentRequest.getRequest(), s);
+                log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(), s);
                 error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
             }
             return mor;
@@ -386,7 +386,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void loadProcessorExtensions(String tenant) {
-        ClassLoader inernalClassloader = C8YAgent.class.getClassLoader();
+        ClassLoader internalClassloader = C8YAgent.class.getClassLoader();
         ClassLoader externalClassLoader = null;
 
         for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
@@ -412,17 +412,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     FileOutputStream outputStream = new FileOutputStream(tempFile);
                     IOUtils.copy(downloadInputStream, outputStream);
 
-                    // step 3 parse list of extentions
+                    // step 3 parse list of extensions
                     URL[] urls = { tempFile.toURI().toURL() };
                     externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
                             external);
                 } else {
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, inernalClassloader,
+                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occured, When loading extension, starting without extensions!", tenant,
+                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ", tenant,
                         e);
             }
         }
@@ -570,6 +570,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
+            amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
             amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
@@ -585,10 +586,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         return amo;
     }
 
-    public void createExtensibleProsessor(String tenant) {
+    public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
-        log.info("Tenant {} - create ExtensibleProsessor {}", tenant, extensibleProcessor);
+        log.info("Tenant {} - create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();

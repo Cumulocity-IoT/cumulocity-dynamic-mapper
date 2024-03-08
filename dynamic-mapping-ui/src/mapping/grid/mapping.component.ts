@@ -210,7 +210,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   // refresh: EventEmitter<any> = new EventEmitter();
 
   pagination: Pagination = {
-    pageSize: 3,
+    pageSize: 30,
     currentPage: 1
   };
   actionControls: ActionControl[] = [];
@@ -277,7 +277,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Toogle Activation',
+        text: 'Toggle Activation',
         icon: 'toggle-on',
         callback: this.activateMapping.bind(this)
       },
@@ -295,7 +295,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Toogle Activation',
+        text: 'Toggle Activation',
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this)
       },
@@ -394,7 +394,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     this.mappingToUpdate = mapping;
-    console.log('Add mappping', this.mappings);
+    console.log('Add mapping', this.mappings);
     // this.refresh.emit();
     this.showConfigMapping = true;
   }
@@ -434,7 +434,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
-    // for backward compatability set direction of mapping to inbound
+    // for backward compatibility set direction of mapping to inbound
     if (
       !this.mappingToUpdate.direction ||
       this.mappingToUpdate.direction == null
@@ -535,7 +535,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onCommitMapping(mapping: Mapping) {
-    // test if new/updated mapping was commited or if cancel
+    // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
 
     console.log('Changed mapping:', mapping);
@@ -668,8 +668,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.exportMappings(mappings2Export);
   }
 
-  async exportSingle(mappping: Mapping) {
-    const mappings2Export = [mappping];
+  async exportSingle(mapping: Mapping) {
+    const mappings2Export = [mapping];
     this.exportMappings(mappings2Export);
   }
 

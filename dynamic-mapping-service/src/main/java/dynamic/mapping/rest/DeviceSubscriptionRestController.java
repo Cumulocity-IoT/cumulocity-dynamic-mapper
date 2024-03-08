@@ -3,7 +3,7 @@ package dynamic.mapping.rest;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapping.model.C8YAPISubscription;
+import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
@@ -38,7 +38,7 @@ public class DeviceSubscriptionRestController {
     private boolean outputMappingEnabled;
 
     @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YAPISubscription subscription) {
+    public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
@@ -48,7 +48,7 @@ public class DeviceSubscriptionRestController {
                         .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
                 if (mor != null) {
                     // Creates subscription for each connector
-                    configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                    configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(mor, subscription.getApi());
 
                 } else {
                     log.warn("Tenant {} - Could not subscribe device with id {}. Device does not exists!", tenant,
@@ -62,14 +62,14 @@ public class DeviceSubscriptionRestController {
     }
 
     @RequestMapping(value = "/subscription", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> subscriptionUpdate(@Valid @RequestBody C8YAPISubscription subscription) {
+    public ResponseEntity<?> subscriptionUpdate(@Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             // List<NotificationSubscriptionRepresentation> deviceSubscriptions =
             // c8yApiSubscriber.getNotificationSubscriptions(null, null).get();
-            C8YAPISubscription c8ySubscription = configurationRegistry.getNotificationSubscriber()
+            C8YNotificationSubscription c8ySubscription = configurationRegistry.getNotificationSubscriber()
                     .getDeviceSubscriptions(tenant,
                             null, null);
             // 3 cases -
@@ -93,7 +93,7 @@ public class DeviceSubscriptionRestController {
                 if (mor != null) {
                     try {
                         // Creates subscription for each connector
-                        configurationRegistry.getNotificationSubscriber().subscribeDevice(mor, subscription.getApi());
+                        configurationRegistry.getNotificationSubscriber().subscribeDeviceAndConnect(mor, subscription.getApi());
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -107,7 +107,7 @@ public class DeviceSubscriptionRestController {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, device.getId());
                 if (mor != null) {
                     try {
-                        configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
+                        configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
                     } catch (Exception e) {
                         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
                     }
@@ -124,12 +124,12 @@ public class DeviceSubscriptionRestController {
     }
 
     @RequestMapping(value = "/subscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<C8YAPISubscription> subscriptionsGet(@RequestParam(required = false) String deviceId,
+    public ResponseEntity<C8YNotificationSubscription> subscriptionsGet(@RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String subscriptionName) {
         if (!outputMappingEnabled)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
-            C8YAPISubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
+            C8YNotificationSubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
                     .getDeviceSubscriptions(contextService.getContext().getTenant(), deviceId, subscriptionName);
             return ResponseEntity.ok(c8YAPISubscription);
         } catch (Exception e) {
@@ -145,7 +145,7 @@ public class DeviceSubscriptionRestController {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(),
                     deviceId);
             if (mor != null) {
-                configurationRegistry.getNotificationSubscriber().unsubscribeDevice(mor);
+                configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(mor);
             } else {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Could not delete subscription for device with id " + deviceId + ". Device not found");

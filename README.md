@@ -162,7 +162,7 @@ Follow the steps from the point above to assign the plugin to your Administratio
 Make sure that [Docker](https://www.docker.com/), [Apache Maven](https://maven.apache.org/) and [Node.js](https://nodejs.org/) are installed and running on your computer.
 
 ### Backend - Microservice
-Run `mvn clean package` in folder `dyanmic-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
+Run `mvn clean package` in folder `dynamic-mapping-service` to build the Microservice which will create a ZIP archive you can upload to Cumulocity.
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frontend - Plugin
@@ -214,7 +214,7 @@ The table of configured connectors to different brokers can be:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the choosen connector type:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the chosen connector type:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
@@ -314,7 +314,7 @@ $parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
 ___
 
 1. Define the properties of the topic and API to be used
-2. Define the templates for the source and target, in JSON format. The soure payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
+2. Define the templates for the source and target, in JSON format. The source payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 3. Test the mapping by applying the transformation and send the result to a test device.
 
 ##### Define topic properties
@@ -329,7 +329,7 @@ For the mappings we differentiate between a **subscription topic** and a **templ
 
 For outbound mappings the properties are slightly different. Most important are the properties:
 1. `filterOutbound`: The Filter Outbound can contain one fragment name to associate a
-                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the maping is
+                      mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is
                       applied.
 2. `publishTopic`: MQTT topic to publish outbound messages to.
 
@@ -368,7 +368,7 @@ The levels of the Template Topic are split and added to the payload:
   ]
 ```
 The entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to the internal Cumulocity Id.
-The additinal property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
+The additional property ```_TOPIC_LEVEL_``` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
 
 ##### Snooping payloads on source topic
 
@@ -378,7 +378,7 @@ In order to record JSON payloads on the defined topic a subscription records the
 
 The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
 
-If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mappping table, where the number of payloads snooped so far is shown.
+If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mapping table, where the number of payloads snooped so far is shown.
 
 ##### Enable snooping payloads on source topic
 
@@ -392,7 +392,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 ##### Map Device Identifier
 
-Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id tpye.
+Connected devices send their data using an external device identifier, e.g. IMEI, serial number, ... In this case the external id has to be used for looking to the device id used by Cumulocity. To achieve this the entries in the ```_TOPIC_LEVEL_``` can be used to resolve the external device identifier to an internal Cumulocity id. When a payload from this device arrives at runtime the external id is used to lookup the corresponding internal Cumulocity id with the help of a external id type.
 
 
 ##### Define templates and substitutions for source and target payload
@@ -445,10 +445,10 @@ To define a new substitution the following steps have to be performed:
 
 >**_NOTE:_** When adding a new substitution the following two consistency rules are checked:
 >1. Does another substitution for the same target property exist? If so, a modal dialog appears and asks the user for confirmation to overwrite the existing substitution.
->2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same proprty exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
+>2. If the new substitution defines the device identifier, it is checked if another substitution already withe the same property exists. If so, a modal dialog appears and asks for confirmation to overwrite the existing substitution.
 
 
-To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if reqiured properties are defined and if the time is in the correct format.
+To avoid inconsistent JSON being sent to the Cumulocity API the defined target tmeplate are validated with schemas. These are defined for all target payloads (Measurement, Event, Alarm, Inventory). The schemas validate if required properties are defined and if the time is in the correct format.
 
 In the sample below, e.g. a warning is shown since the required property ```source.id``` is  missing in the payload.
 
@@ -462,7 +462,7 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 When you define an expression or a path in the source payload for a substitution the result can be one of the following cases:
 1. **if** the result is a scalar value, e.g. ```10.4``` for a single value **and**
      * **if** only one device is identified in the payload \
-      **then** only one Cumulocity MEA-resquest is generated from this payload.\
+      **then** only one Cumulocity MEA-request is generated from this payload.\
      This is a **single-device-single-value** mapping.
      * **if** multiple devices are identified, e.g. ```["device_101023", "device_101024"]``` in the payload \
       **then** multiple Cumulocity MEA-requests or inventory requests - depending on the used targetAPI in the mapping - are generated from this payload. This only makes sense for creating multiple devices.\
@@ -507,7 +507,7 @@ ___
 #### Test transformation from source to target format
 
 To test the defined transformation, press the button ```Transform test message```. The result of the transformation and any errors are displayed.
-On test transformation can result in multiple Cumulocity reqests, e.g. when a measurement is created for a device that is implicitly created, then two requests result from this transformation.
+On test transformation can result in multiple Cumulocity requests, e.g. when a measurement is created for a device that is implicitly created, then two requests result from this transformation.
 To iterate and show all results press the button ```Show Next Test Result```.
 
 
@@ -594,7 +594,7 @@ Using the tab ```Processor Extension``` you can upload your own processor extens
 </p>
 <br/>
 
-The following guide lays out hte steps to create and use a processor extension:
+The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
@@ -613,7 +613,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 </p>
 <br/>
 
-A chart shows a summary with numbers of all sucessfully processed messages and those raising errors. 
+A chart shows a summary with numbers of all successfully processed messages and those raising errors. 
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_MonitoringChart.png"  style="width: 70%;" />
@@ -642,8 +642,8 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 6. ```.../monitoring/tree```: all mappings are organised in a tree for efficient processing and resolving the mappings at runtime. This tree can be retrieved for debugging purposes.
 7. ```.../monitoring/subscriptions```: retrieve all active subscriptions.
 8. ```.../mapping```: retrieve, create, delete, update mappings
-9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingConext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
-10. ```.../extension/```: endpoint to retieve a list of all extensions
+9. ```.../test/{method}?topic=URL_ENCODED_TOPIC```: this endpoint allows testing of a payload. The send parameter (boolean)  indicates if the transformed payload should be sent to Cumulocity after processing. The call return a list of ```ProcessingContext``` to record which mapping processed the payload and the outcome of the mapping process as well as error
+10. ```.../extension/```: endpoint to retrieve a list of all extensions
 11. ```.../extension/{extension-name}```: endpoint to retrieve/delete a specific extension
 
 ## Tests & Sample Data

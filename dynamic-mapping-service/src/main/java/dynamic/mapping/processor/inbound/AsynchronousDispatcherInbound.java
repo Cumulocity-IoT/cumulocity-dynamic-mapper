@@ -57,7 +57,7 @@ import java.util.concurrent.Future;
  * The call method in
  * <code>AsynchronousDispatcherInbound.MappingInboundTask</code> is the core of
  * the message processing.
- * For all resolved mapppings the following steps are performed for new
+ * For all resolved mappings the following steps are performed for new
  * messages:
  * ** deserialize the payload
  * ** extract the content from the payload based on the defined substitution in
@@ -132,7 +132,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
                     context.setServiceConfiguration(serviceConfiguration);
-                    // identify the corect processor based on the mapping type
+                    // identify the correct processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
                     BasePayloadProcessorInbound processor = payloadProcessorsInbound.get(mappingType);
 
@@ -173,7 +173,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
                                 } else {
                                     log.warn(
-                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {}",
+                                            "Tenant {} - Message could NOT be parsed, ignoring this message, as class is not valid: {} {}",
                                             tenant,
                                             context.getPayload().getClass());
                                 }
@@ -188,7 +188,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                     e.getMessage());
-                            log.info("Tenant {} - Message Stacktrace: {}", tenant, e);
+                            log.info("Tenant {} - Message Stacktrace: ", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {

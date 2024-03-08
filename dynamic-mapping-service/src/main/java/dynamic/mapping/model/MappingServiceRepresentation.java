@@ -39,6 +39,7 @@ public class  MappingServiceRepresentation implements Serializable  {
 
   public static final String AGENT_ID = "d11r_mappingService";
   public static final String AGENT_NAME = "Dynamic Mapping Service";
+  public static final String AGENT_TYPE = "d11r_mappingService_type";
 
   @JsonProperty("id")
   private String id;
