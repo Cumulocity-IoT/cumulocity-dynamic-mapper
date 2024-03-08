@@ -18,9 +18,8 @@
   ~
   ~ @authors Christof Strack
   -->
-
 <div class="card pointer card--d-col">
-  <div (click)="detail()" class="card-block text-center card-column-30">
+  <div (click)="detail()" class="card-block text-center card-column-40">
     <div class="card-appicon">
       <i c8yIcon="plugin"></i>
     </div>
@@ -32,12 +31,31 @@
     </small>
   </div>
 
-  <div
-    class="card-block no-min-height p-t-0 p-b-16 card-column-40 text-center-grid"
-  >
-    <span class="label label-primary">{{
-      external ? "External" : "Internal"
-    }}</span>
+  <div class="card-block no-min-height card--d-col card-column-80 flex-grow">
+    <div class="card-column-60 text-center-grid p-b-16">
+      <span class="label label-primary">{{
+        external ? 'External' : 'Internal'
+      }}</span>
+    </div>
+
+    <div class="card-footer separator card-column-60 p-b-8">
+      <div *ngIf="app.loaded === ExtensionStatus.COMPLETE">
+        <span class="badge badge-info">
+          {{ app.extensionEntries.length }}</span
+        ><span class="text-muted">&nbsp;Loaded</span>
+      </div>
+      <div *ngIf="app.loaded === ExtensionStatus.NOT_LOADED">
+        <span class="text-muted">Not Loaded</span>
+      </div>
+      <div *ngIf="app.loaded === ExtensionStatus.PARTIALLY">
+        <span class="badge badge-info">
+          {{ app.extensionEntries.length }}</span
+        ><span class="text-muted">Partially&nbsp;</span>
+      </div>
+      <div *ngIf="app.loaded === ExtensionStatus.UNKNOWN">
+        <span class="text-muted">Not Known</span>
+      </div>
+    </div>
   </div>
 
   <div class="card-actions m-t-0">
@@ -57,26 +75,10 @@
             [disabled]="!external"
           >
             <i c8yIcon="trash" class="m-r-4"></i>
-            {{ "Delete" | translate }}
+            {{ 'Delete' | translate }}
           </button>
         </li>
       </ul>
-    </div>
-  </div>
-  <div class="card-footer separator card-column-30">
-    <div *ngIf="app.loaded === ExtensionStatus.COMPLETE">
-      <span class="badge badge-success"> {{ app.extensionEntries.length }}</span
-      ><span class="text-muted">&nbsp;Loaded</span>
-    </div>
-    <div *ngIf="app.loaded === ExtensionStatus.NOT_LOADED">
-      <span class="text-muted">Not Loaded</span>
-    </div>
-    <div *ngIf="app.loaded === ExtensionStatus.PARTIALLY">
-      <span class="badge badge-success"> {{ app.extensionEntries.length }}</span
-      ><span class="text-muted">Partially&nbsp;</span>
-    </div>
-    <div *ngIf="app.loaded === ExtensionStatus.UNKNOWN">
-      <span class="text-muted">Not Known</span>
     </div>
   </div>
 </div>

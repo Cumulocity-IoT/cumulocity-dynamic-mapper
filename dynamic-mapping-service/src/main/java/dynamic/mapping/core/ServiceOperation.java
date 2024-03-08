@@ -52,6 +52,6 @@ public class ServiceOperation {
         return new ServiceOperation(tenant, Operation.RELOAD_EXTENSIONS, null);
     } 
     public static ServiceOperation refreshNotificationSubscription(String tenant) {
-        return new ServiceOperation(tenant, Operation.REFRESH_NOTFICATIONS_SUBSCRIPTIONS, null);
+        return new ServiceOperation(tenant, Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS, null);
     }
 }

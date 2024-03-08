@@ -73,7 +73,7 @@ public class MQTTClient extends AConnectorClient {
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
         this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
-        this.configuration = connectorConfiguration;
+        this.connectorConfiguration = connectorConfiguration;
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
         this.connectorName = connectorConfiguration.name;
@@ -123,13 +123,13 @@ public class MQTTClient extends AConnectorClient {
 
     public boolean initialize() {
         loadConfiguration();
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
         log.info("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
         if (useSelfSignedCertificate) {
             try {
-                String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
-                String fingerprint = (String) configuration.getProperties().get("fingerprintSelfSignedCertificate");
+                String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
+                String fingerprint = (String) connectorConfiguration.getProperties().get("fingerprintSelfSignedCertificate");
                 if (nameCertificate == null || fingerprint == null) {
                     throw new Exception(
                             "Required properties nameCertificate, fingerprint are not set. Please update the connector configuration!");
@@ -157,13 +157,13 @@ public class MQTTClient extends AConnectorClient {
                 sslSocketFactory = sslContext.getSocketFactory();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
-                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS!", tenant,
+                log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 return false;
             } catch (Exception e) {
-                log.error("Tenant {} - Connector {} - Exception when initializing connector!", tenant,
+                log.error("Tenant {} - Connector {} - Exception when initializing connector: ", tenant,
                         getConnectorName(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
@@ -204,15 +204,15 @@ public class MQTTClient extends AConnectorClient {
                     }
                 }
                 try {
-                    boolean useTLS = (Boolean) configuration.getProperties().getOrDefault("useTLS", false);
-                    boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                    boolean useTLS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useTLS", false);
+                    boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                             .getOrDefault("useSelfSignedCertificate", false);
                     String prefix = useTLS ? "ssl://" : "tcp://";
-                    String mqttHost = (String) configuration.getProperties().get("mqttHost");
-                    String clientId = (String) configuration.getProperties().get("clientId");
-                    int mqttPort = (Integer) configuration.getProperties().get("mqttPort");
-                    String user = (String) configuration.getProperties().get("user");
-                    String password = (String) configuration.getProperties().get("password");
+                    String mqttHost = (String) connectorConfiguration.getProperties().get("mqttHost");
+                    String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+                    int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
+                    String user = (String) connectorConfiguration.getProperties().get("user");
+                    String password = (String) connectorConfiguration.getProperties().get("password");
                     String broker = prefix + mqttHost + ":"
                             + mqttPort;
                     // mqttClient = new MqttClient(broker, MqttClient.generateClientId(), new
@@ -277,11 +277,11 @@ public class MQTTClient extends AConnectorClient {
                 }
                 successful = true;
             } catch (Exception e) {
-                log.error("Tenant {} - Error on reconnect, retrying ... {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
                 updateConnectorStatusToFailed(e);
                 sendConnectorLifecycle();
                 if (serviceConfiguration.logConnectorErrorInBackend) {
-                    log.error("Tenant {} - Stacktrace:", tenant, e);
+                    log.error("Tenant {} - Stacktrace: ", tenant, e);
                 }
                 successful = false;
             }
@@ -304,7 +304,7 @@ public class MQTTClient extends AConnectorClient {
             try {
                 mqttClient.close();
             } catch (MqttException e) {
-                log.error("Tenant {} - Error on closing mqttClient {} {}", tenant, e.getMessage(), e);
+                log.error("Tenant {} - Error on closing mqttClient {}: ", tenant, e.getMessage(), e);
             }
         }
     }
@@ -313,7 +313,7 @@ public class MQTTClient extends AConnectorClient {
     public boolean isConfigValid(ConnectorConfiguration configuration) {
         if (configuration == null)
             return false;
-        // if using selfsignied certificate additional proprties have to be set
+        // if using selfsignied certificate additional properties have to be set
         Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
         if (useSelfSignedCertificate && (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null
@@ -332,6 +332,12 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public boolean isConnected() {
+        // log.info("Tenant {} - TESTING isConnected I:,s  {},  {}", tenant, mqttClient, getConnectorIdent(),
+        //         getConnectorName());
+        // if (mqttClient != null)
+        //     log.info("Tenant {} - TESTING isConnected II: {}", tenant, mqttClient.isConnected());
+        // else
+        //     log.info("Tenant {} - TESTING isConnected II: {}, mqttClient is null", tenant);
         return mqttClient != null ? mqttClient.isConnected() : false;
     }
 
@@ -350,7 +356,7 @@ public class MQTTClient extends AConnectorClient {
                         try {
                             mqttClient.unsubscribe(topic);
                         } catch (MqttException e) {
-                            log.error("Tenant {} - Exception when unsubscribing from topic: {}, {}", tenant, topic, e);
+                            log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant, topic, e);
                         }
 
                     }

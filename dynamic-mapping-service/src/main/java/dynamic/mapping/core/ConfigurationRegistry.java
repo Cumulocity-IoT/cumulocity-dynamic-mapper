@@ -89,7 +89,7 @@ public class ConfigurationRegistry {
     private ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Autowired
-    public void setMappingComponent(@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
+    public void setConnectorConfigurationComponent(@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
         this.connectorConfigurationComponent = connectorConfigurationComponent;
     }
 
@@ -97,7 +97,7 @@ public class ConfigurationRegistry {
     public ServiceConfigurationComponent serviceConfigurationComponent;
 
     @Autowired
-    public void setMappingComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
+    public void setServiceConfigurationComponent(@Lazy ServiceConfigurationComponent serviceConfigurationComponent) {
         this.serviceConfigurationComponent = serviceConfigurationComponent;
     }
 

@@ -22,16 +22,15 @@
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { TestingComponent } from './grid/testing.component';
-import { SharedService } from '../shared/shared.service';
+import { SharedModule } from '../shared';
 
 @NgModule({
   declarations: [
     TestingComponent,
   ],
-  imports: [CoreModule],
+  imports: [CoreModule, SharedModule],
   exports: [],
   providers: [
-    SharedService,
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/testing',
       component: TestingComponent

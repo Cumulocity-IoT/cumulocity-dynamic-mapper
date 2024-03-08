@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -20,11 +19,11 @@
  * @authors Christof Strack
  */
 
- #app div a i.dlt-c8y-icon-swipe-right {
+#app div a i.dlt-c8y-icon-swipe-right {
   color: green !important;
 }
 
-#app div a i.dlt-c8y-icon-swipe-left{
+#app div a i.dlt-c8y-icon-swipe-left {
   color: orange !important;
 }
 
@@ -35,4 +34,3 @@
 }
 
 .dlt-c8y-icon-swipe-left*/
-

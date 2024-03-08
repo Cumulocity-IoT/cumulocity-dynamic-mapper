@@ -29,7 +29,7 @@ import {
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
-import { FormlyFieldConfig } from '@ngx-formly/core';
+import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../configuration';
 import {
@@ -43,7 +43,11 @@ import {
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
-import { isDisabled } from '../shared/util';
+import {
+  checkTopicsInboundAreValid,
+  checkTopicsOutboundAreValid,
+  isDisabled
+} from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveTemplateTopicFromTopic } from '../shared/util';
 
@@ -65,7 +69,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   EditorMode = EditorMode;
   isDisabled = isDisabled;
 
-  propertyFormlyFields: FormlyFieldConfig[];
+  propertyFormlyFields: FormlyFieldConfig[] = [];
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   sourceSystem: string;
   targetSystem: string;
@@ -73,7 +77,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   constructor(
     mappingService: MappingService,
     configurationService: BrokerConfigurationService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private configService: FormlyConfig
   ) {}
 
   ngOnInit() {
@@ -99,14 +104,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     }
     this.propertyFormlyFields = [
       {
+        // validators: {
+        //   validation: [
+        //     {
+        //       name:
+        //         this.stepperConfiguration.direction == Direction.INBOUND
+        //           ? 'checkTopicsInboundAreValid'
+        //           : 'checkTopicsOutboundAreValid'
+        //     }
+        //   ]
+        // },
+
         validators: {
           validation: [
-            {
-              name:
-                this.stepperConfiguration.direction == Direction.INBOUND
-                  ? 'checkTopicsInboundAreValid'
-                  : 'checkTopicsOutboundAreValid'
-            }
+            this.stepperConfiguration.direction == Direction.INBOUND
+              ? checkTopicsInboundAreValid
+              : checkTopicsOutboundAreValid
           ]
         },
         fieldGroupClassName: 'row',
@@ -203,7 +216,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           // filler when template topic is not shown
           {
             className: 'col-lg-6',
-            type: 'filler',
+            template: '<div class="form-group row" style="height:80px"></div>',
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
@@ -278,7 +291,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Create Non Existing Device',
+              label: 'Create non existing device',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
@@ -381,7 +394,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             type: 'switch',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Map Device Identifier',
+              label: 'Map device identifier',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               switchMode: true,

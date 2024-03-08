@@ -19,7 +19,7 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>{{ "All extensions" | translate }}</c8y-title>
+<c8y-title>{{ 'All extensions' | translate }}</c8y-title>
 
 <c8y-breadcrumb>
   <!-- <c8y-breadcrumb-item [icon]="'c8y-atom'" [label]="'Processor' | translate"></c8y-breadcrumb-item> -->
@@ -44,7 +44,7 @@
     [disabled]="!externalExtensionEnabled"
   >
     <i c8yIcon="plus-circle"></i>
-    {{ "Add extension" | translate }}
+    {{ 'Add extension' | translate }}
   </button>
 </c8y-action-bar-item>
 
@@ -55,7 +55,7 @@
     title="{{ 'Reload' | translate }}"
   >
     <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
-    {{ "Reload" | translate }}
+    {{ 'Reload' | translate }}
   </button>
 </c8y-action-bar-item>
 
@@ -63,7 +63,7 @@
   <div class="no-min-height p-t-0 card-column-40 text-center-grid">
     <span class="label label-primary"
       >Loading Extensions:&nbsp;{{
-        externalExtensionEnabled ? "External and Internal" : "only Internal"
+        externalExtensionEnabled ? 'External and Internal' : 'only Internal'
       }}</span
     >
   </div>
@@ -90,7 +90,7 @@
       class="btn btn-primary"
       title="{{ 'Add extension' | translate }}"
     >
-      {{ "Add extension" | translate }}
+      {{ 'Add extension' | translate }}
     </button>
   </p>
 </div>
@@ -100,15 +100,19 @@
     class="page-sticky-header hidden-xs d-flex"
     *ngIf="(extensions$ | async)?.length > 0"
   >
-    <div class="card-block card-column-30">
+    <div class="card-block card-column-40">
       <div class="card-appicon p-l-32 p-r-16 m-r-0 m-l-4"></div>
-      {{ "Extension" | translate }}
+      {{ 'Extension' | translate }}
     </div>
-
-    <div class="card-block card-column-40">Extension Type</div>
-    <div class="card-block card-column-30">Number Events</div>
+    <div class="card-block p-0 card-column-80 m-r-40">
+      <div class="card-block card-column-60">
+        {{ 'Extension Typ' | translate }}
+      </div>
+      <div class="card-block card-column-60">{{ 'Number Events' | translate }}</div>
+    </div>
   </div>
-  <div *ngFor="let app of extensions$ | async" class="col-sm-3">
+
+  <div *ngFor="let app of extensions$ | async" class="col-xs-12 col-sm-4 col-md-3">
     <d11r-mapping-extension-card
       (appDeleted)="loadExtensions()"
       [app]="app"
