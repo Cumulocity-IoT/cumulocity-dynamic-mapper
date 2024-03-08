@@ -35,6 +35,8 @@ target/
 logs/
 bin/
 attic/*
+dist/
+
 
 dynamic-mapping-ui/node_modules/*
 dynamic-mapping-extension/.factorypath
@@ -43,3 +45,4 @@ dynamic-mapping-service/.factorypath
 set.sh
 dynamic-mapping-ui/.env
 **/.flattened-pom.xml
+.angular

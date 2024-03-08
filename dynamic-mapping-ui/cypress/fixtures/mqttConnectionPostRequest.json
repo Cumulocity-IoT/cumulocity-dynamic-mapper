@@ -1,0 +1,12 @@
+{
+  "ident": "p3l7xl",
+  "connectorType": "MQTT",
+  "name": "Cypress MQTT",
+  "properties": {
+    "mqttHost": "dummyHost",
+    "mqttPort": 8883,
+    "user": "test",
+    "password": "testPassword",
+    "clientId": "cypressId"
+  }
+}
