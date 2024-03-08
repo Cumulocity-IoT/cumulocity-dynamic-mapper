@@ -38,7 +38,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   reload$: BehaviorSubject<void> = new BehaviorSubject(null);
   externalExtensionEnabled: boolean = true;
 
-  extensions$: Observable<IResultList<IManagedObject>>;
+  extensions$: Observable<IManagedObject[]>;
 
   listClass: string;
 

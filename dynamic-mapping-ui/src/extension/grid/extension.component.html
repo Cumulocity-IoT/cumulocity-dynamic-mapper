@@ -100,15 +100,15 @@
     class="page-sticky-header hidden-xs d-flex"
     *ngIf="(extensions$ | async)?.length > 0"
   >
-    <div class="card-block card-column-40">
-      <div class="card-appicon p-l-32 p-r-16 m-r-0 m-l-4"></div>
+    <div class="card-block card-column-40 p-l-0">
+      <div class="card-appicon"></div>
       {{ 'Extension' | translate }}
     </div>
-    <div class="card-block p-0 card-column-80 m-r-40">
+    <div class="card-block p-0 card-column-80 p-l-0">
       <div class="card-block card-column-60">
-        {{ 'Extension Typ' | translate }}
+        {{ 'Extension typ' | translate }}
       </div>
-      <div class="card-block card-column-60">{{ 'Number Events' | translate }}</div>
+      <div class="card-block card-column-60">{{ 'Number events' | translate }}</div>
     </div>
   </div>
 
