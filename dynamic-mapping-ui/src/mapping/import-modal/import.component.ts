@@ -56,7 +56,8 @@ export class ImportMappingsComponent implements OnDestroy {
 
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
-      const [file] = event;
+      // eslint-disable-next-line prefer-destructuring
+      const file = event[0].file;
       this.onFile(file);
     }
   }
@@ -65,6 +66,7 @@ export class ImportMappingsComponent implements OnDestroy {
     this.isLoading = true;
     this.errorMessage = null;
     this.progress$.next(0);
+    // const ms = await file.text();
     const ms = await file.text();
     const mappings: Mapping[] = JSON.parse(ms);
     const countMappings = mappings.length;
