@@ -229,7 +229,7 @@ export class BrokerConfigurationService {
         );
       }),
       map((event) => {
-        event[CONNECTOR_FRAGMENT].type = event.type;
+        event[CONNECTOR_FRAGMENT].type = event?.type;
         return [event[CONNECTOR_FRAGMENT]];
       })
     );
