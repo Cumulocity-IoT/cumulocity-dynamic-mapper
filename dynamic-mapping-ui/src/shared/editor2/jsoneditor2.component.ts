@@ -98,6 +98,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     if (!this.jsonEditorContainer.nativeElement) {
       console.error("Can't find the ElementRef reference for jsoneditor)");
     }
+    delete (this.content as any).text;
     this.editor = new JSONEditor({
       target: this.jsonEditorContainer.nativeElement,
       props: {
@@ -126,10 +127,6 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
             items.findIndex((i) => i['text'] === 'table'),
             1
           );
-          // items.splice(
-          //   items.findIndex((i) => i["className"] === "jse-sort"),
-          //   1
-          // );
           items.splice(
             items.findIndex((i) => i['className'] === 'jse-transform'),
             1
@@ -189,7 +186,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   private onSelect(selection: JSONEditorSelection | undefined) {
     const c: any = selection;
-    // ignore emitting change events when the path was set progamatically to avoid circles
+    // ignore emitting change events when the path was set programmatically to avoid circles
     if (!c?.triggeredSelection) {
       if (isKeySelection(selection) || isValueSelection(selection)) {
         const st = stringifyJSONPath((selection as any).path);
@@ -214,7 +211,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     const path = parseJSONPath(pathString);
     console.log('Set selection to path:', pathString, path);
     const selection: any = createMultiSelection(path, path);
-    // marker to ignore emitting change events when the path was set progamatically
+    // marker to ignore emitting change events when the path was set programmatically
     selection.triggeredSelection = true;
 
     try {

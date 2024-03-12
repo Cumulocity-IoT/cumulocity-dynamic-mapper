@@ -25,7 +25,7 @@ import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
-} from '../prosessor.model';
+} from '../processor.model';
 import { Injectable } from '@angular/core';
 import {
   TIME,
@@ -66,7 +66,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
           substitution.pathSource
         );
 
-        // step 2 analyse exctracted content: textual, array
+        // step 2 analyse extracted content: textual, array
         const postProcessingCacheEntry: SubstituteValue[] = _.get(
           postProcessingCache,
           substitution.pathTarget,
@@ -90,7 +90,7 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
         } else {
           if (Array.isArray(extractedSourceContent)) {
             if (substitution.expandArray) {
-              // extracted result from sourcPayload is an array, so we potentially have to
+              // extracted result from sourcePayload is an array, so we potentially have to
               // iterate over the result, e.g. creating multiple devices
               extractedSourceContent.forEach((jn) => {
                 if (isNumeric(jn)) {

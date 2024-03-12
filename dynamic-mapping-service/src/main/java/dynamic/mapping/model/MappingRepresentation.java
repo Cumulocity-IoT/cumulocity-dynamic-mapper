@@ -78,7 +78,7 @@ public class MappingRepresentation implements Serializable {
   /*
    * only one substitution can be marked with definesIdentifier == true
    */
-  static public ArrayList<ValidationError> isSubstituionValid(Mapping mapping) {
+  static public ArrayList<ValidationError> isSubstitutionValid(Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     long count = Arrays.asList(mapping.substitutions).stream()
         .filter(sub -> sub.definesDeviceIdentifier(mapping.targetAPI, mapping.direction)).count();
@@ -164,7 +164,7 @@ public class MappingRepresentation implements Serializable {
 
   static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    result.addAll(isSubstituionValid(mapping));
+    result.addAll(isSubstitutionValid(mapping));
     result.addAll(isTemplateTopicValid(mapping.templateTopic));
     if (mapping.direction.equals(Direction.INBOUND)) {
       result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));

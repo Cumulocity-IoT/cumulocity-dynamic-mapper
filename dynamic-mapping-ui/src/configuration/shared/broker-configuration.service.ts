@@ -120,7 +120,7 @@ export class BrokerConfigurationService {
 
   async stopConnectorStatusSubscriptions() {
     if (!this._agentId) {
-        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+        this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
     console.log('Stop subscriptions:', this._agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);
@@ -177,9 +177,9 @@ export class BrokerConfigurationService {
     );
   }
 
-  initConnectorLogsRealtime() {
+  async initConnectorLogsRealtime() {
     if (!this._agentId) {
-        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+        this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
     console.log(
       'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
@@ -229,7 +229,7 @@ export class BrokerConfigurationService {
         );
       }),
       map((event) => {
-        event[CONNECTOR_FRAGMENT].type = event.type;
+        event[CONNECTOR_FRAGMENT].type = event?.type;
         return [event[CONNECTOR_FRAGMENT]];
       })
     );
@@ -256,7 +256,7 @@ export class BrokerConfigurationService {
 
   async startConnectorStatusSubscriptions(): Promise<void> {
     if (!this._agentId) {
-        this._agentId = this.sharedService.getDynamicMappingServiceAgent();
+        this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
     console.log('Started subscriptions:', this._agentId);
 

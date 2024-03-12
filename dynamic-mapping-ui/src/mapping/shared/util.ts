@@ -23,7 +23,7 @@ import { API, Direction, Mapping, MappingSubstitution } from '../../shared';
 import {
   SubstituteValue,
   SubstituteValueType
-} from '../processor/prosessor.model';
+} from '../processor/processor.model';
 import { ValidationError, ValidationFormlyError } from './mapping.model';
 
 export function getTypedValue(subValue: SubstituteValue): any {
@@ -192,7 +192,7 @@ export function isWildcardTopic(topic: string): boolean {
   return result;
 }
 
-export function isSubstituionValid(mapping: Mapping): boolean {
+export function isSubstitutionValid(mapping: Mapping): boolean {
   const count = mapping.substitutions
     .filter((sub) =>
       definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)

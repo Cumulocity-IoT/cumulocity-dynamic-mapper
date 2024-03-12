@@ -2,7 +2,7 @@
 
 
 Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses
-this gap by providing the following artifcats:
+this gap by providing the following artifacts:
 
 * A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
 connect to a MQTT broker, a generic Data Mapper & Expression Language  for data mapping and the

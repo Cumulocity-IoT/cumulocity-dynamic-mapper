@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mapping",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "description": "Cumulocity plugin to map custom JSON payloads to C8Y payloads.The plugin support both directions: inbound/outbound. Currently MQTT is supported ",
   "repository": {
     "type": "git",
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "c8ycli server",
-    "start:admin": "npm start -- --shell administration",
+    "start:admin": "npm start -- --shell administration -u https://ck2.eu-latest.cumulocity.com",
     "build": "c8ycli build",
     "deploy": "c8ycli deploy",
     "postinstall": "ngcc",
@@ -29,9 +29,9 @@
     "@angular/platform-browser-dynamic": "14.0.6",
     "@angular/router": "14.0.6",
     "@angular/upgrade": "14.0.6",
-    "@c8y/client": "1018.0.170",
-    "@c8y/ngx-components": "1018.0.170",
-    "@c8y/style": "1018.0.170",
+    "@c8y/client": "1018.0.205",
+    "@c8y/ngx-components": "1018.0.205",
+    "@c8y/style": "1018.0.205",
     "@ngx-formly/bootstrap": "^6.1.3",
     "@ngx-formly/core": "^6.1.8",
     "@ngx-translate/core": "14.0.0",
@@ -43,7 +43,7 @@
     "run": "^1.4.0",
     "rxjs": "~6.6.3",
     "style-loader": "^3.3.1",
-    "vanilla-jsoneditor": "^0.21.0",
+    "vanilla-jsoneditor": "^0.22.0",
     "zone.js": "~0.11.7"
   },
   "devDependencies": {
@@ -55,8 +55,11 @@
     "@angular/language-service": "14.0.6",
     "@angular/localize": "14.0.6",
     "@angular/service-worker": "14.0.6",
-    "@c8y/cli": "1018.0.170",
+    "@c8y/cli": "1018.0.205",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "cumulocity-cypress": "^0.2.6",
+    "cypress": "^13.6.6",
+    "cypress-slow-down": "^1.3.1",
     "eslint-plugin-import": "^2.29.1",
     "file-loader": "^6.2.0",
     "prettier": "^3.1.1",

@@ -19,50 +19,34 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import {
-  FetchClient,
-  IdentityService,
-  IExternalIdentity,
-} from '@c8y/client';
+import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
 import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
 import { Feature } from '../configuration/shared/configuration.model';
-import { AlertService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
   constructor(
     private client: FetchClient,
-    private identity: IdentityService,
-    private alertService: AlertService
-  ) {
-    this.initDynamicMappingServiceAgent()
-      .then((id) => {
-        this._agentId = id;
-      })
-      .catch((e) => console.error('MappingService with id not subscribed!', e));
-  }
+    private identity: IdentityService
+  ) {}
   private _agentId: string;
   private _feature: Promise<Feature>;
 
-  getDynamicMappingServiceAgent(): string {
+  async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
-      this.alertService.warning('Monitoring service not intialized correctly!');
+      const identity: IExternalIdentity = {
+        type: 'c8y_Serial',
+        externalId: AGENT_ID
+      };
+      const { data, res } = await this.identity.detail(identity);
+      if (res.status == 404) {
+        console.error('MappingService with id not subscribed!', AGENT_ID);
+        return;
+      }
+      // this._agentId = data.managedObject.id as string;
+      this._agentId =data.managedObject.id as string;
     }
     return this._agentId;
-  }
-
-  private async initDynamicMappingServiceAgent(): Promise<any> {
-    const identity: IExternalIdentity = {
-      type: 'c8y_Serial',
-      externalId: AGENT_ID
-    };
-    const { data, res } = await this.identity.detail(identity);
-    if (res.status == 404) {
-      console.error('MappingService with id not subscribed!', AGENT_ID);
-      return;
-    }
-    // this._agentId = data.managedObject.id as string;
-    return data.managedObject.id;
   }
 
   async getFeatures(): Promise<Feature> {

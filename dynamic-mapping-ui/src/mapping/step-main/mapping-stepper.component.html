@@ -118,6 +118,7 @@
                       [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
                       [class]="'jse-main-small'"
+                      (changeContent)="onTemplateSourceChanged($event)"
                       (pathChanged)="onSelectedPathSourceChanged($event)"
                       (initialized)="onEditorSourceInitialized()"
                       [data]="templateSource"
@@ -126,9 +127,7 @@
                     ></d11r-mapping-json-editor2>
                     <c8y-messages class="text-left">
                       <c8y-message
-                        *ngIf="
-                        substitutionModel.pathSource === ''
-                        "
+                        *ngIf="substitutionModel.pathSource === ''"
                         translate
                         ><span class="text-warning"
                           >Select source node to define substitution!</span
@@ -197,6 +196,20 @@
                       </select>
                     </div>
                   </div>
+                  <div
+                    *ngIf="
+                      !stepperConfiguration.showEditorSource &&
+                      !stepperConfiguration.showProcessorExtensions
+                    "
+                  >
+                    <label>Template Source - {{ sourceSystem }}</label>
+                    <div class="p-t-48">
+                      <span
+                        >Template is described internally by the chosen mapping
+                        type</span
+                      >
+                    </div>
+                  </div>
                 </div>
                 <div class="col-lg-5 column-left-border">
                   <div class="form-group">
@@ -261,6 +274,7 @@
                       [schemaUpdate]="schemaUpdateTarget"
                       [options]="editorOptionsTarget"
                       [class]="'jse-main-small'"
+                      (changeContent)="onTemplateTargetChanged($event)"
                       (pathChanged)="onSelectedPathTargetChanged($event)"
                       (initialized)="onEditorTargetInitialized()"
                       [data]="templateTarget"
@@ -270,9 +284,7 @@
                     </d11r-mapping-json-editor2>
                     <c8y-messages class="text-right">
                       <c8y-message
-                        *ngIf="
-                        substitutionModel.pathTarget === ''
-                        "
+                        *ngIf="substitutionModel.pathTarget === ''"
                         translate
                         ><span class="text-warning"
                           >Select target node to define substitution!</span
@@ -362,12 +374,12 @@
                   <c8y-messages class="text-right">
                     <c8y-message
                       *ngIf="
-                        (countDeviceIdentifers$ | async) !== 1 &&
+                        (countDeviceIdentifiers$ | async) !== 1 &&
                         !stepperConfiguration.allowNoDefinedIdentifier
                       "
                     >
                       <span class="text-warning"
-                        >Excactly one substitution defining the DeviceIdentifier
+                        >Exactly one substitution defining the DeviceIdentifier
                         must be used.</span
                       >
                     </c8y-message>

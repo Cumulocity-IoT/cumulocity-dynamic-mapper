@@ -38,6 +38,19 @@ import { TestingDeviceService } from './testing.service';
   styleUrls: ['../../mapping/shared/mapping.style.css']
 })
 export class TestingComponent {
+  constructor(private service: TestingDeviceService) {
+    // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
+    this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
+    // we're setting up `onRefreshClick` to be executed on refresh event
+    this.refresh.subscribe(() => this.onRefreshClick());
+    this.service.refreshData$.subscribe(() => {
+      this.deviceGrid.reload();
+    });
+    this.columns = this.service.getColumns();
+    this.pagination = this.service.getPagination();
+    this.actionControls = this.service.getActionControls();
+    this.bulkActionControls = this.service.getBulkActionControls();
+  }
   @ViewChild(DataGridComponent, { static: false })
   deviceGrid: DataGridComponent;
 
@@ -51,26 +64,16 @@ export class TestingComponent {
     gridHeader: true
   };
 
-  columns: Column[] = this.service.getColumns();
-  pagination: Pagination = this.service.getPagination();
+  columns: Column[];
+  pagination: Pagination;
   infiniteScroll: LoadMoreMode = 'auto';
   serverSideDataCallback: any;
+  selectable: boolean = true;
+  actionControls: ActionControl[];
+  bulkActionControls: BulkActionControl[];
 
   refresh: EventEmitter<any> = new EventEmitter<any>();
 
-  selectable: boolean = true;
-  actionControls: ActionControl[] = this.service.getActionControls();
-  bulkActionControls: BulkActionControl[] =
-    this.service.getBulkActionControls();
-  constructor(private service: TestingDeviceService) {
-    // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
-    this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
-    // we're setting up `onRefreshClick` to be executed on refresh event
-    this.refresh.subscribe(() => this.onRefreshClick());
-    this.service.refreshData$.subscribe(() => {
-      this.deviceGrid.reload();
-    });
-  }
 
   /**
    * This method loads data when data grid requests it (e.g. on initial load or on column settings change).

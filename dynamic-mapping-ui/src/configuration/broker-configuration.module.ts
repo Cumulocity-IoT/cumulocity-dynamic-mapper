@@ -24,7 +24,6 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { AdminGuard, SharedModule } from '../shared';
 import { BrokerConfigurationComponent } from './broker-configuration.component';
 import { EditConfigurationComponent } from './edit/edit-config-modal.component';
-import { SharedService } from '../shared/shared.service';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
@@ -32,7 +31,6 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
   imports: [CoreModule, SharedModule,BsDropdownModule.forRoot()],
   exports: [],
   providers: [
-    SharedService,
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/configuration',
       component: BrokerConfigurationComponent,

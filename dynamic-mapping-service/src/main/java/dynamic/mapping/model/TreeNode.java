@@ -213,7 +213,7 @@ public class TreeNode {
         if (hasChildren) {
             if (currentLevel == levels.size() - 1) {
                 log.debug(
-                        "Tenant {} - Deleting mappingNode (?)      : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
+                        "Tenant {} - Deleting mappingNode (?)      : currentPathMonitoring: {}, branchingLevel: {}, mappingId: {}",
                         tenant,
                         currentPathMonitoring, branchingLevel, mapping.id);
                 // find child and remove
@@ -222,7 +222,7 @@ public class TreeNode {
                         if (tnn.isMappingNode()) {
                             if (tnn.getMapping().id.equals(mapping.id)) {
                                 log.info(
-                                        "Tenant {} - Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mapppingId: {}",
+                                        "Tenant {} - Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mappingId: {}",
                                         tenant,
                                         currentPathMonitoring, branchingLevel, mapping.id);
                                 // foundMapping.setTrue();

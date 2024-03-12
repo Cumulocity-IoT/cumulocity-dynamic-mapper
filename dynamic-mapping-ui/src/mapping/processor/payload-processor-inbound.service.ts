@@ -34,7 +34,7 @@ import {
   ProcessingContext,
   SubstituteValue,
   SubstituteValueType
-} from './prosessor.model';
+} from './processor.model';
 
 @Injectable({ providedIn: 'root' })
 export abstract class PayloadProcessorInbound {

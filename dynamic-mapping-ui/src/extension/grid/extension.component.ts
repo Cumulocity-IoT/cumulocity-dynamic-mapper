@@ -38,7 +38,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   reload$: BehaviorSubject<void> = new BehaviorSubject(null);
   externalExtensionEnabled: boolean = true;
 
-  extensions$: Observable<IResultList<IManagedObject>>;
+  extensions$: Observable<IManagedObject[]>;
 
   listClass: string;
 
@@ -58,7 +58,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
       );
     this.loadExtensions();
     this.extensions$.subscribe((exts) => {
-      console.log('New extenions:', exts);
+      console.log('New extensions:', exts);
     });
     this.externalExtensionEnabled = (
       await this.brokerConfigurationService.getServiceConfiguration()

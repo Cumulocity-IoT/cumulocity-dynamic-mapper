@@ -38,14 +38,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <revision>4.1.3</revision>
-        <c8y.version>1018.0.261</c8y.version>
-        <lombok.version>1.18.24</lombok.version>
+        <revision>4.1.4</revision>
+        <c8y.version>1020.73.0</c8y.version>
+        <lombok.version>1.18.30</lombok.version>
         <slf4j.version>1.7.36</slf4j.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot-dependencies.version>2.5.14</spring-boot-dependencies.version>
+        <spring-boot-dependencies.version>2.7.11</spring-boot-dependencies.version>
     </properties>
 
     <repositories>
@@ -65,15 +65,11 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-joda</artifactId>
-                <version>2.12.7</version>
-            </dependency>
+
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
-                <version>2.7.0</version>
+                <version>2.9.0</version>
             </dependency>
             <dependency>
                 <groupId>com.nsn.cumulocity.clients-java</groupId>
@@ -100,7 +96,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>3.21.9</version>
+                <version>3.25.2</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.paho</groupId>
@@ -108,14 +104,20 @@
                 <version>1.2.5</version>
             </dependency>
             <dependency>
-                <groupId>javax.validation</groupId>
-                <artifactId>validation-api</artifactId>
-                <version>1.1.0.Final</version>
-            </dependency>
-            <dependency>
                 <groupId>com.ibm.jsonata4java</groupId>
                 <artifactId>JSONata4Java</artifactId>
-                <version>2.4.5</version>
+                <version>2.4.8</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.11.0</version>
+            </dependency>
+            <!-- commons-text 1.11.0 requires commons-lang3 3.13.0, see https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.13.0</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -130,7 +132,7 @@
             <dependency>
                 <groupId>org.java-websocket</groupId>
                 <artifactId>Java-WebSocket</artifactId>
-                <version>1.5.3</version>
+                <version>1.5.6</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -145,7 +147,7 @@
             <dependency>
                 <groupId>org.json</groupId>
                 <artifactId>json</artifactId>
-                <version>20231013</version>
+                <version>20240205</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -159,6 +161,9 @@
                     <configuration>
                         <updatePomFile>true</updatePomFile>
                         <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                        <pomElements>
+                            <dependencyManagement>expand</dependencyManagement>
+                        </pomElements>
                     </configuration>
                     <executions>
                         <execution>
@@ -183,7 +188,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-              </plugin>
+            </plugin>
         </plugins>
-      </build>
+    </build>
 </project>

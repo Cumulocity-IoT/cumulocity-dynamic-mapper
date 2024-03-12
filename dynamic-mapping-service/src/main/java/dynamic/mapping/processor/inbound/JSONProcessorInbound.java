@@ -98,14 +98,17 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                 Expressions expr = Expressions.parse(substitution.pathSource);
                 extractedSourceContent = expr.evaluate(payloadJsonNode);
             } catch (ParseException | IOException | EvaluateException e) {
-                log.error("Tenant {} - Exception for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             } catch (EvaluateRuntimeException e) {
-                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}", tenant, substitution.pathSource,
+                log.error("Tenant {} - EvaluateRuntimeException for: {}, {}: ", tenant, substitution.pathSource,
+                        payload, e);
+            } catch (Exception e) {
+                log.error("Tenant {} - Exception for: {}, {}: ", tenant, substitution.pathSource,
                         payload, e);
             }
             /*
-             * step 2 analyse exctracted content: textual, array
+             * step 2 analyse extracted content: textual, array
              */
             List<MappingSubstitution.SubstituteValue> postProcessingCacheEntry = postProcessingCache.getOrDefault(
                     substitution.pathTarget,
@@ -120,7 +123,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
             } else {
                 if (extractedSourceContent.isArray()) {
                     if (substitution.expandArray) {
-                        // extracted result from sourcPayload is an array, so we potentially have to
+                        // extracted result from sourcePayload is an array, so we potentially have to
                         // iterate over the result, e.g. creating multiple devices
                         for (JsonNode jn : extractedSourceContent) {
                             if (jn.isTextual()) {
