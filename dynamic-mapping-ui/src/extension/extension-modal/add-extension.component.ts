@@ -72,8 +72,9 @@ export class AddExtensionComponent implements OnDestroy {
 
   onFileDroppedEvent(event) {
     if (event && event.length > 0) {
-      const [file] = event;
-      this.onFile(file.file);
+      // eslint-disable-next-line prefer-destructuring
+      const file = event[0].file;
+      this.onFile(file);
     }
   }
 
