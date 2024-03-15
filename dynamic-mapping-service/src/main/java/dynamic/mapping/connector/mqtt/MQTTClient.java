@@ -64,11 +64,13 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientConfig;
+import com.hivemq.client.mqtt.mqtt3.message.Mqtt3Message;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder.Complete;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
+import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import com.hivemq.client.mqtt.mqtt3.message.subscribe.Mqtt3Subscribe;
 import com.hivemq.client.mqtt.mqtt3.message.subscribe.Mqtt3SubscribeBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.subscribe.Mqtt3SubscribeBuilderBase;
@@ -355,13 +357,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void close() {
-        if (mqttClient != null) {
-            try {
-                mqttClient.close();
-            } catch (ConnectorException e) {
-                log.error("Tenant {} - Error on closing mqttClient {}: ", tenant, e.getMessage(), e);
-            }
-        }
+
     }
 
     @Override
@@ -486,15 +482,11 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
-        MqttMessage mqttMessage = new MqttMessage();
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
-        mqttMessage.setPayload(payload.getBytes());
-        try {
-            mqttClient.publish(context.getResolvedPublishTopic(), mqttMessage);
-        } catch (ConnectorException e) {
-            throw new RuntimeException(e);
-        }
+        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getTopic()).payload(payload.getBytes()).build();
+        mqttClient.publish(mqttMessage);
+
         log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenant, payload,
                 context.getMapping().name, context.getResolvedPublishTopic());
     }
