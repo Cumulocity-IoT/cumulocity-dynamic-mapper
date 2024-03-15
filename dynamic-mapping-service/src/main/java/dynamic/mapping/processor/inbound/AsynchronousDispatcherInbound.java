@@ -203,7 +203,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) throws Exception {
+    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
 
@@ -249,7 +249,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
     }
 
     @Override
-    public void onMessage(ConnectorMessage message) throws Exception {
+    public void onMessage(ConnectorMessage message) {
         processMessage(message);
     }
 
