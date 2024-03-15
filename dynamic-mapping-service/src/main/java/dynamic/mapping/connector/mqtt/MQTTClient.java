@@ -230,9 +230,6 @@ public class MQTTClient extends AConnectorClient {
                     }
                 }
                 try {
-
-                    mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
-
                     boolean useTLS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useTLS", false);
                     boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                             .getOrDefault("useSelfSignedCertificate", false);
@@ -283,13 +280,14 @@ public class MQTTClient extends AConnectorClient {
                                 // .maxDelay(10000, TimeUnit.MILLISECONDS).build())
                                 .buildBlocking();
                     }
+                    //Registering Callback
+                    Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+                    mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
-                    // mqttClient.setCallaBack(mqttCallback);
                     // MqttConnectOptions connOpts = new MqttConnectOptions();
                     // connOpts.setCleanSession(true);
                     // connOpts.setAutomaticReconnect(false);
                     // log.info("Tenant {} - DANGEROUS-LOG password: {}", tenant, password);
-
                     Mqtt3ConnAck ack = mqttClient.connect();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
                         throw new ConnectorException("Tenant " + tenant + " - Error connecting to broker:"
