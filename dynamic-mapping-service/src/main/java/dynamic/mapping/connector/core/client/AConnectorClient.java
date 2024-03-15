@@ -43,7 +43,6 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -220,7 +219,7 @@ public abstract class AConnectorClient {
     /***
      * Subscribe to a topic on the Broker
      ***/
-    public abstract void subscribe(String topic, Integer qos) throws MqttException;
+    public abstract void subscribe(String topic, Integer qos) throws ConnectorException;
 
     /***
      * Unsubscribe a topic on the Broker
@@ -341,7 +340,7 @@ public abstract class AConnectorClient {
                         mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (MqttException exp) {
+                } catch (ConnectorException exp) {
                     log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                             mapping.subscriptionTopic, exp);
                 }
@@ -363,7 +362,7 @@ public abstract class AConnectorClient {
                             mapping.qos.ordinal());
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                    } catch (MqttException exp) {
+                    } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
                     }
@@ -407,7 +406,7 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
-                    } catch (MqttException exp) {
+                    } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
                         throw new RuntimeException(exp);
                     }
