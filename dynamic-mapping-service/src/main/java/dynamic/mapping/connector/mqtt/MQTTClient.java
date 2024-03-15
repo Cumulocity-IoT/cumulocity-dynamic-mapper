@@ -282,6 +282,7 @@ public class MQTTClient extends AConnectorClient {
                                 // .maxDelay(10000, TimeUnit.MILLISECONDS).build())
                                 .buildBlocking();
                     }
+                    mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
                     //Registering Callback
                     Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
                     mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
