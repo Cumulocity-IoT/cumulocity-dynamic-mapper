@@ -42,6 +42,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.validation.constraints.NotNull;
 
+import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
+import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3UnsubscribeBuilder;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -284,15 +286,11 @@ public class MQTTClient extends AConnectorClient {
                     Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
                     mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
-                    // MqttConnectOptions connOpts = new MqttConnectOptions();
-                    // connOpts.setCleanSession(true);
-                    // connOpts.setAutomaticReconnect(false);
-                    // log.info("Tenant {} - DANGEROUS-LOG password: {}", tenant, password);
-                    Mqtt3ConnAck ack = mqttClient.connect();
+                    Mqtt3ConnAck ack = mqttClient.connectWith().cleanSession(true).keepAlive(60).send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
                         throw new ConnectorException("Tenant " + tenant + " - Error connecting to broker:"
                                 + mqttClient.getConfig().getServerHost() + ". Errorcode: "
-                                + ack.getReturnCode().toString());
+                                + ack.getReturnCode().name());
                     }
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
@@ -396,34 +394,23 @@ public class MQTTClient extends AConnectorClient {
     public void disconnect() {
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
-        try {
-            if (isConnected()) {
-                log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
-                        mqttClient.getConfig().getServerHost());
-                activeSubscriptions.entrySet().forEach(entry -> {
-                    // only unsubscribe if still active subscriptions exist
-                    String topic = entry.getKey();
-                    MutableInt activeSubs = entry.getValue();
-                    if (activeSubs.intValue() > 0) {
-                        try {
-                            mqttClient.unsubscribe(topic);
-                        } catch (ConnectorException e) {
-                            log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant, topic, e);
-                        }
-
-                    }
-                });
-                mqttClient.unsubscribe("$SYS");
-                mqttClient.disconnect();
-                connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
-                sendConnectorLifecycle();
-                log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
-                        mqttClient.getConfig().getServerHost());
-            }
-        } catch (ConnectorException e) {
-            log.error("Tenant {} - Error on disconnecting MQTT Client: ", tenant, e);
-            updateConnectorStatusToFailed(e);
+        if (isConnected()) {
+            log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
+                    mqttClient.getConfig().getServerHost());
+            activeSubscriptions.entrySet().forEach(entry -> {
+                // only unsubscribe if still active subscriptions exist
+                String topic = entry.getKey();
+                MutableInt activeSubs = entry.getValue();
+                if (activeSubs.intValue() > 0) {
+                    mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
+                }
+            });
+            mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+            mqttClient.disconnect();
+            connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
             sendConnectorLifecycle();
+            log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
+                    mqttClient.getConfig().getServerHost());
         }
     }
 
@@ -461,7 +448,7 @@ public class MQTTClient extends AConnectorClient {
     public void unsubscribe(String topic) throws Exception {
         log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
-        mqttClient.unsubscribe(topic);
+        mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {
