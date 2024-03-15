@@ -30,12 +30,8 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     @Override
     public void accept(Mqtt3Publish mqttMessage) {
         ConnectorMessage connectorMessage = new ConnectorMessage();
-        Optional<ByteBuffer> ob = mqttMessage.getPayload();
-        if (ob.isPresent()) {
-            ByteBuffer bb = ob.get();
-            byte[] arr = new byte[bb.remaining()];
-            bb.get(arr);
-            connectorMessage.setPayload(arr);
+        if(mqttMessage.getPayload().isPresent()) {
+            connectorMessage.setPayload(mqttMessage.getPayload().get().array());
         }
         connectorMessage.setTenant(tenant);
         connectorMessage.setSendPayload(true);
