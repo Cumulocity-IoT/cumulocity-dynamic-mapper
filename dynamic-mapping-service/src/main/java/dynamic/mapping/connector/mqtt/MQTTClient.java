@@ -437,11 +437,10 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public void subscribe(String topic, Integer qos) throws ConnectorException {
         log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
-        Mqtt3SubAck subAck = null;
         sendSubscriptionEvents(topic, "Subscribing");
         if (qos != null) {
             //We don't need to add a handler on subscribe using hive client
-            mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send();
+            //mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send();
             Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
             asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send().thenRun(() -> {
                 log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
@@ -451,7 +450,6 @@ public class MQTTClient extends AConnectorClient {
             });
         } else {
             //We don't need to add a handler on subscribe using hive client
-            mqttClient.subscribeWith().topicFilter(topic).send();
             Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
             asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send().thenRun(() -> {
                 log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
