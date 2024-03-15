@@ -21,19 +21,15 @@
 
 package dynamic.mapping;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import com.hivemq.client.internal.mqtt.message.MqttMessage;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 
 import dynamic.mapping.processor.extension.external.CustomEventOuter;
 import dynamic.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 
 
 public class ProtobufPahoClient {
-
-    static MemoryPersistence persistence = new MemoryPersistence();
 
     public static void main(String[] args) {
 
@@ -50,7 +46,12 @@ public class ProtobufPahoClient {
         String topic2 = "protobuf/event";
 
         try {
-            MqttClient sampleClient = new MqttClient(broker, client_id, persistence);
+            Mqtt3BlockingClient sampleClient =  Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
+                                .identifier(clientId + additionalSubscriptionIdTest)
+                                // .automaticReconnect(MqttClientAutoReconnect.builder()
+                                // .initialDelay(3000, TimeUnit.MILLISECONDS)
+                                // .maxDelay(10000, TimeUnit.MILLISECONDS).build())
+                                .buildBlocking();;
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setUserName(broker_username);
             connOpts.setPassword(broker_password.toCharArray());
