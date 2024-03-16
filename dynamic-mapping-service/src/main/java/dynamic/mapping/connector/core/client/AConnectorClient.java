@@ -220,7 +220,7 @@ public abstract class AConnectorClient {
     /***
      * Subscribe to a topic on the Broker
      ***/
-    public abstract void subscribe(String topic, Integer qos) throws ConnectorException;
+    public abstract void subscribe(String topic, Integer qos, Boolean registerCallback) throws ConnectorException;
 
     /***
      * Unsubscribe a topic on the Broker
@@ -340,7 +340,7 @@ public abstract class AConnectorClient {
                 log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                         mapping.qos.ordinal());
                 try {
-                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal(), true);
                 } catch (ConnectorException exp) {
                     log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                             mapping.subscriptionTopic, exp);
@@ -362,7 +362,7 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos.ordinal());
                     try {
-                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal(), true);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
@@ -406,7 +406,7 @@ public abstract class AConnectorClient {
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
-                        subscribe(topic, qos);
+                        subscribe(topic, qos, true);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
                         throw new RuntimeException(exp);
@@ -468,11 +468,11 @@ public abstract class AConnectorClient {
         String tenant = getTenant();
         String connectorIdent = getConnectorIdent();
         if (closeException != null)
-            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent,
+            log.error("Tenant {} - Connection lost to broker {}: {}", tenant, connectorIdent,
                     closeException.getMessage());
         closeException.printStackTrace();
         if (closeMessage != null)
-            log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
+            log.info("Tenant {} - Connection lost to MQTT broker: {}", tenant, closeMessage);
         reconnect();
     }
 

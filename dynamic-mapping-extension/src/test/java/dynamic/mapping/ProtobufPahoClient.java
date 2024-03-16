@@ -26,13 +26,15 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
 
 import dynamic.mapping.processor.extension.external.CustomEventOuter;
 import dynamic.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 
 public class ProtobufPahoClient {
     Mqtt3BlockingClient testClient;
-    static String broker_host = System.getenv("broker");
+    static String broker_host = System.getenv("broker_host");
     static Integer broker_port = Integer.valueOf(System.getenv("broker_port"));
     static String client_id = System.getenv("client_id");
     static String broker_username = System.getenv("broker_username");
@@ -62,7 +64,20 @@ public class ProtobufPahoClient {
 
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
 
-        testClient.connect();
+        // testClient.connect();
+        Mqtt3ConnAck ack = testClient.connectWith()
+                .cleanSession(true)
+                .keepAlive(60)
+                .send();
+        if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
+            // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
+            // broker:"
+            // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
+            // + ack.getReturnCode().name());
+            System.out.println("Error connecting to broker:"
+                    + broker_host + ". Errorcode: "
+                    + ack.getReturnCode().name());
+        }
 
         System.out.println("Publishing message: :::");
 

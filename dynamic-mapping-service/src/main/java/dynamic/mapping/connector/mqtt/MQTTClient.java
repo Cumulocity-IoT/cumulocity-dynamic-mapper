@@ -31,7 +31,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -51,6 +50,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
+import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
@@ -58,7 +58,6 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
-import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuthBuilder.Complete;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
@@ -93,6 +92,8 @@ public class MQTTClient extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+
+        mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -203,6 +204,54 @@ public class MQTTClient extends AConnectorClient {
                 shouldConnect());
         if (isConnected())
             disconnect();
+
+        boolean useTLS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useTLS", false);
+        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+
+        String mqttHost = (String) connectorConfiguration.getProperties().get("mqttHost");
+        String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+        int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
+        String user = (String) connectorConfiguration.getProperties().get("user");
+        String password = (String) connectorConfiguration.getProperties().get("password");
+
+        Mqtt3ClientBuilder partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
+                .identifier(clientId + additionalSubscriptionIdTest);
+
+        // is username & password used
+        if (!StringUtils.isEmpty(user)) {
+            Complete simpleAuthComplete = Mqtt3SimpleAuth.builder().username(user);
+            if (!StringUtils.isEmpty(password)) {
+                simpleAuthComplete = simpleAuthComplete.password(password.getBytes());
+            }
+            partialBuilder = partialBuilder
+                    .simpleAuth(simpleAuthComplete.build());
+        }
+
+        // tls configuration
+        if (useSelfSignedCertificate) {
+            partialBuilder = partialBuilder.sslConfig(sslConfig);
+            log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
+        } else if (useTLS) {
+            partialBuilder = partialBuilder.sslWithDefaultConfig();
+        }
+
+        // finally build mqttClient
+        MqttClientDisconnectedContext c;
+        mqttClient = partialBuilder
+                .addDisconnectedListener(context -> {
+                    // test if we closed the connection deliberately, otherwise we have to try to
+                    // reconnect
+                    if (connectorConfiguration.enabled)
+                        connectionLost(
+                                "Disconnected from: " + context.getSource().toString(), context.getCause());
+                })
+                .buildBlocking();
+
+        // Registering Callback
+        Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+        mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
+
         // stay in the loop until successful
         boolean successful = false;
         while (!successful) {
@@ -220,79 +269,37 @@ public class MQTTClient extends AConnectorClient {
                     }
                 }
                 try {
-                    boolean useTLS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useTLS", false);
-                    boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                            .getOrDefault("useSelfSignedCertificate", false);
-
-                    String mqttHost = (String) connectorConfiguration.getProperties().get("mqttHost");
-                    String clientId = (String) connectorConfiguration.getProperties().get("clientId");
-                    int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
-                    String user = (String) connectorConfiguration.getProperties().get("user");
-                    String password = (String) connectorConfiguration.getProperties().get("password");
-
-                    Mqtt3ClientBuilder partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-                            .identifier(clientId + additionalSubscriptionIdTest);
-
-                    // is username & password used
-                    Mqtt3SimpleAuthBuilder simpleAuthBuilder = Mqtt3SimpleAuth.builder();
-                    Complete simpleAuthComplete = null;
-                    if (!StringUtils.isEmpty(user)) {
-                        simpleAuthComplete = simpleAuthBuilder.username(user);
-                    }
-                    if (!StringUtils.isEmpty(password) && simpleAuthComplete != null) {
-                        simpleAuthComplete = simpleAuthComplete.password(password.getBytes());
-                    }
-                    if (simpleAuthComplete != null) {
-                        Mqtt3SimpleAuth simpleAuth = simpleAuthComplete.build();
-                        partialBuilder = partialBuilder
-                                .simpleAuth(simpleAuth);
-                    }
-
-                    // tls configuration
-                    if (useSelfSignedCertificate) {
-                        partialBuilder = partialBuilder.sslConfig(sslConfig);
-                        log.debug("Tenant {} - Using certificate: {}", tenant, cert.getCertInPemFormat());
-                    } else if (useTLS) {
-                        partialBuilder = partialBuilder.sslWithDefaultConfig();
-                    }
-
-                    // finally build mqttClient
-                    MqttClientDisconnectedContext c;
-                    mqttClient = partialBuilder
-                            .addDisconnectedListener(context -> {
-                                // test if we closed the connection deliberately, otherwise we have to try to
-                                // reconnect
-                                if (connectorConfiguration.enabled)
-                                    connectionLost(
-                                            "Disconnected from: " + context.getSource().toString(), context.getCause());
-                            })
-                            .buildBlocking();
-
-                    mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
-                    // Registering Callback
-                    // Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-                    // mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
                     Mqtt3ConnAck ack = mqttClient.connectWith()
                             .cleanSession(true)
                             .keepAlive(60)
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
-                        throw new ConnectorException("Tenant " + tenant + " - Error connecting to broker:"
+                        // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
+                        // broker:"
+                        // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
+                        // + ack.getReturnCode().name());
+                        log.error("Tenant " + tenant + " - Error connecting to broker:"
                                 + mqttClient.getConfig().getServerHost() + ". Errorcode: "
                                 + ack.getReturnCode().name());
                     }
+
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     connectorStatus.updateStatus(ConnectorStatus.CONNECTED, true);
                     sendConnectorLifecycle();
-                } catch (ConnectorException e) {
-                    log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
-                    updateConnectorStatusToFailed(e);
-                    sendConnectorLifecycle();
-                    if (serviceConfiguration.logConnectorErrorInBackend) {
-                        log.error("Tenant {} - Stacktrace:", tenant, e);
-                    }
+                } catch (Exception e) {
+                    log.error("Tenant {} - Failed to connect to broker {}, {}", tenant,
+                            mqttClient.getConfig().getServerHost(), e.getMessage());
                 }
+                // try {
+                // } catch (ConnectorException e) {
+                // log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
+                // updateConnectorStatusToFailed(e);
+                // sendConnectorLifecycle();
+                // if (serviceConfiguration.logConnectorErrorInBackend) {
+                // log.error("Tenant {} - Stacktrace:", tenant, e);
+                // }
+                // }
                 firstRun = false;
             }
 
@@ -301,7 +308,7 @@ public class MQTTClient extends AConnectorClient {
                 if (shouldConnect()) {
                     try {
                         // is not working for broker.emqx.io
-                        subscribe("$SYS/#", 0);
+                        subscribe("$SYS/#", 0, false);
                         ;
                     } catch (ConnectorException e) {
                         log.warn(
@@ -312,7 +319,7 @@ public class MQTTClient extends AConnectorClient {
                     mappingComponent.rebuildMappingOutboundCache(tenant);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
-                    // reviously used updatedMappings
+                    // previously used updatedMappings
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptions(updatedMappings, true);
                 }
@@ -382,6 +389,14 @@ public class MQTTClient extends AConnectorClient {
     public void disconnect() {
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
+        try {
+            if (mqttClient != null && mqttClient.getState().isConnected())
+                mqttClient.disconnect();
+        } catch (Exception e) {
+            log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
+                    e);
+        }
+
         if (isConnected()) {
             log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
                     mqttClient.getConfig().getServerHost());
@@ -394,7 +409,6 @@ public class MQTTClient extends AConnectorClient {
                 }
             });
             mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
-            mqttClient.disconnect();
             connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
             sendConnectorLifecycle();
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
@@ -408,23 +422,35 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, Integer qos) throws ConnectorException {
+    public void subscribe(String topic, Integer qos, Boolean registerCallback) throws ConnectorException {
         log.info("Tenant {} - Subscribing on topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Subscribing");
         if (qos.equals(null))
             qos = 0;
 
+        registerCallback = false;
         // We don't need to add a handler on subscribe using hive client
         // mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send();
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).callback(mqttCallback).send()
-                .thenRun(() -> {
-                    log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
-                }).exceptionally(throwable -> {
-                    log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                            throwable.getMessage());
-                    return null;
-                });
+        if (registerCallback) {
+            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).callback(mqttCallback).send()
+                    .thenRun(() -> {
+                        log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+                    }).exceptionally(throwable -> {
+                        log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
+                                throwable.getMessage());
+                        return null;
+                    });
+        } else {
+            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send()
+                    .thenRun(() -> {
+                        log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+                    }).exceptionally(throwable -> {
+                        log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
+                                throwable.getMessage());
+                        return null;
+                    });
+        }
 
     }
 
