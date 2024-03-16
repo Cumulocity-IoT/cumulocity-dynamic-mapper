@@ -1,7 +1,6 @@
 package dynamic.mapping.connector.mqtt;
 
 import java.nio.ByteBuffer;
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import com.hivemq.client.mqtt.datatypes.MqttTopic;
