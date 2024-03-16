@@ -137,7 +137,8 @@ public abstract class AConnectorClient {
     public abstract ConnectorSpecification getSpecification();
 
     public void loadConfiguration() {
-        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
+                tenant);
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -461,6 +462,18 @@ public abstract class AConnectorClient {
                     C8YAgent.STATUS_SUBSCRIPTION_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
         }
+    }
+
+    public void connectionLost(String closeMessage, Throwable closeException) {
+        String tenant = getTenant();
+        String connectorIdent = getConnectorIdent();
+        if (closeException != null)
+            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent,
+                    closeException.getMessage());
+        closeException.printStackTrace();
+        if (closeMessage != null)
+            log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
+        reconnect();
     }
 
     @Data

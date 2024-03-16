@@ -21,11 +21,6 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         this.connectorIdent = connectorIdent;
     }
 
-    // @Override
-    // public void connectionLost(Throwable throwable) {
-    // genericMessageCallback.onClose(null, throwable);
-    // }
-
     @Override
     public void accept(Mqtt3Publish mqttMessage) {
         ConnectorMessage connectorMessage = new ConnectorMessage();
