@@ -31,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +141,7 @@ public class MQTTClient extends AConnectorClient {
 
     private AConnectorClient.Certificate cert;
 
-    private SSLSocketFactory sslSocketFactory;
+    private MqttClientSslConfig sslConfig;
 
     private MQTTCallback mqttCallback = null;
 
@@ -178,11 +179,16 @@ public class MQTTClient extends AConnectorClient {
                 TrustManagerFactory tmf = TrustManagerFactory
                         .getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(trustStore);
-                TrustManager[] trustManagers = tmf.getTrustManagers();
-
-                SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
-                sslContext.init(null, trustManagers, null);
-                sslSocketFactory = sslContext.getSocketFactory();
+                // TrustManager[] trustManagers = tmf.getTrustManagers();
+                // SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                // sslContext.init(null, trustManagers, null);
+                // sslSocketFactory = sslContext.getSocketFactory();
+                MqttClientSslConfigBuilder sslConfigBuilder = MqttClientSslConfig.builder();
+                // use sample from
+                // https://github.com/micronaut-projects/micronaut-mqtt/blob/ac2720937871b8907ad429f7ea5b8b4664a0776e/mqtt-hivemq/src/main/java/io/micronaut/mqtt/hivemq/v3/client/Mqtt3ClientFactory.java#L118
+                // and https://hivemq.github.io/hivemq-mqtt-client/docs/client-configuration/
+                List<String> expectedProtocols = Arrays.asList("TLSv1.2");
+                sslConfig = sslConfigBuilder.trustManagerFactory(tmf).protocols(expectedProtocols).build();
             } catch (NoSuchAlgorithmException | CertificateException | IOException | KeyStoreException
                     | KeyManagementException e) {
                 log.error("Tenant {} - Connector {} - Exception when configuring socketFactory for TLS: ", tenant,
@@ -252,12 +258,6 @@ public class MQTTClient extends AConnectorClient {
                         simpleAuthComplete = simpleAuthComplete.password(password.getBytes());
                     }
                     if (useSelfSignedCertificate) {
-                        MqttClientSslConfigBuilder sslConfigBuilder = MqttClientSslConfig.builder();
-
-                        // use sample from
-                        // https://github.com/micronaut-projects/micronaut-mqtt/blob/ac2720937871b8907ad429f7ea5b8b4664a0776e/mqtt-hivemq/src/main/java/io/micronaut/mqtt/hivemq/v3/client/Mqtt3ClientFactory.java#L118
-                        // and https://hivemq.github.io/hivemq-mqtt-client/docs/client-configuration/
-                        MqttClientSslConfig sslConfig = null;
                         mqttClient = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
                                 .identifier(clientId + additionalSubscriptionIdTest).sslConfig(sslConfig)
                                 .buildBlocking();
