@@ -98,7 +98,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       .subscribe((confs) => {
         this.configurations = confs;
       });
-    this.brokerConfigurationService.getStatusLogs().subscribe((logs) => {
+    this.brokerConfigurationService.getStatusLogs()?.subscribe((logs) => {
       this.statusLogs = logs;
     });
     await this.loadData();
