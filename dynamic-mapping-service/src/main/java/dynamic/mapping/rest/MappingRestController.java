@@ -351,7 +351,7 @@ public class MappingRestController {
                         connectorIdent);
                 // important to use reconnect, since it requires to go through the
                 // initialization phase
-                client.reconnect();
+                client.submitConnect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
                 ConnectorConfiguration configuration = connectorConfigurationComponent

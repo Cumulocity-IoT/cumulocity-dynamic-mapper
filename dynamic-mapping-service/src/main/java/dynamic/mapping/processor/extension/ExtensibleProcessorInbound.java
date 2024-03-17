@@ -64,18 +64,14 @@ public class ExtensibleProcessorInbound extends BasePayloadProcessorInbound<byte
                 String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
                         context.getMapping().extension.getName(),
                         context.getMapping().extension.getEvent());
-                log.warn("Tenant {} - Extension {}:{} could not be found!", tenant,
-                        context.getMapping().extension.getName(),
-                        context.getMapping().extension.getEvent());
+                log.warn(message);
                 throw new ProcessingException(message);
             }
         } catch (Exception ex) {
             String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
                     context.getMapping().extension.getName(),
                     context.getMapping().extension.getEvent());
-            log.warn("Tenant {} - Extension {}:{} could not be found!", tenant,
-                    context.getMapping().extension.getName(),
-                    context.getMapping().extension.getEvent());
+            log.warn(message);
             throw new ProcessingException(message);
         }
         extension.extractFromSource(context);

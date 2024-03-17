@@ -34,7 +34,7 @@ public class ConnectorRegistry {
 
     public void registerClient(String tenant, AConnectorClient client) throws ConnectorRegistryException {
         if (tenant == null)
-            throw new ConnectorRegistryException("tenant is missing!");
+            throw new ConnectorRegistryException("Tenant is missing!");
         if (client.getConnectorIdent() == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
         if (connectorTenantMap.get(tenant) == null) {
@@ -56,7 +56,7 @@ public class ConnectorRegistry {
 
     public HashMap<String, AConnectorClient> getClientsForTenant(String tenant) throws ConnectorRegistryException {
         if (tenant == null)
-            throw new ConnectorRegistryException("tenant is missing!");
+            throw new ConnectorRegistryException("Tenant is missing!");
         if (connectorTenantMap.get(tenant) != null) {
             return connectorTenantMap.get(tenant);
         } else {
@@ -67,7 +67,7 @@ public class ConnectorRegistry {
 
     public AConnectorClient getClientForTenant(String tenant, String ident) throws ConnectorRegistryException {
         if (tenant == null)
-            throw new ConnectorRegistryException("tenant is missing!");
+            throw new ConnectorRegistryException("Tenant is missing!");
         if (ident == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
         if (connectorTenantMap.get(tenant) != null) {
@@ -86,7 +86,7 @@ public class ConnectorRegistry {
 
     public void unregisterAllClientsForTenant(String tenant) throws ConnectorRegistryException {
         if (tenant == null)
-            throw new ConnectorRegistryException("tenant is missing!");
+            throw new ConnectorRegistryException("Tenant is missing!");
         if (connectorTenantMap.get(tenant) != null) {
             HashMap<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             Iterator<Entry<String, AConnectorClient>> iterator = connectorMap.entrySet().iterator();
@@ -104,7 +104,7 @@ public class ConnectorRegistry {
 
     public void unregisterClient(String tenant, String ident) throws ConnectorRegistryException {
         if (tenant == null)
-            throw new ConnectorRegistryException("tenant is missing!");
+            throw new ConnectorRegistryException("Tenant is missing!");
         if (ident == null)
             throw new ConnectorRegistryException("Connector ident is missing!");
 

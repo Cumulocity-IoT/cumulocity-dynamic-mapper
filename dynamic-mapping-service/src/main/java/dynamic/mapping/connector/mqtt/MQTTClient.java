@@ -46,13 +46,13 @@ import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 import com.hivemq.client.mqtt.MqttClientSslConfigBuilder;
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
-import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
@@ -92,8 +92,6 @@ public class MQTTClient extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
-
-        mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
     }
 
     private static final int WAIT_PERIOD_MS = 10000;
@@ -129,6 +127,8 @@ public class MQTTClient extends AConnectorClient {
     private MQTTCallback mqttCallback = null;
 
     private Mqtt3BlockingClient mqttClient;
+
+    private MutableBoolean connectionState = new MutableBoolean(false);
 
     // private Mqtt3ClientConfiguration sslConfiguration;
 
@@ -237,19 +237,23 @@ public class MQTTClient extends AConnectorClient {
         }
 
         // finally build mqttClient
-        MqttClientDisconnectedContext c;
         mqttClient = partialBuilder
                 .addDisconnectedListener(context -> {
                     // test if we closed the connection deliberately, otherwise we have to try to
                     // reconnect
+                    connectionState.setFalse();
                     if (connectorConfiguration.enabled)
                         connectionLost(
                                 "Disconnected from: " + context.getSource().toString(), context.getCause());
+                })
+                .addConnectedListener(connext -> {
+                    connectionState.setTrue();
                 })
                 .buildBlocking();
 
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
+        mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
         mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful
@@ -274,32 +278,20 @@ public class MQTTClient extends AConnectorClient {
                             .keepAlive(60)
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
-                        // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
-                        // broker:"
-                        // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
-                        // + ack.getReturnCode().name());
-                        log.error("Tenant " + tenant + " - Error connecting to broker:"
-                                + mqttClient.getConfig().getServerHost() + ". Errorcode: "
-                                + ack.getReturnCode().name());
+
+                        throw new ConnectorException(String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s" , tenant, mqttClient.getConfig().getServerHost(), ack.getReturnCode().name() ));
                     }
 
+                    // connectionState.setTrue();
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     connectorStatus.updateStatus(ConnectorStatus.CONNECTED, true);
                     sendConnectorLifecycle();
                 } catch (Exception e) {
-                    log.error("Tenant {} - Failed to connect to broker {}, {}", tenant,
-                            mqttClient.getConfig().getServerHost(), e.getMessage());
+                    log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
+                            mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
+                            mqttClient.getState().isConnected());
                 }
-                // try {
-                // } catch (ConnectorException e) {
-                // log.error("Tenant {} - Error on reconnect: {}", tenant, e.getMessage());
-                // updateConnectorStatusToFailed(e);
-                // sendConnectorLifecycle();
-                // if (serviceConfiguration.logConnectorErrorInBackend) {
-                // log.error("Tenant {} - Stacktrace:", tenant, e);
-                // }
-                // }
                 firstRun = false;
             }
 
@@ -308,7 +300,7 @@ public class MQTTClient extends AConnectorClient {
                 if (shouldConnect()) {
                     try {
                         // is not working for broker.emqx.io
-                        subscribe("$SYS/#", 0, false);
+                        subscribe("$SYS/#", 0);
                         ;
                     } catch (ConnectorException e) {
                         log.warn(
@@ -373,29 +365,14 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public boolean isConnected() {
-        // log.info("Tenant {} - TESTING isConnected I:,s {}, {}", tenant, mqttClient,
-        // getConnectorIdent(),
-        // getConnectorName());
-        // if (mqttClient != null)
-        // log.info("Tenant {} - TESTING isConnected II: {}", tenant,
-        // mqttClient.isConnected());
-        // else
-        // log.info("Tenant {} - TESTING isConnected II: {}, mqttClient is null",
-        // tenant);
-        return mqttClient != null ? mqttClient.getState().isConnected() : false;
+        return connectionState.booleanValue();
+        // return mqttClient != null ? mqttClient.getState().isConnected() : false;
     }
 
     @Override
     public void disconnect() {
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
-        try {
-            if (mqttClient != null && mqttClient.getState().isConnected())
-                mqttClient.disconnect();
-        } catch (Exception e) {
-            log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
-                    e);
-        }
 
         if (isConnected()) {
             log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
@@ -404,11 +381,22 @@ public class MQTTClient extends AConnectorClient {
                 // only unsubscribe if still active subscriptions exist
                 String topic = entry.getKey();
                 MutableInt activeSubs = entry.getValue();
-                if (activeSubs.intValue() > 0) {
+                if (activeSubs.intValue() > 0 && mqttClient.getState().isConnected()) {
                     mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
                 }
             });
-            mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+
+            if (mqttClient.getState().isConnected()) {
+                mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter("$SYS").build());
+            }
+
+            try {
+                if (mqttClient != null && mqttClient.getState().isConnected())
+                    mqttClient.disconnect();
+            } catch (Exception e) {
+                log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
+                        e);
+            }
             connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
             sendConnectorLifecycle();
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
@@ -422,36 +410,22 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, Integer qos, Boolean registerCallback) throws ConnectorException {
-        log.info("Tenant {} - Subscribing on topic: {}", tenant, topic);
+    public void subscribe(String topic, Integer qos) throws ConnectorException {
+        log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Subscribing");
         if (qos.equals(null))
             qos = 0;
 
-        registerCallback = false;
         // We don't need to add a handler on subscribe using hive client
-        // mqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send();
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        if (registerCallback) {
-            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).callback(mqttCallback).send()
-                    .thenRun(() -> {
-                        log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
-                    }).exceptionally(throwable -> {
-                        log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                                throwable.getMessage());
-                        return null;
-                    });
-        } else {
-            asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send()
-                    .thenRun(() -> {
-                        log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
-                    }).exceptionally(throwable -> {
-                        log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
-                                throwable.getMessage());
-                        return null;
-                    });
-        }
-
+        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send()
+                .thenRun(() -> {
+                    log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+                }).exceptionally(throwable -> {
+                    log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
+                            throwable.getMessage());
+                    return null;
+                });
     }
 
     public void unsubscribe(String topic) throws Exception {

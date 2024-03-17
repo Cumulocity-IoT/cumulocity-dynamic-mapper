@@ -249,8 +249,7 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
             if (m.getC8yMQTTMapping().isActive()) {
-                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + id
-                        + " is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
             // mapping is deactivated and we can delete it
             inventoryApi.delete(GId.asGId(id));
@@ -284,8 +283,7 @@ public class MappingComponent {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
-                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + mapping.id
-                        + " is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant);
@@ -321,7 +319,7 @@ public class MappingComponent {
         if (errors.size() != 0) {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
-            throw new RuntimeException("Validation errors:" + errorList);
+            throw new RuntimeException(String.format("Validation errors: %s", errorList));
         }
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             MappingRepresentation mr = new MappingRepresentation();
