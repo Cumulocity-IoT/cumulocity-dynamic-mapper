@@ -62,7 +62,7 @@ public enum API {
     static public API fromString(String value) {
         API api = ALIAS_MAP.get(value);
         if (api == null)
-            throw new IllegalArgumentException("Not an alias: " + value);
+            throw new IllegalArgumentException(String.format("Not an alias: %s", value));
         return api;
     }
 }
