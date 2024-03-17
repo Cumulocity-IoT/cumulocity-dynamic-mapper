@@ -199,6 +199,8 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void connect() {
+        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
+        sendConnectorLifecycle();
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenant, isConnected(),
                 shouldConnect());
@@ -371,6 +373,8 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
+        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
+        sendConnectorLifecycle();
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
 
