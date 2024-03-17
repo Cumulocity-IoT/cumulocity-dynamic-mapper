@@ -150,6 +150,7 @@ public abstract class AConnectorClient {
     }
 
     public void submitConnect() {
+        loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
         log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
@@ -162,6 +163,7 @@ public abstract class AConnectorClient {
     }
 
     public void submitDisconnect() {
+        loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
         log.info("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
@@ -220,7 +222,7 @@ public abstract class AConnectorClient {
     /***
      * Subscribe to a topic on the Broker
      ***/
-    public abstract void subscribe(String topic, Integer qos, Boolean registerCallback) throws ConnectorException;
+    public abstract void subscribe(String topic, Integer qos) throws ConnectorException;
 
     /***
      * Unsubscribe a topic on the Broker
@@ -340,7 +342,7 @@ public abstract class AConnectorClient {
                 log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                         mapping.qos.ordinal());
                 try {
-                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal(), true);
+                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                 } catch (ConnectorException exp) {
                     log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                             mapping.subscriptionTopic, exp);
@@ -362,7 +364,7 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos.ordinal());
                     try {
-                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal(), true);
+                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
@@ -406,7 +408,7 @@ public abstract class AConnectorClient {
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
-                        subscribe(topic, qos, true);
+                        subscribe(topic, qos);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
                         throw new RuntimeException(exp);
