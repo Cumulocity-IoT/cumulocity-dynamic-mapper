@@ -199,8 +199,8 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void connect() {
-        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
-        sendConnectorLifecycle();
+        updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
+
         log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenant, isConnected(),
                 shouldConnect());
@@ -287,8 +287,7 @@ public class MQTTClient extends AConnectorClient {
                     // connectionState.setTrue();
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
-                    connectorStatus.updateStatus(ConnectorStatus.CONNECTED, true);
-                    sendConnectorLifecycle();
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true,true);
                 } catch (Exception e) {
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
@@ -330,6 +329,7 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
+
     private void updateConnectorStatusToFailed(Exception e) {
         String msg = " --- " + e.getClass().getName() + ": "
                 + e.getMessage();
@@ -337,7 +337,7 @@ public class MQTTClient extends AConnectorClient {
             msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
         }
         connectorStatus.setMessage(msg);
-        connectorStatus.updateStatus(ConnectorStatus.FAILED, false);
+        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false,true);
     }
 
     @Override
@@ -373,8 +373,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
-        sendConnectorLifecycle();
+        updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true,true);
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
 
@@ -401,8 +400,7 @@ public class MQTTClient extends AConnectorClient {
                 log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
                         e);
             }
-            connectorStatus.updateStatus(ConnectorStatus.DISCONNECTED, true);
-            sendConnectorLifecycle();
+            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true,true);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }

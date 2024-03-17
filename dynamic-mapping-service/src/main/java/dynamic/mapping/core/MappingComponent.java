@@ -173,32 +173,6 @@ public class MappingComponent {
         }
     }
 
-    public void sendConnectorLifecycle(String tenant, String connectorIdent, ConnectorStatusEvent connectorStatus,
-            String connectorName) {
-        if (configurationRegistry.getServiceConfigurations().get(tenant).sendConnectorLifecycle) {
-            subscriptionsService.runForTenant(tenant, () -> {
-                MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                        .getMappingServiceRepresentations().get(tenant);
-                Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
-                        new HashMap<String, Map<String, String>>());
-                log.debug("Tenant {} - Sending status connector: {}", tenant, ccs);
-                Map<String, String> stMap = Map.ofEntries(
-                        entry("status", connectorStatus.getStatus().name()),
-                        entry("message", connectorStatus.message),
-                        entry("connectorName", connectorName),
-                        entry("date", connectorStatus.date));
-                ccs.put(connectorIdent, stMap);
-                consolidatedConnectorStatus.put(tenant, ccs);
-                Map<String, Object> service = new HashMap<String, Object>();
-                service.put(C8YAgent.CONNECTOR_FRAGMENT, ccs);
-                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-                updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
-                updateMor.setAttrs(service);
-                this.inventoryApi.update(updateMor);
-            });
-        }
-    }
-
     public MappingStatus getMappingStatus(String tenant, Mapping m) {
         // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
         Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
