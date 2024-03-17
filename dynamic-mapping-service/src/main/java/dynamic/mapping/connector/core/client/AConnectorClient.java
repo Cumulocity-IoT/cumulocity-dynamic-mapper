@@ -112,6 +112,8 @@ public abstract class AConnectorClient {
 
     private Instant start = Instant.now();
 
+    private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
+
     @Getter
     @Setter
     public ConnectorConfiguration connectorConfiguration;
@@ -145,8 +147,7 @@ public abstract class AConnectorClient {
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 
-        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
-        sendConnectorLifecycle();
+        updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
 
     public void submitConnect() {
@@ -261,9 +262,11 @@ public abstract class AConnectorClient {
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
-                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
+                updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
             }
-            sendConnectorLifecycle();
+            // else {
+            // sendConnectorLifecycle();
+            // }
         } catch (Exception ex) {
             log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
@@ -472,6 +475,14 @@ public abstract class AConnectorClient {
         if (closeMessage != null)
             log.info("Tenant {} - Connection lost to MQTT broker: {}", tenant, closeMessage);
         reconnect();
+    }
+
+    public void updateConnectorStatusAndSend(ConnectorStatus status, boolean clearMessage, boolean send) {
+        previousConnectorStatus = connectorStatus.getStatus();
+        connectorStatus.updateStatus(status, clearMessage);
+        if (send && !(status.equals(previousConnectorStatus))) {
+            sendConnectorLifecycle();
+        }
     }
 
     @Data

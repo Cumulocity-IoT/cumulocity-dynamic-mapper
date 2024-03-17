@@ -98,6 +98,8 @@ import dynamic.mapping.model.API;
 @Component
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
+    ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
+
     @Autowired
     private EventApi eventApi;
 
@@ -422,7 +424,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ", tenant,
+                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ",
+                        tenant,
                         e);
             }
         }
@@ -611,7 +614,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle) {
+        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle
+                && !(connectorStatus.equals(previousConnectorStatus))) {
+            previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);
