@@ -147,7 +147,7 @@ public abstract class AConnectorClient {
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 
-        updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
+        // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
 
     public void submitConnect() {
@@ -253,20 +253,15 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            // disable since the connector status is submitted as Events with the following
-            // method sendConnectorLifecycle()
-            // mappingComponent.sendConnectorLifecycle(tenant,
-            // getConnectorIdent(),getConnectorStatus(),
-            // getConnectorName());
 
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
                 updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
             }
-            // else {
-            // sendConnectorLifecycle();
-            // }
+            else {
+                sendConnectorLifecycle();
+            }
         } catch (Exception ex) {
             log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
@@ -433,7 +428,8 @@ public abstract class AConnectorClient {
 
     public void sendConnectorLifecycle() {
         // stop sending lifecycle event if connector is disabled
-        if (serviceConfiguration.sendConnectorLifecycle && connectorConfiguration.enabled) {
+        if (serviceConfiguration.sendConnectorLifecycle && !(connectorStatus.getStatus().equals(previousConnectorStatus))) {
+            previousConnectorStatus = connectorStatus.getStatus();
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);
@@ -478,9 +474,8 @@ public abstract class AConnectorClient {
     }
 
     public void updateConnectorStatusAndSend(ConnectorStatus status, boolean clearMessage, boolean send) {
-        previousConnectorStatus = connectorStatus.getStatus();
         connectorStatus.updateStatus(status, clearMessage);
-        if (send && !(status.equals(previousConnectorStatus))) {
+        if (send) {
             sendConnectorLifecycle();
         }
     }
