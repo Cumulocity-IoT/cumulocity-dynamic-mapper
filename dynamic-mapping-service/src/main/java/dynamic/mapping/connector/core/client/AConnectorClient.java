@@ -158,8 +158,6 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
-        sendConnectorLifecycle();
     }
 
     public void submitDisconnect() {
@@ -171,8 +169,6 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
-        sendConnectorLifecycle();
     }
 
     public void submitHousekeeping() {
