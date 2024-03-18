@@ -45,7 +45,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot-dependencies.version>2.7.11</spring-boot-dependencies.version>
+        <spring-boot-dependencies.version>2.7.17</spring-boot-dependencies.version>
     </properties>
 
     <repositories>
@@ -65,7 +65,19 @@
 
     <dependencyManagement>
         <dependencies>
-
+            <!-- artifacts dagger, jctools-core need to be listed as provided, other wise one can
+            not run the dynamic-mapper  locally in vcode in case of error tracing & debugging
+        -->
+            <dependency>
+                <groupId>com.google.dagger</groupId>
+                <artifactId>dagger</artifactId>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jctools</groupId>
+                <artifactId>jctools-core</artifactId>
+                <scope>provided</scope>
+            </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
@@ -98,10 +110,15 @@
                 <artifactId>protobuf-java</artifactId>
                 <version>3.25.2</version>
             </dependency>
-            <dependency>
+            <!-- <dependency>
                 <groupId>org.eclipse.paho</groupId>
                 <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
                 <version>1.2.5</version>
+            </dependency> -->
+            <dependency>
+                <groupId>com.hivemq</groupId>
+                <artifactId>hivemq-mqtt-client</artifactId>
+                <version>1.3.3</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.jsonata4java</groupId>
@@ -113,7 +130,8 @@
                 <artifactId>commons-text</artifactId>
                 <version>1.11.0</version>
             </dependency>
-            <!-- commons-text 1.11.0 requires commons-lang3 3.13.0, see https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
+            <!-- commons-text 1.11.0 requires commons-lang3 3.13.0, see
+            https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>

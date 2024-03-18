@@ -203,7 +203,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) throws Exception {
+    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
 
@@ -237,19 +237,10 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onClose(String closeMessage, Throwable closeException) {
-        String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConnectorIdent();
-        if (closeException != null)
-            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent,
-                    closeException.getMessage());
-        closeException.printStackTrace();
-        if (closeMessage != null)
-            log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
-        connectorClient.reconnect();
     }
 
     @Override
-    public void onMessage(ConnectorMessage message) throws Exception {
+    public void onMessage(ConnectorMessage message) {
         processMessage(message);
     }
 

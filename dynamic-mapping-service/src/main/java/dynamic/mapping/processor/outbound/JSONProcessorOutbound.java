@@ -143,8 +143,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                 new GId(extractedSourceContent.asText()), mapping.externalIdType,
                                 context);
                         if (externalId == null && context.isSendPayload()) {
-                            throw new RuntimeException("External id " + extractedSourceContent.asText() + " for type "
-                                    + mapping.externalIdType + " not found!");
+                            throw new RuntimeException(String.format("External id %s for type %s not found!", extractedSourceContent.asText(),mapping.externalIdType ));
                         } else if (externalId == null) {
                             extractedSourceContent = null;
                         } else {

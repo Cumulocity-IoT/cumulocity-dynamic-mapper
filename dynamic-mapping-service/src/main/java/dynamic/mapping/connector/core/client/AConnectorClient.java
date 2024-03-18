@@ -43,7 +43,6 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -113,6 +112,8 @@ public abstract class AConnectorClient {
 
     private Instant start = Instant.now();
 
+    private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
+
     @Getter
     @Setter
     public ConnectorConfiguration connectorConfiguration;
@@ -138,18 +139,19 @@ public abstract class AConnectorClient {
     public abstract ConnectorSpecification getSpecification();
 
     public void loadConfiguration() {
-        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(), tenant);
+        connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
+                tenant);
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
         serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         configurationRegistry.getServiceConfigurations().put(tenant, serviceConfiguration);
 
-        connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
-        sendConnectorLifecycle();
+        // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
 
     public void submitConnect() {
+        loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
         log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
@@ -157,11 +159,10 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.CONNECTING, true);
-        sendConnectorLifecycle();
     }
 
     public void submitDisconnect() {
+        loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
         log.info("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
@@ -169,8 +170,6 @@ public abstract class AConnectorClient {
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
         }
-        connectorStatus.updateStatus(ConnectorStatus.DISCONNECTING, true);
-        sendConnectorLifecycle();
     }
 
     public void submitHousekeeping() {
@@ -220,7 +219,7 @@ public abstract class AConnectorClient {
     /***
      * Subscribe to a topic on the Broker
      ***/
-    public abstract void subscribe(String topic, Integer qos) throws MqttException;
+    public abstract void subscribe(String topic, Integer qos) throws ConnectorException;
 
     /***
      * Unsubscribe a topic on the Broker
@@ -254,18 +253,15 @@ public abstract class AConnectorClient {
             }
             mappingComponent.cleanDirtyMappings(tenant);
             mappingComponent.sendMappingStatus(tenant);
-            // disable since the connector status is submitted as Events with the following
-            // method sendConnectorLifecycle()
-            // mappingComponent.sendConnectorLifecycle(tenant,
-            // getConnectorIdent(),getConnectorStatus(),
-            // getConnectorName());
 
             // check if connector is in DISCONNECTED state and then move it to CONFIGURED
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
-                connectorStatus.updateStatus(ConnectorStatus.CONFIGURED, true);
+                updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
             }
-            sendConnectorLifecycle();
+            else {
+                sendConnectorLifecycle();
+            }
         } catch (Exception ex) {
             log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
@@ -341,7 +337,7 @@ public abstract class AConnectorClient {
                         mapping.qos.ordinal());
                 try {
                     subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (MqttException exp) {
+                } catch (ConnectorException exp) {
                     log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                             mapping.subscriptionTopic, exp);
                 }
@@ -363,7 +359,7 @@ public abstract class AConnectorClient {
                             mapping.qos.ordinal());
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                    } catch (MqttException exp) {
+                    } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
                     }
@@ -407,7 +403,7 @@ public abstract class AConnectorClient {
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
-                    } catch (MqttException exp) {
+                    } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
                         throw new RuntimeException(exp);
                     }
@@ -432,7 +428,8 @@ public abstract class AConnectorClient {
 
     public void sendConnectorLifecycle() {
         // stop sending lifecycle event if connector is disabled
-        if (serviceConfiguration.sendConnectorLifecycle && connectorConfiguration.enabled) {
+        if (serviceConfiguration.sendConnectorLifecycle && !(connectorStatus.getStatus().equals(previousConnectorStatus))) {
+            previousConnectorStatus = connectorStatus.getStatus();
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);
@@ -461,6 +458,25 @@ public abstract class AConnectorClient {
             c8yAgent.createEvent(msg,
                     C8YAgent.STATUS_SUBSCRIPTION_EVENT_TYPE,
                     DateTime.now(), mappingServiceRepresentation, tenant, stMap);
+        }
+    }
+
+    public void connectionLost(String closeMessage, Throwable closeException) {
+        String tenant = getTenant();
+        String connectorIdent = getConnectorIdent();
+        if (closeException != null)
+            log.error("Tenant {} - Connection lost to broker {}: {}", tenant, connectorIdent,
+                    closeException.getMessage());
+        closeException.printStackTrace();
+        if (closeMessage != null)
+            log.info("Tenant {} - Connection lost to MQTT broker: {}", tenant, closeMessage);
+        reconnect();
+    }
+
+    public void updateConnectorStatusAndSend(ConnectorStatus status, boolean clearMessage, boolean send) {
+        connectorStatus.updateStatus(status, clearMessage);
+        if (send) {
+            sendConnectorLifecycle();
         }
     }
 

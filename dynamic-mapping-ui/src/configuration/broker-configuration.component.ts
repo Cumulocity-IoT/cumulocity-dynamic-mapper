@@ -57,7 +57,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   statusLogs$: Observable<any[]>;
   statusLogs: any[] = [];
   filterStatusLog = {
-    eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    // eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    eventType: 'ALL',
     connectorIdent: 'ALL'
   };
   StatusEventTypes = StatusEventTypes;
@@ -98,7 +99,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       .subscribe((confs) => {
         this.configurations = confs;
       });
-    this.brokerConfigurationService.getStatusLogs().subscribe((logs) => {
+    this.brokerConfigurationService.getStatusLogs()?.subscribe((logs) => {
       this.statusLogs = logs;
     });
     await this.loadData();

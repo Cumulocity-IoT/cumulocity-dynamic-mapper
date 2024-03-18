@@ -126,7 +126,8 @@ public class TreeNode {
             } else {
                 String remaining = String.join("/", remainingLevels);
                 throw new ResolveException(
-                        "No mapping registered for this path: " + this.getAbsolutePath() + remaining + "!");
+                        String.format("No mapping registered for this path: %s %s!", this.getAbsolutePath(),
+                                remaining));
             }
         }
         return results;
@@ -157,14 +158,14 @@ public class TreeNode {
                     if (!specificChildren.get(0).isMappingNode()) {
                         child = specificChildren.get(0);
                     } else {
-                        throw new ResolveException(
-                                "Could not add mapping to tree, since at this node is already blocked by mappingId : "
-                                        + specificChildren.get(0).toString());
+                        throw new ResolveException(String.format(
+                                "Could not add mapping to tree, since at this node is already blocked by mappingId : %s",
+                                specificChildren.get(0).toString()));
                     }
                 } else {
-                    throw new ResolveException(
-                            "Could not add mapping to tree, multiple mappings are only allowed at the end of the tree. This node already contains: "
-                                    + specificChildren.size() + " nodes");
+                    throw new ResolveException(String.format(
+                            "Could not add mapping to tree, multiple mappings are only allowed at the end of the tree. This node already contains: %s nodes",
+                            specificChildren.size()));
                 }
             } else {
                 child = TreeNode.createInnerNode(this, levels.get(currentLevel));
@@ -176,7 +177,7 @@ public class TreeNode {
             }
             child.addMapping(mapping, levels, currentLevel + 1);
         } else {
-            throw new ResolveException("Could not add mapping to tree: " + mapping.toString());
+            throw new ResolveException(String.format("Could not add mapping to tree: %s", mapping.toString()));
         }
     }
 
