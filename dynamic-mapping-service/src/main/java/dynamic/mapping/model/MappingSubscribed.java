@@ -35,6 +35,11 @@ import java.util.ArrayList;
 @Setter
 @NoArgsConstructor
 public class MappingSubscribed implements Serializable {
+    public MappingSubscribed(String ident) {
+        this.ident = ident;
+        this.connectorSubscribed = new ArrayList<>();
+    }
+
     @NotNull
     public String ident;
     @NotNull

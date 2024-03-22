@@ -118,7 +118,8 @@ public abstract class AConnectorClient {
 
     // structure < ident, mapping >
     // public Map<String, Mapping> subscribedMappings = new HashMap<>();
-    public List<String> subscribedMappings = new ArrayList<>();
+    @Getter
+    private List<String> subscribedMappings = new ArrayList<>();
 
     private Instant start = Instant.now();
 

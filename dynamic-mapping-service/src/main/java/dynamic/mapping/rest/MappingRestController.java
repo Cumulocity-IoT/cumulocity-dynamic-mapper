@@ -76,6 +76,7 @@ import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.TreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import dynamic.mapping.model.MappingSubscribed;
 
 @Slf4j
 @RestController
@@ -453,6 +454,33 @@ public class MappingRestController {
 
     }
 
+    @RequestMapping(value = "/monitoring/mappings", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,MappingSubscribed>> getMappingsSubscribed() {
+        String tenant = contextService.getContext().getTenant();
+        Map<String,MappingSubscribed> mappingsSubscribed = new HashMap<>();
+        try {
+            HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+                    .getClientsForTenant(tenant);
+            if (connectorMap != null) {
+                for (AConnectorClient client : connectorMap.values()) {
+                    ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
+                    List<String> subscribedMappings = client.getSubscribedMappings();
+                    subscribedMappings.forEach(ident -> {
+                        MappingSubscribed mappingSubscribed = mappingsSubscribed.getOrDefault(ident, new MappingSubscribed(ident));
+                        mappingSubscribed.getConnectorSubscribed().add(cleanedConfiguration);
+                        mappingsSubscribed.put(ident, mappingSubscribed);
+                    });
+                }
+            }
+
+            log.info("Tenant {} - Get active subscriptions!", tenant);
+            return ResponseEntity.status(HttpStatus.OK).body(mappingsSubscribed);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
     @RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<Mapping>> getMappings() {
         String tenant = contextService.getContext().getTenant();
@@ -610,7 +638,8 @@ public class MappingRestController {
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API", tenant);
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }
