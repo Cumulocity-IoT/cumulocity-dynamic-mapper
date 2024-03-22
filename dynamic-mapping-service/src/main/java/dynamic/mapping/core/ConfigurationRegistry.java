@@ -10,10 +10,14 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.mqtt.ConnectorType;
+import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -89,7 +93,8 @@ public class ConfigurationRegistry {
     private ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Autowired
-    public void setConnectorConfigurationComponent(@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
+    public void setConnectorConfigurationComponent(
+            @Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
         this.connectorConfigurationComponent = connectorConfigurationComponent;
     }
 
@@ -115,6 +120,25 @@ public class ConfigurationRegistry {
                 MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
                 MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
                 MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+    }
+
+    public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
+            String additionalSubscriptionIdTest, String tenant) {
+        AConnectorClient connectorClient = null;
+        if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        } else if (ConnectorType.MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        }
+        return connectorClient;
     }
 
     public Map<MappingType, BasePayloadProcessorOutbound<?>> createPayloadProcessorsOutbound(

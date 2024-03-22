@@ -3,6 +3,11 @@ package dynamic.mapping.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+
+import dynamic.mapping.connector.core.ConnectorProperty;
+import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.mqtt.ConnectorType;
+import dynamic.mapping.connector.core.ConnectorPropertyType;
 import lombok.Data;
 import lombok.ToString;
 
@@ -26,7 +31,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     @JsonProperty("connectorType")
-    public String connectorType;
+    public ConnectorType connectorType;
 
     @NotNull
     @JsonProperty("enabled")
@@ -79,5 +84,14 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
         // } catch (CloneNotSupportedException e) {
         // return null;
         // }
+    }
+
+    public void copyPredefinedValues(ConnectorSpecification spec) {
+        spec.getProperties().entrySet().forEach(prop -> {
+            ConnectorProperty p = prop.getValue();
+            if (!p.editable) {
+                properties.put(prop.getKey(), p.defaultValue);
+            }
+        });
     }
 }

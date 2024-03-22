@@ -68,7 +68,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     logSubstitution: true,
     logConnectorErrorInBackend: false,
     sendConnectorLifecycle: false,
-    sendMappingStatus: false,
+    sendMappingStatus: true,
     sendSubscriptionEvents: false,
     sendNotificationLifecycle: false,
   };

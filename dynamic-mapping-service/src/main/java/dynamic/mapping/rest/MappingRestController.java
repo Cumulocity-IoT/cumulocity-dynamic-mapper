@@ -42,6 +42,7 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,10 +140,10 @@ public class MappingRestController {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
         log.info("Tenant {} - Getting connection properties...", tenant);
-        Map<String, ConnectorSpecification> spec = connectorRegistry
+        Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
-        for (String connectorType : spec.keySet()) {
+        for (ConnectorType connectorType : spec.keySet()) {
             connectorConfigurations.add(spec.get(connectorType));
         }
         return ResponseEntity.ok(connectorConfigurations);

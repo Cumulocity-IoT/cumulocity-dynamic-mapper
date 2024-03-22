@@ -72,10 +72,29 @@ import dynamic.mapping.core.ConnectorStatus;
 @Slf4j
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
+    public MQTTClient() {
+        Map<String, ConnectorProperty> configProps = new HashMap<>();
+        configProps.put("mqttHost", new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("mqttPort", new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, true, null));
+        configProps.put("user", new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("password",
+                new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null));
+        configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("useTLS", new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, true, null));
+        configProps.put("useSelfSignedCertificate",
+                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, null));
+        configProps.put("fingerprintSelfSignedCertificate",
+                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("nameCertificate", new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("supportsWildcardInTopic",
+                new ConnectorProperty(false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, true, null));
+        spec = new ConnectorSpecification(connectorType, configProps);
+    }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
             AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+        this();
         this.configurationRegistry = configurationRegistry;
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
@@ -94,43 +113,24 @@ public class MQTTClient extends AConnectorClient {
         this.tenant = tenant;
     }
 
-    private static final int WAIT_PERIOD_MS = 10000;
+    protected static final int WAIT_PERIOD_MS = 10000;
+
+    public ConnectorType connectorType = ConnectorType.MQTT;
 
     @Getter
-    private static final String connectorType = "MQTT";
+    public ConnectorSpecification spec;
 
-    @Getter
-    public static ConnectorSpecification spec;
-    static {
-        Map<String, ConnectorProperty> configProps = new HashMap<>();
-        configProps.put("mqttHost", new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("mqttPort", new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY));
-        configProps.put("user", new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("password",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY));
-        configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("useTLS", new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY));
-        configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY));
-        configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY));
-        configProps.put("nameCertificate", new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY));
-        spec = new ConnectorSpecification(connectorType, true, configProps);
-    }
+    protected String additionalSubscriptionIdTest;
 
-    private String additionalSubscriptionIdTest;
+    protected AConnectorClient.Certificate cert;
 
-    private AConnectorClient.Certificate cert;
+    protected MqttClientSslConfig sslConfig;
 
-    private MqttClientSslConfig sslConfig;
+    protected MQTTCallback mqttCallback = null;
 
-    private MQTTCallback mqttCallback = null;
+    protected Mqtt3BlockingClient mqttClient;
 
-    private Mqtt3BlockingClient mqttClient;
-
-    private MutableBoolean connectionState = new MutableBoolean(false);
-
-    // private Mqtt3ClientConfiguration sslConfiguration;
+    protected MutableBoolean connectionState = new MutableBoolean(false);
 
     public boolean initialize() {
         loadConfiguration();
@@ -194,7 +194,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public ConnectorSpecification getSpecification() {
-        return MQTTClient.spec;
+        return spec;
     }
 
     @Override
@@ -255,7 +255,7 @@ public class MQTTClient extends AConnectorClient {
 
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(dispatcher, tenant, MQTTClient.getConnectorType());
+        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent());
         mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful
@@ -281,17 +281,21 @@ public class MQTTClient extends AConnectorClient {
                             .send();
                     if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
 
-                        throw new ConnectorException(String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s" , tenant, mqttClient.getConfig().getServerHost(), ack.getReturnCode().name() ));
+                        throw new ConnectorException(
+                                String.format("Tenant %s - Error connecting to broker: %s. Errorcode: %s", tenant,
+                                        mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
                     }
 
                     // connectionState.setTrue();
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
-                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true,true);
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                 } catch (Exception e) {
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
                             mqttClient.getState().isConnected());
+                            updateConnectorStatusToFailed(e);
+                            sendConnectorLifecycle();
                 }
                 firstRun = false;
             }
@@ -329,15 +333,14 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
-
-    private void updateConnectorStatusToFailed(Exception e) {
+    protected void updateConnectorStatusToFailed(Exception e) {
         String msg = " --- " + e.getClass().getName() + ": "
                 + e.getMessage();
         if (!(e.getCause() == null)) {
             msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
         }
         connectorStatus.setMessage(msg);
-        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false,true);
+        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false, true);
     }
 
     @Override
@@ -356,8 +359,8 @@ public class MQTTClient extends AConnectorClient {
             return false;
         }
         // check if all required properties are set
-        for (String property : MQTTClient.getSpec().getProperties().keySet()) {
-            if (MQTTClient.getSpec().getProperties().get(property).required
+        for (String property : getSpec().getProperties().keySet()) {
+            if (getSpec().getProperties().get(property).required
                     && configuration.getProperties().get(property) == null) {
                 return false;
             }
@@ -373,7 +376,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true,true);
+        updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
         log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
                 (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
 
@@ -400,7 +403,7 @@ public class MQTTClient extends AConnectorClient {
                 log.error("Tenant {} - Error disconnecting from MQTT broker:", tenant,
                         e);
             }
-            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true,true);
+            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }
@@ -449,6 +452,11 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public String getConnectorName() {
         return connectorName;
+    }
+
+    @Override
+    public Boolean supportsWildcardsInTopic() {
+        return true;
     }
 
 }

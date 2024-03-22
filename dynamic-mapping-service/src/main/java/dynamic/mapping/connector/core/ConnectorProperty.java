@@ -25,6 +25,14 @@ public class ConnectorProperty implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ConnectorPropertyType type;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean editable;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Object defaultValue;
+
     public Object clone()
     {
         try {

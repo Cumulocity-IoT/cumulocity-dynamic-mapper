@@ -63,7 +63,7 @@ import { NameRendererComponent } from '../renderer/name.renderer.component';
 import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
-import { TemplateRendererComponent } from '../renderer/template.renderer.component';
+// import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 
@@ -142,22 +142,22 @@ export class MappingComponent implements OnInit, OnDestroy {
       cellRendererComponent: APIRendererComponent,
       gridTrackSize: '7%'
     },
-    {
-      header: 'Sample payload',
-      name: 'source',
-      path: 'source',
-      filterable: true,
-      sortable: false,
-      cellRendererComponent: TemplateRendererComponent
-    },
-    {
-      header: 'Target',
-      name: 'target',
-      path: 'target',
-      filterable: true,
-      sortable: false,
-      cellRendererComponent: TemplateRendererComponent
-    },
+    // {
+    //   header: 'Sample payload',
+    //   name: 'source',
+    //   path: 'source',
+    //   filterable: true,
+    //   sortable: false,
+    //   cellRendererComponent: TemplateRendererComponent
+    // },
+    // {
+    //   header: 'Target',
+    //   name: 'target',
+    //   path: 'target',
+    //   filterable: true,
+    //   sortable: false,
+    //   cellRendererComponent: TemplateRendererComponent
+    // },
     {
       header: 'Test/Snoop',
       name: 'tested',

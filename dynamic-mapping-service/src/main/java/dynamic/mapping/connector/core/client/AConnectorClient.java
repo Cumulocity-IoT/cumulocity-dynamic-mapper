@@ -26,6 +26,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
+import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;
@@ -70,6 +72,10 @@ public abstract class AConnectorClient {
     protected String connectorIdent;
 
     protected String connectorName;
+
+    @Getter
+    @Setter
+    public ConnectorType connectorType;
 
     @Getter
     @Setter
@@ -110,6 +116,10 @@ public abstract class AConnectorClient {
     // structure < subscriptionTopic, numberMappings >
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
+    // structure < ident, mapping >
+    // public Map<String, Mapping> subscribedMappings = new HashMap<>();
+    public List<String> subscribedMappings = new ArrayList<>();
+
     private Instant start = Instant.now();
 
     private ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
@@ -138,9 +148,12 @@ public abstract class AConnectorClient {
 
     public abstract ConnectorSpecification getSpecification();
 
+    public abstract Boolean supportsWildcardsInTopic();
+
     public void loadConfiguration() {
         connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
                 tenant);
+        this.connectorConfiguration.copyPredefinedValues(getSpec());
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -149,6 +162,8 @@ public abstract class AConnectorClient {
 
         // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
+
+    public abstract ConnectorSpecification getSpec();
 
     public void submitConnect() {
         loadConfiguration();
@@ -258,8 +273,7 @@ public abstract class AConnectorClient {
             // state.
             if (ConnectorStatus.DISCONNECTED.equals(connectorStatus.status) && isConfigValid(connectorConfiguration)) {
                 updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
-            }
-            else {
+            } else {
                 sendConnectorLifecycle();
             }
         } catch (Exception ex) {
@@ -294,6 +308,7 @@ public abstract class AConnectorClient {
             MutableInt activeSubs = getActiveSubscriptions()
                     .get(mapping.subscriptionTopic);
             activeSubs.subtract(1);
+            subscribedMappings.remove(mapping.ident);
             if (activeSubs.intValue() <= 0) {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
@@ -371,15 +386,21 @@ public abstract class AConnectorClient {
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
+            subscribedMappings = new ArrayList<>();
+
         }
         if (isConnected()) {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
             updatedMappings.forEach(mapping -> {
-                if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
-                    updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
+                Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
+                if (supportsWildcardsInTopic() || !containsWildcards) {
+                    if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
+                        updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
+                    }
+                    MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
+                    activeSubs.add(1);
+                    subscribedMappings.add (mapping.ident);
                 }
-                MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
-                activeSubs.add(1);
             });
 
             // unsubscribe topics not used
@@ -428,7 +449,8 @@ public abstract class AConnectorClient {
 
     public void sendConnectorLifecycle() {
         // stop sending lifecycle event if connector is disabled
-        if (serviceConfiguration.sendConnectorLifecycle && !(connectorStatus.getStatus().equals(previousConnectorStatus))) {
+        if (serviceConfiguration.sendConnectorLifecycle
+                && !(connectorStatus.getStatus().equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus.getStatus();
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();

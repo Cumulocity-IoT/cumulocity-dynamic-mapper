@@ -39,7 +39,7 @@ public class ServiceConfiguration implements Cloneable {
         this.logSubstitution = false;
         this.logConnectorErrorInBackend = false;
         this.sendConnectorLifecycle = false;
-        this.sendMappingStatus = false;
+        this.sendMappingStatus = true;
         this.sendSubscriptionEvents = false;
         this.sendNotificationLifecycle = false;
         this.externalExtensionEnabled = true;

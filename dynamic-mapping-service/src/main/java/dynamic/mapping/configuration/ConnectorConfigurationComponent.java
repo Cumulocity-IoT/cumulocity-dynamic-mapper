@@ -146,7 +146,7 @@ public class ConnectorConfigurationComponent {
         List<ConnectorConfiguration> configs = getConnectorConfigurations(tenant);
         for (ConnectorConfiguration config : configs) {
             OptionPK optionPK = new OptionPK(OPTION_CATEGORY_CONFIGURATION,
-                    getConnectorOptionKey(config.getConnectorType()));
+                    getConnectorOptionKey(config.getIdent()));
             tenantOptionApi.delete(optionPK);
         }
     }

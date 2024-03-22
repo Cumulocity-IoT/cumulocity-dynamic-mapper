@@ -3,6 +3,7 @@ package dynamic.mapping.connector.core.registry;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.mqtt.ConnectorType;
 
 import org.springframework.stereotype.Component;
 
@@ -18,17 +19,17 @@ public class ConnectorRegistry {
     // Structure: Tenant, <Connector Ident, ConnectorInstance>
     protected HashMap<String, HashMap<String, AConnectorClient>> connectorTenantMap = new HashMap<>();
     // Structure: ConnectorId, <Property, PropertyDefinition>
-    protected Map<String, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
+    protected Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
 
-    public void registerConnector(String connectorType, ConnectorSpecification specification) {
+    public void registerConnector(ConnectorType connectorType, ConnectorSpecification specification) {
         connectorSpecificationMap.put(connectorType, specification);
     }
 
-    public ConnectorSpecification getConnectorSpecification(String connectorType) {
+    public ConnectorSpecification getConnectorSpecification(ConnectorType connectorType) {
         return connectorSpecificationMap.get(connectorType);
     }
 
-    public Map<String, ConnectorSpecification> getConnectorSpecifications() {
+    public Map<ConnectorType, ConnectorSpecification> getConnectorSpecifications() {
         return connectorSpecificationMap;
     }
 

@@ -44,7 +44,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import {
-  checkTopicsInboundAreValid,
+  checkTopicsInboundAreValidWithOption,
   checkTopicsOutboundAreValid,
   isDisabled
 } from '../shared/util';
@@ -118,7 +118,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         validators: {
           validation: [
             this.stepperConfiguration.direction == Direction.INBOUND
-              ? checkTopicsInboundAreValid
+              ? checkTopicsInboundAreValidWithOption({days:3})
               : checkTopicsOutboundAreValid
           ]
         },

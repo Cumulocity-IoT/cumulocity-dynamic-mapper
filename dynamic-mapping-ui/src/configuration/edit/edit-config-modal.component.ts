@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -93,6 +93,7 @@ export class EditConfigurationComponent implements OnInit {
     );
 
     this.configuration.connectorType = connectorType;
+    this.dynamicFormlyFields = [];
 
     this.dynamicFormlyFields.push({
       fieldGroup: [
@@ -106,7 +107,19 @@ export class EditConfigurationComponent implements OnInit {
             label: 'Name',
             required: true
           }
-        }
+        },
+        // {
+        //     className: 'col-lg-12',
+        //     key: 'supportsWildcardInTopic',
+        //     id: 'supportsWildcardInTopic',
+        //     type: 'switch',
+        //     wrappers: ['c8y-form-field'],
+        //     defaultValue: true,
+        //     templateOptions: {
+        //       label: HumanizePipe.humanize('supportsWildcardInTopic'),
+        //       description: 'If this option is checked, then topics can contains wildcards characters: +, #',
+        //     }
+        //   }
       ]
     });
     if (dynamicFields) {
@@ -114,7 +127,8 @@ export class EditConfigurationComponent implements OnInit {
       const sortedFields = new Array(numberFields);
       for (const key in dynamicFields.properties) {
         const property = dynamicFields.properties[key];
-        if (property.order < numberFields && property.order >= 0) {
+        // only display field when it is editable
+        if (property.order < numberFields && property.order >= 0 && property.editable) {
           if (!sortedFields[property.order]) {
             sortedFields[property.order] = { key: key, property: property };
           } else {

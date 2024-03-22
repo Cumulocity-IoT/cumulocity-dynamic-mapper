@@ -28,6 +28,8 @@ export enum ConnectorPropertyType {
 export interface ConnectorProperty {
   required: boolean;
   order: number;
+  editable: boolean;
+  defaultValue? : any;
   type: ConnectorPropertyType;
 }
 

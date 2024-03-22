@@ -1,6 +1,5 @@
 package dynamic.mapping.core;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -28,7 +27,9 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
+import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 
 @Service
 @EnableScheduling
@@ -109,7 +110,8 @@ public class BootstrapService {
         mappingComponent.initializeMappingCaches(tenant);
 
         // TODO Add other clients static property definition here
-        connectorRegistry.registerConnector(MQTTClient.getConnectorType(), MQTTClient.getSpec());
+        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpec());
+        connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpec());
 
         try {
             if (serviceConfiguration != null) {
@@ -136,19 +138,8 @@ public class BootstrapService {
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
             ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
-        AConnectorClient connectorClient = null;
-
-        if (MQTTClient.getConnectorType().equals(connectorConfiguration.getConnectorType())) {
-            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
-                    connectorConfiguration.getIdent());
-            MQTTClient mqttClient = new MQTTClient(configurationRegistry, connectorConfiguration,
-                    null,
-                    additionalSubscriptionIdTest, tenant);
-
-            connectorRegistry.registerClient(tenant, mqttClient);
-            connectorClient = mqttClient;
-        }
-
+        AConnectorClient connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration, additionalSubscriptionIdTest, tenant);
+        connectorRegistry.registerClient(tenant, connectorClient);
         // initialize AsynchronousDispatcherInbound
         AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry, connectorClient);
         configurationRegistry.initializePayloadProcessorsInbound(tenant);

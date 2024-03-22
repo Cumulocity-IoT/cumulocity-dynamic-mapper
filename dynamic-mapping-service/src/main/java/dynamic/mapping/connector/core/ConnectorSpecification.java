@@ -2,6 +2,8 @@ package dynamic.mapping.connector.core;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+
+import dynamic.mapping.connector.mqtt.ConnectorType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
@@ -16,11 +18,7 @@ public class ConnectorSpecification implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public String connectorType;
-
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    public boolean supportsWildcardInTopic;
+    public ConnectorType connectorType;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
