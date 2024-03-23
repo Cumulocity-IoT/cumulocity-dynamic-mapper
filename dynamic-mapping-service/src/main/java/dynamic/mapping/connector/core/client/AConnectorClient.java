@@ -388,8 +388,8 @@ public abstract class AConnectorClient {
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
             subscribedMappings = new ArrayList<>();
-
         }
+        
         if (isConnected()) {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
             updatedMappings.forEach(mapping -> {

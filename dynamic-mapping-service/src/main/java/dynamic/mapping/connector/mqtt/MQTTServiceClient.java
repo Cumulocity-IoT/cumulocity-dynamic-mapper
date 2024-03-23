@@ -23,39 +23,48 @@ package dynamic.mapping.connector.mqtt;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Random;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 
-@Slf4j
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTServiceClient extends MQTTClient {
     public MQTTServiceClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
-        configProps.put("mqttHost", new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, "cumulocity"));
-        configProps.put("mqttPort", new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, false, 2883));
-        configProps.put("user", new ConnectorProperty(false, 2, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("mqttHost",
+                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, "cumulocity"));
+        configProps.put("mqttPort",
+                new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, false, 2883));
+        configProps.put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, true, null));
         configProps.put("password",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null));
-        configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.STRING_PROPERTY, true, null));
-        configProps.put("useTLS", new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
+                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null));
+        configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.ID_STRING_PROPERTY, false,
+                MQTTServiceClient.nextId()));
+        configProps.put("useTLS",
+                new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
         configProps.put("useSelfSignedCertificate",
                 new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
         configProps.put("fingerprintSelfSignedCertificate",
                 new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false));
-        configProps.put("nameCertificate", new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false));
+        configProps.put("nameCertificate",
+                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false));
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
         spec = new ConnectorSpecification(connectorType, configProps);
     }
+
+    private static Random random = new Random();
+
+    private static String nextId() {
+        return "MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
+    }
+    // return random.nextInt(max - min) + min;
 
     public MQTTServiceClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,

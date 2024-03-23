@@ -404,6 +404,7 @@ public class MQTTClient extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
+            updateActiveSubscriptions(null, true);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }

@@ -62,7 +62,7 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
-import { ConnectorsSubscribedRendererComponent } from '../renderer/connectorSubsribed.renderer.component';
+import { ConnectorsSubscribedRendererComponent } from '../renderer/connectorSubscribed.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -120,13 +120,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       visible: true
     },
     {
-      header: 'Subscription Topic',
+      header: 'Subscription topic',
       name: 'subscriptionTopic',
       path: 'mapping.subscriptionTopic',
       filterable: true
     },
     {
-      header: 'Template Topic',
+      header: 'Template topic',
       name: 'templateTopic',
       path: 'mapping.templateTopic',
       filterable: true
@@ -158,7 +158,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     //   cellRendererComponent: TemplateRendererComponent
     // },
     {
-      header: 'Connectors',
+      header: 'Connectors subscribed',
       name: 'connectors',
       path: 'connectorsSubscribed',
       filterable: true,
@@ -241,14 +241,14 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
       this.columnsMappings[1] = {
-        header: 'Publish Topic',
+        header: 'Publish topic',
         name: 'publishTopic',
         path: 'mapping.publishTopic',
         filterable: true
         // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
-        header: 'Template Topic Sample',
+        header: 'Template topic sample',
         name: 'templateTopicSample',
         path: 'mapping.templateTopicSample',
         filterable: true
