@@ -28,8 +28,8 @@ import { SnoopStatus } from '../../shared';
       <span
         class="c8y-pulse animated pulse"
         [ngClass]="{
-          active: context.item.tested,
-          inactive: !context.item.tested
+          active: context.value.tested,
+          inactive: !context.value.tested
         }"
       ></span>
     </div>
@@ -38,17 +38,19 @@ import { SnoopStatus } from '../../shared';
         class="c8y-pulse animated pulse"
         [ngClass]="{
           active:
-            context.item.snoopStatus === 'ENABLED' ||
-            context.item.snoopStatus === 'STARTED',
+            context.value.snoopStatus === 'ENABLED' ||
+            context.value.snoopStatus === 'STARTED',
           inactive:
-            context.item.snoopStatus === 'NONE' ||
-            context.item.snoopStatus === 'STOPPED'
+            context.value.snoopStatus === 'NONE' ||
+            context.value.snoopStatus === 'STOPPED'
         }"
       ></span>
     </div>
   `
 })
 export class StatusRendererComponent {
-  constructor(public context: CellRendererContext) {}
+  constructor(public context: CellRendererContext) {
+    // console.log('StatusRenderer:', context.item, context.value);
+  }
   SnoopStatus: SnoopStatus;
 }

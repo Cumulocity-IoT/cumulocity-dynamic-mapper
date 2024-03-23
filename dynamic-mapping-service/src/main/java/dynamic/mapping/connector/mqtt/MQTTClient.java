@@ -87,7 +87,7 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, true, null));
         configProps.put("nameCertificate", new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, true, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, true, null));
+                new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true));
         spec = new ConnectorSpecification(connectorType, configProps);
     }
 

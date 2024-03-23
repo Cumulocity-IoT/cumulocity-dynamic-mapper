@@ -50,7 +50,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Subject, BehaviorSubject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import-modal/import.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
@@ -78,8 +78,9 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappings: MappingEnriched[] = [];
-  mappings$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject([]);
+  mappings: Mapping[] = [];
+  //   mappings$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject([]);
+  mappings$: Promise<MappingEnriched[]>;
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
   devices: IIdentified[] = [];
@@ -167,7 +168,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     {
       header: 'Test/Snoop',
       name: 'tested',
-      path: 'mapping.tested',
+      path: 'mapping',
       filterable: false,
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
@@ -242,14 +243,14 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.columnsMappings[1] = {
         header: 'Publish Topic',
         name: 'publishTopic',
-        path: 'publishTopic',
+        path: 'mapping.publishTopic',
         filterable: true
         // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
         header: 'Template Topic Sample',
         name: 'templateTopicSample',
-        path: 'templateTopicSample',
+        path: 'mapping.templateTopicSample',
         filterable: true
         // gridTrackSize: "12.5%",
       };
@@ -420,7 +421,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  updateMapping(mapping: Mapping) {
+  updateMapping(m: MappingEnriched) {
+    const { mapping } = m;
     if (!mapping.direction)
       this.stepperConfiguration.direction = Direction.INBOUND;
     this.stepperConfiguration = {
@@ -450,7 +452,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = true;
   }
 
-  copyMapping(mapping: Mapping) {
+  copyMapping(m: MappingEnriched) {
+    const { mapping } = m;
     this.stepperConfiguration = {
       ...this.stepperConfiguration,
       showEditorSource: true,
@@ -473,7 +476,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = true;
   }
 
-  async activateMapping(mapping: Mapping) {
+  async activateMapping(m: MappingEnriched) {
+    const { mapping } = m;
     const newActive = !mapping.active;
     const action = newActive ? 'Activate' : 'Deactivate';
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
@@ -483,10 +487,11 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async deleteMappingWithConfirmation(
-    mapping: Mapping,
+    m: MappingEnriched,
     confirmation: boolean = true,
     multiple: boolean = false
   ): Promise<boolean> {
+    const { mapping } = m;
     let result: boolean = false;
     console.log('Deleting mapping before confirmation:', mapping);
     if (confirmation) {
@@ -508,7 +513,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       result = await confirmDeletionModalRef.content.closeSubject.toPromise();
       if (result) {
         console.log('DELETE mapping:', mapping, result);
-        await this.deleteMapping(mapping);
+        await this.deleteMapping(m);
       } else {
         console.log('Canceled DELETE mapping', mapping, result);
       }
@@ -518,7 +523,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  async deleteMapping(mapping: Mapping) {
+  async deleteMapping(m: MappingEnriched) {
+    const { mapping } = m;
     try {
       await this.mappingService.deleteMapping(mapping.id);
       this.alertService.success(gettext('Mapping deleted successfully'));
@@ -535,20 +541,22 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
     const mappingsSubscribedPromise =
       this.mappingService.getMappingsSubscribed();
-    Promise.all([mappingsPromise, mappingsSubscribedPromise]).then(
-      (results) => {
-        const mappingsEnriched = [];
-        const [mappings, mappingsSubscribed] = results;
-        mappings.forEach((m) => {
-          mappingsEnriched.push({
-            id: m.id,
-            mapping: m,
-            connectorsSubscribed: mappingsSubscribed[m.ident]
-          });
+    this.mappings$ = Promise.all([
+      mappingsPromise,
+      mappingsSubscribedPromise
+    ]).then((results) => {
+      const mappingsEnriched = [];
+      const [mappings, mappingsSubscribed] = results;
+      mappings.forEach((m) => {
+        mappingsEnriched.push({
+          id: m.id,
+          mapping: m,
+          connectorsSubscribed: mappingsSubscribed[m.ident]
         });
-        this.mappings$.next(mappingsEnriched);
-      }
-    );
+      });
+      this.mappings = mappings;
+      return mappingsEnriched;
+    });
   }
 
   async reloadMappings(): Promise<void> {
@@ -648,7 +656,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   private exportMappingBulk(ids: string[]) {
     const mappings2Export = this.mappings
-      .map((m) => m.mapping)
+      // .map((m) => m.mapping)
       .filter((m) => ids.includes(m.id));
     this.exportMappings(mappings2Export);
   }
@@ -656,7 +664,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private async activateMappingBulk(ids: string[]) {
     for (let i = 0; i < this.mappings.length; i++) {
       if (ids.includes(this.mappings[i].id)) {
-        const newActive = !this.mappings[i].mapping.active;
+        const newActive = !this.mappings[i].active;
         const action = newActive ? 'Activate' : 'Deactivate';
         const parameter = { id: this.mappings[i].id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
@@ -669,15 +677,19 @@ export class MappingComponent implements OnInit, OnDestroy {
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
     let continueDelete: boolean = false;
     for (let i = 0; i < this.mappings.length; i++) {
+      const m: MappingEnriched = {
+        id: this.mappings[i].id,
+        mapping: this.mappings[i]
+      };
       if (ids.includes(this.mappings[i].id)) {
         if (i == 0) {
           continueDelete = await this.deleteMappingWithConfirmation(
-            this.mappings[i].mapping,
+            m,
             true,
             true
           );
         } else if (continueDelete) {
-          await this.deleteMapping(this.mappings[i].mapping);
+          await this.deleteMapping(m);
         }
       }
     }
@@ -687,12 +699,13 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   async onExportAll() {
     const mappings2Export = this.mappings
-      .map((m) => m.mapping)
+      // .map((m) => m.mapping)
       .filter((m) => m.direction == this.stepperConfiguration.direction);
     this.exportMappings(mappings2Export);
   }
 
-  async exportSingle(mapping: Mapping) {
+  async exportSingle(m: MappingEnriched) {
+    const { mapping } = m;
     const mappings2Export = [mapping];
     this.exportMappings(mappings2Export);
   }

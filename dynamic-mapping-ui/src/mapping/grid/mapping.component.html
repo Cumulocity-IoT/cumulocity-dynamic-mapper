@@ -80,7 +80,7 @@
   <div class="card-block">
     <c8y-data-grid
       [title]="titleMapping | translate"
-      [selectable]="'true'"
+      [selectable]="true"
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
       [rows]=" mappings$ |async"
@@ -90,7 +90,7 @@
     </c8y-data-grid>
   </div>
   <div class="card-block col-md-offset-5 bg-white">
-    <div class="c8y-empty-state" *ngIf="mappings.length === 0">
+    <div class="c8y-empty-state" *ngIf="(mappings$ | async)?.length === 0">
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
         <strong>No mappings available.</strong><br />
@@ -119,7 +119,7 @@
       [rows]="subscription?.devices"
       [pagination]="pagination"
       [actionControls]="actionControlSubscription"
-      [refresh]="refresh"
+
     >
     </c8y-data-grid>
   </div>

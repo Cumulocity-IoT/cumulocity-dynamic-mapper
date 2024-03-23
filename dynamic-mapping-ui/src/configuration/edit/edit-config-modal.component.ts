@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output } from '@angular/core';
-import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
+import { ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -127,6 +127,9 @@ export class EditConfigurationComponent implements OnInit {
       const sortedFields = new Array(numberFields);
       for (const key in dynamicFields.properties) {
         const property = dynamicFields.properties[key];
+        if (property.defaultValue && this.add) {
+            this.configuration.properties[key] = property.defaultValue;
+        }
         // only display field when it is editable
         if (property.order < numberFields && property.order >= 0 && property.editable) {
           if (!sortedFields[property.order]) {
