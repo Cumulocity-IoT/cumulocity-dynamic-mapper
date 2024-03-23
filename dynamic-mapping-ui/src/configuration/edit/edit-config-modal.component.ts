@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -8,6 +8,7 @@ import {
   ConnectorSpecification,
   ConnectorPropertyType
 } from '../shared/configuration.model';
+import { uuidCustom } from '../../shared';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
@@ -53,7 +54,7 @@ export class EditConfigurationComponent implements OnInit {
         className: 'col-lg-12',
         key: 'connectorType',
         type: 'select',
-        id:'connectorType',
+        id: 'connectorType',
         wrappers: ['c8y-form-field'],
         templateOptions: {
           label: 'Connector type',
@@ -107,7 +108,7 @@ export class EditConfigurationComponent implements OnInit {
             label: 'Name',
             required: true
           }
-        },
+        }
         // {
         //     className: 'col-lg-12',
         //     key: 'supportsWildcardInTopic',
@@ -122,16 +123,24 @@ export class EditConfigurationComponent implements OnInit {
         //   }
       ]
     });
+    if (this.add) {
+        const n = HumanizePipe.humanize(connectorType);
+      this.configuration.name = `${n} - ${uuidCustom()}`;
+    }
     if (dynamicFields) {
       const numberFields = Object.keys(dynamicFields.properties).length;
       const sortedFields = new Array(numberFields);
       for (const key in dynamicFields.properties) {
         const property = dynamicFields.properties[key];
         if (property.defaultValue && this.add) {
-            this.configuration.properties[key] = property.defaultValue;
+          this.configuration.properties[key] = property.defaultValue;
         }
         // only display field when it is editable
-        if (property.order < numberFields && property.order >= 0 && property.editable) {
+        if (
+          property.order < numberFields &&
+          property.order >= 0 &&
+          property.editable
+        ) {
           if (!sortedFields[property.order]) {
             sortedFields[property.order] = { key: key, property: property };
           } else {
