@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "ng serve --host 0.0.0.0",
-    "start:admin": "npm start -- --shell administration -u https://ck2.eu-latest.cumulocity.com",
+    "start:admin": "npm start -- --shell administration -u https://mqttservice.latest.stage.c8y.io",
     "build": "ng build",
     "deploy": "ng deploy",
     "format": "prettier --write 'src/**/*.ts'",

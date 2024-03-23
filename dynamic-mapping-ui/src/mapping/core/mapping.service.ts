@@ -37,7 +37,9 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   Direction,
   Mapping,
-  SharedService
+  SharedService,
+  MappingSubscribed,
+  PATH_MAPPING_SUBSCRIBED_ENDPOINT
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -80,6 +82,22 @@ export class MappingService {
     this._mappingsOutbound = undefined;
   }
 
+  async getMappingsSubscribed(): Promise<MappingSubscribed[]> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_SUBSCRIBED_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const mappings: Promise<MappingSubscribed[]> = await data.json();
+    return mappings;
+  }
+
   async getMappings(direction: Direction): Promise<Mapping[]> {
     let mappings: Promise<Mapping[]>;
     if (
@@ -89,23 +107,20 @@ export class MappingService {
       const result: Mapping[] = [];
       const filter: object = {
         pageSize: 200,
-        withTotalPages: true,
+        withTotalPages: true
       };
       const query: any = {
-        __and: [
-          { 'd11r_mapping.direction': direction },
-          { 'type': MAPPING_TYPE }
-        ]
+        __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
       };
 
-    //   if (direction == Direction.INBOUND) {
-    //     query = this.queriesUtil.addOrFilter(query, {
-    //       __not: { __has: 'd11r_mapping.direction' }
-    //     });
-    //   }
-    //   query = this.queriesUtil.addAndFilter(query, {
-    //     type: { __has: 'd11r_mapping' }
-    //   });
+      //   if (direction == Direction.INBOUND) {
+      //     query = this.queriesUtil.addOrFilter(query, {
+      //       __not: { __has: 'd11r_mapping.direction' }
+      //     });
+      //   }
+      //   query = this.queriesUtil.addAndFilter(query, {
+      //     type: { __has: 'd11r_mapping' }
+      //   });
 
       const { data } = await this.inventory.listQuery(query, filter);
 

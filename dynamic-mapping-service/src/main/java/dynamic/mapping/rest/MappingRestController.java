@@ -454,7 +454,7 @@ public class MappingRestController {
 
     }
 
-    @RequestMapping(value = "/monitoring/mappings", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/mappingSubscribed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String,MappingSubscribed>> getMappingsSubscribed() {
         String tenant = contextService.getContext().getTenant();
         Map<String,MappingSubscribed> mappingsSubscribed = new HashMap<>();
@@ -467,7 +467,7 @@ public class MappingRestController {
                     List<String> subscribedMappings = client.getSubscribedMappings();
                     subscribedMappings.forEach(ident -> {
                         MappingSubscribed mappingSubscribed = mappingsSubscribed.getOrDefault(ident, new MappingSubscribed(ident));
-                        mappingSubscribed.getConnectorSubscribed().add(cleanedConfiguration);
+                        mappingSubscribed.getConnectorsSubscribed().add(cleanedConfiguration);
                         mappingsSubscribed.put(ident, mappingSubscribed);
                     });
                 }

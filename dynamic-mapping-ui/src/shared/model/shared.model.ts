@@ -1,3 +1,5 @@
+import { ConnectorConfiguration } from '../../configuration';
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -53,6 +55,17 @@ export interface Mapping {
   filterOutbound?: string;
   autoAckOperation?: boolean;
   lastUpdate: number;
+}
+
+export interface MappingEnriched {
+  id: string;
+  mapping: Mapping;
+  connectorsSubscribed?: ConnectorConfiguration[];
+}
+
+export interface MappingSubscribed {
+  ident: string;
+  connectorsSubscribed?: ConnectorConfiguration[];
 }
 
 export enum RepairStrategy {

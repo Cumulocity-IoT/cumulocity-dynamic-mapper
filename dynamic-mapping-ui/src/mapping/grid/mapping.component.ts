@@ -18,12 +18,7 @@
  *
  * @authors Christof Strack
  */
-import {
-  Component,
-  OnDestroy,
-  OnInit,
-  ViewEncapsulation
-} from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -42,6 +37,7 @@ import {
   ConfirmationModalComponent,
   Direction,
   Mapping,
+  MappingEnriched,
   MappingSubstitution,
   MappingType,
   QOS,
@@ -54,7 +50,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Subject } from 'rxjs';
+import { Subject, BehaviorSubject } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import-modal/import.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
@@ -66,6 +62,7 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
+import { ConnectorsSubscribedRendererComponent } from '../renderer/connectorSubsribed.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -81,7 +78,8 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappings: Mapping[] = [];
+  mappings: MappingEnriched[] = [];
+  mappings$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject([]);
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
   devices: IIdentified[] = [];
@@ -100,7 +98,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     direction: Direction.INBOUND
   };
   titleMapping: string;
-  titleSubsription: string = 'Subscription on devices for mapping OUTBOUND';
+  titleSubscription: string = 'Subscription on devices for mapping OUTBOUND';
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -113,7 +111,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     {
       name: 'name',
       header: 'Name',
-      path: 'name',
+      path: 'mapping.name',
       filterable: false,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
@@ -123,19 +121,19 @@ export class MappingComponent implements OnInit, OnDestroy {
     {
       header: 'Subscription Topic',
       name: 'subscriptionTopic',
-      path: 'subscriptionTopic',
+      path: 'mapping.subscriptionTopic',
       filterable: true
     },
     {
       header: 'Template Topic',
       name: 'templateTopic',
-      path: 'templateTopic',
+      path: 'mapping.templateTopic',
       filterable: true
     },
     {
       name: 'targetAPI',
       header: 'API',
-      path: 'targetAPI',
+      path: 'mapping.targetAPI',
       filterable: true,
       sortable: true,
       dataType: ColumnDataType.TextShort,
@@ -159,9 +157,17 @@ export class MappingComponent implements OnInit, OnDestroy {
     //   cellRendererComponent: TemplateRendererComponent
     // },
     {
+      header: 'Connectors',
+      name: 'connectors',
+      path: 'connectorsSubscribed',
+      filterable: true,
+      sortable: false,
+      cellRendererComponent: ConnectorsSubscribedRendererComponent
+    },
+    {
       header: 'Test/Snoop',
       name: 'tested',
-      path: 'tested',
+      path: 'mapping.tested',
       filterable: false,
       sortable: false,
       cellRendererComponent: StatusRendererComponent,
@@ -171,7 +177,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     {
       header: 'QOS',
       name: 'qos',
-      path: 'qos',
+      path: 'mapping.qos',
       filterable: true,
       sortable: false,
       cellRendererComponent: QOSRendererComponent
@@ -179,7 +185,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     {
       header: 'Active',
       name: 'active',
-      path: 'active',
+      path: 'mapping.active',
       filterable: false,
       sortable: true,
       cellRendererComponent: StatusActivationRendererComponent,
@@ -256,9 +262,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.subscription = await this.mappingService.getSubscriptions();
   }
 
-  async ngOnInit() {
+  ngOnInit() {
     // console.log('ngOnInit');
-    this.getMappings();
+    this.init();
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
@@ -524,14 +530,30 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async getMappings(): Promise<void> {
-    this.mappings = await this.mappingService.getMappings(
+    const mappingsPromise = this.mappingService.getMappings(
       this.stepperConfiguration.direction
+    );
+    const mappingsSubscribedPromise =
+      this.mappingService.getMappingsSubscribed();
+    Promise.all([mappingsPromise, mappingsSubscribedPromise]).then(
+      (results) => {
+        const mappingsEnriched = [];
+        const [mappings, mappingsSubscribed] = results;
+        mappings.forEach((m) => {
+          mappingsEnriched.push({
+            id: m.id,
+            mapping: m,
+            connectorsSubscribed: mappingsSubscribed[m.ident]
+          });
+        });
+        this.mappings$.next(mappingsEnriched);
+      }
     );
   }
 
   async reloadMappings(): Promise<void> {
     this.mappingService.resetCache();
-    this.getMappings();
+    await this.getMappings();
   }
 
   async onCommitMapping(mapping: Mapping) {
@@ -625,14 +647,16 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private exportMappingBulk(ids: string[]) {
-    const mappings2Export = this.mappings.filter((m) => ids.includes(m.id));
+    const mappings2Export = this.mappings
+      .map((m) => m.mapping)
+      .filter((m) => ids.includes(m.id));
     this.exportMappings(mappings2Export);
   }
 
   private async activateMappingBulk(ids: string[]) {
     for (let i = 0; i < this.mappings.length; i++) {
       if (ids.includes(this.mappings[i].id)) {
-        const newActive = !this.mappings[i].active;
+        const newActive = !this.mappings[i].mapping.active;
         const action = newActive ? 'Activate' : 'Deactivate';
         const parameter = { id: this.mappings[i].id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
@@ -648,12 +672,12 @@ export class MappingComponent implements OnInit, OnDestroy {
       if (ids.includes(this.mappings[i].id)) {
         if (i == 0) {
           continueDelete = await this.deleteMappingWithConfirmation(
-            this.mappings[i],
+            this.mappings[i].mapping,
             true,
             true
           );
         } else if (continueDelete) {
-          await this.deleteMapping(this.mappings[i]);
+          await this.deleteMapping(this.mappings[i].mapping);
         }
       }
     }
@@ -662,9 +686,9 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async onExportAll() {
-    const mappings2Export = this.mappings.filter(
-      (m) => m.direction == this.stepperConfiguration.direction
-    );
+    const mappings2Export = this.mappings
+      .map((m) => m.mapping)
+      .filter((m) => m.direction == this.stepperConfiguration.direction);
     this.exportMappings(mappings2Export);
   }
 
@@ -726,5 +750,9 @@ export class MappingComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+  }
+
+  async init() {
+    await this.getMappings();
   }
 }

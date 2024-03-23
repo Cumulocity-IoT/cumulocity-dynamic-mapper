@@ -83,7 +83,7 @@
       [selectable]="'true'"
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
-      [rows]="mappings"
+      [rows]=" mappings$ |async"
       [pagination]="pagination"
       [actionControls]="actionControls"
     >
@@ -114,7 +114,7 @@
 >
   <div class="card-block">
     <c8y-data-grid
-      [title]="titleSubsription | translate"
+      [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions"
       [rows]="subscription?.devices"
       [pagination]="pagination"

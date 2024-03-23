@@ -306,6 +306,7 @@ export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
 export const PATH_FEATURE_ENDPOINT = 'feature';
 export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
+export const PATH_MAPPING_SUBSCRIBED_ENDPOINT = 'mappingSubscribed';
 export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 
