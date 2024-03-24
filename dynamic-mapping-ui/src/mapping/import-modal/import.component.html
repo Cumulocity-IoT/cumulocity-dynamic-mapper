@@ -44,7 +44,7 @@
           [loading]="isLoading"
           [maxAllowedFiles]="1"
           [message]="'Upload a JSON file' | translate"
-          [progress]="progress | async"
+          [progress]="progress$ | async"
           class="drop-area"
         >
         </c8y-drop-area>

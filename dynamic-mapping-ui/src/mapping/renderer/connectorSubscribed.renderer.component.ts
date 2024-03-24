@@ -23,10 +23,10 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   template: `
-    <p class="text-normal"
-      *ngFor="let con of context.value?.connectorsSubscribed"
-      >{{ con.name }}</p
-    >
+    <div *ngFor="let con of context.value?.connectorsSubscribed">
+        <span class="text-10 label label-primary">{{ con.name }}</span
+        >
+    </div>
   `
 })
 export class ConnectorsSubscribedRendererComponent {

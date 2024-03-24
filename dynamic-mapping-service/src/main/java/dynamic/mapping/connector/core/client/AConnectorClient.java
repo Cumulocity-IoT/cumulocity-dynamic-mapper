@@ -342,6 +342,9 @@ public abstract class AConnectorClient {
             if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                 getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
             }
+            if (!getSubscribedMappings().contains(mapping.ident)) {
+                getSubscribedMappings().add(mapping.ident);
+            }
             MutableInt updatedMappingSubs = getActiveSubscriptions()
                     .get(mapping.subscriptionTopic);
 
@@ -389,7 +392,7 @@ public abstract class AConnectorClient {
             activeSubscriptions = new HashMap<String, MutableInt>();
             subscribedMappings = new ArrayList<>();
         }
-        
+
         if (isConnected()) {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
             updatedMappings.forEach(mapping -> {
