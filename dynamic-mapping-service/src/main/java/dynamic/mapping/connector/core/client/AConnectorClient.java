@@ -339,41 +339,22 @@ public abstract class AConnectorClient {
                 subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
             }
 
-            if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
-            }
-            if (!getSubscribedMappings().contains(mapping.ident)) {
-                getSubscribedMappings().add(mapping.ident);
-            }
-            MutableInt updatedMappingSubs = getActiveSubscriptions()
-                    .get(mapping.subscriptionTopic);
-
-            // consider unsubscribing from previous subscription topic if it has changed
-            if (create) {
-                updatedMappingSubs.add(1);
-                ;
-                log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
-                        mapping.qos.ordinal());
-                try {
-                    subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
-                } catch (ConnectorException exp) {
-                    log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
-                            mapping.subscriptionTopic, exp);
-                }
-            } else if (subscriptionTopicChanged && activeMapping != null) {
-                MutableInt activeMappingSubs = getActiveSubscriptions()
-                        .get(activeMapping.subscriptionTopic);
-                activeMappingSubs.subtract(1);
-                if (activeMappingSubs.intValue() <= 0) {
-                    try {
-                        unsubscribe(mapping.subscriptionTopic);
-                    } catch (Exception exp) {
-                        log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
-                                mapping.subscriptionTopic, exp);
-                    }
-                }
-                updatedMappingSubs.add(1);
+            Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
+            boolean validSubscription = supportsWildcardsInTopic() || !containsWildcards;
+            if (validSubscription) {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                    getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
+                }
+                if (!getSubscribedMappings().contains(mapping.ident)) {
+                    getSubscribedMappings().add(mapping.ident);
+                }
+                MutableInt updatedMappingSubs = getActiveSubscriptions()
+                        .get(mapping.subscriptionTopic);
+
+                // consider unsubscribing from previous subscription topic if it has changed
+                if (create) {
+                    updatedMappingSubs.add(1);
+                    ;
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos.ordinal());
                     try {
@@ -381,6 +362,29 @@ public abstract class AConnectorClient {
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
+                    }
+                } else if (subscriptionTopicChanged && activeMapping != null) {
+                    MutableInt activeMappingSubs = getActiveSubscriptions()
+                            .get(activeMapping.subscriptionTopic);
+                    activeMappingSubs.subtract(1);
+                    if (activeMappingSubs.intValue() <= 0) {
+                        try {
+                            unsubscribe(mapping.subscriptionTopic);
+                        } catch (Exception exp) {
+                            log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
+                                    mapping.subscriptionTopic, exp);
+                        }
+                    }
+                    updatedMappingSubs.add(1);
+                    if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                        log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                                mapping.qos.ordinal());
+                        try {
+                            subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                        } catch (ConnectorException exp) {
+                            log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
+                                    mapping.subscriptionTopic, exp);
+                        }
                     }
                 }
             }
@@ -403,7 +407,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
                     activeSubs.add(1);
-                    subscribedMappings.add (mapping.ident);
+                    subscribedMappings.add(mapping.ident);
                 }
             });
 
