@@ -87,7 +87,7 @@
         "pathSource": " $map($map(mea.values[0].timestamp, $number), function($v, $i, $a) { $fromMillis($v) })",
         "pathTarget": "time",
         "repairStrategy": "DEFAULT",
-        "expandArray": false
+        "expandArray": true
       }
     ],
     "updateExistingDevice": false,
