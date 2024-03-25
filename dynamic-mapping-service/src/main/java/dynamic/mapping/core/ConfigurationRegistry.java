@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapping.configuration.ConnectorConfiguration;
@@ -36,6 +37,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
+
+    @Getter
+    private Map <String, MicroserviceCredentials> microserviceCredentials = new HashMap <>();
 
     // structure: <tenant, <mappingType, mappingServiceRepresentation>>
     @Getter
@@ -168,5 +172,10 @@ public class ConfigurationRegistry {
             processorPerTenant.put(connectorClient.getConnectorIdent(),
                     createPayloadProcessorsOutbound(connectorClient));
         }
+    }
+
+    public MicroserviceCredentials getMicroserviceCredential(String tenant) {
+        MicroserviceCredentials ms = microserviceCredentials.get(tenant);
+        return ms;
     }
 }

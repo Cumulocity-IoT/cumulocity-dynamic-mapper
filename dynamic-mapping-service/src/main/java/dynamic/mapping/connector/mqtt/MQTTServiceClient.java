@@ -25,25 +25,28 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
-
+import lombok.NoArgsConstructor;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
 
-// This is instantiated manually not using Spring Boot anymore.
+
 public class MQTTServiceClient extends MQTTClient {
     public MQTTServiceClient() {
+
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("mqttHost",
                 new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, "cumulocity"));
         configProps.put("mqttPort",
                 new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, false, 2883));
-        configProps.put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, true, null));
+        configProps.put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, null));
         configProps.put("password",
-                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null));
+                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, null));
         configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.ID_STRING_PROPERTY, false,
                 MQTTServiceClient.nextId()));
         configProps.put("useTLS",
@@ -86,6 +89,11 @@ public class MQTTServiceClient extends MQTTClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+        MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+        String user = String.format("%s/%s", tenant, msc.getUsername());
+        getSpec().getProperties().put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, user));
+        getSpec().getProperties().put("password",
+                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, msc.getPassword()));
     }
 
     public ConnectorType connectorType = ConnectorType.MQTT_SERVICE;

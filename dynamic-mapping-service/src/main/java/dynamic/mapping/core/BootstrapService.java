@@ -92,6 +92,7 @@ public class BootstrapService {
     public void initialize(MicroserviceSubscriptionAddedEvent event) {
         // Executed for each tenant subscribed
         String tenant = event.getCredentials().getTenant();
+        configurationRegistry.getMicroserviceCredentials().put(tenant, event.getCredentials());
         log.info("Tenant {} - Microservice subscribed", tenant);
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
         ManagedObjectRepresentation mappingServiceMOR = configurationRegistry.getC8yAgent()

@@ -70,6 +70,7 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
+
 // This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
