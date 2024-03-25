@@ -158,7 +158,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     //   cellRendererComponent: TemplateRendererComponent
     // },
     {
-      header: 'Deployed to connectors',
+      header: 'Active for connectors',
       name: 'connectors',
       path: 'deployedToConnectors',
       filterable: true,

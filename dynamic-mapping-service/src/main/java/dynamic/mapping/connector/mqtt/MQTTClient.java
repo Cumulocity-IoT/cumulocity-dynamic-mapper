@@ -457,7 +457,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public Boolean supportsWildcardsInTopic() {
-        return true;
+        return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
     }
 
 }
