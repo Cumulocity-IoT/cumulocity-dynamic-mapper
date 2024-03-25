@@ -60,12 +60,12 @@ export interface Mapping {
 export interface MappingEnriched {
   id: string;
   mapping: Mapping;
-  connectorsSubscribed?: ConnectorConfiguration[];
+  deployedToConnectors?: ConnectorConfiguration[];
 }
 
 export interface MappingSubscribed {
   ident: string;
-  connectorsSubscribed?: ConnectorConfiguration[];
+  deployedToConnectors?: ConnectorConfiguration[];
 }
 
 export enum RepairStrategy {

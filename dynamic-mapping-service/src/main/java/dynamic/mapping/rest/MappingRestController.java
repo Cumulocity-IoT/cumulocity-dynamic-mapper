@@ -76,7 +76,7 @@ import dynamic.mapping.model.Feature;
 import dynamic.mapping.model.TreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
-import dynamic.mapping.model.MappingSubscribed;
+import dynamic.mapping.model.MappingDeployment;
 
 @Slf4j
 @RestController
@@ -454,27 +454,27 @@ public class MappingRestController {
 
     }
 
-    @RequestMapping(value = "/mappingSubscribed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,MappingSubscribed>> getMappingsSubscribed() {
+    @RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String,MappingDeployment>> getMappingsDeployed() {
         String tenant = contextService.getContext().getTenant();
-        Map<String,MappingSubscribed> mappingsSubscribed = new HashMap<>();
+        Map<String,MappingDeployment> mappingsDeployed = new HashMap<>();
         try {
             HashMap<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
                     ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-                    List<String> subscribedMappings = client.getSubscribedMappings();
+                    List<String> subscribedMappings = client.getMappingsDeployed();
                     subscribedMappings.forEach(ident -> {
-                        MappingSubscribed mappingSubscribed = mappingsSubscribed.getOrDefault(ident, new MappingSubscribed(ident));
-                        mappingSubscribed.getConnectorsSubscribed().add(cleanedConfiguration);
-                        mappingsSubscribed.put(ident, mappingSubscribed);
+                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident, new MappingDeployment(ident));
+                        mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
+                        mappingsDeployed.put(ident, mappingDeployed);
                     });
                 }
             }
 
             log.info("Tenant {} - Get active subscriptions!", tenant);
-            return ResponseEntity.status(HttpStatus.OK).body(mappingsSubscribed);
+            return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }

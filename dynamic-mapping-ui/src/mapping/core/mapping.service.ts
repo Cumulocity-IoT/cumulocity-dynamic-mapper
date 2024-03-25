@@ -38,8 +38,8 @@ import {
   Direction,
   Mapping,
   SharedService,
-  MappingSubscribed,
-  PATH_MAPPING_SUBSCRIBED_ENDPOINT
+  MappingSubscribed as MappingDeployed,
+  PATH_MAPPING_DEPLOYED_ENDPOINT
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -82,9 +82,9 @@ export class MappingService {
     this._mappingsOutbound = undefined;
   }
 
-  async getMappingsSubscribed(): Promise<MappingSubscribed[]> {
+  async getMappingsDeployed(): Promise<MappingDeployed[]> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_SUBSCRIBED_ENDPOINT}`,
+      `${BASE_URL}/${PATH_MAPPING_DEPLOYED_ENDPOINT}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -94,7 +94,7 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    const mappings: Promise<MappingSubscribed[]> = await data.json();
+    const mappings: Promise<MappingDeployed[]> = await data.json();
     return mappings;
   }
 

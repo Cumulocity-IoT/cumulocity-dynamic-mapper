@@ -119,7 +119,7 @@ public abstract class AConnectorClient {
     // structure < ident, mapping >
     // public Map<String, Mapping> subscribedMappings = new HashMap<>();
     @Getter
-    private List<String> subscribedMappings = new ArrayList<>();
+    private List<String> mappingsDeployed = new ArrayList<>();
 
     private Instant start = Instant.now();
 
@@ -309,7 +309,7 @@ public abstract class AConnectorClient {
             MutableInt activeSubs = getActiveSubscriptions()
                     .get(mapping.subscriptionTopic);
             activeSubs.subtract(1);
-            subscribedMappings.remove(mapping.ident);
+            mappingsDeployed.remove(mapping.ident);
             if (activeSubs.intValue() <= 0) {
                 try {
                     unsubscribe(mapping.subscriptionTopic);
@@ -340,13 +340,13 @@ public abstract class AConnectorClient {
             }
 
             Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
-            boolean validSubscription = supportsWildcardsInTopic() || !containsWildcards;
-            if (validSubscription) {
+            boolean validDeployment = supportsWildcardsInTopic() || !containsWildcards;
+            if (validDeployment) {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                     getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
                 }
-                if (!getSubscribedMappings().contains(mapping.ident)) {
-                    getSubscribedMappings().add(mapping.ident);
+                if (!getMappingsDeployed().contains(mapping.ident)) {
+                    getMappingsDeployed().add(mapping.ident);
                 }
                 MutableInt updatedMappingSubs = getActiveSubscriptions()
                         .get(mapping.subscriptionTopic);
@@ -394,7 +394,7 @@ public abstract class AConnectorClient {
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
-            subscribedMappings = new ArrayList<>();
+            mappingsDeployed = new ArrayList<>();
         }
 
         if (isConnected()) {
@@ -407,7 +407,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
                     activeSubs.add(1);
-                    subscribedMappings.add(mapping.ident);
+                    mappingsDeployed.add(mapping.ident);
                 }
             });
 

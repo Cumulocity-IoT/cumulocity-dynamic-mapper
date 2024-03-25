@@ -16,21 +16,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @authors Christof Strack
+ * @authors Christof Strack, Stefan Witschel
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
 
-@Component({
-  template: `
-    <div *ngFor="let con of context.value?.connectorsSubscribed">
-        <span class="text-10 label label-primary">{{ con.name }}</span
-        >
-    </div>
-  `
-})
-export class ConnectorsSubscribedRendererComponent {
-  constructor(public context: CellRendererContext) {
-   // console.log('Connectors', context, context.value);
-  }
+package dynamic.mapping.model;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import dynamic.mapping.configuration.ConnectorConfiguration;
+
+import javax.validation.constraints.NotNull;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+
+@Getter
+@Setter
+@NoArgsConstructor
+public class MappingDeployment implements Serializable {
+    public MappingDeployment(String ident) {
+        this.ident = ident;
+        this.deployedToConnectors = new ArrayList<>();
+    }
+
+    @NotNull
+    public String ident;
+    @NotNull
+    public ArrayList<ConnectorConfiguration> deployedToConnectors;
 }

@@ -62,7 +62,7 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
-import { ConnectorsSubscribedRendererComponent } from '../renderer/connectorSubscribed.renderer.component';
+import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -158,12 +158,12 @@ export class MappingComponent implements OnInit, OnDestroy {
     //   cellRendererComponent: TemplateRendererComponent
     // },
     {
-      header: 'Connectors subscribed',
+      header: 'Deployed to connectors',
       name: 'connectors',
-      path: 'connectorsSubscribed',
+      path: 'deployedToConnectors',
       filterable: true,
       sortable: false,
-      cellRendererComponent: ConnectorsSubscribedRendererComponent
+      cellRendererComponent: MappingDeploymentRendererComponent
     },
     {
       header: 'Test/Snoop',
@@ -539,19 +539,19 @@ export class MappingComponent implements OnInit, OnDestroy {
     const mappingsPromise = this.mappingService.getMappings(
       this.stepperConfiguration.direction
     );
-    const mappingsSubscribedPromise =
-      this.mappingService.getMappingsSubscribed();
+    const mappingsDeployedPromise =
+      this.mappingService.getMappingsDeployed();
     this.mappings$ = Promise.all([
       mappingsPromise,
-      mappingsSubscribedPromise
+      mappingsDeployedPromise
     ]).then((results) => {
       const mappingsEnriched = [];
-      const [mappings, mappingsSubscribed] = results;
+      const [mappings, mappingsDeployed] = results;
       mappings.forEach((m) => {
         mappingsEnriched.push({
           id: m.id,
           mapping: m,
-          connectorsSubscribed: mappingsSubscribed[m.ident]
+          deployedToConnectors: mappingsDeployed[m.ident]
         });
       });
       this.mappings = mappings;

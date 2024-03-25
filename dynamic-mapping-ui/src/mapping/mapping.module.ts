@@ -51,7 +51,7 @@ import { MappingStepPropertiesComponent } from './step-one/mapping-properties.co
 import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
-import { ConnectorsSubscribedRendererComponent } from './renderer/connectorSubscribed.renderer.component';
+import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
 
 @NgModule({
   declarations: [
@@ -64,7 +64,7 @@ import { ConnectorsSubscribedRendererComponent } from './renderer/connectorSubsc
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
-    ConnectorsSubscribedRendererComponent,
+    MappingDeploymentRendererComponent,
     QOSRendererComponent,
     TemplateRendererComponent,
     SnoopedTemplateRendererComponent,
