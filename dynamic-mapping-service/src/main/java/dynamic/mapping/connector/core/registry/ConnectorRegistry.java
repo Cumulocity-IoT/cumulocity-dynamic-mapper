@@ -18,7 +18,7 @@ public class ConnectorRegistry {
 
     // Structure: Tenant, <Connector Ident, ConnectorInstance>
     protected HashMap<String, HashMap<String, AConnectorClient>> connectorTenantMap = new HashMap<>();
-    // Structure: ConnectorId, <Property, PropertyDefinition>
+    // Structure: ConnectorType, <Property, PropertyDefinition>
     protected Map<ConnectorType, ConnectorSpecification> connectorSpecificationMap = new HashMap<>();
 
     public void registerConnector(ConnectorType connectorType, ConnectorSpecification specification) {
