@@ -30,10 +30,10 @@ import { CellRendererContext } from '@c8y/ngx-components';
 @Component({
   encapsulation: ViewEncapsulation.None,
   template: `
-    <span [title]="context.item.active">
+    <span [title]="context.value">
       <i
         style="text-align:center; width: 100%;"
-        [c8yIcon]="!context.value ? 'circle-o' : 'plus-circle-o'"
+        [c8yIcon]="context.value ? 'toggle-on': 'toggle-off'"
         class="m-r-5"
       ></i>
     </span>
