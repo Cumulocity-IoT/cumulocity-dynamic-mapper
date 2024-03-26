@@ -19,7 +19,9 @@
  * @authors Christof Strack
  */
 import { Component, ViewEncapsulation } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
+import { AlertService, CellRendererContext } from '@c8y/ngx-components';
+import { MappingService } from '../core/mapping.service';
+import { Direction } from '../../shared';
 
 /**
  * The example component for custom cell renderer.
@@ -29,18 +31,41 @@ import { CellRendererContext } from '@c8y/ngx-components';
  */
 @Component({
   encapsulation: ViewEncapsulation.None,
-  template: `
-    <span [title]="context.value">
-      <i
-        style="text-align:center; width: 100%;"
-        [c8yIcon]="context.value ? 'toggle-on': 'toggle-off'"
-        class="m-r-5"
-      ></i>
-    </span>
+    template: `
+        <div >
+          <label
+            title="{{ 'Toggle mapping activation' | translate }}"
+            class="c8y-switch c8y-switch--inline"
+            (click)="activateMapping()"
+          >
+            <input
+              type="checkbox"
+              [checked]="context.value"
+            />
+            <span></span>
+            <span
+              class="text-capitalize"
+              title="{{ context.value ? 'active': 'inactive'| translate | lowercase }}"
+            >
+              {{ context.value ? 'active': 'inactive' | translate }}
+            </span>
+          </label>
+        </div>
   `
 })
 export class StatusActivationRendererComponent {
-  constructor(public context: CellRendererContext) {
-    // console.log("Status", context, context.value)
+  constructor(public context: CellRendererContext, public alertService:AlertService, public mappingService: MappingService) {
+     // console.log('Status', context, context.value);
+  }
+
+  async activateMapping() {
+    const { mapping } = this.context.item;
+    const newActive = !mapping.active;
+    const action = newActive ? 'Activate' : 'Deactivate';
+    this.alertService.success(`${action} mapping: ${mapping.id}!`);
+    const parameter = { id: mapping.id, active: newActive };
+    await this.mappingService.changeActivationMapping(parameter);
+    this.mappingService.reloadMappings(Direction.INBOUND);
+    this.mappingService.reloadMappings(Direction.OUTBOUND);
   }
 }

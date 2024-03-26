@@ -50,7 +50,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Subject } from 'rxjs';
+import { Observable, Subject, map, take, tap } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import-modal/import.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
@@ -78,15 +78,11 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   isConnectionToMQTTEstablished: boolean;
 
-  mappings: Mapping[] = [];
-  //   mappings$: BehaviorSubject<MappingEnriched[]> = new BehaviorSubject([]);
-  mappings$: Promise<MappingEnriched[]>;
+  mappingsEnriched$: Observable<MappingEnriched[]>;
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
   devices: IIdentified[] = [];
   Direction = Direction;
-
-  param = { name: 'world' };
 
   stepperConfiguration: StepperConfiguration = {
     showEditorSource: true,
@@ -189,8 +185,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       path: 'mapping.active',
       filterable: false,
       sortable: true,
-      cellRendererComponent: StatusActivationRendererComponent,
-      gridTrackSize: '7%'
+      cellRendererComponent: StatusActivationRendererComponent
     }
   ];
 
@@ -265,7 +260,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // console.log('ngOnInit');
-    this.init();
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
@@ -317,6 +311,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscription.bind(this)
     });
+
+    this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
+      this.stepperConfiguration.direction
+    );
   }
 
   onAddMapping() {
@@ -401,7 +399,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     this.mappingToUpdate = mapping;
-    console.log('Add mapping', this.mappings);
     // this.refresh.emit();
     this.showConfigMapping = true;
   }
@@ -483,7 +480,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
-    this.reloadMappings();
+    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
   }
 
   async deleteMappingWithConfirmation(
@@ -529,39 +526,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       await this.mappingService.deleteMapping(mapping.id);
       this.alertService.success(gettext('Mapping deleted successfully'));
       this.isConnectionToMQTTEstablished = true;
-      this.reloadMappings();
     } catch (error) {
       this.alertService.danger(gettext('Failed to delete mapping:') + error);
     }
-  }
-
-  async getMappings(): Promise<void> {
-    const mappingsPromise = this.mappingService.getMappings(
-      this.stepperConfiguration.direction
-    );
-    const mappingsDeployedPromise =
-      this.mappingService.getMappingsDeployed();
-    this.mappings$ = Promise.all([
-      mappingsPromise,
-      mappingsDeployedPromise
-    ]).then((results) => {
-      const mappingsEnriched = [];
-      const [mappings, mappingsDeployed] = results;
-      mappings.forEach((m) => {
-        mappingsEnriched.push({
-          id: m.id,
-          mapping: m,
-          deployedToConnectors: mappingsDeployed[m.ident]
-        });
-      });
-      this.mappings = mappings;
-      return mappingsEnriched;
-    });
-  }
-
-  async reloadMappings(): Promise<void> {
-    this.mappingService.resetCache();
-    await this.getMappings();
   }
 
   async onCommitMapping(mapping: Mapping) {
@@ -581,7 +548,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.updateMapping(mapping);
           this.alertService.success(gettext('Mapping updated successfully'));
-          this.reloadMappings();
           // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
@@ -598,7 +564,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.createMapping(mapping);
           this.alertService.success(gettext('Mapping created successfully'));
-          this.reloadMappings();
           // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
@@ -624,7 +589,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
     this.showConfigMapping = false;
-    this.reloadMappings();
   }
 
   async onCommitSubscriptions(deviceList: IIdentified[]) {
@@ -648,60 +612,71 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.reloadMappingsInBackend();
   }
 
-  private exportMappings(mappings2Export: Mapping[]) {
+  async exportMappings(mappings2Export: Mapping[]): Promise<void> {
     const json = JSON.stringify(mappings2Export, undefined, 2);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
   }
 
   private exportMappingBulk(ids: string[]) {
-    const mappings2Export = this.mappings
-      // .map((m) => m.mapping)
-      .filter((m) => ids.includes(m.id));
-    this.exportMappings(mappings2Export);
+    this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
+      const mappings2Export = ms
+        .filter((m) => ids.includes(m.id))
+        .map((me) => me.mapping);
+      this.exportMappings(mappings2Export);
+    });
   }
 
-  private async activateMappingBulk(ids: string[]) {
-    for (let i = 0; i < this.mappings.length; i++) {
-      if (ids.includes(this.mappings[i].id)) {
-        const newActive = !this.mappings[i].active;
+  private activateMappingBulk(ids: string[]) {
+    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
+      const mappings2Activate = ms
+        .filter((m) => ids.includes(m.id))
+        .map((me) => me.mapping);
+      for (let index = 0; index < mappings2Activate.length; index++) {
+        const m = mappings2Activate[index];
+        const newActive = !m.active;
         const action = newActive ? 'Activate' : 'Deactivate';
-        const parameter = { id: this.mappings[i].id, active: newActive };
+        const parameter = { id: m.id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${this.mappings[i].id}!`);
+        this.alertService.success(`${action} mapping: ${m.id}!`);
       }
-    }
-    this.reloadMappings();
+      this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+    });
   }
 
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
     let continueDelete: boolean = false;
-    for (let i = 0; i < this.mappings.length; i++) {
-      const m: MappingEnriched = {
-        id: this.mappings[i].id,
-        mapping: this.mappings[i]
-      };
-      if (ids.includes(this.mappings[i].id)) {
-        if (i == 0) {
+    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
+      const mappings2Delete = ms
+        .filter((m) => ids.includes(m.id))
+        .map((me) => me.mapping);
+      for (let index = 0; index < mappings2Delete.length; index++) {
+        const m = mappings2Delete[index];
+        const me: MappingEnriched = {
+          id: m.id,
+          mapping: m
+        };
+        if (index == 0) {
           continueDelete = await this.deleteMappingWithConfirmation(
-            m,
+            me,
             true,
             true
           );
         } else if (continueDelete) {
-          await this.deleteMapping(m);
+          this.deleteMapping(me);
         }
       }
-    }
+    });
     this.isConnectionToMQTTEstablished = true;
-    this.reloadMappings();
+    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
   }
 
   async onExportAll() {
-    const mappings2Export = this.mappings
-      // .map((m) => m.mapping)
-      .filter((m) => m.direction == this.stepperConfiguration.direction);
-    this.exportMappings(mappings2Export);
+    this.mappingsEnriched$.pipe(
+      take(1),
+      map((ms) => ms.map((m) => m.mapping)),
+      tap((ms) => this.exportMappings(ms))
+    );
   }
 
   async exportSingle(m: MappingEnriched) {
@@ -716,7 +691,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(() => {
-      this.reloadMappings();
+      this.mappingService.reloadMappings(this.stepperConfiguration.direction);
       modalRef.hide();
     });
   }
@@ -764,8 +739,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
   }
-
-  async init() {
-    await this.getMappings();
+  reloadMappings() {
+    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
   }
 }

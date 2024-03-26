@@ -9,6 +9,7 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
@@ -109,6 +110,8 @@ public class BootstrapService {
         configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
         mappingComponent.initializeMappingStatus(tenant, false);
         mappingComponent.initializeMappingCaches(tenant);
+        mappingComponent.rebuildMappingOutboundCache(tenant);
+        mappingComponent.rebuildMappingInboundCache(tenant);
 
         // TODO Add other clients static property definition here
         connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpec());

@@ -26,7 +26,14 @@ import {
   InventoryService,
   QueriesUtil
 } from '@c8y/client';
-import { Subject } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  combineLatest,
+  map,
+  shareReplay,
+  switchMap
+} from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   BASE_URL,
@@ -39,7 +46,8 @@ import {
   Mapping,
   SharedService,
   MappingSubscribed as MappingDeployed,
-  PATH_MAPPING_DEPLOYED_ENDPOINT
+  PATH_MAPPING_DEPLOYED_ENDPOINT,
+  MappingEnriched
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -61,25 +69,33 @@ export class MappingService {
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
+    this.initializeMappingsEnriched();
   }
 
   queriesUtil: QueriesUtil;
   protected JSONATA = require('jsonata');
 
-  private _mappingsInbound: Promise<Mapping[]>;
-  private _mappingsOutbound: Promise<Mapping[]>;
-  private reload$: Subject<void> = new Subject();
+//   private _mappingsInbound: Promise<Mapping[]>;
+//   private _mappingsOutbound: Promise<Mapping[]>;
+
+  mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
+  mappingsInboundEnriched$: Observable<MappingEnriched[]>;
+
+  reloadInbound$: Subject<void> = new Subject<void>();
+  reloadOutbound$: Subject<void> = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
+    // this.reloadInbound$.next();
+    // this.reloadOutbound$.next();
   }
 
   resetCache() {
-    this._mappingsInbound = undefined;
-    this._mappingsOutbound = undefined;
+    // this._mappingsInbound = undefined;
+    // this._mappingsOutbound = undefined;
   }
 
   async getMappingsDeployed(): Promise<MappingDeployed[]> {
@@ -98,12 +114,68 @@ export class MappingService {
     return mappings;
   }
 
+  initializeMappingsEnriched() {
+    this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.getMappings(Direction.INBOUND),
+          this.getMappingsDeployed()
+        ])
+      ),
+      map(([mappings, mappingsDeployed]) => {
+        const mappingsEnriched = [];
+        mappings.forEach((m) => {
+          mappingsEnriched.push({
+            id: m.id,
+            mapping: m,
+            deployedToConnectors: mappingsDeployed[m.ident]
+          });
+        });
+        return mappingsEnriched;
+      }),
+      shareReplay(1)
+    );
+    this.mappingsInboundEnriched$.subscribe((ms) => {
+      console.log('Horst', ms);
+    });
+    this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
+      switchMap(() => this.getMappings(Direction.OUTBOUND)),
+      map((mappings) => {
+        const mappingsEnriched = [];
+        mappings.forEach((m) => {
+          mappingsEnriched.push({
+            id: m.id,
+            mapping: m
+          });
+        });
+        return mappingsEnriched;
+      }),
+      shareReplay(1)
+    );
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+  }
+
+  getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
+    console.log('Isolde', direction);
+    if (direction == Direction.INBOUND) {
+      return this.mappingsInboundEnriched$;
+    } else {
+      return this.mappingsOutboundEnriched$;
+    }
+  }
+
+  reloadMappings(direction: Direction) {
+    if (direction == Direction.INBOUND) {
+      this.reloadInbound$.next();
+    } else {
+      this.reloadOutbound$.next();
+    }
+  }
+
   async getMappings(direction: Direction): Promise<Mapping[]> {
     let mappings: Promise<Mapping[]>;
-    if (
-      (direction == Direction.INBOUND && !this._mappingsInbound) ||
-      (direction == Direction.OUTBOUND && !this._mappingsOutbound)
-    ) {
+    if (direction == Direction.INBOUND || direction == Direction.OUTBOUND) {
       const result: Mapping[] = [];
       const filter: object = {
         pageSize: 200,
@@ -132,17 +204,17 @@ export class MappingService {
       );
 
       mappings = Promise.resolve(result);
-      if (direction == Direction.INBOUND) {
-        this._mappingsInbound = mappings;
-      } else {
-        this._mappingsOutbound = mappings;
-      }
-    } else {
-      if (direction == Direction.INBOUND) {
-        mappings = this._mappingsInbound;
-      } else {
-        mappings = this._mappingsOutbound;
-      }
+    //   if (direction == Direction.INBOUND) {
+    //     this._mappingsInbound = mappings;
+    //   } else {
+    //     this._mappingsOutbound = mappings;
+    //   }
+    // } else {
+    //   if (direction == Direction.INBOUND) {
+    //     mappings = this._mappingsInbound;
+    //   } else {
+    //     mappings = this._mappingsOutbound;
+    //   }
     }
     return mappings;
   }
@@ -213,7 +285,8 @@ export class MappingService {
         id: m.id
       });
     });
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
@@ -230,7 +303,8 @@ export class MappingService {
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     const m = await data.json();
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return m;
   }
 
@@ -247,7 +321,8 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return data.text();
   }
 
@@ -262,7 +337,8 @@ export class MappingService {
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     const m = await data.json();
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return m;
   }
 

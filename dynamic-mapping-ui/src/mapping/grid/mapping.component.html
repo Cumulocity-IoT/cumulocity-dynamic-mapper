@@ -83,14 +83,17 @@
       [selectable]="true"
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
-      [rows]=" mappings$ |async"
+      [rows]="mappingsEnriched$ | async"
       [pagination]="pagination"
       [actionControls]="actionControls"
     >
     </c8y-data-grid>
   </div>
   <div class="card-block col-md-offset-5 bg-white">
-    <div class="c8y-empty-state" *ngIf="(mappings$ | async)?.length === 0">
+    <div
+      class="c8y-empty-state"
+      *ngIf="(mappingsEnriched$ | async)?.length === 0"
+    >
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
         <strong>No mappings available.</strong><br />
@@ -110,7 +113,10 @@
 
 <div
   class="card"
-  *ngIf="stepperConfiguration.direction === Direction.OUTBOUND && subscription?.devices"
+  *ngIf="
+    stepperConfiguration.direction === Direction.OUTBOUND &&
+    subscription?.devices
+  "
 >
   <div class="card-block">
     <c8y-data-grid
@@ -119,7 +125,6 @@
       [rows]="subscription?.devices"
       [pagination]="pagination"
       [actionControls]="actionControlSubscription"
-
     >
     </c8y-data-grid>
   </div>
@@ -132,7 +137,7 @@
       (cancel)="showConfigMapping = false"
       (commit)="onCommitMapping($event)"
       [mapping]="mappingToUpdate"
-      [mappings]="mappings"
+      [mappings]="mappings$ | async"
       [stepperConfiguration]="stepperConfiguration"
     >
     </d11r-mapping-stepper>

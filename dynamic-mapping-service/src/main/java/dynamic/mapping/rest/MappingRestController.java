@@ -337,7 +337,7 @@ public class MappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+                Map<String, AConnectorClient> connectorMap = connectorRegistry
                         .getClientsForTenant(tenant);
                 for (AConnectorClient client : connectorMap.values()) {
                     client.updateActiveSubscriptions(updatedMappings, false);
@@ -400,10 +400,10 @@ public class MappingRestController {
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
-        HashMap<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
+        Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
-            HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+            Map<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
@@ -459,7 +459,7 @@ public class MappingRestController {
         String tenant = contextService.getContext().getTenant();
         Map<String,MappingDeployment> mappingsDeployed = new HashMap<>();
         try {
-            HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+            Map<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
@@ -515,7 +515,7 @@ public class MappingRestController {
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).deleteActiveSubscription(deletedMapping);
                 });
@@ -542,7 +542,7 @@ public class MappingRestController {
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).upsertActiveSubscription(createdMapping);
                 });
@@ -570,7 +570,7 @@ public class MappingRestController {
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).upsertActiveSubscription(updatedMapping);
                 });
