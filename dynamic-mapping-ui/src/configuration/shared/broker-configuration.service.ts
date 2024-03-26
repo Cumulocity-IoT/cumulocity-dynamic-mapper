@@ -132,7 +132,7 @@ export class BrokerConfigurationService {
     //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
     // );
     const connectorConfig$ = this.triggerConfigurations$.pipe(
-      tap(() => console.log('New triggerConfigurations!')),
+      // tap(() => console.log('New triggerConfigurations!')),
       switchMap(() => {
         const observableConfigurations = from(
           this.getConnectorConfigurations()

@@ -75,8 +75,8 @@ export class MappingService {
   queriesUtil: QueriesUtil;
   protected JSONATA = require('jsonata');
 
-//   private _mappingsInbound: Promise<Mapping[]>;
-//   private _mappingsOutbound: Promise<Mapping[]>;
+  //   private _mappingsInbound: Promise<Mapping[]>;
+  //   private _mappingsOutbound: Promise<Mapping[]>;
 
   mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
   mappingsInboundEnriched$: Observable<MappingEnriched[]>;
@@ -135,9 +135,6 @@ export class MappingService {
       }),
       shareReplay(1)
     );
-    this.mappingsInboundEnriched$.subscribe((ms) => {
-      console.log('Horst', ms);
-    });
     this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
       switchMap(() => this.getMappings(Direction.OUTBOUND)),
       map((mappings) => {
@@ -152,12 +149,9 @@ export class MappingService {
       }),
       shareReplay(1)
     );
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
   }
 
   getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
-    console.log('Isolde', direction);
     if (direction == Direction.INBOUND) {
       return this.mappingsInboundEnriched$;
     } else {
@@ -174,49 +168,34 @@ export class MappingService {
   }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
-    let mappings: Promise<Mapping[]>;
-    if (direction == Direction.INBOUND || direction == Direction.OUTBOUND) {
-      const result: Mapping[] = [];
-      const filter: object = {
-        pageSize: 200,
-        withTotalPages: true
-      };
-      const query: any = {
-        __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
-      };
+    const result: Mapping[] = [];
+    const filter: object = {
+      pageSize: 200,
+      withTotalPages: true
+    };
+    const query: any = {
+      __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
+    };
 
-      //   if (direction == Direction.INBOUND) {
-      //     query = this.queriesUtil.addOrFilter(query, {
-      //       __not: { __has: 'd11r_mapping.direction' }
-      //     });
-      //   }
-      //   query = this.queriesUtil.addAndFilter(query, {
-      //     type: { __has: 'd11r_mapping' }
-      //   });
-
-      const { data } = await this.inventory.listQuery(query, filter);
-
-      data.forEach((m) =>
-        result.push({
-          ...m[MAPPING_FRAGMENT],
-          id: m.id
-        })
-      );
-
-      mappings = Promise.resolve(result);
     //   if (direction == Direction.INBOUND) {
-    //     this._mappingsInbound = mappings;
-    //   } else {
-    //     this._mappingsOutbound = mappings;
+    //     query = this.queriesUtil.addOrFilter(query, {
+    //       __not: { __has: 'd11r_mapping.direction' }
+    //     });
     //   }
-    // } else {
-    //   if (direction == Direction.INBOUND) {
-    //     mappings = this._mappingsInbound;
-    //   } else {
-    //     mappings = this._mappingsOutbound;
-    //   }
-    }
-    return mappings;
+    //   query = this.queriesUtil.addAndFilter(query, {
+    //     type: { __has: 'd11r_mapping' }
+    //   });
+
+    const { data } = await this.inventory.listQuery(query, filter);
+
+    data.forEach((m) =>
+      result.push({
+        ...m[MAPPING_FRAGMENT],
+        id: m.id
+      })
+    );
+
+    return result;
   }
 
   initializeCache(dir: Direction): void {

@@ -311,10 +311,11 @@ export class MappingComponent implements OnInit, OnDestroy {
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscription.bind(this)
     });
-
     this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
       this.stepperConfiguration.direction
     );
+    this.mappingsEnriched$.pipe(take(1)).subscribe();
+    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
   }
 
   onAddMapping() {
