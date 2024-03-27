@@ -42,6 +42,7 @@ import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -444,7 +445,8 @@ public class MQTTClient extends AConnectorClient {
     public void publishMEAO(ProcessingContext<?> context) {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
-        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getTopic()).payload(payload.getBytes()).build();
+        MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
+        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getTopic()).qos(mqttQos).payload(payload.getBytes()).build();
         mqttClient.publish(mqttMessage);
 
         log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenant, payload,
