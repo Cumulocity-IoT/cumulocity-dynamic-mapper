@@ -65,7 +65,7 @@ export class StatusActivationRendererComponent {
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
-    this.mappingService.reloadMappings(Direction.INBOUND);
-    this.mappingService.reloadMappings(Direction.OUTBOUND);
+    this.mappingService.refreshMappings(Direction.INBOUND);
+    this.mappingService.refreshMappings(Direction.OUTBOUND);
   }
 }

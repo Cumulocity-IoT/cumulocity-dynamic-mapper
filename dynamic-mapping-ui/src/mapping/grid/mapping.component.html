@@ -53,11 +53,11 @@
   </button>
   <button
     class="btn btn-link"
-    title="{{ 'Export mappings' | translate }}"
+    title="{{ 'Export all mappings' | translate }}"
     (click)="onExportAll()"
   >
     <i c8yIcon="download"></i>
-    {{ 'Export mappings' | translate }}
+    {{ 'Export all mappings' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -70,7 +70,7 @@
   <button
     class="btn btn-link"
     title="{{ 'Refresh' | translate }}"
-    (click)="reloadMappings()"
+    (click)="refreshMappings()"
   >
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
@@ -84,7 +84,7 @@
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
       [rows]="mappingsEnriched$ | async"
-      [pagination]="pagination"
+      [pagination]="pagination" 
       [actionControls]="actionControls"
     >
     </c8y-data-grid>

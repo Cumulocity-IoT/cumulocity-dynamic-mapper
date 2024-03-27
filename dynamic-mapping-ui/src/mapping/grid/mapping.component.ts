@@ -50,7 +50,7 @@ import {
 import { Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Observable, Subject, map, take, tap } from 'rxjs';
+import { Observable, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
 import { ImportMappingsComponent } from '../import-modal/import.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
@@ -104,91 +104,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     gridHeader: true
   };
 
-  columnsMappings: Column[] = [
-    {
-      name: 'name',
-      header: 'Name',
-      path: 'mapping.name',
-      filterable: false,
-      dataType: ColumnDataType.TextShort,
-      cellRendererComponent: NameRendererComponent,
-      sortOrder: 'asc',
-      visible: true
-    },
-    {
-      header: 'Subscription topic',
-      name: 'subscriptionTopic',
-      path: 'mapping.subscriptionTopic',
-      filterable: true
-    },
-    {
-      header: 'Template topic',
-      name: 'templateTopic',
-      path: 'mapping.templateTopic',
-      filterable: true
-    },
-    {
-      name: 'targetAPI',
-      header: 'API',
-      path: 'mapping.targetAPI',
-      filterable: true,
-      sortable: true,
-      dataType: ColumnDataType.TextShort,
-      cellRendererComponent: APIRendererComponent,
-      gridTrackSize: '7%'
-    },
-    // {
-    //   header: 'Sample payload',
-    //   name: 'source',
-    //   path: 'source',
-    //   filterable: true,
-    //   sortable: false,
-    //   cellRendererComponent: TemplateRendererComponent
-    // },
-    // {
-    //   header: 'Target',
-    //   name: 'target',
-    //   path: 'target',
-    //   filterable: true,
-    //   sortable: false,
-    //   cellRendererComponent: TemplateRendererComponent
-    // },
-    {
-      header: 'Active for connectors',
-      name: 'connectors',
-      path: 'deployedToConnectors',
-      filterable: true,
-      sortable: false,
-      cellRendererComponent: MappingDeploymentRendererComponent
-    },
-    {
-      header: 'Test/Snoop',
-      name: 'tested',
-      path: 'mapping',
-      filterable: false,
-      sortable: false,
-      cellRendererComponent: StatusRendererComponent,
-      cellCSSClassName: 'text-align-center',
-      gridTrackSize: '7%'
-    },
-    {
-      header: 'QOS',
-      name: 'qos',
-      path: 'mapping.qos',
-      filterable: true,
-      sortable: false,
-      cellRendererComponent: QOSRendererComponent
-    },
-    {
-      header: 'Active',
-      name: 'active',
-      path: 'mapping.active',
-      filterable: false,
-      sortable: true,
-      cellRendererComponent: StatusActivationRendererComponent
-    }
-  ];
-
+  columnsMappings: Column[];
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
@@ -209,7 +125,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   value: string;
   mappingType: MappingType;
   destroy$: Subject<boolean> = new Subject<boolean>();
-  // refresh: EventEmitter<any> = new EventEmitter();
 
   pagination: Pagination = {
     pageSize: 30,
@@ -234,21 +149,21 @@ export class MappingComponent implements OnInit, OnDestroy {
       ? Direction.INBOUND
       : Direction.OUTBOUND;
 
+    this.columnsMappings = this.getColumnsMappings();
     if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
       this.columnsMappings[1] = {
         header: 'Publish topic',
         name: 'publishTopic',
         path: 'mapping.publishTopic',
         filterable: true
-        // gridTrackSize: "12.5%",
       };
       this.columnsMappings[2] = {
         header: 'Template topic sample',
         name: 'templateTopicSample',
         path: 'mapping.templateTopicSample',
         filterable: true
-        // gridTrackSize: "12.5%",
       };
+      this.columnsMappings.splice(4,2);
     }
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction}`;
     this.loadSubscriptions();
@@ -314,8 +229,94 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
       this.stepperConfiguration.direction
     );
-    this.mappingsEnriched$.pipe(take(1)).subscribe();
-    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+  }
+
+  getColumnsMappings(): Column[] {
+    const cols: Column[] = [
+      {
+        name: 'name',
+        header: 'Name',
+        path: 'mapping.name',
+        filterable: false,
+        dataType: ColumnDataType.TextShort,
+        cellRendererComponent: NameRendererComponent,
+        sortOrder: 'asc',
+        visible: true
+      },
+      {
+        header: 'Subscription topic',
+        name: 'subscriptionTopic',
+        path: 'mapping.subscriptionTopic',
+        filterable: true
+      },
+      {
+        header: 'Template topic',
+        name: 'templateTopic',
+        path: 'mapping.templateTopic',
+        filterable: true
+      },
+      {
+        name: 'targetAPI',
+        header: 'API',
+        path: 'mapping.targetAPI',
+        filterable: true,
+        sortable: true,
+        dataType: ColumnDataType.TextShort,
+        cellRendererComponent: APIRendererComponent,
+        gridTrackSize: '7%'
+      },
+      // {
+      //   header: 'Sample payload',
+      //   name: 'source',
+      //   path: 'source',
+      //   filterable: true,
+      //   sortable: false,
+      //   cellRendererComponent: TemplateRendererComponent
+      // },
+      // {
+      //   header: 'Target',
+      //   name: 'target',
+      //   path: 'target',
+      //   filterable: true,
+      //   sortable: false,
+      //   cellRendererComponent: TemplateRendererComponent
+      // },
+      {
+        header: 'Active for connectors',
+        name: 'connectors',
+        path: 'deployedToConnectors',
+        filterable: true,
+        sortable: false,
+        cellRendererComponent: MappingDeploymentRendererComponent
+      },
+      {
+        header: 'Test/Snoop',
+        name: 'tested',
+        path: 'mapping',
+        filterable: false,
+        sortable: false,
+        cellRendererComponent: StatusRendererComponent,
+        cellCSSClassName: 'text-align-center',
+        gridTrackSize: '7%'
+      },
+      {
+        header: 'QOS',
+        name: 'qos',
+        path: 'mapping.qos',
+        filterable: true,
+        sortable: false,
+        cellRendererComponent: QOSRendererComponent
+      },
+      {
+        header: 'Active',
+        name: 'active',
+        path: 'mapping.active',
+        filterable: false,
+        sortable: true,
+        cellRendererComponent: StatusActivationRendererComponent
+      }
+    ];
+    return cols;
   }
 
   onAddMapping() {
@@ -400,7 +401,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     this.mappingToUpdate = mapping;
-    // this.refresh.emit();
     this.showConfigMapping = true;
   }
 
@@ -481,7 +481,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
-    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
   async deleteMappingWithConfirmation(
@@ -549,7 +549,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.updateMapping(mapping);
           this.alertService.success(gettext('Mapping updated successfully'));
-          // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
             gettext('Failed to updated mapping:') + error
@@ -565,7 +564,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         try {
           await this.mappingService.createMapping(mapping);
           this.alertService.success(gettext('Mapping created successfully'));
-          // this.refresh.emit();
         } catch (error) {
           this.alertService.danger(
             gettext('Failed to create mapping:') + error
@@ -641,7 +639,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         await this.mappingService.changeActivationMapping(parameter);
         this.alertService.success(`${action} mapping: ${m.id}!`);
       }
-      this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
   }
 
@@ -669,15 +667,14 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     });
     this.isConnectionToMQTTEstablished = true;
-    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
   async onExportAll() {
-    this.mappingsEnriched$.pipe(
-      take(1),
-      map((ms) => ms.map((m) => m.mapping)),
-      tap((ms) => this.exportMappings(ms))
-    );
+    this.mappingsEnriched$.pipe(take(1)).subscribe((ms) => {
+      const mappings2Export = ms.map((me) => me.mapping);
+      this.exportMappings(mappings2Export);
+    });
   }
 
   async exportSingle(m: MappingEnriched) {
@@ -692,7 +689,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(() => {
-      this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
       modalRef.hide();
     });
   }
@@ -740,7 +737,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
   }
-  reloadMappings() {
-    this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+  refreshMappings() {
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 }

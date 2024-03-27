@@ -32,7 +32,8 @@ import {
   combineLatest,
   map,
   shareReplay,
-  switchMap
+  switchMap,
+  take
 } from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
@@ -149,6 +150,10 @@ export class MappingService {
       }),
       shareReplay(1)
     );
+    this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
+    this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
   }
 
   getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
@@ -159,7 +164,7 @@ export class MappingService {
     }
   }
 
-  reloadMappings(direction: Direction) {
+  refreshMappings(direction: Direction) {
     if (direction == Direction.INBOUND) {
       this.reloadInbound$.next();
     } else {
