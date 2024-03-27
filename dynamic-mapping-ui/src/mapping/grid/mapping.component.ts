@@ -63,6 +63,7 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
+import { LowerCasePipe } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -95,7 +96,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     direction: Direction.INBOUND
   };
   titleMapping: string;
-  titleSubscription: string = 'Subscription on devices for mapping OUTBOUND';
+  titleSubscription: string = 'Subscription on devices for mapping outbound';
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -165,7 +166,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
       this.columnsMappings.splice(4,2);
     }
-    this.titleMapping = `Mapping ${this.stepperConfiguration.direction}`;
+    this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
     this.loadSubscriptions();
   }
 
