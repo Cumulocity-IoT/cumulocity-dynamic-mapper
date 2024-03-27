@@ -29,7 +29,7 @@ export interface ConnectorProperty {
   required: boolean;
   order: number;
   editable: boolean;
-  defaultValue? : any;
+  defaultValue?: any;
   type: ConnectorPropertyType;
 }
 
@@ -38,6 +38,7 @@ export interface ConnectorConfiguration {
   connectorType: string;
   enabled: boolean;
   status?: any;
+  status$?: any;
   name: string;
   properties: { [name: string]: any };
 }
@@ -97,5 +98,5 @@ export enum StatusEventTypes {
   STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
   STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
   STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
-  ALL = 'ALL',
+  ALL = 'ALL'
 }

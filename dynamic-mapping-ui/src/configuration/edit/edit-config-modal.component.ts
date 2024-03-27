@@ -13,7 +13,7 @@ import { uuidCustom } from '../../shared';
 @Component({
   selector: 'd11r-edit-connector-modal',
   template: ` <c8y-modal
-    title="Edit properties broker configuration"
+    title="Edit connector configuration"
     (onClose)="onSave()"
     (onDismiss)="onDismiss()"
     [labels]="labels"
