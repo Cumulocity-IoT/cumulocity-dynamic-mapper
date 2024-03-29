@@ -31,22 +31,24 @@
   [disabled]="true"
   #addMappingRef
 >
-  <p class="p-16 text-center text-medium separator-bottom sticky-top bg-white">
-    {{ "Select mapping type for target" | translate }}
-  </p>
-  <div class="modal-inner-scroll animated fadeIn">
-    <div class="list-group list-group-links" [formGroup]="formGroupStep">
-      <ng-container *ngFor="let q of MappingType | keyvalue">
-        <button
-          *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
-          class="list-group-item"
-          title="{{ q.value }}"
-          (click)="onSelectMappingType(q.value)"
-        >
-          <i [c8yIcon]="'rules m-r-4'"></i>
-          <span>{{ q.value }}</span>
-        </button>
-      </ng-container>
-    </div>
+  <div>
+      <p class="p-b-24 text-center text-medium separator-bottom sticky-top bg-white">
+        {{ "Select mapping type for target" | translate }}
+      </p>
+      <div class="p-24 modal-inner-scroll animated fadeIn">
+        <div class="list-group list-group-links" [formGroup]="formGroupStep">
+          <ng-container *ngFor="let q of MappingType | keyvalue">
+            <button
+              *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
+              class="list-group-item"
+              title="{{ q.value }}"
+              (click)="onSelectMappingType(q.value)"
+            >
+              <i [c8yIcon]="'rules m-r-4'"></i>
+              <span>{{ q.value }}</span>
+            </button>
+          </ng-container>
+        </div>
+      </div>
   </div>
 </c8y-modal>

@@ -56,7 +56,7 @@ export class C8YAgent {
   }
 
   async createMEAO(context: ProcessingContext) {
-    let result: any;
+    let result: Promise<any>;
     let error: string = '';
     const currentRequest =
       context.requests[context.requests.length - 1].request;
@@ -97,31 +97,30 @@ export class C8YAgent {
           result = this.inventory.create(p, context);
         }
       } else {
-        error = `Payload is not a valid:${context.mapping.targetAPI}`;
+        error = `Payload is not a valid: ${context.mapping.targetAPI}`;
       }
     }
 
     if (error != '') {
-      this.alert.danger(`Failed to tested mapping: ${error}`);
+      this.alert.danger(`Failed to test mapping: ${error}`);
       return '';
     }
 
     try {
       const { data, res } = await result;
-      // console.log ("My data:", data );
       if (res.status == 200 || res.status == 201) {
         // this.alert.success("Successfully tested mapping!");
         return data;
       } else {
         const e = await res.text();
-        this.alert.danger(`Failed to tested mapping: ${e}`);
+        this.alert.danger(`Failed to test mapping: ${e}`);
         context.requests[context.requests.length - 1].error = e;
         return '';
       }
     } catch (e) {
-      const { data } = await e;
-      this.alert.danger(`Failed to tested mapping: ${data}`);
-      context.requests[context.requests.length - 1].error = e;
+      const { res } = await e;
+      this.alert.danger(`Failed to test mapping: ${res.statusText}`);
+      context.requests[context.requests.length - 1].error = res.statusText;
       return '';
     }
   }

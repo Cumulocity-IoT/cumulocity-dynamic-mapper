@@ -412,6 +412,7 @@
     <c8y-stepper-buttons
       class="col-xs-12 d-block card-footer p-24 separator"
       (onCustom)="onCommitButton()"
+      (onCancel)="cancel.emit()"
       (onBack)="onBackStep($event)"
       [labels]="{ custom: 'Confirm' }"
     >
