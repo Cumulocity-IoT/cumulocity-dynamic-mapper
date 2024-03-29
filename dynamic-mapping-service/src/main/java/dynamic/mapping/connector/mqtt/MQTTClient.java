@@ -446,11 +446,11 @@ public class MQTTClient extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
-        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getTopic()).qos(mqttQos).payload(payload.getBytes()).build();
+        Mqtt3Publish mqttMessage = Mqtt3Publish.builder().topic(context.getResolvedPublishTopic()).qos(mqttQos).payload(payload.getBytes()).build();
         mqttClient.publish(mqttMessage);
 
-        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}", tenant, payload,
-                context.getMapping().name, context.getResolvedPublishTopic());
+        log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,
+                context.getMapping().name, context.getResolvedPublishTopic(), connectorName);
     }
 
     @Override

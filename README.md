@@ -346,7 +346,7 @@ For an outbound mapping to be applied two conditions have to be fulfilled:
 ##### Subscription Topic
 
 This is the topic which is actually subscribed on in the broker. It can contain wildcards, either single level "+" or multilevel "#".
-This occurs must be supported by the configured message broker.
+This must be supported by the configured message broker.
 >**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
 

@@ -100,16 +100,17 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     // The Outbound Dispatcher is hardly connected to the Connector otherwise it is
     // not possible to correlate messages received bei Notification API to the
     // correct Connector
-    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+    public AsynchronousDispatcherOutbound(ConfigurationRegistry configurationRegistry,
+            AConnectorClient connectorClient) {
         this.objectMapper = configurationRegistry.getObjectMapper();
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.mappingComponent = configurationRegistry.getMappingComponent();
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.connectorClient = connectorClient;
         // log.info("Tenant {} - HIER I {} {}", connectorClient.getTenant(),
-        //         configurationRegistry.getPayloadProcessorsOutbound());
+        // configurationRegistry.getPayloadProcessorsOutbound());
         // log.info("Tenant {} - HIER II {} {}", connectorClient.getTenant(),
-        //         configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
+        // configurationRegistry.getPayloadProcessorsOutbound().get(connectorClient.getTenant()));
         this.payloadProcessorsOutbound = configurationRegistry.getPayloadProcessorsOutbound()
                 .get(connectorClient.getTenant())
                 .get(connectorClient.getConnectorIdent());
@@ -127,11 +128,13 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     @Override
     public void onNotification(Notification notification) {
-        // We don't care about UPDATES nor DELETES
-        if ("CREATE".equals(notification.getNotificationHeaders().get(1))) {
+        // We don't care about UPDATES nor DELETES and ignore notifications if connector
+        // is not connected
+        if ("CREATE".equals(notification.getNotificationHeaders().get(1)) && connectorClient.isConnected()) {
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-            log.info("Tenant {} - Notification received: <{}>", tenant, notification.getMessage());
-            log.info("Tenant {} - Notification headers: <{}>", tenant, notification.getNotificationHeaders());
+            log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant, notification.getMessage(),
+                    notification.getNotificationHeaders(), connectorClient.connectorConfiguration.name,
+                    connectorClient.isConnected());
             C8YMessage c8yMessage = new C8YMessage();
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setApi(notification.getApi());
@@ -205,6 +208,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
+                    context.setQos(mapping.getQos());
                     context.setServiceConfiguration(serviceConfiguration);
                     // identify the correct processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
@@ -219,7 +223,8 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                         context.getTopic(),
                                         context.getPayload().toString());
                             } else {
-                                log.info("Tenant {} - New message on topic: '{}', sendPayload: {}", tenant, context.getTopic(), sendPayload);
+                                log.info("Tenant {} - New message on topic: '{}', sendPayload: {}", tenant,
+                                        context.getTopic(), sendPayload);
                             }
                             mappingStatus.messagesReceived++;
                             if (mapping.snoopStatus == SnoopStatus.ENABLED
@@ -296,14 +301,15 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             try {
                 JsonNode message = objectMapper.readTree(c8yMessage.getPayload());
                 resolvedMappings = mappingComponent.resolveMappingOutbound(tenant, message, c8yMessage.getApi());
-                if(resolvedMappings.size() > 0 && op != null)
+                if (resolvedMappings.size() > 0 && op != null)
                     c8yAgent.updateOperationStatus(tenant, op, OperationStatus.EXECUTING, null);
             } catch (Exception e) {
                 log.warn("Tenant {} - Error resolving appropriate map. Could NOT be parsed. Ignoring this message!",
                         tenant);
                 log.debug(e.getMessage(), tenant);
-                //if (op != null)
-                //    c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
+                // if (op != null)
+                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                // e.getLocalizedMessage());
                 mappingStatusUnspecified.errors++;
             }
         } else {
@@ -328,13 +334,15 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     }
                 } else {
                     // No Mapping found
-                    //c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                    //        "No Mapping found for operation " + op.toJSON());
+                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                    // "No Mapping found for operation " + op.toJSON());
                 }
             } catch (InterruptedException e) {
-                //c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
+                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                // e.getLocalizedMessage());
             } catch (ExecutionException e) {
-                //c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED, e.getLocalizedMessage());
+                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                // e.getLocalizedMessage());
             }
         }
         return futureProcessingResult;

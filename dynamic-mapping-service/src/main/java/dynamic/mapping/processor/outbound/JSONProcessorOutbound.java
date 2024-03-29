@@ -136,7 +136,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 } else if (extractedSourceContent.isTextual()) {
                     if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
-                        log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}, {}, {}",
+                        log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}",
                                 context.getTenant(), ps, extractedSourceContent.toPrettyString(),
                                 extractedSourceContent.asText());
                         ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
