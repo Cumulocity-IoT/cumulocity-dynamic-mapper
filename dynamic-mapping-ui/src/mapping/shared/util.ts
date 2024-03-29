@@ -241,6 +241,7 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
   ).length;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function checkTopicsInboundAreValidWithOption(options) {
   return checkTopicsInboundAreValid;
 
@@ -248,7 +249,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
     let errors = {};
     let error: boolean = false;
 
-    console.log('Validation options:', options);
+    // console.log('Validation options:', options);
 
     const { templateTopic, templateTopicSample, subscriptionTopic } =
       control['controls'];

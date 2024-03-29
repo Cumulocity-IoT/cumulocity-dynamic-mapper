@@ -719,7 +719,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
     } else if (this.step == 'Define templates and substitutions') {
-      this.mapping = this.getCurrentMapping(false);
+       this.mapping = this.getCurrentMapping(false);
     }
     event.stepper.previous();
   }
