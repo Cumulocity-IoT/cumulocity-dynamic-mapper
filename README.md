@@ -13,11 +13,11 @@
 ## Overview
 
 The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
-It can connect to multiple message brokers likes **MQTT**, **MQTT Connect** and others, subscribes to specific topics and maps the data in a graphical way to the domain model of Cumulocity.
+It can connect to multiple message brokers likes **MQTT**, **MQTT Service** and others, subscribes to specific topics and maps the data in a graphical way to the domain model of Cumulocity.
 
 Per default the followings connectors are supported
 * **MQTT** - any MQTT Broker
-* **MQTT Connect** - MQTT Broker provided by Cumulocity IoT (in development)
+* **MQTT Service** - MQTT Broker provided by Cumulocity IoT (in development)
 
 It contains two major components:
 
@@ -50,21 +50,21 @@ Here are the **core features** summarized:
 The architecture of the components consists of the following components:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Architecture.jpg"  style="width: 100%;" />
+<img src="resources/image/Dynamic_Mapper_Architecture.png"  style="width: 100%;" />
 </p>
 <br/>
 The orange components are part of this project which are:
 
 * 2 Default connectors for..
   * **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to MQTT brokers
-  * **MQTT Connect (in development)** -  using the MQTT Connect Client to connect to MQTT Connect
+  * **MQTT Service (in development)** -  using the MQTT Service Client to connect to MQTT Service
 * **Data Mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 * **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
 * **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
 * **Mapper Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
-> **Please Note:** When using MQTT or any other Message Broker beside MQTT Connect you need an instance of this broker available to use the Dynamic Mapper.
+> **Please Note:** When using MQTT or any other Message Broker beside MQTT Service you need an instance of this broker available to use the Dynamic Mapper.
 
 The mapper processes messages in both directions:
 1. `INBOUND`: from Message Broker to C8Y
@@ -214,7 +214,7 @@ The table of configured connectors to different brokers can be:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Connect, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the chosen connector type:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Service, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the chosen connector type:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
