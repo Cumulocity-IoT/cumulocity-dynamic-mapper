@@ -56,8 +56,8 @@ The architecture of the components consists of the following components:
 The orange components are part of this project which are:
 
 * 2 Default connectors for..
-  * **MQTT Client** - using [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to connect and subscribe to MQTT brokers
-  * **MQTT Service (in development)** -  using the MQTT Service Client to connect to MQTT Service
+  * **MQTT Client** - using [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) to connect and subscribe to MQTT brokers
+  * **MQTT Service (in development)** -  using hivemq-mqtt-client to connect to MQTT Service
 * **Data Mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
 * **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
@@ -92,9 +92,6 @@ Due to two different libraries to evaluate JSONata in:
 2. `dynamic-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 
 Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
-
-The Paho java client uses memory persistence to persist its state (used to store outbound and inbound messages while they are in flight). When the microservice restarts this information is lost. 
-The microservice can not use the default `MqttDefaultFilePersistence` of the paho client. See [Issue](https://github.com/eclipse/paho.mqtt.java/issues/507)
 
 ### Contribution
 > **Pull Requests adding connectors, mappings for other data formats or additional functionally are welcomed!**
