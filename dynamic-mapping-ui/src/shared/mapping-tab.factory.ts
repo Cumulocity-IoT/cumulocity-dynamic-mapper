@@ -38,7 +38,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/configuration',
         priority: 930,
-        label: 'Configuration',
+        label: 'Connector',
         icon: 'cog',
         orientation: 'horizontal',
         hide: !feature?.userHasMappingAdminRole
@@ -68,7 +68,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/testing',
         priority: 900,
-        label: 'Test devices',
+        label: 'Test device',
         icon: 'reflector-bulb',
         orientation: 'horizontal'
       } as Tab);
@@ -80,7 +80,7 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/extensions',
+        path: 'sag-ps-pkg-dynamic-mapping/extension',
         priority: 880,
         label: 'Processor extension',
         icon: 'plugin',

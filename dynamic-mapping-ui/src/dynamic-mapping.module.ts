@@ -42,7 +42,7 @@ import {
   OverviewGuard,
   SharedModule
 } from './shared';
-import { TestingModule } from './testing-devices/testing.module';
+import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
 import {
   checkTopicsInboundAreValidWithOption,

@@ -21,6 +21,8 @@
 
 package dynamic.mapping;
 
+import java.util.Date;
+
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
@@ -84,7 +86,7 @@ public class ProtobufPahoClient {
         CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
-                .setTxt("Dummy Text")
+                .setTxt("Stop at petrol station: " + (new Date().toString()))
                 .setEventType("c8y_ProtobufEventType")
                 .setTimestamp(System.currentTimeMillis())
                 .build();

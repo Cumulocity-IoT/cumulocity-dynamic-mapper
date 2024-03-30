@@ -48,7 +48,7 @@ export class ExtensionCardComponent implements OnInit {
   }
 
   async detail() {
-    // this.router.navigateByUrl(`/sag-ps-pkg-dynamic-mapping/extensions/${this.app.id}`);
+    // this.router.navigateByUrl(`/sag-ps-pkg-dynamic-mapping/extension/${this.app.id}`);
     this.router.navigate(['properties/', this.app.id], {
       relativeTo: this.activatedRoute
     });
