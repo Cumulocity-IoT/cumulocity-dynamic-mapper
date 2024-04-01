@@ -245,8 +245,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe((value) => {
-                  this.updateSourceExpressionResult(value);
+                field.formControl.valueChanges.subscribe(() => {
+                  this.updateSourceExpressionResult();
                 });
               }
             }
@@ -282,8 +282,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
-                field.formControl.valueChanges.subscribe((value) => {
-                  this.updateTargetExpressionResult(value);
+                field.formControl.valueChanges.subscribe(() => {
+                  this.updateTargetExpressionResult();
                 });
               }
             }
@@ -436,7 +436,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     );
   }
 
-  async updateSourceExpressionResult(path: string) {
+  async updateSourceExpressionResult() {
     try {
       this.substitutionModel.sourceExpression = {
         msgTxt: '',
@@ -446,7 +446,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
       const r: JSON = await this.mappingService.evaluateExpression(
         this.editorSource?.get(),
-        path
+        this.substitutionFormly.get('pathSource').value
       );
       this.substitutionModel.sourceExpression = {
         resultType: whatIsIt(r),
@@ -499,7 +499,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log(`onTemplateTargetChanged changed: ${JSON.stringify(content)}`);
   }
 
-  async updateTargetExpressionResult(path: string) {
+  async updateTargetExpressionResult() {
+    const path = this.substitutionFormly.get('pathTarget').value;
     try {
       this.substitutionModel.targetExpression = {
         msgTxt: '',
@@ -880,8 +881,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
           this.substitutionModel = editedSub;
-          this.updateSourceExpressionResult(editedSub.pathSource);
-          this.updateTargetExpressionResult(editedSub.pathTarget);
+          this.updateSourceExpressionResult();
+          this.updateTargetExpressionResult();
         }
       });
       this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
