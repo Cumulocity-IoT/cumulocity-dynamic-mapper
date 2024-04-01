@@ -19,26 +19,7 @@
  * @authors Christof Strack
  */
 
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { FieldType } from '@ngx-formly/core';
-
-@Component({
-  selector: 'd11r-formly-field-textarea',
-  template: `
-    <textarea autosize readonly
-      [class]="class"
-      [class.is-invalid]="showError"
-      [attr.aria-describedby]="id + '-formly-validation-error'"
-      [attr.aria-invalid]="showError"
-    >
- {{ to.value }}
-</textarea>
-  `,
-  styleUrls: ['./textarea.type.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
-})
-export class FieldTextareaCustom extends FieldType {
-  get class() {
-    return `form-control ${this.to.class}`;
-  }
+ textarea::-webkit-scrollbar {
+    width: 10px;
+    
 }
