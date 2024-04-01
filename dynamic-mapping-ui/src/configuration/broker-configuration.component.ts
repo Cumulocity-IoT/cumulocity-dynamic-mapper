@@ -123,9 +123,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     );
     console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === 201) {
-      this.alert.success(gettext('Reconnect successful!'));
+      this.alert.success(gettext('Reconnected successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to reconnect.'));
+      this.alert.danger(gettext('Failed to reconnect!'));
     }
   }
 
@@ -157,7 +157,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Update successful'));
+          this.alert.success(gettext('Updated successfully.'));
         } else {
           this.alert.danger(
             gettext('Failed to update connector configuration')
@@ -201,10 +201,10 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Update successful'));
+          this.alert.success(gettext('Updated successfully.'));
         } else {
           this.alert.danger(
-            gettext('Failed to update connector configuration')
+            gettext('Failed to update connector configuration!')
           );
         }
       }
@@ -236,7 +236,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
               configuration.ident
             );
           if (response.status < 300) {
-            this.alert.success(gettext('Deleted successful'));
+            this.alert.success(gettext('Deleted successfully.'));
           } else {
             this.alert.danger(
               gettext('Failed to delete connector configuration')
@@ -300,9 +300,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     console.log('Details toggle activation to broker', response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
-      this.alert.success(gettext('Connection updated successful'));
+      this.alert.success(gettext('Connection updated successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to establish connection'));
+      this.alert.danger(gettext('Failed to establish connection!'));
     }
     await this.loadData();
   }
@@ -312,7 +312,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       Operation.RESET_STATUS_MAPPING
     );
     if (res.status < 300) {
-      this.alert.success(gettext('Successfully reset'));
+      this.alert.success(gettext('Status reset successfully.'));
     } else {
       this.alert.danger(gettext('Failed to rest statistic.'));
     }

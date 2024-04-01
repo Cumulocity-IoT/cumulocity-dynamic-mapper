@@ -63,7 +63,6 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
-import { LowerCasePipe } from '@angular/common';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -478,7 +477,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async activateMapping(m: MappingEnriched) {
     const { mapping } = m;
     const newActive = !mapping.active;
-    const action = newActive ? 'Activate' : 'Deactivate';
+    const action = newActive ? 'Activated' : 'Deactivated';
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
@@ -635,7 +634,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       for (let index = 0; index < mappings2Activate.length; index++) {
         const m = mappings2Activate[index];
         const newActive = !m.active;
-        const action = newActive ? 'Activate' : 'Deactivate';
+        const action = newActive ? 'Activated' : 'Deactivated';
         const parameter = { id: m.id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
         this.alertService.success(`${action} mapping: ${m.id}!`);
