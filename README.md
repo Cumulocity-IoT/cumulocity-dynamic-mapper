@@ -428,7 +428,7 @@ To define a new substitution the following steps have to be performed:
       * ```multi-device-multi-value```
       * ```single-device-multi-value```\
   Otherwise an extracted array is treated as a single value, see [Different type of substitutions](#different-type-of-substitutions).
-   1. Select option ```Resolve to externalId``` if you want to resolve system Cumulocity Id to externalId using externalIdType. This can onlybe used for OUTBOUND mappings.
+   1. Select option ```Resolve to externalId``` if you want to resolve system Cumulocity Id to externalId using externalIdType. This can only be used for OUTBOUND mappings.
    1. Select a ```Reapir Strategy``` that determines how the mapping is applied:
       *  ```DEFAULT```: Map the extracted values to the attribute addressed on right side
       *  ```USE_FIRST_VALUE_OF_ARRAY```: When the left side of the mapping returns an array, only use the 1. item in the array and map this to the right side

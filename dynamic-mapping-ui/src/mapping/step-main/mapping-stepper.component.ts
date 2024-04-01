@@ -719,7 +719,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
     } else if (this.step == 'Define templates and substitutions') {
-       this.mapping = this.getCurrentMapping(false);
+      this.mapping = this.getCurrentMapping(false);
     }
     event.stepper.previous();
   }
@@ -879,8 +879,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         console.log('Mapping after edit:', editedSub);
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
-          this.substitutionModel.pathSource = editedSub.pathSource;
-          this.substitutionModel.pathTarget = editedSub.pathTarget;
+          this.substitutionModel = editedSub;
+          this.updateSourceExpressionResult(editedSub.pathSource);
+          this.updateTargetExpressionResult(editedSub.pathTarget);
         }
       });
       this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));

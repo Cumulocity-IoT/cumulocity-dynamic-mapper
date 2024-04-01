@@ -164,14 +164,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
-        // variant where the default strategy for PROCESSOR_EXTENSION is
-        // REMOVE_IF_MISSING
-        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) &&
-        // subValueMissing) ||
-        // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-        // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
-        // type.equals(MappingType.PROTOBUF_STATIC))
-        // && (subValueMissing || subValueNull)))
         try {
             if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
                     (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
