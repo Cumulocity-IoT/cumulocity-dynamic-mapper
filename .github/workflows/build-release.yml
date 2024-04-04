@@ -43,7 +43,7 @@ jobs:
       - name: Zip Frontend
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         run: |
-          cd dynamic-mapping-ui/dist/apps/sag-ps-pkg-dynamic-mapping
+          cd dynamic-mapping-ui/dist/dynamic-mapping-ui
           zip -r -q ../../../dynamic-mapping-ui.zip *
       - name: Create Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
