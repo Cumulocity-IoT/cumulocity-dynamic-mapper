@@ -13,7 +13,8 @@
     "build": "ng build",
     "deploy": "ng deploy",
     "format": "prettier --write 'src/**/*.ts'",
-    "lint": "eslint --ext .ts,.component.html ."
+    "lint": "eslint --ext .ts,.component.html .",
+    "cy:run": "cypress run"
   },
   "keywords": [],
   "license": "ISC",

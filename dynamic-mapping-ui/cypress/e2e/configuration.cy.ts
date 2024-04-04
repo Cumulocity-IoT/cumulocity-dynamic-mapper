@@ -21,7 +21,7 @@ describe('Specs for connector configuration', () => {
       .click();
 
     // navigate to configuration
-    cy.get('a[title="Configuration"]').as('configuration').should('exist');
+    cy.get('a[title="Connector"]').as('configuration').should('exist');
     cy.get('@configuration').click();
   });
 
@@ -74,7 +74,7 @@ describe('Specs for connector configuration', () => {
 
   it('Delete connector', function () {
     // navigate to configuration
-    cy.get('a[title="Configuration"]').as('configuration').should('exist');
+    cy.get('a[title="Connector"]').as('configuration').should('exist');
     cy.get('@configuration').click();
 
     // read ident from previously added connector
@@ -82,7 +82,7 @@ describe('Specs for connector configuration', () => {
       this.mqttConnectionPostRequest = data;
       // cy.get(`#connector_${this.mqttConnectionPostRequest.ident} btn[title="Action"]`)
       // identify respective row with connector
-      cy.get(`#connector_${this.mqttConnectionPostRequest.ident}`).click();
+      cy.get(`#connector_${this.mqttConnectionPostRequest.ident}`, { timeout: 10000 }).click();
       cy.get('.dropdown #delete').click({ force: true });
       cy.get('[data-cy="c8y-confirm-modal--ok"]').click();
     });
