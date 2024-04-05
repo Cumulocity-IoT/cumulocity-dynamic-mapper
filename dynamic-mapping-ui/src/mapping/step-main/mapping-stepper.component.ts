@@ -898,9 +898,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         existingSubstitution = index;
       }
     });
+    const duplicateSubstitution = existingSubstitution != -1;
     const initialState = {
-      duplicate: existingSubstitution != -1,
-      existingSubstitution: existingSubstitution,
+      duplicateSubstitution,
+      existingSubstitution,
       substitution: sub,
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration
@@ -913,9 +914,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
     modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
       console.log('About to add new substitution:', newSub);
-      if (newSub) {
+      if (newSub && !duplicateSubstitution) {
         this.mapping.substitutions.push(newSub);
-      }
+      } else if (newSub && duplicateSubstitution) {
+        this.mapping.substitutions[existingSubstitution] = newSub;
+       }
     });
   }
 
