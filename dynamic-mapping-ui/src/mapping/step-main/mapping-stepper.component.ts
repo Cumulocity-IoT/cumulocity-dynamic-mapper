@@ -191,14 +191,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.mapping,
       this.stepperConfiguration
     );
-    const numberSnooped = this.mapping.snoopedTemplates
-      ? this.mapping.snoopedTemplates.length
-      : 0;
-    if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
-      this.alertService.success(
-        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`
-      );
-    }
 
     this.substitutionFormlyFields = [
       {
