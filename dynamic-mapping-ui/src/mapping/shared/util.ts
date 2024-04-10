@@ -94,31 +94,31 @@ export function isTopicNameValid(topic: string): any {
   return errors;
 }
 
-export function isTemplateTopicValid(topic: string): any {
-  let topix = topic;
-  // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
-  // TOPIC_WILDCARD_MULTI
-  topix = normalizeTopic(topix);
+// export function isTemplateTopicValid(topic: string): any {
+//   let topix = topic;
+//   // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+//   // TOPIC_WILDCARD_MULTI
+//   topix = normalizeTopic(topix);
 
-  // let errors = {};
-  // // count number of "#"
-  // let count_multi = (topix.match(/\#/g) || []).length;
-  // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
-  // // count number of "+"
-  // let count_single = (topix.match(/\+/g) || []).length;
-  // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+//   // let errors = {};
+//   // // count number of "#"
+//   // let count_multi = (topix.match(/\#/g) || []).length;
+//   // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+//   // // count number of "+"
+//   // let count_single = (topix.match(/\+/g) || []).length;
+//   // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+//   // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
-  const errors = {};
-  // count number of "#"
-  const count_multi = (topix.match(/#/g) || []).length;
-  if (count_multi >= 1)
-    errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
-      true;
+//   const errors = {};
+//   // count number of "#"
+//   const count_multi = (topix.match(/#/g) || []).length;
+//   if (count_multi >= 1)
+//     errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
+//       true;
 
-  return errors;
-}
+//   return errors;
+// }
 
 export function isSubscriptionTopicValid(topic: string): any {
   let topix = topic;
@@ -157,19 +157,19 @@ export function isSubscriptionTopicUnique(
   return result;
 }
 
-export function isTemplateTopicUnique(
-  mapping: Mapping,
-  mappings: Mapping[]
-): boolean {
-  const result = mappings.every((m) => {
-    return (
-      (!mapping.templateTopic.startsWith(m.templateTopic) &&
-        !m.templateTopic.startsWith(mapping.templateTopic)) ||
-      mapping.id == m.id
-    );
-  });
-  return result;
-}
+// export function isTemplateTopicUnique(
+//   mapping: Mapping,
+//   mappings: Mapping[]
+// ): boolean {
+//   const result = mappings.every((m) => {
+//     return (
+//       (!mapping.templateTopic.startsWith(m.templateTopic) &&
+//         !m.templateTopic.startsWith(mapping.templateTopic)) ||
+//       mapping.id == m.id
+//     );
+//   });
+//   return result;
+// }
 
 export function isFilterOutboundUnique(
   mapping: Mapping,
@@ -247,19 +247,22 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
   function checkTopicsInboundAreValid(control: AbstractControl) {
     let errors = {};
-    let error: boolean = false;
+    // let error: boolean = false;
 
     // console.log('Validation options:', options);
 
-    const { templateTopic, templateTopicSample, subscriptionTopic } =
-      control['controls'];
-    templateTopic.setErrors(null);
+    const {
+      //  templateTopic,
+      templateTopicSample,
+      subscriptionTopic
+    } = control['controls'];
+    // templateTopic.setErrors(null);
     templateTopicSample.setErrors(null);
     subscriptionTopic.setErrors(null);
 
     // avoid displaying the message error when values are empty
     if (
-      templateTopic.value == '' ||
+      // templateTopic.value == '' ||
       templateTopicSample.value == '' ||
       subscriptionTopic.value == ''
     ) {
@@ -280,22 +283,22 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
     // let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
     // error = !f(subscriptionTopic, templateTopic);
-    const f = (t) => (s) =>
-      new RegExp(
-        s.concat('@').split('+').join('[^/]+').split('#').join('.+')
-      ).test(t.concat('@'));
-    error = !f(templateTopic.value)(subscriptionTopic.value);
-    if (error) {
-      errors = {
-        ...errors,
-        TemplateTopic_Must_Match_The_SubscriptionTopic: {
-          ...ValidationFormlyError[
-            'TemplateTopic_Must_Match_The_SubscriptionTopic'
-          ],
-          errorPath: 'templateTopic'
-        }
-      };
-    }
+    // const f = (t) => (s) =>
+    //   new RegExp(
+    //     s.concat('@').split('+').join('[^/]+').split('#').join('.+')
+    //   ).test(t.concat('@'));
+    // error = !f(templateTopic.value)(subscriptionTopic.value);
+    // if (error) {
+    //   errors = {
+    //     ...errors,
+    //     TemplateTopic_Must_Match_The_SubscriptionTopic: {
+    //       ...ValidationFormlyError[
+    //         'TemplateTopic_Must_Match_The_SubscriptionTopic'
+    //       ],
+    //       errorPath: 'templateTopic'
+    //     }
+    //   };
+    // }
 
     // count number of "#" in subscriptionTopic
     let count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
@@ -337,7 +340,9 @@ export function checkTopicsInboundAreValidWithOption(options) {
     }
 
     // count number of "#" in templateTopic
-    count_multi = (templateTopic.value.match(/#/g) || []).length;
+    // count_multi = (templateTopic.value.match(/#/g) || []).length;
+    // count number of "#" in subscriptionTopic
+    count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
     if (count_multi >= 1) {
       errors = {
         ...errors,
@@ -345,12 +350,13 @@ export function checkTopicsInboundAreValidWithOption(options) {
           ...ValidationFormlyError[
             'No_Multi_Level_Wildcard_Allowed_In_TemplateTopic'
           ],
-          errorPath: 'templateTopic'
+          errorPath: 'subscriptionTopic'
         }
       };
     }
 
-    const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
+    // const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
+    const splitTT: string[] = splitTopicExcludingSeparator(subscriptionTopic.value);
     const splitTTS: string[] = splitTopicExcludingSeparator(
       templateTopicSample.value
     );

@@ -99,7 +99,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       : 0;
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success(
-        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`, `The recording processs is in state ${this.mapping.snoopStatus}.`
+        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`, `The recording process is in state ${this.mapping.snoopStatus}.`
       );
     }
     this.propertyFormlyFields = [
@@ -118,7 +118,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         validators: {
           validation: [
             this.stepperConfiguration.direction == Direction.INBOUND
-              ? checkTopicsInboundAreValidWithOption({days:3})
+              ? checkTopicsInboundAreValidWithOption({sampleOption:3})
               : checkTopicsOutboundAreValid
           ]
         },
@@ -148,23 +148,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: 'Subscription Topic',
               change: () => {
-                const newDerivedTopic = (this.mapping.templateTopic =
+                const newDerivedTopic =
                   deriveTemplateTopicFromTopic(
                     this.propertyFormly.get('subscriptionTopic').value
-                  ));
+                  );
                 this.propertyFormly
                   .get('templateTopicSample')
                   .setValue(newDerivedTopic);
-                this.propertyFormly
-                  .get('templateTopic')
-                  .setValue(newDerivedTopic);
-                // this.mapping.templateTopic = deriveTemplateTopicFromTopic(
-                //   this.propertyFormly.get("subscriptionTopic").value
-                // );
-                // this.mapping.templateTopicSample = this.mapping.templateTopic;
-                // this.mapping = {
-                //   ...this.mapping,
-                // };
+                // this.propertyFormly
+                //   .get('templateTopic')
+                //   .setValue(newDerivedTopic);
               },
               required: this.stepperConfiguration.direction == Direction.INBOUND
             },
@@ -196,23 +189,23 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
-          {
-            className: 'col-lg-6',
-            key: 'templateTopic',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Template Topic',
-              placeholder: 'Template Topic ...',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description:
-                'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
-              required: this.stepperConfiguration.direction == Direction.INBOUND
-            },
-            hideExpression:
-              this.stepperConfiguration.direction == Direction.OUTBOUND
-          },
+        //   {
+        //     className: 'col-lg-6',
+        //     key: 'templateTopic',
+        //     type: 'input',
+        //     wrappers: ['c8y-form-field'],
+        //     templateOptions: {
+        //       label: 'Template Topic',
+        //       placeholder: 'Template Topic ...',
+        //       disabled:
+        //         this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+        //       description:
+        //         'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+        //       required: this.stepperConfiguration.direction == Direction.INBOUND
+        //     },
+        //     hideExpression:
+        //       this.stepperConfiguration.direction == Direction.OUTBOUND
+        //   },
           // filler when template topic is not shown
           {
             className: 'col-lg-6',

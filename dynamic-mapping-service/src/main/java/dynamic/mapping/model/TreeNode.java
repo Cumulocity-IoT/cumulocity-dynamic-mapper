@@ -183,7 +183,8 @@ public class TreeNode {
 
     public void addMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            var path = mapping.templateTopic;
+            // var path = mapping.templateTopic;
+            var path = mapping.subscriptionTopic;
             // if templateTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;
@@ -195,7 +196,8 @@ public class TreeNode {
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            var path = mapping.templateTopic;
+            // var path = mapping.templateTopic;
+            var path = mapping.subscriptionTopic;
             // if templateTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;
