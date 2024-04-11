@@ -112,9 +112,11 @@ public class MappingRepresentation implements Serializable {
   static public ArrayList<ValidationError> isSubscriptionTopicValid(String topic) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     int count = topic.length() - topic.replace(TOPIC_WILDCARD_SINGLE, "").length();
-    if (count > 1) {
-      result.add(ValidationError.Only_One_Single_Level_Wildcard);
-    }
+    // disable this test: Why is it still needed?
+    // if (count > 1) {
+    //   result.add(ValidationError.Only_One_Single_Level_Wildcard);
+    // }
+
     count = topic.length() - topic.replace(TOPIC_WILDCARD_MULTI, "").length();
     if (count > 1) {
       result.add(ValidationError.Only_One_Multi_Level_Wildcard);
@@ -125,30 +127,19 @@ public class MappingRepresentation implements Serializable {
     return result;
   }
 
-  static public List<ValidationError> isTemplateTopicSubscriptionTopicValid(Mapping mapping) {
+  static public List<ValidationError> isTemplateTopicSampleAndSubscriptionTopicValid(Mapping mapping) {
     List<ValidationError> result = new ArrayList<ValidationError>();
 
     // does the template topic is covered by the subscriptionTopic
     BiFunction<String, String, Boolean> topicMatcher = (st,
         tt) -> (Pattern.matches(String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"), tt));
-    boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.templateTopic));
+    boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.templateTopicSample));
     if (error) {
-      result.add(ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic);
+      result.add(ValidationError.TemplateTopicSample_Must_Match_The_SubscriptionTopic);
     }
     return result;
   }
 
-//   static public List<ValidationError> isTemplateTopicUnique(List<Mapping> mappings, Mapping mapping) {
-//     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-//     var templateTopic = mapping.templateTopic;
-//     mappings.forEach(m -> {
-//       if ((templateTopic.startsWith(m.templateTopic) || m.templateTopic.startsWith(templateTopic))
-//           && (mapping.id != m.id)) {
-//         result.add(ValidationError.TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic);
-//       }
-//     });
-//     return result;
-//   }
 
   static public List<ValidationError> isFilterOutboundUnique(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
@@ -165,15 +156,12 @@ public class MappingRepresentation implements Serializable {
   static public List<ValidationError> isMappingValid(List<Mapping> mappings, Mapping mapping) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     result.addAll(isSubstitutionValid(mapping));
-    // result.addAll(isTemplateTopicValid(mapping.templateTopic));
-    result.addAll(isTemplateTopicValid(mapping.subscriptionTopic));
     if (mapping.direction.equals(Direction.INBOUND)) {
       result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
-      // result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.templateTopic, mapping.templateTopicSample));
-      result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic, mapping.templateTopicSample));
+      result.addAll(isTemplateTopicSampleAndSubscriptionTopicValid(mapping));
+    //   result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic, mapping.templateTopicSample));
     } else {
       // test if we can attach multiple outbound mappings to the same filterOutbound
-      // result.addAll(isFilterOutboundUnique(mappings,mapping));
       result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.templateTopicSample));
     }
 

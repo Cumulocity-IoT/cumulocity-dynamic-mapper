@@ -359,7 +359,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       id: ident,
       ident: ident,
       subscriptionTopic: '',
-      templateTopic: '',
+      // templateTopic: '',
       templateTopicSample: '',
       targetAPI: API.MEASUREMENT.name,
       source: '{}',
