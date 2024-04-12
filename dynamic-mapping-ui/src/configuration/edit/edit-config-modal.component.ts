@@ -226,6 +226,26 @@ export class EditConfigurationComponent implements OnInit {
                 }
               ]
             });
+          } else if (property.type == ConnectorPropertyType.OPTION_PROPERTY) {
+            this.dynamicFormlyFields.push({
+              // fieldGroupClassName: "row",
+              fieldGroup: [
+                {
+                  className: 'col-lg-12',
+                  key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
+                  type: 'select',
+                  wrappers: ['c8y-form-field'],
+                  templateOptions: {
+                    label: entry.key,
+                    required: property.required,
+                    options: Object.values(property.options).map((key) => {
+                        return { label: key, value: key };
+                      }),
+                  }
+                }
+              ]
+            });
           }
         }
       }

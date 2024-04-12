@@ -72,6 +72,10 @@
             <artifactId>hivemq-mqtt-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.ibm.jsonata4java</groupId>
             <artifactId>JSONata4Java</artifactId>
         </dependency>

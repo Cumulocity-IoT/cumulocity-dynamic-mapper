@@ -30,7 +30,6 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
-import lombok.NoArgsConstructor;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -41,24 +40,24 @@ public class MQTTServiceClient extends MQTTClient {
 
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("mqttHost",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, "cumulocity"));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, "cumulocity",null));
         configProps.put("mqttPort",
-                new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, false, 2883));
-        configProps.put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, null));
+                new ConnectorProperty(true, 1, ConnectorPropertyType.NUMERIC_PROPERTY, false, 2883,null));
+        configProps.put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, null,null));
         configProps.put("password",
-                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, null));
+                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, null,null));
         configProps.put("clientId", new ConnectorProperty(true, 4, ConnectorPropertyType.ID_STRING_PROPERTY, false,
-                MQTTServiceClient.nextId()));
+                MQTTServiceClient.nextId(),null));
         configProps.put("useTLS",
-                new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
+                new ConnectorProperty(false, 5, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
+                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,null));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false));
+                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false,null));
         configProps.put("nameCertificate",
-                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false));
+                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false));
+                new ConnectorProperty(false, 8, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,null));
         spec = new ConnectorSpecification(connectorType, configProps);
     }
 
@@ -91,9 +90,9 @@ public class MQTTServiceClient extends MQTTClient {
         this.tenant = tenant;
         MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
         String user = String.format("%s/%s", tenant, msc.getUsername());
-        getSpec().getProperties().put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, user));
+        getSpec().getProperties().put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, user,null));
         getSpec().getProperties().put("password",
-                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, msc.getPassword()));
+                new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, msc.getPassword(),null));
     }
 
     public ConnectorType connectorType = ConnectorType.MQTT_SERVICE;
