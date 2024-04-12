@@ -392,9 +392,10 @@ public abstract class AConnectorClient {
     }
 
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
+        
+        mappingsDeployed = new ArrayList<>();
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
-            mappingsDeployed = new ArrayList<>();
         }
 
         if (isConnected()) {

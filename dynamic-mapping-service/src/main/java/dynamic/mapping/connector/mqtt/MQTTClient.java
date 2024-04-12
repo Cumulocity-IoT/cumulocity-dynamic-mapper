@@ -101,7 +101,7 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, null));
         configProps.put("serverPath",
-                new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "/mqtt", null));
+                new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "mqtt", null));
         spec = new ConnectorSpecification(connectorType, configProps);
     }
 
@@ -221,7 +221,7 @@ public class MQTTClient extends AConnectorClient {
         if (isConnected())
             disconnect();
 
-        boolean protocol = (Boolean) connectorConfiguration.getProperties().getOrDefault("protocol", false);
+        String protocol = (String) connectorConfiguration.getProperties().getOrDefault("protocol", false);
         boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
 
