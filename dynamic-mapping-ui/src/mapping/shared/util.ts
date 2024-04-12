@@ -80,10 +80,12 @@ export function isTopicNameValid(topic: string): any {
   const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+
+  // disable this test: Why is it still needed?
   // count number of "+"
-  const count_single = (topix.match(/\+/g) || []).length;
-  if (count_single > 1)
-    errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+  //   const count_single = (topix.match(/\+/g) || []).length;
+  //   if (count_single > 1)
+  //     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
@@ -94,31 +96,31 @@ export function isTopicNameValid(topic: string): any {
   return errors;
 }
 
-export function isTemplateTopicValid(topic: string): any {
-  let topix = topic;
-  // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
-  // TOPIC_WILDCARD_MULTI
-  topix = normalizeTopic(topix);
+// export function isTemplateTopicValid(topic: string): any {
+//   let topix = topic;
+//   // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+//   // TOPIC_WILDCARD_MULTI
+//   topix = normalizeTopic(topix);
 
-  // let errors = {};
-  // // count number of "#"
-  // let count_multi = (topix.match(/\#/g) || []).length;
-  // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
-  // // count number of "+"
-  // let count_single = (topix.match(/\+/g) || []).length;
-  // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+//   // let errors = {};
+//   // // count number of "#"
+//   // let count_multi = (topix.match(/\#/g) || []).length;
+//   // if (count_multi > 1) errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+//   // // count number of "+"
+//   // let count_single = (topix.match(/\+/g) || []).length;
+//   // if (count_single > 1) errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
-  // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
+//   // if (count_multi >= 1 && topix.indexOf(TOPIC_WILDCARD_MULTI) + 1 != topix.length) errors[ValidationError.Multi_Level_Wildcard_Only_At_End] = true;
 
-  const errors = {};
-  // count number of "#"
-  const count_multi = (topix.match(/#/g) || []).length;
-  if (count_multi >= 1)
-    errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
-      true;
+//   const errors = {};
+//   // count number of "#"
+//   const count_multi = (topix.match(/#/g) || []).length;
+//   if (count_multi >= 1)
+//     errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
+//       true;
 
-  return errors;
-}
+//   return errors;
+// }
 
 export function isSubscriptionTopicValid(topic: string): any {
   let topix = topic;
@@ -128,10 +130,12 @@ export function isSubscriptionTopicValid(topic: string): any {
   const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi > 1)
     errors[ValidationError.Only_One_Multi_Level_Wildcard] = true;
+
   // count number of "+"
-  const count_single = (topix.match(/\+/g) || []).length;
-  if (count_single > 1)
-    errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
+  // disable this test: Why is it still needed?
+  //   const count_single = (topix.match(/\+/g) || []).length;
+  //   if (count_single > 1)
+  //     errors[ValidationError.Only_One_Single_Level_Wildcard] = true;
 
   if (
     count_multi >= 1 &&
@@ -157,19 +161,19 @@ export function isSubscriptionTopicUnique(
   return result;
 }
 
-export function isTemplateTopicUnique(
-  mapping: Mapping,
-  mappings: Mapping[]
-): boolean {
-  const result = mappings.every((m) => {
-    return (
-      (!mapping.templateTopic.startsWith(m.templateTopic) &&
-        !m.templateTopic.startsWith(mapping.templateTopic)) ||
-      mapping.id == m.id
-    );
-  });
-  return result;
-}
+// export function isTemplateTopicUnique(
+//   mapping: Mapping,
+//   mappings: Mapping[]
+// ): boolean {
+//   const result = mappings.every((m) => {
+//     return (
+//       (!mapping.templateTopic.startsWith(m.templateTopic) &&
+//         !m.templateTopic.startsWith(mapping.templateTopic)) ||
+//       mapping.id == m.id
+//     );
+//   });
+//   return result;
+// }
 
 export function isFilterOutboundUnique(
   mapping: Mapping,
@@ -207,38 +211,42 @@ export function isSubstitutionValid(mapping: Mapping): boolean {
   );
 }
 
-// export function checkSubstitutionIsValid(control: AbstractControl) {
-//   let errors = {};
-// let count = mapping.substitutions.filter(sub => definesDeviceIdentifier(mapping.targetAPI, sub)).map(m => 1).reduce((previousValue: number, currentValue: number, currentIndex: number, array: number[]) => {
-//   return previousValue + currentValue;
-// }, 0)
-
-// let count = countDeviceIdentifiers(mapping);
-
-// if (!stepperConfiguration.allowNoDefinedIdentifier && mapping.direction != Direction.OUTBOUND) {
-//   if (count > 1) {
-//     errors = {
-//       ...errors,
-//       Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
-//         ...ValidationFormlyError['Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used'],
-//         errorPath: 'templateTopic'
-//       }
-//     };
-//   }
-//   if (count < 1) {
-//     errors[ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used] = true
-//   }
-// } else {
-// }
-// console.log(stepperConfiguration, mapping.mappingType)
-//   //console.log("Tested substitutions:", count, errors, mapping.substitutions, mapping.substitutions.filter(m => m.definesIdentifier));
-//   return Object.keys(errors).length > 0 ? errors : null;
-// }
-
 export function countDeviceIdentifiers(mapping: Mapping): number {
   return mapping.substitutions.filter((sub) =>
     definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
   ).length;
+}
+
+export function isTemplateTopicSampleAndSubscriptionTopicValid(
+  subscriptionTopic: string,
+  templateTopicSample: string,
+  errors: any
+) {
+  // in the topic a multi level wildcard "#" can appear and is replaced by a single level wildcard "+"
+  // for comparison the "#" must then be replaced by a "+"
+  // allowed (tt=template topic, st= subscription topic)
+  // allowed    st                      tt
+  //    +       /topic/                 /topic/
+  //    -       /topic/                 /topic/value
+  //    +       /topic/#                /topic/value
+  //    +       /topic/+                /topic/value
+  //    -       /topic/+                /topic/important/value
+  //    +       /topic/+/value          /topic/important/value
+  //    +       device/#                device/+/rom/
+
+  const f = (t) => (s) =>
+    new RegExp(
+      s.concat('@').split('+').join('[^/]+').split('#').join('.+')
+    ).test(t.concat('@'));
+  const matched = f(templateTopicSample)(subscriptionTopic);
+  if (!matched) {
+    errors['TemplateTopicSample_Must_Match_The_SubscriptionTopic'] = {
+      ...ValidationFormlyError[
+        'TemplateTopicSample_Must_Match_The_SubscriptionTopic'
+      ],
+      errorPath: 'templateTopicSample'
+    };
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -247,75 +255,35 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
   function checkTopicsInboundAreValid(control: AbstractControl) {
     let errors = {};
-    let error: boolean = false;
+    // let error: boolean = false;
 
     // console.log('Validation options:', options);
 
-    const { templateTopic, templateTopicSample, subscriptionTopic } =
-      control['controls'];
-    templateTopic.setErrors(null);
+    const {
+      //  templateTopic,
+      templateTopicSample,
+      subscriptionTopic
+    } = control['controls'];
+    // templateTopic.setErrors(null);
     templateTopicSample.setErrors(null);
     subscriptionTopic.setErrors(null);
 
     // avoid displaying the message error when values are empty
     if (
-      templateTopic.value == '' ||
+      // templateTopic.value == '' ||
       templateTopicSample.value == '' ||
       subscriptionTopic.value == ''
     ) {
       return { required: false };
     }
 
-    // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
-    // for comparison the "#" must then be replaced by a "+"
-    // allowed (tt=template topic, st= subscription topic)
-    // allowed    st                      tt
-    //    +       /topic/                 /topic/
-    //    -       /topic/                 /topic/value
-    //    +       /topic/#                /topic/value
-    //    +       /topic/+                /topic/value
-    //    -       /topic/+                /topic/important/value
-    //    +       /topic/+/value          /topic/important/value
-    //    +       device/#                device/+/rom/
-
-    // let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-    // error = !f(subscriptionTopic, templateTopic);
-    const f = (t) => (s) =>
-      new RegExp(
-        s.concat('@').split('+').join('[^/]+').split('#').join('.+')
-      ).test(t.concat('@'));
-    error = !f(templateTopic.value)(subscriptionTopic.value);
-    if (error) {
-      errors = {
-        ...errors,
-        TemplateTopic_Must_Match_The_SubscriptionTopic: {
-          ...ValidationFormlyError[
-            'TemplateTopic_Must_Match_The_SubscriptionTopic'
-          ],
-          errorPath: 'templateTopic'
-        }
-      };
-    }
-
     // count number of "#" in subscriptionTopic
-    let count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
+    const count_multi = (subscriptionTopic.value.match(/#/g) || []).length;
     if (count_multi > 1) {
       errors = {
         ...errors,
         Only_One_Multi_Level_Wildcard: {
           ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
-          errorPath: 'subscriptionTopic'
-        }
-      };
-    }
-
-    // count number of "+" in subscriptionTopic
-    const count_single = (subscriptionTopic.value.match(/\+/g) || []).length;
-    if (count_single > 1) {
-      errors = {
-        ...errors,
-        Only_One_Single_Level_Wildcard: {
-          ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
           errorPath: 'subscriptionTopic'
         }
       };
@@ -336,84 +304,80 @@ export function checkTopicsInboundAreValidWithOption(options) {
       };
     }
 
-    // count number of "#" in templateTopic
-    count_multi = (templateTopic.value.match(/#/g) || []).length;
-    if (count_multi >= 1) {
-      errors = {
-        ...errors,
-        No_Multi_Level_Wildcard_Allowed_In_TemplateTopic: {
-          ...ValidationFormlyError[
-            'No_Multi_Level_Wildcard_Allowed_In_TemplateTopic'
-          ],
-          errorPath: 'templateTopic'
-        }
-      };
-    }
-
-    const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
-    const splitTTS: string[] = splitTopicExcludingSeparator(
-      templateTopicSample.value
+    // check if templateTopicSample matches subscriptionTopic
+    isTemplateTopicSampleAndSubscriptionTopicValid(
+      subscriptionTopic.value,
+      templateTopicSample.value,
+      errors
     );
-    if (splitTT.length != splitTTS.length) {
-      errors = {
-        ...errors,
-        TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
-          {
-            ...ValidationFormlyError[
-              'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
-            ],
-            errorPath: 'templateTopicSample'
-          }
-      };
-    } else {
-      for (let i = 0; i < splitTT.length; i++) {
-        if ('/' == splitTT[i] && !('/' == splitTTS[i])) {
-          errors = {
-            ...errors,
-            TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-              {
-                ...ValidationFormlyError[
-                  'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-                ],
-                errorPath: 'templateTopicSample'
-              }
-          };
-          break;
-        }
-        if ('/' == splitTTS[i] && !('/' == splitTT[i])) {
-          errors = {
-            ...errors,
-            TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-              {
-                ...ValidationFormlyError[
-                  'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-                ],
-                errorPath: 'templateTopicSample'
-              }
-          };
-          break;
-        }
-        if (
-          !('/' == splitTT[i]) &&
-          !('+' == splitTT[i]) &&
-          !('#' == splitTT[i])
-        ) {
-          if (splitTT[i] != splitTTS[i]) {
-            errors = {
-              ...errors,
-              TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
-                {
-                  ...ValidationFormlyError[
-                    'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
-                  ],
-                  errorPath: 'templateTopicSample'
-                }
-            };
-            break;
-          }
-        }
-      }
-    }
+    // const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
+    // const splitTT: string[] = splitTopicExcludingSeparator(
+    //   subscriptionTopic.value
+    // );
+    // const splitTTS: string[] = splitTopicExcludingSeparator(
+    //   templateTopicSample.value
+    // );
+    // if (splitTT.length != splitTTS.length) {
+    //   errors = {
+    //     ...errors,
+    //     TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+    //       {
+    //         ...ValidationFormlyError[
+    //           'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+    //         ],
+    //         errorPath: 'templateTopicSample'
+    //       }
+    //   };
+    // } else {
+    //   for (let i = 0; i < splitTT.length; i++) {
+    //     if ('/' == splitTT[i] && !('/' == splitTTS[i])) {
+    //       errors = {
+    //         ...errors,
+    //         TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+    //           {
+    //             ...ValidationFormlyError[
+    //               'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+    //             ],
+    //             errorPath: 'templateTopicSample'
+    //           }
+    //       };
+    //       break;
+    //     }
+    //     if ('/' == splitTTS[i] && !('/' == splitTT[i])) {
+    //       errors = {
+    //         ...errors,
+    //         TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+    //           {
+    //             ...ValidationFormlyError[
+    //               'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+    //             ],
+    //             errorPath: 'templateTopicSample'
+    //           }
+    //       };
+    //       break;
+    //     }
+    //     if (
+    //       !('/' == splitTT[i]) &&
+    //       !('+' == splitTT[i]) &&
+    //       !('#' == splitTT[i])
+    //     ) {
+    //       if (splitTT[i] != splitTTS[i]) {
+    //         errors = {
+    //           ...errors,
+    //           TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+    //             {
+    //               ...ValidationFormlyError[
+    //                 'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+    //               ],
+    //               errorPath: 'templateTopicSample'
+    //             }
+    //         };
+    //         break;
+    //       }
+    //     }
+    //   }
+    // }
+
     return Object.keys(errors).length > 0 ? errors : null;
   }
 }

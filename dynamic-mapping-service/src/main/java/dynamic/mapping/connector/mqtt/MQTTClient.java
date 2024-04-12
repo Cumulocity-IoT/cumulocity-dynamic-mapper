@@ -230,9 +230,16 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
+        boolean useWSS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useWSS", false);
 
-        Mqtt3ClientBuilder partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-                .identifier(clientId + additionalSubscriptionIdTest);
+        Mqtt3ClientBuilder partialBuilder;
+        if (useWSS) {
+            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig().serverPort(mqttPort)
+            .identifier(clientId + additionalSubscriptionIdTest); 
+        } else {
+            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
+            .identifier(clientId + additionalSubscriptionIdTest); 
+        }
 
         // is username & password used
         if (!StringUtils.isEmpty(user)) {
@@ -344,15 +351,14 @@ public class MQTTClient extends AConnectorClient {
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
-                    try {
-                        // is not working for broker.emqx.io
-                        subscribe("$SYS/#", 0);
-                        ;
-                    } catch (ConnectorException e) {
-                        log.warn(
-                                "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
-                                e.getMessage(), e);
-                    }
+                    // try {
+                    //     // is not working for broker.emqx.io
+                    //     // subscribe("$SYS/#", 0);
+                    // } catch (ConnectorException e) {
+                    //     log.warn(
+                    //             "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
+                    //             e.getMessage(), e);
+                    // }
 
                     mappingComponent.rebuildMappingOutboundCache(tenant);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in

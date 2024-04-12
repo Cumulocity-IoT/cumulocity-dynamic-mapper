@@ -120,6 +120,14 @@ public class TreeNode {
                 }
                 // test if single level wildcard "+" match exists for this level
             }
+             else if (childNodes.containsKey(MappingRepresentation.TOPIC_WILDCARD_MULTI)) {
+                List<TreeNode> revolvedNodes = childNodes.get(MappingRepresentation.TOPIC_WILDCARD_MULTI);
+                for (TreeNode node : revolvedNodes) {
+                    results.addAll(node.resolveTopicPath(remainingLevels));
+                }
+                // test if single level wildcard "+" match exists for this level
+
+            }
         } else if (remainingLevels.size() == 0) {
             if (isMappingNode()) {
                 results.add(this);
@@ -183,7 +191,8 @@ public class TreeNode {
 
     public void addMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            var path = mapping.templateTopic;
+            // var path = mapping.templateTopic;
+            var path = mapping.subscriptionTopic;
             // if templateTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;
@@ -195,7 +204,8 @@ public class TreeNode {
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            var path = mapping.templateTopic;
+            // var path = mapping.templateTopic;
+            var path = mapping.subscriptionTopic;
             // if templateTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;

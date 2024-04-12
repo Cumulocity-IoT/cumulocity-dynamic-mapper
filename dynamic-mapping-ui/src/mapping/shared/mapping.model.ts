@@ -38,7 +38,7 @@ export enum ValidationError {
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  TemplateTopic_Must_Match_The_SubscriptionTopic,
+  TemplateTopicSample_Must_Match_The_SubscriptionTopic,
   TemplateTopic_Not_Unique,
   TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic,
   Target_Template_Must_Be_Valid_JSON,
@@ -68,8 +68,8 @@ export const ValidationFormlyError = {
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
     message: 'Only one MultiLevel wildcard "#" is allowed.'
   },
-  TemplateTopic_Must_Match_The_SubscriptionTopic: {
-    message: 'The TemplateTopic must match the SubscriptionTopic.'
+  TemplateTopicSample_Must_Match_The_SubscriptionTopic: {
+    message: 'The TemplateTopicSample must match the SubscriptionTopic.'
   },
   TemplateTopic_Not_Unique: {
     message: 'This TemplateTopic must be unique across other TemplateTopics.'

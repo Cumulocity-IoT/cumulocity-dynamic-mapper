@@ -59,23 +59,26 @@ public class MappingsRepresentationJUnitTest {
   }
 
   @Test
-  void testIsTemplateTopicValid() {
+  void testIsTemplateTopicSampleValid() {
 
     Mapping m1 = new Mapping();
     m1.setTemplateTopic("/device/+/east/");
+    m1.setTemplateTopicSample("/device/us/east/");
     m1.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m1));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m1));
 
     Mapping m2 = new Mapping();
     m2.setTemplateTopic("/device");
+    m2.setTemplateTopicSample("/device");
     m2.setSubscriptionTopic("/device/#");
-    ValidationError[] l2 = { ValidationError.TemplateTopic_Must_Match_The_SubscriptionTopic };
-    assertEquals(Arrays.asList(l2), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m2));
+    ValidationError[] l2 = { ValidationError.TemplateTopicSample_Must_Match_The_SubscriptionTopic };
+    assertEquals(Arrays.asList(l2), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m2));
 
     Mapping m3 = new Mapping();
     m3.setTemplateTopic("/device/");
+    m3.setTemplateTopicSample("/device/");
     m3.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSubscriptionTopicValid(m3));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m3));
   }
 
   @Test
