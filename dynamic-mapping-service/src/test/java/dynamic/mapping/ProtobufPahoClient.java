@@ -34,7 +34,7 @@ import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.St
 
 public class ProtobufPahoClient {
     Mqtt3BlockingClient testClient;
-    static String broker_host = System.getenv("broker");
+    static String broker_host = System.getenv("broker_host");
     static Integer broker_port = Integer.valueOf(System.getenv("broker_port"));
     static String client_id = System.getenv("client_id");
     static String broker_username = System.getenv("broker_username");
@@ -67,7 +67,7 @@ public class ProtobufPahoClient {
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message: :::");
+        System.out.println("Publishing message to topic: " + topic);
 
         StaticCustomMeasurementOuter.StaticCustomMeasurement proto = StaticCustomMeasurement.newBuilder()
                 .setExternalIdType("c8y_Serial")
@@ -92,11 +92,7 @@ public class ProtobufPahoClient {
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
         testClient.connect();
 
-        System.out.println("Publishing message: :::");
-
-        testClient.connect();
-
-        System.out.println("Publishing message: :::");
+        System.out.println("Publishing message to topic: " + topic);
 
         InternalCustomAlarmOuter.InternalCustomAlarm proto = InternalCustomAlarm.newBuilder()
                 .setExternalIdType("c8y_Serial")
@@ -111,7 +107,5 @@ public class ProtobufPahoClient {
         System.out.println("Message published");
         testClient.disconnect();
         System.out.println("Disconnected");
-
     }
-
 }

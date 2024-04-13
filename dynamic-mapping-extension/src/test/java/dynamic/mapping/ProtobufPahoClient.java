@@ -72,16 +72,12 @@ public class ProtobufPahoClient {
                 .keepAlive(60)
                 .send();
         if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
-            // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
-            // broker:"
-            // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
-            // + ack.getReturnCode().name());
             System.out.println("Error connecting to broker:"
                     + broker_host + ". Errorcode: "
                     + ack.getReturnCode().name());
         }
 
-        System.out.println("Publishing message: :::");
+        System.out.println("Publishing message to topic: " + topic);
 
         CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
                 .setExternalIdType("c8y_Serial")
