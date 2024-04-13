@@ -81,7 +81,7 @@ public class ProtobufPahoClient {
                     + ack.getReturnCode().name());
         }
 
-        System.out.println("Publishing message: :::");
+        System.out.println("Publishing message on topic" + topic);
 
         CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
                 .setExternalIdType("c8y_Serial")

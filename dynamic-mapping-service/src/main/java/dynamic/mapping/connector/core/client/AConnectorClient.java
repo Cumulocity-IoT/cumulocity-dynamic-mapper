@@ -392,7 +392,7 @@ public abstract class AConnectorClient {
     }
 
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
-        
+
         mappingsDeployed = new ArrayList<>();
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
@@ -495,12 +495,13 @@ public abstract class AConnectorClient {
     public void connectionLost(String closeMessage, Throwable closeException) {
         String tenant = getTenant();
         String connectorIdent = getConnectorIdent();
-        if (closeException != null)
+        if (closeException != null) {
             log.error("Tenant {} - Connection lost to broker {}: {}", tenant, connectorIdent,
                     closeException.getMessage());
-        closeException.printStackTrace();
+            closeException.printStackTrace();
+        }
         if (closeMessage != null)
-            log.info("Tenant {} - Connection lost to MQTT broker: {}", tenant, closeMessage);
+            log.info("Tenant {} - Connection lost to broker: {}", tenant, closeMessage);
         reconnect();
     }
 

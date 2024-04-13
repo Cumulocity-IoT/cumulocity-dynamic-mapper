@@ -359,7 +359,7 @@
     "autoAckOperation": true,
     "targetAPI": "EVENT",
     "source": "{\"msg_type\":\"c8y_BusStopEvent\",\"txt\":\"Bus stopped at petrol station today!\",\"td\":\"2022-09-08T16:21:53.389+02:00\",\"model\":{\"name\":\"MAN e-Bus\"}}",
-    "target": "{\"source\":{\"id\":\"909090\"},\"ttext\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"ttype\":\"c8y_TestEvent\",\"customProperties\":\"dummy\"}",
+    "target": "{\"source\":{\"id\":\"909090\"},\"text\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\",\"customProperties\":\"dummy\"}",
     "externalIdType": "c8y_Serial",
     "templateTopic": "eventObject/+",
     "qos": "AT_LEAST_ONCE",

@@ -249,12 +249,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.subscriptionTopic',
         filterable: true
       },
-    //   {
-    //     header: 'Template topic',
-    //     name: 'templateTopic',
-    //     path: 'mapping.templateTopic',
-    //     filterable: true
-    //   },
+      {
+        header: 'Template topic',
+        name: 'templateTopic',
+        path: 'mapping.templateTopic',
+        filterable: true
+      },
       {
         name: 'targetAPI',
         header: 'API',
@@ -359,7 +359,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       id: ident,
       ident: ident,
       subscriptionTopic: '',
-      // templateTopic: '',
+      templateTopic: '',
       templateTopicSample: '',
       targetAPI: API.MEASUREMENT.name,
       source: '{}',
