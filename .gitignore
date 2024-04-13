@@ -47,4 +47,3 @@ dynamic-mapping-ui/cypress.env.js
 dynamic-mapping-ui/cypress/videos
 dynamic-mapping-ui/cypress/screenshots
 dynamic-mapping-ui/cypress/fixtures/mqttConnectionPostRequest.json
-resources/script/mapping/sampleMapping/mappings-migrated-INBOUND.json
