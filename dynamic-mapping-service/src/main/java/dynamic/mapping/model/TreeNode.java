@@ -191,8 +191,7 @@ public class TreeNode {
 
     public void addMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            // var path = mapping.templateTopic;
-            var path = mapping.subscriptionTopic;
+            var path = mapping.templateTopic;
             // if templateTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;

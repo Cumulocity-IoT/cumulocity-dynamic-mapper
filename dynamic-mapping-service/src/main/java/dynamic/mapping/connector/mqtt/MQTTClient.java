@@ -351,14 +351,14 @@ public class MQTTClient extends AConnectorClient {
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
-                    // try {
-                    //     // is not working for broker.emqx.io
-                    //     // subscribe("$SYS/#", 0);
-                    // } catch (ConnectorException e) {
-                    //     log.warn(
-                    //             "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
-                    //             e.getMessage(), e);
-                    // }
+                    try {
+                        // is not working for broker.emqx.io
+                         subscribe("$SYS/#", 0);
+                    } catch (ConnectorException e) {
+                        log.warn(
+                                "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
+                                e.getMessage(), e);
+                    }
 
                     mappingComponent.rebuildMappingOutboundCache(tenant);
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
