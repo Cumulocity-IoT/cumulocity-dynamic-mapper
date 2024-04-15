@@ -38,17 +38,17 @@ export enum ValidationError {
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  TemplateTopicSample_Must_Match_The_SubscriptionTopic,
-  TemplateTopic_Not_Unique,
-  TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic,
+  MappingTopicSample_Must_Match_The_SubscriptionTopic,
+  MappingTopic_Not_Unique,
+  MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic,
   Target_Template_Must_Be_Valid_JSON,
   Source_Template_Must_Be_Valid_JSON,
-  No_Multi_Level_Wildcard_Allowed_In_TemplateTopic,
+  No_Multi_Level_Wildcard_Allowed_In_MappingTopic,
   Device_Identifier_Must_Be_Selected,
-  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
   FilterOutbound_Must_Be_Unique
 }
 
@@ -68,15 +68,15 @@ export const ValidationFormlyError = {
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
     message: 'Only one MultiLevel wildcard "#" is allowed.'
   },
-  TemplateTopicSample_Must_Match_The_SubscriptionTopic: {
-    message: 'The TemplateTopicSample must match the SubscriptionTopic.'
+  MappingTopicSample_Must_Match_The_SubscriptionTopic: {
+    message: 'The MappingTopicSample must match the SubscriptionTopic.'
   },
-  TemplateTopic_Not_Unique: {
-    message: 'This TemplateTopic must be unique across other TemplateTopics.'
+  MappingTopic_Not_Unique: {
+    message: 'This MappingTopic must be unique across other MappingTopics.'
   },
-  TemplateTopic_Must_Not_Be_Substring_Of_Other_TemplateTopic: {
+  MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic: {
     message:
-      "This TemplateTopic can't be the starting part of another  TemplateTopic or vice."
+      "This MappingTopic can't be the starting part of another  MappingTopic or vice."
   },
   Target_Template_Must_Be_Valid_JSON: {
     message: 'TargetTemplate must be valid JSON.'
@@ -84,31 +84,31 @@ export const ValidationFormlyError = {
   Source_Template_Must_Be_Valid_JSON: {
     message: 'SourceTemplate must be valid JSON..'
   },
-  No_Multi_Level_Wildcard_Allowed_In_TemplateTopic: {
-    message: 'No MultiLevel wildcard is allowed in TemplateTopic.'
+  No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
+    message: 'No MultiLevel wildcard is allowed in MappingTopic.'
   },
   Device_Identifier_Must_Be_Selected: {
     message: 'DeviceIdentifier must be selected.'
   },
-  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
       message:
-        'The TemplateTopic and TemplateTopicSample do not have same number of levels in the Topic Name'
+        'The MappingTopic and MappingTopicSample do not have same number of levels in the Topic Name'
     },
-  TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
     {
       message:
-        'TemplateTopic and TemplateTopicSample do not have same structure in the Topic Name.'
+        'MappingTopic and MappingTopicSample do not have same structure in the Topic Name.'
     },
-  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
       message:
-        'The PublishTopic and TemplateTopicSample do not have same number of levels in the Topic Name'
+        'The PublishTopic and MappingTopicSample do not have same number of levels in the Topic Name'
     },
-  PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
     {
       message:
-        'PublishTopic and TemplateTopicSample do not have same structure in the Topic Name.'
+        'PublishTopic and MappingTopicSample do not have same structure in the Topic Name.'
     },
   FilterOutbound_Must_Be_Unique: {
     message: 'FilterOutbound must be unique within all outbound mappings.'

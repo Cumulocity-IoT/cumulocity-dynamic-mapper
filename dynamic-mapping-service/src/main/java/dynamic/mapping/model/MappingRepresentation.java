@@ -98,13 +98,13 @@ public class MappingRepresentation implements Serializable {
     return result;
   }
 
-  static public ArrayList<ValidationError> isTemplateTopicValid(String topic) {
-    // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+  static public ArrayList<ValidationError> isMappingTopicValid(String topic) {
+    // mappingTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
     // TOPIC_WILDCARD_MULTI
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     int count = topic.length() - topic.replace(TOPIC_WILDCARD_MULTI, "").length();
     if (count >= 1) {
-      result.add(ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic);
+      result.add(ValidationError.No_Multi_Level_Wildcard_Allowed_In_MappingTopic);
     }
     return result;
   }
@@ -127,15 +127,15 @@ public class MappingRepresentation implements Serializable {
     return result;
   }
 
-  static public List<ValidationError> isTemplateTopicSampleAndSubscriptionTopicValid(Mapping mapping) {
+  static public List<ValidationError> isMappingTopicSampleAndSubscriptionTopicValid(Mapping mapping) {
     List<ValidationError> result = new ArrayList<ValidationError>();
 
     // does the template topic is covered by the subscriptionTopic
     BiFunction<String, String, Boolean> topicMatcher = (st,
         tt) -> (Pattern.matches(String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"), tt));
-    boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.templateTopicSample));
+    boolean error = (!topicMatcher.apply(mapping.subscriptionTopic, mapping.mappingTopicSample));
     if (error) {
-      result.add(ValidationError.TemplateTopicSample_Must_Match_The_SubscriptionTopic);
+      result.add(ValidationError.MappingTopicSample_Must_Match_The_SubscriptionTopic);
     }
     return result;
   }
@@ -158,38 +158,38 @@ public class MappingRepresentation implements Serializable {
     result.addAll(isSubstitutionValid(mapping));
     if (mapping.direction.equals(Direction.INBOUND)) {
       result.addAll(isSubscriptionTopicValid(mapping.subscriptionTopic));
-      result.addAll(isTemplateTopicSampleAndSubscriptionTopicValid(mapping));
-    //   result.addAll(isTemplateTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic, mapping.templateTopicSample));
+      result.addAll(isMappingTopicSampleAndSubscriptionTopicValid(mapping));
+    //   result.addAll(isMappingTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic, mapping.mappingTopicSample));
     } else {
       // test if we can attach multiple outbound mappings to the same filterOutbound
-      result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.templateTopicSample));
+      result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.mappingTopicSample));
     }
 
     result.addAll(areJSONTemplatesValid(mapping));
-    // result.addAll(isTemplateTopicUnique(mappings, mapping));
+    // result.addAll(isMappingTopicUnique(mappings, mapping));
     return result;
   }
 
   private static Collection<? extends ValidationError> isPublishTopicTemplateAndTopicSampleValid(
-      @NotNull String publishTopic, @NotNull String templateTopicSample) {
+      @NotNull String publishTopic, @NotNull String mappingTopicSample) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     String[] splitPT = Mapping.splitTopicIncludingSeparatorAsArray(publishTopic);
-    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(templateTopicSample);
+    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopicSample);
     if (splitPT.length != splitTTS.length) {
-      result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+      result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
     } else {
       for (int i = 0; i < splitPT.length; i++) {
         if (("/").equals(splitPT[i]) && !("/").equals(splitTTS[i])) {
-          result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (("/").equals(splitTTS[i]) && !("/").equals(splitPT[i])) {
-          result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (!("/").equals(splitPT[i]) && !("+").equals(splitPT[i]) && !("#").equals(splitPT[i])) {
           if (!splitPT[i].equals(splitTTS[i])) {
-            result.add(ValidationError.PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+            result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
             break;
           }
         }
@@ -199,29 +199,29 @@ public class MappingRepresentation implements Serializable {
   }
 
   /*
-   * test if mapping.templateTopic and mapping.templateTopicSample have the same
+   * test if mapping.mappingTopic and mapping.mappingTopicSample have the same
    * structure and same number of levels
    */
-  public static List<ValidationError> isTemplateTopicTemplateAndTopicSampleValid(String templateTopic,
-      String templateTopicSample) {
+  public static List<ValidationError> isMappingTopicTemplateAndTopicSampleValid(String mappingTopic,
+      String mappingTopicSample) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
-    String[] splitTT = Mapping.splitTopicIncludingSeparatorAsArray(templateTopic);
-    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(templateTopicSample);
+    String[] splitTT = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopic);
+    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopicSample);
     if (splitTT.length != splitTTS.length) {
-      result.add(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+      result.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
     } else {
       for (int i = 0; i < splitTT.length; i++) {
         if (("/").equals(splitTT[i]) && !("/").equals(splitTTS[i])) {
-          result.add(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (("/").equals(splitTTS[i]) && !("/").equals(splitTT[i])) {
-          result.add(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (!("/").equals(splitTT[i]) && !("+").equals(splitTT[i])) {
           if (!splitTT[i].equals(splitTTS[i])) {
-            result.add(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+            result.add(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
             break;
           }
         }

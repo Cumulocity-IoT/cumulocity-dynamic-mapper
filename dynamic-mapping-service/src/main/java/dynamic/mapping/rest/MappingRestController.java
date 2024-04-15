@@ -73,7 +73,7 @@ import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.MappingDeployment;
@@ -427,9 +427,9 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getInboundMappingTree() {
+    public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
-        TreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
+        MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
         log.info("Tenant {} - Get mapping tree!", tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }

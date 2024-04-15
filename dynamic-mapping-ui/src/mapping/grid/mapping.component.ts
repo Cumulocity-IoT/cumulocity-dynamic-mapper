@@ -158,9 +158,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: true
       };
       this.columnsMappings[2] = {
-        header: 'Template topic sample',
-        name: 'templateTopicSample',
-        path: 'mapping.templateTopicSample',
+        header: 'Mapping topic sample',
+        name: 'mappingTopicSample',
+        path: 'mapping.mappingTopicSample',
         filterable: true
       };
       this.columnsMappings.splice(4,2);
@@ -250,9 +250,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: true
       },
       {
-        header: 'Template topic',
-        name: 'templateTopic',
-        path: 'mapping.templateTopic',
+        header: 'Mapping topic',
+        name: 'mappingTopic',
+        path: 'mapping.mappingTopic',
         filterable: true
       },
       {
@@ -359,8 +359,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       id: ident,
       ident: ident,
       subscriptionTopic: '',
-      templateTopic: '',
-      templateTopicSample: '',
+      mappingTopic: '',
+      mappingTopicSample: '',
       targetAPI: API.MEASUREMENT.name,
       source: '{}',
       target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],

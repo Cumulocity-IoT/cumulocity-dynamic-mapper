@@ -47,7 +47,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -93,13 +93,13 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
+    private Map<String, MappingTreeNode> resolverMappingInbound = new HashMap<>();
 
     public void initializeMappingCaches(String tenant) {
         cacheMappingInbound.put(tenant, new HashMap<>());
         cacheMappingOutbound.put(tenant, new HashMap<>());
         resolverMappingOutbound.put(tenant, new HashMap<>());
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
@@ -124,7 +124,7 @@ public class MappingComponent {
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initializedMappingStatus.put(tenant, true);
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
         if (cacheMappingOutbound.get(tenant) == null)
@@ -398,8 +398,8 @@ public class MappingComponent {
         }
     }
 
-    public TreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
-        TreeNode in = TreeNode.createRootNode(tenant);
+    public MappingTreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
+        MappingTreeNode in = MappingTreeNode.createRootNode(tenant);
         mappings.forEach(m -> {
             try {
                 in.addMapping(m);
@@ -480,7 +480,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
+        List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
                 .map(mn -> mn.getMapping()).collect(Collectors.toList());

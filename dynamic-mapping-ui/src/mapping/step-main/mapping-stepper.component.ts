@@ -562,7 +562,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       );
     } else {
       const levels: string[] = splitTopicExcludingSeparator(
-        this.mapping.templateTopicSample
+        this.mapping.mappingTopicSample
       );
       this.templateTarget = expandExternalTemplate(
         JSON.parse(getExternalTemplate(this.mapping)),
@@ -664,7 +664,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               );
 
               const levels: string[] = splitTopicExcludingSeparator(
-                this.mapping.templateTopicSample
+                this.mapping.mappingTopicSample
               );
               if (this.stepperConfiguration.direction == Direction.INBOUND) {
                 this.templateSource = expandExternalTemplate(
@@ -721,7 +721,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   private expandTemplates() {
     const levels: string[] = splitTopicExcludingSeparator(
-      this.mapping.templateTopicSample
+      this.mapping.mappingTopicSample
     );
 
     if (
@@ -801,7 +801,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateSource = expandExternalTemplate(
         this.templateSource,
         this.mapping,
-        splitTopicExcludingSeparator(this.mapping.templateTopicSample)
+        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
       );
     } else {
       this.templateSource = expandC8YTemplate(

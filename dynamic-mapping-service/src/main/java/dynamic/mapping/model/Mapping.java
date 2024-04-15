@@ -70,10 +70,10 @@ public class Mapping implements Serializable {
   public String publishTopic;
 
   @NotNull
-  public String templateTopic;
+  public String mappingTopic;
 
   @NotNull
-  public String templateTopicSample;
+  public String mappingTopicSample;
 
   @NotNull
   public API targetAPI;

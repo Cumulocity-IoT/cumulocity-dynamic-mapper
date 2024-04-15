@@ -350,13 +350,13 @@ This must be supported by the configured message broker.
 >**_NOTE:_** Multi-level wildcards can only appear at the end of topic. The topic "/device/#/west" is not valid.
 Examples of valid topics are: "device/#", "device/data/#", "device/12345/data" etc.
 
-##### Template Topic
+##### Mapping Topic
 
 The template topic is the key of the persisted mapping. The main difference to the subscription topic is that
 a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.\
 Examples are: "device/+/data, "device/express/+", "device/+"\
-In order to use sample data instead of the wildcard you can add a Template Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Template Topic they must exactly be the same in the Template Topic Sample.
-The levels of the Template Topic are split and added to the payload:
+In order to use sample data instead of the wildcard you can add a Mapping Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Mapping Topic they must exactly be the same in the Mapping Topic Sample.
+The levels of the Mapping Topic are split and added to the payload:
 ```
   "_TOPIC_LEVEL_": [
     "device",

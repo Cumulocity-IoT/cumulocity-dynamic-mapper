@@ -332,7 +332,7 @@ export class MappingService {
   ): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
-      topic: mapping.templateTopicSample,
+      topic: mapping.mappingTopicSample,
       processingType: ProcessingType.UNDEFINED,
       cardinality: new Map<string, number>(),
       errors: [],

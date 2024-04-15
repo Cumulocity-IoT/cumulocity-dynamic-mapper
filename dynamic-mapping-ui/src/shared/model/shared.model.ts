@@ -34,8 +34,8 @@ export interface Mapping {
   ident: string;
   subscriptionTopic?: string;
   publishTopic?: string;
-  templateTopic: string;
-  templateTopicSample: string;
+  mappingTopic: string;
+  mappingTopicSample: string;
   targetAPI: string;
   source: string;
   target: string;

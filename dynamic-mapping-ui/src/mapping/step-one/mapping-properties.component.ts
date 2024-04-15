@@ -49,7 +49,7 @@ import {
   isDisabled
 } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
-import { deriveTemplateTopicFromTopic } from '../shared/util';
+import { deriveMappingTopicFromTopic } from '../shared/util';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -149,14 +149,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description: 'Subscription Topic',
               change: () => {
-                const newDerivedTopic = deriveTemplateTopicFromTopic(
+                const newDerivedTopic = deriveMappingTopicFromTopic(
                   this.propertyFormly.get('subscriptionTopic').value
                 );
                 this.propertyFormly
-                  .get('templateTopic')
+                  .get('mappingTopic')
                   .setValue(newDerivedTopic);
                 this.propertyFormly
-                  .get('templateTopicSample')
+                  .get('mappingTopicSample')
                   .setValue(newDerivedTopic);
               },
               required: this.stepperConfiguration.direction == Direction.INBOUND
@@ -175,12 +175,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               change: () => {
-                const newDerivedTopic = deriveTemplateTopicFromTopic(
+                const newDerivedTopic = deriveMappingTopicFromTopic(
                   this.propertyFormly.get('publishTopic').value
                 );
 
                 this.propertyFormly
-                  .get('templateTopicSample')
+                  .get('mappingTopicSample')
                   .setValue(newDerivedTopic);
               },
               required:
@@ -191,16 +191,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           },
           {
             className: 'col-lg-6',
-            key: 'templateTopic',
+            key: 'mappingTopic',
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Template Topic',
-              placeholder: 'Template Topic ...',
+              label: 'Mapping Topic',
+              placeholder: 'Mapping Topic ...',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'The TemplateTopic defines the topic to which this mapping is bound to. Name must begin with the Topic name.',
+                'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally. Name must begin with the SubscriptionTopic.',
               required: this.stepperConfiguration.direction == Direction.INBOUND
             },
             hideExpression:
@@ -215,17 +215,17 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           },
           {
             className: 'col-lg-6',
-            key: 'templateTopicSample',
+            key: 'mappingTopicSample',
             type: 'input',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Template Topic Sample',
+              label: 'Mapping Topic Sample',
               placeholder: 'e.g. device/110',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description: `The TemplateTopicSample name
-              must have the same number of
-              levels and must match the TemplateTopic.`,
+              description: `The MappingTopicSample name
+              must have the same structure and number of
+              levels as the MappingTopic. Wildcards, i.e. "+" in the MappingTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
             }
           },

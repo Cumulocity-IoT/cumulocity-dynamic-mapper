@@ -59,26 +59,26 @@ public class MappingsRepresentationJUnitTest {
   }
 
   @Test
-  void testIsTemplateTopicSampleValid() {
+  void testIsMappingTopicSampleValid() {
 
     Mapping m1 = new Mapping();
-    m1.setTemplateTopic("/device/+/east/");
-    m1.setTemplateTopicSample("/device/us/east/");
+    m1.setMappingTopic("/device/+/east/");
+    m1.setMappingTopicSample("/device/us/east/");
     m1.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m1));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isMappingTopicSampleAndSubscriptionTopicValid(m1));
 
     Mapping m2 = new Mapping();
-    m2.setTemplateTopic("/device");
-    m2.setTemplateTopicSample("/device");
+    m2.setMappingTopic("/device");
+    m2.setMappingTopicSample("/device");
     m2.setSubscriptionTopic("/device/#");
-    ValidationError[] l2 = { ValidationError.TemplateTopicSample_Must_Match_The_SubscriptionTopic };
-    assertEquals(Arrays.asList(l2), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m2));
+    ValidationError[] l2 = { ValidationError.MappingTopicSample_Must_Match_The_SubscriptionTopic };
+    assertEquals(Arrays.asList(l2), MappingRepresentation.isMappingTopicSampleAndSubscriptionTopicValid(m2));
 
     Mapping m3 = new Mapping();
-    m3.setTemplateTopic("/device/");
-    m3.setTemplateTopicSample("/device/");
+    m3.setMappingTopic("/device/");
+    m3.setMappingTopicSample("/device/");
     m3.setSubscriptionTopic("/device/#");
-    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isTemplateTopicSampleAndSubscriptionTopicValid(m3));
+    assertEquals(new ArrayList<ValidationError>(), MappingRepresentation.isMappingTopicSampleAndSubscriptionTopicValid(m3));
   }
 
   @Test
@@ -104,26 +104,26 @@ public class MappingsRepresentationJUnitTest {
 
   }
 
-  void testTemplateTopicMatchesTemplateTopicSample() {
+  void testMappingTopicMatchesMappingTopicSample() {
 
     Mapping m1 = new Mapping();
-    m1.templateTopic = "/plant1/+/machine1";
-    m1.templateTopicSample = "/plant1/line1/machine1";
+    m1.mappingTopic = "/plant1/+/machine1";
+    m1.mappingTopicSample = "/plant1/line1/machine1";
     assertEquals(0, MappingRepresentation
-        .isTemplateTopicTemplateAndTopicSampleValid(m1.templateTopic, m1.templateTopicSample).size() == 0);
+        .isMappingTopicTemplateAndTopicSampleValid(m1.mappingTopic, m1.mappingTopicSample).size() == 0);
 
     Mapping m2 = new Mapping();
-    m2.templateTopic = "/plant2/+/machine1";
-    m2.templateTopicSample = "/plant1/line1/machine1";
-    assertEquals(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-        MappingRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m2.templateTopic, m2.templateTopicSample)
+    m2.mappingTopic = "/plant2/+/machine1";
+    m2.mappingTopicSample = "/plant1/line1/machine1";
+    assertEquals(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+        MappingRepresentation.isMappingTopicTemplateAndTopicSampleValid(m2.mappingTopic, m2.mappingTopicSample)
             .get(0));
 
     Mapping m3 = new Mapping();
-    m3.templateTopic = "/plant1/+/machine1/modul1";
-    m3.templateTopicSample = "/plant1/line1/machine1";
-    assertEquals(ValidationError.TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-        MappingRepresentation.isTemplateTopicTemplateAndTopicSampleValid(m3.templateTopic, m3.templateTopicSample)
+    m3.mappingTopic = "/plant1/+/machine1/modul1";
+    m3.mappingTopicSample = "/plant1/line1/machine1";
+    assertEquals(ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+        MappingRepresentation.isMappingTopicTemplateAndTopicSampleValid(m3.mappingTopic, m3.mappingTopicSample)
             .get(0));
 
   }
