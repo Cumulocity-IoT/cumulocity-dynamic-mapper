@@ -30,6 +30,7 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;

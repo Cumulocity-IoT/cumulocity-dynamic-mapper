@@ -3,7 +3,7 @@ package dynamic.mapping.connector.core.registry;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.connector.mqtt.ConnectorType;
+import dynamic.mapping.connector.core.client.ConnectorType;
 
 import org.springframework.stereotype.Component;
 

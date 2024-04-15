@@ -40,9 +40,9 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.beans.factory.annotation.Autowired;

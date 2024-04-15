@@ -58,7 +58,6 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
-import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatusEvent;

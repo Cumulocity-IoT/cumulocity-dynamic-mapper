@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.model.Mapping;
@@ -28,7 +29,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.connector.mqtt.ConnectorType;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 

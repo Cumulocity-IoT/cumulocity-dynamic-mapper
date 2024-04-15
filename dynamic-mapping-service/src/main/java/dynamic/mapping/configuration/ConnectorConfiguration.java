@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorSpecification;
-import dynamic.mapping.connector.mqtt.ConnectorType;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
 import lombok.Data;
 import lombok.ToString;

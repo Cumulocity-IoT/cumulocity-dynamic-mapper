@@ -65,20 +65,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- artifacts dagger, jctools-core need to be listed as provided, other wise one can
-            not run the dynamic-mapper  locally in vcode in case of error tracing & debugging
-
-            <dependency>
-                <groupId>com.google.dagger</groupId>
-                <artifactId>dagger</artifactId>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.jctools</groupId>
-                <artifactId>jctools-core</artifactId>
-                <scope>provided</scope>
-            </dependency>
-            -->
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
@@ -116,11 +102,6 @@
                 <artifactId>protobuf-java</artifactId>
                 <version>3.25.2</version>
             </dependency>
-            <!-- <dependency>
-                <groupId>org.eclipse.paho</groupId>
-                <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-                <version>1.2.5</version>
-            </dependency> -->
             <dependency>
                 <groupId>com.hivemq</groupId>
                 <artifactId>hivemq-mqtt-client</artifactId>
@@ -177,6 +158,11 @@
                 <groupId>org.json</groupId>
                 <artifactId>json</artifactId>
                 <version>20240205</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>3.7.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

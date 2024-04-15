@@ -3,7 +3,7 @@ package dynamic.mapping.connector.core;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
-import dynamic.mapping.connector.mqtt.ConnectorType;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;

@@ -42,6 +42,7 @@ import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
