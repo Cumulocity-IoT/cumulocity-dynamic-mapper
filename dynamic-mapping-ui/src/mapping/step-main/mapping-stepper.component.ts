@@ -608,7 +608,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.source,
         this.mapping
       );
-      this.enrichTemplates();
+      this.expandTemplates();
       this.extensions =
         (await this.brokerConfigurationService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
@@ -719,7 +719,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     event.stepper.previous();
   }
 
-  private enrichTemplates() {
+  private expandTemplates() {
     const levels: string[] = splitTopicExcludingSeparator(
       this.mapping.templateTopicSample
     );
