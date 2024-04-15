@@ -44,7 +44,7 @@ public class Mapping implements Serializable {
   public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 
   public static final String TIME = "time";
-  public static int SNOOP_TEMPLATES_MAX = 5;
+  public static int SNOOP_TEMPLATES_MAX = 10;
   public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
   public static Mapping UNSPECIFIED_MAPPING;
 
@@ -143,7 +143,7 @@ public class Mapping implements Serializable {
 
   public void addSnoopedTemplate(String payloadMessage) {
     snoopedTemplates.add(payloadMessage);
-    if (snoopedTemplates.size() >= SNOOP_TEMPLATES_MAX) {
+    if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
       // remove oldest payload
       snoopedTemplates.remove(0);
     } else {
