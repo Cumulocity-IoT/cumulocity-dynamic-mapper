@@ -536,6 +536,8 @@ public class MappingRestController {
         try {
             String tenant = contextService.getContext().getTenant();
             log.info("Tenant {} - Add mapping: {}", mapping);
+            // new mapping should be disabled by default
+            mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);

@@ -362,7 +362,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
             ...ValidationFormlyError[
               'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
             ],
-            errorPath: 'templateTopicSample'
+            errorPath: 'templateTopic'
           }
       };
     } else {
@@ -375,7 +375,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
                 ...ValidationFormlyError[
                   'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: 'templateTopicSample'
+                errorPath: 'templateTopic'
               }
           };
           break;
@@ -388,7 +388,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
                 ...ValidationFormlyError[
                   'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: 'templateTopicSample'
+                errorPath: 'templateTopic'
               }
           };
           break;
@@ -406,7 +406,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
                   ...ValidationFormlyError[
                     'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                   ],
-                  errorPath: 'templateTopicSample'
+                  errorPath: 'templateTopic'
                 }
             };
             break;

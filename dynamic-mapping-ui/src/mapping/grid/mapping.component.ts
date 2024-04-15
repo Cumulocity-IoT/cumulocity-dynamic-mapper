@@ -470,6 +470,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.name = `${this.mappingToUpdate.name} - Copy`;
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
+    this.mappingToUpdate.active = false;
     console.log('Copying mapping', this.mappingToUpdate);
     this.showConfigMapping = true;
   }
@@ -700,7 +701,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
     console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
-      // this.alertService.success(gettext('Mappings activated successfully'));
+      this.alertService.success(gettext('Mappings reloaded'));
       this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));

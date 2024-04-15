@@ -35,12 +35,12 @@ import { Direction } from '../../shared';
         <div >
           <label
             title="{{ 'Toggle mapping activation' | translate }}"
-            class="c8y-switch c8y-switch--inline"
-            (click)="activateMapping()"
+            class="c8y-switch"
           >
             <input
               type="checkbox"
               [checked]="context.value"
+              (change)="activateMapping()"
             />
             <span></span>
             <span

@@ -635,7 +635,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.snoopStatus == SnoopStatus.ENABLED &&
         numberSnooped == 0
       ) {
-        console.log('Ready to snoop ...');
+        console.log('Snooping not yet started ...');
         const modalRef: BsModalRef = this.bsModalService.show(
           SnoopingModalComponent,
           { initialState }
@@ -650,7 +650,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           modalRef.hide();
         });
       } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
-        console.log('Continue snoop ...?');
+        console.log('Continue snooping ...?');
         const modalRef: BsModalRef = this.bsModalService.show(
           SnoopingModalComponent,
           { initialState }
@@ -662,6 +662,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               this.templateSource = JSON.parse(
                 this.mapping.snoopedTemplates[0]
               );
+
               const levels: string[] = splitTopicExcludingSeparator(
                 this.mapping.templateTopicSample
               );
@@ -677,7 +678,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                   this.mapping
                 );
               }
-              this.onSampleTargetTemplatesButton();
+              // TODO check and observe if templates have already been initialized before
+              // this.onSampleTargetTemplatesButton();
             }
             event.stepper.next();
           } else {
@@ -910,7 +912,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.substitutions.push(newSub);
       } else if (newSub && duplicateSubstitution) {
         this.mapping.substitutions[existingSubstitution] = newSub;
-       }
+      }
     });
   }
 
