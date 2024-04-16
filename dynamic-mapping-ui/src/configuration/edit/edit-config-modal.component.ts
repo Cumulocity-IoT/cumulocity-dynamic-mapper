@@ -33,10 +33,12 @@ import { uuidCustom } from '../../shared';
             {{ 'Description' | translate }}
           </span>
         </label>
-        <p
-          readOnly
-          [ngModel]="description"
-        >{{description}}</p>
+        <textarea
+          rows="3"
+          class="form-control"
+          placeholder="choose connector ..."
+          >{{ description }}</textarea
+        >
       </c8y-form-group>
       <div [formGroup]="dynamicFormly">
         <formly-form
@@ -61,13 +63,7 @@ export class EditConfigurationComponent implements OnInit {
   description: string;
 
   ngOnInit(): void {
-    const desc = this.specifications.find(
-      (sp) => sp.connectorType == this.configuration.connectorType
-    );
-    this.description = 'Not defined';
-    if (!desc) {
-      this.description = desc.description;
-    }
+    this.setConnectorDescription();
 
     this.brokerFormlyFields = [
       {
@@ -98,6 +94,15 @@ export class EditConfigurationComponent implements OnInit {
     }
   }
 
+  private setConnectorDescription() {
+    const desc = this.specifications.find(
+      (sp) => sp.connectorType == this.configuration.connectorType
+    );
+    if (desc) {
+      this.description = desc.description;
+    }
+  }
+
   onDismiss() {
     console.log('Dismiss');
     this.closeSubject.next(undefined);
@@ -114,6 +119,7 @@ export class EditConfigurationComponent implements OnInit {
     );
 
     this.configuration.connectorType = connectorType;
+    this.setConnectorDescription();
     this.dynamicFormlyFields = [];
 
     this.dynamicFormlyFields.push({
