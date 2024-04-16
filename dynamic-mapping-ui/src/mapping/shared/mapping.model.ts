@@ -100,15 +100,15 @@ export const ValidationFormlyError = {
       message:
         'MappingTopic and MappingTopicSample do not have same structure in the Topic Name.'
     },
-  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
       message:
-        'The PublishTopic and MappingTopicSample do not have same number of levels in the Topic Name'
+        'The PublishTopic and PublishTopicSample do not have same number of levels in the Topic Name'
     },
-  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
     {
       message:
-        'PublishTopic and MappingTopicSample do not have same structure in the Topic Name.'
+        'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
     },
   FilterOutbound_Must_Be_Unique: {
     message: 'FilterOutbound must be unique within all outbound mappings.'

@@ -70,6 +70,9 @@ public class Mapping implements Serializable {
   public String publishTopic;
 
   @NotNull
+  public String publishTopicSample;
+
+  @NotNull
   public String mappingTopic;
 
   @NotNull
@@ -132,6 +135,9 @@ public class Mapping implements Serializable {
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)
   public Boolean autoAckOperation;
+
+  @NotNull
+  public boolean debug;
 
   @NotNull
   public long lastUpdate;

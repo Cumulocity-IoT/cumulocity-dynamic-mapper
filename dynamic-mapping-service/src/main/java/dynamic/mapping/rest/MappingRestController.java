@@ -374,6 +374,10 @@ public class MappingRestController {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+            } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
+                String id = operation.getParameter().get("id");
+                Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
+                mappingComponent.setDebugMapping(tenant, id, debugBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
                 configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
             }
@@ -455,9 +459,9 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,MappingDeployment>> getMappingsDeployed() {
+    public ResponseEntity<Map<String, MappingDeployment>> getMappingsDeployed() {
         String tenant = contextService.getContext().getTenant();
-        Map<String,MappingDeployment> mappingsDeployed = new HashMap<>();
+        Map<String, MappingDeployment> mappingsDeployed = new HashMap<>();
         try {
             Map<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
@@ -466,7 +470,8 @@ public class MappingRestController {
                     ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
                     List<String> subscribedMappings = client.getMappingsDeployed();
                     subscribedMappings.forEach(ident -> {
-                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident, new MappingDeployment(ident));
+                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
+                                new MappingDeployment(ident));
                         mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
                         mappingsDeployed.put(ident, mappingDeployed);
                     });

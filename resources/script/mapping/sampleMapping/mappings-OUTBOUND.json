@@ -1,6 +1,6 @@
 [
   {
-    "mappingTopicSample": "evt/outbound/berlin_01",
+    "publishTopicSample": "evt/outbound/berlin_01",
     "ident": "ek2kpo",
     "tested": false,
     "autoAckOperation": true,
@@ -60,10 +60,11 @@
     "updateExistingDevice": false,
     "mappingType": "JSON",
     "lastUpdate": 1709800167869,
+    "debug": false,
     "name": "Mapping - 51"
   },
   {
-    "mappingTopicSample": "opp/outbound/berlin_01",
+    "publishTopicSample": "opp/outbound/berlin_01",
     "ident": "utnidm",
     "tested": false,
     "autoAckOperation": true,
@@ -109,6 +110,7 @@
     "updateExistingDevice": false,
     "mappingType": "JSON",
     "lastUpdate": 1709828472844,
+    "debug": false,
     "name": "Mapping - 52"
   }
 ]

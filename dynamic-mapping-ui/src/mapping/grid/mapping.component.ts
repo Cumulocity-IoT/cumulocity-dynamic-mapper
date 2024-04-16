@@ -158,12 +158,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: true
       };
       this.columnsMappings[2] = {
-        header: 'Mapping topic sample',
-        name: 'mappingTopicSample',
-        path: 'mapping.mappingTopicSample',
+        header: 'Publish topic sample',
+        name: 'publishTopicSample',
+        path: 'mapping.publishTopicSample',
         filterable: true
       };
-      this.columnsMappings.splice(4,2);
+      this.columnsMappings.splice(4, 2);
     }
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
     this.loadSubscriptions();
@@ -202,6 +202,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Export Mapping',
         icon: 'export',
         callback: this.exportSingle.bind(this)
+      },
+      {
+        type: 'DEBUG',
+        text: 'Toggle Debugging',
+        icon: 'bug1',
+        callback: this.debugMapping.bind(this)
       }
     );
     this.bulkActionControls.push(
@@ -290,7 +296,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
-        header: 'Test/Snoop',
+        header: 'Test/Debug/Snoop',
         name: 'tested',
         path: 'mapping',
         filterable: false,
@@ -354,31 +360,61 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     const ident = uuidCustom();
     const sub: MappingSubstitution[] = [];
-    let mapping: Mapping = {
-      name: `Mapping - ${ident.substring(0, 7)}`,
-      id: ident,
-      ident: ident,
-      subscriptionTopic: '',
-      mappingTopic: '',
-      mappingTopicSample: '',
-      targetAPI: API.MEASUREMENT.name,
-      source: '{}',
-      target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
-      active: false,
-      tested: false,
-      qos: QOS.AT_LEAST_ONCE,
-      substitutions: sub,
-      mapDeviceIdentifier: false,
-      createNonExistingDevice: false,
-      mappingType: this.mappingType,
-      updateExistingDevice: false,
-      externalIdType: 'c8y_Serial',
-      snoopStatus: SnoopStatus.NONE,
-      snoopedTemplates: [],
-      direction: this.stepperConfiguration.direction,
-      autoAckOperation: true,
-      lastUpdate: Date.now()
-    };
+    let mapping: Mapping;
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      mapping = {
+        name: `Mapping - ${ident.substring(0, 7)}`,
+        id: ident,
+        ident: ident,
+        subscriptionTopic: '',
+        mappingTopic: '',
+        mappingTopicSample: '',
+        targetAPI: API.MEASUREMENT.name,
+        source: '{}',
+        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        active: false,
+        tested: false,
+        qos: QOS.AT_LEAST_ONCE,
+        substitutions: sub,
+        mapDeviceIdentifier: false,
+        createNonExistingDevice: false,
+        mappingType: this.mappingType,
+        updateExistingDevice: false,
+        externalIdType: 'c8y_Serial',
+        snoopStatus: SnoopStatus.NONE,
+        snoopedTemplates: [],
+        direction: this.stepperConfiguration.direction,
+        autoAckOperation: true,
+        debug: false,
+        lastUpdate: Date.now()
+      };
+    } else {
+      mapping = {
+        name: `Mapping - ${ident.substring(0, 7)}`,
+        id: ident,
+        ident: ident,
+        publishTopic: '',
+        publishTopicSample: '',
+        targetAPI: API.MEASUREMENT.name,
+        source: '{}',
+        target: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        active: false,
+        tested: false,
+        qos: QOS.AT_LEAST_ONCE,
+        substitutions: sub,
+        mapDeviceIdentifier: false,
+        createNonExistingDevice: false,
+        mappingType: this.mappingType,
+        updateExistingDevice: false,
+        externalIdType: 'c8y_Serial',
+        snoopStatus: SnoopStatus.NONE,
+        snoopedTemplates: [],
+        direction: this.stepperConfiguration.direction,
+        autoAckOperation: true,
+        debug: false,
+        lastUpdate: Date.now()
+      };
+    }
     mapping.target = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
@@ -482,6 +518,16 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.alertService.success(`${action} mapping: ${mapping.id}!`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+  }
+
+  async debugMapping(m: MappingEnriched) {
+    const { mapping } = m;
+    const newDebug = !mapping.debug;
+    const action = newDebug ? 'Activated' : 'Deactivated';
+    this.alertService.success(`Debugging ${action} mapping: ${mapping.id}!`);
+    const parameter = { id: mapping.id, debug: newDebug };
+    await this.mappingService.changeDebuggingMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 

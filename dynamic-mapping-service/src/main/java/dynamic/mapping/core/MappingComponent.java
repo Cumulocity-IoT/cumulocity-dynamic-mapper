@@ -221,7 +221,8 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
             if (m.getC8yMQTTMapping().isActive()) {
-                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
+                throw new IllegalArgumentException(String.format(
+                        "Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
             // mapping is deactivated and we can delete it
             inventoryApi.delete(GId.asGId(id));
@@ -255,7 +256,9 @@ public class MappingComponent {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
-                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, mapping.id));
+                throw new IllegalArgumentException(
+                        String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!",
+                                tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant);
@@ -440,6 +443,31 @@ public class MappingComponent {
         // mappings that are not working
         boolean ignoreValidation = !active;
         updateMapping(tenant, mapping, true, ignoreValidation);
+        // step 4. delete mapping from update cache
+        removeDirtyMapping(tenant, mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildMappingOutboundCache(tenant);
+        } else {
+            deleteFromCacheMappingInbound(tenant, mapping);
+            addToCacheMappingInbound(tenant, mapping);
+            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+        }
+    }
+
+    public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
+        // step 1. update debug for mapping
+        log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);
+        Mapping mapping = getMapping(tenant, id);
+        mapping.setDebug(debug);
+        if (Direction.INBOUND.equals(mapping.direction)) {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        }
+        // step 3. update mapping in inventory
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        updateMapping(tenant, mapping, true, true);
         // step 4. delete mapping from update cache
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches

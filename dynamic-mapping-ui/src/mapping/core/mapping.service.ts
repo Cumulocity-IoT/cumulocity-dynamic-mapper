@@ -90,8 +90,13 @@ export class MappingService {
       Operation.ACTIVATE_MAPPING,
       parameter
     );
-    // this.reloadInbound$.next();
-    // this.reloadOutbound$.next();
+  }
+
+  async changeDebuggingMapping(parameter: any) {
+    await this.brokerConfigurationService.runOperation(
+      Operation.DEBUG_MAPPING,
+      parameter
+    );
   }
 
   resetCache() {

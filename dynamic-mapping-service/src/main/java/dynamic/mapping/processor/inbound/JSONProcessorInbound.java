@@ -86,7 +86,9 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         }
 
         String payload = payloadJsonNode.toPrettyString();
-        log.info("Tenant {} - Patched payload: {}", tenant, payload);
+        if (serviceConfiguration.logPayload || mapping.debug) {
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+        }
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -184,7 +186,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (serviceConfiguration.logSubstitution) {
+                if (serviceConfiguration.logSubstitution || mapping.debug) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);

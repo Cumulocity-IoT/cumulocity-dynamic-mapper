@@ -162,7 +162,7 @@ public class MappingRepresentation implements Serializable {
     //   result.addAll(isMappingTopicTemplateAndTopicSampleValid(mapping.subscriptionTopic, mapping.mappingTopicSample));
     } else {
       // test if we can attach multiple outbound mappings to the same filterOutbound
-      result.addAll(isPublishTopicTemplateAndTopicSampleValid(mapping.publishTopic, mapping.mappingTopicSample));
+      result.addAll(isPublishTopicTemplateAndPublishTopicSampleValid(mapping.publishTopic, mapping.publishTopicSample));
     }
 
     result.addAll(areJSONTemplatesValid(mapping));
@@ -170,26 +170,26 @@ public class MappingRepresentation implements Serializable {
     return result;
   }
 
-  private static Collection<? extends ValidationError> isPublishTopicTemplateAndTopicSampleValid(
-      @NotNull String publishTopic, @NotNull String mappingTopicSample) {
+  private static Collection<? extends ValidationError> isPublishTopicTemplateAndPublishTopicSampleValid(
+      @NotNull String publishTopic, @NotNull String publishTopicSample) {
     ArrayList<ValidationError> result = new ArrayList<ValidationError>();
     String[] splitPT = Mapping.splitTopicIncludingSeparatorAsArray(publishTopic);
-    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopicSample);
+    String[] splitTTS = Mapping.splitTopicIncludingSeparatorAsArray(publishTopicSample);
     if (splitPT.length != splitTTS.length) {
-      result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
+      result.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
     } else {
       for (int i = 0; i < splitPT.length; i++) {
         if (("/").equals(splitPT[i]) && !("/").equals(splitTTS[i])) {
-          result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (("/").equals(splitTTS[i]) && !("/").equals(splitPT[i])) {
-          result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+          result.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
           break;
         }
         if (!("/").equals(splitPT[i]) && !("+").equals(splitPT[i]) && !("#").equals(splitPT[i])) {
           if (!splitPT[i].equals(splitTTS[i])) {
-            result.add(ValidationError.PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
+            result.add(ValidationError.PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
             break;
           }
         }

@@ -152,12 +152,18 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 const newDerivedTopic = deriveMappingTopicFromTopic(
                   this.propertyFormly.get('subscriptionTopic').value
                 );
-                this.propertyFormly
-                  .get('mappingTopic')
-                  .setValue(newDerivedTopic);
-                this.propertyFormly
-                  .get('mappingTopicSample')
-                  .setValue(newDerivedTopic);
+                if (this.stepperConfiguration.direction == Direction.INBOUND) {
+                  this.propertyFormly
+                    .get('mappingTopic')
+                    .setValue(newDerivedTopic);
+                  this.propertyFormly
+                    .get('mappingTopicSample')
+                    .setValue(newDerivedTopic);
+                } else {
+                  this.propertyFormly
+                    .get('publishTopicSample')
+                    .setValue(newDerivedTopic);
+                }
               },
               required: this.stepperConfiguration.direction == Direction.INBOUND
             },
@@ -180,7 +186,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 );
 
                 this.propertyFormly
-                  .get('mappingTopicSample')
+                  .get('publishTopicSample')
                   .setValue(newDerivedTopic);
               },
               required:
@@ -227,7 +233,27 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               must have the same structure and number of
               levels as the MappingTopic. Wildcards, i.e. "+" in the MappingTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
               required: true
-            }
+            },
+            hideExpression:
+              this.stepperConfiguration.direction == Direction.OUTBOUND
+          },
+          {
+            className: 'col-lg-6',
+            key: 'publishTopicSample',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Publish Topic Sample',
+              placeholder: 'e.g. device/110',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description: `The PublishTopicSample name
+              must have the same structure and number of
+              levels as the PublishTopic. Wildcards, i.e. "+" in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              required: true
+            },
+            hideExpression:
+              this.stepperConfiguration.direction != Direction.OUTBOUND
           },
           {
             className: 'col-lg-12',

@@ -78,10 +78,12 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
+            AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
-        this.mappingComponent = configurationRegistry.getMappingComponent();;
+        this.mappingComponent = configurationRegistry.getMappingComponent();
+        ;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -139,7 +141,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, connectorMessage);
-                            if (serviceConfiguration.logPayload) {
+                            if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant,
                                         context.getTopic(),
                                         context.getPayload().toString());
@@ -216,7 +218,9 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                 } catch (Exception e) {
-                    log.warn("Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!", tenant, topic);
+                    log.warn(
+                            "Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
+                            tenant, topic);
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
