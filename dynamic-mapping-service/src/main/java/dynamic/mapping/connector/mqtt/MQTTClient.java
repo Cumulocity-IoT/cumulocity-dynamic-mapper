@@ -78,11 +78,11 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("protocol",
-        new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, "mqtt://", Map.ofEntries(
-                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, "mqtt://", Map.ofEntries(
+                        new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
+                        new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
+                        new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
+                        new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
         configProps.put("mqttHost",
                 new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         configProps.put("mqttPort",
@@ -118,6 +118,7 @@ public class MQTTClient extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
         this.connectorName = connectorConfiguration.name;
+        this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -151,7 +152,7 @@ public class MQTTClient extends AConnectorClient {
         loadConfiguration();
         Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
-        log.info("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
+        log.debug("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
         if (useSelfSignedCertificate) {
             try {
                 String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
@@ -203,6 +204,7 @@ public class MQTTClient extends AConnectorClient {
             }
         }
         log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
+                getConnectorType(),
                 getConnectorName());
         return true;
     }
@@ -235,11 +237,12 @@ public class MQTTClient extends AConnectorClient {
 
         Mqtt3ClientBuilder partialBuilder;
         if (useWSS) {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig().serverPort(mqttPort)
-            .identifier(clientId + additionalSubscriptionIdTest); 
+            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig()
+                    .serverPort(mqttPort)
+                    .identifier(clientId + additionalSubscriptionIdTest);
         } else {
             partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-            .identifier(clientId + additionalSubscriptionIdTest); 
+                    .identifier(clientId + additionalSubscriptionIdTest);
         }
 
         // is username & password used
@@ -354,7 +357,7 @@ public class MQTTClient extends AConnectorClient {
                 if (shouldConnect()) {
                     try {
                         // is not working for broker.emqx.io
-                         subscribe("$SYS/#", 0);
+                        subscribe("$SYS/#", 0);
                     } catch (ConnectorException e) {
                         log.warn(
                                 "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
@@ -425,11 +428,11 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public void disconnect() {
         updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-        log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
-                (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
+        log.info("Tenant {} - Disconnecting from broker: {}", tenant,
+                (mqttClient == null ? (String) connectorConfiguration.getProperties().get("mqttHost") : mqttClient.getConfig().getServerHost()));
 
         if (isConnected()) {
-            log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
+            log.debug("Tenant {} - Disconnected from broker I: {}", tenant,
                     mqttClient.getConfig().getServerHost());
             activeSubscriptions.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist

@@ -106,7 +106,7 @@ public class MappingComponent {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                 .getMappingServiceRepresentations().get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
-            log.info("Tenant {} - Initializing status: {}, {} ", tenant,
+            log.debug("Tenant {} - Initializing status: {}, {} ", tenant,
                     mappingServiceRepresentation.getMappingStatus(),
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0

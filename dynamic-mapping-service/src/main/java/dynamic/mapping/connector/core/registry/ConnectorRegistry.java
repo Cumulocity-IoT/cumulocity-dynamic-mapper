@@ -45,11 +45,11 @@ public class ConnectorRegistry {
         } else {
             Map<String, AConnectorClient> connectorMap = connectorTenantMap.get(tenant);
             if (connectorMap.get(client.getConnectorIdent()) == null) {
-                log.info("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdent());
+                log.debug("Tenant {} - Adding new client with id {}...", tenant, client.getConnectorIdent());
                 connectorMap.put(client.getConnectorIdent(), client);
                 connectorTenantMap.put(tenant, connectorMap);
             } else {
-                log.info("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdent());
+                log.debug("Tenant {} - Client {} is already registered!", tenant, client.getConnectorIdent());
             }
         }
 

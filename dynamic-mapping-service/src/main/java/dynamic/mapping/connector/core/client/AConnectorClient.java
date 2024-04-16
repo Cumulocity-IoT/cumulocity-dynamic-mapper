@@ -138,7 +138,7 @@ public abstract class AConnectorClient {
 
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
-        log.info("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
+        log.debug("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
         if ((initializeTask == null || initializeTask.isDone())) {
             initializeTask = cachedThreadPool.submit(() -> initialize());
         }
@@ -169,7 +169,7 @@ public abstract class AConnectorClient {
         loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
-        log.info("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
+        log.debug("Tenant {} - Called connect(): connectTask.isDone() {}", tenant,
                 connectTask == null || connectTask.isDone());
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> connect());
@@ -180,7 +180,7 @@ public abstract class AConnectorClient {
         loadConfiguration();
         // test if connect task is still running, then we don't need to start another
         // task
-        log.info("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
+        log.debug("Tenant {} - Called submitDisconnect(): connectTask.isDone() {}", tenant,
                 connectTask == null || connectTask.isDone());
         if (connectTask == null || connectTask.isDone()) {
             connectTask = cachedThreadPool.submit(() -> disconnect());
@@ -188,7 +188,7 @@ public abstract class AConnectorClient {
     }
 
     public void submitHousekeeping() {
-        log.info("Tenant {} - Called submitHousekeeping()", tenant);
+        log.debug("Tenant {} - Called submitHousekeeping()", tenant);
         housekeepingExecutor.scheduleAtFixedRate(() -> runHousekeeping(), 0, 30,
                 TimeUnit.SECONDS);
     }

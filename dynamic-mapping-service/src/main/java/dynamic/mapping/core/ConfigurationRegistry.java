@@ -117,7 +117,6 @@ public class ConfigurationRegistry {
 
     public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
-        log.info("Tenant {} - payloadProcessorsInbound {}", tenant, extensibleProcessor);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),

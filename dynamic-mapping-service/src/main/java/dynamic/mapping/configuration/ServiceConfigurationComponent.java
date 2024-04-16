@@ -84,7 +84,7 @@ public class ServiceConfigurationComponent {
                             ServiceConfiguration.class);
                 }
                 log.debug("Tenant {} - Returning service configuration found: {}:", tenant, rt.logPayload);
-                log.info("Tenant {} - Found connection configuration: {}", tenant, rt);
+                log.debug("Tenant {} - Found connection configuration: {}", tenant, rt);
             } catch (SDKException exception) {
                 log.warn("Tenant {} - No configuration found, returning empty element!", tenant);
                 rt = initialize(tenant);
