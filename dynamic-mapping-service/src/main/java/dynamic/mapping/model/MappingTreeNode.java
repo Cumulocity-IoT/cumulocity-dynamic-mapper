@@ -203,8 +203,7 @@ public class MappingTreeNode {
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
         if (mapping != null) {
-            // var path = mapping.mappingTopic;
-            var path = mapping.subscriptionTopic;
+            var path = mapping.mappingTopic;
             // if mappingTopic is not set use topic instead
             if (path == null || path.equals("")) {
                 path = mapping.subscriptionTopic;
