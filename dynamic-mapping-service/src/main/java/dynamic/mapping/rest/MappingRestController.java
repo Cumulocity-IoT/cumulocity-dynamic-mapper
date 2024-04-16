@@ -415,7 +415,7 @@ public class MappingRestController {
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }
-            log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
+            log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);

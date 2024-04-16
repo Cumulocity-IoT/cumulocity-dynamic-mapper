@@ -45,6 +45,7 @@ export interface ConnectorConfiguration {
 }
 
 export interface ConnectorSpecification {
+  description: string;
   connectorType: string;
   supportsWildcardInTopic: boolean;
   properties: { [name: string]: ConnectorProperty };
@@ -93,7 +94,7 @@ export enum Operation {
   RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
   RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
   REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
-  DEBUG_MAPPING = 'DEBUG_MAPPING',
+  DEBUG_MAPPING = 'DEBUG_MAPPING'
 }
 
 export enum StatusEventTypes {

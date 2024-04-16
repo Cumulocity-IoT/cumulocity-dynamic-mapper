@@ -22,6 +22,7 @@
 package dynamic.mapping.connector.mqtt;
 
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -35,6 +36,7 @@ import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.core.ConfigurationRegistry;
+import dynamic.mapping.model.QOS;
 
 
 public class MQTTServiceClient extends MQTTClient {
@@ -64,7 +66,9 @@ public class MQTTServiceClient extends MQTTClient {
                 new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false,null));
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,null));
-        spec = new ConnectorSpecification(connectorType, configProps);
+        String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#' and QOS 'exactly once' is reduced to 'at least once'";
+        spec = new ConnectorSpecification(description, connectorType, configProps);
+        connectorType = ConnectorType.MQTT_SERVICE;
     }
 
     private static Random random = new Random();
@@ -99,6 +103,7 @@ public class MQTTServiceClient extends MQTTClient {
         getSpec().getProperties().put("user", new ConnectorProperty(true, 2, ConnectorPropertyType.STRING_PROPERTY, false, user,null));
         getSpec().getProperties().put("password",
                 new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, msc.getPassword(),null));
+        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE);
     }
 
     @Override

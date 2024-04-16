@@ -568,9 +568,6 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
                     mappingServiceIdRepresentation, amo.getId());
-            log.info("Tenant {} - Agent representation {}", tenant,
-                    MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);

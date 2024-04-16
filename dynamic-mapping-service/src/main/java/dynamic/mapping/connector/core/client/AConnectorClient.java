@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
+import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -234,7 +235,7 @@ public abstract class AConnectorClient {
     /***
      * Subscribe to a topic on the Broker
      ***/
-    public abstract void subscribe(String topic, Integer qos) throws ConnectorException;
+    public abstract void subscribe(String topic, QOS qos) throws ConnectorException;
 
     /***
      * Unsubscribe a topic on the Broker
@@ -355,9 +356,9 @@ public abstract class AConnectorClient {
                     updatedMappingSubs.add(1);
                     ;
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
-                            mapping.qos.ordinal());
+                            mapping.qos);
                     try {
-                        subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                        subscribe(mapping.subscriptionTopic, mapping.qos);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                 mapping.subscriptionTopic, exp);
@@ -379,7 +380,7 @@ public abstract class AConnectorClient {
                         log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                                 mapping.qos.ordinal());
                         try {
-                            subscribe(mapping.subscriptionTopic, mapping.qos.ordinal());
+                            subscribe(mapping.subscriptionTopic, mapping.qos);
                         } catch (ConnectorException exp) {
                             log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                     mapping.subscriptionTopic, exp);
@@ -427,8 +428,9 @@ public abstract class AConnectorClient {
             // subscribe to new topics
             updatedSubscriptionCache.keySet().forEach((topic) -> {
                 if (!getActiveSubscriptions().containsKey(topic)) {
-                    int qos = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
+                    int qosOrdial = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
+                    QOS qos = QOS.values()[qosOrdial];
                     log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
