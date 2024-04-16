@@ -395,7 +395,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
-            log.info("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
+            log.debug("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
                     extName);
             try {
                 if (external) {
@@ -453,7 +453,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (buffered != null)
             newExtensions.load(buffered);
-        log.info("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
+        log.debug("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
 
         Enumeration<?> extensions = newExtensions.propertyNames();
         while (extensions.hasMoreElements()) {
@@ -592,7 +592,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
-        log.info("Tenant {} - create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.info("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
@@ -608,7 +608,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         } else {
             ie = internalExtension.get(0);
         }
-        log.info("Tenant {} - Internal extension: {} registered: {}", tenant,
+        log.debug("Tenant {} - Internal extension: {} registered: {}", tenant,
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }

@@ -131,8 +131,6 @@ public class MQTTClient extends AConnectorClient {
 
     protected static final int WAIT_PERIOD_MS = 10000;
 
-    public ConnectorType connectorType = ConnectorType.MQTT;
-
     @Getter
     public ConnectorSpecification spec;
 

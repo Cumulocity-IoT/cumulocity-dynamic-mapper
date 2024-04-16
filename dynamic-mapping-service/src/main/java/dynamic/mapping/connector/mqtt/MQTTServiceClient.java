@@ -101,8 +101,6 @@ public class MQTTServiceClient extends MQTTClient {
                 new ConnectorProperty(true, 3, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, msc.getPassword(),null));
     }
 
-    public ConnectorType connectorType = ConnectorType.MQTT_SERVICE;
-
     @Override
     public Boolean supportsWildcardsInTopic() {
         return false;

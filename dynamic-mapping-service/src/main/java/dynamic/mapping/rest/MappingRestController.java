@@ -434,7 +434,7 @@ public class MappingRestController {
     public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
         MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
-        log.info("Tenant {} - Get mapping tree!", tenant);
+        log.info("Tenant {} - Get mapping tree", tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
