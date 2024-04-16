@@ -33,6 +33,7 @@ import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.processor.C8YMessage;
@@ -63,11 +64,16 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
     public void extractFromSource(ProcessingContext<JsonNode> context)
             throws ProcessingException {
         Mapping mapping = context.getMapping();
+        String tenant = context.getTenant();
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
+
         JsonNode payloadJsonNode = context.getPayload();
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
 
         String payload = payloadJsonNode.toPrettyString();
-        // log.info("Tenant {} -Patched payload: {}", tenant, payload);
+        if (serviceConfiguration.logPayload || mapping.debug) {
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+        }
 
         for (MappingSubstitution substitution : mapping.substitutions) {
             JsonNode extractedSourceContent = null;
@@ -117,7 +123,8 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                                 MappingSubstitution.SubstituteValue.TYPE.NUMBER,
                                                 substitution.repairStrategy));
                             } else {
-                                log.warn("Tenant {} - Since result is not textual or number it is ignored: {}", context.getTenant(),
+                                log.warn("Tenant {} - Since result is not textual or number it is ignored: {}",
+                                        context.getTenant(),
                                         jn.asText());
                             }
                         }
@@ -143,7 +150,8 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                 new GId(extractedSourceContent.asText()), mapping.externalIdType,
                                 context);
                         if (externalId == null && context.isSendPayload()) {
-                            throw new RuntimeException(String.format("External id %s for type %s not found!", extractedSourceContent.asText(),mapping.externalIdType ));
+                            throw new RuntimeException(String.format("External id %s for type %s not found!",
+                                    extractedSourceContent.asText(), mapping.externalIdType));
                         } else if (externalId == null) {
                             extractedSourceContent = null;
                         } else {
@@ -170,7 +178,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (context.getServiceConfiguration().logSubstitution) {
+                if (context.getServiceConfiguration().logSubstitution || mapping.debug) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             context.getTenant(),
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);

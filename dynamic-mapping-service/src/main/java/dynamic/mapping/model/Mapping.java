@@ -70,10 +70,13 @@ public class Mapping implements Serializable {
   public String publishTopic;
 
   @NotNull
-  public String templateTopic;
+  public String publishTopicSample;
 
   @NotNull
-  public String templateTopicSample;
+  public String mappingTopic;
+
+  @NotNull
+  public String mappingTopicSample;
 
   @NotNull
   public API targetAPI;
@@ -132,6 +135,9 @@ public class Mapping implements Serializable {
   @NotNull
   @JsonSetter(nulls = Nulls.SKIP)
   public Boolean autoAckOperation;
+
+  @NotNull
+  public boolean debug;
 
   @NotNull
   public long lastUpdate;

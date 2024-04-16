@@ -24,27 +24,38 @@ import { SnoopStatus } from '../../shared';
 
 @Component({
   template: `
-    <div class="c8y-realtime" title="Tested">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active: context.value.tested,
-          inactive: !context.value.tested
-        }"
-      ></span>
-    </div>
-    <div class="c8y-realtime" title="Snooping">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active:
-            context.value.snoopStatus === 'ENABLED' ||
-            context.value.snoopStatus === 'STARTED',
-          inactive:
-            context.value.snoopStatus === 'NONE' ||
-            context.value.snoopStatus === 'STOPPED'
-        }"
-      ></span>
+    <div class="d-inline-flex">
+        <div class="c8y-realtime" title="Tested">
+          <span
+            class="c8y-pulse animated pulse"
+            [ngClass]="{
+              active: context.value.tested,
+              inactive: !context.value.tested
+            }"
+          ></span>
+        </div>
+        <div class="c8y-realtime" title="Debug">
+          <span
+            class="c8y-pulse animated pulse"
+            [ngClass]="{
+              active: context.value.debug,
+              inactive: !context.value.debug
+            }"
+          ></span>
+        </div>
+        <div class="c8y-realtime" title="Snooping">
+          <span
+            class="c8y-pulse animated pulse"
+            [ngClass]="{
+              active:
+                context.value.snoopStatus === 'ENABLED' ||
+                context.value.snoopStatus === 'STARTED',
+              inactive:
+                context.value.snoopStatus === 'NONE' ||
+                context.value.snoopStatus === 'STOPPED'
+            }"
+          ></span>
+        </div>
     </div>
   `
 })

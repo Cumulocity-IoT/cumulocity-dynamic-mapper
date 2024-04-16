@@ -73,7 +73,7 @@ import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.MappingDeployment;
@@ -374,6 +374,10 @@ public class MappingRestController {
                 String id = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
                 mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+            } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
+                String id = operation.getParameter().get("id");
+                Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
+                mappingComponent.setDebugMapping(tenant, id, debugBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
                 configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
             }
@@ -411,7 +415,7 @@ public class MappingRestController {
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }
-            log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
+            log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
@@ -427,10 +431,10 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getInboundMappingTree() {
+    public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
-        TreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
-        log.info("Tenant {} - Get mapping tree!", tenant);
+        MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
+        log.info("Tenant {} - Get mapping tree", tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -455,9 +459,9 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String,MappingDeployment>> getMappingsDeployed() {
+    public ResponseEntity<Map<String, MappingDeployment>> getMappingsDeployed() {
         String tenant = contextService.getContext().getTenant();
-        Map<String,MappingDeployment> mappingsDeployed = new HashMap<>();
+        Map<String, MappingDeployment> mappingsDeployed = new HashMap<>();
         try {
             Map<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
@@ -466,7 +470,8 @@ public class MappingRestController {
                     ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
                     List<String> subscribedMappings = client.getMappingsDeployed();
                     subscribedMappings.forEach(ident -> {
-                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident, new MappingDeployment(ident));
+                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
+                                new MappingDeployment(ident));
                         mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
                         mappingsDeployed.put(ident, mappingDeployed);
                     });

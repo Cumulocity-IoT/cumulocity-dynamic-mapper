@@ -47,7 +47,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -93,20 +93,20 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
+    private Map<String, MappingTreeNode> resolverMappingInbound = new HashMap<>();
 
     public void initializeMappingCaches(String tenant) {
         cacheMappingInbound.put(tenant, new HashMap<>());
         cacheMappingOutbound.put(tenant, new HashMap<>());
         resolverMappingOutbound.put(tenant, new HashMap<>());
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                 .getMappingServiceRepresentations().get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
-            log.info("Tenant {} - Initializing status: {}, {} ", tenant,
+            log.debug("Tenant {} - Initializing status: {}, {} ", tenant,
                     mappingServiceRepresentation.getMappingStatus(),
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
@@ -124,7 +124,7 @@ public class MappingComponent {
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initializedMappingStatus.put(tenant, true);
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
         if (cacheMappingOutbound.get(tenant) == null)
@@ -221,7 +221,8 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
             if (m.getC8yMQTTMapping().isActive()) {
-                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
+                throw new IllegalArgumentException(String.format(
+                        "Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
             // mapping is deactivated and we can delete it
             inventoryApi.delete(GId.asGId(id));
@@ -255,7 +256,9 @@ public class MappingComponent {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
-                throw new IllegalArgumentException(String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, mapping.id));
+                throw new IllegalArgumentException(
+                        String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!",
+                                tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant);
@@ -398,8 +401,8 @@ public class MappingComponent {
         }
     }
 
-    public TreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
-        TreeNode in = TreeNode.createRootNode(tenant);
+    public MappingTreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
+        MappingTreeNode in = MappingTreeNode.createRootNode(tenant);
         mappings.forEach(m -> {
             try {
                 in.addMapping(m);
@@ -452,6 +455,31 @@ public class MappingComponent {
         }
     }
 
+    public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
+        // step 1. update debug for mapping
+        log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);
+        Mapping mapping = getMapping(tenant, id);
+        mapping.setDebug(debug);
+        if (Direction.INBOUND.equals(mapping.direction)) {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+        }
+        // step 3. update mapping in inventory
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        updateMapping(tenant, mapping, true, true);
+        // step 4. delete mapping from update cache
+        removeDirtyMapping(tenant, mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildMappingOutboundCache(tenant);
+        } else {
+            deleteFromCacheMappingInbound(tenant, mapping);
+            addToCacheMappingInbound(tenant, mapping);
+            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+        }
+    }
+
     public void cleanDirtyMappings(String tenant) throws Exception {
         // test if for this tenant dirty mappings exist
         log.debug("Tenant {} - Testing for dirty maps", tenant);
@@ -480,7 +508,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
+        List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
                 .map(mn -> mn.getMapping()).collect(Collectors.toList());

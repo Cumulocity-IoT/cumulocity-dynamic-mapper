@@ -63,7 +63,7 @@ export function normalizeTopic(topic: string) {
   return nt;
 }
 
-export function deriveTemplateTopicFromTopic(topic: string) {
+export function deriveMappingTopicFromTopic(topic: string) {
   let topix = topic;
   if (topix == undefined) topix = '';
   topix = normalizeTopic(topix);
@@ -94,9 +94,9 @@ export function isTopicNameValid(topic: string): any {
   return errors;
 }
 
-export function isTemplateTopicValid(topic: string): any {
+export function isMappingTopicValid(topic: string): any {
   let topix = topic;
-  // templateTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
+  // mappingTopic can contain any number of "+" TOPIC_WILDCARD_SINGLE but no "#"
   // TOPIC_WILDCARD_MULTI
   topix = normalizeTopic(topix);
 
@@ -114,7 +114,7 @@ export function isTemplateTopicValid(topic: string): any {
   // count number of "#"
   const count_multi = (topix.match(/#/g) || []).length;
   if (count_multi >= 1)
-    errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_TemplateTopic] =
+    errors[ValidationError.No_Multi_Level_Wildcard_Allowed_In_MappingTopic] =
       true;
 
   return errors;
@@ -157,14 +157,14 @@ export function isSubscriptionTopicUnique(
   return result;
 }
 
-export function isTemplateTopicUnique(
+export function isMappingTopicUnique(
   mapping: Mapping,
   mappings: Mapping[]
 ): boolean {
   const result = mappings.every((m) => {
     return (
-      (!mapping.templateTopic.startsWith(m.templateTopic) &&
-        !m.templateTopic.startsWith(mapping.templateTopic)) ||
+      (!mapping.mappingTopic.startsWith(m.mappingTopic) &&
+        !m.mappingTopic.startsWith(mapping.mappingTopic)) ||
       mapping.id == m.id
     );
   });
@@ -221,7 +221,7 @@ export function isSubstitutionValid(mapping: Mapping): boolean {
 //       ...errors,
 //       Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used: {
 //         ...ValidationFormlyError['Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used'],
-//         errorPath: 'templateTopic'
+//         errorPath: 'mappingTopic'
 //       }
 //     };
 //   }
@@ -251,16 +251,16 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
     // console.log('Validation options:', options);
 
-    const { templateTopic, templateTopicSample, subscriptionTopic } =
+    const { mappingTopic, mappingTopicSample, subscriptionTopic } =
       control['controls'];
-    templateTopic.setErrors(null);
-    templateTopicSample.setErrors(null);
+    mappingTopic.setErrors(null);
+    mappingTopicSample.setErrors(null);
     subscriptionTopic.setErrors(null);
 
     // avoid displaying the message error when values are empty
     if (
-      templateTopic.value == '' ||
-      templateTopicSample.value == '' ||
+      mappingTopic.value == '' ||
+      mappingTopicSample.value == '' ||
       subscriptionTopic.value == ''
     ) {
       return { required: false };
@@ -279,20 +279,20 @@ export function checkTopicsInboundAreValidWithOption(options) {
     //    +       device/#                device/+/rom/
 
     // let f = (tt, st) => new RegExp(st.split`+`.join`[^/]+`.split`#`.join`.*`).test(tt)
-    // error = !f(subscriptionTopic, templateTopic);
+    // error = !f(subscriptionTopic, mappingTopic);
     const f = (t) => (s) =>
       new RegExp(
         s.concat('@').split('+').join('[^/]+').split('#').join('.+')
       ).test(t.concat('@'));
-    error = !f(templateTopic.value)(subscriptionTopic.value);
+    error = !f(mappingTopic.value)(subscriptionTopic.value);
     if (error) {
       errors = {
         ...errors,
-        TemplateTopic_Must_Match_The_SubscriptionTopic: {
+        MappingTopic_Must_Match_The_SubscriptionTopic: {
           ...ValidationFormlyError[
-            'TemplateTopic_Must_Match_The_SubscriptionTopic'
+            'MappingTopic_Must_Match_The_SubscriptionTopic'
           ],
-          errorPath: 'templateTopic'
+          errorPath: 'mappingTopic'
         }
       };
     }
@@ -336,33 +336,33 @@ export function checkTopicsInboundAreValidWithOption(options) {
       };
     }
 
-    // count number of "#" in templateTopic
-    count_multi = (templateTopic.value.match(/#/g) || []).length;
+    // count number of "#" in mappingTopic
+    count_multi = (mappingTopic.value.match(/#/g) || []).length;
     if (count_multi >= 1) {
       errors = {
         ...errors,
-        No_Multi_Level_Wildcard_Allowed_In_TemplateTopic: {
+        No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
           ...ValidationFormlyError[
-            'No_Multi_Level_Wildcard_Allowed_In_TemplateTopic'
+            'No_Multi_Level_Wildcard_Allowed_In_MappingTopic'
           ],
-          errorPath: 'templateTopic'
+          errorPath: 'mappingTopic'
         }
       };
     }
 
-    const splitTT: string[] = splitTopicExcludingSeparator(templateTopic.value);
+    const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value);
     const splitTTS: string[] = splitTopicExcludingSeparator(
-      templateTopicSample.value
+      mappingTopicSample.value
     );
     if (splitTT.length != splitTTS.length) {
       errors = {
         ...errors,
-        TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+        MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
           {
             ...ValidationFormlyError[
-              'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+              'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
             ],
-            errorPath: 'templateTopic'
+            errorPath: 'mappingTopic'
           }
       };
     } else {
@@ -370,12 +370,12 @@ export function checkTopicsInboundAreValidWithOption(options) {
         if ('/' == splitTT[i] && !('/' == splitTTS[i])) {
           errors = {
             ...errors,
-            TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
               {
                 ...ValidationFormlyError[
-                  'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                  'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: 'templateTopic'
+                errorPath: 'mappingTopic'
               }
           };
           break;
@@ -383,12 +383,12 @@ export function checkTopicsInboundAreValidWithOption(options) {
         if ('/' == splitTTS[i] && !('/' == splitTT[i])) {
           errors = {
             ...errors,
-            TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
               {
                 ...ValidationFormlyError[
-                  'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                  'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: 'templateTopic'
+                errorPath: 'mappingTopic'
               }
           };
           break;
@@ -401,12 +401,12 @@ export function checkTopicsInboundAreValidWithOption(options) {
           if (splitTT[i] != splitTTS[i]) {
             errors = {
               ...errors,
-              TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+              MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
                 {
                   ...ValidationFormlyError[
-                    'TemplateTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                    'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                   ],
-                  errorPath: 'templateTopic'
+                  errorPath: 'mappingTopic'
                 }
             };
             break;
@@ -421,12 +421,12 @@ export function checkTopicsInboundAreValidWithOption(options) {
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
   let errors = {};
 
-  const { publishTopic, templateTopicSample } = control['controls'];
+  const { publishTopic, publishTopicSample } = control['controls'];
   publishTopic.setErrors(null);
-  templateTopicSample.setErrors(null);
+  publishTopicSample.setErrors(null);
 
   // avoid displaying the message error when values are empty
-  if (publishTopic.value == '' || templateTopicSample.value == '') {
+  if (publishTopic.value == '' || publishTopicSample.value == '') {
     return null;
   }
 
@@ -471,17 +471,17 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 
   const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value);
   const splitTTS: string[] = splitTopicExcludingSeparator(
-    templateTopicSample.value
+    publishTopicSample.value
   );
   if (splitPT.length != splitTTS.length) {
     errors = {
       ...errors,
-      PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+      PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
         {
           ...ValidationFormlyError[
-            'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+            'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
           ],
-          errorPath: 'templateTopicSample'
+          errorPath: 'publishTopicSample'
         }
     };
   } else {
@@ -489,12 +489,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
       if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
         errors = {
           ...errors,
-          PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: 'templateTopicSample'
+              errorPath: 'publishTopicSample'
             }
         };
         break;
@@ -502,12 +502,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
       if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
         errors = {
           ...errors,
-          PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+          PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
             {
               ...ValidationFormlyError[
-                'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
               ],
-              errorPath: 'templateTopicSample'
+              errorPath: 'publishTopicSample'
             }
         };
         break;
@@ -520,12 +520,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         if (splitPT[i] != splitTTS[i]) {
           errors = {
             ...errors,
-            PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
               {
                 ...ValidationFormlyError[
-                  'PublishTopic_And_TemplateTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                  'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
                 ],
-                errorPath: 'templateTopicSample'
+                errorPath: 'publishTopicSample'
               }
           };
           break;

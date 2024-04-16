@@ -1,6 +1,6 @@
 [
   {
-    "templateTopicSample": "evt/outbound/berlin_01",
+    "publishTopicSample": "evt/outbound/berlin_01",
     "ident": "ek2kpo",
     "tested": false,
     "autoAckOperation": true,
@@ -56,14 +56,15 @@
     "filterOutbound": "bus_event",
     "publishTopic": "evt/outbound/#",
     "target": "{\"deviceId\":\"909090\",\"description\":\"This is a new test event.\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"eventType\":\"TestEvent\",\"bus_event\":\"stop_event\",\"_TOPIC_LEVEL_\":[\"evt\",\"outbound\",\"berlin_01\"]}",
-    "templateTopic": "",
+    "mappingTopic": "",
     "updateExistingDevice": false,
     "mappingType": "JSON",
     "lastUpdate": 1709800167869,
+    "debug": false,
     "name": "Mapping - 51"
   },
   {
-    "templateTopicSample": "opp/outbound/berlin_01",
+    "publishTopicSample": "opp/outbound/berlin_01",
     "ident": "utnidm",
     "tested": false,
     "autoAckOperation": true,
@@ -105,10 +106,11 @@
     "filterOutbound": "bus_opp",
     "publishTopic": "opp/outbound/#",
     "target": "{\"c8y_Id\":\"909090\",\"decription\":\"dummy operation\",\"type\":\"bus_operation\",\"_TOPIC_LEVEL_\":[\"opp\",\"outbound\",\"berlin_01\"]}",
-    "templateTopic": "",
+    "mappingTopic": "",
     "updateExistingDevice": false,
     "mappingType": "JSON",
     "lastUpdate": 1709828472844,
+    "debug": false,
     "name": "Mapping - 52"
   }
 ]

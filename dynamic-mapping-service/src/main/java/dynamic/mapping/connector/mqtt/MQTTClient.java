@@ -34,8 +34,11 @@ import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import javax.net.ssl.TrustManagerFactory;
 import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
@@ -44,6 +47,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.model.Mapping;
+import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -78,11 +82,11 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("protocol",
-        new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, "mqtt://", Map.ofEntries(
-                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, "mqtt://", Map.ofEntries(
+                        new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
+                        new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
+                        new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
+                        new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
         configProps.put("mqttHost",
                 new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         configProps.put("mqttPort",
@@ -103,7 +107,9 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, null));
         configProps.put("serverPath",
                 new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "mqtt", null));
-        spec = new ConnectorSpecification(connectorType, configProps);
+        String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
+        connectorType = ConnectorType.MQTT;
+        spec = new ConnectorSpecification(description, connectorType, configProps);
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -118,6 +124,7 @@ public class MQTTClient extends AConnectorClient {
         // ensure the client knows its identity even if configuration is set to null
         this.connectorIdent = connectorConfiguration.ident;
         this.connectorName = connectorConfiguration.name;
+        // this.connectorType = connectorConfiguration.connectorType;
         this.c8yAgent = configurationRegistry.getC8yAgent();
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.objectMapper = configurationRegistry.getObjectMapper();
@@ -126,11 +133,10 @@ public class MQTTClient extends AConnectorClient {
         this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
         this.dispatcher = dispatcher;
         this.tenant = tenant;
+        this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
     }
 
     protected static final int WAIT_PERIOD_MS = 10000;
-
-    public ConnectorType connectorType = ConnectorType.MQTT;
 
     @Getter
     public ConnectorSpecification spec;
@@ -147,11 +153,14 @@ public class MQTTClient extends AConnectorClient {
 
     protected MutableBoolean connectionState = new MutableBoolean(false);
 
+    @Getter
+    protected List<QOS> supportedQOS;
+
     public boolean initialize() {
         loadConfiguration();
         Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("useSelfSignedCertificate", false);
-        log.info("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
+        log.debug("Tenant {} - Testing connector for useSelfSignedCertificate: {} ", tenant, useSelfSignedCertificate);
         if (useSelfSignedCertificate) {
             try {
                 String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
@@ -203,6 +212,7 @@ public class MQTTClient extends AConnectorClient {
             }
         }
         log.info("Tenant {} - Connector {} - Initialization of connector {} was successful!", tenant,
+                getConnectorType(),
                 getConnectorName());
         return true;
     }
@@ -235,11 +245,12 @@ public class MQTTClient extends AConnectorClient {
 
         Mqtt3ClientBuilder partialBuilder;
         if (useWSS) {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig().serverPort(mqttPort)
-            .identifier(clientId + additionalSubscriptionIdTest); 
+            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig()
+                    .serverPort(mqttPort)
+                    .identifier(clientId + additionalSubscriptionIdTest);
         } else {
             partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-            .identifier(clientId + additionalSubscriptionIdTest); 
+                    .identifier(clientId + additionalSubscriptionIdTest);
         }
 
         // is username & password used
@@ -354,7 +365,7 @@ public class MQTTClient extends AConnectorClient {
                 if (shouldConnect()) {
                     try {
                         // is not working for broker.emqx.io
-                         subscribe("$SYS/#", 0);
+                        subscribe("$SYS/#", QOS.AT_LEAST_ONCE);
                     } catch (ConnectorException e) {
                         log.warn(
                                 "Tenant {} - Error on subscribing to topic $SYS/#, this might not be supported by the mqtt broker {} {}",
@@ -424,12 +435,12 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void disconnect() {
-        updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
-        log.info("Tenant {} - Disconnecting from MQTT broker: {}", tenant,
-                (mqttClient == null ? null : mqttClient.getConfig().getServerHost()));
-
         if (isConnected()) {
-            log.debug("Tenant {} - Disconnected from MQTT broker I: {}", tenant,
+            updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTING, true, true);
+            log.info("Tenant {} - Disconnecting from broker: {}", tenant,
+                    (mqttClient == null ? (String) connectorConfiguration.getProperties().get("mqttHost")
+                            : mqttClient.getConfig().getServerHost()));
+            log.debug("Tenant {} - Disconnected from broker I: {}", tenant,
                     mqttClient.getConfig().getServerHost());
             activeSubscriptions.entrySet().forEach(entry -> {
                 // only unsubscribe if still active subscriptions exist
@@ -464,15 +475,28 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, Integer qos) throws ConnectorException {
+    public void subscribe(String topic, QOS qos) throws ConnectorException {
         log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
+        QOS usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
-        if (qos.equals(null))
-            qos = 0;
+        if (usedQOS.equals(null))
+            usedQOS = QOS.AT_LEAST_ONCE;
+        else if (!supportedQOS.contains(qos)) {
+            // determine maximum supported QOS
+            usedQOS = QOS.AT_LEAST_ONCE;
+            for (int i = 1; i < qos.ordinal(); i++) {
+                if (supportedQOS.contains(QOS.values()[i])) {
+                    usedQOS = QOS.values()[i];
+                }
+            }
+            if (usedQOS.ordinal() < qos.ordinal()) {
+                log.warn("Tenant {} - QOS {} is not supported. Using instead: {}", tenant, qos, usedQOS);
+            }
+        }
 
         // We don't need to add a handler on subscribe using hive client
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
-        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(qos)).send()
+        asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
                 .thenRun(() -> {
                     log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
                 }).exceptionally(throwable -> {

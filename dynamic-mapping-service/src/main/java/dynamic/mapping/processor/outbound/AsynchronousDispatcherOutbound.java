@@ -217,7 +217,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, c8yMessage);
-                            if (serviceConfiguration.logPayload) {
+                            if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}",
                                         tenant,
                                         context.getTopic(),

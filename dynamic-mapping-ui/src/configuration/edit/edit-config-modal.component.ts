@@ -27,6 +27,19 @@ import { uuidCustom } from '../../shared';
           s
         ></formly-form>
       </div>
+      <c8y-form-group style="margin-left: 12px; margin-right: 12px;">
+        <label style="margin-left: 4px;">
+          <span>
+            {{ 'Description' | translate }}
+          </span>
+        </label>
+        <textarea
+          rows="3"
+          class="form-control"
+          placeholder="choose connector ..."
+          >{{ description }}</textarea
+        >
+      </c8y-form-group>
       <div [formGroup]="dynamicFormly">
         <formly-form
           [form]="dynamicFormly"
@@ -47,8 +60,11 @@ export class EditConfigurationComponent implements OnInit {
   dynamicFormlyFields: FormlyFieldConfig[] = [];
   dynamicFormly: FormGroup = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
+  description: string;
 
   ngOnInit(): void {
+    this.setConnectorDescription();
+
     this.brokerFormlyFields = [
       {
         className: 'col-lg-12',
@@ -78,6 +94,15 @@ export class EditConfigurationComponent implements OnInit {
     }
   }
 
+  private setConnectorDescription() {
+    const desc = this.specifications.find(
+      (sp) => sp.connectorType == this.configuration.connectorType
+    );
+    if (desc) {
+      this.description = desc.description;
+    }
+  }
+
   onDismiss() {
     console.log('Dismiss');
     this.closeSubject.next(undefined);
@@ -94,6 +119,7 @@ export class EditConfigurationComponent implements OnInit {
     );
 
     this.configuration.connectorType = connectorType;
+    this.setConnectorDescription();
     this.dynamicFormlyFields = [];
 
     this.dynamicFormlyFields.push({
@@ -124,7 +150,7 @@ export class EditConfigurationComponent implements OnInit {
       ]
     });
     if (this.add) {
-        const n = HumanizePipe.humanize(connectorType);
+      const n = HumanizePipe.humanize(connectorType);
       this.configuration.name = `${n} - ${uuidCustom()}`;
     }
     if (dynamicFields) {
@@ -240,8 +266,8 @@ export class EditConfigurationComponent implements OnInit {
                     label: entry.key,
                     required: property.required,
                     options: Object.values(property.options).map((key) => {
-                        return { label: key, value: key };
-                      }),
+                      return { label: key, value: key };
+                    })
                   }
                 }
               ]

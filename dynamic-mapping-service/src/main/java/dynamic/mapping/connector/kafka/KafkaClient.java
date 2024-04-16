@@ -26,6 +26,7 @@ package dynamic.mapping.connector.kafka;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
+import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
@@ -99,7 +100,7 @@ public class KafkaClient extends AConnectorClient {
     }
 
     @Override
-    public void subscribe(String topic, Integer qos) throws ConnectorException {
+    public void subscribe(String topic, QOS qos) throws ConnectorException {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'subscribe'");
     }
