@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <batchMaxBytes>65536</batchMaxBytes>
+        <http>
+            <url>https://logs-prod-012.grafana.net/loki/api/v1/push</url>
+            <auth>
+                <username></username>
+                <password></password>
+            </auth>
+            <requestTimeoutMs>15000</requestTimeoutMs>
+        </http>
+        <format>
+            <label>
+                <pattern>app=dynamic-mapping-service,host=${HOSTNAME},level=%level</pattern>
+                <readMarkers>true</readMarkers>
+            </label>
+            <message>
+                <pattern>l=%level c=%logger{20} t=%thread | %msg %ex</pattern>
+            </message>
+        </format>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="LOKI" />
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
