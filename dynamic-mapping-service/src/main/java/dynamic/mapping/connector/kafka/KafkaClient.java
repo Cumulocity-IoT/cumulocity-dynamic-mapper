@@ -21,35 +21,75 @@
 
 package dynamic.mapping.connector.kafka;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
+
+import dynamic.mapping.connector.core.ConnectorProperty;
+import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
+import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.model.QOS;
+import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
+
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 
-
 @Slf4j
-
 // Use pattern to start/stop polling thread from Stackoverflow
 // https://stackoverflow.com/questions/66103052/how-do-i-stop-a-previous-thread-that-is-listening-to-kafka-topic
-public class KafkaClient extends AConnectorClient {
 
-    private KafkaConsumer<String, String> kafkaConsumer;
-    private KafkaProducer<String, String> kafkaProducer;
-    @Override
-    public boolean initialize() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'initialize'");
+public class KafkaClient extends AConnectorClient {
+    public KafkaClient() {
+        Map<String, ConnectorProperty> configProps = new HashMap<>();
+        configProps.put("bootstrapServersHost",
+                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+        configProps.put("bootstrapServersPort",
+                new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, null, null));
+        configProps.put("username",
+                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+        configProps.put("password",
+                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
+        configProps.put("groupId",
+                new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+        String description = "Generic connector for connecting to external Kafka broker.";
+        specification = new ConnectorSpecification(description, connectorType, configProps);
     }
 
+    public KafkaClient(ConfigurationRegistry configurationRegistry,
+            ConnectorConfiguration connectorConfiguration,
+            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+        this();
+        this.configurationRegistry = configurationRegistry;
+        this.mappingComponent = configurationRegistry.getMappingComponent();
+        this.serviceConfigurationComponent = configurationRegistry.getServiceConfigurationComponent();
+        this.connectorConfigurationComponent = configurationRegistry.getConnectorConfigurationComponent();
+        this.connectorConfiguration = connectorConfiguration;
+        // ensure the client knows its identity even if configuration is set to null
+        this.connectorIdent = connectorConfiguration.ident;
+        this.connectorName = connectorConfiguration.name;
+        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
+        this.objectMapper = configurationRegistry.getObjectMapper();
+        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
+        this.mappingServiceRepresentation = configurationRegistry.getMappingServiceRepresentations().get(tenant);
+        this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(tenant);
+        this.dispatcher = dispatcher;
+        this.tenant = tenant;
+    }
+
+    protected String additionalSubscriptionIdTest;
+
     @Override
-    public ConnectorSpecification getSpecification() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSpecification'");
+    public boolean initialize() {
+        loadConfiguration();
+        return true;
     }
 
     @Override
@@ -58,15 +98,68 @@ public class KafkaClient extends AConnectorClient {
     }
 
     @Override
-    public ConnectorSpecification getSpec() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getSpec'");
-    }
+    public void connect() throws InterruptedException {
+        String username = (String) connectorConfiguration.getProperties().get("username");
+        String password = (String) connectorConfiguration.getProperties().get("password");
+        String bootstrapServersHost = (String) connectorConfiguration.getProperties().get("bootstrapServersHost");
+        String bootstrapServersPort = (String) connectorConfiguration.getProperties().get("bootstrapServersHost");
+        String configBootstrapServers = String.format("%s:s%", bootstrapServersHost, bootstrapServersPort);
+        final String configTopic = "NEED_TO_BE_CHANGED";
 
-    @Override
-    public void connect() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'connect'");
+        final TopicConsumerManager topicManager = new TopicConsumerManager();
+        final TopicConsumer configConsumer = new TopicConsumer(
+                new TopicConfig(configBootstrapServers,configTopic));
+
+        configConsumer.start(new TopicConsumerListener() {
+            @Override
+            public void onStarted() {
+                System.out.println("Config consuming started.");
+            }
+
+            @Override
+            public void onStoppedByErrorAndReconnecting(final Exception error) {
+                System.out.println("Config consuming stopped by error: " +
+                            error.getLocalizedMessage() + " and reconnecting...");
+            }
+
+            @Override
+            public void onStopped() {
+                System.out.println("Config consuming stopped.");
+            }
+
+            @Override
+            public void onEvent(final byte[] key, final byte[] event) throws Exception {
+                final IdentifiableTopicConfig config = new IdentifiableTopicConfig();
+                // decode and fill-in IdentifiableTopicConfig from event bytes
+
+                System.out.println("Configuration consumed: " + config);
+
+                topicManager.execute(new MakeTopicConsumer(config, new TopicConsumerListener() {
+                    @Override
+                    public void onStarted() {
+                        System.out.println("Consuming for " + config + " started.");
+                    }
+
+                    @Override
+                    public void onStoppedByErrorAndReconnecting(final Exception error) {
+                        System.out.println("Consuming for " + config + " stopped by error: " + error.getLocalizedMessage() + " and reconnecting...");
+                    }
+
+                    @Override
+                    public void onStopped() {
+                        System.out.println("Consuming for " + config + " stopped.");
+                    }
+
+                    @Override
+                    public void onEvent(final byte[] key, final byte[] event) {
+                        System.out.println("An event consumed for " + config + '.');
+                        // ... process your event ...
+                    }
+                }));
+            }
+        });
+
+        configConsumer.close();
     }
 
     @Override
@@ -89,14 +182,12 @@ public class KafkaClient extends AConnectorClient {
 
     @Override
     public String getConnectorIdent() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getConnectorIdent'");
+        return connectorIdent;
     }
 
     @Override
     public String getConnectorName() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getConnectorName'");
+        return connectorName;
     }
 
     @Override

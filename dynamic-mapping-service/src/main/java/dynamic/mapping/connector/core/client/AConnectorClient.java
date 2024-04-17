@@ -75,6 +75,10 @@ public abstract class AConnectorClient {
 
     @Getter
     @Setter
+    public ConnectorSpecification specification;
+
+    @Getter
+    @Setter
     public ConnectorType connectorType;
 
     @Getter
@@ -147,14 +151,12 @@ public abstract class AConnectorClient {
 
     public abstract boolean initialize();
 
-    public abstract ConnectorSpecification getSpecification();
-
     public abstract Boolean supportsWildcardsInTopic();
 
     public void loadConfiguration() {
         connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
                 tenant);
-        this.connectorConfiguration.copyPredefinedValues(getSpec());
+        this.connectorConfiguration.copyPredefinedValues(getSpecification());
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -164,7 +166,6 @@ public abstract class AConnectorClient {
         // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
 
-    public abstract ConnectorSpecification getSpec();
 
     public void submitConnect() {
         loadConfiguration();

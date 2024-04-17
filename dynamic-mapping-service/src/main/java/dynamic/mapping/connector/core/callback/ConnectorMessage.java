@@ -12,6 +12,8 @@ import lombok.Setter;
 public class ConnectorMessage {
     private byte[] payload;
 
+    private byte[] key;
+
     private String[] headers;
 
     @NotNull

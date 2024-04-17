@@ -34,10 +34,8 @@ import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.net.ssl.TrustManagerFactory;
 import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
@@ -76,8 +74,6 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
-
-// This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
@@ -109,7 +105,7 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "mqtt", null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        spec = new ConnectorSpecification(description, connectorType, configProps);
+        specification = new ConnectorSpecification(description, connectorType, configProps);
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -137,9 +133,6 @@ public class MQTTClient extends AConnectorClient {
     }
 
     protected static final int WAIT_PERIOD_MS = 10000;
-
-    @Getter
-    public ConnectorSpecification spec;
 
     protected String additionalSubscriptionIdTest;
 
@@ -215,11 +208,6 @@ public class MQTTClient extends AConnectorClient {
                 getConnectorType(),
                 getConnectorName());
         return true;
-    }
-
-    @Override
-    public ConnectorSpecification getSpecification() {
-        return spec;
     }
 
     @Override
@@ -418,8 +406,8 @@ public class MQTTClient extends AConnectorClient {
             return false;
         }
         // check if all required properties are set
-        for (String property : getSpec().getProperties().keySet()) {
-            if (getSpec().getProperties().get(property).required
+        for (String property : getSpecification().getProperties().keySet()) {
+            if (getSpecification().getProperties().get(property).required
                     && configuration.getProperties().get(property) == null) {
                 return false;
             }
