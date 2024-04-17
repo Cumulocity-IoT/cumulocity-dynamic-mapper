@@ -30,9 +30,12 @@ import java.util.concurrent.Executors;
 
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingTreeNodeSerializer;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.TaskExecutor;
@@ -74,12 +77,18 @@ import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 
 import lombok.SneakyThrows;
+
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
 public class App {
+    @Bean
+    MeterRegistryCustomizer<MeterRegistry> configurer(
+            @Value("${application.name}") String applicationName) {
+        return (registry) -> registry.config().commonTags("application", applicationName);
+    }
 
     @Bean
     public TaskExecutor taskExecutor() {

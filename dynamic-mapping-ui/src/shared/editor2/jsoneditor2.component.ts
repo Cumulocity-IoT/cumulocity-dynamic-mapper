@@ -91,7 +91,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   content: Content = {
     text: undefined,
     json: {
-      greeting: 'no content'
+      content: 'no content'
     }
   };
   ngOnInit() {
