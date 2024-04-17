@@ -38,7 +38,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <revision>4.2.0-SNAPSHOT</revision>
+        <revision>4.2.1-SNAPSHOT</revision>
         <c8y.version>1020.73.0</c8y.version>
         <lombok.version>1.18.30</lombok.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -162,7 +162,7 @@
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
-                <version>3.7.0</version>
+                <version>3.6.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

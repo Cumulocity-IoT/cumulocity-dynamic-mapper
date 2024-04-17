@@ -82,6 +82,10 @@
 			<artifactId>slf4j-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
 	</dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>

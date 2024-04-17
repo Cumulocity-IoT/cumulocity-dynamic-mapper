@@ -21,8 +21,8 @@
 
 package dynamic.mapping.connector.kafka;
 
-// import org.apache.kafka.clients.consumer.KafkaConsumer;
-// import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
@@ -38,8 +38,8 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 // https://stackoverflow.com/questions/66103052/how-do-i-stop-a-previous-thread-that-is-listening-to-kafka-topic
 public class KafkaClient extends AConnectorClient {
 
-    // private KafkaConsumer<String, String> kafkaConsumer;
-    // private KafkaProducer<String, String> kafkaProducer;
+    private KafkaConsumer<String, String> kafkaConsumer;
+    private KafkaProducer<String, String> kafkaProducer;
     @Override
     public boolean initialize() {
         // TODO Auto-generated method stub
