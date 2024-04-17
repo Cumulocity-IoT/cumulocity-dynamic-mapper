@@ -41,6 +41,7 @@ Here are the **core features** summarized:
 * **Extend**  the mapper easily by using payload extensions or the provided connector interface
 * Full support of **multi-tenancy** - deploy it in your enterprise tenant and subscribe it to sub-tenants.
 
+<br/>
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapper.jpg"  style="width: 80%;" />
 </p>
@@ -197,14 +198,6 @@ The table of configured connectors to different brokers can be:
 * deleted
 * enabled / disabled
 * updated
-
-<!-- <br/>
-<p align="center" style="text-indent:70px;">
-  <a>
-    <img width="100%" src="http://g.recordit.co/dm3Qah19Ar.gif">
-  </a>
-</p>
-<br/> -->
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Overview.png"  style="width: 70%;" />
