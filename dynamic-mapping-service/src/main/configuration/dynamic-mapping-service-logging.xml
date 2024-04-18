@@ -3,6 +3,29 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
 
+    <logger name="com.cumulocity.microservice.security.filter.provider.SpringSecurityContextProvider" level="ERROR" />
+
+    <springProfile name="dev">
+        <logger name="org.springframework.web" level="INFO" />
+        <logger name="org.apache.commons.httpclient" level="INFO" />
+        <logger name="httpclient.wire" level="DEBUG" />
+        <logger name="${package}" level="DEBUG" />
+        <logger name="com.cumulocity" level="DEBUG" />
+    </springProfile>
+
+    <springProfile name="test">
+        <logger name="org.springframework.web" level="INFO" />
+        <logger name="org.apache.commons.httpclient" level="INFO" />
+        <logger name="httpclient.wire" level="INFO" />
+        <logger name="${package}" level="DEBUG" />
+        <logger name="com.cumulocity" level="DEBUG" />
+    </springProfile>
+
+    <springProfile name="prod">
+        <logger name="com.cumulocity" level="INFO" />
+        <logger name="${package}" level="INFO" />
+    </springProfile>
+
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
         <batchMaxBytes>65536</batchMaxBytes>
         <http>
