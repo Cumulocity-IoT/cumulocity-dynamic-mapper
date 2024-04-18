@@ -64,7 +64,7 @@ public class KafkaClient extends AConnectorClient {
                 new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
         configProps.put("groupId",
                 new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
-        String description = "Generic connector for connecting to external Kafka broker.";
+        String description = "Generic connector for external Kafka broker. Mappings allow to extract a value used as key in a Kafka record. The relevant setting in a mapping is  'supportsMessageContext'.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
         specification = new ConnectorSpecification(description, connectorType, configProps, true);
@@ -277,6 +277,9 @@ public class KafkaClient extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String key = currentRequest.getSource();
+        if (context.isSupportsMessageContext()) {
+            key = new String(context.getKey());
+        }
         kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));
 
         log.info("Tenant {} - Published outbound message: {} for mapping: {} on topic: {}, {}", tenant, payload,

@@ -296,7 +296,7 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent());
+        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent(), false);
         mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful

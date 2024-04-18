@@ -45,6 +45,7 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,9 +64,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
     protected ObjectMapper objectMapper;
 
     protected AConnectorClient connectorClient;
-
-    public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
-    public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
 
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
             throws IOException;
@@ -91,6 +89,14 @@ public abstract class BasePayloadProcessorOutbound<T> {
          */
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
         payloadTarget.set(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        if (mapping.supportsMessageContext) {
+            Map<String, String> cod = new HashMap<String, String>() {
+                {
+                    put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                }
+            };
+            payloadTarget.set(Mapping.TOKEN_CONTEXT_DATA, cod);
+        }
 
         String deviceSource = "undefined";
 
@@ -152,6 +158,10 @@ public abstract class BasePayloadProcessorOutbound<T> {
         } else {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     postProcessingCache.size());
+        }
+        if (mapping.supportsMessageContext) {
+            String key = payloadTarget.read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,Mapping.CONTEXT_DATA_KEY_NAME));
+            context.setKey(key.getBytes());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,

@@ -41,151 +41,152 @@ import java.util.List;
 @ToString(exclude = { "source", "target", "snoopedTemplates" })
 public class Mapping implements Serializable {
 
-  public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
-  public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
+    public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+    public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
+    public static final String CONTEXT_DATA_KEY_NAME = "key";
 
-  public static final String TIME = "time";
-  public static int SNOOP_TEMPLATES_MAX = 10;
-  public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
-  public static Mapping UNSPECIFIED_MAPPING;
+    public static final String TIME = "time";
+    public static int SNOOP_TEMPLATES_MAX = 10;
+    public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
+    public static Mapping UNSPECIFIED_MAPPING;
 
-  static {
-    UNSPECIFIED_MAPPING = new Mapping();
-    UNSPECIFIED_MAPPING.setId(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
-    UNSPECIFIED_MAPPING.setIdent(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
-  }
-
-  @NotNull
-  public String name;
-
-  @NotNull
-  public String id;
-
-  @NotNull
-  public String ident;
-
-  @NotNull
-  public String subscriptionTopic;
-
-  @NotNull
-  public String publishTopic;
-
-  @NotNull
-  public String publishTopicSample;
-
-  @NotNull
-  public String mappingTopic;
-
-  @NotNull
-  public String mappingTopicSample;
-
-  @NotNull
-  public API targetAPI;
-
-  @NotNull
-  public String source;
-
-  @NotNull
-  public String target;
-
-  @NotNull
-  public boolean active;
-
-  @NotNull
-  public boolean tested;
-
-  @NotNull
-  public QOS qos;
-
-  @NotNull
-  public MappingSubstitution[] substitutions;
-
-  @NotNull
-  public boolean mapDeviceIdentifier;
-
-  @NotNull
-  public boolean createNonExistingDevice;
-
-  @NotNull
-  public boolean updateExistingDevice;
-
-  @NotNull
-  public String externalIdType;
-
-  @NotNull
-  public SnoopStatus snoopStatus;
-
-  @NotNull
-  public ArrayList<String> snoopedTemplates;
-
-  @NotNull
-  public MappingType mappingType;
-
-  @NotNull
-  @JsonSetter(nulls = Nulls.SKIP)
-  public ExtensionEntry extension;
-
-  @NotNull
-  @JsonSetter(nulls = Nulls.SKIP)
-  public Direction direction;
-
-  @NotNull
-  @JsonSetter(nulls = Nulls.SKIP)
-  public String filterOutbound;
-
-  @NotNull
-  @JsonSetter(nulls = Nulls.SKIP)
-  public Boolean autoAckOperation;
-
-  @NotNull
-  public boolean debug;
-
-  @NotNull
-  public String messageContextKeys;
-
-  @NotNull
-  public long lastUpdate;
-
-  @Override
-  public boolean equals(Object m) {
-    return (m instanceof Mapping) && id == ((Mapping) m).id;
-  }
-
-  public void addSnoopedTemplate(String payloadMessage) {
-    snoopedTemplates.add(payloadMessage);
-    if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
-      // remove oldest payload
-      snoopedTemplates.remove(0);
-    } else {
-      snoopStatus = SnoopStatus.STARTED;
+    static {
+        UNSPECIFIED_MAPPING = new Mapping();
+        UNSPECIFIED_MAPPING.setId(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
+        UNSPECIFIED_MAPPING.setIdent(MappingStatus.IDENT_UNSPECIFIED_MAPPING);
     }
-  }
 
-  public void sortSubstitutions() {
-    MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
-        (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, direction))
-            .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, direction)))))
-        .toArray(size -> new MappingSubstitution[size]);
-    substitutions = sortedSubstitutions;
-  }
+    @NotNull
+    public String name;
 
-  public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
-    topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "/");
-    return topic.split(SPLIT_TOPIC_REGEXP);
-  }
+    @NotNull
+    public String id;
 
-  public static List<String> splitTopicIncludingSeparatorAsList(String topic) {
-    return new ArrayList<String>(
-        Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
-  }
+    @NotNull
+    public String ident;
 
-  public static String[] splitTopicExcludingSeparatorAsArray(String topic) {
-    topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
-    return topic.split("\\/");
-  }
+    @NotNull
+    public String subscriptionTopic;
 
-  public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
-    return new ArrayList<String>(
-        Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
-  }
+    @NotNull
+    public String publishTopic;
+
+    @NotNull
+    public String publishTopicSample;
+
+    @NotNull
+    public String mappingTopic;
+
+    @NotNull
+    public String mappingTopicSample;
+
+    @NotNull
+    public API targetAPI;
+
+    @NotNull
+    public String source;
+
+    @NotNull
+    public String target;
+
+    @NotNull
+    public boolean active;
+
+    @NotNull
+    public boolean tested;
+
+    @NotNull
+    public QOS qos;
+
+    @NotNull
+    public MappingSubstitution[] substitutions;
+
+    @NotNull
+    public boolean mapDeviceIdentifier;
+
+    @NotNull
+    public boolean createNonExistingDevice;
+
+    @NotNull
+    public boolean updateExistingDevice;
+
+    @NotNull
+    public String externalIdType;
+
+    @NotNull
+    public SnoopStatus snoopStatus;
+
+    @NotNull
+    public ArrayList<String> snoopedTemplates;
+
+    @NotNull
+    public MappingType mappingType;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public ExtensionEntry extension;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Direction direction;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String filterOutbound;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean autoAckOperation;
+
+    @NotNull
+    public boolean debug;
+
+    @NotNull
+    public boolean supportsMessageContext;
+
+    @NotNull
+    public long lastUpdate;
+
+    @Override
+    public boolean equals(Object m) {
+        return (m instanceof Mapping) && id == ((Mapping) m).id;
+    }
+
+    public void addSnoopedTemplate(String payloadMessage) {
+        snoopedTemplates.add(payloadMessage);
+        if (snoopedTemplates.size() > SNOOP_TEMPLATES_MAX) {
+            // remove oldest payload
+            snoopedTemplates.remove(0);
+        } else {
+            snoopStatus = SnoopStatus.STARTED;
+        }
+    }
+
+    public void sortSubstitutions() {
+        MappingSubstitution[] sortedSubstitutions = Arrays.stream(substitutions).sorted(
+                (s1, s2) -> -(Boolean.valueOf(s1.definesDeviceIdentifier(targetAPI, direction))
+                        .compareTo(Boolean.valueOf(s2.definesDeviceIdentifier(targetAPI, direction)))))
+                .toArray(size -> new MappingSubstitution[size]);
+        substitutions = sortedSubstitutions;
+    }
+
+    public static String[] splitTopicIncludingSeparatorAsArray(String topic) {
+        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "/");
+        return topic.split(SPLIT_TOPIC_REGEXP);
+    }
+
+    public static List<String> splitTopicIncludingSeparatorAsList(String topic) {
+        return new ArrayList<String>(
+                Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
+    }
+
+    public static String[] splitTopicExcludingSeparatorAsArray(String topic) {
+        topic = topic.trim().replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
+        return topic.split("\\/");
+    }
+
+    public static List<String> splitTopicExcludingSeparatorAsList(String topic) {
+        return new ArrayList<String>(
+                Arrays.asList(Mapping.splitTopicExcludingSeparatorAsArray(topic)));
+    }
 }

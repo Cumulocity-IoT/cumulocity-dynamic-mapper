@@ -27,7 +27,7 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
-import { AbstractControl, FormGroup } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
@@ -435,24 +435,42 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           }
         ]
       },
+    //   {
+    //     fieldGroupClassName: 'row',
+    //     fieldGroup: [
+    //       {
+    //         className: 'col-lg-6',
+    //         key: 'messageContextKeys',
+    //         type: 'input',
+    //         validators: {
+    //             messageContextKeys: {
+    //               expression: (c: AbstractControl) => /(^[a-zA-Z][a-zA-Z0-9_]*([ ]*,[ ]*[a-zA-Z][a-zA-Z0-9_]*)*$|^$)/.test(c.value),
+    //               message: (error: any, field: FormlyFieldConfig) => `"${field.formControl.value}" is not a valid list of keys`,
+    //             },
+    //           },
+    //         templateOptions: {
+    //           label: 'Message context keys',
+    //           disabled:
+    //             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+    //             description: 'Comma separated list of names for keys, e.g. partition keys for Kafka',
+    //         },
+    //       }
+    //     ]
+    //   }
       {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
             className: 'col-lg-6',
-            key: 'messageContextKeys',
-            type: 'input',
-            validators: {
-                messageContextKeys: {
-                  expression: (c: AbstractControl) => /(^[a-zA-Z][a-zA-Z0-9_]*([ ]*,[ ]*[a-zA-Z][a-zA-Z0-9_]*)*$|^$)/.test(c.value),
-                  message: (error: any, field: FormlyFieldConfig) => `"${field.formControl.value}" is not a valid list of keys`,
-                },
-              },
+            key: 'supportsMessageContext',
+            type: 'switch',
+            wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: 'Message context keys',
+              switchMode: true,
+              label: 'Supports key message context',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-                description: 'Comma separated list of names for keys, e.g. partition keys for Kafka',
+                description: 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
             },
           }
         ]

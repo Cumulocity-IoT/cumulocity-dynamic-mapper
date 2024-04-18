@@ -80,6 +80,7 @@ public class ProcessingContext<O> {
 
     private boolean supportsMessageContext = false;
 
+    private byte[] key;
 
     public static final String SOURCE_ID = "source.id";
 

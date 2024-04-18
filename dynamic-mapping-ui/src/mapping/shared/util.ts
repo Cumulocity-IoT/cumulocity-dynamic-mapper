@@ -38,6 +38,7 @@ export function getTypedValue(subValue: SubstituteValue): any {
 
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
 export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
+export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 /*
  * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
@@ -584,10 +585,21 @@ export function expandExternalTemplate(
   if (Array.isArray(template)) {
     return template;
   } else {
-    if (mapping.messageContextKeys) {
-      const keys = mapping.messageContextKeys.split(',').map(function (item) {
-        return item.trim();
-      });
+    // if (mapping.messageContextKeys) {
+    //     const keys = mapping.messageContextKeys.split(',').map(function (item) {
+    //       return item.trim();
+    //     });
+    //     return {
+    //       ...template,
+    //       _TOPIC_LEVEL_: levels,
+    //       _CONTEXT_DATA_: keys.reduce((obj, key) => {
+    //         obj[key] = `${key}-sample`;
+    //         return obj;
+    //       }, {})
+    //     };
+    //   }
+    if (mapping.supportsMessageContext) {
+      const keys = [CONTEXT_DATA_KEY_NAME];
       return {
         ...template,
         _TOPIC_LEVEL_: levels,
