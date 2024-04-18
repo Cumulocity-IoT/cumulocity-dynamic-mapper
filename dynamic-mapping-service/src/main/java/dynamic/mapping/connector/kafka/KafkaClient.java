@@ -66,7 +66,8 @@ public class KafkaClient extends AConnectorClient {
                 new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         String description = "Generic connector for connecting to external Kafka broker.";
         connectorType = ConnectorType.KAFKA;
-        specification = new ConnectorSpecification(description, connectorType, configProps);
+        supportsMessageContext = true;
+        specification = new ConnectorSpecification(description, connectorType, configProps, true);
     }
 
     public KafkaClient(ConfigurationRegistry configurationRegistry,
@@ -188,7 +189,6 @@ public class KafkaClient extends AConnectorClient {
                     updateActiveSubscriptions(updatedMappings, true);
                 }
 
-
                 kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
                 successful = true;
             } catch (Exception e) {
@@ -256,7 +256,7 @@ public class KafkaClient extends AConnectorClient {
                 new TopicConfig(bootstrapServers, topic, username, password, tenant, defaultPropertiesConsumer));
         consumerList.put(topic, kafkaConsumer);
         TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
-                topic);
+                topic, true);
         kafkaConsumer.start(topicConsumerCallback);
     }
 

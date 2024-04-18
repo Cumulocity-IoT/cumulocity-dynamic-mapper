@@ -148,6 +148,10 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorStatusEvent connectorStatus = ConnectorStatusEvent.unknown();
 
+    @Getter
+    @Setter
+    public Boolean supportsMessageContext;
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.debug("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
@@ -298,6 +302,7 @@ public abstract class AConnectorClient {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
         message.setTenant(tenant);
+        message.setSupportsMessageContext(getSupportsMessageContext());
         message.setTopic(topic);
         message.setSendPayload(sendPayload);
         message.setConnectorIdent(getConnectorIdent());

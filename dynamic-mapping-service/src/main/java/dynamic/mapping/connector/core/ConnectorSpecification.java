@@ -28,6 +28,10 @@ public class ConnectorSpecification implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public Map<String, ConnectorProperty> properties;
 
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean supportsMessageContext;
+
     public boolean isPropertySensitive(String property) {
         return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == properties.get(property).type;
     }

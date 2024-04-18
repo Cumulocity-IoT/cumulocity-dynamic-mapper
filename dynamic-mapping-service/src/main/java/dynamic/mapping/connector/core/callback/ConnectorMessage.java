@@ -20,9 +20,11 @@ public class ConnectorMessage {
     private String tenant;
 
     private String topic;
-    
+
     @NotNull
     private String connectorIdent;
 
     private boolean sendPayload;
+
+    private boolean supportsMessageContext;
 }

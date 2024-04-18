@@ -9,10 +9,13 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
 
+@Slf4j
 public class Topic implements AutoCloseable {
     private final TopicConfig topicConfig;
 
@@ -21,7 +24,7 @@ public class Topic implements AutoCloseable {
     public Topic(final TopicConfig topicConfig) {
         this.topicConfig = topicConfig;
 
-        final Properties props =  SerializationUtils.clone(topicConfig.getDefaultPropertiesConsumer());
+        final Properties props = SerializationUtils.clone(topicConfig.getDefaultPropertiesConsumer());
 
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, topicConfig.getBootstrapServers());
         // this is a common topic consumer, so we just pull byte arrays and pass them
@@ -62,13 +65,30 @@ public class Topic implements AutoCloseable {
             final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(10));
             for (ConsumerRecord<byte[], byte[]> record : records) {
                 try {
-                    listener.onEvent(record.key(), record.value());
+                    Object key = record.key();
+                    Object event = record.value();
+                    byte[] keyByte;
+                    byte[] eventByte;
+                    if (key instanceof String) {
+                        keyByte = ((String) key).getBytes();
+                    } else {
+                        keyByte = record.key();
+                    }
+                    if (event instanceof String) {
+                        eventByte = ((String) event).getBytes();
+                    } else {
+                        eventByte = record.key();
+                    }
+                    listener.onEvent(keyByte, eventByte);
                 } catch (final InterruptedException e) { // can be thrown by a blocking operation inside onEvent()
                     throw new org.apache.kafka.common.errors.InterruptException(e);
-                } catch (final Exception e) {
+                } catch (final Exception error) {
                     // just log ("Unexpected error while listener.onEvent() notification", e)
                     // don't corrupt the consuming loop because of
                     // an error in a listener
+                    log.error("Tenant {} - Failed to process message on topic {} with error: ", topicConfig.getTenant(),
+                            topicConfig.getTopic(),
+                            error);
                 }
             }
         }

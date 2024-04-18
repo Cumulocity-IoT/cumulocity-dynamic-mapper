@@ -67,7 +67,7 @@ public class MQTTServiceClient extends MQTTClient {
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, null));
         String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QOS 'exactly once' is reduced to 'at least once'.";
         connectorType = ConnectorType.MQTT_SERVICE;
-        specification = new ConnectorSpecification(description, connectorType, configProps);
+        specification = new ConnectorSpecification(description, connectorType, configProps, false);
     }
 
     private static Random random = new Random();

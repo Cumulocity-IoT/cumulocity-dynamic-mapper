@@ -78,6 +78,9 @@ public class ProcessingContext<O> {
 
     private ServiceConfiguration serviceConfiguration;
 
+    private boolean supportsMessageContext = false;
+
+
     public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {

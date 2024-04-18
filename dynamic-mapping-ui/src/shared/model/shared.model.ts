@@ -56,6 +56,7 @@ export interface Mapping {
   filterOutbound?: string;
   autoAckOperation?: boolean;
   debug?: boolean;
+  messageContextKeys?: string;
   lastUpdate: number;
 }
 

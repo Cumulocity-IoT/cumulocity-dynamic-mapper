@@ -42,6 +42,7 @@ import java.util.List;
 public class Mapping implements Serializable {
 
   public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+  public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
 
   public static final String TIME = "time";
   public static int SNOOP_TEMPLATES_MAX = 10;
@@ -138,6 +139,9 @@ public class Mapping implements Serializable {
 
   @NotNull
   public boolean debug;
+
+  @NotNull
+  public String messageContextKeys;
 
   @NotNull
   public long lastUpdate;
