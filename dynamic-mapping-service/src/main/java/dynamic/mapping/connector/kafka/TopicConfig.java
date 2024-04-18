@@ -21,32 +21,27 @@
 
 package dynamic.mapping.connector.kafka;
 
+import java.util.Properties;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class TopicConfig {
     private String bootstrapServers;
     private String topic;
+    private String username;
+    private String password;
+    private Properties defaultPropertiesConsumer;
 
-    public TopicConfig() {
-    }
-
-    public TopicConfig(final String bootstrapServers, final String topic) {
+    public TopicConfig(String bootstrapServers, String topic, String username, String password,
+            Properties defaultPropertiesConsumer) {
         this.bootstrapServers = bootstrapServers;
         this.topic = topic;
-    }
-
-    public String getBootstrapServers() {
-        return bootstrapServers;
-    }
-
-    public void setBootstrapServers(final String bootstrapServers) {
-        this.bootstrapServers = bootstrapServers;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(final String topic) {
-        this.topic = topic;
+        this.username = username;
+        this.password = password;
+        this.defaultPropertiesConsumer = defaultPropertiesConsumer;
     }
 
     @Override

@@ -25,15 +25,15 @@ package dynamic.mapping.connector.kafka;
  * A command
  */
 public class MakeTopicConsumer {
-    private final IdentifiableTopicConfig config;
+    private final TopicConfig config;
     private final TopicConsumerListener listener;
 
-    public MakeTopicConsumer(final IdentifiableTopicConfig config, final TopicConsumerListener listener) {
+    public MakeTopicConsumer(final TopicConfig config, final TopicConsumerListener listener) {
         this.config = config;
         this.listener = listener;
     }
 
-    public IdentifiableTopicConfig getConfig() {
+    public TopicConfig getConfig() {
         return config;
     }
 

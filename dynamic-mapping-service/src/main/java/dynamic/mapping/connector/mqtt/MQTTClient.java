@@ -132,10 +132,6 @@ public class MQTTClient extends AConnectorClient {
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
     }
 
-    protected static final int WAIT_PERIOD_MS = 10000;
-
-    protected String additionalSubscriptionIdTest;
-
     protected AConnectorClient.Certificate cert;
 
     protected MqttClientSslConfig sslConfig;
@@ -143,8 +139,6 @@ public class MQTTClient extends AConnectorClient {
     protected MQTTCallback mqttCallback = null;
 
     protected Mqtt3BlockingClient mqttClient;
-
-    protected MutableBoolean connectionState = new MutableBoolean(false);
 
     @Getter
     protected List<QOS> supportedQOS;
@@ -213,9 +207,8 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public void connect() {
         updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
-
-        log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
-                tenant, isConnected(),
+        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+                tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
             disconnect();
@@ -312,7 +305,8 @@ public class MQTTClient extends AConnectorClient {
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Establishing the MQTT connection now - phase II: {} {}", tenant,
+                log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+                        getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
                     try {
@@ -378,16 +372,6 @@ public class MQTTClient extends AConnectorClient {
                 successful = false;
             }
         }
-    }
-
-    protected void updateConnectorStatusToFailed(Exception e) {
-        String msg = " --- " + e.getClass().getName() + ": "
-                + e.getMessage();
-        if (!(e.getCause() == null)) {
-            msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
-        }
-        connectorStatus.setMessage(msg);
-        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false, true);
     }
 
     @Override

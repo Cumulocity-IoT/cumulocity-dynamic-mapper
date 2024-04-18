@@ -44,6 +44,7 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
@@ -69,9 +70,15 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
+    protected static final int WAIT_PERIOD_MS = 10000;
+
     protected String connectorIdent;
 
     protected String connectorName;
+
+    protected String additionalSubscriptionIdTest;
+
+    protected MutableBoolean connectionState = new MutableBoolean(false);
 
     @Getter
     @Setter
@@ -165,7 +172,6 @@ public abstract class AConnectorClient {
 
         // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
-
 
     public void submitConnect() {
         loadConfiguration();
@@ -512,6 +518,16 @@ public abstract class AConnectorClient {
         if (send) {
             sendConnectorLifecycle();
         }
+    }
+
+    protected void updateConnectorStatusToFailed(Exception e) {
+        String msg = " --- " + e.getClass().getName() + ": "
+                + e.getMessage();
+        if (!(e.getCause() == null)) {
+            msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
+        }
+        connectorStatus.setMessage(msg);
+        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false, true);
     }
 
     @Data

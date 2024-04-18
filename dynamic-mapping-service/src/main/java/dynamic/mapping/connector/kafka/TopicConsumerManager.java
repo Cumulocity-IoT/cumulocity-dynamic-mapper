@@ -61,7 +61,7 @@ import java.util.HashMap;
         }
 
         private class CommandExecutor extends Thread {
-            private final Map<Integer, TopicConsumer> consumers = new HashMap<>();
+            private final Map<String, TopicConsumer> consumers = new HashMap<>();
             private final BlockingQueue<Object> commands;
 
             public CommandExecutor(final BlockingQueue<Object> commands) {
@@ -78,13 +78,13 @@ import java.util.HashMap;
                             if (command instanceof MakeTopicConsumer) {
                                 final MakeTopicConsumer makeTc = (MakeTopicConsumer) command;
 
-                                final TopicConsumer oldTc = consumers.get(makeTc.getConfig().getId());
+                                final TopicConsumer oldTc = consumers.get(makeTc.getConfig().getTopic());
                                 if (oldTc != null) {
                                     oldTc.close();
                                 }
 
                                 final TopicConsumer newTc = new TopicConsumer(makeTc.getConfig());
-                                consumers.put(makeTc.getConfig().getId(), newTc);
+                                consumers.put(makeTc.getConfig().getTopic(), newTc);
 
                                 newTc.start(makeTc.getListener());
                             }
