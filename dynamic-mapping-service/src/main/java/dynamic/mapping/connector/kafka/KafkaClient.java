@@ -38,6 +38,7 @@ import dynamic.mapping.connector.core.ConnectorPropertyType;
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorException;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.model.Mapping;
@@ -58,12 +59,13 @@ public class KafkaClient extends AConnectorClient {
         configProps.put("bootstrapServers",
                 new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         configProps.put("username",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         configProps.put("password",
-                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
         configProps.put("groupId",
-                new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         String description = "Generic connector for connecting to external Kafka broker.";
+        connectorType = ConnectorType.KAFKA;
         specification = new ConnectorSpecification(description, connectorType, configProps);
     }
 
@@ -89,7 +91,7 @@ public class KafkaClient extends AConnectorClient {
         this.tenant = tenant;
         this.connectionState.setFalse();
 
-        this.defaultPropertiesProducer = new Properties();
+        defaultPropertiesProducer = new Properties();
         // String jaasTemplate =
         // "org.apache.kafka.common.security.scram.ScramLoginModule required
         // username=\"%s\" password=\"%s\";";
@@ -97,21 +99,21 @@ public class KafkaClient extends AConnectorClient {
         String serializer = StringSerializer.class.getName();
         // defaultPropertiesConsumer.put("bootstrap.servers",
         // "glider.srvs.cloudkafka.com:9094");
-        defaultPropertiesConsumer.put("key.serializer", serializer);
-        defaultPropertiesConsumer.put("value.serializer", serializer);
-        defaultPropertiesConsumer.put("security.protocol", "SASL_SSL");
-        defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
-        // defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
-        defaultPropertiesConsumer.put("linger.ms", 1);
-        defaultPropertiesConsumer.put("enable.idempotence", false);
+        defaultPropertiesProducer.put("key.serializer", serializer);
+        defaultPropertiesProducer.put("value.serializer", serializer);
+        defaultPropertiesProducer.put("security.protocol", "SASL_SSL");
+        defaultPropertiesProducer.put("sasl.mechanism", "SCRAM-SHA-256");
+        // defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+        defaultPropertiesProducer.put("linger.ms", 1);
+        defaultPropertiesProducer.put("enable.idempotence", false);
 
         String deserializer = StringDeserializer.class.getName();
         defaultPropertiesConsumer = new Properties();
         // defaultPropertiesConsumer.put("bootstrap.servers",
         // "glider.srvs.cloudkafka.com:9094");
         // defaultPropertiesConsumer.put("group.id", username + "-consumer");
-        defaultPropertiesConsumer.put("enable.auto.commit", "true");
-        defaultPropertiesConsumer.put("auto.commit.interval.ms", "1000");
+        // defaultPropertiesConsumer.put("enable.auto.commit", "true");
+        // defaultPropertiesConsumer.put("auto.commit.interval.ms", "1000");
         defaultPropertiesConsumer.put("auto.offset.reset", "earliest");
         defaultPropertiesConsumer.put("session.timeout.ms", "30000");
         defaultPropertiesConsumer.put("key.deserializer", deserializer);
@@ -125,10 +127,9 @@ public class KafkaClient extends AConnectorClient {
     }
 
     private String bootstrapServers;
-
     private String password;
-
     private String username;
+    private String groupId;
 
     private HashMap<String, TopicConsumer> consumerList = new HashMap<String, TopicConsumer>();
 
@@ -161,6 +162,15 @@ public class KafkaClient extends AConnectorClient {
         boolean successful = false;
         while (!successful) {
             loadConfiguration();
+            username = (String) connectorConfiguration.getProperties().get("username");
+            password = (String) connectorConfiguration.getProperties().get("password");
+            groupId = (String) connectorConfiguration.getProperties().get("groupId");
+            bootstrapServers = (String) connectorConfiguration.getProperties().get("bootstrapServers");
+            String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
+            String jaasCfg = String.format(jaasTemplate, username, password);
+            defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
+            defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            defaultPropertiesConsumer.put("group.id", groupId);
             log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
                     getConnectorName(),
                     shouldConnect(), bootstrapServers);
@@ -177,10 +187,7 @@ public class KafkaClient extends AConnectorClient {
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptions(updatedMappings, true);
                 }
-                String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-                String jaasCfg = String.format(jaasTemplate, username, password);
-                defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
-                defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+
 
                 kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
                 successful = true;
@@ -246,7 +253,7 @@ public class KafkaClient extends AConnectorClient {
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
         TopicConsumer kafkaConsumer = new TopicConsumer(
-                new TopicConfig(bootstrapServers, topic, username, password, defaultPropertiesConsumer));
+                new TopicConfig(bootstrapServers, topic, username, password, tenant, defaultPropertiesConsumer));
         consumerList.put(topic, kafkaConsumer);
         TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
                 topic);

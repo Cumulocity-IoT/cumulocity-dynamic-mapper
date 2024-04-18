@@ -31,16 +31,18 @@ import lombok.Setter;
 public class TopicConfig {
     private String bootstrapServers;
     private String topic;
+    private String tenant;
     private String username;
     private String password;
     private Properties defaultPropertiesConsumer;
 
-    public TopicConfig(String bootstrapServers, String topic, String username, String password,
+    public TopicConfig(String bootstrapServers, String topic, String username, String password, String tenant,
             Properties defaultPropertiesConsumer) {
         this.bootstrapServers = bootstrapServers;
         this.topic = topic;
         this.username = username;
         this.password = password;
+        this.tenant = tenant;
         this.defaultPropertiesConsumer = defaultPropertiesConsumer;
     }
 

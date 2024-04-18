@@ -37,6 +37,7 @@ export function getTypedValue(subValue: SubstituteValue): any {
 }
 
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
+export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
 export const TIME = 'time';
 /*
  * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]

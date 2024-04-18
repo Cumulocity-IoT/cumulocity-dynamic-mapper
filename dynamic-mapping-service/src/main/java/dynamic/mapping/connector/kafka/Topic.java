@@ -1,5 +1,6 @@
 package dynamic.mapping.connector.kafka;
 
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -20,14 +21,15 @@ public class Topic implements AutoCloseable {
     public Topic(final TopicConfig topicConfig) {
         this.topicConfig = topicConfig;
 
-        final Properties props = new Properties(topicConfig.getDefaultPropertiesConsumer());
+        final Properties props =  SerializationUtils.clone(topicConfig.getDefaultPropertiesConsumer());
+
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, topicConfig.getBootstrapServers());
         // this is a common topic consumer, so we just pull byte arrays and pass them
         // to a listener, we don't do any decoding in here
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-		String jaasCfg = String.format(jaasTemplate, topicConfig.getUsername(), topicConfig.getPassword());
+        String jaasCfg = String.format(jaasTemplate, topicConfig.getUsername(), topicConfig.getPassword());
         props.put("sasl.jaas.config", jaasCfg);
 
         consumer = new KafkaConsumer<>(props);

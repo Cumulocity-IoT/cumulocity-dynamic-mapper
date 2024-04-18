@@ -17,6 +17,7 @@ import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -39,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ConfigurationRegistry {
 
     @Getter
-    private Map <String, MicroserviceCredentials> microserviceCredentials = new HashMap <>();
+    private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
 
     // structure: <tenant, <mappingType, mappingServiceRepresentation>>
     @Getter
@@ -139,6 +140,12 @@ public class ConfigurationRegistry {
                     null,
                     additionalSubscriptionIdTest, tenant);
             log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        } else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new KafkaClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
                     connectorConfiguration.getIdent());
         }
         return connectorClient;

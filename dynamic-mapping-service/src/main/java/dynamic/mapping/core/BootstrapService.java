@@ -10,7 +10,7 @@ import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapping.model.Mapping;
+import dynamic.mapping.connector.kafka.KafkaClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
@@ -114,8 +114,9 @@ public class BootstrapService {
         mappingComponent.rebuildMappingInboundCache(tenant);
 
         // TODO Add other clients static property definition here
-        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpec());
-        connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpec());
+        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpecification());
+        connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpecification());
+        connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getSpecification());
 
         try {
             if (serviceConfiguration != null) {
