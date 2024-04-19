@@ -82,6 +82,8 @@ public class ProcessingContext<O> {
 
     private byte[] key;
 
+    private String source;
+
     public static final String SOURCE_ID = "source.id";
 
     public boolean hasError() {

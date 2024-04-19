@@ -30,6 +30,7 @@ import com.jayway.jsonpath.PathNotFoundException;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -76,8 +77,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
          */
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        // if there are to little device idenfified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         Set<String> pathTargets = postProcessingCache.keySet();
 
@@ -88,17 +89,22 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * is required in the payload for a substitution
          */
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        payloadTarget.set(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
         if (mapping.supportsMessageContext) {
             Map<String, String> cod = new HashMap<String, String>() {
                 {
                     put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                 }
             };
-            payloadTarget.set(Mapping.TOKEN_CONTEXT_DATA, cod);
+            payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
+        }
+        if (serviceConfiguration.logPayload || mapping.debug) {
+            String patchedPayloadTarget = payloadTarget.jsonString();
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, patchedPayloadTarget,
+                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
-        String deviceSource = "undefined";
+        String deviceSource = context.getSource();
 
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
@@ -136,7 +142,14 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
             }
             // remove TOPIC_LEVEL
-            payloadTarget.delete(Mapping.TOKEN_TOPIC_LEVEL);
+            payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
+            if (mapping.supportsMessageContext) {
+                String key = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+                context.setKey(key.getBytes());
+                // remove TOKEN_CONTEXT_DATA
+                payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
+            }
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
                             payloadTarget.jsonString(),
@@ -158,10 +171,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
         } else {
             log.warn("Tenant {} - Ignoring payload: {}, {}, {}", tenant, payloadTarget, mapping.targetAPI,
                     postProcessingCache.size());
-        }
-        if (mapping.supportsMessageContext) {
-            String key = payloadTarget.read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA,Mapping.CONTEXT_DATA_KEY_NAME));
-            context.setKey(key.getBytes());
         }
         log.debug("Tenant {} - Added payload for sending: {}, {}, numberDevices: {}", tenant, payloadTarget,
                 mapping.targetAPI,

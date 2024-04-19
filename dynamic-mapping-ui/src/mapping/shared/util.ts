@@ -640,6 +640,10 @@ export function reduceSourceTemplate(
 }
 
 export function reduceTargetTemplate(template: object): string {
+  if (template) {
+    delete template[TOKEN_TOPIC_LEVEL];
+    delete template[TOKEN_CONTEXT_DATA];
+  }
   const tt = JSON.stringify(template);
   return tt;
 }

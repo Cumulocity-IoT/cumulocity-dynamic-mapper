@@ -72,7 +72,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
 
         String payload = payloadJsonNode.toPrettyString();
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+            log.info("Tenant {} - Incoming payload in extractFromSource(): {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
         }
 
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -143,7 +143,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                 } else if (extractedSourceContent.isTextual()) {
                     if (ps.equals(MappingRepresentation.findDeviceIdentifier(mapping).pathSource)
                             && substitution.resolve2ExternalId) {
-                        log.info("Tenant {} - Findind external Id: resolveGlobalId2ExternalId: {}, {}, {}",
+                        log.info("Tenant {} - Finding external Id: resolveGlobalId2ExternalId: {}, {}, {}",
                                 context.getTenant(), ps, extractedSourceContent.toPrettyString(),
                                 extractedSourceContent.asText());
                         ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
@@ -163,6 +163,7 @@ public class JSONProcessorOutbound extends BasePayloadProcessorOutbound<JsonNode
                             new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                     MappingSubstitution.SubstituteValue.TYPE.TEXTUAL, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
+                    context.setSource(extractedSourceContent.asText());
                 } else if (extractedSourceContent.isNumber()) {
                     context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
                     postProcessingCacheEntry

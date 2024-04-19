@@ -28,13 +28,13 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 public class KafkaClient {
-    KafkaProducer <String,String> testClient;
+    KafkaProducer<String, String> testClient;
     static String broker_host = System.getenv("broker_host");
     static String broker_username = System.getenv("broker_username");
     static String broker_password = System.getenv("broker_password");
     static String topic = System.getenv("topic");
 
-    public KafkaClient(KafkaProducer <String,String> sampleClient) {
+    public KafkaClient(KafkaProducer<String, String> sampleClient) {
         testClient = sampleClient;
     }
 
@@ -51,6 +51,7 @@ public class KafkaClient {
         props.put("security.protocol", "SASL_SSL");
         props.put("sasl.mechanism", "SCRAM-SHA-256");
         props.put("sasl.jaas.config", jaasCfg);
+        props.put("group.id", "ednvcfnr-mapper");
         props.put("linger.ms", 1);
         props.put("enable.idempotence", false);
 
@@ -70,6 +71,7 @@ public class KafkaClient {
         String key = "863859042393327";
 
         testClient.send(new ProducerRecord<String, String>(topic, key, payload));
+        testClient.close();
 
         System.out.println("Message published");
         System.out.println("Disconnected");

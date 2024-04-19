@@ -230,8 +230,10 @@ public class KafkaClient extends AConnectorClient {
                 }
             });
 
+            connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             updateActiveSubscriptions(null, true);
+            kafkaProducer.close();
             log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
         }

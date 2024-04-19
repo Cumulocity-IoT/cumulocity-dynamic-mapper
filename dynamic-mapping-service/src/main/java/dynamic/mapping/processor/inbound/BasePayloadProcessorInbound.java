@@ -76,7 +76,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
-        // if there are to little device idenfified then we replicate the first device
+        // if there are too few devices identified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         String maxEntry = postProcessingCache.entrySet()
                 .stream()
