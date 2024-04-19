@@ -22,6 +22,7 @@
 package dynamic.mapping.connector.kafka;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -258,6 +259,34 @@ public class KafkaClient extends AConnectorClient {
         TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
                 topic, true);
         kafkaConsumer.start(topicConsumerCallback);
+    }
+
+    @Override
+    public void monitorSubscriptions() {
+
+        // for (Iterator<Map.Entry<String, Mapping>> me =
+        // getMappingsDeployed().entrySet().iterator(); me.hasNext();) {
+        Iterator<String> it = getMappingsDeployed().keySet().iterator();
+        while (it.hasNext()) {
+            String mapIdent = it.next();
+            Mapping map = getMappingsDeployed().get(mapIdent);
+            // test if topicConsumer was started successfully
+            if (consumerList.containsKey(map.subscriptionTopic)) {
+                TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
+                if (kafkaConsumer.shouldStop()) {
+                    try {
+                        // kafkaConsumer.close();
+                        unsubscribe(mapIdent);
+                        getMappingsDeployed().remove(map.ident);
+                        log.warn(
+                                "Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
+                                tenant, map.subscriptionTopic, map, getConnectorName());
+                    } catch (Exception e) {
+                        // ignore interrupt
+                    }
+                }
+            }
+        }
     }
 
     @Override

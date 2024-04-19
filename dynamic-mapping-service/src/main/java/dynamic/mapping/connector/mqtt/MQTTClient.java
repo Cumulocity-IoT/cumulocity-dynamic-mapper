@@ -506,4 +506,9 @@ public class MQTTClient extends AConnectorClient {
         return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
     }
 
+    @Override
+    public void monitorSubscriptions() {
+        // nothing to do
+    }
+
 }

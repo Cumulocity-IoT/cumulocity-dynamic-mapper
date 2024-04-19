@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -128,9 +129,9 @@ public abstract class AConnectorClient {
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     // structure < ident, mapping >
-    // public Map<String, Mapping> subscribedMappings = new HashMap<>();
+    // public Map<String, Mapping> subscribedMappings = new ConcurrentHashMap<>();
     @Getter
-    private List<String> mappingsDeployed = new ArrayList<>();
+    private Map<String, Mapping> mappingsDeployed = new ConcurrentHashMap<>();
 
     private Instant start = Instant.now();
 
@@ -210,6 +211,12 @@ public abstract class AConnectorClient {
      ***/
     public abstract void connect();
 
+
+    /***
+     * This method if specifically for Kafka, since it does not have the concept of a client. Kafka rather supports consumer on topic level. They can fail to connect
+     ***/
+    public abstract void monitorSubscriptions();
+
     /***
      * Should return true when connector is enabled and provided properties are
      * valid
@@ -288,6 +295,8 @@ public abstract class AConnectorClient {
             } else {
                 sendConnectorLifecycle();
             }
+            // remove failed subscriptions
+            monitorSubscriptions();
         } catch (Exception ex) {
             log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
@@ -357,8 +366,8 @@ public abstract class AConnectorClient {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                     getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
                 }
-                if (!getMappingsDeployed().contains(mapping.ident)) {
-                    getMappingsDeployed().add(mapping.ident);
+                if (!getMappingsDeployed().containsKey(mapping.ident)) {
+                    getMappingsDeployed().put(mapping.ident, mapping);
                 }
                 MutableInt updatedMappingSubs = getActiveSubscriptions()
                         .get(mapping.subscriptionTopic);
@@ -405,7 +414,7 @@ public abstract class AConnectorClient {
 
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
 
-        mappingsDeployed = new ArrayList<>();
+        mappingsDeployed = new ConcurrentHashMap<>();
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
         }
@@ -420,7 +429,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
                     activeSubs.add(1);
-                    mappingsDeployed.add(mapping.ident);
+                    mappingsDeployed.put(mapping.ident,mapping);
                 }
             });
 

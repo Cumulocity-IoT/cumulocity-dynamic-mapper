@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
@@ -468,7 +469,7 @@ public class MappingRestController {
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
                     ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-                    List<String> subscribedMappings = client.getMappingsDeployed();
+                    List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream().collect(Collectors.toList());
                     subscribedMappings.forEach(ident -> {
                         MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
                                 new MappingDeployment(ident));

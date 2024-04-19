@@ -21,6 +21,8 @@
 
 package dynamic.mapping.connector.kafka;
 
+import org.apache.kafka.common.errors.TopicAuthorizationException;
+
 public class TopicConsumer {
     private final TopicConfig topicConfig;
 
@@ -64,6 +66,10 @@ public class TopicConsumer {
         }
     }
 
+    public boolean shouldStop() {
+        return consumingThread.shouldStop;
+    }
+
     public void close() throws InterruptedException {
         synchronized (this) {
             if (closed) {
@@ -78,6 +84,7 @@ public class TopicConsumer {
     private class ConsumingThread extends Thread {
         private final TopicConsumerListener listener;
         private volatile boolean closed;
+        boolean shouldStop = false;
 
         ConsumingThread(final TopicConsumerListener listener) {
             super("Consumer#" + topicConfig.getBootstrapServers() + "/" + topicConfig.getTopic());
@@ -87,8 +94,9 @@ public class TopicConsumer {
         @Override
         public void run() {
             Exception error = null;
-
-            while (true) {
+            boolean continueToListen = true;
+   
+            while (continueToListen) {
                 Topic tc = null;
                 try {
                     tc = new Topic(topicConfig);
@@ -107,6 +115,10 @@ public class TopicConsumer {
                         break;
                     }
                     error = e;
+                    if (error instanceof TopicAuthorizationException) {
+                        continueToListen = false;
+                        shouldStop = true;
+                    }
                 } finally {
                     if (tc != null) {
                         try {
