@@ -306,7 +306,7 @@ public class KafkaClient extends AConnectorClient {
         C8YRequest currentRequest = context.getCurrentRequest();
         String payload = currentRequest.getRequest();
         String key = currentRequest.getSource();
-        if (context.isSupportsMessageContext()) {
+        if (context.isSupportsMessageContext() && context.getKey() != null) {
             key = new String(context.getKey());
         }
         kafkaProducer.send(new ProducerRecord<String, String>(context.getMapping().publishTopic, key, payload));

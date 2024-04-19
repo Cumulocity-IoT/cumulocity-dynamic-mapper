@@ -81,7 +81,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         splitTopicAsList.forEach(s -> topicLevels.add(s));
         if (payloadJsonNode instanceof ObjectNode) {
             ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
-            if (context.isSupportsMessageContext()) {
+            if (context.isSupportsMessageContext() && context.getKey() != null) {
                 ObjectNode contextData = objectMapper.createObjectNode();
                 String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
                 contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
