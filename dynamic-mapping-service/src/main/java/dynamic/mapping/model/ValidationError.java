@@ -27,7 +27,7 @@ public enum ValidationError {
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  MappingTopicSample_Must_Match_The_SubscriptionTopic,
+  MappingTopic_Must_Match_The_SubscriptionTopic,
   MappingTopic_Not_Unique,
   MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic, 
   Target_Template_Must_Be_Valid_JSON, 

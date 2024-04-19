@@ -270,8 +270,8 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
     // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
     // for comparison the "#" must then be replaced by a "+"
-    // allowed (tt=template topic, st= subscription topic)
-    // allowed    st                      tt
+    // allowed (mt=template topic, st= subscription topic)
+    // allowed    st                      mt
     //    +       /topic/                 /topic/
     //    -       /topic/                 /topic/value
     //    +       /topic/#                /topic/value
