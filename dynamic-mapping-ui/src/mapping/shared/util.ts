@@ -294,7 +294,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
           ...ValidationFormlyError[
             'MappingTopic_Must_Match_The_SubscriptionTopic'
           ],
-          errorPath: 'mappingTopic'
+          errorPath: 'subscriptionTopic'
         }
       };
     }
