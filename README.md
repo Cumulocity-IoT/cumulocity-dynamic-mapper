@@ -294,13 +294,17 @@ splits the payload and return the second field: ```100```.
 And for the binary payload is encoded as hex string:
 ```
 {
-  "message": "5a75207370c3a47420303821",
+  "message": "0x575",
 }
 ```
 Using appropriate JSONata expression you can parse the payload:
 ```
-$parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
+$number(message) & " C"
 ```
+
+> **Please Note:** Currently this does not work due to the missing support for hexadecimal number in the current [JSONata library](https://github.com/IBM/JSONata4Java). The implementation of the `$number()` function only works for decimal numbers. An [issue](https://github.com/IBM/JSONata4Java/issues/305) is pending for resolution.
+The JSONata function `$parseInteger()` is not supported by [JSONata library](https://github.com/IBM/JSONata4Java) and can't be used.
+
 ___
 
 1. Define the properties of the topic and API to be used
