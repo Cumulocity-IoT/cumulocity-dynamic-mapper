@@ -302,7 +302,7 @@ Using appropriate JSONata expression you can parse the payload:
 $number(message) & " C"
 ```
 
-> **Please Note:** Currently this does not work due to the missing support for hexadecimal number in the current [JSONata library](https://github.com/IBM/JSONata4Java). The implementation of the `$number()` function only works for decimal numbers. An [issue](https://github.com/IBM/JSONata4Java/issues/305) is pending for resolution.
+> **Please Note:** Currently this works only with a pached version of the [JSONata library](https://github.com/IBM/JSONata4Java)  due to the missing support for hexadecimal number in the current in the original version. The original implementation of the `$number()` function only works for decimal numbers. An [issue](https://github.com/IBM/JSONata4Java/issues/305) is pending for resolution.
 The JSONata function `$parseInteger()` is not supported by [JSONata library](https://github.com/IBM/JSONata4Java) and can't be used.
 
 ___
