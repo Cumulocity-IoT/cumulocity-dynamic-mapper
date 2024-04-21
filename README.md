@@ -256,7 +256,7 @@ Further example for JSONata expressions are:
 
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 1. `JSON`: if your payload is in JSON format
-1. `FLAT_FILE`: if your payload is in a csv format
+1. `FLAT_FILE`: if your payload is in a CSV format
 1. `GENERIC_BINARY`: if your payload is in HEX format
 1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension

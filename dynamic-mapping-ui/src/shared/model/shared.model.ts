@@ -114,6 +114,19 @@ export enum MappingType {
   PROCESSOR_EXTENSION = 'PROCESSOR_EXTENSION'
 }
 
+export interface MappingTypeDescriptionInterface {
+  key: MappingType;
+  description: string;
+}
+
+export const MAPPING_TYPE_DESCRIPTION : Record <MappingType, MappingTypeDescriptionInterface> = {
+    [MappingType.JSON]: {key: MappingType.JSON , description: 'Mapping handles payloads in JSON format'},
+    [MappingType.FLAT_FILE]: {key: MappingType.FLAT_FILE , description: 'Mapping handles payloads in CSV format'},
+    [MappingType.GENERIC_BINARY]: {key: MappingType.GENERIC_BINARY , description: 'Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x"'},
+    [MappingType.PROTOBUF_STATIC]: {key: MappingType.PROTOBUF_STATIC , description: 'Mapping handles payloads in protobuf format'},
+    [MappingType.PROCESSOR_EXTENSION]: {key: MappingType.PROCESSOR_EXTENSION , description: 'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab'},
+};
+
 export interface Extension {
   id?: string;
   name: string;
