@@ -60,13 +60,13 @@ public class NumberUtils implements Serializable {
             // Test first for hexadecimal, octal or binary number Try to convert the number to a double
             if (number.startsWith("0x") || number.startsWith("0X")) {
                 // Hexadecimal number
-                result = new LongNode((long) Integer.parseInt(number.substring(2), 16));
+                result = new LongNode((long) Long.parseLong(number.substring(2), 16));
             } else if (number.startsWith("0o") || number.startsWith("0O")) {
                 // Octal number
-                result = new LongNode((long) Integer.parseInt(number.substring(2), 8));
+                result = new LongNode((long) Long.parseLong(number.substring(2), 8));
             } else if (number.startsWith("0b") || number.startsWith("0B")) {
                 // Binary number
-                result = new LongNode((long) Integer.parseInt(number.substring(2), 2));
+                result = new LongNode((long) Long.parseLong(number.substring(2), 2));
             } else {
                 // Try to convert the number to a double
                 Double doubleValue = Double.valueOf(number);
