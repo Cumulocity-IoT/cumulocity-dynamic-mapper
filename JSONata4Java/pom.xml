@@ -106,8 +106,8 @@
                                         <include>META-INF/**/*</include>
                                     </includes>
                                     <excludes>
-                                        <exlude>
-                                            com/api/jsonata4java/expressions/utils/NumberUtils.class</exlude>
+                                        <exclude>
+                                            com/api/jsonata4java/expressions/utils/NumberUtils.class</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

@@ -165,7 +165,7 @@ public class MappingsRepresentationJUnitTest {
         BiFunction<String, String, Boolean> topicMatcher = (st,
                 tt) -> (Pattern.matches(String.join("[^\\/]+", st.replace("/", "\\/").split("\\+")).replace("#", ".*"),
                         tt));
-        // apppend trailing null character to avoid that the last "+" is swallowd
+        // append trailing null character to avoid that the last "+" is swallowd
         String st = "binary/+" + "\u0000";
         String mt = "binary/+" + "\u0000";
         ;
