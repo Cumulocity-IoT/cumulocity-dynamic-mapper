@@ -34,10 +34,8 @@ import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.net.ssl.TrustManagerFactory;
 import com.hivemq.client.mqtt.mqtt3.message.unsubscribe.Mqtt3Unsubscribe;
@@ -76,8 +74,6 @@ import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 
 @Slf4j
-
-// This is instantiated manually not using Spring Boot anymore.
 public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
@@ -109,7 +105,7 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "mqtt", null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        spec = new ConnectorSpecification(description, connectorType, configProps);
+        specification = new ConnectorSpecification(description, connectorType, configProps, false);
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -136,13 +132,6 @@ public class MQTTClient extends AConnectorClient {
         this.supportedQOS = Arrays.asList(QOS.AT_LEAST_ONCE, QOS.AT_MOST_ONCE, QOS.EXACTLY_ONCE);
     }
 
-    protected static final int WAIT_PERIOD_MS = 10000;
-
-    @Getter
-    public ConnectorSpecification spec;
-
-    protected String additionalSubscriptionIdTest;
-
     protected AConnectorClient.Certificate cert;
 
     protected MqttClientSslConfig sslConfig;
@@ -150,8 +139,6 @@ public class MQTTClient extends AConnectorClient {
     protected MQTTCallback mqttCallback = null;
 
     protected Mqtt3BlockingClient mqttClient;
-
-    protected MutableBoolean connectionState = new MutableBoolean(false);
 
     @Getter
     protected List<QOS> supportedQOS;
@@ -218,16 +205,10 @@ public class MQTTClient extends AConnectorClient {
     }
 
     @Override
-    public ConnectorSpecification getSpecification() {
-        return spec;
-    }
-
-    @Override
     public void connect() {
         updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
-
-        log.info("Tenant {} - Establishing the MQTT connection now - phase I: (isConnected:shouldConnect) ({}:{})",
-                tenant, isConnected(),
+        log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
+                tenant, getConnectorName(), isConnected(),
                 shouldConnect());
         if (isConnected())
             disconnect();
@@ -315,7 +296,7 @@ public class MQTTClient extends AConnectorClient {
                 mqttClient.getConfig().getServerPort(), configuredServerPath);
         // Registering Callback
         Mqtt3AsyncClient mqtt3AsyncClient = mqttClient.toAsync();
-        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent());
+        mqttCallback = new MQTTCallback(dispatcher, tenant, getConnectorIdent(), false);
         mqtt3AsyncClient.publishes(MqttGlobalPublishFilter.ALL, mqttCallback);
 
         // stay in the loop until successful
@@ -324,7 +305,8 @@ public class MQTTClient extends AConnectorClient {
             loadConfiguration();
             var firstRun = true;
             while (!isConnected() && shouldConnect()) {
-                log.info("Tenant {} - Establishing the MQTT connection now - phase II: {} {}", tenant,
+                log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
+                        getConnectorName(),
                         shouldConnect(), configuredUrl);
                 if (!firstRun) {
                     try {
@@ -392,16 +374,6 @@ public class MQTTClient extends AConnectorClient {
         }
     }
 
-    protected void updateConnectorStatusToFailed(Exception e) {
-        String msg = " --- " + e.getClass().getName() + ": "
-                + e.getMessage();
-        if (!(e.getCause() == null)) {
-            msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
-        }
-        connectorStatus.setMessage(msg);
-        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false, true);
-    }
-
     @Override
     public void close() {
     }
@@ -418,8 +390,8 @@ public class MQTTClient extends AConnectorClient {
             return false;
         }
         // check if all required properties are set
-        for (String property : getSpec().getProperties().keySet()) {
-            if (getSpec().getProperties().get(property).required
+        for (String property : getSpecification().getProperties().keySet()) {
+            if (getSpecification().getProperties().get(property).required
                     && configuration.getProperties().get(property) == null) {
                 return false;
             }
@@ -532,6 +504,11 @@ public class MQTTClient extends AConnectorClient {
     @Override
     public Boolean supportsWildcardsInTopic() {
         return Boolean.parseBoolean(connectorConfiguration.getProperties().get("supportsWildcardInTopic").toString());
+    }
+
+    @Override
+    public void monitorSubscriptions() {
+        // nothing to do
     }
 
 }

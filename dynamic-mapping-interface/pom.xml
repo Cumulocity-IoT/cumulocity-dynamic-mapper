@@ -48,10 +48,6 @@
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-joda</artifactId>
 		</dependency>
-        <!-- <dependency>
-            <groupId>org.eclipse.paho</groupId>
-            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-        </dependency> -->
         <dependency>
             <groupId>com.hivemq</groupId>
             <artifactId>hivemq-mqtt-client</artifactId>
@@ -71,7 +67,6 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-joda</artifactId>
-            <scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>

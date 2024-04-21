@@ -256,7 +256,7 @@ Further example for JSONata expressions are:
 
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 1. `JSON`: if your payload is in JSON format
-1. `FLAT_FILE`: if your payload is in a csv format
+1. `FLAT_FILE`: if your payload is in a CSV format
 1. `GENERIC_BINARY`: if your payload is in HEX format
 1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
@@ -294,13 +294,17 @@ splits the payload and return the second field: ```100```.
 And for the binary payload is encoded as hex string:
 ```
 {
-  "message": "5a75207370c3a47420303821",
+  "message": "0x575",
 }
 ```
 Using appropriate JSONata expression you can parse the payload:
 ```
-$parseInteger($string("0x"&$substring(message,0,2)),"0")&" C"
+$number(message) & " C"
 ```
+
+> **Please Note:** Currently this works only with a pached version of the [JSONata library](https://github.com/IBM/JSONata4Java)  due to the missing support for hexadecimal number in the current in the original version. The original implementation of the `$number()` function only works for decimal numbers. An [issue](https://github.com/IBM/JSONata4Java/issues/305) is pending for resolution.
+The JSONata function `$parseInteger()` is not supported by [JSONata library](https://github.com/IBM/JSONata4Java) and can't be used.
+
 ___
 
 1. Define the properties of the topic and API to be used

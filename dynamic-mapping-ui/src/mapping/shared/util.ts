@@ -37,6 +37,8 @@ export function getTypedValue(subValue: SubstituteValue): any {
 }
 
 export const TOKEN_TOPIC_LEVEL = '_TOPIC_LEVEL_';
+export const TOKEN_CONTEXT_DATA = '_CONTEXT_DATA_';
+export const CONTEXT_DATA_KEY_NAME = 'key';
 export const TIME = 'time';
 /*
  * for '/device/hamburg/temperature/' return ["/", "device", "/", "hamburg", "/", "temperature", "/"]
@@ -268,8 +270,8 @@ export function checkTopicsInboundAreValidWithOption(options) {
 
     // in the topic a multi level wildcard "*" can appear and is replaced by a single level wildcard "+"
     // for comparison the "#" must then be replaced by a "+"
-    // allowed (tt=template topic, st= subscription topic)
-    // allowed    st                      tt
+    // allowed (mt=template topic, st= subscription topic)
+    // allowed    st                      mt
     //    +       /topic/                 /topic/
     //    -       /topic/                 /topic/value
     //    +       /topic/#                /topic/value
@@ -292,7 +294,7 @@ export function checkTopicsInboundAreValidWithOption(options) {
           ...ValidationFormlyError[
             'MappingTopic_Must_Match_The_SubscriptionTopic'
           ],
-          errorPath: 'mappingTopic'
+          errorPath: 'subscriptionTopic'
         }
       };
     }
@@ -576,39 +578,73 @@ export function cloneSubstitution(
 }
 
 export function expandExternalTemplate(
-  t: object,
-  m: Mapping,
+  template: object,
+  mapping: Mapping,
   levels: string[]
 ): object {
-  if (Array.isArray(t)) {
-    return t;
+  if (Array.isArray(template)) {
+    return template;
   } else {
-    return {
-      ...t,
-      _TOPIC_LEVEL_: levels
-    };
+    // if (mapping.messageContextKeys) {
+    //     const keys = mapping.messageContextKeys.split(',').map(function (item) {
+    //       return item.trim();
+    //     });
+    //     return {
+    //       ...template,
+    //       _TOPIC_LEVEL_: levels,
+    //       _CONTEXT_DATA_: keys.reduce((obj, key) => {
+    //         obj[key] = `${key}-sample`;
+    //         return obj;
+    //       }, {})
+    //     };
+    //   }
+    if (mapping.supportsMessageContext) {
+      const keys = [CONTEXT_DATA_KEY_NAME];
+      return {
+        ...template,
+        _TOPIC_LEVEL_: levels,
+        _CONTEXT_DATA_: keys.reduce((obj, key) => {
+          obj[key] = `${key}-sample`;
+          return obj;
+        }, {})
+      };
+    } else
+      return {
+        ...template,
+        _TOPIC_LEVEL_: levels
+      };
   }
 }
 
-export function expandC8YTemplate(t: object, m: Mapping): object {
-  if (m.targetAPI == API.INVENTORY.name) {
+export function expandC8YTemplate(template: object, mapping: Mapping): object {
+  if (mapping.targetAPI == API.INVENTORY.name) {
     return {
-      ...t,
+      ...template,
       id: '909090'
     };
   } else {
-    return t;
+    return template;
   }
 }
 
-export function reduceSourceTemplate(t: object, patched: boolean): string {
-  if (!patched) delete t[TOKEN_TOPIC_LEVEL];
-  const tt = JSON.stringify(t);
+export function reduceSourceTemplate(
+  template: object,
+  patched: boolean
+): string {
+  if (!patched) {
+    delete template[TOKEN_TOPIC_LEVEL];
+    delete template[TOKEN_CONTEXT_DATA];
+  }
+  const tt = JSON.stringify(template);
   return tt;
 }
 
-export function reduceTargetTemplate(t: object): string {
-  const tt = JSON.stringify(t);
+export function reduceTargetTemplate(template: object): string {
+  if (template) {
+    delete template[TOKEN_TOPIC_LEVEL];
+    delete template[TOKEN_CONTEXT_DATA];
+  }
+  const tt = JSON.stringify(template);
   return tt;
 }
 

@@ -133,6 +133,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
+                    context.setSupportsMessageContext(connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext);
+                    context.setKey(connectorMessage.getKey());
                     context.setServiceConfiguration(serviceConfiguration);
                     // identify the correct processor based on the mapping type
                     MappingType mappingType = context.getMappingType();

@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -44,6 +45,7 @@ import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.QOS;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
@@ -69,9 +71,19 @@ import dynamic.mapping.processor.model.ProcessingContext;
 @Slf4j
 public abstract class AConnectorClient {
 
+    protected static final int WAIT_PERIOD_MS = 10000;
+
     protected String connectorIdent;
 
     protected String connectorName;
+
+    protected String additionalSubscriptionIdTest;
+
+    protected MutableBoolean connectionState = new MutableBoolean(false);
+
+    @Getter
+    @Setter
+    public ConnectorSpecification specification;
 
     @Getter
     @Setter
@@ -117,9 +129,9 @@ public abstract class AConnectorClient {
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
 
     // structure < ident, mapping >
-    // public Map<String, Mapping> subscribedMappings = new HashMap<>();
+    // public Map<String, Mapping> subscribedMappings = new ConcurrentHashMap<>();
     @Getter
-    private List<String> mappingsDeployed = new ArrayList<>();
+    private Map<String, Mapping> mappingsDeployed = new ConcurrentHashMap<>();
 
     private Instant start = Instant.now();
 
@@ -137,6 +149,10 @@ public abstract class AConnectorClient {
     @Setter
     public ConnectorStatusEvent connectorStatus = ConnectorStatusEvent.unknown();
 
+    @Getter
+    @Setter
+    public Boolean supportsMessageContext;
+
     public void submitInitialize() {
         // test if init task is still running, then we don't need to start another task
         log.debug("Tenant {} - Called initialize(): {}", tenant, initializeTask == null || initializeTask.isDone());
@@ -147,14 +163,12 @@ public abstract class AConnectorClient {
 
     public abstract boolean initialize();
 
-    public abstract ConnectorSpecification getSpecification();
-
     public abstract Boolean supportsWildcardsInTopic();
 
     public void loadConfiguration() {
         connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
                 tenant);
-        this.connectorConfiguration.copyPredefinedValues(getSpec());
+        this.connectorConfiguration.copyPredefinedValues(getSpecification());
         // get the latest serviceConfiguration from the Cumulocity backend in case
         // someone changed it in the meantime
         // update the in the registry
@@ -163,8 +177,6 @@ public abstract class AConnectorClient {
 
         // updateConnectorStatusAndSend(ConnectorStatus.CONFIGURED, true, true);
     }
-
-    public abstract ConnectorSpecification getSpec();
 
     public void submitConnect() {
         loadConfiguration();
@@ -198,6 +210,12 @@ public abstract class AConnectorClient {
      * Connect to the broker
      ***/
     public abstract void connect();
+
+
+    /***
+     * This method if specifically for Kafka, since it does not have the concept of a client. Kafka rather supports consumer on topic level. They can fail to connect
+     ***/
+    public abstract void monitorSubscriptions();
 
     /***
      * Should return true when connector is enabled and provided properties are
@@ -277,6 +295,8 @@ public abstract class AConnectorClient {
             } else {
                 sendConnectorLifecycle();
             }
+            // remove failed subscriptions
+            monitorSubscriptions();
         } catch (Exception ex) {
             log.error("Tenant {} - Error during house keeping execution: ", tenant, ex);
         }
@@ -291,6 +311,7 @@ public abstract class AConnectorClient {
         String payloadMessage = objectMapper.writeValueAsString(payload);
         ConnectorMessage message = new ConnectorMessage();
         message.setTenant(tenant);
+        message.setSupportsMessageContext(getSupportsMessageContext());
         message.setTopic(topic);
         message.setSendPayload(sendPayload);
         message.setConnectorIdent(getConnectorIdent());
@@ -345,8 +366,8 @@ public abstract class AConnectorClient {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                     getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
                 }
-                if (!getMappingsDeployed().contains(mapping.ident)) {
-                    getMappingsDeployed().add(mapping.ident);
+                if (!getMappingsDeployed().containsKey(mapping.ident)) {
+                    getMappingsDeployed().put(mapping.ident, mapping);
                 }
                 MutableInt updatedMappingSubs = getActiveSubscriptions()
                         .get(mapping.subscriptionTopic);
@@ -393,7 +414,7 @@ public abstract class AConnectorClient {
 
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
 
-        mappingsDeployed = new ArrayList<>();
+        mappingsDeployed = new ConcurrentHashMap<>();
         if (reset) {
             activeSubscriptions = new HashMap<String, MutableInt>();
         }
@@ -408,7 +429,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
                     activeSubs.add(1);
-                    mappingsDeployed.add(mapping.ident);
+                    mappingsDeployed.put(mapping.ident,mapping);
                 }
             });
 
@@ -511,6 +532,16 @@ public abstract class AConnectorClient {
         if (send) {
             sendConnectorLifecycle();
         }
+    }
+
+    protected void updateConnectorStatusToFailed(Exception e) {
+        String msg = " --- " + e.getClass().getName() + ": "
+                + e.getMessage();
+        if (!(e.getCause() == null)) {
+            msg = msg + " --- Caused by " + e.getCause().getClass().getName() + ": " + e.getCause().getMessage();
+        }
+        connectorStatus.setMessage(msg);
+        updateConnectorStatusAndSend(ConnectorStatus.FAILED, false, true);
     }
 
     @Data

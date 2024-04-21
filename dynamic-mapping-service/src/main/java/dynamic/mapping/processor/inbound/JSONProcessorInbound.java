@@ -42,6 +42,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,12 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         splitTopicAsList.forEach(s -> topicLevels.add(s));
         if (payloadJsonNode instanceof ObjectNode) {
             ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
+            if (context.isSupportsMessageContext() && context.getKey() != null) {
+                ObjectNode contextData = objectMapper.createObjectNode();
+                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
+                contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_CONTEXT_DATA, contextData);
+            }
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
@@ -87,7 +94,8 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 
         String payload = payloadJsonNode.toPrettyString();
         if (serviceConfiguration.logPayload || mapping.debug) {
-            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload, mapping.debug,serviceConfiguration.logPayload || mapping.debug );
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
+                    mapping.debug, serviceConfiguration.logPayload || mapping.debug);
         }
 
         boolean substitutionTimeExists = false;

@@ -466,7 +466,7 @@
     "substitutions": [
       {
         "resolve2ExternalId": false,
-        "pathSource": "$parseInteger($string(message), '0')",
+        "pathSource": "$number($substring(message,0,6))",
         "pathTarget": "value",
         "repairStrategy": "DEFAULT",
         "expandArray": false
@@ -528,13 +528,6 @@
         "resolve2ExternalId": false,
         "pathSource": "$now()",
         "pathTarget": "time",
-        "repairStrategy": "DEFAULT",
-        "expandArray": false
-      },
-      {
-        "resolve2ExternalId": false,
-        "pathSource": "\"Temp: \"&$parseInteger($string(message),\"0\")&\" C\"",
-        "pathTarget": "text",
         "repairStrategy": "DEFAULT",
         "expandArray": false
       },

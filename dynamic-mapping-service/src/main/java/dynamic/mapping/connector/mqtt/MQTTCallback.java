@@ -14,17 +14,20 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
     static String TOPIC_LEVEL_SEPARATOR = String.valueOf(MqttTopic.TOPIC_LEVEL_SEPARATOR);
     String tenant;
     String connectorIdent;
+    boolean supportsMessageContext;
 
-    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdent) {
+    MQTTCallback(GenericMessageCallback callback, String tenant, String connectorIdent,
+            boolean supportsMessageContext) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdent = connectorIdent;
+        this.supportsMessageContext = supportsMessageContext;
     }
 
     @Override
     public void accept(Mqtt3Publish mqttMessage) {
         ConnectorMessage connectorMessage = new ConnectorMessage();
-        if(mqttMessage.getPayload().isPresent()) {
+        if (mqttMessage.getPayload().isPresent()) {
             ByteBuffer byteBuffer = mqttMessage.getPayload().get();
             byte[] byteArray = new byte[byteBuffer.remaining()];
             byteBuffer.get(byteArray);
@@ -35,6 +38,7 @@ public class MQTTCallback implements Consumer<Mqtt3Publish> {
         String topic = String.join(TOPIC_LEVEL_SEPARATOR, mqttMessage.getTopic().getLevels());
         connectorMessage.setTopic(topic);
         connectorMessage.setConnectorIdent(connectorIdent);
+        connectorMessage.setSupportsMessageContext(supportsMessageContext);
         genericMessageCallback.onMessage(connectorMessage);
     }
 

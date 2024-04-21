@@ -206,6 +206,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                     context.setTopic(mapping.publishTopic);
                     context.setMappingType(mapping.mappingType);
                     context.setMapping(mapping);
+                    context.setSupportsMessageContext(mapping.supportsMessageContext);;
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
                     context.setQos(mapping.getQos());
@@ -268,7 +269,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                     e.getMessage());
-                            log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
+                            log.error("Tenant {} - Message Stacktrace: ", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {

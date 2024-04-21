@@ -20,6 +20,7 @@
  */
 import {
   Component,
+  ElementRef,
   Input,
   OnDestroy,
   OnInit,
@@ -29,7 +30,7 @@ import {
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { Direction, MappingType } from '../../shared';
+import { Direction, MAPPING_TYPE_DESCRIPTION, MappingType } from '../../shared';
 import { isDisabled } from '../shared/util';
 
 @Component({
@@ -39,18 +40,33 @@ import { isDisabled } from '../shared/util';
 })
 export class MappingTypeComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
+  @ViewChild('mappingTypes') mappingTypesElement: ElementRef;
 
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
   @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<MappingType>;
-  labels: ModalLabels = { cancel: 'Cancel' };
+  labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
   mappingType: MappingType.JSON;
+  mappingTypeDescription: string =
+    MAPPING_TYPE_DESCRIPTION[MappingType.JSON].description;
 
-  constructor(private fb: FormBuilder) {}
+  constructor(
+    private fb: FormBuilder,
+    private elementRef: ElementRef
+  ) {
+    this.elementRef = elementRef;
+  }
+
+//   ngAfterViewInit(): void {
+//     const selector = `button[title=${MappingType.JSON}]`;
+//     const preSelectedMappingType =
+//       this.elementRef.nativeElement.querySelector(selector);
+//     preSelectedMappingType.click();
+//   }
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
@@ -72,9 +88,14 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
 
   onSelectMappingType(t) {
     this.mappingType = t;
-    this.closeSubject.next(this.mappingType);
-    this.closeSubject.complete();
+    this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
   }
+
+  //   onSelectMappingType(t) {
+  //     this.mappingType = t;
+  //     this.closeSubject.next(this.mappingType);
+  //     this.closeSubject.complete();
+  //   }
 
   ngOnDestroy() {
     this.closeSubject.complete();

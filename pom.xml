@@ -19,18 +19,16 @@
   ~
   ~ @authors Christof Strack, Stefan Witschel
   -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>com.softwareag.c8y.mapping</groupId>
     <artifactId>dynamic-mapping-solution</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
-
     <modules>
+        <module>jsonata4java</module>
         <module>dynamic-mapping-service</module>
         <module>dynamic-mapping-interface</module>
         <module>dynamic-mapping-extension</module>
@@ -47,7 +45,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot-dependencies.version>2.7.17</spring-boot-dependencies.version>
     </properties>
-
     <repositories>
         <repository>
             <id>cumulocity</id>
@@ -62,7 +59,6 @@
             <url>https://download.cumulocity.com/maven/repository</url>
         </pluginRepository>
     </pluginRepositories>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -106,7 +102,7 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
                 <version>4.1.108.Final</version>
-            </dependency>         
+            </dependency>
             <dependency>
                 <groupId>com.ibm.jsonata4java</groupId>
                 <artifactId>JSONata4Java</artifactId>
@@ -116,8 +112,8 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
                 <version>1.11.0</version>
-            </dependency>
-            <!-- commons-text 1.11.0 requires commons-lang3 3.13.0, see
+            </dependency><!-- commons-text 1.11.0 requires
+            commons-lang3 3.13.0, see
             https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -142,11 +138,6 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>

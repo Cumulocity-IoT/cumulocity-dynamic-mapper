@@ -12,15 +12,19 @@ import lombok.Setter;
 public class ConnectorMessage {
     private byte[] payload;
 
+    private byte[] key;
+
     private String[] headers;
 
     @NotNull
     private String tenant;
 
     private String topic;
-    
+
     @NotNull
     private String connectorIdent;
 
     private boolean sendPayload;
+
+    private boolean supportsMessageContext;
 }

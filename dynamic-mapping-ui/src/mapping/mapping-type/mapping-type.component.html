@@ -28,27 +28,35 @@
   (onClose)="onClose()"
   (onDismiss)="onDismiss()"
   [labels]="labels"
-  [disabled]="true"
+  [disabled]="false"
   #addMappingRef
 >
   <div>
-      <p class="p-b-24 text-center text-medium separator-bottom sticky-top bg-white">
-        {{ "Select mapping type for target" | translate }}
-      </p>
-      <div class="p-24 modal-inner-scroll animated fadeIn">
-        <div class="list-group list-group-links" [formGroup]="formGroupStep">
-          <ng-container *ngFor="let q of MappingType | keyvalue">
-            <button
-              *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
-              class="list-group-item"
-              title="{{ q.value }}"
-              (click)="onSelectMappingType(q.value)"
-            >
-              <i [c8yIcon]="'rules m-r-4'"></i>
-              <span>{{ q.value }}</span>
-            </button>
-          </ng-container>
-        </div>
+    <p
+      class="p-b-16 text-center text-medium text-16 separator-bottom sticky-top bg-white"
+    >
+      {{ 'Select mapping type for target' | translate }}
+    </p>
+    <div class="p-24 modal-inner-scroll animated fadeIn">
+      <div #mappingTypes class="list-group list-group-links" [formGroup]="formGroupStep">
+        <ng-container *ngFor="let q of MappingType | keyvalue">
+          <button
+            *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
+            class="list-group-item"
+            title="{{ q.value }}"
+            (click)="onSelectMappingType(q.value)"
+          >
+            <i [c8yIcon]="'rules m-r-4'"></i>
+            <span>{{ q.value }}</span>
+          </button>
+        </ng-container>
       </div>
+      <c8y-form-group class="p-t-16">
+        <!-- <label>Mapping type description</label> -->
+        <textarea readonly rows="3" class="form-control fit-w">{{
+          mappingTypeDescription
+        }}</textarea>
+      </c8y-form-group>
+    </div>
   </div>
 </c8y-modal>

@@ -721,7 +721,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   private expandTemplates() {
     const levels: string[] = splitTopicExcludingSeparator(
-      this.mapping.mappingTopicSample
+      this.mapping.direction == Direction.INBOUND
+        ? this.mapping.mappingTopicSample
+        : this.mapping.publishTopicSample
     );
 
     if (
