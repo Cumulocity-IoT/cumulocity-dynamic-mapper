@@ -204,7 +204,11 @@ The table of configured connectors to different brokers can be:
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector: MQTT, MQTT Service, Kafka, ... Then the input is dynamically adapted to the configuration paramaeter for the chosen connector type:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector. Currently we support the following connectors:
+* MQTT:  supports connections to MQTT version 3.1.1 over websocket and tcp
+* MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
+* Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, ...
+The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
@@ -643,7 +647,7 @@ The mapping microservice provides endpoints to control the lifecycle and manage 
 ## Tests & Sample Data
 
 ### Load Test
-In the resource section you find a test profil [jmeter_test_01.jmx](./resources/script/performance/jmeter_test_01.jmx) using the performance tool ```jmeter``` and an extension for mqtt: [emqx/mqtt-jmete](https://github.com/emqx/mqtt-jmeter).
+In the resource section you find a test profil [jmeter_test_01.jmx](./resources/script/performance/jmeter_test_01.jmx) using the performance tool ```jmeter``` and an extension for MQTT: [emqx/mqtt-jmeter](https://github.com/emqx/mqtt-jmeter).
 This was used to run simple loadtest.
 
 ## Setup Sample mappings
