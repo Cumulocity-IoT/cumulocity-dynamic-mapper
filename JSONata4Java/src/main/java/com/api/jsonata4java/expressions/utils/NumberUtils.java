@@ -1,6 +1,6 @@
 /**
  * (c) Copyright 2018, 2019 IBM Corporation
- * 1 New Orchard Road, 
+ * 1 New Orchard Road,
  * Armonk, New York, 10504-1722
  * United States
  * +1 914 499 1900
@@ -19,10 +19,10 @@
  * limitations under the License.
  *
  */
-
 package com.api.jsonata4java.expressions.utils;
 
 import java.io.Serializable;
+
 import com.api.jsonata4java.expressions.EvaluateRuntimeException;
 import com.fasterxml.jackson.databind.node.DoubleNode;
 import com.fasterxml.jackson.databind.node.LongNode;
@@ -36,20 +36,19 @@ public class NumberUtils implements Serializable {
      * The convertNumberToValueNode method converts the string passed in to a
      * suitable subclass of ValueNode depending on whether it is an integer or
      * decimal.
-     * 
-     * For consistency with the JavaScript implementation of JSONata, we limit the
-     * size of the numbers that we handle to be within the range Double.MAX_VALUE
-     * and -Double.MAX_VALUE. If we did not do this we would need to implement a lot
-     * of extra code to handle BigInteger and BigDecimal.
-     * 
-     * @param number
-     *               The string representation of the number to convert
-     * @return ValueNode The ValueNode representation of the number contained in the
-     *         input string
-     * @throws EvaluateRuntimeException
-     *                                  If the number represented by the string is
-     *                                  outside of the valid range or if the string
-     *                                  does not contain a valid number.
+     *
+     * For consistency with the JavaScript implementation of JSONata, we limit
+     * the size of the numbers that we handle to be within the range
+     * Double.MAX_VALUE and -Double.MAX_VALUE. If we did not do this we would
+     * need to implement a lot of extra code to handle BigInteger and
+     * BigDecimal.
+     *
+     * @param number The string representation of the number to convert
+     * @return ValueNode The ValueNode representation of the number contained in
+     * the input string
+     * @throws EvaluateRuntimeException If the number represented by the string
+     * is outside of the valid range or if the string does not contain a valid
+     * number.
      */
     public static final ValueNode convertNumberToValueNode(String number) {
 
@@ -57,42 +56,65 @@ public class NumberUtils implements Serializable {
         ValueNode result = null;
 
         try {
-            // Test first for hexadecimal, octal or binary number Try to convert the number to a double
-            if (number.startsWith("0x") || number.startsWith("0X")) {
-                // Hexadecimal number
-                result = new LongNode((long) Long.parseLong(number.substring(2), 16));
-            } else if (number.startsWith("0o") || number.startsWith("0O")) {
-                // Octal number
-                result = new LongNode((long) Long.parseLong(number.substring(2), 8));
-            } else if (number.startsWith("0b") || number.startsWith("0B")) {
-                // Binary number
-                result = new LongNode((long) Long.parseLong(number.substring(2), 2));
-            } else {
-                // Try to convert the number to a double
-                Double doubleValue = Double.valueOf(number);
-                // Check to see if the converted number is within the acceptable range
-                if (!doubleValue.isInfinite() && !doubleValue.isNaN()) {
-                    if ((doubleValue >= 0.0d && doubleValue <= Double.valueOf(Long.MAX_VALUE))
-                            || (doubleValue < 0.0d && doubleValue >= Double.valueOf(Long.MIN_VALUE))) {
-                        if (doubleValue - doubleValue.longValue() == 0.0d) {
-                            result = new LongNode((long) doubleValue.doubleValue());
-                        } else {
-                            result = new DoubleNode(doubleValue.doubleValue());
-                        }
+            // Try to convert the number to a double
+            Double doubleValue = Double.valueOf(number);
+
+            // Check to see if the converted number is within the acceptable range
+            if (!doubleValue.isInfinite() && !doubleValue.isNaN()) {
+                if ((doubleValue >= 0.0d && doubleValue <= Double.valueOf(Long.MAX_VALUE))
+                        || (doubleValue < 0.0d && doubleValue >= Double.valueOf(Long.MIN_VALUE))) {
+                    if (doubleValue - doubleValue.longValue() == 0.0d) {
+                        result = new LongNode((long) doubleValue.doubleValue());
                     } else {
                         result = new DoubleNode(doubleValue.doubleValue());
                     }
                 } else {
-                    final String msg = String.format(Constants.ERR_MSG_NUMBER_OUT_OF_RANGE, number);
-                    throw new EvaluateRuntimeException(msg);
+                    result = new DoubleNode(doubleValue.doubleValue());
                 }
+            } else {
+                final String msg = String.format(Constants.ERR_MSG_NUMBER_OUT_OF_RANGE, number);
+                throw new EvaluateRuntimeException(msg);
             }
-
         } catch (NumberFormatException e2) {
+            // try conversion for other values
+            result = convertToNumber(number);
+        }
+
+        return result;
+    }
+
+    /**
+     * Attempts to convert a String based number representation using prefixes
+     * like 0x (hex), 0o (octal), 0b (binary)
+     *
+     * @param number
+     * @return
+     */
+    public static ValueNode convertToNumber(String number) {
+        if (number == null) {
             final String msg = String.format(Constants.ERR_MSG_UNABLE_TO_CAST_VALUE_TO_NUMBER, number);
             throw new EvaluateRuntimeException(msg);
         }
-
+        number = number.trim().toLowerCase();
+        ValueNode result = null;
+        try {
+            if (number.startsWith("0x")) {
+                // Hexadecimal number
+                result = new LongNode(Long.parseLong(number.substring(2), 16));
+            } else if (number.startsWith("0o")) {
+                // Octal number
+                result = new LongNode(Long.parseLong(number.substring(2), 8));
+            } else if (number.startsWith("0b")) {
+                // Binary number
+                result = new LongNode(Long.parseLong(number.substring(2), 2));
+            } else {
+                // Decimal number or invalid format
+                result = new LongNode(Long.parseLong(number));
+            }
+        } catch (Exception e) {
+            final String msg = String.format(Constants.ERR_MSG_UNABLE_TO_CAST_VALUE_TO_NUMBER, number);
+            throw new EvaluateRuntimeException(msg);
+        }
         return result;
     }
 }
