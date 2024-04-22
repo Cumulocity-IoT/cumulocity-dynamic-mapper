@@ -3,7 +3,7 @@
 ## Table of Contents
 - [Overview](#overview)
 - [Installation Guide ](#installation-guide)
-- [Build & Deploye](#build--deploy)
+- [Build & Deploy](#build--deploy)
 - [User Guide](#user-guide)
 - [API Documentation](#api-documentation)
 - [Tests & Sample Data](#tests--sample-data)
@@ -13,29 +13,30 @@
 ## Overview
 
 The Cumulocity Dynamic Mapper addresses the need to get **any** data provided by a message broker mapped to the Cumulocity IoT Domain model in a zero-code approach.
-It can connect to multiple message brokers likes **MQTT**, **MQTT Service** and others, subscribes to specific topics and maps the data in a graphical way to the domain model of Cumulocity.
+It can connect to multiple message brokers likes **MQTT**, **MQTT Service** , **Kafka** and others, subscribes to specific topics and maps the data in a graphical editor to the domain model of Cumulocity.
 
 Per default the followings connectors are supported
 * **MQTT** - any MQTT Broker
-* **MQTT Service** - MQTT Broker provided by Cumulocity IoT (in development)
+* **MQTT Service** - MQTT Broker 
+* **Kafka** - Kafka Broker
 
-It contains two major components:
+The solution is compposed of two major components:
 
-* A **Microservice** - exposes REST endpoints, provides a generic connector interface which can be used by broker clients to
+* A **microservice** - exposes REST endpoints, provides a generic connector interface which can be used by broker clients to
 connect to a message broker, a generic data mapper, a comprehensive expression language for data mapping and the
 [Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity. It also supports multi tenancy.
 
-* A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a broker connection & to perform 
+* A **frontend (plugin)** - uses the exposed endpoints of the microservice to configure a broker connection & to perform 
 graphical data mappings within the Cumumlocity IoT UI.
 
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
-the Cumulocity IoT Domain Model in a graphical way.
+the Cumulocity IoT Domain Model in a graphical editor.
 
 Here are the **core features** summarized:
 
 * **Connect** to multiple message broker of your choice at the same time.
 * **Map** any data to/from the Cumulocity IoT Domain Model in a graphical way.
-* **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker.
+* **Bidirectional mappings** are supported - so you can forward data to Cumulocity or subscribe on Cumulocity data and forward it to the broker
 * **Transform** data with a comprehensive expression language supported by [JSONata](https://jsonata.org/) 
 * **Multiple payload formats** are supported, starting with **JSON**, **Protobuf**, **Binary**, **CSV**.
 * **Extend**  the mapper easily by using payload extensions or the provided connector interface
@@ -54,24 +55,25 @@ The architecture of the components consists of the following components:
 <img src="resources/image/Dynamic_Mapper_Architecture.png"  style="width: 100%;" />
 </p>
 <br/>
-The orange components are part of this project which are:
+The light blue components are part of this project which are:
 
-* 2 Default connectors for..
-  * **MQTT Client** - using [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) to connect and subscribe to MQTT brokers
-  * **MQTT Service (in development)** -  using hivemq-mqtt-client to connect to MQTT Service
-* **Data Mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
+* three default connectors for..
+  * **MQTT client** - using [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) to connect and subscribe to MQTT brokers
+  * **MQTT Service client** - using hivemq-mqtt-client to connect to MQTT Service
+  * **Kafka connector** - to connect to Kafka brokers
+* **Data mapper** - handling of received messages via connector and mapping them to a target data format for Cumulocity IoT. 
 Also includes an expression runtime [JSONata](https://jsonata.org) to execute expressions
-* **C8Y Client** - implements part of the Cumulocity IoT REST API to integrate data
-* **REST Endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
-* **Mapper Frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
+* **C8Y client** - implements part of the Cumulocity IoT REST API to integrate data
+* **REST endpoints** - custom endpoints which are used by the MQTT Frontend or can be used to add mappings programmatically
+* **Mapper frontend** - A plugin for Cumulocity IoT to provide an UI for MQTT Configuration & Data Mapping
 
-> **Please Note:** When using MQTT or any other Message Broker beside MQTT Service you need an instance of this broker available to use the Dynamic Mapper.
+> **Please Note:** When using MQTT or any other Message Broker beside MQTT Service you need to provide this broker available yourself to use the Dynamic Mapper.
 
 The mapper processes messages in both directions:
 1. `INBOUND`: from Message Broker to C8Y
 2. `OUTBOUND`: from C8Y to Message Broker
 
-The Dynamic Mapper is a **multi tenant microservice** which means you can deploy it once in your enterprise tenant and subscribe additional tenants using the same hardware resources.
+The Dynamic Mapper can be deployed as a **multi tenant microservice** which means you can deploy it once in your enterprise tenant and subscribe additional tenants using the same hardware resources.
 It is also implemented to support **multiple broker connections** at the same time. So you can combine multiple message brokers sharing the same mappings.
 This implies of course that all of them use the same topic structure and payload otherwise the mappings will fail.
 
@@ -80,17 +82,16 @@ This implies of course that all of them use the same topic structure and payload
 As we already have a very good C8Y API coverage for mapping not all complex cases might be supported. Currently, the 
 following Mappings are supported:
 
-* Inventory
-* Events
-* Measurements
-* Alarms
-* Operations (Outbound to devices)
+* inventory
+* events
+* measurements
+* alarms
+* operations (outbound to devices)
 
-Beside that complex JSON objects & arrays are supported but not fully tested.
-
-Due to two different libraries to evaluate JSONata in:
+A mapping is defined of mapping properties and substitutions. The substitutions are mapping rules copying date from the incoming payload to the payload in the target system. These substitutions are defined using the standard JSONata as JSONata expressions. These JSONata expressions are evaluated in two different libraries:
 1. `dynamic-mapping-ui`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
 2. `dynamic-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
+Please be aware that slight in differences in the evaluation of these expressions exist.
 
 Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
@@ -110,10 +111,10 @@ Make sure to use a user with admin privileges in your Tenant.
 
 You need to install two components to your Cumulocity IoT Tenant:
 
-1. Microservice - (Java)
-2. WebApp Plugin - (Angular/Cumulocity WebSDK)
+1. microservice - (Java)
+2. web app plugin - (angular/Cumulocity WebSDK)
 
-Both are provided as binaries in [Releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Take 
+Both are provided as binaries in [releases](https://github.com/SoftwareAG/cumulocity-generic-mqtt-agent/releases). Download 
 the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
 #### Microservice
@@ -123,9 +124,9 @@ In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Eco
 Select the `dynamic-mapping-service.zip`.
 Make sure that you subscribe the microservice to your tenant when prompted
 
-#### Web App Plugin
+#### Web app plugin
 
-#### Community Store
+#### Community store
 
 The Web App Plugin is part of the community plugins and should be available directly in your Tenant under
 "Administration" -> "Ecosystem" -> "Extensions". Just click on "dynamic-mapping" and click on "install plugin".
@@ -171,7 +172,7 @@ The Frontend is build as [Cumulocity plugin](https://cumulocity.com/guides/web/t
 ## User Guide
 
 ### Permissions
-The solution differentiates two different roles:
+The solution differentiates between two different roles:
 1. `ROLE_MAPPING_ADMIN`: can use/access all tabs, including **Configuration**, **Processor Extension**. In addition, the relevant endpoints in `MappingRestController`:
 
    1.1. `POST /configuration/connection`
@@ -193,21 +194,22 @@ The available tabs for `ROLE_MAPPING_CREATE` are as follows:
 
 ### Configuration connector to broker
 
-The configurations are persisted in the tenant options of a Cumulocity Tenant and can be manged by the following UI.\
+The configurations are persisted as tenant options in the Cumulocity Tenant and can be manged using the following UI.\
 The table of configured connectors to different brokers can be:
 * deleted
 * enabled / disabled
-* updated
+* updated / copied
 
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Overview.png"  style="width: 70%;" />
 </p>
 <br/>
 
-Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to select first the type of connector. Currently we support the following connectors:
+Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
 * MQTT:  supports connections to MQTT version 3.1.1 over websocket and tcp
 * MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
-* Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, ...
+* Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization ( currently StringSerializer)...
+
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
@@ -223,7 +225,7 @@ The settings for the Kafka connector can be seen on the following screenshot:
 <br/>
 
 
-When you add or change a connection configuration very often it happens that incorrect parameter are given. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs:
+When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
 <p align="center">
 <img src="resources/image/Generic_Mapping_Connector_Monitoring.png"  style="width: 70%;" />
 </p>
@@ -237,8 +239,10 @@ Once the connection to a broker is configured and successfully enabled you can s
 1. Creating new mappings: Press button `Add mapping`
 2. Updating existing mapping: Press the pencil in the row of the relevant mapping
 3. Deleting existing mapping: Press the "-" icon in the row of the relevant mapping to delete an existing mappings
+4. Importing new mappings
+5. Exporting defined mappings
 
-After every change the mappings is automatically updated in the mapping cache of the microservice.
+To change a mapping it has to be deactivated.After changes are made the mapping needs to be activated again. The updated version of the mapping is deployed automatically and applied immediately when new messages are sent to the configure mapping topic.
 
 #### Define mappings from source to target format (Cumulocity REST format)
 
