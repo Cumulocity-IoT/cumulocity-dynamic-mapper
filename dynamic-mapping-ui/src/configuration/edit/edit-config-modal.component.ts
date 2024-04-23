@@ -161,11 +161,11 @@ export class EditConfigurationComponent implements OnInit {
         if (property.defaultValue && this.add) {
           this.configuration.properties[key] = property.defaultValue;
         }
-        // only display field when it is editable
+        // only display field when it is visible
         if (
           property.order < numberFields &&
           property.order >= 0 &&
-          property.editable
+          property.visible
         ) {
           if (!sortedFields[property.order]) {
             sortedFields[property.order] = { key: key, property: property };
