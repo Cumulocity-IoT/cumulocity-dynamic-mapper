@@ -33,6 +33,10 @@ public class ConnectorProperty implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean visible;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
     public Object defaultValue;
 
     @NotNull

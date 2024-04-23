@@ -30,6 +30,7 @@ export interface ConnectorProperty {
   required: boolean;
   order: number;
   editable: boolean;
+  visible: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
 }

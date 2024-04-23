@@ -63,13 +63,13 @@ public class KafkaClient extends AConnectorClient {
     public KafkaClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("bootstrapServers",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
         configProps.put("username",
-                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
         configProps.put("password",
-                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null, null));
         configProps.put("groupId",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
         String description = "Generic connector for external Kafka broker. Mappings allow to extract a value used as key in a Kafka record. The relevant setting in a mapping is  'supportsMessageContext'.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;

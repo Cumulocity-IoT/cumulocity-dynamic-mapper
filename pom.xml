@@ -28,7 +28,7 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
     <modules>
-        <module>jsonata4java</module>
+        <!-- <module>jsonata4java</module> -->
         <module>dynamic-mapping-service</module>
         <module>dynamic-mapping-interface</module>
         <module>dynamic-mapping-extension</module>
@@ -106,7 +106,7 @@
             <dependency>
                 <groupId>com.ibm.jsonata4java</groupId>
                 <artifactId>JSONata4Java</artifactId>
-                <version>2.4.8</version>
+                <version>2.4.9</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -179,6 +179,11 @@
                 <version>2.3.0-alpha</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.loki4j</groupId>
+                <artifactId>loki-logback-appender</artifactId>
+                <version>1.5.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
