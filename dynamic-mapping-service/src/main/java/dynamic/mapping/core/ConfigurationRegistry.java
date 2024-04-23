@@ -1,5 +1,7 @@
 package dynamic.mapping.core;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -127,7 +129,7 @@ public class ConfigurationRegistry {
     }
 
     public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) {
+            String additionalSubscriptionIdTest, String tenant) throws FileNotFoundException, IOException {
         AConnectorClient connectorClient = null;
         if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
             connectorClient = new MQTTClient(this, connectorConfiguration,

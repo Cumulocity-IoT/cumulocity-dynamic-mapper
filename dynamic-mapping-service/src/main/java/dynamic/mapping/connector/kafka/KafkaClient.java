@@ -31,8 +31,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import dynamic.mapping.connector.core.ConnectorProperty;
 import dynamic.mapping.connector.core.ConnectorPropertyType;
@@ -49,6 +48,10 @@ import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ClassPathResource;
 
 @Slf4j
 // Use pattern to start/stop polling thread from Stackoverflow
@@ -73,7 +76,8 @@ public class KafkaClient extends AConnectorClient {
 
     public KafkaClient(ConfigurationRegistry configurationRegistry,
             ConnectorConfiguration connectorConfiguration,
-            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant) {
+            AsynchronousDispatcherInbound dispatcher, String additionalSubscriptionIdTest, String tenant)
+            throws FileNotFoundException, IOException {
         this();
         this.configurationRegistry = configurationRegistry;
         this.mappingComponent = configurationRegistry.getMappingComponent();
@@ -92,40 +96,46 @@ public class KafkaClient extends AConnectorClient {
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.connectionState.setFalse();
-
-        defaultPropertiesProducer = new Properties();
+        
+        Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
+        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
+        
+        // defaultPropertiesProducer = new Properties();
         // String jaasTemplate =
         // "org.apache.kafka.common.security.scram.ScramLoginModule required
         // username=\"%s\" password=\"%s\";";
         // String jaasCfg = String.format(jaasTemplate, username, password);
-        String serializer = StringSerializer.class.getName();
+        // String serializer = StringSerializer.class.getName();
         // defaultPropertiesConsumer.put("bootstrap.servers",
         // "glider.srvs.cloudkafka.com:9094");
-        defaultPropertiesProducer.put("key.serializer", serializer);
-        defaultPropertiesProducer.put("value.serializer", serializer);
-        defaultPropertiesProducer.put("security.protocol", "SASL_SSL");
-        defaultPropertiesProducer.put("sasl.mechanism", "SCRAM-SHA-256");
+        // defaultPropertiesProducer.put("key.serializer", serializer);
+        // defaultPropertiesProducer.put("value.serializer", serializer);
+        // defaultPropertiesProducer.put("security.protocol", "SASL_SSL");
+        // defaultPropertiesProducer.put("sasl.mechanism", "SCRAM-SHA-256");
         // defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
-        defaultPropertiesProducer.put("linger.ms", 1);
-        defaultPropertiesProducer.put("enable.idempotence", false);
+        // defaultPropertiesProducer.put("linger.ms", 1);
+        // defaultPropertiesProducer.put("enable.idempotence", false);
 
-        String deserializer = StringDeserializer.class.getName();
-        defaultPropertiesConsumer = new Properties();
-        // defaultPropertiesConsumer.put("bootstrap.servers",
-        // "glider.srvs.cloudkafka.com:9094");
+        // String deserializer = StringDeserializer.class.getName();
+        // defaultPropertiesConsumer = new Properties();
+
+        Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
+        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
+
+        // defaultPropertiesConsumer.put("bootstrap.servers","glider.srvs.cloudkafka.com:9094");
         // defaultPropertiesConsumer.put("group.id", username + "-consumer");
         // defaultPropertiesConsumer.put("enable.auto.commit", "true");
         // defaultPropertiesConsumer.put("auto.commit.interval.ms", "1000");
-        defaultPropertiesConsumer.put("auto.offset.reset", "earliest");
-        defaultPropertiesConsumer.put("session.timeout.ms", "30000");
-        defaultPropertiesConsumer.put("key.deserializer", deserializer);
-        defaultPropertiesConsumer.put("value.deserializer", deserializer);
-        defaultPropertiesConsumer.put("key.serializer", serializer);
-        defaultPropertiesConsumer.put("value.serializer", serializer);
-        defaultPropertiesConsumer.put("security.protocol", "SASL_SSL");
-        defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
+        // defaultPropertiesConsumer.put("auto.offset.reset", "earliest");
+        // defaultPropertiesConsumer.put("session.timeout.ms", "30000");
+        // defaultPropertiesConsumer.put("key.deserializer", deserializer);
+        // defaultPropertiesConsumer.put("value.deserializer", deserializer);
+        // defaultPropertiesConsumer.put("key.serializer", serializer);
+        // defaultPropertiesConsumer.put("value.serializer", serializer);
+        // defaultPropertiesConsumer.put("security.protocol", "SASL_SSL");
+        // defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
         // defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
-        defaultPropertiesConsumer.put("linger.ms", 1);
+        // defaultPropertiesConsumer.put("linger.ms", 1);
     }
 
     private String bootstrapServers;
@@ -139,6 +149,9 @@ public class KafkaClient extends AConnectorClient {
     private Properties defaultPropertiesProducer;
 
     private KafkaProducer<String, String> kafkaProducer;
+
+    private String KAFKA_CONSUMER_PROPERTIES = "/kafka-consumer.properties";
+    private String KAFKA_PRODUCER_PROPERTIES = "/kafka-producer.properties";
 
     @Override
     public boolean initialize() {

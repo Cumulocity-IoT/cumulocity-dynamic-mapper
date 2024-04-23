@@ -1,5 +1,7 @@
 package dynamic.mapping.core;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
@@ -143,7 +145,13 @@ public class BootstrapService {
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
             ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
-        AConnectorClient connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration, additionalSubscriptionIdTest, tenant);
+        AConnectorClient connectorClient = null;
+        try {
+            connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration, additionalSubscriptionIdTest, tenant);
+        } catch (IOException e) {
+            log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(), e);
+            throw new ConnectorRegistryException(e.getMessage());
+        } 
         connectorRegistry.registerClient(tenant, connectorClient);
         // initialize AsynchronousDispatcherInbound
         AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry, connectorClient);
