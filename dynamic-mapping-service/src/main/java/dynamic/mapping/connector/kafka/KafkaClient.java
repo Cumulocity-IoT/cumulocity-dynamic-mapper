@@ -120,7 +120,7 @@ public class KafkaClient extends AConnectorClient {
         // defaultPropertiesConsumer = new Properties();
 
         Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
-        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
+        defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
 
         // defaultPropertiesConsumer.put("bootstrap.servers","glider.srvs.cloudkafka.com:9094");
         // defaultPropertiesConsumer.put("group.id", username + "-consumer");
