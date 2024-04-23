@@ -67,6 +67,8 @@ public class TopicConsumer {
     }
 
     public boolean shouldStop() {
+        if (consumingThread == null)
+            return true;
         return consumingThread.shouldStop;
     }
 
@@ -95,7 +97,7 @@ public class TopicConsumer {
         public void run() {
             Exception error = null;
             boolean continueToListen = true;
-   
+
             while (continueToListen) {
                 Topic tc = null;
                 try {
