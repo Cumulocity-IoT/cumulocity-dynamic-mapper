@@ -31,7 +31,8 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringSerializer;
+// import org.apache.kafka.common.serialization.StringDeserializer;
+// import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import dynamic.mapping.connector.core.ConnectorProperty;
