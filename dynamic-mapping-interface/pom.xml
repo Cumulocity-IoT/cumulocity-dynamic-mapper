@@ -85,7 +85,11 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
         </dependency>
-	</dependencies>
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+        </dependency>
+    </dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>
 		<plugins>
