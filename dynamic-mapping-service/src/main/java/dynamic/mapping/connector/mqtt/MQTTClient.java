@@ -102,7 +102,7 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, null));
         configProps.put("serverPath",
-                new ConnectorProperty(true, 10, ConnectorPropertyType.STRING_PROPERTY, true, "mqtt", null));
+                new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
         specification = new ConnectorSpecification(description, connectorType, configProps, false);
