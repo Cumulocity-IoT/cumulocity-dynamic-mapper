@@ -93,7 +93,7 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("clientId",
                 new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, null, null));
+                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, false, null));
         configProps.put("fingerprintSelfSignedCertificate",
                 new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("nameCertificate",
