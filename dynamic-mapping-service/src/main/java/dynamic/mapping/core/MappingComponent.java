@@ -229,7 +229,7 @@ public class MappingComponent {
             deleteMappingStatus(tenant, id);
             return m.getC8yMQTTMapping();
         });
-        log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
+        //log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
         return result;
     }
 
@@ -312,7 +312,8 @@ public class MappingComponent {
             mor.setId(GId.asGId(mapping.id));
             mor.setName(mapping.name);
             inventoryApi.update(mor);
-            log.info("Tenant {} - Created mapping: {}", mor, tenant);
+            log.info("Tenant {} - Mapping created: {}", tenant, mor.getName());
+            log.debug("Tenant {} - Mapping created: {}", tenant, mor);
             return mapping;
         });
         return result;

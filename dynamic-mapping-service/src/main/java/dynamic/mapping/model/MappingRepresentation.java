@@ -140,7 +140,7 @@ public class MappingRepresentation implements Serializable {
         String st = mapping.subscriptionTopic + "\u0000";
         String mt = mapping.mappingTopic + "\u0000";
     
-        log.info("Testing st:" + st + "Testing tt:" + mt );
+        log.debug("Testing st:" + st + "Testing tt:" + mt );
         boolean error = (!topicMatcher.apply(st, mt));
         if (error) {
             result.add(ValidationError.MappingTopic_Must_Match_The_SubscriptionTopic);

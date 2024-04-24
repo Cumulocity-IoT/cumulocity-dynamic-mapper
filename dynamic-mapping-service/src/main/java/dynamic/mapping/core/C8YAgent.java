@@ -484,7 +484,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
-                        log.info("Tenant {} - Successfully registered bean: {} for key: {}", tenant,
+                        log.debug("Tenant {} - Successfully registered bean: {} for key: {}", tenant,
                                 newExtensions.getProperty(key),
                                 key);
                     }
@@ -589,7 +589,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
-        log.info("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
