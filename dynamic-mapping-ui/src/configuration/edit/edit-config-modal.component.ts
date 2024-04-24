@@ -289,6 +289,7 @@ export class EditConfigurationComponent implements OnInit {
                     label: entry.key,
                     readonly: property.readonly,
                     cols: 120,
+                    rows: 4,
                     required: property.required
                   }
                 }

@@ -77,15 +77,14 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
             return null;
         }
         return result;
-        // this way we don't get a deep clone
-        // try {
-        // return super.clone();
-        // } catch (CloneNotSupportedException e) {
-        // return null;
-        // }
     }
 
+    /**
+     * Copy the properties that are readonly from the specification to the configuration
+     * @param spec the connectorSpecification to use as a template and copy predefined from to the connectorConfiguration
+     */
     public void copyPredefinedValues(ConnectorSpecification spec) {
+        
         spec.getProperties().entrySet().forEach(prop -> {
             ConnectorProperty p = prop.getValue();
             if (p.readonly) {
