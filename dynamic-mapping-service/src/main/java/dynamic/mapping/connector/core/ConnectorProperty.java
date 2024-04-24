@@ -29,7 +29,11 @@ public class ConnectorProperty implements Cloneable {
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
-    public Boolean editable;
+    public Boolean readonly;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean hidden;
 
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)

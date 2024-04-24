@@ -14,7 +14,7 @@ export class WrapperCustomFormField extends FieldWrapper implements OnInit {
     this.showDescriptionAsPopup =
       this.field.type === 'radio' ||
       this.field.type === 'typeahead' ||
-      (this.to.description &&
-        this.to.description.length > this.maxHelpBlockLength);
+      (this.props.description &&
+        this.props.description.length > this.maxHelpBlockLength);
   }
 }

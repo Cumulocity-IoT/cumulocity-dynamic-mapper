@@ -50,7 +50,6 @@ import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import com.hivemq.client.mqtt.MqttClientSslConfig;
@@ -78,31 +77,31 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("protocol",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, true, "mqtt://", Map.ofEntries(
+                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://", Map.ofEntries(
                         new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
                         new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
                         new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
                         new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
         configProps.put("mqttHost",
-                new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("mqttPort",
-                new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, true, null, null));
+                new ConnectorProperty(true, 2, ConnectorPropertyType.NUMERIC_PROPERTY, false, false, null, null));
         configProps.put("user",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("password",
-                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null, null));
         configProps.put("clientId",
-                new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("useSelfSignedCertificate",
-                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, null, null));
         configProps.put("fingerprintSelfSignedCertificate",
-                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 7, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("nameCertificate",
-                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 8, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("supportsWildcardInTopic",
-                new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, null));
+                new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false, true, null));
         configProps.put("serverPath",
-                new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, true, null, null));
+                new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
         specification = new ConnectorSpecification(description, connectorType, configProps, false);

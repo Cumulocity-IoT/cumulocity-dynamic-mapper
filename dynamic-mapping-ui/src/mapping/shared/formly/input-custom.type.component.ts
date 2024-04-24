@@ -30,8 +30,8 @@ import { FieldType } from '@ngx-formly/core';
       [formControl]="formControl"
       [class]="class"
       [formlyAttributes]="field"
-      [required]="to.required"
-      [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+      [required]="props.required"
+      [attr.autocomplete]="props.autocomplete ? props.autocomplete : null"
       [class.is-invalid]="showError"
     />
     <ng-template #numberTmp>
@@ -40,8 +40,8 @@ import { FieldType } from '@ngx-formly/core';
         [formControl]="formControl"
         [class]="class"
         [formlyAttributes]="field"
-        [required]="to.required"
-        [attr.autocomplete]="to.autocomplete ? to.autocomplete : null"
+        [required]="props.required"
+        [attr.autocomplete]="props.autocomplete ? props.autocomplete : null"
         [class.is-invalid]="showError"
       />
     </ng-template>`,
@@ -49,10 +49,10 @@ import { FieldType } from '@ngx-formly/core';
 })
 export class FieldInputCustom extends FieldType {
   get type() {
-    return this.to.type || 'text';
+    return this.props.type || 'text';
   }
 
   get class() {
-    return `form-control ${this.to.class}`;
+    return `form-control ${this.props.class}`;
   }
 }

@@ -23,6 +23,6 @@ import { FieldType } from '@ngx-formly/core';
 
 @Component({
   selector: 'd11r-formly-text',
-  template: '{{ to.label }}'
+  template: '{{ props.label }}'
 })
 export class FormlyTextField extends FieldType {}

@@ -88,7 +88,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     public void copyPredefinedValues(ConnectorSpecification spec) {
         spec.getProperties().entrySet().forEach(prop -> {
             ConnectorProperty p = prop.getValue();
-            if (!p.editable) {
+            if (!p.readonly) {
                 properties.put(prop.getKey(), p.defaultValue);
             }
         });
