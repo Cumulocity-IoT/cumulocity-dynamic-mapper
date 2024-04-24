@@ -77,7 +77,7 @@ public class KafkaClient extends AConnectorClient {
         Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
         defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
         StringWriter writerProducer = new StringWriter();
-        defaultPropertiesProducer.store(writerProducer, null);
+        defaultPropertiesProducer.store(writerProducer, "properties can only be edited in the property file: kafka-producer.properties");
         configProps.put("propertiesProducer",
                 new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
                         writerProducer.getBuffer().toString(), null));
@@ -85,12 +85,12 @@ public class KafkaClient extends AConnectorClient {
         Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
         defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
         StringWriter writerConsumer = new StringWriter();
-        defaultPropertiesProducer.store(writerConsumer, null);
+        defaultPropertiesConsumer.store(writerConsumer, "properties can only be edited in the property file: kafka-consumer.properties");
         configProps.put("propertiesConsumer",
                 new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
                         writerConsumer.getBuffer().toString(), null));
 
-        String description = "Generic connector for external Kafka broker. Mappings allow to extract a value used as key in a Kafka record. The relevant setting in a mapping is  'supportsMessageContext'.";
+        String description = "Generic connector to receive and send messages to a external Kafka broker. Mappings allow to define values for the payload and the key in a Kafka record. The relevant setting in a mapping is 'supportsMessageContext'.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
         specification = new ConnectorSpecification(description, connectorType, configProps, true);
