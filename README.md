@@ -369,6 +369,12 @@ The template topic is the key of the persisted mapping. The main difference to t
 a template topic can have a path behind the wildcard for the reason as we can receive multiple topics on a wildcard which might be mapped differently.\
 Examples are: "device/+/data, "device/express/+", "device/+"\
 In order to use sample data instead of the wildcard you can add a Mapping Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Mapping Topic they must exactly be the same in the Mapping Topic Sample.
+
+<p align="center">
+<img src="resources/image/Generic_Mapping_Diagram_Map.png"  style="width: 70%;" />
+</p>
+<br/>
+
 The levels of the Mapping Topic are split and added to the payload:
 ```
   "_TOPIC_LEVEL_": [
