@@ -19,18 +19,20 @@
  * @authors Christof Strack
  */
 export enum ConnectorPropertyType {
+  ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
   STRING_PROPERTY = 'STRING_PROPERTY',
   SENSITIVE_STRING_PROPERTY = 'SENSITIVE_STRING_PROPERTY',
   NUMERIC_PROPERTY = 'NUMERIC_PROPERTY',
   BOOLEAN_PROPERTY = 'BOOLEAN_PROPERTY',
-  OPTION_PROPERTY = 'OPTION_PROPERTY'
+  OPTION_PROPERTY = 'OPTION_PROPERTY',
+  STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY'
 }
 
 export interface ConnectorProperty {
   required: boolean;
   order: number;
-  editable: boolean;
-  visible: boolean;
+  readonly: boolean;
+  hidden: boolean;
   defaultValue?: any;
   type: ConnectorPropertyType;
 }

@@ -1,12 +1,12 @@
-<ng-template #popTemplate><div [innerHtml]="to.description"></div></ng-template>
+<ng-template #popTemplate><div [innerHtml]="props.description"></div></ng-template>
 <div class="form-group" [class.has-error]="showError">
-  <label *ngIf="to.label && to.hideLabel !== true" [attr.for]="id" class="text-pre-wrap">
-    {{ to.label | humanize }}
+  <label *ngIf="props.label && props.hideLabel !== true" [attr.for]="id" class="text-pre-wrap">
+    {{ props.label | humanize }}
     <i
-      *ngIf="to.tooltip"
+      *ngIf="props.tooltip"
       class="text-info"
       c8yIcon="info-circle"
-      title="{{ to.tooltip | translate }}"
+      title="{{ props.tooltip | translate }}"
     ></i>
     <button
       class="btn-help btn-help--sm m-t-auto m-b-auto"
@@ -16,15 +16,15 @@
       [popover]="popTemplate"
       triggers="focus"
       placement="right"
-      *ngIf="to.description && showDescriptionAsPopup"
+      *ngIf="props.description && showDescriptionAsPopup"
     ></button>
   </label>
   <div class="d-flex">
     <div class="flex-grow">
       <ng-template #fieldComponent></ng-template>
     </div>
-    <ng-container *ngIf="to.customTemplateRef">
-      <ng-container *ngTemplateOutlet="to.customTemplateRef"></ng-container>
+    <ng-container *ngIf="props.customTemplateRef">
+      <ng-container *ngTemplateOutlet="props.customTemplateRef"></ng-container>
     </ng-container>
   </div>
 
@@ -37,8 +37,8 @@
 
   <div
     class="help-block has-info text-muted"
-    *ngIf="!showError && to.description && !showDescriptionAsPopup"
+    *ngIf="!showError && props.description && !showDescriptionAsPopup"
   >
-    {{ to.description | translate }}
+    {{ props.description | translate }}
   </div>
 </div>

@@ -52,6 +52,8 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ConnectorConfiguration;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.StringWriter;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ClassPathResource;
 
@@ -60,16 +62,34 @@ import org.springframework.core.io.ClassPathResource;
 // https://stackoverflow.com/questions/66103052/how-do-i-stop-a-previous-thread-that-is-listening-to-kafka-topic
 
 public class KafkaClient extends AConnectorClient {
-    public KafkaClient() {
+    public KafkaClient() throws FileNotFoundException, IOException {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("bootstrapServers",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("username",
-                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
+                new ConnectorProperty(false, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("password",
-                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, true, true, null, null));
+                new ConnectorProperty(false, 2, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+                        null));
         configProps.put("groupId",
-                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, true, true, null, null));
+                new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
+
+        Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
+        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
+        StringWriter writerProducer = new StringWriter();
+        defaultPropertiesProducer.store(writerProducer, null);
+        configProps.put("propertiesProducer",
+                new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+                        writerProducer.getBuffer().toString(), null));
+
+        Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
+        defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
+        StringWriter writerConsumer = new StringWriter();
+        defaultPropertiesProducer.store(writerConsumer, null);
+        configProps.put("propertiesConsumer",
+                new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
+                        writerConsumer.getBuffer().toString(), null));
+
         String description = "Generic connector for external Kafka broker. Mappings allow to extract a value used as key in a Kafka record. The relevant setting in a mapping is  'supportsMessageContext'.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
@@ -98,10 +118,7 @@ public class KafkaClient extends AConnectorClient {
         this.dispatcher = dispatcher;
         this.tenant = tenant;
         this.connectionState.setFalse();
-        
-        Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
-        defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
-        
+
         // defaultPropertiesProducer = new Properties();
         // String jaasTemplate =
         // "org.apache.kafka.common.security.scram.ScramLoginModule required
@@ -120,10 +137,6 @@ public class KafkaClient extends AConnectorClient {
 
         // String deserializer = StringDeserializer.class.getName();
         // defaultPropertiesConsumer = new Properties();
-
-        Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
-        defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
-
         // defaultPropertiesConsumer.put("bootstrap.servers","glider.srvs.cloudkafka.com:9094");
         // defaultPropertiesConsumer.put("group.id", username + "-consumer");
         // defaultPropertiesConsumer.put("enable.auto.commit", "true");

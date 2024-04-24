@@ -76,7 +76,6 @@ public class BootstrapService {
         configurationRegistry.getNotificationSubscriber().unsubscribeTenantSubscriber(tenant);
         configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
 
-
         try {
             connectorRegistry.unregisterAllClientsForTenant(tenant);
         } catch (ConnectorRegistryException e) {
@@ -115,12 +114,11 @@ public class BootstrapService {
         mappingComponent.rebuildMappingOutboundCache(tenant);
         mappingComponent.rebuildMappingInboundCache(tenant);
 
-        // TODO Add other clients static property definition here
-        connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpecification());
-        connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpecification());
-        connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getSpecification());
-
         try {
+            // TODO Add other clients static property definition here
+            connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpecification());
+            connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpecification());
+            connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getSpecification());
             if (serviceConfiguration != null) {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
                         .getConnectorConfigurations(tenant);
@@ -138,7 +136,7 @@ public class BootstrapService {
 
         log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
         if (outputMappingEnabled) {
-            //configurationRegistry.getNotificationSubscriber().initTenantClient();
+            // configurationRegistry.getNotificationSubscriber().initTenantClient();
             configurationRegistry.getNotificationSubscriber().initDeviceClient();
         }
     }
@@ -147,14 +145,16 @@ public class BootstrapService {
             ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
         AConnectorClient connectorClient = null;
         try {
-            connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration, additionalSubscriptionIdTest, tenant);
+            connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,
+                    additionalSubscriptionIdTest, tenant);
         } catch (IOException e) {
             log.error("Tenant {} - Error on creating connector {} {}", connectorConfiguration.getConnectorType(), e);
             throw new ConnectorRegistryException(e.getMessage());
-        } 
+        }
         connectorRegistry.registerClient(tenant, connectorClient);
         // initialize AsynchronousDispatcherInbound
-        AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry, connectorClient);
+        AsynchronousDispatcherInbound dispatcherInbound = new AsynchronousDispatcherInbound(configurationRegistry,
+                connectorClient);
         configurationRegistry.initializePayloadProcessorsInbound(tenant);
         connectorClient.setDispatcher(dispatcherInbound);
         connectorClient.reconnect();

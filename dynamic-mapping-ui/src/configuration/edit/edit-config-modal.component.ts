@@ -9,6 +9,7 @@ import {
   ConnectorPropertyType
 } from '../shared/configuration.model';
 import { uuidCustom } from '../../shared';
+import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
@@ -72,7 +73,7 @@ export class EditConfigurationComponent implements OnInit {
         type: 'select',
         id: 'connectorType',
         wrappers: ['c8y-form-field'],
-        templateOptions: {
+        props: {
           label: 'Connector type',
           options: this.specifications.map((sp) => {
             return {
@@ -130,7 +131,7 @@ export class EditConfigurationComponent implements OnInit {
           id: 'name',
           type: 'input',
           wrappers: ['c8y-form-field'],
-          templateOptions: {
+          props: {
             label: 'Name',
             required: true
           }
@@ -142,7 +143,7 @@ export class EditConfigurationComponent implements OnInit {
         //     type: 'switch',
         //     wrappers: ['c8y-form-field'],
         //     defaultValue: true,
-        //     templateOptions: {
+        //     props: {
         //       label: HumanizePipe.humanize('supportsWildcardInTopic'),
         //       description: 'If this option is checked, then topics can contains wildcards characters: +, #',
         //     }
@@ -165,7 +166,7 @@ export class EditConfigurationComponent implements OnInit {
         if (
           property.order < numberFields &&
           property.order >= 0 &&
-          property.visible
+          !property.hidden
         ) {
           if (!sortedFields[property.order]) {
             sortedFields[property.order] = { key: key, property: property };
@@ -190,7 +191,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     type: 'number',
                     label: entry.key,
                     required: property.required
@@ -208,7 +209,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     label: entry.key,
                     required: property.required
                   }
@@ -227,7 +228,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     type: 'password',
                     label: entry.key,
                     required: property.required
@@ -245,7 +246,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'switch',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     label: entry.key,
                     required: property.required
                   }
@@ -262,12 +263,33 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'select',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     label: entry.key,
                     required: property.required,
                     options: Object.values(property.options).map((key) => {
                       return { label: key, value: key };
                     })
+                  }
+                }
+              ]
+            });
+          } else if (
+            property.type == ConnectorPropertyType.STRING_LARGE_PROPERTY
+          ) {
+            this.dynamicFormlyFields.push({
+              // fieldGroupClassName: "row",
+              fieldGroup: [
+                {
+                  className: 'col-lg-12',
+                  key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
+                  type: FieldTextareaCustom,
+                  wrappers: ['c8y-form-field'],
+                  props: {
+                    label: entry.key,
+                    readonly: property.readonly,
+                    cols: 120,
+                    required: property.required
                   }
                 }
               ]
