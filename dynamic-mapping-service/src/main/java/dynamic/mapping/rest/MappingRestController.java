@@ -128,7 +128,7 @@ public class MappingRestController {
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Get Feature status", tenant);
+        log.debug("Tenant {} - Get Feature status", tenant);
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
@@ -451,7 +451,7 @@ public class MappingRestController {
                             entry.getValue().getValue()))
                     .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
-            log.info("Tenant {} - Get active subscriptions!", tenant);
+            log.debug("Tenant {} - Getting active subscriptions!", tenant);
             return ResponseEntity.status(HttpStatus.OK).body(result);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
@@ -479,7 +479,7 @@ public class MappingRestController {
                 }
             }
 
-            log.info("Tenant {} - Get active subscriptions!", tenant);
+            log.debug("Tenant {} - Get active subscriptions!", tenant);
             return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
@@ -530,7 +530,7 @@ public class MappingRestController {
             log.error("Tenant {} - Exception when deleting mapping {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
-        log.info("Tenant {} - After Delete mapping: {}", tenant, id);
+        log.info("Tenant {} - Mapping {} successfully deleted!", tenant, id);
 
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }
@@ -541,7 +541,8 @@ public class MappingRestController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             String tenant = contextService.getContext().getTenant();
-            log.info("Tenant {} - Add mapping: {}", mapping);
+            log.info("Tenant {} - Adding mapping: {}", tenant, mapping.getMappingTopic());
+            log.debug("Tenant {} - Adding mapping: {}", tenant, mapping);
             // new mapping should be disabled by default
             mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);

@@ -192,7 +192,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                     e.getMessage());
-                            log.info("Tenant {} - Message Stacktrace: ", tenant, e);
+                            log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {

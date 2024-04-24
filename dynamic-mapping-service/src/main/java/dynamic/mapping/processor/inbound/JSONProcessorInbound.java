@@ -124,8 +124,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                     substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("Tenant {} - No substitution for: {}, {}", tenant, substitution.pathSource,
-                        payload);
+                log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant, substitution.pathSource, mapping.getMappingTopic());
                 postProcessingCacheEntry
                         .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                 MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));

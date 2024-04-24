@@ -449,12 +449,13 @@ public abstract class AConnectorClient {
             // subscribe to new topics
             updatedSubscriptionCache.keySet().forEach((topic) -> {
                 if (!getActiveSubscriptions().containsKey(topic)) {
+
                     int qosOrdial = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                     QOS qos = QOS.values()[qosOrdial];
-                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, topic, qos);
                     try {
                         subscribe(topic, qos);
+                        log.info("Tenant {} - Successfully subscribed to topic: {}, qos: {}", tenant, topic, qos);
                     } catch (ConnectorException exp) {
                         log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant, topic, exp);
                         throw new RuntimeException(exp);
@@ -462,7 +463,7 @@ public abstract class AConnectorClient {
                 }
             });
             activeSubscriptions = updatedSubscriptionCache;
-            log.info("Tenant {} - Updating subscriptions to topics was successful, activeSubscriptions on topic {}",
+            log.info("Tenant {} - Updating subscriptions to topics was successful, active Subscriptions: {}",
                     tenant, getActiveSubscriptions().size());
         }
     }

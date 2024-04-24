@@ -230,7 +230,7 @@ public class MappingTreeNode {
                     tn.getValue().removeIf(tnn -> {
                         if (tnn.isMappingNode()) {
                             if (tnn.getMapping().id.equals(mapping.id)) {
-                                log.info(
+                                log.debug(
                                         "Tenant {} - Deleting mappingNode          : currentPathMonitoring: {}, branchingLevel: {}, mappingId: {}",
                                         tenant,
                                         currentPathMonitoring, branchingLevel, mapping.id);
@@ -271,7 +271,7 @@ public class MappingTreeNode {
                                         currentPathMonitoring, branchingLevel, e.getMessage());
                             }
                             if (currentLevel < branchingLevel.getValue()) {
-                                log.info(
+                                log.debug(
                                         "Tenant {} - Deleting innerNode stopped: currentPathMonitoring: {}, branchingLevel: {}",
                                         tenant,
                                         currentPathMonitoring, branchingLevel);
@@ -279,7 +279,7 @@ public class MappingTreeNode {
                             }
                         }
                         if (bm) {
-                            log.info(
+                            log.debug(
                                     "Tenant {} - Deleting innerNode            : currentPathMonitoring: {}, branchingLevel: {}",
                                     tenant,
                                     currentPathMonitoring, branchingLevel);
