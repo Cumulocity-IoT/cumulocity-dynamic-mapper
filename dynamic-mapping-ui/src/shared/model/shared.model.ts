@@ -130,7 +130,7 @@ export const MAPPING_TYPE_DESCRIPTION : Record <MappingType, MappingTypeDescript
     ]
     `},
     [MappingType.GENERIC_BINARY]: {key: MappingType.GENERIC_BINARY , description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
-Use the JSONata function "$number() to parse an hexdecimal string as a number, e.g. $number("0x5a75") returns 23157`},
+Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157`},
     [MappingType.PROTOBUF_STATIC]: {key: MappingType.PROTOBUF_STATIC , description: 'Mapping handles payloads in protobuf format'},
     [MappingType.PROCESSOR_EXTENSION]: {key: MappingType.PROCESSOR_EXTENSION , description: 'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab'},
 };
