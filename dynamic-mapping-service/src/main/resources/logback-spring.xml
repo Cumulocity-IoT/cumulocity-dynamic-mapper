@@ -8,9 +8,9 @@
     <springProfile name="dev">
         <logger name="org.springframework.web" level="INFO" />
         <logger name="org.apache.commons.httpclient" level="INFO" />
-        <logger name="httpclient.wire" level="DEBUG" />
-        <logger name="dynamic.mapping" level="DEBUG" />
-        <logger name="com.cumulocity" level="DEBUG" />
+        <logger name="httpclient.wire" level="INFO" />
+        <logger name="dynamic.mapping" level="INFO" />
+        <logger name="com.cumulocity" level="INFO" />
     </springProfile>
 
     <springProfile name="test">
