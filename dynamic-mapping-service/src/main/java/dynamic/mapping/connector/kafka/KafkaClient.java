@@ -101,19 +101,23 @@ public class KafkaClient extends AConnectorClient {
     }
 
     private static String removeDateCommentLine(String pt) {
-        String regex = "(?m)^#.*$(\r?\n)?";
+        String result = pt;
+        String regex = "(?m)^[ ]*#.*$(\r?\n)?";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(pt);
-        if (matcher.find()) {
-            // Find the second occurrence of the pattern
-            if (matcher.find()) {
-                return pt.replaceFirst(regex, "");
-            } else {
-                return pt;
+        // Find the second occurrence of the pattern
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+            if (count == 2) {
+                break;
             }
-        } else {
-            return pt;
         }
+        // Remove the second line starting with "#"
+        if (count == 2) {
+            result = pt.substring(0, matcher.start()) + pt.substring(matcher.end());
+        }
+        return result;
     }
 
     public KafkaClient(ConfigurationRegistry configurationRegistry,
