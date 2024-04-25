@@ -28,7 +28,6 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
     <modules>
-        <!-- <module>jsonata4java</module> -->
         <module>dynamic-mapping-service</module>
         <module>dynamic-mapping-interface</module>
         <module>dynamic-mapping-extension</module>
