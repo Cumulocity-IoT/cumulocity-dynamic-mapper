@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -77,23 +79,41 @@ public class KafkaClient extends AConnectorClient {
         Resource resourceProducer = new ClassPathResource(KAFKA_PRODUCER_PROPERTIES);
         defaultPropertiesProducer = PropertiesLoaderUtils.loadProperties(resourceProducer);
         StringWriter writerProducer = new StringWriter();
-        defaultPropertiesProducer.store(writerProducer, "properties can only be edited in the property file: kafka-producer.properties");
+        defaultPropertiesProducer.store(writerProducer,
+                "properties can only be edited in the property file: kafka-producer.properties");
         configProps.put("propertiesProducer",
                 new ConnectorProperty(false, 4, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-                        writerProducer.getBuffer().toString(), null));
+                        removeDateCommentLine(writerProducer.getBuffer().toString()), null));
 
         Resource resourceConsumer = new ClassPathResource(KAFKA_CONSUMER_PROPERTIES);
         defaultPropertiesConsumer = PropertiesLoaderUtils.loadProperties(resourceConsumer);
         StringWriter writerConsumer = new StringWriter();
-        defaultPropertiesConsumer.store(writerConsumer, "properties can only be edited in the property file: kafka-consumer.properties");
+        defaultPropertiesConsumer.store(writerConsumer,
+                "properties can only be edited in the property file: kafka-consumer.properties");
         configProps.put("propertiesConsumer",
                 new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
-                        writerConsumer.getBuffer().toString(), null));
+                        removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
 
-        String description = "Generic connector to receive and send messages to a external Kafka broker. Mappings allow to define values for the payload and the key in a Kafka record. The relevant setting in a mapping is 'supportsMessageContext'.";
+        String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
         specification = new ConnectorSpecification(description, connectorType, configProps, true);
+    }
+
+    private static String removeDateCommentLine(String pt) {
+        String regex = "(?m)^#.*$(\r?\n)?";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(pt);
+        if (matcher.find()) {
+            // Find the second occurrence of the pattern
+            if (matcher.find()) {
+                return pt.replaceFirst(regex, "");
+            } else {
+                return pt;
+            }
+        } else {
+            return pt;
+        }
     }
 
     public KafkaClient(ConfigurationRegistry configurationRegistry,
