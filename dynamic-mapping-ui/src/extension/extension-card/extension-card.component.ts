@@ -22,8 +22,9 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { ExtensionStatus } from '../../shared';
+import { ConfirmationModalComponent, ExtensionStatus } from '../../shared';
 import { ExtensionService } from '../share/extension.service';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
@@ -40,7 +41,8 @@ export class ExtensionCardComponent implements OnInit {
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private router: Router,
-    private activatedRoute: ActivatedRoute
+    private activatedRoute: ActivatedRoute,
+    public bsModalService: BsModalService
   ) {}
 
   async ngOnInit() {
@@ -56,13 +58,36 @@ export class ExtensionCardComponent implements OnInit {
   }
 
   async delete() {
-    try {
-      await this.extensionService.deleteExtension(this.app);
-      this.appDeleted.emit();
-    } catch (ex) {
-      if (ex) {
-        this.alertService.addServerFailure(ex);
-      }
-    }
+    const initialState = {
+        title: 'Delete mapping extension',
+        message:
+          'You are about to delete a mapping extension. Do you want to proceed?',
+        labels: {
+          ok: 'Delete',
+          cancel: 'Cancel'
+        }
+      };
+      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState }
+      );
+      confirmDeletionModalRef.content.closeSubject.subscribe(
+        async (confirmation: boolean) => {
+          console.log('Confirmation result:', confirmation);
+          if (confirmation) {
+            try {
+                await this.extensionService.deleteExtension(this.app);
+                this.appDeleted.emit();
+              } catch (ex) {
+                if (ex) {
+                  this.alertService.addServerFailure(ex);
+                }
+              }
+          }
+          confirmDeletionModalRef.hide();
+        }
+      );
+
+
   }
 }

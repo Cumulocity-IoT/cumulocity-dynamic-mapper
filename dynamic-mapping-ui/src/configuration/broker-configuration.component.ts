@@ -70,7 +70,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     sendConnectorLifecycle: false,
     sendMappingStatus: true,
     sendSubscriptionEvents: false,
-    sendNotificationLifecycle: false,
+    sendNotificationLifecycle: false
   };
 
   constructor(
@@ -89,7 +89,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       sendConnectorLifecycle: new FormControl(''),
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl(''),
-      sendNotificationLifecycle: new FormControl(''),
+      sendNotificationLifecycle: new FormControl('')
     });
     this.feature = await this.sharedService.getFeatures();
     this.specifications =
@@ -173,7 +173,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alert.warning(
-      gettext('Review properties, e.g. client_id must be different across different client connectors to the same broker.')
+      gettext(
+        'Review properties, e.g. client_id must be different across different client connectors to the same broker.'
+      )
     );
 
     const initialState = {
@@ -308,14 +310,38 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   }
 
   async resetStatusMapping() {
-    const res = await this.brokerConfigurationService.runOperation(
-      Operation.RESET_STATUS_MAPPING
+    const initialState = {
+      title: 'Reset mapping statistic',
+      message:
+        'You are about to delete the mapping statistic. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
     );
-    if (res.status < 300) {
-      this.alert.success(gettext('Status reset successfully.'));
-    } else {
-      this.alert.danger(gettext('Failed to rest statistic.'));
-    }
+
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        console.log('Confirmation result:', result);
+        if (result) {
+          const res = await this.brokerConfigurationService.runOperation(
+            Operation.RESET_STATUS_MAPPING
+          );
+          if (res.status < 300) {
+            this.alert.success(
+              gettext('Mapping statistic reset successfully.')
+            );
+          } else {
+            this.alert.danger(gettext('Failed to reset statistic.'));
+          }
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 
   async clickedSaveServiceConfiguration() {
