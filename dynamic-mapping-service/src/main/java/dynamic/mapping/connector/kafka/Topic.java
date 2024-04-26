@@ -19,7 +19,7 @@ import java.util.Properties;
 public class Topic implements AutoCloseable {
     private final TopicConfig topicConfig;
 
-    private final Consumer consumer;
+    private final Consumer<byte[], byte[]> consumer;
 
     public Topic(final TopicConfig topicConfig) {
         this.topicConfig = topicConfig;

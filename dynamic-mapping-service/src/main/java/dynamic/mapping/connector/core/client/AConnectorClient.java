@@ -26,7 +26,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -206,72 +205,80 @@ public abstract class AConnectorClient {
                 TimeUnit.SECONDS);
     }
 
-    /***
+    /**
      * Connect to the broker
-     ***/
+     **/
     public abstract void connect();
 
-
-    /***
-     * This method if specifically for Kafka, since it does not have the concept of a client. Kafka rather supports consumer on topic level. They can fail to connect
-     ***/
+    /**
+     * This method if specifically for Kafka, since it does not have the concept of
+     * a client. Kafka rather supports consumer on topic level. They can fail to
+     * connect
+     **/
     public abstract void monitorSubscriptions();
 
-    /***
+    /**
      * Should return true when connector is enabled and provided properties are
      * valid
-     ***/
+     **/
     public boolean shouldConnect() {
         return isConfigValid(connectorConfiguration) && connectorConfiguration.isEnabled();
     }
 
-    /***
+    /**
      * Returns true if the connector is currently connected
-     ***/
+     **/
     public abstract boolean isConnected();
 
-    /***
+    /**
      * Disconnect the broker
-     ***/
+     **/
     public abstract void disconnect();
 
-    /***
+    /**
      * Close the connection to broker and release all resources
-     ***/
+     **/
     public abstract void close();
 
-    /***
+    /**
      * Returning the unique ID identifying the connector instance
-     ***/
+     **/
     public abstract String getConnectorIdent();
 
-    /***
+    /**
      * Returning the name of the connector instance
-     ***/
+     **/
     public abstract String getConnectorName();
 
-    /***
+    /**
      * Subscribe to a topic on the Broker
-     ***/
+     **/
     public abstract void subscribe(String topic, QOS qos) throws ConnectorException;
 
-    /***
+    /**
      * Unsubscribe a topic on the Broker
-     ***/
+     **/
     public abstract void unsubscribe(String topic) throws Exception;
 
-    /***
+    /**
      * Checks if the provided configuration is valid
-     ***/
+     **/
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
 
-    /***
+    /**
      * This method should publish Cumulocity received Messages to the Connector
      * using the provided ProcessContext
      * Relevant for Outbound Communication
-     ***/
+     **/
     public abstract void publishMEAO(ProcessingContext<?> context);
 
+    /**
+     * This method is triggered every 30 seconds. It performs the following tasks:
+     * 1. synchronizes snooped payloads with the mapping in the inventory
+     * 2. send an connector lifecycle update
+     * 3. monitor and removes failed subscriptions. This is required for the Kafka
+     * connector
+     **/
     public void runHousekeeping() {
         try {
             Instant now = Instant.now();
@@ -343,6 +350,14 @@ public abstract class AConnectorClient {
         }
     }
 
+    /**
+     * This method is called when a mapping is created or an existing mapping is
+     * updated.
+     * It maintains a list of the active subscriptions for this connector.
+     * When a mapping id deleted or deactivated, then it is verified how many other
+     * mapping use the same subscriptionTopic. If there are no other mapping using
+     * the same subscriptionTopic the subscriptionTopic is unsubscribed
+     **/
     public void upsertActiveSubscription(Mapping mapping) {
         if (isConnected()) {
             // test if subscriptionTopic has changed
@@ -412,6 +427,12 @@ public abstract class AConnectorClient {
         }
     }
 
+    /**
+     * This method is maintains the list of mappings that are active for this
+     * connector.
+     * If a connector does not support wildcards in this topic subscriptions, i.e.
+     * Kafka, the mapping can't be activated for this connector
+     **/
     public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
 
         mappingsDeployed = new ConcurrentHashMap<>();
@@ -429,7 +450,7 @@ public abstract class AConnectorClient {
                     }
                     MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
                     activeSubs.add(1);
-                    mappingsDeployed.put(mapping.ident,mapping);
+                    mappingsDeployed.put(mapping.ident, mapping);
                 }
             });
 

@@ -32,7 +32,6 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import dynamic.mapping.processor.model.RepairStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
-import org.springframework.stereotype.Component;
 
 import javax.ws.rs.ProcessingException;
 import java.io.IOException;
