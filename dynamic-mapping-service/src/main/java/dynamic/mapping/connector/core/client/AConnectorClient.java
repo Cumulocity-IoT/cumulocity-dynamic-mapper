@@ -376,7 +376,7 @@ public abstract class AConnectorClient {
             }
 
             Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
-            boolean validDeployment = supportsWildcardsInTopic() || !containsWildcards;
+            boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
             if (validDeployment) {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                     getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
@@ -444,7 +444,7 @@ public abstract class AConnectorClient {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
             updatedMappings.forEach(mapping -> {
                 Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
-                if (supportsWildcardsInTopic() || !containsWildcards) {
+                if ((supportsWildcardsInTopic() || !containsWildcards) && mapping.isActive()) {
                     if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
                         updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
                     }

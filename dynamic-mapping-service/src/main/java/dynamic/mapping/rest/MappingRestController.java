@@ -371,9 +371,16 @@ public class MappingRestController {
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 configurationRegistry.getC8yAgent().reloadExtensions(tenant);
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
-                String id = operation.getParameter().get("id");
+                // activate/deactivate mapping
+                String mappingId = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
-                mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+                Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, mappingId, activeBoolean);
+                Map<String, AConnectorClient> connectorMap = connectorRegistry
+                        .getClientsForTenant(tenant);
+                // subscribe/unsubscribe respective subscriptionTopic of mapping
+                for (AConnectorClient client : connectorMap.values()) {
+                    client.upsertActiveSubscription(updatedMapping);
+                }
             } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
                 String id = operation.getParameter().get("id");
                 Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
@@ -468,7 +475,8 @@ public class MappingRestController {
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
                     ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-                    List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream().collect(Collectors.toList());
+                    List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
+                            .collect(Collectors.toList());
                     subscribedMappings.forEach(ident -> {
                         MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
                                 new MappingDeployment(ident));

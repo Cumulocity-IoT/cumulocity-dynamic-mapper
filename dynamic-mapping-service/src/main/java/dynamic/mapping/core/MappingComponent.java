@@ -430,14 +430,14 @@ public class MappingComponent {
         return rebuildMappingInboundCache(tenant, updatedMappings);
     }
 
-    public void setActivationMapping(String tenant, String id, Boolean active) throws Exception {
+    public Mapping setActivationMapping(String tenant, String mappingId, Boolean active) throws Exception {
         // step 1. update activation for mapping
-        log.info("Tenant {} - Setting active: {} got mapping: {}", tenant, id, active);
-        Mapping mapping = getMapping(tenant, id);
+        log.info("Tenant {} - Setting active: {} got mapping: {}", tenant, mappingId, active);
+        Mapping mapping = getMapping(tenant, mappingId);
         mapping.setActive(active);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
-            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
         }
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
@@ -454,6 +454,7 @@ public class MappingComponent {
             addToCacheMappingInbound(tenant, mapping);
             cacheMappingInbound.get(tenant).put(mapping.id, mapping);
         }
+        return mapping;
     }
 
     public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
