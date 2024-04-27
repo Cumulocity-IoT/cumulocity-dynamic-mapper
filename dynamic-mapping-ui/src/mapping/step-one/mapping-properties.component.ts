@@ -426,6 +426,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'externalIdType',
             type: 'input',
+            defaultValue: 'c8y_Serial',
             templateOptions: {
               label: 'External Id type',
               disabled:
