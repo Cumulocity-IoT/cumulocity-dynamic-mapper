@@ -290,7 +290,10 @@ export class MappingService {
       }
     );
     const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
+    if (!data.ok) {
+      const error = await data.json();
+      throw new Error(error.message)!;
+    }
     const m = await data.json();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();

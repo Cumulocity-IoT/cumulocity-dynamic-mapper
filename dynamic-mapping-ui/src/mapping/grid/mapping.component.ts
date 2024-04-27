@@ -598,7 +598,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.alertService.success(gettext('Mapping updated successfully'));
         } catch (error) {
           this.alertService.danger(
-            gettext('Failed to updated mapping:') + error
+            gettext('Failed to updated mapping: ') + error.message
           );
         }
         // this.activateMappings();
