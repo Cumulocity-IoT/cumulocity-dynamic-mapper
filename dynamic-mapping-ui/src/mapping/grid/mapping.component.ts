@@ -18,7 +18,13 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import {
   ActionControl,
   AlertService,
@@ -26,6 +32,7 @@ import {
   BulkActionControl,
   Column,
   ColumnDataType,
+  DataGridComponent,
   DisplayOptions,
   Pagination,
   gettext
@@ -71,6 +78,7 @@ import { MappingDeploymentRendererComponent } from '../renderer/mappingDeploymen
   encapsulation: ViewEncapsulation.None
 })
 export class MappingComponent implements OnInit, OnDestroy {
+  @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
   isSubstitutionValid: boolean;
 
   showConfigMapping: boolean = false;
@@ -104,7 +112,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     gridHeader: true
   };
 
-  columnsMappings: Column[];
+  columnsMappings: Column[] = [];
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
@@ -515,7 +523,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const newActive = !mapping.active;
     const action = newActive ? 'Activated' : 'Deactivated';
-    this.alertService.success(`${action} mapping: ${mapping.id}!`);
+    this.alertService.success(`${action} mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, active: newActive };
     await this.mappingService.changeActivationMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -525,7 +533,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const { mapping } = m;
     const newDebug = !mapping.debug;
     const action = newDebug ? 'Activated' : 'Deactivated';
-    this.alertService.success(`Debugging ${action} mapping: ${mapping.id}!`);
+    this.alertService.success(`Debugging ${action} mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, debug: newDebug };
     await this.mappingService.changeDebuggingMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
@@ -671,6 +679,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         .map((me) => me.mapping);
       this.exportMappings(mappings2Export);
     });
+
+    this.mappingGrid.setAllItemsSelected(false);
   }
 
   private activateMappingBulk(ids: string[]) {
@@ -684,10 +694,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         const action = newActive ? 'Activated' : 'Deactivated';
         const parameter = { id: m.id, active: newActive };
         await this.mappingService.changeActivationMapping(parameter);
-        this.alertService.success(`${action} mapping: ${m.id}!`);
+        this.alertService.success(`${action} mapping: ${m.id}`);
       }
       this.mappingService.refreshMappings(this.stepperConfiguration.direction);
     });
+    this.mappingGrid.setAllItemsSelected(false);
   }
 
   private async deleteMappingBulkWithConfirmation(ids: string[]) {
@@ -715,6 +726,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     });
     this.isConnectionToMQTTEstablished = true;
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    this.mappingGrid.setAllItemsSelected(false);
   }
 
   async onExportAll() {
