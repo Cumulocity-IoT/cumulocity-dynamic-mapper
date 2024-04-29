@@ -340,7 +340,10 @@ export class MappingService {
   ): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
-      topic: mapping.mappingTopicSample,
+      topic:
+        mapping.direction == Direction.INBOUND
+          ? mapping.mappingTopicSample
+          : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
       cardinality: new Map<string, number>(),
       errors: [],

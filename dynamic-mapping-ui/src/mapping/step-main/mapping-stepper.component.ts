@@ -598,7 +598,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.templateModel.mapping = this.mapping;
       console.log(
         'Populate jsonPath if wildcard:',
-        isWildcardTopic(this.mapping.subscriptionTopic),
+        isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
         this.mapping.substitutions.length
       );
       console.log(
