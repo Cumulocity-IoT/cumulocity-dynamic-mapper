@@ -78,7 +78,7 @@
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block">
-    <c8y-data-grid id="mappingGrid" #mappingGrid
+    <c8y-data-grid #mappingGrid
       [title]="titleMapping | translate"
       [selectable]="true"
       [columns]="columnsMappings"
@@ -137,7 +137,6 @@
       (cancel)="showConfigMapping = false"
       (commit)="onCommitMapping($event)"
       [mapping]="mappingToUpdate"
-      [mappings]="mappings$ | async"
       [stepperConfiguration]="stepperConfiguration"
     >
     </d11r-mapping-stepper>

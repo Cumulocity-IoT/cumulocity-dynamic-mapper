@@ -83,7 +83,6 @@ import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapp
 })
 export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
-  @Input() mappings: Mapping[];
   @Input() stepperConfiguration: StepperConfiguration;
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();

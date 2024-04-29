@@ -112,7 +112,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     gridHeader: true
   };
 
-  columnsMappings: Column[] = [];
+  columnsMappings: Column[];
   columnsSubscriptions: Column[] = [
     {
       name: 'id',
