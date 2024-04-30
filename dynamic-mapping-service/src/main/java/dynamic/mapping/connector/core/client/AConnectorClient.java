@@ -381,8 +381,10 @@ public abstract class AConnectorClient {
                 if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
                     getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
                 }
-                if (!getMappingsDeployed().containsKey(mapping.ident)) {
+                if (mapping.active) {
                     getMappingsDeployed().put(mapping.ident, mapping);
+                } else {
+                    getMappingsDeployed().remove(mapping.ident);
                 }
                 MutableInt updatedMappingSubs = getActiveSubscriptions()
                         .get(mapping.subscriptionTopic);
