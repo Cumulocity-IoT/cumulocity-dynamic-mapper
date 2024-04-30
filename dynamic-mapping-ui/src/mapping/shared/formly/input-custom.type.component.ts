@@ -31,7 +31,7 @@ import { FieldType } from '@ngx-formly/core';
       [class]="class"
       [formlyAttributes]="field"
       [required]="props.required"
-      [attr.autocomplete]="props.autocomplete ? props.autocomplete : null"
+      [attr.autocomplete]="props['autocomplete'] ? props['autocomplete'] : null"
       [class.is-invalid]="showError"
     />
     <ng-template #numberTmp>
@@ -41,7 +41,7 @@ import { FieldType } from '@ngx-formly/core';
         [class]="class"
         [formlyAttributes]="field"
         [required]="props.required"
-        [attr.autocomplete]="props.autocomplete ? props.autocomplete : null"
+        [attr.autocomplete]="props['autocomplete']? props['autocomplete'] : null"
         [class.is-invalid]="showError"
       />
     </ng-template>`,

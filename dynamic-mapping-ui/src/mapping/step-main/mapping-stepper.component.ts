@@ -544,7 +544,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.editorSource ? this.editorSource.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
-      target: reduceTargetTemplate(this.editorTarget?.get()), // remove pachted attributes, since it should not be stored
+      target: reduceTargetTemplate(this.editorTarget?.get(), patched), // remove patched attributes, since it should not be stored
       lastUpdate: Date.now()
     };
   }

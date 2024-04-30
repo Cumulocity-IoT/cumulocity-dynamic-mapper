@@ -53,7 +53,8 @@ export const SAMPLE_TEMPLATES_C8Y = {
   INVENTORY: `{ 
     "c8y_IsDevice": {},
     "name": "Vibration Sensor",
-    "type": "maker_Vibration_Sensor"
+    "type": "maker_Vibration_Sensor",
+    "com_cumulocity_model_Agent": {}
  }`,
   OPERATION: `{ 
    "deviceId": "909090",

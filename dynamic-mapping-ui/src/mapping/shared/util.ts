@@ -639,8 +639,9 @@ export function reduceSourceTemplate(
   return tt;
 }
 
-export function reduceTargetTemplate(template: object): string {
-  if (template) {
+export function reduceTargetTemplate(template: object,
+    patched: boolean): string {
+  if (template && !patched) {
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];
   }
