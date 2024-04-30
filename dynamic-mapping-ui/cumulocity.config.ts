@@ -39,6 +39,10 @@ export default {
       {
         from: '../resources/image/Generic_Mapping_AddMapping.png',
         to: 'images/Generic_Mapping_AddMapping.png'
+      },
+      {
+        from: '../resources/image/Generic_Mapping_MappingTemplate.png',
+        to: 'images/Generic_Mapping_MappingTemplate.png'
       }
     ],
     federation: [

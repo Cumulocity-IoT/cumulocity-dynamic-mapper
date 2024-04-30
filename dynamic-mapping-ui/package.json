@@ -63,40 +63,5 @@
     "file-loader": "^6.2.0",
     "prettier": "^3.1.1",
     "typescript": "~5.1.3"
-  },
-  "c8y": {
-    "application": {
-      "name": "dynamic-mapping-ui",
-      "contextPath": "sag-ps-pkg-dynamic-mapping",
-      "key": "sag-ps-pkg-dynamic-mapping-key",
-      "globalTitle": "Dynamic Mapping Widget",
-      "tabsHorizontal": true,
-      "isPackage": true,
-      "noAppSwitcher": true,
-      "package": "plugin",
-      "exports": [
-        {
-          "name": "Dynamic Mapping Widget",
-          "module": "DynamicMappingModule",
-          "path": "./src/dynamic-mapping.module",
-          "description": "Adds a Dynamic Mapping Widget"
-        }
-      ],
-      "copy": [
-        {
-          "from": "README.md",
-          "to": "README.md"
-        },
-        {
-          "from": "../resources/image/Generic_Mapping_AddMapping.png",
-          "to": "images/Generic_Mapping_AddMapping.png"
-        }
-      ],
-      "remotes": {
-        "sag-ps-pkg-dynamic-mapping": [
-          "DynamicMappingModule"
-        ]
-      }
-    }
   }
 }
