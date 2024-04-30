@@ -137,6 +137,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                                     "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
                             request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
                             request.put("c8y_IsDevice", null);
+                            request.put("com_cumulocity_model_Agent", null);
                             try {
                                 var requestString = objectMapper.writeValueAsString(request);
                                 var newPredecessor = context.addRequest(
