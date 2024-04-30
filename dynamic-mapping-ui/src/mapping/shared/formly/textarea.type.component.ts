@@ -43,7 +43,7 @@ import { FieldType } from '@ngx-formly/core';
 })
 export class FieldTextareaCustom extends FieldType{
   get class() {
-    return `form-control ${this.props.class}`;
+    return `form-control ${this.props['class']}`;
   }
   get readonly() {
     return this.props.readonly ? this.props.readonly : true;
@@ -52,6 +52,6 @@ export class FieldTextareaCustom extends FieldType{
     return this.props.cols ? 80 : this.props.cols;
   }
   get rows() {
-    return this.props.v ? 4 : this.props.rows;
+    return this.props['v'] ? 4 : this.props.rows;
   }
 }

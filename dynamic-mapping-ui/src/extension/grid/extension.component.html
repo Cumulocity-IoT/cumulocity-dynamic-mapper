@@ -37,6 +37,16 @@
 </c8y-breadcrumb>
 
 <c8y-action-bar-item [placement]="'right'">
+    <div class="no-min-height p-t-0 card-column-40 text-center-grid">
+      <span class="label label-primary"
+        >Loading Extensions:&nbsp;{{
+          externalExtensionEnabled ? 'External and Internal' : 'only Internal'
+        }}</span
+      >
+    </div>
+  </c8y-action-bar-item>
+
+<c8y-action-bar-item [placement]="'right'">
   <button
     (click)="addExtension()"
     class="btn btn-link"
@@ -57,16 +67,6 @@
     <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
     {{ 'Reload' | translate }}
   </button>
-</c8y-action-bar-item>
-
-<c8y-action-bar-item [placement]="'right'">
-  <div class="no-min-height p-t-0 card-column-40 text-center-grid">
-    <span class="label label-primary"
-      >Loading Extensions:&nbsp;{{
-        externalExtensionEnabled ? 'External and Internal' : 'only Internal'
-      }}</span
-    >
-  </div>
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form hidden-xs">
@@ -116,7 +116,6 @@
     <d11r-mapping-extension-card
       (appDeleted)="loadExtensions()"
       [app]="app"
-      [loaded]="loaded"
       class="d-contents"
     >
     </d11r-mapping-extension-card>

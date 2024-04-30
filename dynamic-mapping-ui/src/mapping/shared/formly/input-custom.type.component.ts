@@ -53,6 +53,6 @@ export class FieldInputCustom extends FieldType {
   }
 
   get class() {
-    return `form-control ${this.props.class}`;
+    return `form-control ${this.props['class']}`;
   }
 }

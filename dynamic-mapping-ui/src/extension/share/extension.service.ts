@@ -80,15 +80,15 @@ export class ExtensionService {
       listOfExtensionsBackend
     ]).then(([listOfExtensionsInventory, listOfExtensionsBackend]) => {
       listOfExtensionsInventory.forEach((ext) => {
-        if (listOfExtensionsBackend[ext.name]?.loaded) {
-          ext.loaded = listOfExtensionsBackend[ext.name].loaded;
-          ext.external = listOfExtensionsBackend[ext.name].external;
+        if (listOfExtensionsBackend[ext['name']]?.loaded) {
+          ext['loaded'] = listOfExtensionsBackend[ext['name']].loaded;
+          ext['external'] = listOfExtensionsBackend[ext['name']].external;
           const exts = _.values(
-            listOfExtensionsBackend[ext.name].extensionEntries
+            listOfExtensionsBackend[ext['name']].extensionEntries
           );
-          ext.extensionEntries = exts;
+          ext['extensionEntries'] = exts;
         } else {
-          ext.loaded = ExtensionStatus.UNKNOWN;
+          ext['loaded'] = ExtensionStatus.UNKNOWN;
         }
       });
       return listOfExtensionsInventory;
@@ -111,7 +111,7 @@ export class ExtensionService {
     );
     // TODO this needs to be changed: create
     // await this.inventoryBinaryService.delete(app.id);
-    await this.brokerConfigurationService.deleteProcessorExtension(app.name);
+    await this.brokerConfigurationService.deleteProcessorExtension(app['name']);
     this.alertService.success(gettext('Extension deleted.'));
     this.appDeleted.emit(app);
   }

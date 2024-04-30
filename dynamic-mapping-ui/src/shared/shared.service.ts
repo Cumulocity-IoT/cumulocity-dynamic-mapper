@@ -41,7 +41,7 @@ export class SharedService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status == 404) {
         console.error('MappingService with id not subscribed!', AGENT_ID);
-        return;
+        return undefined;
       }
       // this._agentId = data.managedObject.id as string;
       this._agentId =data.managedObject.id as string;

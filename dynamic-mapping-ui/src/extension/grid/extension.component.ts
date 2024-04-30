@@ -20,13 +20,14 @@
  */
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { IManagedObject, IResultList } from '@c8y/client';
+import { IManagedObject } from '@c8y/client';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
 import { ExtensionService } from '../share/extension.service';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import { AddExtensionComponent } from '../extension-modal/add-extension.component';
+import { AlertService } from '@c8y/ngx-components';
 
 @Component({
   selector: 'd11r-mapping-extension',
@@ -45,7 +46,8 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
-    private brokerConfigurationService: BrokerConfigurationService
+    private brokerConfigurationService: BrokerConfigurationService,
+    private alertService: AlertService
   ) {}
 
   async ngOnInit() {
@@ -73,6 +75,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     await this.brokerConfigurationService.runOperation(
       Operation.RELOAD_EXTENSIONS
     );
+    this.alertService.success('Extensions reloaded');
     this.reload$.next();
   }
 

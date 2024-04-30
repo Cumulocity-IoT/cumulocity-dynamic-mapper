@@ -197,7 +197,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMappingWithConfirmation.bind(this),
-        showIf: (mapping) => !mapping.active
+        showIf: (mapping) => !mapping['active']
       },
       {
         type: 'ACTIVATE',

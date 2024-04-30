@@ -32,7 +32,6 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 })
 export class ExtensionCardComponent implements OnInit {
   @Input() app: IManagedObject;
-  @Input() loaded: any = true;
   @Output() appDeleted: EventEmitter<void> = new EventEmitter();
   ExtensionStatus = ExtensionStatus;
   external: boolean = true;
@@ -46,7 +45,7 @@ export class ExtensionCardComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    this.external = this.app?.external;
+    this.external = this.app?.['external'];
   }
 
   async detail() {
