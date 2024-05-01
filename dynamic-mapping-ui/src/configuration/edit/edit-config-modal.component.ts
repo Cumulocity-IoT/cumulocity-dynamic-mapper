@@ -8,7 +8,7 @@ import {
   ConnectorSpecification,
   ConnectorPropertyType
 } from '../shared/configuration.model';
-import { uuidCustom } from '../../shared';
+import { nextIdAndPad } from '../../shared';
 import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.component';
 
 @Component({
@@ -55,6 +55,7 @@ export class EditConfigurationComponent implements OnInit {
   @Input() add: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
+  @Input() configurationsCount: number;
   @Output() closeSubject: Subject<any> = new Subject();
   brokerFormlyFields: FormlyFieldConfig[] = [];
   brokerFormly: FormGroup = new FormGroup({});
@@ -152,7 +153,7 @@ export class EditConfigurationComponent implements OnInit {
     });
     if (this.add) {
       const n = HumanizePipe.humanize(connectorType);
-      this.configuration.name = `${n} - ${uuidCustom()}`;
+      this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
     }
     if (dynamicFields) {
       const numberFields = Object.keys(dynamicFields.properties).length;

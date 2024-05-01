@@ -260,7 +260,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const initialState = {
       add: true,
       configuration: configuration,
-      specifications: this.specifications
+      specifications: this.specifications,
+      configurationsCount: this.configurations.length
     };
     const modalRef = this.bsModalService.show(EditConfigurationComponent, {
       initialState

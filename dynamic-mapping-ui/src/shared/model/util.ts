@@ -374,3 +374,7 @@ export function uuidCustom(): string {
   const id = Math.random().toString(36).slice(-6);
   return id;
 }
+
+export function nextIdAndPad(id: number, padding: number): string {
+  return (id + 1).toString(10).padStart(padding, '0');
+}

@@ -61,6 +61,7 @@ import dynamic.mapping.processor.model.ProcessingContext;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -158,6 +159,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
     private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
+
+    @Value("${application.version}")
+    private String version;
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
             ProcessingContext<?> context) {
@@ -361,6 +365,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     // Device does not exist
                     // append external id to name
                     mor.setName(mor.getName());
+                    /*
+                    mor.set(new Agent());
+                    HashMap<String, String> agentFragments = new HashMap<>();
+                    agentFragments.put("name", "Dynamic Mapper");
+                    agentFragments.put("version", version);
+                    agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+                    agentFragments.put("maintainer", "Open-Source");
+                    mor.set(agentFragments, "c8y_Agent");
+                     */
                     mor.set(new IsDevice());
                     // remove id
                     mor.setId(null);
@@ -572,6 +585,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
+            HashMap<String, String> agentFragments = new HashMap<>();
+            agentFragments.put("name", "Dynamic Mapper");
+            agentFragments.put("version", version);
+            agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+            agentFragments.put("maintainer", "Open-Source");
+            amo.set(agentFragments, "c8y_Agent");
             amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());

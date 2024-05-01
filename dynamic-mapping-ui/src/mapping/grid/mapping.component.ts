@@ -51,6 +51,7 @@ import {
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
   getExternalTemplate,
+  nextIdAndPad,
   uuidCustom
 } from '../../shared';
 
@@ -245,8 +246,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.stepperConfiguration.direction
     );
 
-    this.mappingsEnriched$.subscribe( maps => {
-        this.mappingsCount = maps.length;
+    this.mappingsEnriched$.subscribe((maps) => {
+      this.mappingsCount = maps.length;
     });
   }
 
@@ -377,7 +378,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       mapping = {
         // name: `Mapping - ${ident.substring(0, 7)}`,
-        name: `Mapping - ${(this.mappingsCount + 1).toString(10).padStart(2, '0') }`,
+        name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: ident,
         ident: ident,
         subscriptionTopic: '',
