@@ -393,7 +393,7 @@ public abstract class AConnectorClient {
                 if (create) {
                     updatedMappingSubs.add(1);
                     ;
-                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                    log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                             mapping.qos);
                     try {
                         subscribe(mapping.subscriptionTopic, mapping.qos);
@@ -407,6 +407,8 @@ public abstract class AConnectorClient {
                     activeMappingSubs.subtract(1);
                     if (activeMappingSubs.intValue() <= 0) {
                         try {
+                            log.info("Tenant {} - Unsubscribing from topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                                    mapping.qos.ordinal());
                             unsubscribe(mapping.subscriptionTopic);
                         } catch (Exception exp) {
                             log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
@@ -415,13 +417,42 @@ public abstract class AConnectorClient {
                     }
                     updatedMappingSubs.add(1);
                     if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                        log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                        log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                                 mapping.qos.ordinal());
                         try {
                             subscribe(mapping.subscriptionTopic, mapping.qos);
                         } catch (ConnectorException exp) {
                             log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                     mapping.subscriptionTopic, exp);
+                        }
+                    }
+                } else if (activeMapping != null) {
+                    if(mapping.isActive()) {
+                        updatedMappingSubs.add(1);
+                        if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                            log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                                    mapping.qos.ordinal());
+                            try {
+                                subscribe(mapping.subscriptionTopic, mapping.qos);
+                            } catch (ConnectorException exp) {
+                                log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
+                                        mapping.subscriptionTopic, exp);
+                            }
+                        }
+                    } else {
+                        MutableInt activeMappingSubs = getActiveSubscriptions()
+                                .get(activeMapping.subscriptionTopic);
+                        activeMappingSubs.subtract(1);
+                        if (activeMappingSubs.intValue() <= 0) {
+                            try {
+                                log.info("Tenant {} - Unsubscribing from topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                                        mapping.qos.ordinal());
+                                unsubscribe(mapping.subscriptionTopic);
+                                getActiveSubscriptions().remove(activeMapping.subscriptionTopic);
+                            } catch (Exception exp) {
+                                log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
+                                        mapping.subscriptionTopic, exp);
+                            }
                         }
                     }
                 }
