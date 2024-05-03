@@ -26,7 +26,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -390,9 +389,10 @@ public abstract class AConnectorClient {
      * It maintains a list of the active subscriptions for this connector.
      * When a mapping id deleted or deactivated, then it is verified how many other
      * mapping use the same subscriptionTopic. If there are no other mapping using
-     * the same subscriptionTopic the subscriptionTopic is unsubscribed
+     * the same subscriptionTopic the subscriptionTopic is unsubscribed.
+     * Only inactive mappings can be updated except activation/deactivation.
      **/
-    public void upsertActiveSubscription(Mapping mapping, Boolean create, Boolean activationChanged) {
+    public void updateActiveSubscription(Mapping mapping, Boolean create, Boolean activationChanged) {
         if (isConnected()) {
             Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
             boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
@@ -428,7 +428,7 @@ public abstract class AConnectorClient {
                 } else {
                     if (mapping.active) {
                         // mapping is activated, we have to subscribe
-                        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic) && updatedMappingSubs.intValue() <= 0) {
+                        if (updatedMappingSubs.intValue() == 0) {
                             log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant,
                                     mapping.subscriptionTopic,
                                     mapping.qos.ordinal());
