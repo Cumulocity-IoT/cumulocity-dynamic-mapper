@@ -379,7 +379,7 @@ public class MappingRestController {
                         .getClientsForTenant(tenant);
                 // subscribe/unsubscribe respective subscriptionTopic of mapping
                 for (AConnectorClient client : connectorMap.values()) {
-                    client.upsertActiveSubscription(updatedMapping);
+                    client.upsertActiveSubscription(updatedMapping, false, true);
                 }
             } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
                 String id = operation.getParameter().get("id");
@@ -560,7 +560,7 @@ public class MappingRestController {
                 // occur in all of them.
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).upsertActiveSubscription(createdMapping);
+                    clients.get(connector).upsertActiveSubscription(createdMapping, true, false);
                 });
                 mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
                 mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
@@ -588,7 +588,7 @@ public class MappingRestController {
             } else {
                 Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).upsertActiveSubscription(updatedMapping);
+                    clients.get(connector).upsertActiveSubscription(updatedMapping, false, false);
                 });
                 mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
                 mappingComponent.addToCacheMappingInbound(tenant, mapping);
