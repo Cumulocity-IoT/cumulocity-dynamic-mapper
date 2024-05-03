@@ -207,7 +207,7 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             if (mo != null) {
                 Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
-                log.info("Tenant {} - Found Mapping: {}", tenant, mt.id);
+                log.debug("Tenant {} - Found Mapping: {}", tenant, mt.id);
                 return mt;
             }
             return null;
@@ -432,7 +432,7 @@ public class MappingComponent {
 
     public Mapping setActivationMapping(String tenant, String mappingId, Boolean active) throws Exception {
         // step 1. update activation for mapping
-        log.info("Tenant {} - Setting active: {} got mapping: {}", tenant, mappingId, active);
+        log.debug("Tenant {} - Setting active: {} got mapping: {}", tenant, active, mappingId );
         Mapping mapping = getMapping(tenant, mappingId);
         mapping.setActive(active);
         if (Direction.INBOUND.equals(mapping.direction)) {

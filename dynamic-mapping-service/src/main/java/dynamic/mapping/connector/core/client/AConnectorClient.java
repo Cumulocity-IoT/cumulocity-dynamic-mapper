@@ -412,7 +412,7 @@ public abstract class AConnectorClient {
                 if (create) {
                     if (mapping.active) {
                         updatedMappingSubs.add(1);
-                        log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                        log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                                 mapping.qos);
                         try {
                             subscribe(mapping.subscriptionTopic, mapping.qos);
@@ -428,13 +428,13 @@ public abstract class AConnectorClient {
                 } else {
                     if (mapping.active) {
                         // mapping is activated, we have to subscribe
-                        updatedMappingSubs.add(1);
-                        if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
-                            log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant,
+                        if (getActiveSubscriptions().containsKey(mapping.subscriptionTopic) && updatedMappingSubs.intValue() <= 0) {
+                            log.info("Tenant {} - Subscribing to topic: {}, qos: {}", tenant,
                                     mapping.subscriptionTopic,
                                     mapping.qos.ordinal());
                             try {
                                 subscribe(mapping.subscriptionTopic, mapping.qos);
+                                updatedMappingSubs.add(1);
                             } catch (ConnectorException exp) {
                                 log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                         mapping.subscriptionTopic, exp);
@@ -448,7 +448,10 @@ public abstract class AConnectorClient {
                         activeMappingSubs.subtract(1);
                         if (activeMappingSubs.intValue() <= 0) {
                             try {
+                                log.info("Tenant {} - Unsubscribing from topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
+                                        mapping.qos.ordinal());
                                 unsubscribe(mapping.subscriptionTopic);
+                                getActiveSubscriptions().remove(mapping.subscriptionTopic);
                             } catch (Exception exp) {
                                 log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
                                         mapping.subscriptionTopic, exp);
