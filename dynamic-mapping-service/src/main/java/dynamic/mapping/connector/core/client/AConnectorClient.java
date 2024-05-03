@@ -26,6 +26,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -124,11 +125,14 @@ public abstract class AConnectorClient {
 
     private Future<?> initializeTask;
 
+    // keeps track how many active mappings use this topic as subscriptionTopic:
     // structure < subscriptionTopic, numberMappings >
     public Map<String, MutableInt> activeSubscriptions = new HashMap<>();
-
+    // keeps track if a specific mapping is deployed in this connector:
+    // a) is it active,
+    // b) does it comply with the capabilities of the connector, i.e. supports
+    // wildcards
     // structure < ident, mapping >
-    // public Map<String, Mapping> subscribedMappings = new ConcurrentHashMap<>();
     @Getter
     private Map<String, Mapping> mappingsDeployed = new ConcurrentHashMap<>();
 
@@ -350,6 +354,36 @@ public abstract class AConnectorClient {
         }
     }
 
+    public boolean subscriptionTopicChanged(Mapping mapping) {
+        Boolean subscriptionTopicChanged = false;
+        Mapping activeMapping = null;
+        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
+                .stream()
+                .filter(m -> m.id.equals(mapping.id))
+                .findFirst();
+
+        if (activeMappingOptional.isPresent()) {
+            activeMapping = activeMappingOptional.get();
+            subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
+        }
+        return subscriptionTopicChanged;
+    }
+
+    public boolean activationChanged(Mapping mapping) {
+        Boolean activationChanged = false;
+        Mapping activeMapping = null;
+        Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
+                .stream()
+                .filter(m -> m.id.equals(mapping.id))
+                .findFirst();
+
+        if (activeMappingOptional.isPresent()) {
+            activeMapping = activeMappingOptional.get();
+            activationChanged = mapping.active != activeMapping.active;
+        }
+        return activationChanged;
+    }
+
     /**
      * This method is called when a mapping is created or an existing mapping is
      * updated.
@@ -358,23 +392,8 @@ public abstract class AConnectorClient {
      * mapping use the same subscriptionTopic. If there are no other mapping using
      * the same subscriptionTopic the subscriptionTopic is unsubscribed
      **/
-    public void upsertActiveSubscription(Mapping mapping) {
+    public void upsertActiveSubscription(Mapping mapping, Boolean create, Boolean activationChanged) {
         if (isConnected()) {
-            // test if subscriptionTopic has changed
-            Mapping activeMapping = null;
-            Boolean create = true;
-            Boolean subscriptionTopicChanged = false;
-            Optional<Mapping> activeMappingOptional = mappingComponent.getCacheMappingInbound().get(tenant).values()
-                    .stream()
-                    .filter(m -> m.id.equals(mapping.id))
-                    .findFirst();
-
-            if (activeMappingOptional.isPresent()) {
-                create = false;
-                activeMapping = activeMappingOptional.get();
-                subscriptionTopicChanged = !mapping.subscriptionTopic.equals(activeMapping.subscriptionTopic);
-            }
-
             Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
             boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
             if (validDeployment) {
@@ -391,37 +410,49 @@ public abstract class AConnectorClient {
 
                 // consider unsubscribing from previous subscription topic if it has changed
                 if (create) {
-                    updatedMappingSubs.add(1);
-                    ;
-                    log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
-                            mapping.qos);
-                    try {
-                        subscribe(mapping.subscriptionTopic, mapping.qos);
-                    } catch (ConnectorException exp) {
-                        log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
-                                mapping.subscriptionTopic, exp);
-                    }
-                } else if (subscriptionTopicChanged && activeMapping != null) {
-                    MutableInt activeMappingSubs = getActiveSubscriptions()
-                            .get(activeMapping.subscriptionTopic);
-                    activeMappingSubs.subtract(1);
-                    if (activeMappingSubs.intValue() <= 0) {
-                        try {
-                            unsubscribe(mapping.subscriptionTopic);
-                        } catch (Exception exp) {
-                            log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
-                                    mapping.subscriptionTopic, exp);
-                        }
-                    }
-                    updatedMappingSubs.add(1);
-                    if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                    if (mapping.active) {
+                        updatedMappingSubs.add(1);
                         log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
-                                mapping.qos.ordinal());
+                                mapping.qos);
                         try {
                             subscribe(mapping.subscriptionTopic, mapping.qos);
                         } catch (ConnectorException exp) {
                             log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                     mapping.subscriptionTopic, exp);
+                        }
+                    } else {
+                        log.error("Tenant {} - Cannot update of active mapping: {}, it is not subscribed to topics ",
+                                tenant,
+                                mapping.name);
+                    }
+                } else {
+                    if (mapping.active) {
+                        // mapping is activated, we have to subscribe
+                        updatedMappingSubs.add(1);
+                        if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
+                            log.debug("Tenant {} - Subscribing to topic: {}, qos: {}", tenant,
+                                    mapping.subscriptionTopic,
+                                    mapping.qos.ordinal());
+                            try {
+                                subscribe(mapping.subscriptionTopic, mapping.qos);
+                            } catch (ConnectorException exp) {
+                                log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
+                                        mapping.subscriptionTopic, exp);
+                            }
+                        }
+                    } else if (activationChanged) {
+                        // only unsubscribe if the mapping was deactivated in this call. Otherwise the
+                        // mapping was updated which does not result in any changes of the subscription
+                        MutableInt activeMappingSubs = getActiveSubscriptions()
+                                .get(mapping.subscriptionTopic);
+                        activeMappingSubs.subtract(1);
+                        if (activeMappingSubs.intValue() <= 0) {
+                            try {
+                                unsubscribe(mapping.subscriptionTopic);
+                            } catch (Exception exp) {
+                                log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", tenant,
+                                        mapping.subscriptionTopic, exp);
+                            }
                         }
                     }
                 }
@@ -446,7 +477,8 @@ public abstract class AConnectorClient {
             Map<String, MutableInt> updatedSubscriptionCache = new HashMap<String, MutableInt>();
             updatedMappings.forEach(mapping -> {
                 Boolean containsWildcards = mapping.subscriptionTopic.matches(".*[#\\+].*");
-                if ((supportsWildcardsInTopic() || !containsWildcards) && mapping.isActive()) {
+                boolean validDeployment = (supportsWildcardsInTopic() || !containsWildcards);
+                if (validDeployment && mapping.isActive()) {
                     if (!updatedSubscriptionCache.containsKey(mapping.subscriptionTopic)) {
                         updatedSubscriptionCache.put(mapping.subscriptionTopic, new MutableInt(0));
                     }
@@ -457,13 +489,13 @@ public abstract class AConnectorClient {
             });
 
             // unsubscribe topics not used
-            getActiveSubscriptions().keySet().forEach((topic) -> {
-                if (!updatedSubscriptionCache.containsKey(topic)) {
-                    log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, topic);
+            getActiveSubscriptions().keySet().forEach((subscriptionTopic) -> {
+                if (!updatedSubscriptionCache.containsKey(subscriptionTopic)) {
+                    log.debug("Tenant {} - Unsubscribe from topic: {}", tenant, subscriptionTopic);
                     try {
-                        unsubscribe(topic);
+                        unsubscribe(subscriptionTopic);
                     } catch (Exception exp) {
-                        log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", topic, exp);
+                        log.error("Tenant {} - Exception when unsubscribing from topic: {}: ", subscriptionTopic, exp);
                         throw new RuntimeException(exp);
                     }
                 }
@@ -472,7 +504,6 @@ public abstract class AConnectorClient {
             // subscribe to new topics
             updatedSubscriptionCache.keySet().forEach((topic) -> {
                 if (!getActiveSubscriptions().containsKey(topic)) {
-
                     int qosOrdial = updatedMappings.stream().filter(m -> m.subscriptionTopic.equals(topic))
                             .map(m -> m.qos.ordinal()).reduce(Integer::max).orElse(0);
                     QOS qos = QOS.values()[qosOrdial];
