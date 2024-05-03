@@ -434,19 +434,17 @@ public abstract class AConnectorClient {
                                     mapping.qos.ordinal());
                             try {
                                 subscribe(mapping.subscriptionTopic, mapping.qos);
-                                updatedMappingSubs.add(1);
                             } catch (ConnectorException exp) {
                                 log.error("Tenant {} - Exception when subscribing to topic: {}: ", tenant,
                                         mapping.subscriptionTopic, exp);
                             }
                         }
+                        updatedMappingSubs.add(1);
                     } else if (activationChanged) {
                         // only unsubscribe if the mapping was deactivated in this call. Otherwise the
                         // mapping was updated which does not result in any changes of the subscription
-                        MutableInt activeMappingSubs = getActiveSubscriptions()
-                                .get(mapping.subscriptionTopic);
-                        activeMappingSubs.subtract(1);
-                        if (activeMappingSubs.intValue() <= 0) {
+                        updatedMappingSubs.subtract(1);
+                        if (updatedMappingSubs.intValue() <= 0) {
                             try {
                                 log.info("Tenant {} - Unsubscribing from topic: {}, qos: {}", tenant, mapping.subscriptionTopic,
                                         mapping.qos.ordinal());
