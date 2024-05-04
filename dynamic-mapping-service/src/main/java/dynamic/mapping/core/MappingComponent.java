@@ -257,7 +257,7 @@ public class MappingComponent {
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
                 throw new IllegalArgumentException(
-                        String.format("Tenant %s - Mapping %s is still active, deactivate mapping before deleting!",
+                        String.format("Tenant %s - Mapping %s is still active, deactivate mapping before updating!",
                                 tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
