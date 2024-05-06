@@ -55,7 +55,7 @@
     "@angular/language-service": "14.0.6",
     "@angular/localize": "14.0.6",
     "@angular/service-worker": "14.0.6",
-    "@c8y/cli": "1018.0.205",
+    "@c8y/cli": "1018.510.4",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "cumulocity-cypress": "^0.2.6",
     "cypress": "^13.6.6",
