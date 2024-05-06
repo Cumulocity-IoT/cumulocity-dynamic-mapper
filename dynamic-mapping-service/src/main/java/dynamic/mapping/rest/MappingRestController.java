@@ -377,9 +377,11 @@ public class MappingRestController {
                 Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, mappingId, activeBoolean);
                 Map<String, AConnectorClient> connectorMap = connectorRegistry
                         .getClientsForTenant(tenant);
-                // subscribe/unsubscribe respective subscriptionTopic of mapping
-                for (AConnectorClient client : connectorMap.values()) {
-                    client.updateActiveSubscription(updatedMapping, false, true);
+                // subscribe/unsubscribe respective subscriptionTopic of mapping only for outbound mapping
+                if (updatedMapping.direction == Direction.INBOUND) {
+                    for (AConnectorClient client : connectorMap.values()) {
+                        client.updateActiveSubscription(updatedMapping, false, true);
+                    }
                 }
             } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
                 String id = operation.getParameter().get("id");
