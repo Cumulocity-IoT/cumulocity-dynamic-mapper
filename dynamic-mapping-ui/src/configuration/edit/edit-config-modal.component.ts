@@ -154,6 +154,7 @@ export class EditConfigurationComponent implements OnInit {
     if (this.add) {
       const n = HumanizePipe.humanize(connectorType);
       this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
+      this.configuration.enabled = false;
     }
     if (dynamicFields) {
       const numberFields = Object.keys(dynamicFields.properties).length;

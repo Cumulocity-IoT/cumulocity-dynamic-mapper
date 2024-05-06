@@ -208,7 +208,6 @@ public class KafkaClient extends AConnectorClient {
 
     @Override
     public void connect() {
-        connectionState.setTrue();
         log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
@@ -230,7 +229,6 @@ public class KafkaClient extends AConnectorClient {
                     shouldConnect(), bootstrapServers);
             log.info("Tenant {} - Successfully connected to broker {}", tenant,
                     bootstrapServers);
-            updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
             try {
                 // test if the mqtt connection is configured and enabled
                 if (shouldConnect()) {
@@ -240,9 +238,10 @@ public class KafkaClient extends AConnectorClient {
                     // previously used updatedMappings
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptions(updatedMappings, true);
+                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+                    connectionState.setTrue();
                 }
-
-                kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
                 successful = true;
             } catch (Exception e) {
                 log.error("Tenant {} - Error on reconnect, retrying ... {}: ", tenant, e.getMessage(), e);
@@ -308,7 +307,8 @@ public class KafkaClient extends AConnectorClient {
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
         TopicConsumer kafkaConsumer = new TopicConsumer(
-                new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId, defaultPropertiesConsumer));
+                new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId,
+                        defaultPropertiesConsumer));
         consumerList.put(topic, kafkaConsumer);
         TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
                 topic, true);
