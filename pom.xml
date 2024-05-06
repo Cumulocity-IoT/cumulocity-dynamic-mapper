@@ -110,7 +110,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.11.0</version>
+                <version>1.12.0</version>
             </dependency><!-- commons-text 1.11.0 requires
             commons-lang3 3.13.0, see
             https://stackoverflow.com/questions/53459184/java-lang-noclassdeffounderror-could-not-initialize-class-org-apache-commons-te-->
