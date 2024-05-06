@@ -40,7 +40,7 @@
     "ngx-bootstrap": "11.0.2",
     "postcss-loader": "^8.1.0",
     "rxjs": "~7.8.1",
-    "style-loader": "^3.3.4",
+    "style-loader": "^4.0.0",
     "vanilla-jsoneditor": "^0.23.0",
     "zone.js": "~0.13.0"
   },
