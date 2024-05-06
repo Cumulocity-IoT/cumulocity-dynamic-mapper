@@ -30,7 +30,7 @@ export default {
     ]
   },
   buildTime: {
-    extraWebpackConfig: './extra-webpack.config.js',
+   // extraWebpackConfig: './extra-webpack.config.js',
     copy: [
       {
         from: 'README.md',
