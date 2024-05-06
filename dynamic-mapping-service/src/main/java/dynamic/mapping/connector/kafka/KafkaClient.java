@@ -224,7 +224,7 @@ public class KafkaClient extends AConnectorClient {
             String jaasCfg = String.format(jaasTemplate, username, password);
             defaultPropertiesProducer.put("sasl.jaas.config", jaasCfg);
             defaultPropertiesProducer.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            defaultPropertiesConsumer.put("group.id", groupId);
+            defaultPropertiesProducer.put("group.id", groupId);
             log.info("Tenant {} - Trying to connect {} - phase II: (shouldConnect):{} {}", tenant,
                     getConnectorName(),
                     shouldConnect(), bootstrapServers);
@@ -308,7 +308,7 @@ public class KafkaClient extends AConnectorClient {
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
         TopicConsumer kafkaConsumer = new TopicConsumer(
-                new TopicConfig(bootstrapServers, topic, username, password, tenant, defaultPropertiesConsumer));
+                new TopicConfig(tenant, bootstrapServers, topic, username, password, groupId, defaultPropertiesConsumer));
         consumerList.put(topic, kafkaConsumer);
         TopicConsumerCallback topicConsumerCallback = new TopicConsumerCallback(dispatcher, tenant, getConnectorIdent(),
                 topic, true);

@@ -29,20 +29,23 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TopicConfig {
+    private String tenant;
     private String bootstrapServers;
     private String topic;
-    private String tenant;
     private String username;
     private String password;
+    private String groupId;
     private Properties defaultPropertiesConsumer;
 
-    public TopicConfig(String bootstrapServers, String topic, String username, String password, String tenant,
+    public TopicConfig(String tenant, String bootstrapServers, String topic, String username, String password,
+            String groupId,
             Properties defaultPropertiesConsumer) {
+        this.tenant = tenant;
         this.bootstrapServers = bootstrapServers;
         this.topic = topic;
         this.username = username;
         this.password = password;
-        this.tenant = tenant;
+        this.groupId = groupId;
         this.defaultPropertiesConsumer = defaultPropertiesConsumer;
     }
 

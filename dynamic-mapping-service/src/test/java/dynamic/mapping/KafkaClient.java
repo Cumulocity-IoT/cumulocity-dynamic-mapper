@@ -32,6 +32,7 @@ public class KafkaClient {
     static String broker_host = System.getenv("broker_host");
     static String broker_username = System.getenv("broker_username");
     static String broker_password = System.getenv("broker_password");
+    static String group_id = System.getenv("group_id");
     static String topic = System.getenv("topic");
 
     public KafkaClient(KafkaProducer<String, String> sampleClient) {
@@ -45,15 +46,15 @@ public class KafkaClient {
         String serializer = StringSerializer.class.getName();
 
         Properties props = new Properties();
-        props.put("bootstrap.servers", broker_host);
         props.put("key.serializer", serializer);
         props.put("value.serializer", serializer);
         props.put("security.protocol", "SASL_SSL");
         props.put("sasl.mechanism", "SCRAM-SHA-256");
-        props.put("sasl.jaas.config", jaasCfg);
-        props.put("group.id", "ednvcfnr-mapper");
         props.put("linger.ms", 1);
         props.put("enable.idempotence", false);
+        props.put("bootstrap.servers", broker_host);
+        props.put("group.id",group_id);
+        props.put("sasl.jaas.config", jaasCfg);
 
         KafkaClient client = new KafkaClient(new KafkaProducer<>(props));
         client.testSendMeasurement();

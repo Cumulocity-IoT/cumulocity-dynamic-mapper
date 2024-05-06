@@ -27,6 +27,7 @@ public class Topic implements AutoCloseable {
         final Properties props = SerializationUtils.clone(topicConfig.getDefaultPropertiesConsumer());
 
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, topicConfig.getBootstrapServers());
+        props.put("group.id", topicConfig.getGroupId());
         // this is a common topic consumer, so we just pull byte arrays and pass them
         // to a listener, we don't do any decoding in here
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
