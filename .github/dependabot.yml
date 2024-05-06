@@ -5,8 +5,20 @@
 
 version: 2
 updates:
-  - package-ecosystem: "maven" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "maven"
+    directory: "/"
     target-branch: "develop"
     schedule:
       interval: "weekly"
+    # Labels on pull requests for security and version updates
+    labels:
+      - "maven dependencies"
+    
+  - package-ecosystem: "npm"
+    directory: "/dynamic-mapping-ui/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+    # Labels on pull requests for security and version updates
+    labels:
+      - "npm dependencies"
