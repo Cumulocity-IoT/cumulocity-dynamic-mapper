@@ -35,7 +35,7 @@
     "@c8y/style": "1019.21.1",
     "@ngx-translate/core": "14.0.0",
     "chart.js": "^4.4.1",
-    "css-loader": "^6.10.0",
+    "css-loader": "^7.1.1",
     "jsonata": "^2.0.3",
     "ngx-bootstrap": "11.0.2",
     "postcss-loader": "^8.1.0",
