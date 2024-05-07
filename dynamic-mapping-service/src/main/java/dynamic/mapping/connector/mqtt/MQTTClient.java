@@ -77,11 +77,12 @@ public class MQTTClient extends AConnectorClient {
     public MQTTClient() {
         Map<String, ConnectorProperty> configProps = new HashMap<>();
         configProps.put("protocol",
-                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://", Map.ofEntries(
-                        new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
-                        new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
-                        new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
-                        new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
+                new ConnectorProperty(true, 0, ConnectorPropertyType.OPTION_PROPERTY, false, false, "mqtt://",
+                        Map.ofEntries(
+                                new AbstractMap.SimpleEntry<String, String>("mqtt://", "mqtt://"),
+                                new AbstractMap.SimpleEntry<String, String>("mqtts://", "mqtts://"),
+                                new AbstractMap.SimpleEntry<String, String>("ws://", "ws://"),
+                                new AbstractMap.SimpleEntry<String, String>("wss://", "wss://"))));
         configProps.put("mqttHost",
                 new ConnectorProperty(true, 1, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("mqttPort",
@@ -89,7 +90,8 @@ public class MQTTClient extends AConnectorClient {
         configProps.put("user",
                 new ConnectorProperty(false, 3, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("password",
-                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null, null));
+                new ConnectorProperty(false, 4, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false, null,
+                        null));
         configProps.put("clientId",
                 new ConnectorProperty(true, 5, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         configProps.put("useSelfSignedCertificate",
@@ -327,10 +329,13 @@ public class MQTTClient extends AConnectorClient {
                                         mqttClient.getConfig().getServerHost(), ack.getReturnCode().name()));
                     }
 
-                    // connectionState.setTrue();
+                    connectionState.setTrue();
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
+                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+                    updateActiveSubscriptions(updatedMappings, true);
+
                 } catch (Exception e) {
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
                             mqttClient.getConfig().getServerHost(), e.getMessage(), connectionState.booleanValue(),
@@ -357,8 +362,6 @@ public class MQTTClient extends AConnectorClient {
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // previously used updatedMappings
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptions(updatedMappings, true);
                 }
                 successful = true;
             } catch (Exception e) {
@@ -434,7 +437,8 @@ public class MQTTClient extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            updateActiveSubscriptions(null, true);
+            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+            updateActiveSubscriptions(updatedMappings, true);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }

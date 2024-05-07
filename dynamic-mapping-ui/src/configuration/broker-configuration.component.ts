@@ -26,6 +26,7 @@ import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
   ConfirmationModalComponent,
+  Direction,
   SharedService,
   uuidCustom
 } from '../shared';
@@ -308,6 +309,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       this.alert.danger(gettext('Failed to establish connection!'));
     }
     await this.loadData();
+    this.sharedService.refreshMappings(Direction.INBOUND);
+    this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
 
   async resetStatusMapping() {

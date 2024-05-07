@@ -70,6 +70,8 @@ export class MappingService {
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
+    this.reloadInbound$ = this.sharedService.reloadInbound$;
+    this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
   }
 
@@ -82,8 +84,8 @@ export class MappingService {
   mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
   mappingsInboundEnriched$: Observable<MappingEnriched[]>;
 
-  reloadInbound$: Subject<void> = new Subject<void>();
-  reloadOutbound$: Subject<void> = new Subject<void>();
+  reloadInbound$: Subject<void>; // = new Subject<void>();
+  reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(

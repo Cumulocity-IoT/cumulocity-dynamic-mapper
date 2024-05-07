@@ -175,6 +175,7 @@ public class KafkaClient extends AConnectorClient {
         // defaultPropertiesConsumer.put("sasl.mechanism", "SCRAM-SHA-256");
         // defaultPropertiesConsumer.put("sasl.jaas.config", jaasCfg);
         // defaultPropertiesConsumer.put("linger.ms", 1);
+        updateConnectorStatusAndSend(ConnectorStatus.UNKNOWN, true, true);
     }
 
     private String bootstrapServers;
@@ -208,6 +209,7 @@ public class KafkaClient extends AConnectorClient {
 
     @Override
     public void connect() {
+        updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
         log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
                 tenant, getConnectorName(), isConnected(),
                 shouldConnect());
@@ -236,11 +238,11 @@ public class KafkaClient extends AConnectorClient {
                     // in order to keep MappingInboundCache and ActiveSubscriptionMappingInbound in
                     // sync, the ActiveSubscriptionMappingInbound is build on the
                     // previously used updatedMappings
+                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
+                    connectionState.setTrue();
+                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
                     updateActiveSubscriptions(updatedMappings, true);
-                    kafkaProducer = new KafkaProducer<>(defaultPropertiesProducer);
-                    updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    connectionState.setTrue();
                 }
                 successful = true;
             } catch (Exception e) {
@@ -283,7 +285,8 @@ public class KafkaClient extends AConnectorClient {
 
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            updateActiveSubscriptions(null, true);
+            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+            updateActiveSubscriptions(updatedMappings, true);
             kafkaProducer.close();
             log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
