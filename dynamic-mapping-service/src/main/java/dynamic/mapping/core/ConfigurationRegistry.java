@@ -1,5 +1,7 @@
 package dynamic.mapping.core;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -8,12 +10,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorType;
+import dynamic.mapping.connector.kafka.KafkaClient;
+import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.notification.C8YNotificationSubscriber;
 import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
@@ -32,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ConfigurationRegistry {
+
+    @Getter
+    private Map<String, MicroserviceCredentials> microserviceCredentials = new HashMap<>();
 
     // structure: <tenant, <mappingType, mappingServiceRepresentation>>
     @Getter
@@ -89,7 +100,8 @@ public class ConfigurationRegistry {
     private ConnectorConfigurationComponent connectorConfigurationComponent;
 
     @Autowired
-    public void setConnectorConfigurationComponent(@Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
+    public void setConnectorConfigurationComponent(
+            @Lazy ConnectorConfigurationComponent connectorConfigurationComponent) {
         this.connectorConfigurationComponent = connectorConfigurationComponent;
     }
 
@@ -108,13 +120,37 @@ public class ConfigurationRegistry {
 
     public Map<MappingType, BasePayloadProcessorInbound<?>> createPayloadProcessorsInbound(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = getExtensibleProcessors().get(tenant);
-        log.info("Tenant {} - payloadProcessorsInbound {}", tenant, extensibleProcessor);
         return Map.of(
                 MappingType.JSON, new JSONProcessorInbound(this),
                 MappingType.FLAT_FILE, new FlatFileProcessorInbound(this),
                 MappingType.GENERIC_BINARY, new GenericBinaryProcessorInbound(this),
                 MappingType.PROTOBUF_STATIC, new StaticProtobufProcessor(this),
                 MappingType.PROCESSOR_EXTENSION, extensibleProcessor);
+    }
+
+    public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
+            String additionalSubscriptionIdTest, String tenant) throws FileNotFoundException, IOException {
+        AConnectorClient connectorClient = null;
+        if (ConnectorType.MQTT.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        } else if (ConnectorType.MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new MQTTServiceClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing MQTTService Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        } else if (ConnectorType.KAFKA.equals(connectorConfiguration.getConnectorType())) {
+            connectorClient = new KafkaClient(this, connectorConfiguration,
+                    null,
+                    additionalSubscriptionIdTest, tenant);
+            log.info("Tenant {} - Initializing Kafka Connector with ident {}", tenant,
+                    connectorConfiguration.getIdent());
+        }
+        return connectorClient;
     }
 
     public Map<MappingType, BasePayloadProcessorOutbound<?>> createPayloadProcessorsOutbound(
@@ -144,5 +180,10 @@ public class ConfigurationRegistry {
             processorPerTenant.put(connectorClient.getConnectorIdent(),
                     createPayloadProcessorsOutbound(connectorClient));
         }
+    }
+
+    public MicroserviceCredentials getMicroserviceCredential(String tenant) {
+        MicroserviceCredentials ms = microserviceCredentials.get(tenant);
+        return ms;
     }
 }

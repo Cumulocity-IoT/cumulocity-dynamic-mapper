@@ -22,7 +22,6 @@
 package dynamic.mapping.notification;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import com.cumulocity.model.JSONBase;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
@@ -43,7 +42,6 @@ import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
-import dynamic.mapping.notification.websocket.Notification;
 import org.apache.commons.collections.ArrayStack;
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,7 +97,6 @@ public class C8YNotificationSubscriber {
     private ScheduledExecutorService executorService = null;
     private final String DEVICE_SUBSCRIBER = "DynamicMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
-    private final String TENANT_SUBSCRIBER = "DynamicMapperTenantSubscriber";
     private final String TENANT_SUBSCRIPTION = "DynamicMapperTenantSubscription";
 
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();

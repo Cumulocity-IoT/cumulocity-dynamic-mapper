@@ -28,7 +28,11 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
   declarations: [BrokerConfigurationComponent, EditConfigurationComponent],
-  imports: [CoreModule, SharedModule,BsDropdownModule.forRoot()],
+  imports: [
+    CoreModule,
+    SharedModule,
+    BsDropdownModule.forRoot()
+  ],
   exports: [],
   providers: [
     hookRoute({

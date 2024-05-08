@@ -19,7 +19,8 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>Broker configuration</c8y-title>
+<c8y-title>Connector
+</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
@@ -52,7 +53,7 @@
     <div class="card">
       <div class="card-header p-l-32 separator j-c-between">
         <h4 class="card-title">
-          {{ 'Brokers' | translate }}
+          {{ 'Connector configuration' | translate }}
         </h4>
       </div>
       <div class="card-block">
@@ -100,7 +101,7 @@
                 <td width="5%" style="padding-top: 12px">
                   <i
                     style="text-align: center; width: 100%"
-                    [c8yIcon]="!con?.enabled ? 'circle-o' : 'plus-circle-o'"
+                    [c8yIcon]="!con?.enabled ? 'inactive-state' : 'check'"
                     class="m-r-5"
                   ></i>
                 </td>
@@ -125,7 +126,7 @@
                       class="btn btn-dot"
                       (click)="onConfigurationToggle(i)"
                     >
-                      <i c8yIcon="toggle-on"></i>
+                      <i [c8yIcon]="con?.enabled ? 'toggle-on': 'toggle-off'"></i>
                     </button>
                     <div placement="bottom right" class="dropdown" dropdown>
                       <button

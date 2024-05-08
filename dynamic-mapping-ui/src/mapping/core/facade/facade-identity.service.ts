@@ -46,8 +46,8 @@ export class FacadeIdentityService {
     externalIdType: string,
     context: ProcessingContext
   ): Promise<IExternalIdentity> {
+    const result: IExternalIdentity = undefined;
     if (context.sendPayload) {
-      const result: IExternalIdentity = undefined;
       await this.identity.list(managedObjectId);
       // while (res.data.length) {
 
@@ -73,10 +73,10 @@ export class FacadeIdentityService {
       //         break;
       //     }
       // }
-      return result;
     } else {
-      // return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
+        // return this.mockIdentity.getExternalIdsOfGlobalId(managedObjectId);
     }
+    return result;
   }
 
   resolveExternalId2GlobalId(

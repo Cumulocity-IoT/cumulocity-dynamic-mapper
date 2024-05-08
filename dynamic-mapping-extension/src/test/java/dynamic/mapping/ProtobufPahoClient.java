@@ -21,68 +21,81 @@
 
 package dynamic.mapping;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import java.util.Date;
+
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
+import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
 
 import dynamic.mapping.processor.extension.external.CustomEventOuter;
 import dynamic.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 
-
 public class ProtobufPahoClient {
+    Mqtt3BlockingClient testClient;
+    static String broker_host = System.getenv("broker_host");
+    static Integer broker_port = Integer.valueOf(System.getenv("broker_port"));
+    static String client_id = System.getenv("client_id");
+    static String broker_username = System.getenv("broker_username");
+    static String broker_password = System.getenv("broker_password");
 
-    static MemoryPersistence persistence = new MemoryPersistence();
+    public ProtobufPahoClient(Mqtt3BlockingClient sampleClient) {
+        testClient = sampleClient;
+    }
 
     public static void main(String[] args) {
 
-        ProtobufPahoClient client = new ProtobufPahoClient();
+        Mqtt3SimpleAuth simpleAuth = Mqtt3SimpleAuth.builder().username(broker_username)
+                .password(broker_password.getBytes()).build();
+        Mqtt3BlockingClient sampleClient = Mqtt3Client.builder()
+                .serverHost(broker_host)
+                .serverPort(broker_port)
+                .identifier(client_id)
+                .simpleAuth(simpleAuth)
+                .sslWithDefaultConfig()
+                .buildBlocking();
+        ProtobufPahoClient client = new ProtobufPahoClient(sampleClient);
         client.testSendEvent();
     }
 
     private void testSendEvent() {
-        int qos = 0;
-        String broker = System.getenv("broker");
-        String client_id = System.getenv("client_id");
-        String broker_username = System.getenv("broker_username");
-        String broker_password = System.getenv("broker_password");
-        String topic2 = "protobuf/event";
+        String topic = "protobuf/event";
 
-        try {
-            MqttClient sampleClient = new MqttClient(broker, client_id, persistence);
-            MqttConnectOptions connOpts = new MqttConnectOptions();
-            connOpts.setUserName(broker_username);
-            connOpts.setPassword(broker_password.toCharArray());
-            connOpts.setCleanSession(true);
+        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
 
-            System.out.println("Connecting to broker: " + broker);
-
-            sampleClient.connect(connOpts);
-
-            System.out.println("Publishing message: :::");
-
-            CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
-                    .setExternalIdType("c8y_Serial")
-                    .setExternalId("berlin_01")
-                    .setTxt("Dummy Text")
-                    .setEventType("c8y_ProtobufEventType")
-                    .setTimestamp(System.currentTimeMillis())
-                    .build();
-
-            MqttMessage message = new MqttMessage(proto.toByteArray());
-            message.setQos(qos);
-            sampleClient.publish(topic2, message);
-
-            System.out.println("Message published");
-            sampleClient.disconnect();
-            System.out.println("Disconnected");
-            //System.exit(0);
-
-        } catch (MqttException me) {
-            System.out.println("Exception:" + me.getMessage());
-            me.printStackTrace();
+        // testClient.connect();
+        Mqtt3ConnAck ack = testClient.connectWith()
+                .cleanSession(true)
+                .keepAlive(60)
+                .send();
+        if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
+            // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
+            // broker:"
+            // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
+            // + ack.getReturnCode().name());
+            System.out.println("Error connecting to broker:"
+                    + broker_host + ". Errorcode: "
+                    + ack.getReturnCode().name());
         }
-    }
 
+        System.out.println("Publishing message on topic" + topic);
+
+        CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
+                .setExternalIdType("c8y_Serial")
+                .setExternalId("berlin_01")
+                .setTxt("Stop at petrol station: " + (new Date().toString()))
+                .setEventType("c8y_ProtobufEventType")
+                .setTimestamp(System.currentTimeMillis())
+                .build();
+
+        Mqtt3AsyncClient sampleClientAsync = testClient.toAsync();
+        sampleClientAsync.publishWith().topic(topic).qos(MqttQos.AT_LEAST_ONCE).payload(proto.toByteArray()).send();
+
+        System.out.println("Message published");
+        testClient.disconnect();
+        System.out.println("Disconnected");
+    }
 }

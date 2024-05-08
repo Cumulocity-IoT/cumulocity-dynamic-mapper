@@ -45,9 +45,13 @@
 			<artifactId>protobuf-java</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.eclipse.paho</groupId>
-			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-joda</artifactId>
 		</dependency>
+        <dependency>
+            <groupId>com.hivemq</groupId>
+            <artifactId>hivemq-mqtt-client</artifactId>
+        </dependency>
 		<dependency>
 			<groupId>com.ibm.jsonata4java</groupId>
 			<artifactId>JSONata4Java</artifactId>
@@ -78,7 +82,15 @@
 			<artifactId>slf4j-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+        </dependency>
+    </dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapping-service/src/main/java</sourceDirectory>
 		<plugins>

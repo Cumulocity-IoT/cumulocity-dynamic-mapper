@@ -63,7 +63,7 @@ export class ExtensionPropertiesComponent {
     this.breadcrumbConfig = {
       icon: 'c8y-modules',
       label: gettext('Extensions'),
-      path: 'sag-ps-pkg-dynamic-mapping/extensions'
+      path: 'sag-ps-pkg-dynamic-mapping/extension'
     };
   }
 }

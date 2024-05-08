@@ -41,7 +41,7 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/extensions',
+      path: 'sag-ps-pkg-dynamic-mapping/extension',
       children: [
         {
           path: '',

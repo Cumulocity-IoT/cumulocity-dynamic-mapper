@@ -26,7 +26,15 @@ import {
   InventoryService,
   QueriesUtil
 } from '@c8y/client';
-import { Subject } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  combineLatest,
+  map,
+  shareReplay,
+  switchMap,
+  take
+} from 'rxjs';
 import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   BASE_URL,
@@ -37,7 +45,10 @@ import {
   PATH_SUBSCRIPTION_ENDPOINT,
   Direction,
   Mapping,
-  SharedService
+  SharedService,
+  MappingSubscribed as MappingDeployed,
+  PATH_MAPPING_DEPLOYED_ENDPOINT,
+  MappingEnriched
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -59,14 +70,22 @@ export class MappingService {
     private client: FetchClient
   ) {
     this.queriesUtil = new QueriesUtil();
+    this.reloadInbound$ = this.sharedService.reloadInbound$;
+    this.reloadOutbound$ = this.sharedService.reloadOutbound$;
+    this.initializeMappingsEnriched();
   }
 
   queriesUtil: QueriesUtil;
   protected JSONATA = require('jsonata');
 
-  private _mappingsInbound: Promise<Mapping[]>;
-  private _mappingsOutbound: Promise<Mapping[]>;
-  private reload$: Subject<void> = new Subject();
+  //   private _mappingsInbound: Promise<Mapping[]>;
+  //   private _mappingsOutbound: Promise<Mapping[]>;
+
+  mappingsOutboundEnriched$: Observable<MappingEnriched[]>;
+  mappingsInboundEnriched$: Observable<MappingEnriched[]>;
+
+  reloadInbound$: Subject<void>; // = new Subject<void>();
+  reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
@@ -75,28 +94,100 @@ export class MappingService {
     );
   }
 
+  async changeDebuggingMapping(parameter: any) {
+    await this.brokerConfigurationService.runOperation(
+      Operation.DEBUG_MAPPING,
+      parameter
+    );
+  }
+
   resetCache() {
-    this._mappingsInbound = undefined;
-    this._mappingsOutbound = undefined;
+    // this._mappingsInbound = undefined;
+    // this._mappingsOutbound = undefined;
+  }
+
+  async getMappingsDeployed(): Promise<MappingDeployed[]> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_MAPPING_DEPLOYED_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const mappings: Promise<MappingDeployed[]> = await data.json();
+    return mappings;
+  }
+
+  initializeMappingsEnriched() {
+    this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
+      switchMap(() =>
+        combineLatest([
+          this.getMappings(Direction.INBOUND),
+          this.getMappingsDeployed()
+        ])
+      ),
+      map(([mappings, mappingsDeployed]) => {
+        const mappingsEnriched = [];
+        mappings.forEach((m) => {
+          mappingsEnriched.push({
+            id: m.id,
+            mapping: m,
+            deployedToConnectors: mappingsDeployed[m.ident]
+          });
+        });
+        return mappingsEnriched;
+      }),
+      shareReplay(1)
+    );
+    this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
+      switchMap(() => this.getMappings(Direction.OUTBOUND)),
+      map((mappings) => {
+        const mappingsEnriched = [];
+        mappings.forEach((m) => {
+          mappingsEnriched.push({
+            id: m.id,
+            mapping: m
+          });
+        });
+        return mappingsEnriched;
+      }),
+      shareReplay(1)
+    );
+    this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
+    this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
+  }
+
+  getMappingsObservable(direction: Direction): Observable<MappingEnriched[]> {
+    if (direction == Direction.INBOUND) {
+      return this.mappingsInboundEnriched$;
+    } else {
+      return this.mappingsOutboundEnriched$;
+    }
+  }
+
+  refreshMappings(direction: Direction) {
+    if (direction == Direction.INBOUND) {
+      this.reloadInbound$.next();
+    } else {
+      this.reloadOutbound$.next();
+    }
   }
 
   async getMappings(direction: Direction): Promise<Mapping[]> {
-    let mappings: Promise<Mapping[]>;
-    if (
-      (direction == Direction.INBOUND && !this._mappingsInbound) ||
-      (direction == Direction.OUTBOUND && !this._mappingsOutbound)
-    ) {
-      const result: Mapping[] = [];
-      const filter: object = {
-        pageSize: 200,
-        withTotalPages: true,
-      };
-      const query: any = {
-        __and: [
-          { 'd11r_mapping.direction': direction },
-          { 'type': MAPPING_TYPE }
-        ]
-      };
+    const result: Mapping[] = [];
+    const filter: object = {
+      pageSize: 200,
+      withTotalPages: true
+    };
+    const query: any = {
+      __and: [{ 'd11r_mapping.direction': direction }, { type: MAPPING_TYPE }]
+    };
 
     //   if (direction == Direction.INBOUND) {
     //     query = this.queriesUtil.addOrFilter(query, {
@@ -107,29 +198,16 @@ export class MappingService {
     //     type: { __has: 'd11r_mapping' }
     //   });
 
-      const { data } = await this.inventory.listQuery(query, filter);
+    const { data } = await this.inventory.listQuery(query, filter);
 
-      data.forEach((m) =>
-        result.push({
-          ...m[MAPPING_FRAGMENT],
-          id: m.id
-        })
-      );
+    data.forEach((m) =>
+      result.push({
+        ...m[MAPPING_FRAGMENT],
+        id: m.id
+      })
+    );
 
-      mappings = Promise.resolve(result);
-      if (direction == Direction.INBOUND) {
-        this._mappingsInbound = mappings;
-      } else {
-        this._mappingsOutbound = mappings;
-      }
-    } else {
-      if (direction == Direction.INBOUND) {
-        mappings = this._mappingsInbound;
-      } else {
-        mappings = this._mappingsOutbound;
-      }
-    }
-    return mappings;
+    return result;
   }
 
   initializeCache(dir: Direction): void {
@@ -198,7 +276,8 @@ export class MappingService {
         id: m.id
       });
     });
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
   }
 
   async updateMapping(mapping: Mapping): Promise<Mapping> {
@@ -213,9 +292,13 @@ export class MappingService {
       }
     );
     const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
+    if (!data.ok) {
+      const error = await data.json();
+      throw new Error(error.message)!;
+    }
     const m = await data.json();
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return m;
   }
 
@@ -232,7 +315,8 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return data.text();
   }
 
@@ -247,7 +331,8 @@ export class MappingService {
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
     const m = await data.json();
-    this.reload$.next();
+    this.reloadInbound$.next();
+    this.reloadOutbound$.next();
     return m;
   }
 
@@ -257,7 +342,10 @@ export class MappingService {
   ): ProcessingContext {
     const ctx: ProcessingContext = {
       mapping: mapping,
-      topic: mapping.templateTopicSample,
+      topic:
+        mapping.direction == Direction.INBOUND
+          ? mapping.mappingTopicSample
+          : mapping.publishTopicSample,
       processingType: ProcessingType.UNDEFINED,
       cardinality: new Map<string, number>(),
       errors: [],

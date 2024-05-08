@@ -1,14 +1,12 @@
-# Dynamic Mapping Service for Cumulocity
+# Dynamic Mapping Solution for Cumulocity
 
 
 Cumulocity IoT has a MQTT endpoint, but does not yet allow devices to send generic MQTT payloads. This project addresses
 this gap by providing the following artifacts:
 
-* A **Microservice** - exposes REST endpoints, uses the [PAHO MQTT Client](https://github.com/eclipse/paho.mqtt.java) to
-connect to a MQTT broker, a generic Data Mapper & Expression Language  for data mapping and the
-[Cumulocity Microservice SDK](https://cumulocity.com/guides/microservice-sdk/introduction/) to connect to Cumulocity.
+* A **Microservice** - contains connectors for generic MQTT brokers, the Cumulocity MQTT Service and Kafka brokers. The microservice listens to incoming messages and applies the appropriate mappings. Exposes REST endpoints for the UI to manage connector configurations and mappings.
 * A **Frontend Plugin** - uses the exposed endpoints of the microservice to configure a MQTT broker connection & to perform 
-graphical MQTT Data Mappings within the Cumumlocity IoT UI.
+graphical MQTT Data Mappings within the Cumulocity IoT UI. Mappings are defined using [JSONata](https://jsonata.org/) expressions.  
 
 Using the solution you are able to connect to any MQTT broker and map any JSON-based payload on any topic dynamically to
 the Cumulocity IoT Domain Model in a graphical way.
@@ -17,12 +15,18 @@ The mapper processes messages in both directions:
 1. `INBOUND`: from external source to C8Y
 2. `OUTBOUND`: from C8Y to external source
 
-<!-- <p align="center">
-<img src="./images/Generic_MQTT_AddMapping.png"  style="width: 70%;" />
-</p> -->
-![Overview](images/Generic_MQTT_AddMapping.png)
-
-
-For the complete documentation please check the github projekt [cumulocity-dynamic-mqtt-mapper](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper).
+Different mappings types can be used:
+<br>
+<br>
+![Add mapping](images/Generic_Mapping_AddMapping.png)
+<br>
+<br>
+Mappings are defined in a graphical editor using JSONata expressions:
+<br>
+<br>
+![Define mappings](images/Generic_Mapping_MappingTemplate.png)
+<br>
+<br>
+For the complete documentation please check the github project [cumulocity-dynamic-mqtt-mapper](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper).
 
 **NOTE:** This solution requires an additional microservice. The microservice ```mqtt-mapping-service.zip``` can be found in the [release section](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper/releases) of the github project. Instruction how to the deploy the microservice can be found in the [documentation](https://github.com/SoftwareAG/cumulocity-dynamic-mqtt-mapper#microservice).

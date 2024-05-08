@@ -42,10 +42,10 @@ import {
   OverviewGuard,
   SharedModule
 } from './shared';
-import { TestingModule } from './testing-devices/testing.module';
+import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
 import {
-  checkTopicsInboundAreValid,
+  checkTopicsInboundAreValidWithOption,
   checkTopicsOutboundAreValid
 } from './mapping/shared/util';
 import { WrapperFormlyHorizontal } from './mapping/shared/formly/horizontal.wrapper.component';
@@ -87,7 +87,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
         validators: [
           {
             name: 'checkTopicsInboundAreValid',
-            validation: checkTopicsInboundAreValid
+            validation: checkTopicsInboundAreValidWithOption
           },
           {
             name: 'checkTopicsOutboundAreValid',

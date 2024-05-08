@@ -20,8 +20,9 @@
  */
 import { Injectable } from '@angular/core';
 import { FetchClient, IdentityService, IExternalIdentity } from '@c8y/client';
-import { AGENT_ID, BASE_URL, PATH_FEATURE_ENDPOINT } from '.';
+import { AGENT_ID, BASE_URL, Direction, PATH_FEATURE_ENDPOINT } from '.';
 import { Feature } from '../configuration/shared/configuration.model';
+import { Subject, takeUntil, timer } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class SharedService {
@@ -31,6 +32,8 @@ export class SharedService {
   ) {}
   private _agentId: string;
   private _feature: Promise<Feature>;
+  reloadInbound$: Subject<void> = new Subject<void>();
+  reloadOutbound$: Subject<void> = new Subject<void>();
 
   async getDynamicMappingServiceAgent(): Promise<string> {
     if (!this._agentId) {
@@ -41,10 +44,10 @@ export class SharedService {
       const { data, res } = await this.identity.detail(identity);
       if (res.status == 404) {
         console.error('MappingService with id not subscribed!', AGENT_ID);
-        return;
+        return undefined;
       }
       // this._agentId = data.managedObject.id as string;
-      this._agentId =data.managedObject.id as string;
+      this._agentId = data.managedObject.id as string;
     }
     return this._agentId;
   }
@@ -60,5 +63,24 @@ export class SharedService {
       this._feature = await response.json();
     }
     return this._feature;
+  }
+
+  refreshMappings(direction: Direction) {
+    // delay the reload of mappings as the subscriptions are updated asynchronously. This can take a while
+    if (direction == Direction.INBOUND) {
+      timer(2000)
+        .pipe(takeUntil(this.reloadInbound$))
+        .subscribe(() => {
+          this.reloadInbound$.next();
+        });
+      // this.reloadInbound$.next();
+    } else {
+      timer(2000)
+        .pipe(takeUntil(this.reloadOutbound$))
+        .subscribe(() => {
+          this.reloadOutbound$.next();
+        });
+      // this.reloadOutbound$.next();
+    }
   }
 }

@@ -40,6 +40,7 @@ import dynamic.mapping.configuration.ServiceConfigurationComponent;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
 import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.processor.model.ProcessingContext;
@@ -72,9 +73,10 @@ import dynamic.mapping.core.ServiceOperation;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Extension;
 import dynamic.mapping.model.Feature;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import dynamic.mapping.model.MappingDeployment;
 
 @Slf4j
 @RestController
@@ -125,7 +127,7 @@ public class MappingRestController {
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
-        log.info("Tenant {} - Get Feature status", tenant);
+        log.debug("Tenant {} - Get Feature status", tenant);
         Feature feature = new Feature();
         feature.setOutputMappingEnabled(outputMappingEnabled);
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
@@ -139,10 +141,10 @@ public class MappingRestController {
         String tenant = contextService.getContext().getTenant();
         List<ConnectorSpecification> connectorConfigurations = new ArrayList<>();
         log.info("Tenant {} - Getting connection properties...", tenant);
-        Map<String, ConnectorSpecification> spec = connectorRegistry
+        Map<ConnectorType, ConnectorSpecification> spec = connectorRegistry
                 .getConnectorSpecifications();
         // Iterate over all connectors
-        for (String connectorType : spec.keySet()) {
+        for (ConnectorType connectorType : spec.keySet()) {
             connectorConfigurations.add(spec.get(connectorType));
         }
         return ResponseEntity.ok(connectorConfigurations);
@@ -335,7 +337,7 @@ public class MappingRestController {
                 // previously used updatedMappings
 
                 List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+                Map<String, AConnectorClient> connectorMap = connectorRegistry
                         .getClientsForTenant(tenant);
                 for (AConnectorClient client : connectorMap.values()) {
                     client.updateActiveSubscriptions(updatedMappings, false);
@@ -351,7 +353,7 @@ public class MappingRestController {
                         connectorIdent);
                 // important to use reconnect, since it requires to go through the
                 // initialization phase
-                client.reconnect();
+                client.submitConnect();
             } else if (operation.getOperation().equals(Operation.DISCONNECT)) {
                 String connectorIdent = operation.getParameter().get("connectorIdent");
                 ConnectorConfiguration configuration = connectorConfigurationComponent
@@ -369,9 +371,22 @@ public class MappingRestController {
             } else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
                 configurationRegistry.getC8yAgent().reloadExtensions(tenant);
             } else if (operation.getOperation().equals(Operation.ACTIVATE_MAPPING)) {
-                String id = operation.getParameter().get("id");
+                // activate/deactivate mapping
+                String mappingId = operation.getParameter().get("id");
                 Boolean activeBoolean = Boolean.parseBoolean(operation.getParameter().get("active"));
-                mappingComponent.setActivationMapping(tenant, id, activeBoolean);
+                Mapping updatedMapping = mappingComponent.setActivationMapping(tenant, mappingId, activeBoolean);
+                Map<String, AConnectorClient> connectorMap = connectorRegistry
+                        .getClientsForTenant(tenant);
+                // subscribe/unsubscribe respective subscriptionTopic of mapping only for outbound mapping
+                if (updatedMapping.direction == Direction.INBOUND) {
+                    for (AConnectorClient client : connectorMap.values()) {
+                        client.updateActiveSubscription(updatedMapping, false, true);
+                    }
+                }
+            } else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
+                String id = operation.getParameter().get("id");
+                Boolean debugBoolean = Boolean.parseBoolean(operation.getParameter().get("debug"));
+                mappingComponent.setDebugMapping(tenant, id, debugBoolean);
             } else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
                 configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
             }
@@ -398,10 +413,10 @@ public class MappingRestController {
 
     @RequestMapping(value = "/monitoring/status/connectors", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, ConnectorStatusEvent>> getConnectorsStatus() {
-        HashMap<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
+        Map<String, ConnectorStatusEvent> connectorsStatus = new HashMap<>();
         String tenant = contextService.getContext().getTenant();
         try {
-            HashMap<String, AConnectorClient> connectorMap = connectorRegistry
+            Map<String, AConnectorClient> connectorMap = connectorRegistry
                     .getClientsForTenant(tenant);
             if (connectorMap != null) {
                 for (AConnectorClient client : connectorMap.values()) {
@@ -409,7 +424,7 @@ public class MappingRestController {
                     connectorsStatus.put(client.getConnectorIdent(), st);
                 }
             }
-            log.info("Tenant {} - Get status for connectors: {}", tenant, connectorsStatus);
+            log.info("Tenant {} - Get status of connectors: {}", tenant, connectorsStatus);
             return new ResponseEntity<>(connectorsStatus, HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
@@ -425,10 +440,10 @@ public class MappingRestController {
     }
 
     @RequestMapping(value = "/monitoring/tree", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TreeNode> getInboundMappingTree() {
+    public ResponseEntity<MappingTreeNode> getInboundMappingTree() {
         String tenant = contextService.getContext().getTenant();
-        TreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
-        log.info("Tenant {} - Get mapping tree!", tenant);
+        MappingTreeNode result = mappingComponent.getResolverMappingInbound().get(tenant);
+        log.info("Tenant {} - Get mapping tree", tenant);
         return ResponseEntity.status(HttpStatus.OK).body(result);
     }
 
@@ -444,8 +459,37 @@ public class MappingRestController {
                             entry.getValue().getValue()))
                     .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
-            log.info("Tenant {} - Get active subscriptions!", tenant);
+            log.debug("Tenant {} - Getting active subscriptions!", tenant);
             return ResponseEntity.status(HttpStatus.OK).body(result);
+        } catch (ConnectorRegistryException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, MappingDeployment>> getMappingsDeployed() {
+        String tenant = contextService.getContext().getTenant();
+        Map<String, MappingDeployment> mappingsDeployed = new HashMap<>();
+        try {
+            Map<String, AConnectorClient> connectorMap = connectorRegistry
+                    .getClientsForTenant(tenant);
+            if (connectorMap != null) {
+                for (AConnectorClient client : connectorMap.values()) {
+                    ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
+                    List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
+                            .collect(Collectors.toList());
+                    subscribedMappings.forEach(ident -> {
+                        MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
+                                new MappingDeployment(ident));
+                        mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
+                        mappingsDeployed.put(ident, mappingDeployed);
+                    });
+                }
+            }
+
+            log.debug("Tenant {} - Get active subscriptions!", tenant);
+            return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }
@@ -486,7 +530,7 @@ public class MappingRestController {
             if (!Direction.OUTBOUND.equals(deletedMapping.direction)) {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
                     clients.get(connector).deleteActiveSubscription(deletedMapping);
                 });
@@ -495,7 +539,7 @@ public class MappingRestController {
             log.error("Tenant {} - Exception when deleting mapping {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, ex.getLocalizedMessage());
         }
-        log.info("Tenant {} - After Delete mapping: {}", tenant, id);
+        log.info("Tenant {} - Mapping {} successfully deleted!", tenant, id);
 
         return ResponseEntity.status(HttpStatus.OK).body(id);
     }
@@ -506,16 +550,19 @@ public class MappingRestController {
     public ResponseEntity<Mapping> createMapping(@Valid @RequestBody Mapping mapping) {
         try {
             String tenant = contextService.getContext().getTenant();
-            log.info("Tenant {} - Add mapping: {}", mapping);
+            log.info("Tenant {} - Adding mapping: {}", tenant, mapping.getMappingTopic());
+            log.debug("Tenant {} - Adding mapping: {}", tenant, mapping);
+            // new mapping should be disabled by default
+            mapping.active = false;
             final Mapping createdMapping = mappingComponent.createMapping(tenant, mapping);
             if (Direction.OUTBOUND.equals(createdMapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
                 // FIXME Currently we create mappings in ALL connectors assuming they could
                 // occur in all of them.
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).upsertActiveSubscription(createdMapping);
+                    clients.get(connector).updateActiveSubscription(createdMapping, true, false);
                 });
                 mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
                 mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
@@ -541,9 +588,9 @@ public class MappingRestController {
             if (Direction.OUTBOUND.equals(mapping.direction)) {
                 mappingComponent.rebuildMappingOutboundCache(tenant);
             } else {
-                HashMap<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
+                Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
                 clients.keySet().stream().forEach(connector -> {
-                    clients.get(connector).upsertActiveSubscription(updatedMapping);
+                    clients.get(connector).updateActiveSubscription(updatedMapping, false, false);
                 });
                 mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
                 mappingComponent.addToCacheMappingInbound(tenant, mapping);
@@ -609,7 +656,8 @@ public class MappingRestController {
     public ResponseEntity<Extension> deleteProcessorExtension(@PathVariable String extensionName) {
         String tenant = contextService.getContext().getTenant();
         if (!userHasMappingAdminRole()) {
-            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API", tenant);
+            log.error("Tenant {} - Insufficient Permission, user does not have required permission to access this API",
+                    tenant);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Insufficient Permission, user does not have required permission to access this API");
         }

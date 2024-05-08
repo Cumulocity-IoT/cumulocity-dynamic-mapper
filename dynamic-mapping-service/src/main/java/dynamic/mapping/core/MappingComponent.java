@@ -21,8 +21,6 @@
 
 package dynamic.mapping.core;
 
-import static java.util.Map.entry;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,7 +47,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.model.API;
 import dynamic.mapping.model.Direction;
-import dynamic.mapping.model.TreeNode;
+import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -95,20 +93,20 @@ public class MappingComponent {
 
     // cache of inbound mappings stored in a tree used for resolving
     @Getter
-    private Map<String, TreeNode> resolverMappingInbound = new HashMap<>();
+    private Map<String, MappingTreeNode> resolverMappingInbound = new HashMap<>();
 
     public void initializeMappingCaches(String tenant) {
         cacheMappingInbound.put(tenant, new HashMap<>());
         cacheMappingOutbound.put(tenant, new HashMap<>());
         resolverMappingOutbound.put(tenant, new HashMap<>());
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
     }
 
     public void initializeMappingStatus(String tenant, boolean reset) {
         MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
                 .getMappingServiceRepresentations().get(tenant);
         if (mappingServiceRepresentation.getMappingStatus() != null && !reset) {
-            log.info("Tenant {} - Initializing status: {}, {} ", tenant,
+            log.debug("Tenant {} - Initializing status: {}, {} ", tenant,
                     mappingServiceRepresentation.getMappingStatus(),
                     (mappingServiceRepresentation.getMappingStatus() == null
                             || mappingServiceRepresentation.getMappingStatus().size() == 0 ? 0
@@ -126,7 +124,7 @@ public class MappingComponent {
                     MappingStatus.UNSPECIFIED_MAPPING_STATUS);
         }
         initializedMappingStatus.put(tenant, true);
-        resolverMappingInbound.put(tenant, TreeNode.createRootNode(tenant));
+        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         if (cacheMappingInbound.get(tenant) == null)
             cacheMappingInbound.put(tenant, new HashMap<>());
         if (cacheMappingOutbound.get(tenant) == null)
@@ -173,32 +171,6 @@ public class MappingComponent {
         }
     }
 
-    public void sendConnectorLifecycle(String tenant, String connectorIdent, ConnectorStatusEvent connectorStatus,
-            String connectorName) {
-        if (configurationRegistry.getServiceConfigurations().get(tenant).sendConnectorLifecycle) {
-            subscriptionsService.runForTenant(tenant, () -> {
-                MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
-                        .getMappingServiceRepresentations().get(tenant);
-                Map<String, Map<String, String>> ccs = consolidatedConnectorStatus.getOrDefault(tenant,
-                        new HashMap<String, Map<String, String>>());
-                log.debug("Tenant {} - Sending status connector: {}", tenant, ccs);
-                Map<String, String> stMap = Map.ofEntries(
-                        entry("status", connectorStatus.getStatus().name()),
-                        entry("message", connectorStatus.message),
-                        entry("connectorName", connectorName),
-                        entry("date", connectorStatus.date));
-                ccs.put(connectorIdent, stMap);
-                consolidatedConnectorStatus.put(tenant, ccs);
-                Map<String, Object> service = new HashMap<String, Object>();
-                service.put(C8YAgent.CONNECTOR_FRAGMENT, ccs);
-                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-                updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
-                updateMor.setAttrs(service);
-                this.inventoryApi.update(updateMor);
-            });
-        }
-    }
-
     public MappingStatus getMappingStatus(String tenant, Mapping m) {
         // log.info("Tenant {} - get MappingStatus: {}", tenant, m.ident);
         Map<String, MappingStatus> statusMapping = tenantStatusMapping.get(tenant);
@@ -235,7 +207,7 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             if (mo != null) {
                 Mapping mt = toMappingObject(mo).getC8yMQTTMapping();
-                log.info("Tenant {} - Found Mapping: {}", tenant, mt.id);
+                log.debug("Tenant {} - Found Mapping: {}", tenant, mt.id);
                 return mt;
             }
             return null;
@@ -249,15 +221,15 @@ public class MappingComponent {
             ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id));
             MappingRepresentation m = toMappingObject(mo);
             if (m.getC8yMQTTMapping().isActive()) {
-                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + id
-                        + " is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException(String.format(
+                        "Tenant %s - Mapping %s is still active, deactivate mapping before deleting!", tenant, id));
             }
             // mapping is deactivated and we can delete it
             inventoryApi.delete(GId.asGId(id));
             deleteMappingStatus(tenant, id);
             return m.getC8yMQTTMapping();
         });
-        log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
+        //log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
         return result;
     }
 
@@ -284,8 +256,9 @@ public class MappingComponent {
             // when we do housekeeping tasks we need to update active mapping, e.g. add
             // snooped messages. This is an exception
             if (!allowUpdateWhenActive && mapping.isActive()) {
-                throw new IllegalArgumentException("Tenant " + tenant + " - Mapping " + mapping.id
-                        + " is still active, deactivate mapping before deleting!");
+                throw new IllegalArgumentException(
+                        String.format("Tenant %s - Mapping %s is still active, deactivate mapping before updating!",
+                                tenant, mapping.id));
             }
             // mapping is deactivated and we can delete it
             List<Mapping> mappings = getMappings(tenant);
@@ -321,7 +294,7 @@ public class MappingComponent {
         if (errors.size() != 0) {
             String errorList = errors.stream().map(e -> e.toString()).reduce("",
                     (res, error) -> res + "[ " + error + " ]");
-            throw new RuntimeException("Validation errors:" + errorList);
+            throw new RuntimeException(String.format("Validation errors: %s", errorList));
         }
         Mapping result = subscriptionsService.callForTenant(tenant, () -> {
             MappingRepresentation mr = new MappingRepresentation();
@@ -339,7 +312,8 @@ public class MappingComponent {
             mor.setId(GId.asGId(mapping.id));
             mor.setName(mapping.name);
             inventoryApi.update(mor);
-            log.info("Tenant {} - Created mapping: {}", mor, tenant);
+            log.info("Tenant {} - Mapping created: {}", tenant, mor.getName());
+            log.debug("Tenant {} - Mapping created: {}", tenant, mor);
             return mapping;
         });
         return result;
@@ -428,8 +402,8 @@ public class MappingComponent {
         }
     }
 
-    public TreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
-        TreeNode in = TreeNode.createRootNode(tenant);
+    public MappingTreeNode rebuildMappingTree(List<Mapping> mappings, String tenant) {
+        MappingTreeNode in = MappingTreeNode.createRootNode(tenant);
         mappings.forEach(m -> {
             try {
                 in.addMapping(m);
@@ -456,11 +430,38 @@ public class MappingComponent {
         return rebuildMappingInboundCache(tenant, updatedMappings);
     }
 
-    public void setActivationMapping(String tenant, String id, Boolean active) throws Exception {
+    public Mapping setActivationMapping(String tenant, String mappingId, Boolean active) throws Exception {
         // step 1. update activation for mapping
-        log.info("Tenant {} - Setting active: {} got mapping: {}", tenant, id, active);
-        Mapping mapping = getMapping(tenant, id);
+        log.debug("Tenant {} - Setting active: {} got mapping: {}", tenant, active, mappingId );
+        Mapping mapping = getMapping(tenant, mappingId);
         mapping.setActive(active);
+        if (Direction.INBOUND.equals(mapping.direction)) {
+            // step 2. retrieve collected snoopedTemplates
+            mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(mappingId).getSnoopedTemplates());
+        }
+        // step 3. update mapping in inventory
+        // don't validate mapping when setting active = false, this allows to remove
+        // mappings that are not working
+        boolean ignoreValidation = !active;
+        updateMapping(tenant, mapping, true, ignoreValidation);
+        // step 4. delete mapping from update cache
+        removeDirtyMapping(tenant, mapping);
+        // step 5. update caches
+        if (Direction.OUTBOUND.equals(mapping.direction)) {
+            rebuildMappingOutboundCache(tenant);
+        } else {
+            deleteFromCacheMappingInbound(tenant, mapping);
+            addToCacheMappingInbound(tenant, mapping);
+            cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+        }
+        return mapping;
+    }
+
+    public void setDebugMapping(String tenant, String id, Boolean debug) throws Exception {
+        // step 1. update debug for mapping
+        log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);
+        Mapping mapping = getMapping(tenant, id);
+        mapping.setDebug(debug);
         if (Direction.INBOUND.equals(mapping.direction)) {
             // step 2. retrieve collected snoopedTemplates
             mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
@@ -468,8 +469,7 @@ public class MappingComponent {
         // step 3. update mapping in inventory
         // don't validate mapping when setting active = false, this allows to remove
         // mappings that are not working
-        boolean ignoreValidation = !active;
-        updateMapping(tenant, mapping, true, ignoreValidation);
+        updateMapping(tenant, mapping, true, true);
         // step 4. delete mapping from update cache
         removeDirtyMapping(tenant, mapping);
         // step 5. update caches
@@ -510,7 +510,7 @@ public class MappingComponent {
     }
 
     public List<Mapping> resolveMappingInbound(String tenant, String topic) throws ResolveException {
-        List<TreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
+        List<MappingTreeNode> resolvedMappings = getResolverMappingInbound().get(tenant)
                 .resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
         return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
                 .map(mn -> mn.getMapping()).collect(Collectors.toList());

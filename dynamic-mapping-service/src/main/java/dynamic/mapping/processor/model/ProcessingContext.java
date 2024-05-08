@@ -24,6 +24,7 @@ package dynamic.mapping.processor.model;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
+import dynamic.mapping.model.QOS;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -48,6 +49,8 @@ public class ProcessingContext<O> {
     private Mapping mapping;
 
     private String topic;
+
+    private QOS qos;
 
     private String resolvedPublishTopic;
 
@@ -74,6 +77,12 @@ public class ProcessingContext<O> {
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
+
+    private boolean supportsMessageContext = false;
+
+    private byte[] key;
+
+    private String source;
 
     public static final String SOURCE_ID = "source.id";
 

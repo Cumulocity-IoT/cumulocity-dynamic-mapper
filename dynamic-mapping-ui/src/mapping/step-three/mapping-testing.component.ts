@@ -145,12 +145,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       }
     });
     if (testProcessingContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning('Test transformation was not successful!');
+      this.alertService.warning('Testing transformation was not successful!');
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });
     } else {
-      this.alertService.success('Testing transformation was successful!');
+      this.alertService.success('Testing transformation was successful.');
     }
     this.onNextTestResult();
   }
@@ -168,7 +168,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       }
     });
     if (testProcessingContext.errors.length > 0 || errors.length > 0) {
-      this.alertService.warning('Test transformation was not successful!');
+      this.alertService.warning('Testing transformation was not successful!');
       testProcessingContext.errors.forEach((msg) => {
         this.alertService.danger(msg);
       });

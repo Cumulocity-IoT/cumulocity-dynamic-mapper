@@ -16,7 +16,7 @@ import { definesDeviceIdentifier } from '../shared/util';
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: MappingSubstitution;
-  @Input() duplicate: boolean;
+  @Input() duplicateSubstitution: boolean;
   @Input() existingSubstitution: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
@@ -53,7 +53,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       ? '* '
       : '';
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
-    this.disabled$.next(this.duplicate);
+    this.disabled$.next(this.duplicateSubstitution);
     // console.log("Repair Options:", this.repairStrategyOptions);
     console.log('Existing substitution:', this.existingSubstitution);
   }
@@ -69,7 +69,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   }
 
   onOverrideChanged() {
-    const result = this.duplicate && !this.override;
+    const result = this.duplicateSubstitution && !this.override;
     console.log('Override:', result);
     this.disabled$.next(result);
   }

@@ -21,51 +21,9 @@
 
 package dynamic.mapping.core;
 
-import static java.util.Map.entry;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
-import javax.ws.rs.core.MediaType;
-
-import dynamic.mapping.App;
-import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
-import dynamic.mapping.configuration.TrustedCertificateRepresentation;
-import dynamic.mapping.connector.core.client.AConnectorClient;
-import dynamic.mapping.core.facade.IdentityFacade;
-import dynamic.mapping.core.facade.InventoryFacade;
-import dynamic.mapping.model.Extension;
-import dynamic.mapping.model.ExtensionEntry;
-import dynamic.mapping.model.MappingServiceRepresentation;
-import dynamic.mapping.processor.ProcessingException;
-import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
-import dynamic.mapping.processor.extension.ExtensionsComponent;
-import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapping.processor.model.C8YRequest;
-import dynamic.mapping.processor.model.ProcessingContext;
-import org.apache.commons.io.IOUtils;
-import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Component;
-import org.svenson.JSONParser;
-
+import c8y.IsDevice;
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
@@ -88,15 +46,48 @@ import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.inventory.BinariesApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-
-import c8y.IsDevice;
+import dynamic.mapping.App;
+import dynamic.mapping.configuration.TrustedCertificateCollectionRepresentation;
+import dynamic.mapping.configuration.TrustedCertificateRepresentation;
+import dynamic.mapping.connector.core.client.AConnectorClient;
+import dynamic.mapping.core.facade.IdentityFacade;
+import dynamic.mapping.core.facade.InventoryFacade;
+import dynamic.mapping.model.API;
+import dynamic.mapping.model.Extension;
+import dynamic.mapping.model.ExtensionEntry;
+import dynamic.mapping.model.MappingServiceRepresentation;
+import dynamic.mapping.processor.ProcessingException;
+import dynamic.mapping.processor.extension.ExtensibleProcessorInbound;
+import dynamic.mapping.processor.extension.ExtensionsComponent;
+import dynamic.mapping.processor.extension.ProcessorExtensionInbound;
+import dynamic.mapping.processor.model.C8YRequest;
+import dynamic.mapping.processor.model.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.model.API;
+import org.apache.commons.io.IOUtils;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+import org.svenson.JSONParser;
+
+import javax.ws.rs.core.MediaType;
+import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static java.util.Map.entry;
 
 @Slf4j
 @Component
 public class C8YAgent implements ImportBeanDefinitionRegistrar {
+
+    ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
 
     @Autowired
     private EventApi eventApi;
@@ -124,6 +115,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     @Autowired
     private MicroserviceSubscriptionsService subscriptionsService;
+
+    @Autowired
+    private ContextService<MicroserviceCredentials> contextService;
 
     private ExtensionsComponent extensionsComponent;
 
@@ -157,8 +151,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     private static final String PACKAGE_MAPPING_PROCESSOR_EXTENSION_EXTERNAL = "dynamic.mapping.processor.extension.external";
 
+    @Value("${application.version}")
+    private String version;
+
     public ExternalIDRepresentation resolveExternalId2GlobalId(String tenant, ID identity,
-            ProcessingContext<?> context) {
+                                                               ProcessingContext<?> context) {
         if (identity.getType() == null) {
             identity.setType("c8y_Serial");
         }
@@ -174,7 +171,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
-            ProcessingContext<?> context) {
+                                                               ProcessingContext<?> context) {
         if (idType == null) {
             idType = "c8y_Serial";
         }
@@ -191,59 +188,67 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public MeasurementRepresentation createMeasurement(String name, String type, ManagedObjectRepresentation mor,
-            DateTime dateTime, HashMap<String, MeasurementValue> mvMap, String tenant) {
+                                                       DateTime dateTime, HashMap<String, MeasurementValue> mvMap, String tenant) {
         MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
         subscriptionsService.runForTenant(tenant, () -> {
-            try {
-                measurementRepresentation.set(mvMap, name);
-                measurementRepresentation.setType(type);
-                measurementRepresentation.setSource(mor);
-                measurementRepresentation.setDateTime(dateTime);
-                log.debug("Tenant {} - Creating Measurement {}", tenant, measurementRepresentation);
-                MeasurementRepresentation mrn = measurementApi.create(measurementRepresentation);
-                measurementRepresentation.setId(mrn.getId());
-            } catch (SDKException e) {
-                log.error("Tenant {} - Error creating Measurement", tenant, e);
-            }
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(context, () -> {
+                try {
+                    measurementRepresentation.set(mvMap, name);
+                    measurementRepresentation.setType(type);
+                    measurementRepresentation.setSource(mor);
+                    measurementRepresentation.setDateTime(dateTime);
+                    log.debug("Tenant {} - Creating Measurement {}", tenant, measurementRepresentation);
+                    MeasurementRepresentation mrn = measurementApi.create(measurementRepresentation);
+                    measurementRepresentation.setId(mrn.getId());
+                } catch (SDKException e) {
+                    log.error("Tenant {} - Error creating Measurement", tenant, e);
+                }
+            });
         });
         return measurementRepresentation;
     }
 
     public AlarmRepresentation createAlarm(String severity, String message, String type, DateTime alarmTime,
-            ManagedObjectRepresentation parentMor, String tenant) {
+                                           ManagedObjectRepresentation parentMor, String tenant) {
         AlarmRepresentation alarmRepresentation = subscriptionsService.callForTenant(tenant, () -> {
-            AlarmRepresentation ar = new AlarmRepresentation();
-            ar.setSeverity(severity);
-            ar.setSource(parentMor);
-            ar.setText(message);
-            ar.setDateTime(alarmTime);
-            ar.setStatus("ACTIVE");
-            ar.setType(type);
-
-            return this.alarmApi.create(ar);
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(context, () -> {
+                AlarmRepresentation ar = new AlarmRepresentation();
+                ar.setSeverity(severity);
+                ar.setSource(parentMor);
+                ar.setText(message);
+                ar.setDateTime(alarmTime);
+                ar.setStatus("ACTIVE");
+                ar.setType(type);
+                return this.alarmApi.create(ar);
+            });
         });
         return alarmRepresentation;
     }
 
     public void createEvent(String message, String type, DateTime eventTime, MappingServiceRepresentation source,
-            String tenant, Map<String, String> properties) {
+                            String tenant, Map<String, String> properties) {
         subscriptionsService.runForTenant(tenant, () -> {
-            EventRepresentation er = new EventRepresentation();
-            ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-            mor.setId(new GId(source.getId()));
-            er.setSource(mor);
-            er.setText(message);
-            er.setDateTime(eventTime);
-            er.setType(type);
-            if (properties != null) {
-                er.setProperty(C8YAgent.CONNECTOR_FRAGMENT, properties);
-            }
-            this.eventApi.createAsync(er);
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(context, () -> {
+                EventRepresentation er = new EventRepresentation();
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(source.getId()));
+                er.setSource(mor);
+                er.setText(message);
+                er.setDateTime(eventTime);
+                er.setType(type);
+                if (properties != null) {
+                    er.setProperty(C8YAgent.CONNECTOR_FRAGMENT, properties);
+                }
+                this.eventApi.createAsync(er);
+            });
         });
     }
 
     public AConnectorClient.Certificate loadCertificateByName(String certificateName, String fingerprint,
-            String tenant, String connectorName) {
+                                                              String tenant, String connectorName) {
         TrustedCertificateRepresentation result = subscriptionsService.callForTenant(tenant,
                 () -> {
                     log.info("Tenant {} - Connector {} - Retrieving certificate {} ", tenant, connectorName,
@@ -305,39 +310,42 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         String payload = currentRequest.getRequest();
         API targetAPI = context.getMapping().getTargetAPI();
         AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
-            AbstractExtensibleRepresentation rt = null;
-            try {
-                if (targetAPI.equals(API.EVENT)) {
-                    EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
-                            EventRepresentation.class);
-                    rt = eventApi.create(eventRepresentation);
-                    log.info("Tenant {} - New event posted: {}", tenant, rt);
-                } else if (targetAPI.equals(API.ALARM)) {
-                    AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
-                            AlarmRepresentation.class);
-                    rt = alarmApi.create(alarmRepresentation);
-                    log.info("Tenant {} - New alarm posted: {}", tenant, rt);
-                } else if (targetAPI.equals(API.MEASUREMENT)) {
-                    MeasurementRepresentation measurementRepresentation = jsonParser
-                            .parse(MeasurementRepresentation.class, payload);
-                    rt = measurementApi.create(measurementRepresentation);
-                    log.info("Tenant {} - New measurement posted: {}", tenant, rt);
-                } else if (targetAPI.equals(API.OPERATION)) {
-                    OperationRepresentation operationRepresentation = jsonParser
-                            .parse(OperationRepresentation.class, payload);
-                    rt = deviceControlApi.create(operationRepresentation);
-                    log.info("Tenant {} - New operation posted: {}", tenant, rt);
-                } else {
-                    log.error("Tenant {} - Not existing API!", tenant);
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(contextCredentials, () -> {
+                AbstractExtensibleRepresentation rt = null;
+                try {
+                    if (targetAPI.equals(API.EVENT)) {
+                        EventRepresentation eventRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
+                                EventRepresentation.class);
+                        rt = eventApi.create(eventRepresentation);
+                        log.info("Tenant {} - New event posted: {}", tenant, rt);
+                    } else if (targetAPI.equals(API.ALARM)) {
+                        AlarmRepresentation alarmRepresentation = configurationRegistry.getObjectMapper().readValue(payload,
+                                AlarmRepresentation.class);
+                        rt = alarmApi.create(alarmRepresentation);
+                        log.info("Tenant {} - New alarm posted: {}", tenant, rt);
+                    } else if (targetAPI.equals(API.MEASUREMENT)) {
+                        MeasurementRepresentation measurementRepresentation = jsonParser
+                                .parse(MeasurementRepresentation.class, payload);
+                        rt = measurementApi.create(measurementRepresentation);
+                        log.info("Tenant {} - New measurement posted: {}", tenant, rt);
+                    } else if (targetAPI.equals(API.OPERATION)) {
+                        OperationRepresentation operationRepresentation = jsonParser
+                                .parse(OperationRepresentation.class, payload);
+                        rt = deviceControlApi.create(operationRepresentation);
+                        log.info("Tenant {} - New operation posted: {}", tenant, rt);
+                    } else {
+                        log.error("Tenant {} - Not existing API!", tenant);
+                    }
+                } catch (JsonProcessingException e) {
+                    log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
+                    error.append("Could not map payload: " + targetAPI + "/" + payload);
+                } catch (SDKException s) {
+                    log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                    error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
                 }
-            } catch (JsonProcessingException e) {
-                log.error("Tenant {} - Could not map payload: {} {}", tenant, targetAPI, payload);
-                error.append("Could not map payload: " + targetAPI + "/" + payload);
-            } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
-                error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
-            }
-            return rt;
+                return rt;
+            });
         });
         if (!error.toString().equals("")) {
             throw new ProcessingException(error.toString());
@@ -350,34 +358,46 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         StringBuffer error = new StringBuffer("");
         C8YRequest currentRequest = context.getCurrentRequest();
         ManagedObjectRepresentation device = subscriptionsService.callForTenant(tenant, () -> {
-            ManagedObjectRepresentation mor = configurationRegistry.getObjectMapper().readValue(
-                    currentRequest.getRequest(),
-                    ManagedObjectRepresentation.class);
-            try {
-                ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
-                if (extId == null) {
-                    // Device does not exist
-                    // append external id to name
-                    mor.setName(mor.getName());
-                    mor.set(new IsDevice());
-                    // remove id
-                    mor.setId(null);
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(contextCredentials, () -> {
+                ManagedObjectRepresentation mor = configurationRegistry.getObjectMapper().readValue(
+                        currentRequest.getRequest(),
+                        ManagedObjectRepresentation.class);
+                try {
+                    ExternalIDRepresentation extId = resolveExternalId2GlobalId(tenant, identity, context);
+                    if (extId == null) {
+                        // Device does not exist
+                        // append external id to name
+                        mor.setName(mor.getName());
+                    /*
+                    mor.set(new Agent());
+                    HashMap<String, String> agentFragments = new HashMap<>();
+                    agentFragments.put("name", "Dynamic Mapper");
+                    agentFragments.put("version", version);
+                    agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+                    agentFragments.put("maintainer", "Open-Source");
+                    mor.set(agentFragments, "c8y_Agent");
+                     */
+                        mor.set(new IsDevice());
+                        // remove id
+                        mor.setId(null);
 
-                    mor = inventoryApi.create(mor, context);
-                    log.info("Tenant {} - New device created: {}", tenant, mor);
-                    identityApi.create(mor, identity, context);
-                } else {
-                    // Device exists - update needed
-                    mor.setId(extId.getManagedObject().getId());
-                    mor = inventoryApi.update(mor, context);
+                        mor = inventoryApi.create(mor, context);
+                        log.info("Tenant {} - New device created: {}", tenant, mor);
+                        identityApi.create(mor, identity, context);
+                    } else {
+                        // Device exists - update needed
+                        mor.setId(extId.getManagedObject().getId());
+                        mor = inventoryApi.update(mor, context);
 
-                    log.info("Tenant {} - Device updated: {}", tenant, mor);
+                        log.info("Tenant {} - Device updated: {}", tenant, mor);
+                    }
+                } catch (SDKException s) {
+                    log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(), s);
+                    error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
                 }
-            } catch (SDKException s) {
-                log.error("Tenant {} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(), s);
-                error.append("Could not sent payload to c8y: " + currentRequest.getRequest() + " " + s);
-            }
-            return mor;
+                return mor;
+            });
         });
         if (!error.toString().equals("")) {
             throw new ProcessingException(error.toString());
@@ -393,7 +413,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
             String extName = props.get("name").toString();
             boolean external = (Boolean) props.get("external");
-            log.info("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
+            log.debug("Tenant {} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
                     extName);
             try {
                 if (external) {
@@ -413,7 +433,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     IOUtils.copy(downloadInputStream, outputStream);
 
                     // step 3 parse list of extensions
-                    URL[] urls = { tempFile.toURI().toURL() };
+                    URL[] urls = {tempFile.toURI().toURL()};
                     externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
                             external);
@@ -422,14 +442,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                             external);
                 }
             } catch (IOException e) {
-                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ", tenant,
+                log.error("Tenant {} - Exception occurred, When loading extension, starting without extensions: ",
+                        tenant,
                         e);
             }
         }
     }
 
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
-            boolean external)
+                                              boolean external)
             throws IOException {
         ExtensibleProcessorInbound extensibleProcessor = configurationRegistry.getExtensibleProcessors().get(tenant);
         extensibleProcessor.addExtension(tenant, new Extension(id, extensionName, external));
@@ -450,7 +471,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
         if (buffered != null)
             newExtensions.load(buffered);
-        log.info("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
+        log.debug("Tenant {} - Preparing to load extensions:" + newExtensions.toString(), tenant);
 
         Enumeration<?> extensions = newExtensions.propertyNames();
         while (extensions.hasMoreElements()) {
@@ -481,7 +502,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                                 .newInstance();
                         // springUtil.registerBean(key, clazz);
                         extensionEntry.setExtensionImplementation(extensionImpl);
-                        log.info("Tenant {} - Successfully registered bean: {} for key: {}", tenant,
+                        log.debug("Tenant {} - Successfully registered bean: {} for key: {}", tenant,
                                 newExtensions.getProperty(key),
                                 key);
                     }
@@ -538,18 +559,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     }
 
     public void updateOperationStatus(String tenant, OperationRepresentation op, OperationStatus status,
-            String failureReason) {
+                                      String failureReason) {
         subscriptionsService.runForTenant(tenant, () -> {
-            try {
-                op.setStatus(status.toString());
-                if (failureReason != null)
-                    op.setFailureReason(failureReason);
-                deviceControlApi.update(op);
-            } catch (SDKException exception) {
-                log.error("Tenant {} - Operation with id {} could not be updated: {}", tenant,
-                        op.getDeviceId().getValue(),
-                        exception.getLocalizedMessage());
-            }
+            MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(contextCredentials, () -> {
+                try {
+                    op.setStatus(status.toString());
+                    if (failureReason != null)
+                        op.setFailureReason(failureReason);
+                    deviceControlApi.update(op);
+                } catch (SDKException exception) {
+                    log.error("Tenant {} - Operation with id {} could not be updated: {}", tenant,
+                            op.getDeviceId().getValue(),
+                            exception.getLocalizedMessage());
+                }
+            });
         });
     }
 
@@ -565,13 +589,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
             log.info("Tenant {} - Agent with ID {} already exists {}", tenant,
                     MappingServiceRepresentation.AGENT_ID,
                     mappingServiceIdRepresentation, amo.getId());
-            log.info("Tenant {} - Agent representation {}", tenant,
-                    MappingServiceRepresentation.AGENT_ID,
-                    mappingServiceIdRepresentation);
         } else {
             amo.setName(MappingServiceRepresentation.AGENT_NAME);
             amo.setType(MappingServiceRepresentation.AGENT_TYPE);
             amo.set(new Agent());
+            HashMap<String, String> agentFragments = new HashMap<>();
+            agentFragments.put("name", "Dynamic Mapper");
+            agentFragments.put("version", version);
+            agentFragments.put("url", "https://github.com/SoftwareAG/cumulocity-dynamic-mapper");
+            agentFragments.put("maintainer", "Open-Source");
+            amo.set(agentFragments, "c8y_Agent");
             amo.set(new IsDevice());
             amo.setProperty(C8YAgent.MAPPING_FRAGMENT,
                     new ArrayList<>());
@@ -589,7 +616,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
     public void createExtensibleProcessor(String tenant) {
         ExtensibleProcessorInbound extensibleProcessor = new ExtensibleProcessorInbound(configurationRegistry);
         configurationRegistry.getExtensibleProcessors().put(tenant, extensibleProcessor);
-        log.info("Tenant {} - create ExtensibleProcessor {}", tenant, extensibleProcessor);
+        log.debug("Tenant {} - Create ExtensibleProcessor {}", tenant, extensibleProcessor);
 
         // check if managedObject for internal mapping extension exists
         List<ManagedObjectRepresentation> internalExtension = extensionsComponent.getInternal();
@@ -605,13 +632,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
         } else {
             ie = internalExtension.get(0);
         }
-        log.info("Tenant {} - Internal extension: {} registered: {}", tenant,
+        log.debug("Tenant {} - Internal extension: {} registered: {}", tenant,
                 ExtensionsComponent.PROCESSOR_EXTENSION_INTERNAL_NAME,
                 ie.getId().getValue(), ie);
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
-        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle) {
+        if (configurationRegistry.getServiceConfigurations().get(tenant).sendNotificationLifecycle
+                && !(connectorStatus.equals(previousConnectorStatus))) {
+            previousConnectorStatus = connectorStatus;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             Date now = new Date();
             String date = dateFormat.format(now);
@@ -627,6 +656,15 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
                     DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
                     stMap);
         }
+    }
+
+    public MicroserviceCredentials removeAppKeyHeaderFromContext(MicroserviceCredentials context) {
+        final MicroserviceCredentials clonedContext = new MicroserviceCredentials(
+                context.getTenant(),
+                context.getUsername(), context.getPassword(),
+                context.getOAuthAccessToken(), context.getXsrfToken(),
+                context.getTfaToken(), null);
+        return clonedContext;
     }
 
 }

@@ -3,6 +3,10 @@ package dynamic.mapping.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
+
+import dynamic.mapping.connector.core.ConnectorProperty;
+import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.connector.core.client.ConnectorType;
 import lombok.Data;
 import lombok.ToString;
 
@@ -26,7 +30,7 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     @JsonProperty("connectorType")
-    public String connectorType;
+    public ConnectorType connectorType;
 
     @NotNull
     @JsonProperty("enabled")
@@ -73,11 +77,19 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
             return null;
         }
         return result;
-        // this way we don't get a deep clone
-        // try {
-        // return super.clone();
-        // } catch (CloneNotSupportedException e) {
-        // return null;
-        // }
+    }
+
+    /**
+     * Copy the properties that are readonly from the specification to the configuration
+     * @param spec the connectorSpecification to use as a template and copy predefined from to the connectorConfiguration
+     */
+    public void copyPredefinedValues(ConnectorSpecification spec) {
+        
+        spec.getProperties().entrySet().forEach(prop -> {
+            ConnectorProperty p = prop.getValue();
+            if (p.readonly) {
+                properties.put(prop.getKey(), p.defaultValue);
+            }
+        });
     }
 }

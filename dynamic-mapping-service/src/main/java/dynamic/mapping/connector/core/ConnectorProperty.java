@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 
+import java.util.Map;
+
 import javax.validation.constraints.NotNull;
 
 @Data
@@ -25,8 +27,23 @@ public class ConnectorProperty implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public ConnectorPropertyType type;
 
-    public Object clone()
-    {
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean readonly;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Boolean hidden;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Object defaultValue;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public Map<String, String> options;
+
+    public Object clone() {
         try {
             return super.clone();
         } catch (CloneNotSupportedException e) {

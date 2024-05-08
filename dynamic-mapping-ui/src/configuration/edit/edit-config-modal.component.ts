@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, Output } from '@angular/core';
-import { ModalLabels } from '@c8y/ngx-components';
+import { HumanizePipe, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
@@ -8,11 +8,13 @@ import {
   ConnectorSpecification,
   ConnectorPropertyType
 } from '../shared/configuration.model';
+import { nextIdAndPad } from '../../shared';
+import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.component';
 
 @Component({
   selector: 'd11r-edit-connector-modal',
   template: ` <c8y-modal
-    title="Edit properties broker configuration"
+    title="Edit connector configuration"
     (onClose)="onSave()"
     (onDismiss)="onDismiss()"
     [labels]="labels"
@@ -26,6 +28,19 @@ import {
           s
         ></formly-form>
       </div>
+      <c8y-form-group style="margin-left: 12px; margin-right: 12px;">
+        <label style="margin-left: 4px;">
+          <span>
+            {{ 'Description' | translate }}
+          </span>
+        </label>
+        <textarea
+          rows="3"
+          class="form-control"
+          placeholder="choose connector ..."
+          >{{ description }}</textarea
+        >
+      </c8y-form-group>
       <div [formGroup]="dynamicFormly">
         <formly-form
           [form]="dynamicFormly"
@@ -40,22 +55,26 @@ export class EditConfigurationComponent implements OnInit {
   @Input() add: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
+  @Input() configurationsCount: number;
   @Output() closeSubject: Subject<any> = new Subject();
   brokerFormlyFields: FormlyFieldConfig[] = [];
   brokerFormly: FormGroup = new FormGroup({});
   dynamicFormlyFields: FormlyFieldConfig[] = [];
   dynamicFormly: FormGroup = new FormGroup({});
   labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
+  description: string;
 
   ngOnInit(): void {
+    this.setConnectorDescription();
+
     this.brokerFormlyFields = [
       {
         className: 'col-lg-12',
         key: 'connectorType',
         type: 'select',
-        id:'connectorType',
+        id: 'connectorType',
         wrappers: ['c8y-form-field'],
-        templateOptions: {
+        props: {
           label: 'Connector type',
           options: this.specifications.map((sp) => {
             return {
@@ -77,6 +96,15 @@ export class EditConfigurationComponent implements OnInit {
     }
   }
 
+  private setConnectorDescription() {
+    const desc = this.specifications.find(
+      (sp) => sp.connectorType == this.configuration.connectorType
+    );
+    if (desc) {
+      this.description = desc.description;
+    }
+  }
+
   onDismiss() {
     console.log('Dismiss');
     this.closeSubject.next(undefined);
@@ -93,6 +121,8 @@ export class EditConfigurationComponent implements OnInit {
     );
 
     this.configuration.connectorType = connectorType;
+    this.setConnectorDescription();
+    this.dynamicFormlyFields = [];
 
     this.dynamicFormlyFields.push({
       fieldGroup: [
@@ -102,19 +132,44 @@ export class EditConfigurationComponent implements OnInit {
           id: 'name',
           type: 'input',
           wrappers: ['c8y-form-field'],
-          templateOptions: {
+          props: {
             label: 'Name',
             required: true
           }
         }
+        // {
+        //     className: 'col-lg-12',
+        //     key: 'supportsWildcardInTopic',
+        //     id: 'supportsWildcardInTopic',
+        //     type: 'switch',
+        //     wrappers: ['c8y-form-field'],
+        //     defaultValue: true,
+        //     props: {
+        //       label: HumanizePipe.humanize('supportsWildcardInTopic'),
+        //       description: 'If this option is checked, then topics can contains wildcards characters: +, #',
+        //     }
+        //   }
       ]
     });
+    if (this.add) {
+      const n = HumanizePipe.humanize(connectorType);
+      this.configuration.name = `${n} - ${nextIdAndPad(this.configurationsCount, 2)}`;
+      this.configuration.enabled = false;
+    }
     if (dynamicFields) {
       const numberFields = Object.keys(dynamicFields.properties).length;
       const sortedFields = new Array(numberFields);
       for (const key in dynamicFields.properties) {
         const property = dynamicFields.properties[key];
-        if (property.order < numberFields && property.order >= 0) {
+        if (property.defaultValue && this.add) {
+          this.configuration.properties[key] = property.defaultValue;
+        }
+        // only display field when it is visible
+        if (
+          property.order < numberFields &&
+          property.order >= 0 &&
+          !property.hidden
+        ) {
           if (!sortedFields[property.order]) {
             sortedFields[property.order] = { key: key, property: property };
           } else {
@@ -138,7 +193,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     type: 'number',
                     label: entry.key,
                     required: property.required
@@ -156,7 +211,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     label: entry.key,
                     required: property.required
                   }
@@ -175,7 +230,7 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'input',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     type: 'password',
                     label: entry.key,
                     required: property.required
@@ -193,8 +248,50 @@ export class EditConfigurationComponent implements OnInit {
                   id: `${entry.key}`,
                   type: 'switch',
                   wrappers: ['c8y-form-field'],
-                  templateOptions: {
+                  props: {
                     label: entry.key,
+                    required: property.required
+                  }
+                }
+              ]
+            });
+          } else if (property.type == ConnectorPropertyType.OPTION_PROPERTY) {
+            this.dynamicFormlyFields.push({
+              // fieldGroupClassName: "row",
+              fieldGroup: [
+                {
+                  className: 'col-lg-12',
+                  key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
+                  type: 'select',
+                  wrappers: ['c8y-form-field'],
+                  props: {
+                    label: entry.key,
+                    required: property.required,
+                    options: Object.values(property.options).map((key) => {
+                      return { label: key, value: key };
+                    })
+                  }
+                }
+              ]
+            });
+          } else if (
+            property.type == ConnectorPropertyType.STRING_LARGE_PROPERTY
+          ) {
+            this.dynamicFormlyFields.push({
+              // fieldGroupClassName: "row",
+              fieldGroup: [
+                {
+                  className: 'col-lg-12',
+                  key: `properties.${entry.key}`,
+                  id: `${entry.key}`,
+                  type: FieldTextareaCustom,
+                  wrappers: ['c8y-form-field'],
+                  props: {
+                    label: entry.key,
+                    readonly: property.readonly,
+                    cols: 120,
+                    rows: 4,
                     required: property.required
                   }
                 }

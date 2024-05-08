@@ -78,10 +78,12 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
-    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry, AConnectorClient connectorClient) {
+    public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
+            AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
-        this.mappingComponent = configurationRegistry.getMappingComponent();;
+        this.mappingComponent = configurationRegistry.getMappingComponent();
+        ;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -131,6 +133,8 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     context.setMapping(mapping);
                     context.setSendPayload(sendPayload);
                     context.setTenant(tenant);
+                    context.setSupportsMessageContext(connectorMessage.isSupportsMessageContext() && mapping.supportsMessageContext);
+                    context.setKey(connectorMessage.getKey());
                     context.setServiceConfiguration(serviceConfiguration);
                     // identify the correct processor based on the mapping type
                     MappingType mappingType = context.getMappingType();
@@ -139,7 +143,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     if (processor != null) {
                         try {
                             processor.deserializePayload(context, connectorMessage);
-                            if (serviceConfiguration.logPayload) {
+                            if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant,
                                         context.getTopic(),
                                         context.getPayload().toString());
@@ -188,7 +192,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
                                     e.getMessage());
-                            log.info("Tenant {} - Message Stacktrace: ", tenant, e);
+                            log.debug("Tenant {} - Message Stacktrace: ", tenant, e);
                             mappingStatus.errors++;
                         }
                     } else {
@@ -203,7 +207,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) throws Exception {
+    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
 
@@ -216,7 +220,9 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                 try {
                     resolvedMappings = mappingComponent.resolveMappingInbound(tenant, topic);
                 } catch (Exception e) {
-                    log.warn("Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!", tenant, topic);
+                    log.warn(
+                            "Tenant {} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
+                            tenant, topic);
                     log.debug(e.getMessage(), e);
                     mappingStatusUnspecified.errors++;
                 }
@@ -237,19 +243,10 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onClose(String closeMessage, Throwable closeException) {
-        String tenant = connectorClient.getTenant();
-        String connectorIdent = connectorClient.getConnectorIdent();
-        if (closeException != null)
-            log.error("Tenant {} - Connection Lost to broker {}: {}", tenant, connectorIdent,
-                    closeException.getMessage());
-        closeException.printStackTrace();
-        if (closeMessage != null)
-            log.info("Tenant {} - Connection Lost to MQTT broker: {}", tenant, closeMessage);
-        connectorClient.reconnect();
     }
 
     @Override
-    public void onMessage(ConnectorMessage message) throws Exception {
+    public void onMessage(ConnectorMessage message) {
         processMessage(message);
     }
 

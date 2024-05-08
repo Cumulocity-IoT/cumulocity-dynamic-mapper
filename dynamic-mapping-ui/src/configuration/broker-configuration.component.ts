@@ -26,6 +26,7 @@ import { Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
   ConfirmationModalComponent,
+  Direction,
   SharedService,
   uuidCustom
 } from '../shared';
@@ -57,7 +58,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   statusLogs$: Observable<any[]>;
   statusLogs: any[] = [];
   filterStatusLog = {
-    eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    // eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
+    eventType: 'ALL',
     connectorIdent: 'ALL'
   };
   StatusEventTypes = StatusEventTypes;
@@ -67,9 +69,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     logSubstitution: true,
     logConnectorErrorInBackend: false,
     sendConnectorLifecycle: false,
-    sendMappingStatus: false,
+    sendMappingStatus: true,
     sendSubscriptionEvents: false,
-    sendNotificationLifecycle: false,
+    sendNotificationLifecycle: false
   };
 
   constructor(
@@ -88,7 +90,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       sendConnectorLifecycle: new FormControl(''),
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl(''),
-      sendNotificationLifecycle: new FormControl(''),
+      sendNotificationLifecycle: new FormControl('')
     });
     this.feature = await this.sharedService.getFeatures();
     this.specifications =
@@ -98,7 +100,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       .subscribe((confs) => {
         this.configurations = confs;
       });
-    this.brokerConfigurationService.getStatusLogs().subscribe((logs) => {
+    this.brokerConfigurationService.getStatusLogs()?.subscribe((logs) => {
       this.statusLogs = logs;
     });
     await this.loadData();
@@ -122,9 +124,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     );
     console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === 201) {
-      this.alert.success(gettext('Reconnect successful!'));
+      this.alert.success(gettext('Reconnected successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to reconnect.'));
+      this.alert.danger(gettext('Failed to reconnect!'));
     }
   }
 
@@ -156,7 +158,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Update successful'));
+          this.alert.success(gettext('Updated successfully.'));
         } else {
           this.alert.danger(
             gettext('Failed to update connector configuration')
@@ -172,7 +174,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alert.warning(
-      gettext('Review properties, e.g. client_id must be different across different client connectors to the same broker.')
+      gettext(
+        'Review properties, e.g. client_id must be different across different client connectors to the same broker.'
+      )
     );
 
     const initialState = {
@@ -200,10 +204,10 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Update successful'));
+          this.alert.success(gettext('Updated successfully.'));
         } else {
           this.alert.danger(
-            gettext('Failed to update connector configuration')
+            gettext('Failed to update connector configuration!')
           );
         }
       }
@@ -235,7 +239,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
               configuration.ident
             );
           if (response.status < 300) {
-            this.alert.success(gettext('Deleted successful'));
+            this.alert.success(gettext('Deleted successfully.'));
           } else {
             this.alert.danger(
               gettext('Failed to delete connector configuration')
@@ -257,7 +261,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const initialState = {
       add: true,
       configuration: configuration,
-      specifications: this.specifications
+      specifications: this.specifications,
+      configurationsCount: this.configurations.length
     };
     const modalRef = this.bsModalService.show(EditConfigurationComponent, {
       initialState
@@ -299,22 +304,48 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     console.log('Details toggle activation to broker', response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
-      this.alert.success(gettext('Connection updated successful'));
+      this.alert.success(gettext('Connection updated successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to establish connection'));
+      this.alert.danger(gettext('Failed to establish connection!'));
     }
     await this.loadData();
+    this.sharedService.refreshMappings(Direction.INBOUND);
+    this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
 
   async resetStatusMapping() {
-    const res = await this.brokerConfigurationService.runOperation(
-      Operation.RESET_STATUS_MAPPING
+    const initialState = {
+      title: 'Reset mapping statistic',
+      message:
+        'You are about to delete the mapping statistic. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
     );
-    if (res.status < 300) {
-      this.alert.success(gettext('Successfully reset'));
-    } else {
-      this.alert.danger(gettext('Failed to rest statistic.'));
-    }
+
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        console.log('Confirmation result:', result);
+        if (result) {
+          const res = await this.brokerConfigurationService.runOperation(
+            Operation.RESET_STATUS_MAPPING
+          );
+          if (res.status < 300) {
+            this.alert.success(
+              gettext('Mapping statistic reset successfully.')
+            );
+          } else {
+            this.alert.danger(gettext('Failed to reset statistic.'));
+          }
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 
   async clickedSaveServiceConfiguration() {

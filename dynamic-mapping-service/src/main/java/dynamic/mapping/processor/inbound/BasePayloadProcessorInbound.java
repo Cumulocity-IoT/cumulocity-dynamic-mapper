@@ -35,7 +35,6 @@ import com.jayway.jsonpath.PathNotFoundException;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -50,7 +49,6 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -78,7 +76,7 @@ public abstract class BasePayloadProcessorInbound<T> {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
-        // if there are to little device idenfified then we replicate the first device
+        // if there are too few devices identified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         String maxEntry = postProcessingCache.entrySet()
                 .stream()
@@ -139,6 +137,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                                     "device_" + mapping.externalIdType + "_" + substituteValue.value.asText());
                             request.put(MappingRepresentation.MAPPING_GENERATED_TEST_DEVICE, null);
                             request.put("c8y_IsDevice", null);
+                            request.put("com_cumulocity_model_Agent", null);
                             try {
                                 var requestString = objectMapper.writeValueAsString(request);
                                 var newPredecessor = context.addRequest(
@@ -154,9 +153,9 @@ public abstract class BasePayloadProcessorInbound<T> {
                                 context.getCurrentRequest().setError(e);
                             }
                         } else if (sourceId == null && context.isSendPayload()) {
-                            throw new RuntimeException(
-                                    "External id " + substituteValue.typedValue().toString() + " for type "
-                                            + mapping.externalIdType + " not found!");
+                            throw new RuntimeException(String.format(
+                                    "External id %s for type %s not found!", substituteValue.typedValue().toString(),
+                                    mapping.externalIdType));
                         } else if (sourceId == null) {
                             substituteValue.value = null;
                         } else {
@@ -220,15 +219,6 @@ public abstract class BasePayloadProcessorInbound<T> {
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
-        // variant where the default strategy for PROCESSOR_EXTENSION is
-        // REMOVE_IF_MISSING
-        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) &&
-        // subValueMissing) ||
-        // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-        // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
-        // type.equals(MappingType.PROTOBUF_STATIC))
-        // && (subValueMissing || subValueNull)))
-
         try {
             if ("$".equals(keys)) {
                 Object replacement = sub.typedValue();
@@ -253,7 +243,7 @@ public abstract class BasePayloadProcessorInbound<T> {
                 }
             }
         } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(MessageFormat.format("Path: \"{0}\" not found!", keys));
+            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
         }
     }
 

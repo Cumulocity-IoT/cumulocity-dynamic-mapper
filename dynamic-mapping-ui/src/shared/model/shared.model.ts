@@ -1,3 +1,5 @@
+import { ConnectorConfiguration } from '../../configuration';
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -32,8 +34,9 @@ export interface Mapping {
   ident: string;
   subscriptionTopic?: string;
   publishTopic?: string;
-  templateTopic: string;
-  templateTopicSample: string;
+  publishTopicSample?: string;
+  mappingTopic?: string;
+  mappingTopicSample?: string;
   targetAPI: string;
   source: string;
   target: string;
@@ -52,7 +55,20 @@ export interface Mapping {
   direction?: Direction;
   filterOutbound?: string;
   autoAckOperation?: boolean;
+  debug?: boolean;
+  supportsMessageContext?: boolean;
   lastUpdate: number;
+}
+
+export interface MappingEnriched {
+  id: string;
+  mapping: Mapping;
+  deployedToConnectors?: ConnectorConfiguration[];
+}
+
+export interface MappingSubscribed {
+  ident: string;
+  deployedToConnectors?: ConnectorConfiguration[];
 }
 
 export enum RepairStrategy {
@@ -97,6 +113,27 @@ export enum MappingType {
   PROTOBUF_STATIC = 'PROTOBUF_STATIC',
   PROCESSOR_EXTENSION = 'PROCESSOR_EXTENSION'
 }
+
+export interface MappingTypeDescriptionInterface {
+  key: MappingType;
+  description: string;
+}
+
+export const MAPPING_TYPE_DESCRIPTION : Record <MappingType, MappingTypeDescriptionInterface> = {
+    [MappingType.JSON]: {key: MappingType.JSON , description: 'Mapping handles payloads in JSON format'},
+    [MappingType.FLAT_FILE]: {key: MappingType.FLAT_FILE , description: `Mapping handles payloads in CSV format. Any separator can be defined./nUse the following expression to return the fields in an array.\nFor the expression $split(message, /,\\s*/) the result is:
+    [
+        "165",
+        "14.5",
+        "2022-08-06T00:14:50.000+02:00",
+        "c8y_FuelMeasurement"
+    ]
+    `},
+    [MappingType.GENERIC_BINARY]: {key: MappingType.GENERIC_BINARY , description: `Mapping handles payloads in hex format. In the mapper the incoming hexadecimal payload is decoded as hexadecimal string with a leading "0x". 
+Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157`},
+    [MappingType.PROTOBUF_STATIC]: {key: MappingType.PROTOBUF_STATIC , description: 'Mapping handles payloads in protobuf format'},
+    [MappingType.PROCESSOR_EXTENSION]: {key: MappingType.PROCESSOR_EXTENSION , description: 'Mapping handles payloads in custom format. It can be used if you want to process the message yourself. This requires that a custom processor extension in Java is implemented and uploaded through the "Processor extension" tab'},
+};
 
 export interface Extension {
   id?: string;

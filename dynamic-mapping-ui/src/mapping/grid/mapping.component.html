@@ -20,7 +20,7 @@
   -->
 
 <c8y-title translate
-  >Mapping {{ stepperConfiguration.direction | capitalCase }}</c8y-title
+  >Mapping {{ stepperConfiguration.direction | lowercase}}</c8y-title
 >
 <!-- <mapping-help src="../../shared/help/help-mapping.html"></mapping-help> -->
 <!-- <mapping-help src="/apps/mqtt-mapping/assets/help/help-mapping.html"></mapping-help> -->
@@ -53,11 +53,11 @@
   </button>
   <button
     class="btn btn-link"
-    title="{{ 'Export mappings' | translate }}"
+    title="{{ 'Export all mappings' | translate }}"
     (click)="onExportAll()"
   >
     <i c8yIcon="download"></i>
-    {{ 'Export mappings' | translate }}
+    {{ 'Export all mappings' | translate }}
   </button>
   <button
     class="btn btn-link"
@@ -70,7 +70,7 @@
   <button
     class="btn btn-link"
     title="{{ 'Refresh' | translate }}"
-    (click)="reloadMappings()"
+    (click)="refreshMappings()"
   >
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
@@ -78,19 +78,22 @@
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block">
-    <c8y-data-grid
+    <c8y-data-grid #mappingGrid
       [title]="titleMapping | translate"
-      [selectable]="'true'"
+      [selectable]="true"
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
-      [rows]="mappings"
-      [pagination]="pagination"
+      [rows]="mappingsEnriched$ | async"
+      [pagination]="pagination" 
       [actionControls]="actionControls"
     >
     </c8y-data-grid>
   </div>
   <div class="card-block col-md-offset-5 bg-white">
-    <div class="c8y-empty-state" *ngIf="mappings.length === 0">
+    <div
+      class="c8y-empty-state"
+      *ngIf="(mappingsEnriched$ | async)?.length === 0"
+    >
       <h1 [c8yIcon]="'file-text'"></h1>
       <p>
         <strong>No mappings available.</strong><br />
@@ -110,16 +113,18 @@
 
 <div
   class="card"
-  *ngIf="stepperConfiguration.direction === Direction.OUTBOUND && subscription?.devices"
+  *ngIf="
+    stepperConfiguration.direction === Direction.OUTBOUND &&
+    subscription?.devices
+  "
 >
   <div class="card-block">
     <c8y-data-grid
-      [title]="titleSubsription | translate"
+      [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions"
       [rows]="subscription?.devices"
       [pagination]="pagination"
       [actionControls]="actionControlSubscription"
-      [refresh]="refresh"
     >
     </c8y-data-grid>
   </div>
@@ -132,7 +137,6 @@
       (cancel)="showConfigMapping = false"
       (commit)="onCommitMapping($event)"
       [mapping]="mappingToUpdate"
-      [mappings]="mappings"
       [stepperConfiguration]="stepperConfiguration"
     >
     </d11r-mapping-stepper>

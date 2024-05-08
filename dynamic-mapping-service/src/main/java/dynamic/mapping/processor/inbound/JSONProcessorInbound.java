@@ -42,6 +42,7 @@ import dynamic.mapping.processor.model.RepairStrategy;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -80,13 +81,22 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
         splitTopicAsList.forEach(s -> topicLevels.add(s));
         if (payloadJsonNode instanceof ObjectNode) {
             ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_TOPIC_LEVEL, topicLevels);
+            if (context.isSupportsMessageContext() && context.getKey() != null) {
+                ObjectNode contextData = objectMapper.createObjectNode();
+                String keyString = new String(context.getKey(), StandardCharsets.UTF_8);
+                contextData.put(Mapping.CONTEXT_DATA_KEY_NAME, keyString);
+                ((ObjectNode) payloadJsonNode).set(Mapping.TOKEN_CONTEXT_DATA, contextData);
+            }
         } else {
             log.warn("Tenant {} - Parsing this message as JSONArray, no elements from the topic level can be used!",
                     tenant);
         }
 
         String payload = payloadJsonNode.toPrettyString();
-        log.info("Tenant {} - Patched payload: {}", tenant, payload);
+        if (serviceConfiguration.logPayload || mapping.debug) {
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
+                    mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+        }
 
         boolean substitutionTimeExists = false;
         for (MappingSubstitution substitution : mapping.substitutions) {
@@ -114,8 +124,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                     substitution.pathTarget,
                     new ArrayList<MappingSubstitution.SubstituteValue>());
             if (extractedSourceContent == null) {
-                log.error("Tenant {} - No substitution for: {}, {}", tenant, substitution.pathSource,
-                        payload);
+                log.warn("Tenant {} - Substitution {} not in message payload. Check your mapping {}", tenant, substitution.pathSource, mapping.getMappingTopic());
                 postProcessingCacheEntry
                         .add(new MappingSubstitution.SubstituteValue(extractedSourceContent,
                                 MappingSubstitution.SubstituteValue.TYPE.IGNORE, substitution.repairStrategy));
@@ -184,7 +193,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
                                     MappingSubstitution.SubstituteValue.TYPE.OBJECT, substitution.repairStrategy));
                     postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
                 }
-                if (serviceConfiguration.logSubstitution) {
+                if (serviceConfiguration.logSubstitution || mapping.debug) {
                     log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
                             tenant,
                             substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);

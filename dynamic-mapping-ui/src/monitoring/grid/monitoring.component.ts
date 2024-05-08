@@ -74,7 +74,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     },
     {
       name: 'subscriptionTopic',
-      header: 'Subscription Topic',
+      header: 'Subscription topic',
       path: 'subscriptionTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
@@ -82,7 +82,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     },
     {
       name: 'publishTopic',
-      header: 'Publish Topic',
+      header: 'Publish topic',
       path: 'publishTopic',
       filterable: false,
       dataType: ColumnDataType.TextLong,
@@ -98,7 +98,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Messages Received',
+      header: '# Messages received',
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
@@ -107,7 +107,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Snooped Templates Total',
+      header: '# Snooped templates total',
       name: 'snoopedTemplatesTotal',
       path: 'snoopedTemplatesTotal',
       filterable: true,
@@ -116,7 +116,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       gridTrackSize: '12.5%'
     },
     {
-      header: '# Snooped Templates Active',
+      header: '# Snooped templates active',
       name: 'snoopedTemplatesActive',
       path: 'snoopedTemplatesActive',
       filterable: true,

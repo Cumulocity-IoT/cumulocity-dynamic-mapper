@@ -38,7 +38,7 @@ export class MappingSubscriptionComponent implements OnInit {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
-  @Output() commit = new EventEmitter<IIdentified>();
+  @Output() commit = new EventEmitter<IIdentified[]>();
 
   ngOnInit(): void {
     console.log('MappingSubscription:', this.deviceList);

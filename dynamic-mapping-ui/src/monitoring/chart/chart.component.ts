@@ -173,7 +173,8 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
           },
           x: {
             ticks: {
-              color: this.textColor as any
+              color: this.textColor as any,
+              stepSize: 0
             }
           }
         }

@@ -30,6 +30,7 @@ import com.jayway.jsonpath.PathNotFoundException;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingSubstitution;
 import lombok.extern.slf4j.Slf4j;
+import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.client.AConnectorClient;
 import dynamic.mapping.core.C8YAgent;
 import dynamic.mapping.core.ConfigurationRegistry;
@@ -45,7 +46,7 @@ import org.json.JSONException;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.io.IOException;
-import java.text.MessageFormat;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,9 +66,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
 
     protected AConnectorClient connectorClient;
 
-    public static String TOKEN_DEVICE_TOPIC = "_DEVICE_IDENT_";
-    public static String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
-
     public abstract ProcessingContext<T> deserializePayload(ProcessingContext<T> context, C8YMessage c8yMessage)
             throws IOException;
 
@@ -79,8 +77,8 @@ public abstract class BasePayloadProcessorOutbound<T> {
          */
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
+        ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-        // if there are to little device idenfified then we replicate the first device
         Map<String, List<MappingSubstitution.SubstituteValue>> postProcessingCache = context.getPostProcessingCache();
         Set<String> pathTargets = postProcessingCache.keySet();
 
@@ -91,9 +89,22 @@ public abstract class BasePayloadProcessorOutbound<T> {
          * is required in the payload for a substitution
          */
         List<String> splitTopicExAsList = Mapping.splitTopicExcludingSeparatorAsList(context.getTopic());
-        payloadTarget.set(Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        payloadTarget.put("$", Mapping.TOKEN_TOPIC_LEVEL, splitTopicExAsList);
+        if (mapping.supportsMessageContext) {
+            Map<String, String> cod = new HashMap<String, String>() {
+                {
+                    put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                }
+            };
+            payloadTarget.put("$", Mapping.TOKEN_CONTEXT_DATA, cod);
+        }
+        if (serviceConfiguration.logPayload || mapping.debug) {
+            String patchedPayloadTarget = payloadTarget.jsonString();
+            log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, patchedPayloadTarget,
+                    serviceConfiguration.logPayload, mapping.debug, serviceConfiguration.logPayload || mapping.debug);
+        }
 
-        String deviceSource = "undefined";
+        String deviceSource = context.getSource();
 
         for (String pathTarget : pathTargets) {
             MappingSubstitution.SubstituteValue substituteValue = new MappingSubstitution.SubstituteValue(
@@ -131,7 +142,14 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 context.setResolvedPublishTopic(context.getMapping().getPublishTopic());
             }
             // remove TOPIC_LEVEL
-            payloadTarget.delete(Mapping.TOKEN_TOPIC_LEVEL);
+            payloadTarget.delete("$." + Mapping.TOKEN_TOPIC_LEVEL);
+            if (mapping.supportsMessageContext) {
+                String key = payloadTarget
+                        .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
+                context.setKey(key.getBytes());
+                // remove TOKEN_CONTEXT_DATA
+                payloadTarget.delete("$." + Mapping.TOKEN_CONTEXT_DATA);
+            }
             var newPredecessor = context.addRequest(
                     new C8YRequest(predecessor, RequestMethod.POST, deviceSource, mapping.externalIdType,
                             payloadTarget.jsonString(),
@@ -140,7 +158,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                 if (connectorClient.isConnected() && context.isSendPayload()) {
                     connectorClient.publishMEAO(context);
                 } else {
-                    log.warn("Tenant {} - Not sending message : connected {}, sendPayload {}", tenant,
+                    log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,
                             connectorClient.isConnected(), context.isSendPayload());
                 }
                 // var response = objectMapper.writeValueAsString(attocRequest);
@@ -165,14 +183,6 @@ public abstract class BasePayloadProcessorOutbound<T> {
             throws JSONException {
         boolean subValueMissing = sub.value == null;
         boolean subValueNull = (sub.value == null) || (sub.value != null && sub.value.isNull());
-        // variant where the default strategy for PROCESSOR_EXTENSION is
-        // REMOVE_IF_MISSING
-        // if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) &&
-        // subValueMissing) ||
-        // (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull) ||
-        // ((type.equals(MappingType.PROCESSOR_EXTENSION) ||
-        // type.equals(MappingType.PROTOBUF_STATIC))
-        // && (subValueMissing || subValueNull)))
         try {
             if ((sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING) && subValueMissing) ||
                     (sub.repairStrategy.equals(RepairStrategy.REMOVE_IF_NULL) && subValueNull)) {
@@ -180,14 +190,14 @@ public abstract class BasePayloadProcessorOutbound<T> {
             } else if (sub.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                 boolean pathIsNested = keys.contains(".") || keys.contains("[");
                 if (pathIsNested) {
-                    throw new JSONException("Can only crrate new nodes ion the root level!");
+                    throw new JSONException("Can only create new nodes ion the root level!");
                 }
                 jsonObject.put("$", keys, sub.typedValue());
             } else {
                 jsonObject.set(keys, sub.typedValue());
             }
         } catch (PathNotFoundException e) {
-            throw new PathNotFoundException(MessageFormat.format("Path: \"{0}\" not found!", keys));
+            throw new PathNotFoundException(String.format("Path: %s not found!", keys));
         }
     }
 

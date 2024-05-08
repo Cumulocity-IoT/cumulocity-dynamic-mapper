@@ -24,31 +24,45 @@ import { SnoopStatus } from '../../shared';
 
 @Component({
   template: `
-    <div class="c8y-realtime" title="Tested">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active: context.item.tested,
-          inactive: !context.item.tested
-        }"
-      ></span>
+    <div class="d-inline-flex">
+      <div class="c8y-realtime" title="Tested">
+        <span
+          class="c8y-pulse animated-slow pulse"
+          [ngClass]="{
+            active: context.value.tested,
+            inactive: !context.value.tested
+          }"
+        ></span>
+      </div>
+      <div class="c8y-realtime" title="Debug">
+        <span
+          class="c8y-pulse animated-slow  pulse"
+          [ngClass]="{
+            active: context.value.debug,
+            inactive: !context.value.debug
+          }"
+        ></span>
+      </div>
+      <div class="c8y-realtime" title="Snooping">
+        <span
+          class="c8y-pulse animated-slow  pulse"
+          [ngClass]="{
+            active:
+              context.value.snoopStatus === 'ENABLED' ||
+              context.value.snoopStatus === 'STARTED',
+            inactive:
+              context.value.snoopStatus === 'NONE' ||
+              context.value.snoopStatus === 'STOPPED'
+          }"
+        ></span>
+      </div>
     </div>
-    <div class="c8y-realtime" title="Snooping">
-      <span
-        class="c8y-pulse animated pulse"
-        [ngClass]="{
-          active:
-            context.item.snoopStatus === 'ENABLED' ||
-            context.item.snoopStatus === 'STARTED',
-          inactive:
-            context.item.snoopStatus === 'NONE' ||
-            context.item.snoopStatus === 'STOPPED'
-        }"
-      ></span>
-    </div>
-  `
+  `,
+  styles: ['.animated-slow { animation-duration: 10s;}']
 })
 export class StatusRendererComponent {
-  constructor(public context: CellRendererContext) {}
+  constructor(public context: CellRendererContext) {
+    // console.log('StatusRenderer:', context.item, context.value);
+  }
   SnoopStatus: SnoopStatus;
 }

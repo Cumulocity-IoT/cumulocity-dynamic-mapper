@@ -19,15 +19,21 @@
  * @authors Christof Strack
  */
 export enum ConnectorPropertyType {
+  ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
   STRING_PROPERTY = 'STRING_PROPERTY',
   SENSITIVE_STRING_PROPERTY = 'SENSITIVE_STRING_PROPERTY',
   NUMERIC_PROPERTY = 'NUMERIC_PROPERTY',
-  BOOLEAN_PROPERTY = 'BOOLEAN_PROPERTY'
+  BOOLEAN_PROPERTY = 'BOOLEAN_PROPERTY',
+  OPTION_PROPERTY = 'OPTION_PROPERTY',
+  STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY'
 }
 
 export interface ConnectorProperty {
   required: boolean;
   order: number;
+  readonly: boolean;
+  hidden: boolean;
+  defaultValue?: any;
   type: ConnectorPropertyType;
 }
 
@@ -36,11 +42,13 @@ export interface ConnectorConfiguration {
   connectorType: string;
   enabled: boolean;
   status?: any;
+  status$?: any;
   name: string;
   properties: { [name: string]: any };
 }
 
 export interface ConnectorSpecification {
+  description: string;
   connectorType: string;
   supportsWildcardInTopic: boolean;
   properties: { [name: string]: ConnectorProperty };
@@ -88,12 +96,13 @@ export enum Operation {
   RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
   RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
   RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
-  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS'
+  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
+  DEBUG_MAPPING = 'DEBUG_MAPPING'
 }
 
 export enum StatusEventTypes {
   STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
   STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
   STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
-  ALL = 'ALL',
+  ALL = 'ALL'
 }

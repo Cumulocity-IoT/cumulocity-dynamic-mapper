@@ -171,12 +171,12 @@ export class TestingDeviceService {
     let icon: string = 'question';
     let label: string = 'Other';
 
-    if (mo.type === 'c8y_DeviceGroup') {
+    if (mo['type'] === 'c8y_DeviceGroup') {
       icon = 'c8y-group';
       label = 'Group';
     }
 
-    if (mo.c8y_IsDevice !== undefined) {
+    if (mo['c8y_IsDevice'] !== undefined) {
       icon = 'exchange';
       label = 'Device';
     }

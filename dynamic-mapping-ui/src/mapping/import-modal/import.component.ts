@@ -46,6 +46,7 @@ export class ImportMappingsComponent implements OnDestroy {
   isLoading: boolean;
   isAppCreated: boolean;
   errorMessage: string;
+  successText: string = 'Imported mappings';
   closeSubject: Subject<boolean> = new Subject();
   labels: ModalLabels = { cancel: 'Cancel', ok: 'Done' };
 
