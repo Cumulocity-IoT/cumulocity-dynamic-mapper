@@ -110,15 +110,15 @@
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-spring-boot-starter</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.ibm.jsonata4java</groupId>
-            <artifactId>JSONata4JavaFIX</artifactId>
-            <version>2.4.8-fix</version>
-        </dependency>
-        <!-- <dependency>
-            <groupId>com.ibm.jsonata4java</groupId>
-            <artifactId>JSONata4Java</artifactId>
-        </dependency> -->
+        <!--  <dependency>
+             <groupId>com.ibm.jsonata4java</groupId>
+             <artifactId>JSONata4JavaFIX</artifactId>
+             <version>2.4.8-fix</version>
+         </dependency>-->
+         <dependency>
+             <groupId>com.ibm.jsonata4java</groupId>
+             <artifactId>JSONata4Java</artifactId>
+         </dependency>
     </dependencies>
 
     <build>
