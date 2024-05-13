@@ -7,7 +7,7 @@ export default {
     description,
     license,
     version,
-    name: 'dynamic-mapping-ui',
+    name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:

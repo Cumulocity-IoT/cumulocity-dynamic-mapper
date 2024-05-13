@@ -89,7 +89,7 @@ following Mappings are supported:
 * operations (outbound to devices)
 
 A mapping is defined of mapping properties and substitutions. The substitutions are mapping rules copying date from the incoming payload to the payload in the target system. These substitutions are defined using the standard JSONata as JSONata expressions. These JSONata expressions are evaluated in two different libraries:
-1. `dynamic-mapping-ui`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
+1. `dynamic-mapping`: (nodejs) [npmjs JSONata](https://www.npmjs.com/package/jsonata) and
 2. `dynamic-mapping-service` (java): [JSONata4Java](https://github.com/IBM/JSONata4Java)
 Please be aware that slight in differences in the evaluation of these expressions exist.
 
@@ -151,7 +151,7 @@ Now select the cloned Administration App and go to the "Plugin" Tab. Click on "I
 If you made changes or your want to upload the plugin manually you can do that by following these steps:
 
 1. In "Administration" App go to "Ecosystem" -> "Packages" and click on "Add Application" on the top right.
-2. Select `dynamic-mapping-ui.zip` and wait until it is uploaded.
+2. Select `dynamic-mapping.zip` and wait until it is uploaded.
 
 Follow the steps from the point above to assign the plugin to your Administration App.
 
@@ -165,8 +165,8 @@ Run `mvn clean package` in folder `dynamic-mapping-service` to build the Microse
 Just deploy the ZIP to the Cumulocity Tenant like described [here](https://cumulocity.com/guides/users-guide/administration/#uploading-microservices).
 
 ### Frontend - Plugin
-Run `npm run build` in folder `dynamic-mapping-ui` to build the Front End (plugin) for the Administration which will build a plugin.
-Run `npm run deploy` in folder `dynamic-mapping-ui` to deploy the Front End (plugin) to your Cumulocity tenant.
+Run `npm run build` in folder `dynamic-mapping` to build the Front End (plugin) for the Administration which will build a plugin.
+Run `npm run deploy` in folder `dynamic-mapping` to deploy the Front End (plugin) to your Cumulocity tenant.
 The Frontend is build as [Cumulocity plugin](https://cumulocity.com/guides/web/tutorials/#add-a-custom-widget-with-plugin).
 
 ## User Guide

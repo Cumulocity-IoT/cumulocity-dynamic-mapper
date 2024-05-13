@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "dynamic-mapping-ui": {
+    "dynamic-mapping": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@c8y/devkit:build",
           "options": {
-            "outputPath": "dist/dynamic-mapping-ui",
+            "outputPath": "dist/dynamic-mapping",
             "main": "src/main.ts",
             "polyfills": [
               "zone.js"
@@ -72,10 +72,10 @@
           "builder": "@c8y/devkit:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "dynamic-mapping-ui:build:production"
+              "browserTarget": "dynamic-mapping:build:production"
             },
             "development": {
-              "browserTarget": "dynamic-mapping-ui:build:development"
+              "browserTarget": "dynamic-mapping:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -106,10 +106,10 @@
           "builder": "@c8y/devkit:deploy",
           "configurations": {
             "production": {
-              "browserTarget": "dynamic-mapping-ui:build:production"
+              "browserTarget": "dynamic-mapping:build:production"
             },
             "development": {
-              "browserTarget": "dynamic-mapping-ui:build:development"
+              "browserTarget": "dynamic-mapping:build:development"
             }
           },
           "defaultConfiguration": "production"
