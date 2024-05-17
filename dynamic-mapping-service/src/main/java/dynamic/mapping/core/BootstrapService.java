@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -32,6 +33,8 @@ import dynamic.mapping.configuration.ConnectorConfiguration;
 import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
+
+import javax.annotation.PreDestroy;
 
 @Service
 @EnableScheduling
@@ -67,12 +70,23 @@ public class BootstrapService {
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
+    @Autowired
+    private MicroserviceSubscriptionsService subscriptionsService;
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Shutting down mapper...");
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant =  subscriptionsService.getTenant();
+            configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+        });
+    }
+
     @EventListener
-    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
         String tenant = event.getTenant();
-        configurationRegistry.getNotificationSubscriber().disconnect(tenant, false);
-        configurationRegistry.getNotificationSubscriber().unsubscribeTenantSubscriber(tenant);
+        configurationRegistry.getNotificationSubscriber().disconnect(tenant);
         configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
 
         try {
@@ -167,7 +181,7 @@ public class BootstrapService {
             configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
                     dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
-            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            //configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
         }
         return connectorClient;
