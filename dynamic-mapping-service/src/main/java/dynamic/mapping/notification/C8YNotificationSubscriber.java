@@ -155,7 +155,7 @@ public class C8YNotificationSubscriber {
                                 + additionalSubscriptionIdTest;
                         String token = createToken(DEVICE_SUBSCRIPTION,
                                 tokenSeed);
-                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
+                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
                                 client);
@@ -471,9 +471,10 @@ public class C8YNotificationSubscriber {
             String tenant = subscriptionsService.getTenant();
                 for (String connectorId : deviceTokenPerConnector.get(tenant).keySet()) {
                     try {
+
                         String token = deviceTokenPerConnector.get(tenant).get(connectorId);
                         String newToken = tokenApi.refresh(new Token(token)).getTokenString();
-                        log.info("Tenant {} - Successfully refreshed token for connector {}", connectorId);
+                        log.info("Tenant {} - Successfully refreshed token for connector {}", tenant, connectorId);
                         deviceTokenPerConnector.get(tenant).put(connectorId, newToken);
                     } catch (IllegalArgumentException e) {
                         log.warn("Tenant {} - Could not refresh token for connector {}. Reason: {}", tenant, connectorId, e.getMessage());
