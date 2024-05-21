@@ -172,6 +172,20 @@ public class C8YNotificationSubscriber {
         });
     }
 
+    public boolean isNotificationServiceAvailable(String tenant) {
+        boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                subscriptionAPI.getSubscriptions().get(1).allPages();
+                log.info("Tenant {} - Notification 2.0 available, proceed connecting...", tenant);
+                return true;
+            } catch (SDKException e) {
+                log.warn("Tenant {} - Notification 2.0 Service not available, disabling Outbound Mapping", tenant);
+                return false;
+            }
+        });
+        return notificationAvailable;
+    }
+
     //
     // section 2: handle subscription on device scope
     //
