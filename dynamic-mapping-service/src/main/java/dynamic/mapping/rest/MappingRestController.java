@@ -112,9 +112,6 @@ public class MappingRestController {
     @Value("${APP.externalExtensionsEnabled}")
     private boolean externalExtensionsEnabled;
 
-    @Value("${APP.outputMappingEnabled}")
-    private boolean outputMappingEnabled;
-
     @Value("${APP.userRolesEnabled}")
     private Boolean userRolesEnabled;
 
@@ -127,9 +124,10 @@ public class MappingRestController {
     @RequestMapping(value = "/feature", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Feature> getFeatures() {
         String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
         log.debug("Tenant {} - Get Feature status", tenant);
         Feature feature = new Feature();
-        feature.setOutputMappingEnabled(outputMappingEnabled);
+        feature.setOutputMappingEnabled(serviceConfiguration.isOutboundMappingEnabled());
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMappingCreateRole(userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(userHasMappingAdminRole());
@@ -318,6 +316,17 @@ public class MappingRestController {
 
         try {
             serviceConfigurationComponent.saveServiceConfiguration(configuration);
+            if(!configuration.isOutboundMappingEnabled() && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
+                configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+            } else if(configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null || configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != 200) {
+                List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
+                        .getConnectorConfigurations(tenant);
+                for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
+                    bootstrapService.initializeConnectorByConfiguration(connectorConfiguration, configuration, tenant);
+                }
+                configurationRegistry.getNotificationSubscriber().initDeviceClient();
+            }
+
             configurationRegistry.getServiceConfigurations().put(tenant, configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {

@@ -43,6 +43,7 @@ public class ServiceConfiguration implements Cloneable {
         this.sendSubscriptionEvents = false;
         this.sendNotificationLifecycle = false;
         this.externalExtensionEnabled = true;
+        this.outboundMappingEnabled = true;
     }
 
     @NotNull
@@ -76,4 +77,8 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean externalExtensionEnabled;
+
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    public boolean outboundMappingEnabled;
 }

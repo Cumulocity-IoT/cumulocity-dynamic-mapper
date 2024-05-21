@@ -91,11 +91,8 @@ public class C8YNotificationSubscriber {
 
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
-
-    @Value("${APP.outputMappingEnabled}")
-    private boolean outputMappingEnabled;
-
     private ScheduledExecutorService executorService = null;
+    private ScheduledExecutorService executorTokenService = null;
     private final String DEVICE_SUBSCRIBER = "DynamicMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
@@ -379,8 +376,12 @@ public class C8YNotificationSubscriber {
         return tokenApi.create(tokenRequestRepresentation).getTokenString();
     }
 
-    public void setDeviceConnectionStatus(String tenant, int status) {
+    public void setDeviceConnectionStatus(String tenant, Integer status) {
         deviceWSStatusCode.put(tenant, status);
+    }
+
+    public Integer getDeviceConnectionStatus(String tenant) {
+        return deviceWSStatusCode.get(tenant);
     }
 
     //
@@ -427,6 +428,8 @@ public class C8YNotificationSubscriber {
         // Stop WS Reconnect Thread
         if (this.executorService != null)
             this.executorService.shutdownNow();
+        if (this.executorTokenService != null)
+            this.executorTokenService.shutdownNow();
         if (deviceClientMap.get(tenant) != null) {
             for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                 if (device_client != null && device_client.isOpen()) {
@@ -457,6 +460,12 @@ public class C8YNotificationSubscriber {
                     reconnect();
                 }, 120, 30, TimeUnit.SECONDS);
             }
+            if (this.executorTokenService == null) {
+                this.executorTokenService =  Executors.newScheduledThreadPool(1);
+                this.executorTokenService.scheduleAtFixedRate(() -> {
+                    refreshTokens();
+                }, 5, 60, TimeUnit.MINUTES);
+            }
             return client;
         } catch (Exception e) {
             log.error("Tenant {} - Error on connect to WS {}", tenant, e.getLocalizedMessage());
@@ -465,7 +474,7 @@ public class C8YNotificationSubscriber {
     }
 
     /* Needed for unsubscribing the client */
-    @Scheduled(fixedRate = 60 * 60 * 1000, initialDelay = 5 * 60 * 1000)
+    //@Scheduled(fixedRate = 60 * 60 * 1000, initialDelay = 5 * 60 * 1000)
     public void refreshTokens() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();

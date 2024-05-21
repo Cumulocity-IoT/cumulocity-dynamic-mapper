@@ -373,6 +373,19 @@
                 </span>
               </label>
             </c8y-form-group>
+            <c8y-form-group class="m-b-0">
+              <label class="c8y-checkbox">
+                <input
+                  type="checkbox"
+                  formControlName="outboundMappingEnabled"
+                  [(ngModel)]="serviceConfiguration.outboundMappingEnabled"
+                />
+                <span></span>
+                <span>
+                  {{ 'Outbound Mapping enabled' }}
+                </span>
+              </label>
+            </c8y-form-group>
           </div>
         </div>
         <div class="card-footer">
