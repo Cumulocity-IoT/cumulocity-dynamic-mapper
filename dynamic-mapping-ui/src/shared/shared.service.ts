@@ -31,7 +31,7 @@ export class SharedService {
     private identity: IdentityService
   ) {}
   private _agentId: string;
-  private _feature: Promise<Feature>;
+  private _featurePromise: Promise<Feature>;
   reloadInbound$: Subject<void> = new Subject<void>();
   reloadOutbound$: Subject<void> = new Subject<void>();
 
@@ -52,17 +52,34 @@ export class SharedService {
     return this._agentId;
   }
 
+  //   async getFeatures(): Promise<Feature> {
+  //     if (!this._feature) {
+  //       const response = await this.client.fetch(
+  //         `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+  //         {
+  //           method: 'GET'
+  //         }
+  //       );
+  //       this._feature = await response.json();
+  //     }
+  //     return this._feature;
+  //   }
+
   async getFeatures(): Promise<Feature> {
-    if (!this._feature) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
-        {
-          method: 'GET'
-        }
-      );
-      this._feature = await response.json();
+    if (!this._featurePromise) {
+      this._featurePromise = this.fetchFeatures();
     }
-    return this._feature;
+    return this._featurePromise;
+  }
+
+  private async fetchFeatures(): Promise<Feature> {
+    const response = await this.client.fetch(
+      `${BASE_URL}/${PATH_FEATURE_ENDPOINT}`,
+      {
+        method: 'GET'
+      }
+    );
+    return await response.json();
   }
 
   refreshMappings(direction: Direction) {
