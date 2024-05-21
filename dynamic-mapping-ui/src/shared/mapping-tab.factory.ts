@@ -35,14 +35,26 @@ export class MappingTabFactory implements TabFactory {
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/configuration',
-        priority: 930,
-        label: 'Connector',
-        icon: 'cog',
-        orientation: 'horizontal',
-        hide: !feature?.userHasMappingAdminRole
-      } as Tab);
+      if (feature?.userHasMappingAdminRole) {
+        tabs.push({
+          path: 'sag-ps-pkg-dynamic-mapping/configuration',
+          priority: 930,
+          label: 'Connector',
+          icon: 'cog',
+          orientation: 'horizontal'
+        } as Tab);
+      }
+
+      // TODO investigate why hide does not work, potential bug in component
+      //   tabs.push({
+      //     path: 'sag-ps-pkg-dynamic-mapping/configuration',
+      //     priority: 930,
+      //     label: 'Connector',
+      //     icon: 'cog',
+      //     orientation: 'horizontal',
+      //     hide: !feature?.userHasMappingAdminRole
+      //   } as Tab);
+
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
         priority: 920,
@@ -50,21 +62,27 @@ export class MappingTabFactory implements TabFactory {
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
-        priority: 920,
-        label: 'Mapping outbound',
-        icon: 'swipe-left',
-        orientation: 'horizontal',
-        hide: !feature?.outputMappingEnabled
-      } as Tab);
-      // tabs.push({
-      //   path: 'sag-ps-pkg-dynamic-mapping/monitoring',
-      //   priority: 910,
-      //   label: 'Monitoring',
-      //   icon: 'monitoring',
-      //   orientation: 'horizontal'
-      // } as Tab);
+
+      if (feature?.outputMappingEnabled) {
+        tabs.push({
+          path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+          priority: 910,
+          label: 'Mapping outbound',
+          icon: 'swipe-left',
+          orientation: 'horizontal'
+        } as Tab);
+      }
+
+      // TODO investigate why hide does not work, potential bug in component
+      //   tabs.push({
+      //     path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+      //     priority: 910,
+      //     label: 'Mapping outbound',
+      //     icon: 'swipe-left',
+      //     orientation: 'horizontal',
+      //     hide: !feature?.outputMappingEnabled
+      //   } as Tab);
+
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/testing',
         priority: 900,
@@ -72,6 +90,7 @@ export class MappingTabFactory implements TabFactory {
         icon: 'reflector-bulb',
         orientation: 'horizontal'
       } as Tab);
+
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/tree',
         priority: 890,
@@ -79,14 +98,26 @@ export class MappingTabFactory implements TabFactory {
         icon: 'tree-structure',
         orientation: 'horizontal'
       } as Tab);
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/extension',
-        priority: 880,
-        label: 'Processor extension',
-        icon: 'plugin',
-        orientation: 'horizontal',
-        hide: !feature?.userHasMappingAdminRole
-      } as Tab);
+
+      if (feature?.userHasMappingAdminRole) {
+        tabs.push({
+          path: 'sag-ps-pkg-dynamic-mapping/extension',
+          priority: 880,
+          label: 'Processor extension',
+          icon: 'plugin',
+          orientation: 'horizontal'
+        } as Tab);
+      }
+
+      // TODO investigate why hide does not work, potential bug in component
+      //   tabs.push({
+      //     path: 'sag-ps-pkg-dynamic-mapping/extension',
+      //     priority: 880,
+      //     label: 'Processor extension',
+      //     icon: 'plugin',
+      //     orientation: 'horizontal'
+      //     hide: !feature?.userHasMappingAdminRole
+      //   } as Tab);
     }
     return tabs;
   }

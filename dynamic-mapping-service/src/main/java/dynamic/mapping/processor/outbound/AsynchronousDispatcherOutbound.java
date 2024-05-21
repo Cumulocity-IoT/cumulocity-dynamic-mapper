@@ -154,7 +154,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         if (reason.contains("401"))
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
-            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 0);
+            notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), null);
     }
 
     public String getTenantFromNotificationHeaders(List<String> notificationHeaders) {

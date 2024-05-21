@@ -3,6 +3,8 @@ package dynamic.mapping.rest;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import dynamic.mapping.configuration.ServiceConfiguration;
+import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +36,14 @@ public class DeviceSubscriptionRestController {
     @Autowired
     private ConfigurationRegistry configurationRegistry;
 
-    @Value("${APP.outputMappingEnabled}")
-    private boolean outputMappingEnabled;
+    @Autowired
+    ServiceConfigurationComponent serviceConfigurationComponent;
 
     @RequestMapping(value = "/subscription", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionCreate(@Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
-        if (!outputMappingEnabled)
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             for (Device device : subscription.getDevices()) {
@@ -64,7 +67,8 @@ public class DeviceSubscriptionRestController {
     @RequestMapping(value = "/subscription", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionUpdate(@Valid @RequestBody C8YNotificationSubscription subscription) {
         String tenant = contextService.getContext().getTenant();
-        if (!outputMappingEnabled)
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             // List<NotificationSubscriptionRepresentation> deviceSubscriptions =
@@ -126,7 +130,9 @@ public class DeviceSubscriptionRestController {
     @RequestMapping(value = "/subscriptions", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<C8YNotificationSubscription> subscriptionsGet(@RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String subscriptionName) {
-        if (!outputMappingEnabled)
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             C8YNotificationSubscription c8YAPISubscription = configurationRegistry.getNotificationSubscriber()
@@ -139,7 +145,9 @@ public class DeviceSubscriptionRestController {
 
     @RequestMapping(value = "/subscription/{deviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> subscriptionDelete(@PathVariable String deviceId) {
-        if (!outputMappingEnabled)
+        String tenant = contextService.getContext().getTenant();
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (!serviceConfiguration.isOutboundMappingEnabled())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Output Mapping is disabled!");
         try {
             ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(contextService.getContext().getTenant(),

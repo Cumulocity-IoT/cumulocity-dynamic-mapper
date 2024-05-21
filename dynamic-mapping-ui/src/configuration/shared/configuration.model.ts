@@ -63,6 +63,7 @@ export interface ServiceConfiguration {
   sendSubscriptionEvents: boolean;
   sendNotificationLifecycle: boolean;
   externalExtensionEnabled?: boolean;
+  outboundMappingEnabled: boolean;
 }
 
 export interface ConnectorStatusEvent {
