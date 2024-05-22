@@ -208,7 +208,6 @@ public class C8YNotificationSubscriber {
         Mqtt3SimpleAuth auth = Mqtt3SimpleAuth.builder().username(credentials.getTenant() + "/" +credentials.getUsername()).password(credentials.getPassword().getBytes(StandardCharsets.UTF_8)).build();
         Mqtt3AsyncClient client = Mqtt3Client.builder().serverHost(mqttHost).serverPort(1883)
                 .identifier(deviceId).automaticReconnectWithDefaultConfig().simpleAuth(auth).buildAsync();
-        log.info("Tenant {} - trying to connect to {}", tenant, mqttHost);
         client.connectWith()
                 .cleanSession(true)
                 .keepAlive(60)
