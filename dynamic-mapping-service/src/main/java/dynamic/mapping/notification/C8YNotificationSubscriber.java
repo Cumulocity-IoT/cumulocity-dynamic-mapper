@@ -21,8 +21,11 @@
 
 package dynamic.mapping.notification;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
@@ -32,6 +35,12 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
+import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.model.API;
@@ -43,6 +52,7 @@ import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.ArrayStack;
+import org.apache.commons.lang3.StringUtils;
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -53,6 +63,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -175,7 +186,12 @@ public class C8YNotificationSubscriber {
     public boolean isNotificationServiceAvailable(String tenant) {
         boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                subscriptionAPI.getSubscriptions().get(1).allPages();
+                Iterator<NotificationSubscriptionRepresentation> subscriptionIt = subscriptionAPI.getSubscriptions().get().allPages().iterator();
+                while (subscriptionIt.hasNext()) {
+                    NotificationSubscriptionRepresentation subscription = subscriptionIt.next();
+                    ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
+                    activatePushConnectivityStatus(tenant, extId.getExternalId());
+                }
                 log.info("Tenant {} - Notification 2.0 available, proceed connecting...", tenant);
                 return true;
             } catch (SDKException e) {
@@ -184,6 +200,30 @@ public class C8YNotificationSubscriber {
             }
         });
         return notificationAvailable;
+    }
+
+    public void activatePushConnectivityStatus(String tenant, String deviceId) {
+        String mqttHost = baseUrl.replace("http://", "").replace(":8111", "");
+        MicroserviceCredentials credentials = subscriptionsService.getCredentials(tenant).get();
+        Mqtt3SimpleAuth auth = Mqtt3SimpleAuth.builder().username(credentials.getTenant() + "/" +credentials.getUsername()).password(credentials.getPassword().getBytes(StandardCharsets.UTF_8)).build();
+        Mqtt3AsyncClient client = Mqtt3Client.builder().serverHost(mqttHost).serverPort(1883)
+                .identifier(deviceId).automaticReconnectWithDefaultConfig().simpleAuth(auth).buildAsync();
+        log.info("Tenant {} - trying to connect to {}", tenant, mqttHost);
+        client.connectWith()
+                .cleanSession(true)
+                .keepAlive(60)
+                .send().thenRun(() -> {
+                    log.info("Tenant {} - Successfully connected to C8Y {}", tenant, mqttHost);
+                    client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE).callback(publish -> {
+                        log.debug("Tenant {} - Message received from C8Y MQTT endpoint {}", tenant, publish.getPayload().get());
+                    }).send();
+                }).exceptionally(throwable -> {
+                    log.error("Tenant {} - Failed to connect to {} with error: ", tenant, mqttHost,
+                            throwable.getMessage());
+                    return null;
+                });
+
+
     }
 
     //
@@ -460,7 +500,7 @@ public class C8YNotificationSubscriber {
         String tenant = subscriptionsService.getTenant();
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
         try {
-            baseUrl = baseUrl.replace("http", "ws");
+            String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
             client.setConnectionLostTimeout(30);

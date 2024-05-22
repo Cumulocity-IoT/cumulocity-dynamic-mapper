@@ -154,8 +154,9 @@ public class BootstrapService {
                 } catch (JsonProcessingException e) {
                     log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
                 }
-            } else
+            } else {
                 configurationRegistry.getNotificationSubscriber().initDeviceClient();
+            }
         }
     }
 
