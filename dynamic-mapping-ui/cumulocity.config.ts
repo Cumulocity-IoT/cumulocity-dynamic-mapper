@@ -9,11 +9,7 @@ export default {
     version,
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
-    icon: {
-      class: 'c8y-icon-tools'
-    },
-    // icon: { url: 'url(./image/DM_App-Icon.png)', class: 'c8y-icon-cockpit' },
-    // icon: { url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon.png)' },
+    icon: { url: 'url(./image/DM_App-Icon.svg)', class: 'custom-app-icon' },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
@@ -21,21 +17,25 @@ export default {
     remotes: {
       'sag-ps-pkg-dynamic-mapping': ['DynamicMappingModule']
     },
-    package: 'plugin',
     tabsHorizontal: true,
+    noAppSwitcher: false,
+    // comment the following properties to create a standalone app
+	// comment begin
+    package: 'plugin',
     isPackage: true,
-    noAppSwitcher: true,
     exports: [
       {
         name: 'Dynamic Mapping Widget',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Widget'
+        description: 'Adds a Dynamic Mapping Plugin'
       }
     ]
+	// comment end
   },
   buildTime: {
     // extraWebpackConfig: './extra-webpack.config.js',
+    entryModule: './app.module.ts',
     copy: [
       {
         from: 'README.md',
@@ -50,8 +50,8 @@ export default {
         to: 'image/Generic_Mapping_MappingTemplate.png'
       },
       {
-        from: '../resources/image/DM_App-Icon.png',
-        to: 'image/DM_App-Icon.png'
+        from: '../resources/image/DM_App-Icon.svg',
+        to: 'image/DM_App-Icon.svg'
       }
     ],
     federation: [
@@ -68,7 +68,8 @@ export default {
       '@c8y/client',
       '@c8y/ngx-components',
       'ngx-bootstrap',
-      '@ngx-translate/core'
+      '@ngx-translate/core',
+      '@ngx-formly/core'
     ]
   }
 } as const satisfies EnvironmentOptions;
