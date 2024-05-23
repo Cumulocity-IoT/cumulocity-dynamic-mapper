@@ -33,7 +33,7 @@
     "@c8y/client": "1019.23.8",
     "@c8y/ngx-components": "1019.23.8",
     "@c8y/style": "1019.23.8",
-    "@ngx-translate/core": "14.0.0",
+    "@ngx-translate/core": "15.0.0",
     "chart.js": "^4.4.1",
     "css-loader": "^6.10.0",
     "jsonata": "^2.0.3",
