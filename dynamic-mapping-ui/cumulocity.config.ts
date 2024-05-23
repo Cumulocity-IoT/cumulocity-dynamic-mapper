@@ -9,6 +9,11 @@ export default {
     version,
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
+    icon: {
+      class: 'c8y-icon-tools'
+    },
+    // icon: { url: 'url(./image/DM_App-Icon.png)', class: 'c8y-icon-cockpit' },
+    // icon: { url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon.png)' },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
@@ -30,7 +35,7 @@ export default {
     ]
   },
   buildTime: {
-   // extraWebpackConfig: './extra-webpack.config.js',
+    // extraWebpackConfig: './extra-webpack.config.js',
     copy: [
       {
         from: 'README.md',
@@ -38,11 +43,15 @@ export default {
       },
       {
         from: '../resources/image/Generic_Mapping_AddMapping.png',
-        to: 'images/Generic_Mapping_AddMapping.png'
+        to: 'image/Generic_Mapping_AddMapping.png'
       },
       {
         from: '../resources/image/Generic_Mapping_MappingTemplate.png',
-        to: 'images/Generic_Mapping_MappingTemplate.png'
+        to: 'image/Generic_Mapping_MappingTemplate.png'
+      },
+      {
+        from: '../resources/image/DM_App-Icon.png',
+        to: 'image/DM_App-Icon.png'
       }
     ],
     federation: [
