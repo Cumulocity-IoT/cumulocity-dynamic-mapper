@@ -109,6 +109,8 @@ public class C8YNotificationSubscriber {
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
 
+    private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
+
     // structure: <tenant, <connectorIdent, tokenSeed>>
     private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
 
@@ -170,6 +172,11 @@ public class C8YNotificationSubscriber {
 
                     }
                 }
+                for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
+                    ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
+                    activatePushConnectivityStatus(tenant, extId.getExternalId());
+                }
+
             } catch (URISyntaxException e) {
                 log.error("Tenant {} - Error connecting device subscription: {}", tenant, e.getLocalizedMessage());
             }
@@ -186,12 +193,7 @@ public class C8YNotificationSubscriber {
     public boolean isNotificationServiceAvailable(String tenant) {
         boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                Iterator<NotificationSubscriptionRepresentation> subscriptionIt = subscriptionAPI.getSubscriptions().get().allPages().iterator();
-                while (subscriptionIt.hasNext()) {
-                    NotificationSubscriptionRepresentation subscription = subscriptionIt.next();
-                    ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
-                    activatePushConnectivityStatus(tenant, extId.getExternalId());
-                }
+                subscriptionAPI.getSubscriptions().get(1);
                 log.info("Tenant {} - Notification 2.0 available, proceed connecting...", tenant);
                 return true;
             } catch (SDKException e) {
@@ -212,7 +214,7 @@ public class C8YNotificationSubscriber {
                 .cleanSession(true)
                 .keepAlive(60)
                 .send().thenRun(() -> {
-                    log.info("Tenant {} - Successfully connected to C8Y {}", tenant, mqttHost);
+                    log.info("Tenant {} - Successfully connected to C8Y MQTT host {} for device {}", tenant, mqttHost, deviceId);
                     client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE).callback(publish -> {
                         log.debug("Tenant {} - Message received from C8Y MQTT endpoint {}", tenant, publish.getPayload().get());
                     }).send();
@@ -221,8 +223,15 @@ public class C8YNotificationSubscriber {
                             throwable.getMessage());
                     return null;
                 });
+        if (activePushConnections.get(tenant) == null)
+            activePushConnections.put(tenant, new HashMap<String, Mqtt3Client>());
+        activePushConnections.get(tenant).put(deviceId, client);
+    }
 
-
+    public void deactivatePushConnectivityStatus(String tenant, String deviceId) {
+        Map<String, Mqtt3Client> clients = activePushConnections.get(tenant);
+        clients.get(deviceId).toBlocking().disconnect();
+        activePushConnections.get(tenant).remove(deviceId);
     }
 
     //
@@ -295,13 +304,14 @@ public class C8YNotificationSubscriber {
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
                                 client);
                     }
-
                 } catch (URISyntaxException e) {
                     log.error("Tenant {} - Error on connecting to Notification Service: {}", tenant,
                             e.getLocalizedMessage());
                     throw new RuntimeException(e);
                 }
             }
+            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
+            activatePushConnectivityStatus(tenant, extId.getExternalId());
         });
         return notificationFut;
     }
@@ -400,6 +410,8 @@ public class C8YNotificationSubscriber {
                     .get().allPages().iterator().hasNext()) {
                 disconnect(subscriptionsService.getTenant());
             }
+            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(subscriptionsService.getTenant(), mor.getId(), null, null);
+            deactivatePushConnectivityStatus(subscriptionsService.getTenant(), extId.getExternalId());
         });
     }
 
