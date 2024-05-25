@@ -29,6 +29,7 @@ export class SharedService {
   constructor(
     private client: FetchClient,
     private identity: IdentityService
+
   ) {}
   private _agentId: string;
   private _featurePromise: Promise<Feature>;

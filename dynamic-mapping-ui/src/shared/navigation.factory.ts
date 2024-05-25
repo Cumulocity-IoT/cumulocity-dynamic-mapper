@@ -22,6 +22,7 @@ import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
 import {
   AlertService,
+  AppStateService,
   gettext,
   NavigatorNode,
   NavigatorNodeFactory
@@ -32,22 +33,31 @@ import { SharedService } from './shared.service';
 export class MappingNavigationFactory implements NavigatorNodeFactory {
   private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
     'dynamic-mapping-service';
-  private readonly NAVIGATION_NODE_MQTT = new NavigatorNode({
-    parent: gettext('Settings'),
-    label: gettext('Dynamic Mapping'),
-    icon: 'ftp-server',
-    path: '/sag-ps-pkg-dynamic-mapping/mappings/inbound',
-    priority: 99,
-    preventDuplicates: true
-  });
+  private NAVIGATION_NODE_MQTT;
+
+  appName: string;
 
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
-    private sharedService: SharedService
-  ) {}
+    private sharedService: SharedService,
+    private appStateService: AppStateService
+  ) {
+    appStateService.currentApplication.subscribe((c) => {
+      console.log(c);
+      this.appName = c.name;
+    });
+  }
 
   get() {
+    this.NAVIGATION_NODE_MQTT = new NavigatorNode({
+      parent:  this.appName == 'dynamic-mapping' ? undefined : gettext('Settings'),
+      label: gettext('Dynamic Mapping'),
+      icon: 'ftp-server',
+      path: '/sag-ps-pkg-dynamic-mapping/mappings/inbound',
+      priority: 99,
+      preventDuplicates: true
+    });
     const feature: any = this.sharedService.getFeatures();
     return this.applicationService
       .isAvailable(MappingNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)
