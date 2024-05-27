@@ -491,10 +491,12 @@ public class C8YNotificationSubscriber {
 
     public void disconnect(String tenant) {
         // Stop WS Reconnect Thread
-        if (this.executorService != null)
+        if (this.executorService != null) {
             this.executorService.shutdownNow();
-        if (this.executorTokenService != null)
+        }
+        if (this.executorTokenService != null) {
             this.executorTokenService.shutdownNow();
+        }
         if (deviceClientMap.get(tenant) != null) {
             for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                 if (device_client != null && device_client.isOpen()) {
@@ -516,21 +518,22 @@ public class C8YNotificationSubscriber {
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
             client.setConnectionLostTimeout(30);
             client.connect();
+            configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
+
             // wsClientList.add(client);
             // Only start it once
-            if (this.executorService == null) {
+            if (this.executorService == null)
                 this.executorService = Executors.newScheduledThreadPool(1);
-                configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
-                this.executorService.scheduleAtFixedRate(() -> {
+            this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
-                }, 120, 30, TimeUnit.SECONDS);
-            }
-            if (this.executorTokenService == null) {
+                    }, 120, 30, TimeUnit.SECONDS);
+
+            if (this.executorTokenService == null)
                 this.executorTokenService =  Executors.newScheduledThreadPool(1);
-                this.executorTokenService.scheduleAtFixedRate(() -> {
+            this.executorTokenService.scheduleAtFixedRate(() -> {
                     refreshTokens();
-                }, 5, 60, TimeUnit.MINUTES);
-            }
+                    }, 5, 60, TimeUnit.MINUTES);
+
             return client;
         } catch (Exception e) {
             log.error("Tenant {} - Error on connect to WS {}", tenant, e.getLocalizedMessage());
