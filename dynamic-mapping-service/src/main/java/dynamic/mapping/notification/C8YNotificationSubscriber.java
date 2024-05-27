@@ -493,9 +493,11 @@ public class C8YNotificationSubscriber {
         // Stop WS Reconnect Thread
         if (this.executorService != null) {
             this.executorService.shutdownNow();
+            this.executorService = null;
         }
         if (this.executorTokenService != null) {
             this.executorTokenService.shutdownNow();
+            this.executorTokenService = null;
         }
         if (deviceClientMap.get(tenant) != null) {
             for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
@@ -522,17 +524,19 @@ public class C8YNotificationSubscriber {
 
             // wsClientList.add(client);
             // Only start it once
-            if (this.executorService == null)
+            if (this.executorService == null) {
                 this.executorService = Executors.newScheduledThreadPool(1);
-            this.executorService.scheduleAtFixedRate(() -> {
+                this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
-                    }, 120, 30, TimeUnit.SECONDS);
+                }, 120, 30, TimeUnit.SECONDS);
+            }
 
-            if (this.executorTokenService == null)
-                this.executorTokenService =  Executors.newScheduledThreadPool(1);
-            this.executorTokenService.scheduleAtFixedRate(() -> {
+            if (this.executorTokenService == null) {
+                this.executorTokenService = Executors.newScheduledThreadPool(1);
+                this.executorTokenService.scheduleAtFixedRate(() -> {
                     refreshTokens();
-                    }, 5, 60, TimeUnit.MINUTES);
+                }, 5, 60, TimeUnit.MINUTES);
+            }
 
             return client;
         } catch (Exception e) {
