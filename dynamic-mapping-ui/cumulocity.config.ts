@@ -15,8 +15,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      url: 'url(./image/DM_App-Icon_01.svg)',
-      class: 'custom-app-icon'
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_02.png)'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
@@ -29,28 +28,29 @@ export default {
     noAppSwitcher: false,
     // comment the following properties to create a standalone app
     // comment begin
-    package: 'plugin',
-    isPackage: !isApp,
-    exports:
-      isApp
-        ? []
-        : [
-            {
-              name: 'Dynamic Mapping Widget',
-              module: 'DynamicMappingModule',
-              path: './src/dynamic-mapping.module',
-              description: 'Adds a Dynamic Mapping Plugin'
-            }
-          ]
+    // package: 'plugin',
+    // isPackage: !isApp,
+    package: 'blueprint',
+    isPackage: true,
+    // exports: isApp
+    //   ? []
+    //   : [
+    //       {
+    //         name: 'Dynamic Mapping Widget',
+    //         module: 'DynamicMappingModule',
+    //         path: './src/dynamic-mapping.module',
+    //         description: 'Adds a Dynamic Mapping Plugin'
+    //       }
+    //     ]
     // isPackage: true,
-    // exports: [
-    //   {
-    //     name: 'Dynamic Mapping Widget',
-    //     module: 'DynamicMappingModule',
-    //     path: './src/dynamic-mapping.module',
-    //     description: 'Adds a Dynamic Mapping Plugin'
-    //   }
-    // ]
+    exports: [
+      {
+        name: 'Dynamic Mapping Widget',
+        module: 'DynamicMappingModule',
+        path: './src/dynamic-mapping.module',
+        description: 'Adds a Dynamic Mapping Plugin'
+      }
+    ]
     // comment end
   },
   buildTime: {
@@ -70,8 +70,8 @@ export default {
         to: 'image/Generic_Mapping_MappingTemplate.png'
       },
       {
-        from: '../resources/image/DM_App-Icon_01.svg',
-        to: 'image/DM_App-Icon_01.svg'
+        from: '../resources/image/DM_App-Icon_02.png',
+        to: 'image/DM_App-Icon_02.png'
       }
     ],
     federation: [
