@@ -50,7 +50,7 @@ jobs:
         working-directory: ./dynamic-mapping-ui
       - run: npm install -g @angular/cli > /dev/null
         working-directory: ./dynamic-mapping-ui
-      - run: npm --asset=plugin run build --if-present 
+      - run: npm run build --if-present
         working-directory: ./dynamic-mapping-ui
       - name: Zip Frontend Plugin
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
