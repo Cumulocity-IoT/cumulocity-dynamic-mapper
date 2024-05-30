@@ -70,7 +70,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
-    console.log('Subject:', this.closeSubject, this.labels);
+    //console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });

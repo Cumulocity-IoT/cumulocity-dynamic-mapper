@@ -134,9 +134,9 @@ export class C8YAgent {
     try {
       deviceId = await this.resolveExternalId2GlobalId(identity, context);
     } catch (e) {
-      console.log(
-        `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-      );
+      //console.log(
+      //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
+      //);
     }
 
     const currentRequest =

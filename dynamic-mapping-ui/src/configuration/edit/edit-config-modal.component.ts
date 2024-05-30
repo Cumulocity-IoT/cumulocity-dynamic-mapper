@@ -106,12 +106,12 @@ export class EditConfigurationComponent implements OnInit {
   }
 
   onDismiss() {
-    console.log('Dismiss');
+    //console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
   onSave() {
-    console.log('Save');
+    //console.log('Save');
     this.closeSubject.next(this.configuration);
   }
 
