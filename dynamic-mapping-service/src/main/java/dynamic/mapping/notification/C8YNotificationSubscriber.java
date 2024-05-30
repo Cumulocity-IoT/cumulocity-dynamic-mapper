@@ -71,6 +71,8 @@ import java.util.concurrent.*;
 @Component
 public class C8YNotificationSubscriber {
     private final static String WEBSOCKET_PATH = "/notification2/consumer/?token=";
+    private final static Integer TOKEN_REFRESH_INTERVAL_IN_H = 12;
+    private final static Integer RECONNECT_INTERVAL_IN_SEC = 60;
 
     @Autowired
     private TokenApi tokenApi;
@@ -528,14 +530,14 @@ public class C8YNotificationSubscriber {
                 this.executorService = Executors.newScheduledThreadPool(1);
                 this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
-                }, 120, 30, TimeUnit.SECONDS);
+                }, 120, RECONNECT_INTERVAL_IN_SEC, TimeUnit.SECONDS);
             }
 
             if (this.executorTokenService == null) {
                 this.executorTokenService = Executors.newScheduledThreadPool(1);
                 this.executorTokenService.scheduleAtFixedRate(() -> {
                     refreshTokens();
-                }, 5, 60, TimeUnit.MINUTES);
+                }, TOKEN_REFRESH_INTERVAL_IN_H, TOKEN_REFRESH_INTERVAL_IN_H, TimeUnit.HOURS);
             }
 
             return client;
