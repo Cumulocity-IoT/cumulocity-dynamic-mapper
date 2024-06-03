@@ -27,6 +27,13 @@
   color: orange !important;
 }
 
+.dlt-c8y-icon-custom-app-icon {
+	width: 80px !important;
+	/* height: 40px !important;
+	width: 80px !important; */
+	/*margin-left: 80px !important; */
+}
+
 /* #app > c8y-bootstrap > div > c8y-tabs-outlet > div.tabContainer.hidden-xs > div > div.active > a > i
 {
   color: orange !important;

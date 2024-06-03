@@ -71,7 +71,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     sendConnectorLifecycle: false,
     sendMappingStatus: true,
     sendSubscriptionEvents: false,
-    sendNotificationLifecycle: false
+    sendNotificationLifecycle: false,
+    outboundMappingEnabled: true
   };
 
   constructor(
@@ -90,7 +91,8 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       sendConnectorLifecycle: new FormControl(''),
       sendMappingStatus: new FormControl(''),
       sendSubscriptionEvents: new FormControl(''),
-      sendNotificationLifecycle: new FormControl('')
+      sendNotificationLifecycle: new FormControl(''),
+      outboundMappingEnabled: new FormControl('')
     });
     this.feature = await this.sharedService.getFeatures();
     this.specifications =

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -33,13 +35,12 @@ import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.connector.mqtt.MQTTClient;
 import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 
+import javax.annotation.PreDestroy;
+
 @Service
 @EnableScheduling
 @Slf4j
 public class BootstrapService {
-
-    @Value("${APP.outputMappingEnabled}")
-    private boolean outputMappingEnabled;
 
     @Autowired
     ConnectorRegistry connectorRegistry;
@@ -67,12 +68,23 @@ public class BootstrapService {
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
 
+    @Autowired
+    private MicroserviceSubscriptionsService subscriptionsService;
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Shutting down mapper...");
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant =  subscriptionsService.getTenant();
+            configurationRegistry.getNotificationSubscriber().disconnect(tenant);
+        });
+    }
+
     @EventListener
-    public void destroy(MicroserviceSubscriptionRemovedEvent event) {
+    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
         log.info("Tenant {} - Microservice unsubscribed", event.getTenant());
         String tenant = event.getTenant();
-        configurationRegistry.getNotificationSubscriber().disconnect(tenant, false);
-        configurationRegistry.getNotificationSubscriber().unsubscribeTenantSubscriber(tenant);
+        configurationRegistry.getNotificationSubscriber().disconnect(tenant);
         configurationRegistry.getNotificationSubscriber().unsubscribeDeviceSubscriber(tenant);
 
         try {
@@ -133,10 +145,18 @@ public class BootstrapService {
             // mqttClient.submitConnect();
         }
 
-        log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, outputMappingEnabled);
-        if (outputMappingEnabled) {
-            // configurationRegistry.getNotificationSubscriber().initTenantClient();
-            configurationRegistry.getNotificationSubscriber().initDeviceClient();
+        log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, serviceConfiguration.isOutboundMappingEnabled());
+        if (serviceConfiguration.isOutboundMappingEnabled()) {
+            if(!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
+                try {
+                    serviceConfiguration.setOutboundMappingEnabled(false);
+                    serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
+                } catch (JsonProcessingException e) {
+                    log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
+                }
+            } else {
+                configurationRegistry.getNotificationSubscriber().initDeviceClient();
+            }
         }
     }
 
@@ -158,8 +178,13 @@ public class BootstrapService {
         connectorClient.setDispatcher(dispatcherInbound);
         connectorClient.reconnect();
         connectorClient.submitHousekeeping();
+        initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
 
-        if (outputMappingEnabled) {
+        return connectorClient;
+    }
+
+    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration, AConnectorClient connectorClient) {
+        if (serviceConfiguration.isOutboundMappingEnabled()) {
             // initialize AsynchronousDispatcherOutbound
             configurationRegistry.initializePayloadProcessorsOutbound(connectorClient);
             AsynchronousDispatcherOutbound dispatcherOutbound = new AsynchronousDispatcherOutbound(
@@ -167,15 +192,15 @@ public class BootstrapService {
             configurationRegistry.getNotificationSubscriber().addConnector(tenant, connectorClient.getConnectorIdent(),
                     dispatcherOutbound);
             // Subscriber must be new initialized for the new added connector
-            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            //configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 
         }
-        return connectorClient;
     }
 
     public void shutdownConnector(String tenant, String connectorIdent) throws ConnectorRegistryException {
         connectorRegistry.unregisterClient(tenant, connectorIdent);
-        if (outputMappingEnabled) {
+        ServiceConfiguration serviceConfiguration = serviceConfigurationComponent.getServiceConfiguration(tenant);
+        if (serviceConfiguration.isOutboundMappingEnabled()) {
             configurationRegistry.getNotificationSubscriber().removeConnector(tenant, connectorIdent);
         }
     }

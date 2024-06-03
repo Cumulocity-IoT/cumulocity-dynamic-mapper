@@ -21,8 +21,11 @@
 
 package dynamic.mapping.notification;
 
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionFilterRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
@@ -32,8 +35,15 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.Token;
 import com.cumulocity.sdk.client.messaging.notifications.TokenApi;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
+import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapping.core.ConfigurationRegistry;
 import dynamic.mapping.core.ConnectorStatus;
+import dynamic.mapping.model.API;
 import dynamic.mapping.model.C8YNotificationSubscription;
 import dynamic.mapping.model.Device;
 import dynamic.mapping.notification.websocket.CustomWebSocketClient;
@@ -41,17 +51,19 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.model.API;
 import org.apache.commons.collections.ArrayStack;
+import org.apache.commons.lang3.StringUtils;
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -90,23 +102,17 @@ public class C8YNotificationSubscriber {
 
     @Value("${APP.additionalSubscriptionIdTest}")
     private String additionalSubscriptionIdTest;
-
-    @Value("${APP.outputMappingEnabled}")
-    private boolean outputMappingEnabled;
-
     private ScheduledExecutorService executorService = null;
+    private ScheduledExecutorService executorTokenService = null;
     private final String DEVICE_SUBSCRIBER = "DynamicMapperDeviceSubscriber";
     private final String DEVICE_SUBSCRIPTION = "DynamicMapperDeviceSubscription";
-    private final String TENANT_SUBSCRIPTION = "DynamicMapperTenantSubscription";
-
     private Map<String, Map<String, CustomWebSocketClient>> deviceClientMap = new HashMap<>();
-    private Map<String, CustomWebSocketClient> tenantClientMap = new HashMap<>();
-    private Map<String, Integer> tenantWSStatusCode = new HashMap<>();
     private Map<String, Integer> deviceWSStatusCode = new HashMap<>();
+
+    private Map<String, Map<String, Mqtt3Client>> activePushConnections = new HashMap<>();
 
     // structure: <tenant, <connectorIdent, tokenSeed>>
     private Map<String, Map<String, String>> deviceTokenPerConnector = new HashMap<>();
-    private Map<String, String> tenantToken = new HashMap<>();
 
     public void addSubscriber(String tenant, String ident, AsynchronousDispatcherOutbound dispatcherOutbound) {
         Map<String, AsynchronousDispatcherOutbound> dispatcherOutboundMap = getDispatcherOutboundMaps().get(tenant);
@@ -123,6 +129,7 @@ public class C8YNotificationSubscriber {
     //
     // section 1: initializing tenant client and device client
     //
+
     /**
      * public void initTenantClient() {
      * // Subscribe on Tenant do get informed when devices get deleted/added
@@ -158,13 +165,18 @@ public class C8YNotificationSubscriber {
                                 + additionalSubscriptionIdTest;
                         String token = createToken(DEVICE_SUBSCRIPTION,
                                 tokenSeed);
-                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
+                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
                                 client);
 
                     }
                 }
+                for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
+                    ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
+                    activatePushConnectivityStatus(tenant, extId.getExternalId());
+                }
+
             } catch (URISyntaxException e) {
                 log.error("Tenant {} - Error connecting device subscription: {}", tenant, e.getLocalizedMessage());
             }
@@ -173,126 +185,58 @@ public class C8YNotificationSubscriber {
 
     public void notificationSubscriberReconnect(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
-            disconnect(tenant, false);
-            // notificationSubscriber.init();
-            // initTenantClient();
+            disconnect(tenant);
             initDeviceClient();
         });
     }
 
-    //
-    // section 2: handle subscription on tenant scope
-    //
-
-    // Not needed anymore
-    /**
-     * public void subscribeTenantAndConnect(String tenant) {
-     * log.info("Tenant {} - Creating new Tenant Subscription", tenant);
-     * NotificationSubscriptionRepresentation notificationSubscriptionRepresentation
-     * = createTenantSubscription();
-     * String tenantToken =
-     * createToken(notificationSubscriptionRepresentation.getSubscription(),
-     * TENANT_SUBSCRIBER + additionalSubscriptionIdTest);
-     * this.tenantToken.put(tenant, tenantToken);
-     * 
-     * try {
-     * NotificationCallback tenantCallback = new NotificationCallback() {
-     * 
-     * @Override
-     *           public void onOpen(URI uri) {
-     *           log.info("Tenant {} - Connected to Cumulocity notification service
-     *           over WebSocket {}", tenant, uri);
-     *           tenantWSStatusCode.put(tenant, 200);
-     *           }
-     * 
-     * @Override
-     *           public void onNotification(Notification notification) {
-     *           try {
-     *           log.debug("Tenant {} - Tenant Notification received: <{}>", tenant,
-     *           notification.getMessage());
-     *           log.debug("Tenant {} - Notification headers: <{}>", tenant,
-     *           notification.getNotificationHeaders());
-     *           String tenant = notification.getTenantFromNotificationHeaders();
-     *           ManagedObjectRepresentation mor = JSONBase.getJSONParser()
-     *           .parse(ManagedObjectRepresentation.class,
-     *           notification.getMessage());
-     *           if (notification.getNotificationHeaders().contains("DELETE")) {
-     *           log.info("Tenant {} - Device deleted with name {} and id {}",
-     *           tenant, mor.getName(),
-     *           mor.getId().getValue());
-     *           final ManagedObjectRepresentation morRetrieved =
-     *           configurationRegistry.getC8yAgent()
-     *           .getManagedObjectForId(tenant, mor.getId().getValue());
-     *           if (morRetrieved != null) {
-     *           unsubscribeDeviceAndDisconnect(morRetrieved);
-     *           }
-     *           }
-     *           } catch (Exception e) {
-     *           log.error("Tenant {} - Error on processing Tenant Notification {}:
-     *           {}", tenant, notification.getMessage(),
-     *           e.getLocalizedMessage());
-     *           }
-     *           }
-     * 
-     * @Override
-     *           public void onError(Throwable t) {
-     *           log.error("Tenant {} - We got an exception: {}", tenant, t);
-     *           }
-     * 
-     * @Override
-     *           public void onClose(int statusCode, String reason) {
-     *           log.info("Tenant {} - Tenant ws connection closed.", tenant);
-     *           if (reason.contains("401"))
-     *           tenantWSStatusCode.put(tenant, 401);
-     *           else
-     *           tenantWSStatusCode.put(tenant, 0);
-     *           }
-     *           };
-     *           connect(tenantToken, tenantCallback);
-     *           // tenantClientMap.put(tenant, tenant_client);
-     *           } catch (URISyntaxException e) {
-     *           e.printStackTrace();
-     *           }
-     *           }
-     **/
-
-    public NotificationSubscriptionRepresentation createTenantSubscription() {
-        final String subscriptionName = TENANT_SUBSCRIPTION;
-        String tenant = subscriptionsService.getTenant();
-        Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
-                .getSubscriptionsByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(subscriptionName).byContext("tenant"))
-                .get().allPages().iterator();
-        NotificationSubscriptionRepresentation notificationSubscriptionRepresentation = null;
-        while (subIt.hasNext()) {
-            notificationSubscriptionRepresentation = subIt.next();
-            // Needed for 1015 releases
-            if (TENANT_SUBSCRIPTION.equals(notificationSubscriptionRepresentation.getSubscription())) {
-                log.info("Tenant {} - Subscription with ID {} already exists.", tenant,
-                        notificationSubscriptionRepresentation.getId().getValue());
-                return notificationSubscriptionRepresentation;
+    public boolean isNotificationServiceAvailable(String tenant) {
+        boolean notificationAvailable = subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                subscriptionAPI.getSubscriptions().get(1);
+                log.info("Tenant {} - Notification 2.0 available, proceed connecting...", tenant);
+                return true;
+            } catch (SDKException e) {
+                log.warn("Tenant {} - Notification 2.0 Service not available, disabling Outbound Mapping", tenant);
+                return false;
             }
-        }
-        // log.info("Tenant {} - Subscription does not exist. Creating ...", tenant);
-        notificationSubscriptionRepresentation = new NotificationSubscriptionRepresentation();
-        final NotificationSubscriptionFilterRepresentation filterRepresentation = new NotificationSubscriptionFilterRepresentation();
-        filterRepresentation.setApis(List.of("managedobjects"));
-        notificationSubscriptionRepresentation.setContext("tenant");
-        notificationSubscriptionRepresentation.setSubscription(subscriptionName);
-        notificationSubscriptionRepresentation.setSubscriptionFilter(filterRepresentation);
-        notificationSubscriptionRepresentation = subscriptionAPI.subscribe(notificationSubscriptionRepresentation);
-        return notificationSubscriptionRepresentation;
+        });
+        return notificationAvailable;
     }
 
-    public void unsubscribeTenantSubscriber(String tenant) {
-        if (tenantToken.get(tenant) != null)
-            tokenApi.unsubscribe(new Token(tenantToken.get(tenant)));
+    public void activatePushConnectivityStatus(String tenant, String deviceId) {
+        String mqttHost = baseUrl.replace("http://", "").replace(":8111", "");
+        MicroserviceCredentials credentials = subscriptionsService.getCredentials(tenant).get();
+        Mqtt3SimpleAuth auth = Mqtt3SimpleAuth.builder().username(credentials.getTenant() + "/" +credentials.getUsername()).password(credentials.getPassword().getBytes(StandardCharsets.UTF_8)).build();
+        Mqtt3AsyncClient client = Mqtt3Client.builder().serverHost(mqttHost).serverPort(1883)
+                .identifier(deviceId).automaticReconnectWithDefaultConfig().simpleAuth(auth).buildAsync();
+        client.connectWith()
+                .cleanSession(true)
+                .keepAlive(60)
+                .send().thenRun(() -> {
+                    log.info("Tenant {} - Successfully connected to C8Y MQTT host {} for device {}", tenant, mqttHost, deviceId);
+                    client.toAsync().subscribeWith().topicFilter("s/ds").qos(MqttQos.AT_LEAST_ONCE).callback(publish -> {
+                        log.debug("Tenant {} - Message received from C8Y MQTT endpoint {}", tenant, publish.getPayload().get());
+                    }).send();
+                }).exceptionally(throwable -> {
+                    log.error("Tenant {} - Failed to connect to {} with error: ", tenant, mqttHost,
+                            throwable.getMessage());
+                    return null;
+                });
+        if (activePushConnections.get(tenant) == null)
+            activePushConnections.put(tenant, new HashMap<String, Mqtt3Client>());
+        activePushConnections.get(tenant).put(deviceId, client);
+    }
+
+    public void deactivatePushConnectivityStatus(String tenant, String deviceId) {
+        Map<String, Mqtt3Client> clients = activePushConnections.get(tenant);
+        clients.get(deviceId).toBlocking().disconnect();
+        activePushConnections.get(tenant).remove(deviceId);
     }
 
     //
-    // section 3: handle subscription on device scope
+    // section 2: handle subscription on device scope
     //
-
     public NotificationSubscriptionRepresentation createDeviceSubscription(ManagedObjectRepresentation mor, API api) {
         String tenant = subscriptionsService.getTenant();
         final String subscriptionName = DEVICE_SUBSCRIPTION;
@@ -355,18 +299,19 @@ public class C8YNotificationSubscriber {
                                 + additionalSubscriptionIdTest;
                         String token = createToken(DEVICE_SUBSCRIPTION,
                                 tokenSeed);
-                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), tokenSeed);
+                        deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
                         CustomWebSocketClient client = connect(token, dispatcherOutbound);
                         deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
                                 client);
                     }
-
                 } catch (URISyntaxException e) {
                     log.error("Tenant {} - Error on connecting to Notification Service: {}", tenant,
                             e.getLocalizedMessage());
                     throw new RuntimeException(e);
                 }
             }
+            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
+            activatePushConnectivityStatus(tenant, extId.getExternalId());
         });
         return notificationFut;
     }
@@ -409,7 +354,7 @@ public class C8YNotificationSubscriber {
     }
 
     public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
-            String deviceSubscription) {
+                                                              String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
         if (deviceSubscription != null)
             filter = filter.bySubscription(deviceSubscription);
@@ -463,8 +408,10 @@ public class C8YNotificationSubscriber {
             if (!subscriptionAPI
                     .getSubscriptionsByFilter(new NotificationSubscriptionFilter().bySubscription(DEVICE_SUBSCRIPTION))
                     .get().allPages().iterator().hasNext()) {
-                disconnect(subscriptionsService.getTenant(), true);
+                disconnect(subscriptionsService.getTenant());
             }
+            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(subscriptionsService.getTenant(), mor.getId(), null, null);
+            deactivatePushConnectivityStatus(subscriptionsService.getTenant(), extId.getExternalId());
         });
     }
 
@@ -494,8 +441,12 @@ public class C8YNotificationSubscriber {
         return tokenApi.create(tokenRequestRepresentation).getTokenString();
     }
 
-    public void setDeviceConnectionStatus(String tenant, int status) {
+    public void setDeviceConnectionStatus(String tenant, Integer status) {
         deviceWSStatusCode.put(tenant, status);
+    }
+
+    public Integer getDeviceConnectionStatus(String tenant) {
+        return deviceWSStatusCode.get(tenant);
     }
 
     //
@@ -515,8 +466,9 @@ public class C8YNotificationSubscriber {
                 this.deviceClientMap.get(tenant).remove(connectorIdent);
             }
         }
-        if (this.dispatcherOutboundMaps.get(tenant) != null && dispatcherOutboundMaps.get(tenant).keySet().isEmpty())
-            disconnect(tenant, false);
+        if (this.dispatcherOutboundMaps.get(tenant) != null && dispatcherOutboundMaps.get(tenant).keySet().isEmpty()) {
+            disconnect(tenant);
+        }
     }
 
     public void addConnector(String tenant, String connectorIdent, AsynchronousDispatcherOutbound dispatcherOutbound) {
@@ -537,39 +489,20 @@ public class C8YNotificationSubscriber {
     // section 6: handle websocket connections: connect, disconnect, reconnect, ...
     //
 
-    public void disconnect(String tenant, Boolean onlyDeviceClient) {
+    public void disconnect(String tenant) {
         // Stop WS Reconnect Thread
-        if (onlyDeviceClient != null && onlyDeviceClient) {
+        if (this.executorService != null)
+            this.executorService.shutdownNow();
+        if (this.executorTokenService != null)
+            this.executorTokenService.shutdownNow();
+        if (deviceClientMap.get(tenant) != null) {
             for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
                 if (device_client != null && device_client.isOpen()) {
-                    log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
+                    log.info("Tenant {} - Disconnecting WS Device Client", tenant);
                     device_client.close();
-
                 }
             }
             deviceClientMap.put(tenant, new HashMap<>());
-            // dispatcherOutboundMap.put(tenant, new HashMap<>());
-        } else {
-            if (this.executorService != null)
-                this.executorService.shutdownNow();
-            if (deviceClientMap.get(tenant) != null) {
-                for (CustomWebSocketClient device_client : deviceClientMap.get(tenant).values()) {
-                    if (device_client != null && device_client.isOpen()) {
-                        log.info("Tenant {} - Disconnecting WS Device Client {}", tenant, device_client.toString());
-                        device_client.close();
-                    }
-                }
-                deviceClientMap.put(tenant, new HashMap<>());
-            }
-            // dispatcherOutboundMap.put(tenant, new HashMap<>());
-            if (tenantClientMap.get(tenant) != null) {
-                CustomWebSocketClient tenant_client = tenantClientMap.get(tenant);
-                if (tenant_client != null && tenant_client.isOpen()) {
-                    log.info("Tenant {} - Disconnecting WS Tenant Client {}", tenant, tenant_client.toString());
-                    tenant_client.close();
-                    tenantClientMap.remove(tenant);
-                }
-            }
         }
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.DISCONNECTED, null);
     }
@@ -578,7 +511,7 @@ public class C8YNotificationSubscriber {
         String tenant = subscriptionsService.getTenant();
         configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
         try {
-            baseUrl = baseUrl.replace("http", "ws");
+            String baseUrl = this.baseUrl.replace("http", "ws");
             URI webSocketUrl = new URI(baseUrl + WEBSOCKET_PATH + token);
             final CustomWebSocketClient client = new CustomWebSocketClient(webSocketUrl, callback, tenant);
             client.setConnectionLostTimeout(30);
@@ -590,7 +523,13 @@ public class C8YNotificationSubscriber {
                 configurationRegistry.getC8yAgent().sendNotificationLifecycle(tenant, ConnectorStatus.CONNECTING, null);
                 this.executorService.scheduleAtFixedRate(() -> {
                     reconnect();
-                }, 30, 30, TimeUnit.SECONDS);
+                }, 120, 30, TimeUnit.SECONDS);
+            }
+            if (this.executorTokenService == null) {
+                this.executorTokenService =  Executors.newScheduledThreadPool(1);
+                this.executorTokenService.scheduleAtFixedRate(() -> {
+                    refreshTokens();
+                }, 5, 60, TimeUnit.MINUTES);
             }
             return client;
         } catch (Exception e) {
@@ -599,36 +538,31 @@ public class C8YNotificationSubscriber {
         return null;
     }
 
-    // @Scheduled(fixedRate = 30000, initialDelay = 30000)
+    /* Needed for unsubscribing the client */
+    //@Scheduled(fixedRate = 60 * 60 * 1000, initialDelay = 5 * 60 * 1000)
+    public void refreshTokens() {
+        subscriptionsService.runForEachTenant(() -> {
+            String tenant = subscriptionsService.getTenant();
+                for (String connectorId : deviceTokenPerConnector.get(tenant).keySet()) {
+                    try {
+
+                        String token = deviceTokenPerConnector.get(tenant).get(connectorId);
+                        String newToken = tokenApi.refresh(new Token(token)).getTokenString();
+                        log.info("Tenant {} - Successfully refreshed token for connector {}", tenant, connectorId);
+                        deviceTokenPerConnector.get(tenant).put(connectorId, newToken);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Tenant {} - Could not refresh token for connector {}. Reason: {}", tenant, connectorId, e.getMessage());
+                    }
+                }
+
+        });
+
+    }
+
     public void reconnect() {
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
             try {
-                if (tenantClientMap != null) {
-                    for (String currentTenant : tenantClientMap.keySet()) {
-                        if (currentTenant.equals(tenant)) {
-                            CustomWebSocketClient tenantClient = tenantClientMap.get(currentTenant);
-                            if (tenantClient != null) {
-                                log.debug("Tenant {} - Running ws reconnect... tenant client: {}, tenant_isOpen: {}",
-                                        tenant, tenantClient,
-                                        tenantClient.isOpen());
-                                if (!tenantClient.isOpen()) {
-                                    if (tenantWSStatusCode.get(tenant) == 401
-                                            || tenantClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
-                                        log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
-                                        // subscriptionsService.runForEachTenant(() -> {
-                                        // initTenantClient();
-                                        // });
-                                    } else if (tenantClient.getReadyState().equals(ReadyState.CLOSING)
-                                            || tenantClient.getReadyState().equals(ReadyState.CLOSED)) {
-                                        log.info("Tenant {} - Trying to reconnect ws tenant client... ", tenant);
-                                        tenantClient.reconnect();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
                 if (deviceClientMap.get(tenant) != null) {
                     for (CustomWebSocketClient deviceClient : deviceClientMap.get(tenant).values()) {
                         if (deviceClient != null) {

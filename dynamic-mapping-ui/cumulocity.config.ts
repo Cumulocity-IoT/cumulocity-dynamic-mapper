@@ -1,6 +1,11 @@
 import { EnvironmentOptions } from '@c8y/devkit/dist/options';
 import { author, description, version, license } from './package.json';
 
+const asset = process.env['npm_config_asset'];
+const isApp = asset == 'app' ? true : false;
+
+console.log('Building asset:', asset, asset == 'app', isApp);
+
 export default {
   runTime: {
     author,
@@ -9,6 +14,9 @@ export default {
     version,
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
+    icon: {
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_02.png)'
+    },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
@@ -16,21 +24,38 @@ export default {
     remotes: {
       'sag-ps-pkg-dynamic-mapping': ['DynamicMappingModule']
     },
-    package: 'plugin',
     tabsHorizontal: true,
+    noAppSwitcher: false,
+    // comment the following properties to create a standalone app
+    // comment begin
+    // package: 'plugin',
+    // isPackage: !isApp,
+    package: 'blueprint',
     isPackage: true,
-    noAppSwitcher: true,
+    // exports: isApp
+    //   ? []
+    //   : [
+    //       {
+    //         name: 'Dynamic Mapping Widget',
+    //         module: 'DynamicMappingModule',
+    //         path: './src/dynamic-mapping.module',
+    //         description: 'Adds a Dynamic Mapping Plugin'
+    //       }
+    //     ]
+    // isPackage: true,
     exports: [
       {
         name: 'Dynamic Mapping Widget',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Widget'
+        description: 'Adds a Dynamic Mapping Plugin'
       }
     ]
+    // comment end
   },
   buildTime: {
-   // extraWebpackConfig: './extra-webpack.config.js',
+    // extraWebpackConfig: './extra-webpack.config.js',
+    entryModule: './app.module.ts',
     copy: [
       {
         from: 'README.md',
@@ -38,11 +63,15 @@ export default {
       },
       {
         from: '../resources/image/Generic_Mapping_AddMapping.png',
-        to: 'images/Generic_Mapping_AddMapping.png'
+        to: 'image/Generic_Mapping_AddMapping.png'
       },
       {
         from: '../resources/image/Generic_Mapping_MappingTemplate.png',
-        to: 'images/Generic_Mapping_MappingTemplate.png'
+        to: 'image/Generic_Mapping_MappingTemplate.png'
+      },
+      {
+        from: '../resources/image/DM_App-Icon_02.png',
+        to: 'image/DM_App-Icon_02.png'
       }
     ],
     federation: [
@@ -59,7 +88,8 @@ export default {
       '@c8y/client',
       '@c8y/ngx-components',
       'ngx-bootstrap',
-      '@ngx-translate/core'
+      '@ngx-translate/core',
+      '@ngx-formly/core'
     ]
   }
 } as const satisfies EnvironmentOptions;
