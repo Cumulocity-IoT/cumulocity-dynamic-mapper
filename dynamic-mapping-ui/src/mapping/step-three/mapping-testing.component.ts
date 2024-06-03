@@ -96,11 +96,11 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    console.log(
-      'Mapping to be tested:',
-      this.mapping,
-      this.stepperConfiguration
-    );
+    //console.log(
+    //  'Mapping to be tested:',
+    //  this.mapping,
+    //  this.stepperConfiguration
+    //);
 
     this.editorOptionsTesting = {
       ...this.editorOptionsTesting,
@@ -128,7 +128,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
           response: {}
         };
       }
-      console.log('New test template:', this.currentSourceTemplate);
+      //console.log('New test template:', this.currentSourceTemplate);
     });
   }
 

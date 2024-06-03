@@ -89,11 +89,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-    console.log(
-      'Mapping to be updated:',
-      this.mapping,
-      this.stepperConfiguration
-    );
+    //console.log(
+    //  'Mapping to be updated:',
+    //  this.mapping,
+    //  this.stepperConfiguration
+    //);
     const numberSnooped = this.mapping.snoopedTemplates
       ? this.mapping.snoopedTemplates.length
       : 0;
@@ -290,13 +290,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               change: (field: FormlyFieldConfig, event?: any) => {
-                console.log(
-                  'Changes:',
-                  field,
-                  event,
-                  this.mapping,
-                  this.propertyFormly.valid
-                );
+                //console.log(
+                //  'Changes:',
+                //  field,
+                //  event,
+                //  this.mapping,
+                //  this.propertyFormly.valid
+                //);
                 this.onTargetAPIChanged(
                   this.propertyFormly.get('targetAPI').value
                 );
