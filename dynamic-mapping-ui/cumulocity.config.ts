@@ -1,6 +1,11 @@
 import { EnvironmentOptions } from '@c8y/devkit/dist/options';
 import { author, description, version, license } from './package.json';
 
+const asset = process.env['npm_config_asset'];
+const isApp = asset == 'app' ? true : false;
+
+console.log('Building asset:', asset, asset == 'app', isApp);
+
 export default {
   runTime: {
     author,
@@ -9,7 +14,9 @@ export default {
     version,
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
-    icon: { url: 'url(./image/DM_App-Icon.svg)', class: 'custom-app-icon' },
+    icon: {
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_02.png)'
+    },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
@@ -20,9 +27,22 @@ export default {
     tabsHorizontal: true,
     noAppSwitcher: false,
     // comment the following properties to create a standalone app
-	// comment begin
-    package: 'plugin',
+    // comment begin
+    // package: 'plugin',
+    // isPackage: !isApp,
+    package: 'blueprint',
     isPackage: true,
+    // exports: isApp
+    //   ? []
+    //   : [
+    //       {
+    //         name: 'Dynamic Mapping Widget',
+    //         module: 'DynamicMappingModule',
+    //         path: './src/dynamic-mapping.module',
+    //         description: 'Adds a Dynamic Mapping Plugin'
+    //       }
+    //     ]
+    // isPackage: true,
     exports: [
       {
         name: 'Dynamic Mapping Widget',
@@ -31,7 +51,7 @@ export default {
         description: 'Adds a Dynamic Mapping Plugin'
       }
     ]
-	// comment end
+    // comment end
   },
   buildTime: {
     // extraWebpackConfig: './extra-webpack.config.js',
@@ -50,8 +70,8 @@ export default {
         to: 'image/Generic_Mapping_MappingTemplate.png'
       },
       {
-        from: '../resources/image/DM_App-Icon.svg',
-        to: 'image/DM_App-Icon.svg'
+        from: '../resources/image/DM_App-Icon_02.png',
+        to: 'image/DM_App-Icon_02.png'
       }
     ],
     federation: [
