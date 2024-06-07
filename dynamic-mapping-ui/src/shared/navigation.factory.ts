@@ -51,7 +51,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
 
   get() {
     this.NAVIGATION_NODE_MQTT = new NavigatorNode({
-      parent:  this.appName == 'dynamic-mapping' ? undefined : gettext('Settings'),
+      parent:  this.appName.startsWith('dynamic-mapping') ? undefined : gettext('Settings'),
       label: gettext('Dynamic Mapping'),
       icon: 'ftp-server',
       path: '/sag-ps-pkg-dynamic-mapping/mappings/inbound',
