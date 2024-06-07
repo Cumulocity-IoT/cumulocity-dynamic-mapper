@@ -151,9 +151,9 @@ export abstract class PayloadProcessorOutbound {
         'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
       );
     }
-    console.log(
-      `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: 1`
-    );
+    //console.log(
+    //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: 1`
+    //);
   }
 
   substituteValueInObject(

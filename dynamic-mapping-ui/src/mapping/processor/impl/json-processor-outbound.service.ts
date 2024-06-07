@@ -155,9 +155,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
                 );
                 externalId = extractedSourceContent;
               } catch (e) {
-                console.log(
-                  `External id ${extractedSourceContent}, ${mapping.externalIdType} doesn't exist! Just return original id ${extractedSourceContent}`
-                );
+                //console.log(
+                //  `External id ${extractedSourceContent}, ${mapping.externalIdType} doesn't exist! Just return original id ${extractedSourceContent}`
+                //);
                 if (context.sendPayload) {
                   throw new Error(
                     `External id ${extractedSourceContent} for type ${mapping.externalIdType} not found!`
@@ -217,9 +217,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
               postProcessingCacheEntry
             );
           } else {
-            console.log(
-              `This substitution, involves an objects for: ${substitution.pathSource}, ${extractedSourceContent}`
-            );
+            //console.log(
+            //  `This substitution, involves an objects for: ${substitution.pathSource}, ${extractedSourceContent}`
+            //);
             context.cardinality.set(substitution.pathTarget, 1);
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
@@ -231,9 +231,9 @@ export class JSONProcessorOutbound extends PayloadProcessorOutbound {
               postProcessingCacheEntry
             );
           }
-          console.log(
-            `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
-          );
+          //console.log(
+          //  `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
+          //);
         }
         if (substitution.pathTarget === TIME) {
           substitutionTimeExists = true;

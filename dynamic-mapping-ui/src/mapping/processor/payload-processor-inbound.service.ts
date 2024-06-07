@@ -136,9 +136,9 @@ export abstract class PayloadProcessorInbound {
                 context
               );
             } catch (e) {
-              console.log(
-                `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
-              );
+              //console.log(
+              //  `External id ${identity.externalId} doesn't exist! Just return original id ${identity.externalId} `
+              //);
             }
             if (!sourceId && mapping.createNonExistingDevice) {
               const request = {
@@ -242,9 +242,9 @@ export abstract class PayloadProcessorInbound {
           'Ignoring payload: ${payloadTarget}, ${mapping.targetAPI}, ${postProcessingCache.size}'
         );
       }
-      console.log(
-        `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
-      );
+      //console.log(
+      //  `Added payload for sending: ${payloadTarget}, ${mapping.targetAPI}, numberDevices: ${deviceEntries.length}`
+      //);
       i++;
     }
   }

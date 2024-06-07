@@ -106,6 +106,6 @@ export class TestingComponent {
 
   /** Executes an action on refresh event. */
   onRefreshClick() {
-    console.log('refresh clicked');
+    //console.log('refresh clicked');
   }
 }

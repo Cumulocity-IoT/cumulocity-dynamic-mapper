@@ -166,9 +166,9 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
               postProcessingCacheEntry
             );
           } else {
-            console.log(
-              `This substitution, involves an objects for: ${substitution.pathSource}, ${extractedSourceContent}`
-            );
+            //console.log(
+            //  `This substitution, involves an objects for: ${substitution.pathSource}, ${extractedSourceContent}`
+            //);
             context.cardinality.set(substitution.pathTarget, 1);
             postProcessingCacheEntry.push({
               value: extractedSourceContent,
@@ -180,9 +180,9 @@ export class JSONProcessorInbound extends PayloadProcessorInbound {
               postProcessingCacheEntry
             );
           }
-          console.log(
-            `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
-          );
+          //console.log(
+          //  `Evaluated substitution (pathSource:substitute)/(${substitution.pathSource}:${extractedSourceContent}), (pathTarget)/(${substitution.pathTarget})`
+          //);
         }
         if (substitution.pathTarget === TIME) {
           substitutionTimeExists = true;

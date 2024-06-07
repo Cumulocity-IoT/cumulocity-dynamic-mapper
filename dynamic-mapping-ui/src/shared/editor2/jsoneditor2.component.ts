@@ -110,12 +110,12 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           { contentErrors, patchResult }
         ) => {
           // content is an object { json: JSONData } | { text: string }
-          console.log('onChange', {
-            updatedContent,
-            previousContent,
-            contentErrors,
-            patchResult
-          });
+          //console.log('onChange', {
+          //  updatedContent,
+          //  previousContent,
+          //  contentErrors,
+          //  patchResult
+          //});
           this.content = updatedContent;
           this.changeContent.emit(updatedContent);
         },
@@ -179,7 +179,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     items: ContextMenuItem[],
     context: { mode: 'tree' | 'text' | 'table'; modal: boolean }
   ): ContextMenuItem[] | undefined {
-    console.log('ContextMenü', items, context);
+    //('ContextMenü', items, context);
     this.removeItem(items, 'Transform');
     return items;
   }
@@ -191,14 +191,14 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
       if (isKeySelection(selection) || isValueSelection(selection)) {
         const st = stringifyJSONPath((selection as any).path);
         this.pathChanged.emit(st);
-        console.log('Selected path:', st);
+        //console.log('Selected path:', st);
       } else if (isMultiSelection(selection)) {
         const st = stringifyJSONPath((selection as any).anchorPath);
         this.pathChanged.emit(st);
-        console.log('Selected anchorPath:', st);
+        //console.log('Selected anchorPath:', st);
       }
     } else {
-      console.log('Ignoring selection as is was triggered:', selection);
+      //console.log('Ignoring selection as is was triggered:', selection);
     }
   }
 
@@ -209,7 +209,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
 
   setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
-    console.log('Set selection to path:', pathString, path);
+    //console.log('Set selection to path:', pathString, path);
     const selection: any = createMultiSelection(path, path);
     // marker to ignore emitting change events when the path was set programmatically
     selection.triggeredSelection = true;

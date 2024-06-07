@@ -53,7 +53,7 @@ export class ExtensionCardComponent implements OnInit {
     this.router.navigate(['properties/', this.app.id], {
       relativeTo: this.activatedRoute
     });
-    console.log('Details clicked now:', this.app.id);
+    //console.log('Details clicked now:', this.app.id);
   }
 
   async delete() {
@@ -72,7 +72,7 @@ export class ExtensionCardComponent implements OnInit {
       );
       confirmDeletionModalRef.content.closeSubject.subscribe(
         async (confirmation: boolean) => {
-          console.log('Confirmation result:', confirmation);
+          //console.log('Confirmation result:', confirmation);
           if (confirmation) {
             try {
                 await this.extensionService.deleteExtension(this.app);

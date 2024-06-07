@@ -58,7 +58,7 @@ export class SubstitutionRendererComponent {
   constructor(private elementRef: ElementRef) {}
 
   onSubstitutionSelect(index: number) {
-    console.log('Selected substitution:', index);
+    //console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
   }
@@ -69,14 +69,14 @@ export class SubstitutionRendererComponent {
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
       ix = 0;
     }
-    console.log('Scroll to:', ix);
+    //console.log('Scroll to:', ix);
     this.elementRef.nativeElement
       .querySelector(`#sub-${this.id}-${ix}`)
       .scrollIntoView();
   }
 
   onSubstitutionDelete(index: number) {
-    console.log('Delete substitution:', index);
+    //console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.deleteSub.emit(index);
   }
