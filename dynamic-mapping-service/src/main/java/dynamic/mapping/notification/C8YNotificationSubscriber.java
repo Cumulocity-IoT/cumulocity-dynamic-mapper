@@ -576,7 +576,7 @@ public class C8YNotificationSubscriber {
                     for (CustomWebSocketClient deviceClient : deviceClientMap.get(tenant).values()) {
                         if (deviceClient != null) {
                             if (!deviceClient.isOpen()) {
-                                if (deviceWSStatusCode.get(tenant) == 401
+                                if (deviceWSStatusCode.get(tenant) != null &&  deviceWSStatusCode.get(tenant) == 401
                                         || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                     log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
                                     subscriptionsService.runForEachTenant(() -> {
