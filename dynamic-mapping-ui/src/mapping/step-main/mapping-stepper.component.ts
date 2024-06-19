@@ -320,7 +320,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: FieldTextareaCustom, // 'textarea-custom',
             wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
-              class: 'input-sm',
+              class: 'input',
               disabled: true,
               readonly: true
             },
@@ -339,7 +339,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: FieldTextareaCustom, // 'textarea-custom',
             wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
-              class: 'input-sm',
+              class: 'input',
               disabled: true,
               readonly: true
             },
