@@ -329,7 +329,10 @@ export class MappingService {
       method: 'POST'
     });
     const data = await response;
-    if (!data.ok) throw new Error(data.statusText)!;
+    if (!data.ok) {
+		const errorTxt = await data.json();
+		throw new Error(errorTxt.message ?? 'Could not be imported');
+	}
     const m = await data.json();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();

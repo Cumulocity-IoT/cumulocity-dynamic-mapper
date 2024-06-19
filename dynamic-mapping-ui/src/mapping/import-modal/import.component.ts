@@ -72,12 +72,12 @@ export class ImportMappingsComponent implements OnDestroy {
     const mappings: Mapping[] = JSON.parse(ms);
     const countMappings = mappings.length;
     const errors = [];
-    mappings.forEach((m, i) => {
+    mappings.forEach(async (m, i) => {
       try {
         m.ident = uuidCustom();
         m.lastUpdate = Date.now();
         m.active = false;
-        this.mappingService.createMapping(m);
+        await this.mappingService.createMapping(m);
         this.progress$.next((100 * i) / countMappings);
       } catch (ex) {
         this.errorMessage = `Failed to import mappings: ${i}`;
