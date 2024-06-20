@@ -111,7 +111,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     bordered: true,
     striped: true,
     filter: false,
-    gridHeader: true
+    gridHeader: true,
+    hover: true
   };
 
   columnsMappings: Column[];
@@ -347,7 +348,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe((result) => {
-      //console.log('Was selected:', result);
+      // console.log('Was selected:', result);
       if (result) {
         this.mappingType = result;
         this.addMapping();
@@ -456,7 +457,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async deleteSubscription(device: IIdentified) {
-    //console.log('Delete device', device);
+    // console.log('Delete device', device);
     try {
       await this.mappingService.deleteSubscriptions(device);
       this.alertService.success(
@@ -497,7 +498,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingToUpdate.direction == null
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
-    //console.log('Editing mapping', this.mappingToUpdate);
+    // console.log('Editing mapping', this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
@@ -522,7 +523,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     this.mappingToUpdate.active = false;
-    //console.log('Copying mapping', this.mappingToUpdate);
+    // console.log('Copying mapping', this.mappingToUpdate);
     this.showConfigMapping = true;
   }
 
@@ -551,9 +552,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     confirmation: boolean = true,
     multiple: boolean = false
   ): Promise<boolean> {
-    const { mapping } = m;
     let result: boolean = false;
-    //console.log('Deleting mapping before confirmation:', mapping);
+    // const { mapping } = m;
+    // console.log('Deleting mapping before confirmation:', mapping);
     if (confirmation) {
       const initialState = {
         title: multiple ? 'Delete mappings' : 'Delete mapping',
@@ -572,10 +573,10 @@ export class MappingComponent implements OnInit, OnDestroy {
 
       result = await confirmDeletionModalRef.content.closeSubject.toPromise();
       if (result) {
-        //console.log('DELETE mapping:', mapping, result);
+        // console.log('DELETE mapping:', mapping, result);
         await this.deleteMapping(m);
       } else {
-        //console.log('Canceled DELETE mapping', mapping, result);
+        // console.log('Canceled DELETE mapping', mapping, result);
       }
     } else {
       // await this.deleteMapping(mapping);
@@ -598,7 +599,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
 
-    //('Changed mapping:', mapping);
+    // ('Changed mapping:', mapping);
 
     if (
       mapping.direction == Direction.INBOUND ||
@@ -607,7 +608,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       //  && isFilterOutboundUnique(mapping, this.mappings)
     ) {
       if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-        //console.log('Update existing mapping:', mapping);
+        // console.log('Update existing mapping:', mapping);
         try {
           await this.mappingService.updateMapping(mapping);
           this.alertService.success(gettext('Mapping updated successfully'));
@@ -622,7 +623,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.stepperConfiguration.editorMode == EditorMode.COPY
       ) {
         // new mapping
-        //console.log('Push new mapping:', mapping);
+        // console.log('Push new mapping:', mapping);
         try {
           await this.mappingService.createMapping(mapping);
           this.alertService.success(gettext('Mapping created successfully'));
@@ -657,7 +658,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       api: API.ALL.name,
       devices: deviceList
     };
-    //console.log('Changed deviceList:', this.subscription.devices);
+    // console.log('Changed deviceList:', this.subscription.devices);
     try {
       await this.mappingService.updateSubscriptions(this.subscription);
       this.alertService.success(gettext('Subscriptions updated successfully'));
@@ -764,7 +765,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const response2 = await this.brokerConfigurationService.runOperation(
       Operation.RELOAD_MAPPINGS
     );
-    //console.log('Activate mapping response:', response2);
+    // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings reloaded'));
       this.isConnectionToMQTTEstablished = true;
