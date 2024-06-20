@@ -54,8 +54,6 @@ export default {
     // comment end
   },
   buildTime: {
-    // extraWebpackConfig: './extra-webpack.config.js',
-    entryModule: './app.module.ts',
     copy: [
       {
         from: 'README.md',
