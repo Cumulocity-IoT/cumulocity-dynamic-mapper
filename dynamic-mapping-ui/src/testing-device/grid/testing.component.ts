@@ -61,7 +61,8 @@ export class TestingComponent {
     bordered: false,
     striped: true,
     filter: true,
-    gridHeader: true
+    gridHeader: true,
+	hover:true
   };
 
   columns: Column[];
@@ -106,6 +107,6 @@ export class TestingComponent {
 
   /** Executes an action on refresh event. */
   onRefreshClick() {
-    //console.log('refresh clicked');
+    // console.log('refresh clicked');
   }
 }

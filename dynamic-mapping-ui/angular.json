@@ -36,7 +36,7 @@
             "allowedCommonJsDependencies": [
               "regenerator-runtime/runtime",
               "@cordobo/qrcode",
-              "zone.js/dist/zone",
+              "zone.js",
               "chroma-js"
             ]
           },
@@ -72,10 +72,10 @@
           "builder": "@c8y/devkit:dev-server",
           "configurations": {
             "production": {
-              "browserTarget": "dynamic-mapping:build:production"
+              "buildTarget": "dynamic-mapping:build:production"
             },
             "development": {
-              "browserTarget": "dynamic-mapping:build:development"
+              "buildTarget": "dynamic-mapping:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -106,10 +106,10 @@
           "builder": "@c8y/devkit:deploy",
           "configurations": {
             "production": {
-              "browserTarget": "dynamic-mapping:build:production"
+              "buildTarget": "dynamic-mapping:build:production"
             },
             "development": {
-              "browserTarget": "dynamic-mapping:build:development"
+              "buildTarget": "dynamic-mapping:build:development"
             }
           },
           "defaultConfiguration": "production"
