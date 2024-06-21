@@ -62,7 +62,6 @@ import {
   expandC8YTemplate,
   expandExternalTemplate,
   isDisabled,
-  isWildcardTopic,
   reduceSourceTemplate,
   reduceTargetTemplate,
   splitTopicExcludingSeparator
@@ -153,7 +152,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    //console.log('Formly to be updated:', this.configService);
+    // console.log('Formly to be updated:', this.configService);
     // set value for backward compatiblility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
@@ -185,11 +184,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         severity: 'text-info'
       }
     };
-    //console.log(
+    // console.log(
     //  'Mapping to be updated:',
     //  this.mapping,
     //  this.stepperConfiguration
-    //);
+    // );
 
     this.substitutionFormlyFields = [
       {
@@ -453,7 +452,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel.sourceExpression.severity = 'text-warning';
       }
     } catch (error) {
-      //console.log('Error evaluating source expression: ', error);
+      // console.log('Error evaluating source expression: ', error);
       this.substitutionModel.sourceExpression = {
         msgTxt: error.message,
         severity: 'text-danger'
@@ -577,7 +576,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectExtension(extension) {
-    //('onSelectExtension', extension);
+    // ('onSelectExtension', extension);
     this.mapping.extension.name = extension;
     this.extensionEvents$.next(
       Object.keys(this.extensions[extension].extensionEntries)
@@ -585,28 +584,28 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   async onStepChange(event): Promise<void> {
-    //('OnStepChange', event);
+    // ('OnStepChange', event);
   }
 
   async onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-    //('OnNextStep', event.step.label, this.mapping);
+    // ('OnNextStep', event.step.label, this.mapping);
     this.step = event.step.label;
     if (this.step == 'Define topic') {
       this.templateModel.mapping = this.mapping;
-      //console.log(
+      // console.log(
       //  'Populate jsonPath if wildcard:',
       //  isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
       //  this.mapping.substitutions.length
-      //);
-      //console.log(
+      // );
+      // console.log(
       //  'Templates from mapping:',
       //  this.mapping.target,
       //  this.mapping.source,
       //  this.mapping
-      //);
+      // );
       this.expandTemplates();
       this.extensions =
         (await this.brokerConfigurationService.getProcessorExtensions()) as any;
@@ -634,7 +633,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.mapping.snoopStatus == SnoopStatus.ENABLED &&
         numberSnooped == 0
       ) {
-        //console.log('Snooping not yet started ...');
+        // console.log('Snooping not yet started ...');
         const modalRef: BsModalRef = this.bsModalService.show(
           SnoopingModalComponent,
           { initialState }
@@ -649,7 +648,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           modalRef.hide();
         });
       } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
-        //console.log('Continue snooping ...?');
+        // console.log('Continue snooping ...?');
         const modalRef: BsModalRef = this.bsModalService.show(
           SnoopingModalComponent,
           { initialState }
@@ -704,7 +703,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     stepper: C8yStepper;
     step: CdkStep;
   }): Promise<void> {
-    //console.log('onBackStep', event.step.label, this.mapping);
+    // console.log('onBackStep', event.step.label, this.mapping);
     this.step = event.step.label;
     if (this.step == 'Test mapping') {
       const editorTestingRequestRef =
@@ -751,11 +750,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           levels
         );
       }
-      //console.log(
+      // console.log(
       //  'Sample template',
       //  this.templateTarget,
       //  getSchema(this.mapping.targetAPI, this.mapping.direction, true)
-      //);
+      // );
     } else {
       if (this.stepperConfiguration.direction == Direction.INBOUND) {
         this.templateSource = expandExternalTemplate(
@@ -829,11 +828,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.substitutionModel.resolve2ExternalId = false;
       this.addSubstitution(this.substitutionModel);
       this.selectedSubstitution = -1;
-      //console.log(
+      // console.log(
       //  'New substitution',
       //  this.templateModel,
       //  this.mapping.substitutions
-      //);
+      // );
     } else {
       this.alertService.warning(
         'Please select two nodes: one node in the template source, one node in the template target to define a substitution.'
@@ -842,18 +841,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onDeleteSubstitution(selected: number) {
-    //console.log('Delete selected substitution', selected);
+    // console.log('Delete selected substitution', selected);
     if (selected < this.mapping.substitutions.length) {
       this.mapping.substitutions.splice(selected, 1);
     }
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-    //console.log('Deleted substitution', this.mapping.substitutions.length);
+    // console.log('Deleted substitution', this.mapping.substitutions.length);
   }
 
   onUpdateSubstitution() {
     if (this.selectedSubstitution != -1) {
       const selected = this.selectedSubstitution;
-      //console.log('Edit selected substitution', selected);
+      // console.log('Edit selected substitution', selected);
       const initialState = {
         substitution: _.clone(this.mapping.substitutions[selected]),
         mapping: this.mapping,
@@ -872,7 +871,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         initialState
       });
       modalRef.content.closeSubject.subscribe((editedSub) => {
-        //console.log('Mapping after edit:', editedSub);
+        // console.log('Mapping after edit:', editedSub);
         if (editedSub) {
           this.mapping.substitutions[selected] = editedSub;
           this.substitutionModel = editedSub;
@@ -881,7 +880,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         }
       });
       this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-      //console.log('Edited substitution', this.mapping.substitutions.length);
+      // console.log('Edited substitution', this.mapping.substitutions.length);
     }
   }
 
@@ -908,7 +907,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
    //   console.log('results:', result);
    // });
     modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
-      //console.log('About to add new substitution:', newSub);
+      // console.log('About to add new substitution:', newSub);
       if (newSub && !duplicateSubstitution) {
         this.mapping.substitutions.push(newSub);
       } else if (newSub && duplicateSubstitution) {
