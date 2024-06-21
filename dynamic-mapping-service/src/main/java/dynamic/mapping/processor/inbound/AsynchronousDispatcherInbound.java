@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -95,6 +96,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
+        ExecutorService cachedThreadPool;
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message) {
@@ -106,6 +108,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
             this.connectorMessage = message;
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
+            this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         }
 
         @Override
@@ -183,11 +186,21 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
-                                List<C8YRequest> resultRequests = context.getRequests();
-                                if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
-                                    mappingStatus.errors++;
-                                }
+                                CompletableFuture<ProcessingContext<T>> sendFuture = new CompletableFuture();
+                                Thread.startVirtualThread(() -> {
+                                    sendFuture.complete(processor.substituteInTargetAndSend(context));
+                                });
+                                sendFuture.thenApply(processedContext -> {
+                                    //processor.substituteInTargetAndSend(context);
+                                    List<C8YRequest> resultRequests = processedContext.getRequests();
+                                    if (processedContext.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                        mappingStatus.errors++;
+                                    }
+                                    processingResult.add(processedContext);
+                                    return processedContext;
+                                });
+
+
                             }
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
@@ -200,19 +213,19 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                         log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
                                 tenant, mappingType);
                     }
-                    processingResult.add(context);
+                    //processingResult.add(context);
                 }
             });
             return processingResult;
         }
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
+    public CompletableFuture<List<ProcessingContext<?>>> processMessage(ConnectorMessage message) {
         String topic = message.getTopic();
         String tenant = message.getTenant();
 
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        Future<List<ProcessingContext<?>>> futureProcessingResult = null;
+        final CompletableFuture<List<ProcessingContext<?>>> futureProcessingResult = new CompletableFuture<>();
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         if (topic != null && !topic.startsWith("$SYS")) {
@@ -232,10 +245,19 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         } else {
             return futureProcessingResult;
         }
+        List<Mapping> finalResolvedMappings = resolvedMappings;
+        Thread.startVirtualThread(() -> {
+            try {
+                futureProcessingResult.complete(new MappingInboundTask(configurationRegistry, finalResolvedMappings,
+                                message).call());
+            } catch (Exception e) {
+                futureProcessingResult.completeExceptionally(e);
+            }
+        });
 
-        futureProcessingResult = cachedThreadPool.submit(
-                new MappingInboundTask(configurationRegistry, resolvedMappings,
-                        message));
+        //futureProcessingResult = cachedThreadPool.submit(
+        //        new MappingInboundTask(configurationRegistry, resolvedMappings,
+        //                message));
 
         return futureProcessingResult;
 
@@ -247,7 +269,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     @Override
     public void onMessage(ConnectorMessage message) {
-        processMessage(message);
+        Thread.startVirtualThread(() -> processMessage(message)).setName("vProcIn");
     }
 
     @Override

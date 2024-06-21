@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.MappingTreeNodeSerializer;
@@ -99,9 +100,15 @@ public class App {
         return executor;
     }
 
+//    @Bean("cachedThreadPool")
+//    public ExecutorService cachedThreadPool() {
+//        return Executors.newCachedThreadPool();
+//    }
+
     @Bean("cachedThreadPool")
     public ExecutorService cachedThreadPool() {
-        return Executors.newCachedThreadPool();
+        final ThreadFactory factory = Thread.ofVirtual().name("virtExThread").factory();
+        return Executors.newThreadPerTaskExecutor(factory);
     }
 
     @Bean

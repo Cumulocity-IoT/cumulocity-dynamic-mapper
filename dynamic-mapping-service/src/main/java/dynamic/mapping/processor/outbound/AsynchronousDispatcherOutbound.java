@@ -51,10 +51,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * AsynchronousDispatcherOutbound
@@ -139,7 +136,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             c8yMessage.setApi(notification.getApi());
             c8yMessage.setTenant(tenant);
             c8yMessage.setSendPayload(true);
-            processMessage(c8yMessage);
+            Thread.startVirtualThread(() -> {
+                processMessage(c8yMessage);
+            }).setName("vProcOut");
         }
     }
 
@@ -259,11 +258,18 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                                 }
                             } else {
                                 processor.extractFromSource(context);
-                                processor.substituteInTargetAndSend(context);
-                                List<C8YRequest> resultRequests = context.getRequests();
-                                if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
-                                    mappingStatus.errors++;
-                                }
+                                CompletableFuture<ProcessingContext<T>> sendFuture = new CompletableFuture();
+                                Thread.startVirtualThread(() -> {
+                                    sendFuture.complete(processor.substituteInTargetAndSend(context));
+                                });
+                                sendFuture.thenApply(processedContext -> {
+                                    List<C8YRequest> resultRequests = processedContext.getRequests();
+                                    if (processedContext.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
+                                        mappingStatus.errors++;
+                                    }
+                                    processingResult.add(processedContext);
+                                    return processedContext;
+                                });
                             }
                         } catch (Exception e) {
                             log.warn("Tenant {} - Message could NOT be parsed, ignoring this message: {}", tenant,
@@ -276,7 +282,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                         log.error("Tenant {} - No process for MessageType: {} registered, ignoring this message!",
                                 tenant, mappingType);
                     }
-                    processingResult.add(context);
+                    //processingResult.add(context);
                 }
             });
             return processingResult;
@@ -284,10 +290,10 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
 
     }
 
-    public Future<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
+    public CompletableFuture<List<ProcessingContext<?>>> processMessage(C8YMessage c8yMessage) {
         String tenant = c8yMessage.getTenant();
         MappingStatus mappingStatusUnspecified = mappingComponent.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        Future<List<ProcessingContext<?>>> futureProcessingResult = null;
+        final CompletableFuture<List<ProcessingContext<?>>> futureProcessingResult = new CompletableFuture<>();
         List<Mapping> resolvedMappings = new ArrayList<>();
 
         // Handle C8Y Operation Status
@@ -315,36 +321,48 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         } else {
             return futureProcessingResult;
         }
-
-        futureProcessingResult = cachedThreadPool.submit(
-                new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
-                        payloadProcessorsOutbound, c8yMessage));
-
-        if (op != null) {
-            // Blocking for Operations to receive the processing result to update operation
-            // status
+        List<Mapping> finalResolvedMappings = resolvedMappings;
+        Thread.startVirtualThread(() -> {
             try {
-                List<ProcessingContext<?>> results = futureProcessingResult.get();
-                if (results.size() > 0) {
-                    if (results.get(0).hasError()) {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                                results.get(0).getErrors().toString());
-                    } else {
-                        c8yAgent.updateOperationStatus(tenant, op, OperationStatus.SUCCESSFUL, null);
-                    }
-                } else {
-                    // No Mapping found
-                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                    // "No Mapping found for operation " + op.toJSON());
-                }
-            } catch (InterruptedException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
-            } catch (ExecutionException e) {
-                // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
-                // e.getLocalizedMessage());
+                futureProcessingResult.complete(new MappingOutboundTask(configurationRegistry, finalResolvedMappings, mappingComponent,
+                        payloadProcessorsOutbound, c8yMessage).call());
+            } catch (Exception e) {
+                futureProcessingResult.completeExceptionally(e);
             }
-        }
+        });
+        final OperationRepresentation finalOp = op;
+        futureProcessingResult.thenRun(() -> {
+            if (finalOp != null) {
+                // Blocking for Operations to receive the processing result to update operation
+                // status
+                try {
+                    List<ProcessingContext<?>> results = futureProcessingResult.get();
+                    if (results.size() > 0) {
+                        if (results.get(0).hasError()) {
+                            c8yAgent.updateOperationStatus(tenant, finalOp, OperationStatus.FAILED,
+                                    results.get(0).getErrors().toString());
+                        } else {
+                            c8yAgent.updateOperationStatus(tenant, finalOp, OperationStatus.SUCCESSFUL, null);
+                        }
+                    } else {
+                        // No Mapping found
+                        // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                        // "No Mapping found for operation " + op.toJSON());
+                    }
+                } catch (InterruptedException e) {
+                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                    // e.getLocalizedMessage());
+                } catch (ExecutionException e) {
+                    // c8yAgent.updateOperationStatus(tenant, op, OperationStatus.FAILED,
+                    // e.getLocalizedMessage());
+                }
+            }
+        });
+//        futureProcessingResult = cachedThreadPool.submit(
+//                new MappingOutboundTask(configurationRegistry, resolvedMappings, mappingComponent,
+//                        payloadProcessorsOutbound, c8yMessage));
+
+
         return futureProcessingResult;
     }
 }
