@@ -51,7 +51,7 @@
     (click)="addExtension()"
     class="btn btn-link"
     title="{{ 'Add extension' | translate }}"
-    [disabled]="!externalExtensionEnabled"
+    [disabled]="!externalExtensionEnabled || !feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="plus-circle"></i>
     {{ 'Add extension' | translate }}
@@ -63,6 +63,7 @@
     (click)="reloadExtensions()"
     class="btn btn-link"
     title="{{ 'Reload' | translate }}"
+	[disabled]="!feature?.userHasMappingAdminRole"
   >
     <i [ngClass]="{ 'icon-spin': reloading }" c8yIcon="refresh"></i>
     {{ 'Reload' | translate }}

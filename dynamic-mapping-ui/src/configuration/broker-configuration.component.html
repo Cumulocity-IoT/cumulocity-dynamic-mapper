@@ -26,6 +26,7 @@
     class="btn btn-link"
     title="{{ 'Reconnect notification endpoint' | translate }}"
     (click)="clickedReconnect2NotificationEndpoint()"
+	[disabled]="!feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="disconnected"></i>
     {{ 'Reconnect notification endpoint' | translate }}
@@ -34,6 +35,7 @@
     class="btn btn-link"
     title="{{ 'Reset monitoring' | translate }}"
     (click)="resetStatusMapping()"
+	[disabled]="!feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="reset"></i>
     {{ 'Reset monitoring' | translate }}
@@ -42,6 +44,7 @@
     class="btn btn-link"
     title="{{ 'Refresh' | translate }}"
     (click)="refresh()"
+	[disabled]="!feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
@@ -65,7 +68,7 @@
               id="addConfiguration"
               class="btn btn-default btn-sm"
               (click)="onConfigurationAdd()"
-              translate
+              translate [disabled]="!feature?.userHasMappingAdminRole"
               title="Add configuration"
             >
               <i c8yIcon="plus-circle-o"></i>&nbsp;Add configuration
@@ -124,6 +127,7 @@
                       style="padding-bottom: 6px"
                       title="{{ 'Toggle Activation' | translate }}"
                       class="btn btn-dot"
+					  [disabled]="!feature?.userHasMappingAdminRole"
                       (click)="onConfigurationToggle(i)"
                     >
                       <i [c8yIcon]="con?.enabled ? 'toggle-on': 'toggle-off'"></i>
@@ -147,6 +151,7 @@
                             id="update"
                             type="button"
                             (click)="onConfigurationUpdate(i)"
+							[disabled]="!feature?.userHasMappingAdminRole"
                           >
                             <i c8yIcon="pencil"></i>
                             Update configuration
@@ -157,6 +162,7 @@
                             id="copy"
                             type="button"
                             (click)="onConfigurationCopy(i)"
+							[disabled]="!feature?.userHasMappingAdminRole"
                           >
                             <i c8yIcon="copy"></i>
                             Copy configuration
@@ -167,7 +173,7 @@
                             id="delete"
                             type="button"
                             (click)="onConfigurationDelete(i)"
-                            [disabled]="con?.enabled"
+                            [disabled]="con?.enabled || !feature?.userHasMappingAdminRole"
                           >
                             <i c8yIcon="trash-o"></i>
                             Delete configuration
@@ -183,95 +189,97 @@
         </div>
       </div>
 
-      <div class="legend form-block col-lg-12">Connector Logs</div>
-      <div class="card-block">
-        <c8y-form-group>
-          <form class="form-inline">
-            <div class="c8y-select-wrapper button-bottom-margin">
-              <select
-                class="form-control"
-                style="width: 180px"
-                [(ngModel)]="filterStatusLog.eventType"
-                name="eventType"
-              >
-                <option [value]="'ALL'">ALL types</option>
-                <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">
-                  Connector lifecycle
-                </option>
-                <option
-                  [value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE"
-                >
-                  Subscription events
-                </option>
-                <option
-                  [value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE"
-                >
-                  Notification lifecycle
-                </option>
-              </select>
-            </div>
-            <div class="c8y-select-wrapper button-bottom-margin m-l-16">
-              <select
-                class="form-control"
-                style="width: 180px"
-                [(ngModel)]="filterStatusLog.connectorIdent"
-                name="connectorIdent"
-              >
-                <option [value]="'ALL'">ALL configurations</option>
-                <option [value]="t.ident" *ngFor="let t of configurations">
-                  {{ t.name }}
-                </option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              (click)="updateStatusLogs()"
-              class="btn btn-default btn-sm m-b-8 m-l-16"
-            >
-              Update
-            </button>
-          </form>
-        </c8y-form-group>
-        <div style="height: 340px; overflow: auto">
-          <!-- <c8y-ui-empty-state *ngIf="(statusLogs)?.length === 0"
-            [icon]="'event'"
-            [title]="'No logs found.' | translate"
-            [horizontal]="true"
-          ></c8y-ui-empty-state> -->
-          <div class="timeline-list list-condensed">
-            <div
-              class="timeline-list-item d-flex"
-              *ngFor="let event of statusLogs"
-            >
-              <small class="timeline-item-date">
-                {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
-              </small>
-              <div class="timeline-item-content d-flex flex-wrap">
-                <div class="list-item-icon">
-                  <i c8yIcon="c8y-events"></i>
-                </div>
-                <div class="list-item-body">
-                  <div class="row">
-                    <div class="col-lg-12">
-                      <label class="small" translate>Status&nbsp;</label>
-                      <span>{{ event.status }}</span>
-                      <label class="small" translate
-                        >&nbsp;&nbsp;Connector&nbsp;</label
-                      >
-                      <span>{{ event.connectorName }}</span>
-                      <br />
-                      <span>{{ event.message }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <div *ngIf="feature?.userHasMappingAdminRole">
+		<div class="legend form-block col-lg-12">Connector Logs</div>
+		<div class="card-block">
+		  <c8y-form-group>
+			<form class="form-inline">
+			  <div class="c8y-select-wrapper button-bottom-margin">
+				<select
+				  class="form-control"
+				  style="width: 180px"
+				  [(ngModel)]="filterStatusLog.eventType"
+				  name="eventType"
+				>
+				  <option [value]="'ALL'">ALL types</option>
+				  <option [value]="StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE">
+					Connector lifecycle
+				  </option>
+				  <option
+					[value]="StatusEventTypes.STATUS_SUBSCRIPTION_EVENT_TYPE"
+				  >
+					Subscription events
+				  </option>
+				  <option
+					[value]="StatusEventTypes.STATUS_NOTIFICATION_EVENT_TYPE"
+				  >
+					Notification lifecycle
+				  </option>
+				</select>
+			  </div>
+			  <div class="c8y-select-wrapper button-bottom-margin m-l-16">
+				<select
+				  class="form-control"
+				  style="width: 180px"
+				  [(ngModel)]="filterStatusLog.connectorIdent"
+				  name="connectorIdent"
+				>
+				  <option [value]="'ALL'">ALL configurations</option>
+				  <option [value]="t.ident" *ngFor="let t of configurations">
+					{{ t.name }}
+				  </option>
+				</select>
+			  </div>
+			  <button
+				type="submit"
+				(click)="updateStatusLogs()"
+				class="btn btn-default btn-sm m-b-8 m-l-16"
+			  >
+				Update
+			  </button>
+			</form>
+		  </c8y-form-group>
+		  <div style="height: 340px; overflow: auto">
+			<!-- <c8y-ui-empty-state *ngIf="(statusLogs)?.length === 0"
+			  [icon]="'event'"
+			  [title]="'No logs found.' | translate"
+			  [horizontal]="true"
+			></c8y-ui-empty-state> -->
+			<div class="timeline-list list-condensed">
+			  <div
+				class="timeline-list-item d-flex"
+				*ngFor="let event of statusLogs"
+			  >
+				<small class="timeline-item-date">
+				  {{ event.date | date: 'dd.MM.yy hh:mm:ss' }}
+				</small>
+				<div class="timeline-item-content d-flex flex-wrap">
+				  <div class="list-item-icon">
+					<i c8yIcon="c8y-events"></i>
+				  </div>
+				  <div class="list-item-body">
+					<div class="row">
+					  <div class="col-lg-12">
+						<label class="small" translate>Status&nbsp;</label>
+						<span>{{ event.status }}</span>
+						<label class="small" translate
+						  >&nbsp;&nbsp;Connector&nbsp;</label
+						>
+						<span>{{ event.connectorName }}</span>
+						<br />
+						<span>{{ event.message }}</span>
+					  </div>
+					</div>
+				  </div>
+				</div>
+			  </div>
+			</div>
+		  </div>
+		</div>
+			</div>
+	  </div>
   </div>
-  <div class="col-lg-6">
+  <div class="col-lg-6" *ngIf="feature?.userHasMappingAdminRole">
     <div class="card">
       <div class="card-header p-l-32 separator j-c-between">
         <h4 class="card-title">
