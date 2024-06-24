@@ -47,7 +47,7 @@ import {
   Observable,
   Subject
 } from 'rxjs';
-import { filter, map, scan, switchMap, tap } from 'rxjs/operators';
+import { filter, map, scan, switchMap } from 'rxjs/operators';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
@@ -123,7 +123,7 @@ export class BrokerConfigurationService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    //console.log('Stop subscriptions:', this._agentId);
+    // console.log('Stop subscriptions:', this._agentId);
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
@@ -182,12 +182,12 @@ export class BrokerConfigurationService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    //console.log(
+    // console.log(
     //  'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
     //  this._agentId
-    //);
+    // );
     const sourceList$ = this.triggerLogs$.pipe(
-      //tap((x) => console.log('TriggerLogs In', x)),
+      // tap((x) => console.log('TriggerLogs In', x)),
       switchMap(() => {
         const filter = {
           pageSize: 5,
@@ -245,7 +245,7 @@ export class BrokerConfigurationService {
       scan((acc, val) => {
         let sortedAcc;
         if (val[0]?.type == 'reset') {
-          //console.log('Reset loaded logs!');
+          // console.log('Reset loaded logs!');
           sortedAcc = [];
         } else {
           sortedAcc = val.concat(acc);
@@ -260,7 +260,7 @@ export class BrokerConfigurationService {
     if (!this._agentId) {
       this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
     }
-    //console.log('Started subscriptions:', this._agentId);
+    // console.log('Started subscriptions:', this._agentId);
 
     // subscribe to event stream
     this.subscriptionEvents = this.realtime.subscribe(

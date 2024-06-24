@@ -26,20 +26,23 @@ import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
+import { DisableDirective } from './disable.directive';
 
 @NgModule({
   declarations: [
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
-    CapitalizeCasePipe
+    CapitalizeCasePipe,
+	DisableDirective
   ],
   imports: [CoreModule, BsDatepickerModule, PaginationModule],
   exports: [
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
-    CapitalizeCasePipe
+    CapitalizeCasePipe,
+	DisableDirective
   ]
 })
 export class SharedModule {}

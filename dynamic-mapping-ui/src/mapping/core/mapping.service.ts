@@ -58,6 +58,7 @@ import {
   SubstituteValue
 } from '../processor/processor.model';
 import { C8YAPISubscription } from '../shared/mapping.model';
+import { AlertService } from '@c8y/ngx-components';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -67,7 +68,8 @@ export class MappingService {
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
-    private client: FetchClient
+    private client: FetchClient,
+	private alertService: AlertService
   ) {
     this.queriesUtil = new QueriesUtil();
     this.reloadInbound$ = this.sharedService.reloadInbound$;
@@ -88,6 +90,10 @@ export class MappingService {
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
+	const conf = await this.brokerConfigurationService.getConnectorConfigurations();
+	if (parameter.active && conf.length == 0) {
+		this.alertService.warning('Mapping was activated, but no connector is configured. Please add connector on the Connector tab!');
+	}
     await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
