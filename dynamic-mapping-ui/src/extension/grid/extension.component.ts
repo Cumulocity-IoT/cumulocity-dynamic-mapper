@@ -57,7 +57,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature.userHasMappingAdminRole) {
       this.alertService.warning(
-        "The configuration on this tab is not editable, as you don't have ADMIN permissions. Please assign ADMIN permissions to your user."
+        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
       );
     }
     this.extensions$ = this.reload$.pipe(
