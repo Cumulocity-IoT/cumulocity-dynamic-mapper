@@ -15,7 +15,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_02.png)'
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
@@ -68,8 +68,8 @@ export default {
         to: 'image/Generic_Mapping_MappingTemplate.png'
       },
       {
-        from: '../resources/image/DM_App-Icon_02.png',
-        to: 'image/DM_App-Icon_02.png'
+        from: '../resources/image/DM_App-Icon_03.png',
+        to: 'image/DM_App-Icon_03.png'
       }
     ],
     federation: [
