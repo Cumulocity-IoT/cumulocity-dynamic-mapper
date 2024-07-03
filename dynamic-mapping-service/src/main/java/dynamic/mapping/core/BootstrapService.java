@@ -1,13 +1,12 @@
 package dynamic.mapping.core;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+import dynamic.mapping.configuration.ConnectorConfiguration;
+import dynamic.mapping.configuration.ConnectorConfigurationComponent;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -15,10 +14,12 @@ import dynamic.mapping.connector.core.client.ConnectorType;
 import dynamic.mapping.connector.core.registry.ConnectorRegistry;
 import dynamic.mapping.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapping.connector.kafka.KafkaClient;
+import dynamic.mapping.connector.mqtt.MQTTClient;
+import dynamic.mapping.connector.mqtt.MQTTServiceClient;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.processor.inbound.AsynchronousDispatcherInbound;
 import dynamic.mapping.processor.outbound.AsynchronousDispatcherOutbound;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,17 +27,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Service;
 
-import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
-import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
-import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-
-import lombok.extern.slf4j.Slf4j;
-import dynamic.mapping.configuration.ConnectorConfiguration;
-import dynamic.mapping.configuration.ConnectorConfigurationComponent;
-import dynamic.mapping.connector.mqtt.MQTTClient;
-import dynamic.mapping.connector.mqtt.MQTTServiceClient;
-
 import javax.annotation.PreDestroy;
+import java.io.IOException;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
 
 @Service
 @EnableScheduling
@@ -76,7 +71,7 @@ public class BootstrapService {
     public void destroy() {
         log.info("Shutting down mapper...");
         subscriptionsService.runForEachTenant(() -> {
-            String tenant =  subscriptionsService.getTenant();
+            String tenant = subscriptionsService.getTenant();
             configurationRegistry.getNotificationSubscriber().disconnect(tenant);
         });
     }
@@ -136,14 +131,12 @@ public class BootstrapService {
                         .getConnectorConfigurations(tenant);
                 // For each connector configuration create a new instance of the connector
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    Thread.startVirtualThread(() -> {
-                        try {
-                            initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
-                                    tenant);
-                        } catch (Exception e) {
-                            log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
-                        }
-                    });
+                    try {
+                        initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
+                                tenant);
+                    } catch (Exception e) {
+                        log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -151,10 +144,9 @@ public class BootstrapService {
         }
 
 
-
         log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, serviceConfiguration.isOutboundMappingEnabled());
         if (serviceConfiguration.isOutboundMappingEnabled()) {
-            if(!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
+            if (!configurationRegistry.getNotificationSubscriber().isNotificationServiceAvailable(tenant)) {
                 try {
                     serviceConfiguration.setOutboundMappingEnabled(false);
                     serviceConfigurationComponent.saveServiceConfiguration(serviceConfiguration);
@@ -162,17 +154,13 @@ public class BootstrapService {
                     log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
                 }
             } else {
-                Thread.startVirtualThread(() -> {
-                    subscriptionsService.runForTenant(tenant, () -> {
-                        configurationRegistry.getNotificationSubscriber().initDeviceClient();
-                    });
-                });
+                configurationRegistry.getNotificationSubscriber().initDeviceClient();
             }
         }
     }
 
     public AConnectorClient initializeConnectorByConfiguration(ConnectorConfiguration connectorConfiguration,
-            ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
+                                                               ServiceConfiguration serviceConfiguration, String tenant) throws ConnectorRegistryException {
         AConnectorClient connectorClient = null;
         try {
             connectorClient = configurationRegistry.createConnectorClient(connectorConfiguration,

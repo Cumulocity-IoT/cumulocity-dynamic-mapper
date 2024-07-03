@@ -153,6 +153,7 @@ public class C8YNotificationSubscriber {
             deviceSubList = getNotificationSubscriptionForDevices(null, DEVICE_SUBSCRIPTION).get();
             log.info("Tenant {} - Subscribing to devices {}", tenant, deviceSubList);
         } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
         // When one subscription exists, connect...
@@ -334,8 +335,8 @@ public class C8YNotificationSubscriber {
         }
         filter = filter.byContext("mo");
         NotificationSubscriptionFilter finalFilter = filter;
-        Callable<List<NotificationSubscriptionRepresentation>> callableTask = () -> subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
-            String tenant = subscriptionsService.getTenant();
+        String tenant = subscriptionsService.getTenant();
+        Callable<List<NotificationSubscriptionRepresentation>> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
             List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                     .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
@@ -577,9 +578,7 @@ public class C8YNotificationSubscriber {
                                 if (deviceWSStatusCode.get(tenant) != null &&  deviceWSStatusCode.get(tenant) == 401
                                         || deviceClient.getReadyState().equals(ReadyState.NOT_YET_CONNECTED)) {
                                     log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
-                                    subscriptionsService.runForEachTenant(() -> {
-                                        initDeviceClient();
-                                    });
+                                    initDeviceClient();
                                 } else if (deviceClient.getReadyState().equals(ReadyState.CLOSING)
                                         || deviceClient.getReadyState().equals(ReadyState.CLOSED)) {
                                     log.info("Tenant {} - Trying to reconnect ws device client... ", tenant);
