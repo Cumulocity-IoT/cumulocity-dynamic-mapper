@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.configuration.ServiceConfigurationComponent;
 import dynamic.mapping.connector.core.client.AConnectorClient;
@@ -135,15 +136,21 @@ public class BootstrapService {
                         .getConnectorConfigurations(tenant);
                 // For each connector configuration create a new instance of the connector
                 for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                    initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
-                            tenant);
+                    Thread.startVirtualThread(() -> {
+                        try {
+                            initializeConnectorByConfiguration(connectorConfiguration, serviceConfiguration,
+                                    tenant);
+                        } catch (Exception e) {
+                            log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
+                        }
+                    });
                 }
             }
-
         } catch (Exception e) {
             log.error("Tenant {} - Error on initializing connectors: ", tenant, e);
-            // mqttClient.submitConnect();
         }
+
+
 
         log.info("Tenant {} - OutputMapping Config Enabled: {}", tenant, serviceConfiguration.isOutboundMappingEnabled());
         if (serviceConfiguration.isOutboundMappingEnabled()) {
@@ -155,7 +162,11 @@ public class BootstrapService {
                     log.error("Tenant {} - Error saving service configuration: {}", tenant, e.getMessage());
                 }
             } else {
-                configurationRegistry.getNotificationSubscriber().initDeviceClient();
+                Thread.startVirtualThread(() -> {
+                    subscriptionsService.runForTenant(tenant, () -> {
+                        configurationRegistry.getNotificationSubscriber().initDeviceClient();
+                    });
+                });
             }
         }
     }

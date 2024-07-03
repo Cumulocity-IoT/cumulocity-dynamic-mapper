@@ -270,7 +270,7 @@ public class C8YNotificationSubscriber {
         return notificationSubscriptionRepresentation;
     }
 
-    public CompletableFuture<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
             ManagedObjectRepresentation mor,
             API api) throws ExecutionException, InterruptedException {
         /* Connect to all devices */
@@ -278,11 +278,10 @@ public class C8YNotificationSubscriber {
         String deviceName = mor.getName();
         log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
                 mor.getId().getValue());
-        CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
-        subscriptionsService.runForTenant(tenant, () -> {
+
+        Callable<NotificationSubscriptionRepresentation> callableTask = () -> subscriptionsService.callForTenant(tenant, () -> {
             Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
             NotificationSubscriptionRepresentation notification = createDeviceSubscription(mor, api);
-            notificationFut.complete(notification);
             if (deviceWSStatusCode.get(tenant) == null
                     || (deviceWSStatusCode.get(tenant) != null && deviceWSStatusCode.get(tenant) != 200)) {
                 log.info("Tenant {} - Device Subscription not connected yet. Will connect...", tenant);
@@ -314,11 +313,12 @@ public class C8YNotificationSubscriber {
             }
             ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant, mor.getId(), null, null);
             activatePushConnectivityStatus(tenant, extId.getExternalId());
+            return notification;
         });
-        return notificationFut;
+        return cachedThreadPool.submit(callableTask);
     }
 
-    public CompletableFuture<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
+    public Future<List<NotificationSubscriptionRepresentation>> getNotificationSubscriptionForDevices(
             String deviceId,
             String deviceSubscription) {
         NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter();
@@ -334,8 +334,7 @@ public class C8YNotificationSubscriber {
         }
         filter = filter.byContext("mo");
         NotificationSubscriptionFilter finalFilter = filter;
-        CompletableFuture<List<NotificationSubscriptionRepresentation>> deviceSubListFut = new CompletableFuture<>();
-        subscriptionsService.runForTenant(subscriptionsService.getTenant(), () -> {
+        Callable<List<NotificationSubscriptionRepresentation>> callableTask = () -> subscriptionsService.callForTenant(subscriptionsService.getTenant(), () -> {
             String tenant = subscriptionsService.getTenant();
             List<NotificationSubscriptionRepresentation> deviceSubList = new ArrayList<>();
             Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
@@ -349,10 +348,9 @@ public class C8YNotificationSubscriber {
                     deviceSubList.add(notificationSubscriptionRepresentation);
                 }
             }
-            deviceSubListFut.complete(deviceSubList);
+            return deviceSubList;
         });
-
-        return deviceSubListFut;
+        return cachedThreadPool.submit(callableTask);
     }
 
     public C8YNotificationSubscription getDeviceSubscriptions(String tenant, String deviceId,
