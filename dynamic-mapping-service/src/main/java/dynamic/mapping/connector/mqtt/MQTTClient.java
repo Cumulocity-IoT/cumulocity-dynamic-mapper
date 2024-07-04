@@ -223,17 +223,12 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        boolean useWSS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useWSS", false);
+        //boolean useWSS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useWSS", false);
 
         Mqtt3ClientBuilder partialBuilder;
-        if (useWSS) {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig()
-                    .serverPort(mqttPort)
+        partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
                     .identifier(clientId + additionalSubscriptionIdTest);
-        } else {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-                    .identifier(clientId + additionalSubscriptionIdTest);
-        }
+
 
         // is username & password used
         if (!StringUtils.isEmpty(user)) {
@@ -255,10 +250,13 @@ public class MQTTClient extends AConnectorClient {
 
         // websocket configuration
         if ("ws://".equals(protocol) || "wss://".equals(protocol)) {
+            partialBuilder = partialBuilder.webSocketWithDefaultConfig();
             String serverPath = (String) connectorConfiguration.getProperties().get("serverPath");
-            partialBuilder = partialBuilder.webSocketConfig()
-                    .serverPath(serverPath)
-                    .applyWebSocketConfig();
+            if (serverPath != null) {
+                partialBuilder = partialBuilder.webSocketConfig()
+                        .serverPath(serverPath)
+                        .applyWebSocketConfig();
+            }
             log.debug("Tenant {} - Using websocket: {}", tenant, serverPath);
         }
 
