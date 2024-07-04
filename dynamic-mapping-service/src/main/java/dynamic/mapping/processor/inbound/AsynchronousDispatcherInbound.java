@@ -25,6 +25,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.configuration.ServiceConfiguration;
 import dynamic.mapping.connector.core.callback.ConnectorMessage;
@@ -45,6 +49,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AsynchronousDispatcherInbound
@@ -78,14 +83,19 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
     private ConfigurationRegistry configurationRegistry;
 
+    private Counter inboundMessageCounter;
+
+
+
     public AsynchronousDispatcherInbound(ConfigurationRegistry configurationRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.cachedThreadPool = configurationRegistry.getCachedThreadPool();
         this.mappingComponent = configurationRegistry.getMappingComponent();
-        ;
         this.configurationRegistry = configurationRegistry;
     }
+
+
 
     public static class MappingInboundTask<T> implements Callable<List<ProcessingContext<?>>> {
         List<Mapping> resolvedMappings;
@@ -95,6 +105,9 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
         C8YAgent c8yAgent;
         ObjectMapper objectMapper;
         ServiceConfiguration serviceConfiguration;
+        Timer inboundProcessingTimer;
+        Counter inboundProcessingCounter;
+
 
         public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
                 ConnectorMessage message) {
@@ -106,10 +119,14 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
             this.connectorMessage = message;
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(message.getTenant());
+            this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time").tag("tenant", connectorMessage.getTenant()).tag("connector", connectorMessage.getConnectorIdent()).description("Processing time of inbound messages").register(Metrics.globalRegistry);
+            this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total").tag("tenant", connectorMessage.getTenant()).description("Total number of inbound messages").tag("connector", connectorMessage.getConnectorIdent()).register(Metrics.globalRegistry);
+
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
+            long startTime = System.nanoTime();
             String tenant = connectorMessage.getTenant();
             String topic = connectorMessage.getTopic();
             boolean sendPayload = connectorMessage.isSendPayload();
@@ -142,6 +159,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 
                     if (processor != null) {
                         try {
+                            inboundProcessingCounter.increment();
                             processor.deserializePayload(context, connectorMessage);
                             if (serviceConfiguration.logPayload || mapping.debug) {
                                 log.info("Tenant {} - New message on topic: '{}', wrapped message: {}", tenant,
@@ -203,6 +221,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
                     processingResult.add(context);
                 }
             });
+            inboundProcessingTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
             return processingResult;
         }
     }
