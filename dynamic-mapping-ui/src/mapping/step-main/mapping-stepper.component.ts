@@ -583,6 +583,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async onStepChange(event): Promise<void> {
     // ('OnStepChange', event);
   }
@@ -600,12 +601,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //  isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
       //  this.mapping.substitutions.length
       // );
-      // console.log(
-      //  'Templates from mapping:',
-      //  this.mapping.target,
-      //  this.mapping.source,
-      //  this.mapping
-      // );
+      console.log(
+       'Templates from mapping:',
+       this.mapping.target,
+       this.mapping.source,
+       this.mapping
+      );
       this.expandTemplates();
       this.extensions =
         (await this.brokerConfigurationService.getProcessorExtensions()) as any;
@@ -630,8 +631,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         numberSnooped: numberSnooped
       };
       if (
-        this.mapping.snoopStatus == SnoopStatus.ENABLED &&
-        numberSnooped == 0
+        this.mapping.snoopStatus == SnoopStatus.ENABLED // && numberSnooped == 0
       ) {
         // console.log('Snooping not yet started ...');
         const modalRef: BsModalRef = this.bsModalService.show(

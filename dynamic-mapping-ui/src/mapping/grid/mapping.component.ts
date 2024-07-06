@@ -250,6 +250,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
     });
+	this.mappingService.startChangedMappingEvents();
   }
 
   getColumnsMappings(): Column[] {
@@ -311,7 +312,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
-        header: 'Test/Debug/Snoop',
+        // header: 'Test/Debug/Snoop',
+        header: 'Debug/Snoop',
         name: 'tested',
         path: 'mapping',
         filterable: false,
@@ -803,6 +805,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+	this.mappingService.stopChangedMappingEvents();
   }
   refreshMappings() {
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);

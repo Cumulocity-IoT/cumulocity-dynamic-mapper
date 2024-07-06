@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -492,6 +493,10 @@ public class MappingComponent {
 				updateMapping(tenant, mapping, true, false);
 			}
 
+			configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+					C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+					null);
 		}
 		// reset dirtySet
 		dirtyMappings.put(tenant, new HashSet<Mapping>());

@@ -66,7 +66,7 @@ export interface MappingEnriched {
   deployedToConnectors?: ConnectorConfiguration[];
 }
 
-export interface MappingSubscribed {
+export interface MappingDeployed {
   ident: string;
   deployedToConnectors?: ConnectorConfiguration[];
 }

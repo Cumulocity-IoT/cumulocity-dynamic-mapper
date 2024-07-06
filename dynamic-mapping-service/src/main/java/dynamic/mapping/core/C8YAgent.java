@@ -142,6 +142,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar {
 
     public static final String STATUS_SUBSCRIPTION_EVENT_TYPE = "d11r_subscriptionEvent";
     public static final String STATUS_CONNECTOR_EVENT_TYPE = "d11r_connectorStatusEvent";
+    public static final String STATUS_MAPPING_CHANGED_EVENT_TYPE = "d11r_mappingChangedEvent";
     public static final String STATUS_NOTIFICATION_EVENT_TYPE = "d11r_notificationStatusEvent";
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.properties";

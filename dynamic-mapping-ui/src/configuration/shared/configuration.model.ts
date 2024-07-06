@@ -103,6 +103,7 @@ export enum Operation {
 
 export enum StatusEventTypes {
   STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
+  STATUS_MAPPING_CHANGED_EVENT_TYPE = 'd11r_mappingChangedEvent',
   STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
   STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
   ALL = 'ALL'

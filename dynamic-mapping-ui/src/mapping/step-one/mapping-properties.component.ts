@@ -30,7 +30,13 @@ import {
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
-import { BehaviorSubject } from 'rxjs';
+import {
+  BehaviorSubject,
+  distinctUntilChanged,
+  skip,
+  startWith,
+  tap
+} from 'rxjs';
 import { BrokerConfigurationService } from '../../configuration';
 import {
   API,
@@ -89,17 +95,17 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
 
-    //console.log(
+    // console.log(
     //  'Mapping to be updated:',
     //  this.mapping,
     //  this.stepperConfiguration
-    //);
+    // );
     const numberSnooped = this.mapping.snoopedTemplates
       ? this.mapping.snoopedTemplates.length
       : 0;
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success(
-        `Already ${numberSnooped} templates exist. In the next step you an stop the snooping process and use the templates. Click on Next`,
+        `Already ${numberSnooped} templates exist. To stop the snooping process click on Next and and use the snooped templates.`,
         `The recording process is in state ${this.mapping.snoopStatus}.`
       );
     }
@@ -289,14 +295,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               }),
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               change: (field: FormlyFieldConfig, event?: any) => {
-                //console.log(
+                // console.log(
                 //  'Changes:',
                 //  field,
                 //  event,
                 //  this.mapping,
                 //  this.propertyFormly.valid
-                //);
+                // );
                 this.onTargetAPIChanged(
                   this.propertyFormly.get('targetAPI').value
                 );
@@ -381,27 +388,84 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               required: true
             }
           },
+          //   {
+          //     className: 'col-lg-6',
+          //     key: 'snoopStatus',
+          //     type: 'switch',
+          //     wrappers: ['c8y-form-field'],
+          //     templateOptions: {
+          //       label: 'Snoop payload',
+          //       switchMode: true,
+          //       disabled:
+          //         this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          //       description:
+          //         'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.'
+          //     }
+          //   },
           {
             className: 'col-lg-6',
-            key: 'snoopStatus',
-            type: 'select',
+            key: 'isSnoopStatus',
             wrappers: ['c8y-form-field'],
+            type: 'switch',
             templateOptions: {
-              label: 'Snoop payload',
-              options: Object.keys(SnoopStatus).map((key) => {
-                return {
-                  label: key,
-                  value: key,
-                  disabled: key != 'ENABLED' && key != 'NONE'
-                };
-              }),
+              label: 'Snoop Status',
+              switchMode: true,
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.',
-              required: true
+                'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.'
+            },
+            hooks: {
+              onInit: (field: FormlyFieldConfig) => {
+                // Set initial value based on the model
+                field.formControl.setValue(
+                  field.model.snoopStatus === SnoopStatus.ENABLED ||
+                    field.model.snoopStatus === SnoopStatus.STARTED
+                );
+                field.formControl.valueChanges
+                  .pipe(
+                    startWith(field.formControl.value),
+                    distinctUntilChanged(),
+                    skip(1),
+                    tap((value) => {
+                      field.model.snoopStatus = value
+                        ? SnoopStatus.ENABLED
+                        : SnoopStatus.NONE;
+                    })
+                  )
+                  .subscribe();
+              }
             }
+            // expressionProperties: {
+            //   // 'model.snoopStatus': 'model.snoopStatus ? "ENABLED" : "NONE"'
+            //   // 'model.snoopStatus':  'model.snoopStatus ? SnoopStatus.NONE : SnoopStatus.NONE'
+            //   'model.snoopStatus': (model) => {
+            // 	console.log('Hier', model);
+            //     return model.snoopStatus ? true : true;
+            //   }
+            // }
           }
+          //   {
+          //     className: 'col-lg-6',
+          //     key: 'snoopStatus',
+          //     type: 'select',
+          //     wrappers: ['c8y-form-field'],
+          //     templateOptions: {
+          //       label: 'Snoop payload',
+          //       options: Object.keys(SnoopStatus).map((key) => {
+          //         return {
+          //           label: key,
+          //           value: key,
+          //           disabled: key != 'ENABLED' && key != 'NONE'
+          //         };
+          //       }),
+          //       disabled:
+          //         this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          //       description:
+          //         'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.',
+          //       required: true
+          //     }
+          //   }
         ]
       },
       {
@@ -436,28 +500,28 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           }
         ]
       },
-    //   {
-    //     fieldGroupClassName: 'row',
-    //     fieldGroup: [
-    //       {
-    //         className: 'col-lg-6',
-    //         key: 'messageContextKeys',
-    //         type: 'input',
-    //         validators: {
-    //             messageContextKeys: {
-    //               expression: (c: AbstractControl) => /(^[a-zA-Z][a-zA-Z0-9_]*([ ]*,[ ]*[a-zA-Z][a-zA-Z0-9_]*)*$|^$)/.test(c.value),
-    //               message: (error: any, field: FormlyFieldConfig) => `"${field.formControl.value}" is not a valid list of keys`,
-    //             },
-    //           },
-    //         templateOptions: {
-    //           label: 'Message context keys',
-    //           disabled:
-    //             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-    //             description: 'Comma separated list of names for keys, e.g. partition keys for Kafka',
-    //         },
-    //       }
-    //     ]
-    //   }
+      //   {
+      //     fieldGroupClassName: 'row',
+      //     fieldGroup: [
+      //       {
+      //         className: 'col-lg-6',
+      //         key: 'messageContextKeys',
+      //         type: 'input',
+      //         validators: {
+      //             messageContextKeys: {
+      //               expression: (c: AbstractControl) => /(^[a-zA-Z][a-zA-Z0-9_]*([ ]*,[ ]*[a-zA-Z][a-zA-Z0-9_]*)*$|^$)/.test(c.value),
+      //               message: (error: any, field: FormlyFieldConfig) => `"${field.formControl.value}" is not a valid list of keys`,
+      //             },
+      //           },
+      //         templateOptions: {
+      //           label: 'Message context keys',
+      //           disabled:
+      //             this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+      //             description: 'Comma separated list of names for keys, e.g. partition keys for Kafka',
+      //         },
+      //       }
+      //     ]
+      //   }
       {
         fieldGroupClassName: 'row',
         fieldGroup: [
@@ -471,8 +535,9 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               label: 'Supports key message context',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-                description: 'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
-            },
+              description:
+                'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.'
+            }
           }
         ]
       }

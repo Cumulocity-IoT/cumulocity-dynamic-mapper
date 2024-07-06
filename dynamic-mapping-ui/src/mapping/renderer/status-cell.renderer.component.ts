@@ -25,7 +25,7 @@ import { SnoopStatus } from '../../shared';
 @Component({
   template: `
     <div class="d-inline-flex">
-      <div class="c8y-realtime" title="Tested">
+      <!-- <div class="c8y-realtime" title="Tested">
         <span
           class="c8y-pulse animated-slow pulse"
           [ngClass]="{
@@ -33,7 +33,7 @@ import { SnoopStatus } from '../../shared';
             inactive: !context.value.tested
           }"
         ></span>
-      </div>
+      </div> -->
       <div class="c8y-realtime" title="Debug">
         <span
           class="c8y-pulse animated-slow  pulse"
@@ -43,12 +43,11 @@ import { SnoopStatus } from '../../shared';
           }"
         ></span>
       </div>
-      <div class="c8y-realtime" title="Snooping">
+      <div class="c8y-realtime" [title]="'Snooping:' + context.value.snoopStatus">
         <span
-          class="c8y-pulse animated-slow  pulse"
+          class="c8y-pulse animated-slow pulse"
           [ngClass]="{
             active:
-              context.value.snoopStatus === 'ENABLED' ||
               context.value.snoopStatus === 'STARTED',
             inactive:
               context.value.snoopStatus === 'NONE' ||
