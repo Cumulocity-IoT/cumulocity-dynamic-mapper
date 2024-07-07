@@ -54,6 +54,7 @@ import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.ResolveException;
+import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.ValidationError;
 
 @Slf4j
@@ -463,6 +464,32 @@ public class MappingComponent {
 		log.info("Tenant {} - Setting debug: {} got mapping: {}", tenant, id, debug);
 		Mapping mapping = getMapping(tenant, id);
 		mapping.setDebug(debug);
+		if (Direction.INBOUND.equals(mapping.direction)) {
+			// step 2. retrieve collected snoopedTemplates
+			mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+		}
+		// step 3. update mapping in inventory
+		// don't validate mapping when setting active = false, this allows to remove
+		// mappings that are not working
+		updateMapping(tenant, mapping, true, true);
+		// step 4. delete mapping from update cache
+		removeDirtyMapping(tenant, mapping);
+		// step 5. update caches
+		if (Direction.OUTBOUND.equals(mapping.direction)) {
+			rebuildMappingOutboundCache(tenant);
+		} else {
+			deleteFromCacheMappingInbound(tenant, mapping);
+			addToCacheMappingInbound(tenant, mapping);
+			cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+		}
+	}
+
+
+	public void setSnoopStatusMapping(String tenant, String id, SnoopStatus snoop) throws Exception {
+		// step 1. update debug for mapping
+		log.info("Tenant {} - Setting snoop: {} got mapping: {}", tenant, id, snoop);
+		Mapping mapping = getMapping(tenant, id);
+		mapping.setSnoopStatus(snoop);
 		if (Direction.INBOUND.equals(mapping.direction)) {
 			// step 2. retrieve collected snoopedTemplates
 			mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
