@@ -636,9 +636,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   async onCommitMapping(mapping: Mapping) {
     // test if new/updated mapping was committed or if cancel
     mapping.lastUpdate = Date.now();
-
     // ('Changed mapping:', mapping);
-
     if (
       mapping.direction == Direction.INBOUND ||
       // test if we can attach multiple outbound mappings to the same filterOutbound
@@ -689,8 +687,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.showConfigMapping = true;
-    this.showSnoopingMapping = true;
+    this.showConfigMapping = false;
+    this.showSnoopingMapping = false;
   }
 
   async onCommitSubscriptions(deviceList: IIdentified[]) {
