@@ -99,7 +99,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       : 0;
     if (this.mapping.snoopStatus == SnoopStatus.STARTED && numberSnooped > 0) {
       this.alertService.success(
-        `Already ${numberSnooped} templates exist. To stop the snooping process click on Next and and use the snooped templates.`,
+        `Already ${numberSnooped} templates exist. To stop the snooping process click on Cancel, select the respective mapping in the list of all mappings and choose the action Toogle Snooping.`,
         `The recording process is in state ${this.mapping.snoopStatus}.`
       );
     }
