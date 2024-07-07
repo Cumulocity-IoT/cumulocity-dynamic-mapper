@@ -613,7 +613,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }): Promise<void> {
     // ('OnNextStep', event.step.label, this.mapping);
     this.step = event.step.label;
-    if (this.step == 'Define topic') {
+    if (this.step == 'Properties mapping') {
       this.templateModel.mapping = this.mapping;
       // console.log(
       //  'Populate jsonPath if wildcard:',
