@@ -68,7 +68,7 @@ import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
+import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 
@@ -84,6 +84,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   showConfigMapping: boolean = false;
   showConfigSubscription: boolean = false;
+  showSnoopingMapping: boolean = false;
 
   isConnectionToMQTTEstablished: boolean;
 
@@ -92,6 +93,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingToUpdate: Mapping;
   subscription: C8YAPISubscription;
   devices: IIdentified[] = [];
+  snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
 
   stepperConfiguration: StepperConfiguration = {
@@ -209,16 +211,22 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.activateMapping.bind(this)
       },
       {
+        type: 'DEBUG',
+        text: 'Toggle Debugging',
+        icon: 'bug1',
+        callback: this.toggleDebugMapping.bind(this)
+      },
+      {
+        type: 'SNOOPING',
+        text: 'Toogle Snooping',
+        icon: 'mic',
+        callback: this.toggleSnoopStatusMapping.bind(this)
+      },
+      {
         type: 'EXPORT',
         text: 'Export Mapping',
         icon: 'export',
         callback: this.exportSingle.bind(this)
-      },
-      {
-        type: 'DEBUG',
-        text: 'Toggle Debugging',
-        icon: 'bug1',
-        callback: this.debugMapping.bind(this)
       }
     );
     this.bulkActionControls.push(
@@ -250,7 +258,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
     });
-	this.mappingService.startChangedMappingEvents();
+    this.mappingService.startChangedMappingEvents();
   }
 
   getColumnsMappings(): Column[] {
@@ -287,22 +295,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: APIRendererComponent,
         gridTrackSize: '7%'
       },
-      // {
-      //   header: 'Sample payload',
-      //   name: 'source',
-      //   path: 'source',
-      //   filterable: true,
-      //   sortable: false,
-      //   cellRendererComponent: TemplateRendererComponent
-      // },
-      // {
-      //   header: 'Target',
-      //   name: 'target',
-      //   path: 'target',
-      //   filterable: true,
-      //   sortable: false,
-      //   cellRendererComponent: TemplateRendererComponent
-      // },
       {
         header: 'Active for connectors',
         name: 'connectors',
@@ -320,7 +312,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         sortable: false,
         cellRendererComponent: StatusRendererComponent,
         cellCSSClassName: 'text-align-center',
-        gridTrackSize: '7%'
+        gridTrackSize: '10%'
       },
       {
         header: 'QOS',
@@ -352,7 +344,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     modalRef.content.closeSubject.subscribe((result) => {
       // console.log('Was selected:', result);
       if (result) {
-        this.mappingType = result;
+        if (result.snoop) {
+          this.snoopStatus = SnoopStatus.ENABLED;
+        }
+        this.mappingType = result.mappingType;
         this.addMapping();
       }
       modalRef.hide();
@@ -399,7 +394,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        snoopStatus: SnoopStatus.NONE,
+        snoopStatus: this.snoopStatus,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -425,7 +420,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingType: this.mappingType,
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
-        snoopStatus: SnoopStatus.NONE,
+        snoopStatus: this.snoopStatus,
         snoopedTemplates: [],
         direction: this.stepperConfiguration.direction,
         autoAckOperation: true,
@@ -455,7 +450,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
 
     this.mappingToUpdate = mapping;
-    this.showConfigMapping = true;
+    if (
+      mapping.snoopStatus === SnoopStatus.NONE ||
+      mapping.snoopStatus === SnoopStatus.STOPPED
+    ) {
+      this.showConfigMapping = true;
+    } else {
+      this.showSnoopingMapping = true;
+    }
   }
 
   async deleteSubscription(device: IIdentified) {
@@ -501,7 +503,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
     // console.log('Editing mapping', this.mappingToUpdate);
-    this.showConfigMapping = true;
+    if (
+      mapping.snoopStatus === SnoopStatus.NONE ||
+      mapping.snoopStatus === SnoopStatus.STOPPED
+    ) {
+      this.showConfigMapping = true;
+    } else {
+      this.showSnoopingMapping = true;
+    }
   }
 
   copyMapping(m: MappingEnriched) {
@@ -526,7 +535,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     this.mappingToUpdate.active = false;
     // console.log('Copying mapping', this.mappingToUpdate);
-    this.showConfigMapping = true;
+    if (
+      mapping.snoopStatus === SnoopStatus.NONE ||
+      mapping.snoopStatus === SnoopStatus.STOPPED
+    ) {
+      this.showConfigMapping = true;
+    } else {
+      this.showSnoopingMapping = true;
+    }
   }
 
   async activateMapping(m: MappingEnriched) {
@@ -539,13 +555,33 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
-  async debugMapping(m: MappingEnriched) {
+  async toggleDebugMapping(m: MappingEnriched) {
     const { mapping } = m;
     const newDebug = !mapping.debug;
     const action = newDebug ? 'Activated' : 'Deactivated';
-    this.alertService.success(`Debugging ${action} mapping: ${mapping.id}`);
+    this.alertService.success(`Debugging ${action} for mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, debug: newDebug };
     await this.mappingService.changeDebuggingMapping(parameter);
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+  }
+
+  async toggleSnoopStatusMapping(m: MappingEnriched) {
+    const { mapping } = m;
+    let newSnoop, action;
+    // toggle snoopStatus
+    if (
+      mapping.snoopStatus === SnoopStatus.NONE ||
+      mapping.snoopStatus === SnoopStatus.STOPPED
+    ) {
+      newSnoop = SnoopStatus.ENABLED;
+      action = 'Activated';
+    } else {
+      newSnoop = SnoopStatus.NONE;
+      action = 'Deactivated';
+    }
+    this.alertService.success(`Snooping ${action} for mapping: ${mapping.id}`);
+    const parameter = { id: mapping.id, snoopStatus: newSnoop };
+    await this.mappingService.changeSnoopStatusMapping(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 
@@ -652,7 +688,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         );
       }
     }
-    this.showConfigMapping = false;
+
+    this.showConfigMapping = true;
+    this.showSnoopingMapping = true;
   }
 
   async onCommitSubscriptions(deviceList: IIdentified[]) {
@@ -805,7 +843,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
-	this.mappingService.stopChangedMappingEvents();
+    this.mappingService.stopChangedMappingEvents();
   }
   refreshMappings() {
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);

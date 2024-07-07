@@ -118,6 +118,13 @@ export class MappingService {
     );
   }
 
+  async changeSnoopStatusMapping(parameter: any) {
+    await this.brokerConfigurationService.runOperation(
+      Operation.SNOOP_MAPPING,
+      parameter
+    );
+  }
+
   resetCache() {
     // this._mappingsInbound = undefined;
     // this._mappingsOutbound = undefined;

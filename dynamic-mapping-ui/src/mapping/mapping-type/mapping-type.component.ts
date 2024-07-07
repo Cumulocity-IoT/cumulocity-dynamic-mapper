@@ -40,12 +40,14 @@ import { isDisabled } from '../shared/util';
 })
 export class MappingTypeComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
+
   @ViewChild('mappingTypes') mappingTypesElement: ElementRef;
+  @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<any>;
+  labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
 
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
-  @ViewChild(C8yStepper, { static: true }) closeSubject: Subject<MappingType>;
-  labels: ModalLabels = { ok: 'Select', cancel: 'Cancel' };
+  snoop: boolean = false;
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
@@ -61,16 +63,16 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.elementRef = elementRef;
   }
 
-//   ngAfterViewInit(): void {
-//     const selector = `button[title=${MappingType.JSON}]`;
-//     const preSelectedMappingType =
-//       this.elementRef.nativeElement.querySelector(selector);
-//     preSelectedMappingType.click();
-//   }
+  //   ngAfterViewInit(): void {
+  //     const selector = `button[title=${MappingType.JSON}]`;
+  //     const preSelectedMappingType =
+  //       this.elementRef.nativeElement.querySelector(selector);
+  //     preSelectedMappingType.click();
+  //   }
 
   ngOnInit(): void {
     this.closeSubject = new Subject();
-    //console.log('Subject:', this.closeSubject, this.labels);
+    // console.log('Subject:', this.closeSubject, this.labels);
     this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });
@@ -82,7 +84,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    this.closeSubject.next(this.mappingType);
+    this.closeSubject.next({ mappingType: this.mappingType, snoop: this.snoop });
     this.closeSubject.complete();
   }
 

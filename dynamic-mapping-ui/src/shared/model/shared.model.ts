@@ -29,6 +29,7 @@ export interface MappingSubstitution {
 }
 
 export interface Mapping {
+  [x: string]: any;
   name: string;
   id: string;
   ident: string;

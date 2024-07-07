@@ -46,7 +46,6 @@ import {
   MappingSubstitution,
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
-  SnoopStatus,
   getExternalTemplate,
   getSchema,
   whatIsIt
@@ -67,12 +66,16 @@ import {
   splitTopicExcludingSeparator
 } from '../shared/util';
 import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import { EditorMode, StepperConfiguration } from './stepper-model';
+import {
+  EditorMode,
+  StepperConfiguration
+} from '../shared/stepper-model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { MessageField } from '../shared/formly/message.type.component';
 import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
 import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
 import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
+import { SnoopStatus } from '../../shared/model/shared.model';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -90,6 +93,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   Direction = Direction;
   COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   EditorMode = EditorMode;
+  SnoopStatus = SnoopStatus;
   isDisabled = isDisabled;
 
   substitutionFormly: FormGroup = new FormGroup({});
@@ -117,6 +121,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   countDeviceIdentifiers$: BehaviorSubject<number> =
     new BehaviorSubject<number>(0);
+  labels: any = {
+    next: 'Next',
+    cancel: 'Cancel'
+  };
   propertyFormly: FormGroup = new FormGroup({});
   sourceSystem: string;
   targetSystem: string;
@@ -142,6 +150,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   extensions: Map<string, Extension> = new Map();
   extensionEvents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   onDestroy$ = new Subject<void>();
+
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
@@ -152,8 +161,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    if (
+      this.mapping.snoopStatus === SnoopStatus.NONE ||
+      this.mapping.snoopStatus === SnoopStatus.STOPPED
+    ) {
+      this.labels = {
+        ...this.labels,
+        custom: 'Start snooping'
+      };
+    }
     // console.log('Formly to be updated:', this.configService);
-    // set value for backward compatiblility
+    // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
     this.targetSystem =
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
@@ -384,9 +402,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
 
-    this.extensionEvents$.subscribe((events) => {
-      console.log('New events from extension', events);
-    });
+    // this.extensionEvents$.subscribe((events) => {
+    //   console.log('New events from extension', events);
+    // });
   }
 
   private setTemplateForm(): void {
@@ -540,7 +558,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     return {
       ...this.mapping,
       source: reduceSourceTemplate(
-        this.editorSource ? this.editorSource.get() : {},
+        this.editorSource ? this.editorSource?.get() : {},
         patched
       ), // remove array "_TOPIC_LEVEL_" since it should not be stored
       target: reduceTargetTemplate(this.editorTarget?.get(), patched), // remove patched attributes, since it should not be stored
@@ -588,6 +606,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // ('OnStepChange', event);
   }
 
+
   async onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
@@ -602,10 +621,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //  this.mapping.substitutions.length
       // );
       console.log(
-       'Templates from mapping:',
-       this.mapping.target,
-       this.mapping.source,
-       this.mapping
+        'Templates from mapping:',
+        this.mapping.target,
+        this.mapping.source,
+        this.mapping
       );
       this.expandTemplates();
       this.extensions =
@@ -903,9 +922,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
       initialState
     });
-   // modalRef.content.closeSubject.subscribe((result) => {
-   //   console.log('results:', result);
-   // });
+    // modalRef.content.closeSubject.subscribe((result) => {
+    //   console.log('results:', result);
+    // });
     modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
       // console.log('About to add new substitution:', newSub);
       if (newSub && !duplicateSubstitution) {

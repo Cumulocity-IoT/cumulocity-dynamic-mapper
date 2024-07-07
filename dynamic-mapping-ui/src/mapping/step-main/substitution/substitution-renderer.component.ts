@@ -28,7 +28,7 @@ import {
 } from '@angular/core';
 import { Direction, MappingSubstitution } from '../../../shared';
 import { definesDeviceIdentifier, isDisabled } from '../../shared/util';
-import { EditorMode } from '../stepper-model';
+import { EditorMode } from '../../shared/stepper-model';
 
 @Component({
   selector: 'd11r-mapping-substitution-renderer',

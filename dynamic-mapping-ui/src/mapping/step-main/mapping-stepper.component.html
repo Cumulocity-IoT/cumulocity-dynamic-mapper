@@ -46,16 +46,21 @@
       (targetTemplateChanged)="onTemplateChanged($event)"
     >
     </d11r-mapping-properties>
-    <c8y-stepper-buttons
-      class="d-block card-footer p-24 separator"
-      (onCancel)="cancel.emit()"
-      (onNext)="onNextStep($event)"
-      [labels]="{ next: 'Next', cancel: 'Cancel' }"
-    >
-    </c8y-stepper-buttons>
+    <div>
+      <c8y-stepper-buttons
+        class="d-block card-footer p-24 separator"
+        (onCancel)="cancel.emit()"
+        (onNext)="onNextStep($event)"
+        [labels]="labels"
+      >
+      </c8y-stepper-buttons>
+    </div>
   </cdk-step>
 
-  <cdk-step label="Define templates and substitutions" [stepControl]="templateForm">
+  <cdk-step
+    label="Define templates and substitutions"
+    [stepControl]="templateForm"
+  >
     <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12"></div>
     <div class="col-lg-12 flex-grow no-gutter">
       <div class="card-inner-scroll fit-h">

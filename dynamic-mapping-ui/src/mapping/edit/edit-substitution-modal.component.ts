@@ -7,7 +7,7 @@ import {
   MappingSubstitution,
   RepairStrategy
 } from '../../shared';
-import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
+import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
 import { definesDeviceIdentifier } from '../shared/util';
 
 @Component({

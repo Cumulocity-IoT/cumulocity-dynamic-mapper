@@ -52,11 +52,13 @@ import { MappingStepTestingComponent } from './step-three/mapping-testing.compon
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
+import { SnoopingStepperComponent } from './snooping/snooping-stepper.component';
 
 @NgModule({
   declarations: [
     MappingComponent,
     MappingStepperComponent,
+    SnoopingStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     MappingSubscriptionComponent,

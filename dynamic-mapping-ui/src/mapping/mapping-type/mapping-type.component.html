@@ -38,7 +38,11 @@
       {{ 'Select mapping type for target' | translate }}
     </p>
     <div class="p-24 modal-inner-scroll animated fadeIn">
-      <div #mappingTypes class="list-group list-group-links" [formGroup]="formGroupStep">
+      <div
+        #mappingTypes
+        class="list-group list-group-links"
+        [formGroup]="formGroupStep"
+      >
         <ng-container *ngFor="let q of MappingType | keyvalue">
           <button
             *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
@@ -51,12 +55,28 @@
           </button>
         </ng-container>
       </div>
-      <c8y-form-group class="p-t-16">
-        <!-- <label>Mapping type description</label> -->
-        <textarea readonly rows="6" class="form-control fit-w">{{
-          mappingTypeDescription
-        }}</textarea>
-      </c8y-form-group>
+      <div class="card-block separator-top">
+		<c8y-form-group class="p-t-16">
+		  <label class="c8y-switch">
+			<input
+			  title="{{ 'Start snooping for payloads ...' | translate }}"
+			  type="checkbox"
+			  checked="checked"
+			  [(ngModel)]="snoop"
+			  name="snoop"
+			/>
+			<span></span>
+			Snooping
+		  </label>
+		  <small class="text-muted">Before defining a complete mapping with substitutions you can snoop (record) messages from the source system (Step 1). These can be use in a second step (Step 2) for defining the substitutions from the source payload in the target payload. To continue with Step 2 you have to stop the snooping for the respective mapping.</small>
+		</c8y-form-group>
+		<!-- <label>Mapping type description</label> -->
+		<c8y-form-group>
+		  <textarea readonly rows="6" class="form-control fit-w">{{
+			mappingTypeDescription
+		  }}</textarea>
+		</c8y-form-group>
+	  </div>
     </div>
   </div>
 </c8y-modal>

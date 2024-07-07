@@ -39,7 +39,7 @@ import {
 } from '../../shared/';
 import { MappingService } from '../core/mapping.service';
 import { C8YRequest } from '../processor/processor.model';
-import { StepperConfiguration } from '../step-main/stepper-model';
+import { StepperConfiguration } from '../shared/stepper-model';
 import { isDisabled } from '../shared/util';
 
 @Component({

@@ -44,7 +44,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     private appStateService: AppStateService
   ) {
     appStateService.currentApplication.subscribe((c) => {
-      console.log(c);
+      // console.log(c);
       this.appName = c.name;
     });
   }

@@ -30,13 +30,7 @@ import {
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
-import {
-  BehaviorSubject,
-  distinctUntilChanged,
-  skip,
-  startWith,
-  tap
-} from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { BrokerConfigurationService } from '../../configuration';
 import {
   API,
@@ -48,7 +42,7 @@ import {
   getExternalTemplate
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { EditorMode, StepperConfiguration } from '../step-main/stepper-model';
+import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
 import {
   checkTopicsInboundAreValidWithOption,
   checkTopicsOutboundAreValid,
@@ -69,6 +63,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() propertyFormly: FormGroup;
 
   @Output() targetTemplateChanged = new EventEmitter<any>();
+  @Output() snoopStatusChanged = new EventEmitter<SnoopStatus>();
 
   ValidationError = ValidationError;
   Direction = Direction;
@@ -94,7 +89,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       this.mapping.direction == Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem =
       this.mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-
     // console.log(
     //  'Mapping to be updated:',
     //  this.mapping,
@@ -388,6 +382,37 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               required: true
             }
           },
+        //   {
+        //     className: 'col-lg-6',
+        //     key: 'snoopStatus',
+        //     type: 'switch',
+        //     wrappers: ['c8y-form-field'],
+        //     templateOptions: {
+        //       label: 'Snoop payload',
+        //       switchMode: true,
+        //       disabled: false
+        //     },
+        //     // validators: {
+        //     //   snoopStatus: {
+        //     //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        //     //     expression: (c: AbstractControl) => {
+        //     //       return false;
+        //     //     },
+        //     //     message: (error, field: FormlyFieldConfig) =>
+        //     //       `"${field.formControl.value}" is not valid`
+        //     //   }
+        //     // },
+        //     hide: false,
+        //     hooks: {
+        //       onInit: (field: FormlyFieldConfig) => {
+        //         // Set initial value based on the model
+        //         field.formControl.setValue(
+        //           field.model.snoopStatus === SnoopStatus.ENABLED ||
+        //             field.model.snoopStatus === SnoopStatus.STARTED
+        //         );
+        //       }
+        //     }
+        //   }
           //   {
           //     className: 'col-lg-6',
           //     key: 'snoopStatus',
@@ -402,49 +427,49 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           //         'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.'
           //     }
           //   },
-          {
-            className: 'col-lg-6',
-            key: 'isSnoopStatus',
-            wrappers: ['c8y-form-field'],
-            type: 'switch',
-            templateOptions: {
-              label: 'Snoop Status',
-              switchMode: true,
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description:
-                'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.'
-            },
-            hooks: {
-              onInit: (field: FormlyFieldConfig) => {
-                // Set initial value based on the model
-                field.formControl.setValue(
-                  field.model.snoopStatus === SnoopStatus.ENABLED ||
-                    field.model.snoopStatus === SnoopStatus.STARTED
-                );
-                field.formControl.valueChanges
-                  .pipe(
-                    startWith(field.formControl.value),
-                    distinctUntilChanged(),
-                    skip(1),
-                    tap((value) => {
-                      field.model.snoopStatus = value
-                        ? SnoopStatus.ENABLED
-                        : SnoopStatus.NONE;
-                    })
-                  )
-                  .subscribe();
-              }
-            }
-            // expressionProperties: {
-            //   // 'model.snoopStatus': 'model.snoopStatus ? "ENABLED" : "NONE"'
-            //   // 'model.snoopStatus':  'model.snoopStatus ? SnoopStatus.NONE : SnoopStatus.NONE'
-            //   'model.snoopStatus': (model) => {
-            // 	console.log('Hier', model);
-            //     return model.snoopStatus ? true : true;
-            //   }
-            // }
-          }
+          //   {
+          //     className: 'col-lg-6',
+          //     key: 'isSnoopStatus',
+          //     wrappers: ['c8y-form-field'],
+          //     type: 'switch',
+          //     templateOptions: {
+          //       label: 'Snoop Status',
+          //       switchMode: true,
+          //       disabled:
+          //         this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+          //       description:
+          //         'Snooping records the payloads and saves them for later usage. Once the snooping starts and payloads are recorded, they can be used as templates for defining the source format of the mapping.'
+          //     },
+          //     hooks: {
+          //       onInit: (field: FormlyFieldConfig) => {
+          //         // Set initial value based on the model
+          //         field.formControl.setValue(
+          //           field.model.snoopStatus === SnoopStatus.ENABLED ||
+          //             field.model.snoopStatus === SnoopStatus.STARTED
+          //         );
+          //         field.formControl.valueChanges
+          //           .pipe(
+          //             startWith(field.formControl.value),
+          //             distinctUntilChanged(),
+          //             skip(1),
+          //             tap((value) => {
+          //               field.model.snoopStatus = value
+          //                 ? SnoopStatus.ENABLED
+          //                 : SnoopStatus.NONE;
+          //             })
+          //           )
+          //           .subscribe();
+          //       }
+          //     }
+          //     // expressionProperties: {
+          //     //   // 'model.snoopStatus': 'model.snoopStatus ? "ENABLED" : "NONE"'
+          //     //   // 'model.snoopStatus':  'model.snoopStatus ? SnoopStatus.NONE : SnoopStatus.NONE'
+          //     //   'model.snoopStatus': (model) => {
+          //     // 	console.log('Hier', model);
+          //     //     return model.snoopStatus ? true : true;
+          //     //   }
+          //     // }
+          //   }
           //   {
           //     className: 'col-lg-6',
           //     key: 'snoopStatus',

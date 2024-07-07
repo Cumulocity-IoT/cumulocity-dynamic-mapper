@@ -143,6 +143,20 @@
   </div>
 </div>
 
+
+<div [ngClass]="{ drawerOpen: showSnoopingMapping }">
+	<div class="bottom-drawer">
+	  <d11r-snooping-stepper
+		*ngIf="showSnoopingMapping"
+		(cancel)="showSnoopingMapping = false"
+		(commit)="onCommitMapping($event)"
+		[mapping]="mappingToUpdate"
+		[stepperConfiguration]="stepperConfiguration"
+	  >
+	  </d11r-snooping-stepper>
+	</div>
+  </div>
+
 <div [ngClass]="{ drawerOpen: showConfigSubscription }">
   <div class="bottom-drawer">
     <d11r-mapping-subscription

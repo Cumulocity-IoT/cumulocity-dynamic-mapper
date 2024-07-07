@@ -34,7 +34,7 @@ import { SnoopStatus } from '../../shared';
           }"
         ></span>
       </div> -->
-      <div class="c8y-realtime" title="Debug">
+      <div class="c8y-realtime" [title]="'Debug:' + context.value.debug">
         <span
           class="c8y-pulse animated-slow  pulse"
           [ngClass]="{
