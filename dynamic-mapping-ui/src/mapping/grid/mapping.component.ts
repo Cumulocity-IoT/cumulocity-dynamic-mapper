@@ -218,7 +218,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'SNOOPING',
-        text: 'Toogle Snooping',
+        text: 'Toggle Snooping',
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this)
       },
