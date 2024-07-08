@@ -83,7 +83,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
-    //console.log('Running version', this.version);
+    // console.log('Running version', this.version);
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(''),
       logSubstitution: new FormControl(''),
@@ -95,6 +95,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       outboundMappingEnabled: new FormControl('')
     });
     this.feature = await this.sharedService.getFeatures();
+	if (!this.feature.userHasMappingAdminRole) {
+		this.alert.warning('The configuration on this tab is not editable, as you don\'t have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user.');
+	}
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
     this.brokerConfigurationService
@@ -124,7 +127,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const response1 = await this.brokerConfigurationService.runOperation(
       Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
     );
-    //console.log('Details reconnect2NotificationEndpoint', response1);
+    // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === 201) {
       this.alert.success(gettext('Reconnected successfully.'));
     } else {
@@ -144,7 +147,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      //console.log('Configuration after edit:', editedConfiguration);
+      // console.log('Configuration after edit:', editedConfiguration);
       if (editedConfiguration) {
         this.configurations[index] = editedConfiguration;
         // avoid to include status$
@@ -190,7 +193,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      //console.log('Configuration after edit:', editedConfiguration);
+      // console.log('Configuration after edit:', editedConfiguration);
       if (editedConfiguration) {
         this.configurations[index] = editedConfiguration;
         // avoid to include status$
@@ -234,7 +237,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     );
     confirmDeletionModalRef.content.closeSubject.subscribe(
       async (result: boolean) => {
-        //console.log('Confirmation result:', result);
+        // console.log('Confirmation result:', result);
         if (result) {
           const response =
             await this.brokerConfigurationService.deleteConnectorConfiguration(
@@ -270,7 +273,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       initialState
     });
     modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
-      //console.log('Configuration after edit:', addedConfiguration);
+      // console.log('Configuration after edit:', addedConfiguration);
       if (addedConfiguration) {
         this.configurations.push(addedConfiguration);
         // avoid to include status$
@@ -303,7 +306,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
       { connectorIdent: configuration.ident }
     );
-    //console.log('Details toggle activation to broker', response1);
+    // console.log('Details toggle activation to broker', response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
       this.alert.success(gettext('Connection updated successfully.'));
@@ -332,7 +335,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
 
     confirmDeletionModalRef.content.closeSubject.subscribe(
       async (result: boolean) => {
-        //console.log('Confirmation result:', result);
+        // console.log('Confirmation result:', result);
         if (result) {
           const res = await this.brokerConfigurationService.runOperation(
             Operation.RESET_STATUS_MAPPING

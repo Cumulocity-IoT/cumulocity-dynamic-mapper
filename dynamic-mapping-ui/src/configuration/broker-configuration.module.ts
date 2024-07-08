@@ -21,7 +21,7 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { AdminGuard, SharedModule } from '../shared';
+import { SharedModule } from '../shared';
 import { BrokerConfigurationComponent } from './broker-configuration.component';
 import { EditConfigurationComponent } from './edit/edit-config-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
@@ -38,7 +38,7 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/configuration',
       component: BrokerConfigurationComponent,
-      canActivate: [AdminGuard]
+      // canActivate: [AdminGuard]
     })
   ]
 })

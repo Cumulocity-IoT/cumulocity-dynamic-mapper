@@ -104,7 +104,7 @@ public class ProcessingContext<O> {
      * @param card cardinality of this <code>pathTarget</code> found when extracting
      * values from the payload
      * 
-     * @return true if all added cardinalities are the same, fals if at least two
+     * @return true if all added cardinalities are the same, false if at least two
      * different cardinalities exist.
      */
     public void addCardinality(String pathTarget, Integer card) {

@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -53,6 +54,7 @@ import dynamic.mapping.model.MappingRepresentation;
 import dynamic.mapping.model.MappingServiceRepresentation;
 import dynamic.mapping.model.MappingStatus;
 import dynamic.mapping.model.ResolveException;
+import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.ValidationError;
 
 @Slf4j
@@ -482,6 +484,32 @@ public class MappingComponent {
 		}
 	}
 
+
+	public void setSnoopStatusMapping(String tenant, String id, SnoopStatus snoop) throws Exception {
+		// step 1. update debug for mapping
+		log.info("Tenant {} - Setting snoop: {} got mapping: {}", tenant, id, snoop);
+		Mapping mapping = getMapping(tenant, id);
+		mapping.setSnoopStatus(snoop);
+		if (Direction.INBOUND.equals(mapping.direction)) {
+			// step 2. retrieve collected snoopedTemplates
+			mapping.setSnoopedTemplates(cacheMappingInbound.get(tenant).get(id).getSnoopedTemplates());
+		}
+		// step 3. update mapping in inventory
+		// don't validate mapping when setting active = false, this allows to remove
+		// mappings that are not working
+		updateMapping(tenant, mapping, true, true);
+		// step 4. delete mapping from update cache
+		removeDirtyMapping(tenant, mapping);
+		// step 5. update caches
+		if (Direction.OUTBOUND.equals(mapping.direction)) {
+			rebuildMappingOutboundCache(tenant);
+		} else {
+			deleteFromCacheMappingInbound(tenant, mapping);
+			addToCacheMappingInbound(tenant, mapping);
+			cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+		}
+	}
+
 	public void cleanDirtyMappings(String tenant) throws Exception {
 		// test if for this tenant dirty mappings exist
 		log.debug("Tenant {} - Testing for dirty maps", tenant);
@@ -492,6 +520,10 @@ public class MappingComponent {
 				updateMapping(tenant, mapping, true, false);
 			}
 
+			configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+					C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+					null);
 		}
 		// reset dirtySet
 		dirtyMappings.put(tenant, new HashSet<Mapping>());

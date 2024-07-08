@@ -49,7 +49,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     bordered: true,
     striped: true,
     filter: false,
-    gridHeader: true
+    gridHeader: true,
+	hover: true
   };
 
   columns: Column[] = [

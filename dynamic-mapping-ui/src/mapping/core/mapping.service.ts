@@ -35,7 +35,11 @@ import {
   switchMap,
   take
 } from 'rxjs';
-import { BrokerConfigurationService, Operation } from '../../configuration';
+import {
+  BrokerConfigurationService,
+  Operation,
+  StatusEventTypes
+} from '../../configuration';
 import {
   BASE_URL,
   MAPPING_FRAGMENT,
@@ -46,7 +50,7 @@ import {
   Direction,
   Mapping,
   SharedService,
-  MappingSubscribed as MappingDeployed,
+  MappingDeployed,
   PATH_MAPPING_DEPLOYED_ENDPOINT,
   MappingEnriched
 } from '../../shared';
@@ -58,6 +62,8 @@ import {
   SubstituteValue
 } from '../processor/processor.model';
 import { C8YAPISubscription } from '../shared/mapping.model';
+import { AlertService } from '@c8y/ngx-components';
+import { Realtime } from '@c8y/ngx-components/api';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
@@ -67,15 +73,19 @@ export class MappingService {
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
-    private client: FetchClient
+    private client: FetchClient,
+    private alertService: AlertService
   ) {
     this.queriesUtil = new QueriesUtil();
     this.reloadInbound$ = this.sharedService.reloadInbound$;
     this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
+    this.realtime = new Realtime(this.client);
   }
-
+  private realtime: Realtime;
   queriesUtil: QueriesUtil;
+  private _agentId: string;
+  private subscriptionEvents: any;
   protected JSONATA = require('jsonata');
 
   //   private _mappingsInbound: Promise<Mapping[]>;
@@ -88,6 +98,13 @@ export class MappingService {
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
+    const conf =
+      await this.brokerConfigurationService.getConnectorConfigurations();
+    if (parameter.active && conf.length == 0) {
+      this.alertService.warning(
+        'Mapping was activated, but no connector is configured. Please add connector on the Connector tab!'
+      );
+    }
     await this.brokerConfigurationService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
@@ -97,6 +114,13 @@ export class MappingService {
   async changeDebuggingMapping(parameter: any) {
     await this.brokerConfigurationService.runOperation(
       Operation.DEBUG_MAPPING,
+      parameter
+    );
+  }
+
+  async changeSnoopStatusMapping(parameter: any) {
+    await this.brokerConfigurationService.runOperation(
+      Operation.SNOOP_MAPPING,
       parameter
     );
   }
@@ -330,9 +354,9 @@ export class MappingService {
     });
     const data = await response;
     if (!data.ok) {
-		const errorTxt = await data.json();
-		throw new Error(errorTxt.message ?? 'Could not be imported');
-	}
+      const errorTxt = await data.json();
+      throw new Error(errorTxt.message ?? 'Could not be imported');
+    }
     const m = await data.json();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
@@ -386,5 +410,33 @@ export class MappingService {
       result = expression.evaluate(json) as JSON;
     }
     return result;
+  }
+
+  async startChangedMappingEvents(): Promise<void> {
+    if (!this._agentId) {
+      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    }
+    // console.log('Started subscriptions:', this._agentId);
+
+    // subscribe to event stream
+    this.subscriptionEvents = this.realtime.subscribe(
+      `/events/${this._agentId}`,
+      this.initiateRefreshMapping
+    );
+  }
+
+  private initiateRefreshMapping = async (p: object) => {
+    const payload = p['data']['data'];
+    if (payload?.type == StatusEventTypes.STATUS_MAPPING_CHANGED_EVENT_TYPE) {
+      this.reloadInbound$.next();
+    }
+  };
+
+  async stopChangedMappingEvents() {
+    if (!this._agentId) {
+      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    }
+    // console.log('Stop subscriptions:', this._agentId);
+    this.realtime.unsubscribe(this.subscriptionEvents);
   }
 }

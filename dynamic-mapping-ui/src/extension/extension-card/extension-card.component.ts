@@ -22,9 +22,10 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { ConfirmationModalComponent, ExtensionStatus } from '../../shared';
+import { ConfirmationModalComponent, ExtensionStatus, SharedService } from '../../shared';
 import { ExtensionService } from '../share/extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { Feature } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
@@ -35,17 +36,20 @@ export class ExtensionCardComponent implements OnInit {
   @Output() appDeleted: EventEmitter<void> = new EventEmitter();
   ExtensionStatus = ExtensionStatus;
   external: boolean = true;
+  feature: Feature;
 
   constructor(
     private extensionService: ExtensionService,
     private alertService: AlertService,
     private router: Router,
     private activatedRoute: ActivatedRoute,
-    public bsModalService: BsModalService
+    public bsModalService: BsModalService,
+	private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
     this.external = this.app?.['external'];
+	this.feature = await this.sharedService.getFeatures();
   }
 
   async detail() {
@@ -53,7 +57,7 @@ export class ExtensionCardComponent implements OnInit {
     this.router.navigate(['properties/', this.app.id], {
       relativeTo: this.activatedRoute
     });
-    //console.log('Details clicked now:', this.app.id);
+    // console.log('Details clicked now:', this.app.id);
   }
 
   async delete() {
@@ -72,7 +76,7 @@ export class ExtensionCardComponent implements OnInit {
       );
       confirmDeletionModalRef.content.closeSubject.subscribe(
         async (confirmation: boolean) => {
-          //console.log('Confirmation result:', confirmation);
+          // console.log('Confirmation result:', confirmation);
           if (confirmation) {
             try {
                 await this.extensionService.deleteExtension(this.app);

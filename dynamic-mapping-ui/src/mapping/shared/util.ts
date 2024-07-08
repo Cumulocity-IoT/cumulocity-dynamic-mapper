@@ -19,7 +19,13 @@
  * @authors Christof Strack
  */
 import { AbstractControl } from '@angular/forms';
-import { API, Direction, Mapping, MappingSubstitution } from '../../shared';
+import {
+  API,
+  Direction,
+  Mapping,
+  MappingSubstitution,
+  SnoopStatus
+} from '../../shared';
 import {
   SubstituteValue,
   SubstituteValueType
@@ -241,6 +247,28 @@ export function countDeviceIdentifiers(mapping: Mapping): number {
   return mapping.substitutions.filter((sub) =>
     definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
   ).length;
+}
+
+export function checkNotSnooping(control: AbstractControl) {
+  let errors = {};
+
+  const { snoopStatus } = control['controls'];
+  snoopStatus.setErrors(null);
+
+  const isSnoop =
+    snoopStatus.value === SnoopStatus.ENABLED ||
+    snoopStatus.value === SnoopStatus.STARTED;
+
+  if (isSnoop) {
+    errors = {
+      Only_One_MuNot_Snooping: {
+        message: 'Disable snooping before continuing',
+        errorPath: 'snoopStatus'
+      }
+    };
+  }
+
+  return Object.keys(errors).length > 0 ? errors : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -639,8 +667,10 @@ export function reduceSourceTemplate(
   return tt;
 }
 
-export function reduceTargetTemplate(template: object,
-    patched: boolean): string {
+export function reduceTargetTemplate(
+  template: object,
+  patched: boolean
+): string {
   if (template && !patched) {
     delete template[TOKEN_TOPIC_LEVEL];
     delete template[TOKEN_CONTEXT_DATA];

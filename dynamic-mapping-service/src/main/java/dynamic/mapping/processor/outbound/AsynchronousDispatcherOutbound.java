@@ -35,6 +35,9 @@ import dynamic.mapping.notification.websocket.NotificationCallback;
 import dynamic.mapping.processor.model.C8YRequest;
 import dynamic.mapping.processor.model.MappingType;
 import dynamic.mapping.processor.model.ProcessingContext;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapping.core.C8YAgent;
@@ -113,6 +116,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                 .get(connectorClient.getConnectorIdent());
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+
     }
 
     @Override
@@ -180,10 +184,12 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
             this.c8yMessage = c8yMessage;
             this.objectMapper = configurationRegistry.getObjectMapper();
             this.serviceConfiguration = configurationRegistry.getServiceConfigurations().get(c8yMessage.getTenant());
+
         }
 
         @Override
         public List<ProcessingContext<?>> call() throws Exception {
+            long startTime = System.nanoTime();
             String tenant = c8yMessage.getTenant();
             boolean sendPayload = c8yMessage.isSendPayload();
 
@@ -259,6 +265,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
                             } else {
                                 processor.extractFromSource(context);
                                 processor.substituteInTargetAndSend(context);
+                                Counter.builder("dynmapper_outbound_message_total").tag("tenant", c8yMessage.getTenant()).description("Total number of outbound messages").tag("connector",processor.connectorClient.getConnectorIdent()).register(Metrics.globalRegistry).increment();
+                                Timer.builder("dynmapper_outbound_processing_time").tag("tenant", c8yMessage.getTenant()).tag("connector", processor.connectorClient.getConnectorIdent()).description("Processing time of outbound messages").register(Metrics.globalRegistry).record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+
                                 List<C8YRequest> resultRequests = context.getRequests();
                                 if (context.hasError() || resultRequests.stream().anyMatch(r -> r.hasError())) {
                                     mappingStatus.errors++;

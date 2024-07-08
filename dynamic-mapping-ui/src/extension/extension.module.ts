@@ -23,7 +23,7 @@ import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { AdminGuard, SharedModule } from '../shared';
+import { SharedModule } from '../shared';
 import { ExtensionCardComponent } from './extension-card/extension-card.component';
 import { AddExtensionComponent } from './extension-modal/add-extension.component';
 import { ExtensionComponent } from './grid/extension.component';
@@ -47,7 +47,7 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
           path: '',
           pathMatch: 'full',
           component: ExtensionComponent,
-          canActivate: [AdminGuard]
+          // canActivate: [AdminGuard]
         },
         {
           path: 'properties/:id',
