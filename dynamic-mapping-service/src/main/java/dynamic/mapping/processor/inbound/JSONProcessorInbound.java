@@ -94,7 +94,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 
 		String payload = payloadJsonNode.toPrettyString();
 		if (serviceConfiguration.logPayload || mapping.debug) {
-			log.info("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
+			log.debug("Tenant {} - Patched payload: {} {} {} {}", tenant, payload, serviceConfiguration.logPayload,
 					mapping.debug, serviceConfiguration.logPayload || mapping.debug);
 		}
 
@@ -187,7 +187,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 					postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
 				} else {
 					if (serviceConfiguration.logSubstitution || mapping.debug) {
-						log.info("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
+						log.debug("Tenant {} - This substitution, involves an objects for: {}, {}", tenant,
 								substitution.pathSource, extractedSourceContent.toString());
 					}
 					context.addCardinality(substitution.pathTarget, extractedSourceContent.size());
@@ -197,7 +197,7 @@ public class JSONProcessorInbound extends BasePayloadProcessorInbound<JsonNode> 
 					postProcessingCache.put(substitution.pathTarget, postProcessingCacheEntry);
 				}
 				if (serviceConfiguration.logSubstitution || mapping.debug) {
-					log.info("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
+					log.debug("Tenant {} - Evaluated substitution (pathSource:substitute)/({}:{}), (pathTarget)/({})",
 							tenant,
 							substitution.pathSource, extractedSourceContent.toString(), substitution.pathTarget);
 				}
