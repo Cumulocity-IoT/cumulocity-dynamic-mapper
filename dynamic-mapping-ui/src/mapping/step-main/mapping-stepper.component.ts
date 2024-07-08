@@ -34,7 +34,7 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { BrokerConfigurationService } from '../../configuration';
 import {
@@ -65,11 +65,7 @@ import {
   reduceTargetTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
-import { SnoopingModalComponent } from '../snooping/snooping-modal.component';
-import {
-  EditorMode,
-  StepperConfiguration
-} from '../shared/stepper-model';
+import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { MessageField } from '../shared/formly/message.type.component';
 import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
@@ -606,7 +602,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // ('OnStepChange', event);
   }
 
-
   async onNextStep(event: {
     stepper: C8yStepper;
     step: CdkStep;
@@ -641,79 +636,16 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           );
         }
       }
-
-      const numberSnooped = this.mapping.snoopedTemplates
-        ? this.mapping.snoopedTemplates.length
-        : 0;
-      const initialState = {
-        snoopStatus: this.mapping.snoopStatus,
-        numberSnooped: numberSnooped
-      };
-      if (
-        this.mapping.snoopStatus == SnoopStatus.ENABLED // && numberSnooped == 0
-      ) {
-        // console.log('Snooping not yet started ...');
-        const modalRef: BsModalRef = this.bsModalService.show(
-          SnoopingModalComponent,
-          { initialState }
-        );
-        modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-          if (confirm) {
-            this.commit.emit(this.getCurrentMapping(false));
-          } else {
-            this.mapping.snoopStatus = SnoopStatus.NONE;
-            event.stepper.next();
-          }
-          modalRef.hide();
-        });
-      } else if (this.mapping.snoopStatus == SnoopStatus.STARTED) {
-        // console.log('Continue snooping ...?');
-        const modalRef: BsModalRef = this.bsModalService.show(
-          SnoopingModalComponent,
-          { initialState }
-        );
-        modalRef.content.closeSubject.subscribe((confirm: boolean) => {
-          if (confirm) {
-            this.mapping.snoopStatus = SnoopStatus.STOPPED;
-            if (numberSnooped > 0) {
-              this.templateSource = JSON.parse(
-                this.mapping.snoopedTemplates[0]
-              );
-
-              const levels: string[] = splitTopicExcludingSeparator(
-                this.mapping.mappingTopicSample
-              );
-              if (this.stepperConfiguration.direction == Direction.INBOUND) {
-                this.templateSource = expandExternalTemplate(
-                  this.templateSource,
-                  this.mapping,
-                  levels
-                );
-              } else {
-                this.templateSource = expandC8YTemplate(
-                  this.templateSource,
-                  this.mapping
-                );
-              }
-              // TODO check and observe if templates have already been initialized before
-              // this.onSampleTargetTemplatesButton();
-            }
-            event.stepper.next();
-          } else {
-            this.cancel.emit();
-          }
-          modalRef.hide();
-        });
-      } else {
-        event.stepper.next();
-      }
-    } else if (this.step == 'Define templates and substitutions') {
+      event.stepper.next();
+    } else if (this.step == 'Define substitutions') {
       this.getTemplateForm();
       const testSourceTemplate = this.editorSource
         ? this.editorSource.get()
         : {};
       this.editorTestingPayloadTemplateEmitter.emit(testSourceTemplate);
       this.onSelectSubstitution(0);
+      event.stepper.next();
+    } else {
       event.stepper.next();
     }
   }
@@ -730,7 +662,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       if (editorTestingRequestRef != null) {
         editorTestingRequestRef.setAttribute('schema', undefined);
       }
-    } else if (this.step == 'Define templates and substitutions') {
+    } else if (this.step == 'Select templates') {
+      this.mapping = this.getCurrentMapping(false);
+    } else if (this.step == 'Define substitutions') {
       this.mapping = this.getCurrentMapping(false);
     }
     event.stepper.previous();
