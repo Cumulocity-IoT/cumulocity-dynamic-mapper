@@ -22,7 +22,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  template: '<span>{{ context.item.snoopedTemplates.length }}</span>'
+  template: '<span>{{ context.value.snoopedTemplates ? context.value.snoopedTemplates.length: "" }}</span>'
 })
 export class SnoopedTemplateRendererComponent {
   constructor(public context: CellRendererContext) {}

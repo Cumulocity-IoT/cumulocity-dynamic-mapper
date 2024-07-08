@@ -71,6 +71,7 @@ import { StatusRendererComponent } from '../renderer/status-cell.renderer.compon
 import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
+import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -315,6 +316,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '10%'
       },
       {
+        // header: 'Test/Debug/Snoop',
+        header: 'Templates snooped',
+        name: 'snoopedTemplates',
+        path: 'mapping',
+        filterable: false,
+        sortable: false,
+        cellCSSClassName: 'text-align-center',
+        cellRendererComponent: SnoopedTemplateRendererComponent,
+        gridTrackSize: '8%'
+      },
+      {
         header: 'QOS',
         name: 'qos',
         path: 'mapping.qos',
@@ -328,7 +340,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         path: 'mapping.active',
         filterable: false,
         sortable: true,
-        cellRendererComponent: StatusActivationRendererComponent
+        cellRendererComponent: StatusActivationRendererComponent,
+        gridTrackSize: '9%'
       }
     ];
     return cols;
