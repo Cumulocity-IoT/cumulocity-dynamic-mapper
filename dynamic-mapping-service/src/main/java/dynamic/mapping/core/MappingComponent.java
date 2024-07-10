@@ -484,7 +484,6 @@ public class MappingComponent {
 		}
 	}
 
-
 	public void setSnoopStatusMapping(String tenant, String id, SnoopStatus snoop) throws Exception {
 		// step 1. update debug for mapping
 		log.info("Tenant {} - Setting snoop: {} got mapping: {}", tenant, id, snoop);
@@ -546,6 +545,34 @@ public class MappingComponent {
 				.resolveTopicPath(Mapping.splitTopicIncludingSeparatorAsList(topic));
 		return resolvedMappings.stream().filter(tn -> tn.isMappingNode())
 				.map(mn -> mn.getMapping()).collect(Collectors.toList());
+	}
+
+	public void resetSnoop(String tenant, String id) throws Exception {
+		// step 1. update debug for mapping
+		log.info("Tenant {} - Reset snoop for mapping: {}", tenant, id);
+		Mapping mapping = getMapping(tenant, id);
+		if (Direction.INBOUND.equals(mapping.direction)) {
+			// step 2. retrieve collected snoopedTemplates
+			mapping.setSnoopedTemplates(new ArrayList<>());
+		}
+		// step 3. update mapping in inventory
+		// don't validate mapping when setting active = false, this allows to remove
+		// mappings that are not working
+		updateMapping(tenant, mapping, true, true);
+		// step 4. delete mapping from update cache
+		removeDirtyMapping(tenant, mapping);
+		// step 5. update caches
+		if (Direction.OUTBOUND.equals(mapping.direction)) {
+			rebuildMappingOutboundCache(tenant);
+		} else {
+			deleteFromCacheMappingInbound(tenant, mapping);
+			addToCacheMappingInbound(tenant, mapping);
+			cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+		}
+		configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+				C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+				DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+				null);
 	}
 
 }

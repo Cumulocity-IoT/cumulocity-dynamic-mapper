@@ -207,25 +207,31 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Toggle Activation',
+        text: 'Toggle activation',
         icon: 'toggle-on',
         callback: this.activateMapping.bind(this)
       },
       {
         type: 'DEBUG',
-        text: 'Toggle Debugging',
+        text: 'Toggle debugging',
         icon: 'bug1',
         callback: this.toggleDebugMapping.bind(this)
       },
       {
         type: 'SNOOPING',
-        text: 'Toggle Snooping',
+        text: 'Toggle snooping',
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this)
       },
       {
+        type: 'RESET_SNOOP',
+        text: 'Reset snoop',
+        icon: 'reset',
+        callback: this.resetSnoop.bind(this)
+      },
+      {
         type: 'EXPORT',
-        text: 'Export Mapping',
+        text: 'Export mapping',
         icon: 'export',
         callback: this.exportSingle.bind(this)
       }
@@ -237,13 +243,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Toggle Activation',
+        text: 'Toggle activation',
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this)
       },
       {
         type: 'EXPORT',
-        text: 'Export Mapping',
+        text: 'Export mapping',
         icon: 'export',
         callback: this.exportMappingBulk.bind(this)
       }
@@ -595,6 +601,16 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.alertService.success(`Snooping ${action} for mapping: ${mapping.id}`);
     const parameter = { id: mapping.id, snoopStatus: newSnoop };
     await this.mappingService.changeSnoopStatusMapping(parameter);
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+  }
+
+  async resetSnoop(m: MappingEnriched) {
+    const { mapping } = m;
+    this.alertService.success(
+      `Reset snooped messages for mapping: ${mapping.id}`
+    );
+    const parameter = { id: mapping.id };
+    await this.mappingService.resetSnoop(parameter);
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
   }
 

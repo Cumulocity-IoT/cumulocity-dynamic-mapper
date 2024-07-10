@@ -407,6 +407,9 @@ public class MappingRestController {
 				String id = operation.getParameter().get("id");
 				SnoopStatus newSnoop = SnoopStatus.valueOf(operation.getParameter().get("snoopStatus"));
 				mappingComponent.setSnoopStatusMapping(tenant, id, newSnoop);
+			} else if (operation.getOperation().equals(Operation.SNOOP_RESET)) {
+				String id = operation.getParameter().get("id");
+				mappingComponent.resetSnoop(tenant, id);
 			} else if (operation.getOperation().equals(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS)) {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			}

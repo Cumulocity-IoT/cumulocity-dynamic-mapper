@@ -480,7 +480,7 @@ public class MQTTClient extends AConnectorClient {
     }
 
     public void unsubscribe(String topic) throws Exception {
-        log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
+        log.info("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
         mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
     }
