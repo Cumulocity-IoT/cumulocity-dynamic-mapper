@@ -10,6 +10,7 @@
         <logger name="org.apache.commons.httpclient" level="INFO" />
         <logger name="httpclient.wire" level="INFO" />
         <logger name="dynamic.mapping" level="INFO" />
+        <logger name="dynamic.mapping.model" level="DEBUG" />
         <logger name="com.cumulocity" level="INFO" />
     </springProfile>
 

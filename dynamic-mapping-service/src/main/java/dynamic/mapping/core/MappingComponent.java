@@ -512,7 +512,7 @@ public class MappingComponent {
 	public void cleanDirtyMappings(String tenant) throws Exception {
 		// test if for this tenant dirty mappings exist
 		log.debug("Tenant {} - Testing for dirty maps", tenant);
-		if (dirtyMappings.get(tenant) != null) {
+		if (dirtyMappings.get(tenant) != null && dirtyMappings.get(tenant).size() > 0) {
 			for (Mapping mapping : dirtyMappings.get(tenant)) {
 				log.info("Tenant {} - Found mapping to be saved: {}, {}", tenant, mapping.id, mapping.snoopStatus);
 				// no reload required
@@ -551,28 +551,30 @@ public class MappingComponent {
 		// step 1. update debug for mapping
 		log.info("Tenant {} - Reset snoop for mapping: {}", tenant, id);
 		Mapping mapping = getMapping(tenant, id);
+
+		// nothing to do for outbound mappings
 		if (Direction.INBOUND.equals(mapping.direction)) {
 			// step 2. retrieve collected snoopedTemplates
 			mapping.setSnoopedTemplates(new ArrayList<>());
+			// step 3. update mapping in inventory
+			// don't validate mapping when setting active = false, this allows to remove
+			// mappings that are not working
+			updateMapping(tenant, mapping, true, true);
+			// step 4. delete mapping from update cache
+			removeDirtyMapping(tenant, mapping);
+			// step 5. update caches
+			if (Direction.OUTBOUND.equals(mapping.direction)) {
+				rebuildMappingOutboundCache(tenant);
+			} else {
+				deleteFromCacheMappingInbound(tenant, mapping);
+				addToCacheMappingInbound(tenant, mapping);
+				cacheMappingInbound.get(tenant).put(mapping.id, mapping);
+			}
+			configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
+					C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
+					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
+					null);
 		}
-		// step 3. update mapping in inventory
-		// don't validate mapping when setting active = false, this allows to remove
-		// mappings that are not working
-		updateMapping(tenant, mapping, true, true);
-		// step 4. delete mapping from update cache
-		removeDirtyMapping(tenant, mapping);
-		// step 5. update caches
-		if (Direction.OUTBOUND.equals(mapping.direction)) {
-			rebuildMappingOutboundCache(tenant);
-		} else {
-			deleteFromCacheMappingInbound(tenant, mapping);
-			addToCacheMappingInbound(tenant, mapping);
-			cacheMappingInbound.get(tenant).put(mapping.id, mapping);
-		}
-		configurationRegistry.getC8yAgent().createEvent("Mappings updated in backend",
-				C8YAgent.STATUS_MAPPING_CHANGED_EVENT_TYPE,
-				DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
-				null);
 	}
 
 }
