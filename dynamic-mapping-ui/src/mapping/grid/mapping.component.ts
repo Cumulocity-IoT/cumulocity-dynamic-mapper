@@ -221,13 +221,18 @@ export class MappingComponent implements OnInit, OnDestroy {
         type: 'SNOOPING',
         text: 'Toggle snooping',
         icon: 'mic',
-        callback: this.toggleSnoopStatusMapping.bind(this)
+        callback: this.toggleSnoopStatusMapping.bind(this),
+		showIf: (mapping) => {
+			mapping['direction'] === Direction.INBOUND;}
       },
       {
         type: 'RESET_SNOOP',
         text: 'Reset snoop',
         icon: 'reset',
-        callback: this.resetSnoop.bind(this)
+        callback: this.resetSnoop.bind(this),
+		showIf: (mapping) => {
+			mapping['direction'] === Direction.INBOUND;}
+
       },
       {
         type: 'EXPORT',
