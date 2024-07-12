@@ -64,7 +64,7 @@ import { ImportMappingsComponent } from '../import-modal/import.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
-import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
+// import { QOSRendererComponent } from '../renderer/qos-cell.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
@@ -275,7 +275,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   getColumnsMappings(): Column[] {
-    const cols: Column[] = [
+    let cols: Column[] = [
       {
         name: 'name',
         header: 'Name',
@@ -338,14 +338,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: SnoopedTemplateRendererComponent,
         gridTrackSize: '8%'
       },
-      {
-        header: 'QOS',
-        name: 'qos',
-        path: 'mapping.qos',
-        filterable: true,
-        sortable: false,
-        cellRendererComponent: QOSRendererComponent
-      },
+      //   {
+      //     header: 'QOS',
+      //     name: 'qos',
+      //     path: 'mapping.qos',
+      //     filterable: true,
+      //     sortable: false,
+      //     cellRendererComponent: QOSRendererComponent
+      //   },
       {
         header: 'Active',
         name: 'active',
@@ -356,6 +356,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '9%'
       }
     ];
+
+    // remove column 'Templates snooped' for outbound, as this is not supported
+    if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
+      cols = cols.filter((col) => col.name !== 'snoopedTemplates');
+    }
     return cols;
   }
 

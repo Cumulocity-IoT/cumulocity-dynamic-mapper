@@ -41,7 +41,7 @@ export class MonitoringTabFactory implements TabFactory {
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/monitoring/chart',
         priority: 910,
-        label: 'Monitoring Chart',
+        label: 'Monitoring chart',
         icon: 'pie-chart',
         orientation: 'horizontal'
       } as Tab);

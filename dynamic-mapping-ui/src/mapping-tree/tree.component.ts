@@ -26,7 +26,6 @@ import { JsonEditor2Component } from '../shared';
   selector: 'd11r-mapping-tree-grid',
   templateUrl: 'tree.component.html',
   styleUrls: ['./tree.style.css'],
-
   encapsulation: ViewEncapsulation.None
 })
 export class MappingTreeComponent implements OnInit {
@@ -37,7 +36,6 @@ export class MappingTreeComponent implements OnInit {
 
   ngOnInit(): void {
     this.editorOptionsTree = {
-      ...this.editorOptionsTree,
       mode: 'tree',
       mainMenuBar: true,
       navigationBar: false,

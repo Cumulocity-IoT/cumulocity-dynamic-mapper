@@ -99,12 +99,6 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.snoopDisabled$.next(!MAPPING_TYPE_DESCRIPTION[t].snoopSupported);
   }
 
-  //   onSelectMappingType(t) {
-  //     this.mappingType = t;
-  //     this.closeSubject.next(this.mappingType);
-  //     this.closeSubject.complete();
-  //   }
-
   ngOnDestroy() {
     this.closeSubject.complete();
   }
