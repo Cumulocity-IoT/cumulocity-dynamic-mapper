@@ -615,12 +615,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //  isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
       //  this.mapping.substitutions.length
       // );
-      console.log(
-        'Templates from mapping:',
-        this.mapping.target,
-        this.mapping.source,
-        this.mapping
-      );
+    //   console.log(
+    //     'Templates from mapping:',
+    //     this.mapping.target,
+    //     this.mapping.source,
+    //     this.mapping
+    //   );
       this.expandTemplates();
       this.extensions =
         (await this.brokerConfigurationService.getProcessorExtensions()) as any;
