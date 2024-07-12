@@ -22,27 +22,18 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 @Injectable()
-export class MonitoringTabFactory implements TabFactory {
-  constructor(
-    public router: Router
-  ) {}
+export class TreeTabFactory implements TabFactory {
+  constructor(public router: Router) {}
 
   async get() {
     // console.log("MonitoringTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring/grid',
-        priority: 810,
-        label: 'Monitoring',
-        icon: 'monitoring',
-        orientation: 'horizontal'
-      } as Tab);
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring/chart',
-        priority: 800,
-        label: 'Monitoring chart',
-        icon: 'pie-chart',
+        path: 'sag-ps-pkg-dynamic-mapping/tree',
+        priority: 600,
+        label: 'Mapping tree inbound',
+        icon: 'tree-structure',
         orientation: 'horizontal'
       } as Tab);
     }

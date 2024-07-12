@@ -200,7 +200,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    console.log('Stop subscription');
+    // console.log('Stop subscription');
     this.monitoringService.unsubscribeFromMonitoringChannel(this.subscription);
   }
 }

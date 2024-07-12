@@ -63,13 +63,14 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     this.extensions$ = this.reload$.pipe(
       tap(() => (this.reloading = true)),
       switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
-      tap(console.log),
+      // tap(console.log),
       tap(() => (this.reloading = false)),
       shareReplay()
     );
     this.loadExtensions();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     this.extensions$.subscribe((exts) => {
-      console.log('New extensions:', exts);
+      // console.log('New extensions:', exts);
     });
     this.externalExtensionEnabled = (
       await this.brokerConfigurationService.getServiceConfiguration()

@@ -65,24 +65,16 @@ export class MappingTabFactory implements TabFactory {
 
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/testing',
-        priority: 900,
+        priority: 700,
         label: 'Test device',
         icon: 'reflector-bulb',
-        orientation: 'horizontal'
-      } as Tab);
-
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/tree',
-        priority: 890,
-        label: 'Mapping tree inbound',
-        icon: 'tree-structure',
         orientation: 'horizontal'
       } as Tab);
 
       // if (feature?.userHasMappingAdminRole) {
       tabs.push({
         path: 'sag-ps-pkg-dynamic-mapping/extension',
-        priority: 880,
+        priority: 500,
         label: 'Processor extension',
         icon: 'plugin',
         orientation: 'horizontal'
