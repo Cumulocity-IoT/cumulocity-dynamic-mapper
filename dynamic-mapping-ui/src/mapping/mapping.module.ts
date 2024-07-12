@@ -44,7 +44,6 @@ import { TemplateRendererComponent } from './renderer/template.renderer.componen
 import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
-import { SnoopingModalComponent } from './snooping/snooping-modal.component';
 import { MappingStepperComponent } from './step-main/mapping-stepper.component';
 import { SubstitutionRendererComponent } from './step-main/substitution/substitution-renderer.component';
 import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
@@ -74,7 +73,6 @@ import { SnoopingStepperComponent } from './snooping/snooping-stepper.component'
     StatusActivationRendererComponent,
     APIRendererComponent,
     NameRendererComponent,
-    SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,
     WrapperFormlyHorizontal,
