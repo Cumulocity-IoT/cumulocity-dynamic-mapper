@@ -494,7 +494,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.substitutionFormly.get('pathTarget').setValue(path);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateSourceChanged(content: Content) {
 	if ( _.has(content,'text') && content['text']) {
 		this.templateSource = JSON.parse(content['text']);
@@ -503,10 +502,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 		this.templateSource = content['json'];
 		// this.mapping.source = JSON.stringify(content['json']);
 	}
-    // console.log(`onTemplateSourceChanged changed: ${JSON.stringify(content.text)}`,content );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTemplateTargetChanged(content: Content) {
 	if ( _.has(content,'text') && content['text']) {
 		this.templateTarget = JSON.parse(content['text']);
@@ -515,7 +512,6 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 		this.templateTarget = content['json'];
 		// this.mapping.target = JSON.stringify(content['json']);
 	}
-    // console.log(`onTemplateTargetChanged changed: ${JSON.stringify(content)}`);
   }
 
   async updateTargetExpressionResult() {

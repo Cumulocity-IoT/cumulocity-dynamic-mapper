@@ -48,7 +48,10 @@
       >
         <ng-container *ngFor="let q of MappingType | keyvalue">
           <button
-            *ngIf="direction !== Direction.OUTBOUND || q.value === 'JSON'"
+            *ngIf="
+              MAPPING_TYPE_DESCRIPTION[q.key].properties[direction]
+                .directionSupported
+            "
             class="list-group-item"
             title="{{ q.value }}"
             (click)="onSelectMappingType(q.value)"

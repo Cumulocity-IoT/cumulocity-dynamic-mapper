@@ -169,7 +169,9 @@ export class MappingService {
             id: m.id,
             mapping: m,
             snoopSupported:
-              MAPPING_TYPE_DESCRIPTION[m.mappingType].snoopSupported,
+              MAPPING_TYPE_DESCRIPTION[m.mappingType].properties[
+                Direction.INBOUND
+              ].snoopSupported,
             deployedToConnectors: mappingsDeployed[m.ident]
           });
         });
