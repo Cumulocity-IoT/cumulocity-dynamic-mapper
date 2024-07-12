@@ -72,6 +72,7 @@ import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
 import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
 import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
 import { SnoopStatus } from '../../shared/model/shared.model';
+import { Content } from 'vanilla-jsoneditor';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -494,12 +495,26 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onTemplateSourceChanged(content: any) {
+  onTemplateSourceChanged(content: Content) {
+	if ( _.has(content,'text') && content['text']) {
+		this.templateSource = JSON.parse(content['text']);
+		// this.mapping.source = content['text'];‚
+	} else {
+		this.templateSource = content['json'];
+		// this.mapping.source = JSON.stringify(content['json']);
+	}
     // console.log(`onTemplateSourceChanged changed: ${JSON.stringify(content.text)}`,content );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onTemplateTargetChanged(content: any) {
+  onTemplateTargetChanged(content: Content) {
+	if ( _.has(content,'text') && content['text']) {
+		this.templateTarget = JSON.parse(content['text']);
+		// this.mapping.target = content['text'];
+	} else {
+		this.templateTarget = content['json'];
+		// this.mapping.target = JSON.stringify(content['json']);
+	}
     // console.log(`onTemplateTargetChanged changed: ${JSON.stringify(content)}`);
   }
 

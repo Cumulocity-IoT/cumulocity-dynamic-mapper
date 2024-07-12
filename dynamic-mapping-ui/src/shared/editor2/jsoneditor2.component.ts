@@ -75,7 +75,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   class: string;
 
   @Output()
-  changeContent: EventEmitter<any> = new EventEmitter<any>();
+  contentChanged: EventEmitter<Content> = new EventEmitter<Content>();
   @Output()
   pathChanged: EventEmitter<string> = new EventEmitter<string>();
   @Output()
@@ -117,7 +117,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           //  patchResult
           // });
           this.content = updatedContent;
-          this.changeContent.emit(updatedContent);
+          this.contentChanged.emit(updatedContent);
         },
         onSelect: this.onSelect.bind(this),
         onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
