@@ -201,7 +201,7 @@ export class BrokerConfigurationService {
       }),
       map((data) => data.data),
       map((events) =>
-        events.map((event) => {
+        events.filter( ev => ev[CONNECTOR_FRAGMENT]).map((event) => {
           event[CONNECTOR_FRAGMENT].type = event.type;
           return event[CONNECTOR_FRAGMENT];
         })
