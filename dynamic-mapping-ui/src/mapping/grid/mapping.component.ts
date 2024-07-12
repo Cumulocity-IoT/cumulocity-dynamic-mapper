@@ -203,7 +203,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         type: BuiltInActionType.Delete,
         callback: this.deleteMappingWithConfirmation.bind(this),
-        showIf: (mapping) => !mapping['active']
+        showIf: (item) => !item['mapping']['active']
       },
       {
         type: 'ACTIVATE',
@@ -222,17 +222,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         text: 'Toggle snooping',
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
-		showIf: (mapping) => {
-			mapping['direction'] === Direction.INBOUND;}
+        showIf: (item) => item['mapping']['direction'] === Direction.INBOUND
       },
       {
         type: 'RESET_SNOOP',
         text: 'Reset snoop',
         icon: 'reset',
         callback: this.resetSnoop.bind(this),
-		showIf: (mapping) => {
-			mapping['direction'] === Direction.INBOUND;}
-
+        showIf: (item) => item['mapping']['direction'] === Direction.INBOUND
       },
       {
         type: 'EXPORT',
