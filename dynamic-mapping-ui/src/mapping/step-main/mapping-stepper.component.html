@@ -66,10 +66,7 @@
             <div [formGroup]="templateForm">
               <div class="row" #buttons>
                 <div class="col-lg-5 col-lg-offset-1 column-right-border">
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showEditorSource"
-                  >
+                  <div class="form-group">
                     <div class="d-flex">
                       <button
                         type="button"
@@ -88,13 +85,15 @@
                         "
                       >
                         <i c8yIcon="enter-left"></i>Change source template
-                        <!-- <span
-                          *ngIf="mapping.snoopedTemplates.length > 0"
-                          class="badge animated flash infinite animation-slow"
-                        >
-                          {{ mapping.snoopedTemplates.length }}</span
-                        > -->
                       </button>
+                      <small
+                        *ngIf="mapping.snoopedTemplates.length > 0"
+                        class="text-muted m-l-8 m-t-8"
+                      >
+                        Using snooped template {{ snoopedTemplateCounter }} of
+                        {{ mapping.snoopedTemplates.length }}</small
+                      >
+
                       <small
                         *ngIf="mapping.snoopedTemplates.length > 0"
                         class="text-muted m-l-8 m-t-8"
@@ -104,76 +103,22 @@
                       >
                     </div>
                     <div>
-                      <small class="text-muted"
+                      <small
+                        class="text-muted"
+                        *ngIf="stepperConfiguration.showEditorSource"
                         >Use snooped templates in the source template.</small
                       >
-                    </div>
-                  </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Extensions for {{ mapping.mappingType }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exName"
-                        #extensionName
-                        (change)="onSelectExtension(templateForm.value.exName)"
-                        required
+                      <small
+                        class="text-muted"
+                        *ngIf="!stepperConfiguration.showEditorSource"
+                        >Template is described internally by the chosen mapping
+                        type</small
                       >
-                        <option [ngValue]="null" disabled>
-                          Select an extension
-                        </option>
-                        <option
-                          *ngFor="let ex of extensions | keyvalue"
-                          [ngValue]="ex.key"
-                          [selected]="ex.key === mapping.extension?.name"
-                        >
-                          {{ ex.key }}
-                        </option>
-                      </select>
                     </div>
                   </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Events for {{ mapping.extension.name }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exEvent"
-                        #extensionEvent
-                        required
-                      >
-                        <option [ngValue]="null" disabled>
-                          Select an event
-                        </option>
-                        <option
-                          *ngFor="let ev of extensionEvents$ | async"
-                          [ngValue]="ev"
-                          [selected]="ev === mapping.extension?.event"
-                        >
-                          {{ ev }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div
+                  <!-- <div
                     *ngIf="
-                      !stepperConfiguration.showEditorSource &&
-                      !stepperConfiguration.showProcessorExtensions
+                      !stepperConfiguration.showEditorSource
                     "
                   >
                     <label>Template Source - {{ sourceSystem }}</label>
@@ -183,7 +128,7 @@
                         type</span
                       >
                     </div>
-                  </div>
+                  </div> -->
                 </div>
                 <div class="col-lg-5 column-left-border">
                   <div class="form-group">
@@ -217,16 +162,14 @@
               </div>
               <div class="row" #editors>
                 <div class="col-lg-5 col-lg-offset-1 column-right-border">
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showEditorSource"
-                  >
-                    <div class="d-flex j-c-between">
+                  <div class="form-group">
+                    <div>
                       <label translate
                         >Template Source - {{ sourceSystem }}</label
                       >
                     </div>
                     <d11r-mapping-json-editor2
+                      *ngIf="stepperConfiguration.showEditorSource"
                       [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
                       [class]="'jse-main-small'"

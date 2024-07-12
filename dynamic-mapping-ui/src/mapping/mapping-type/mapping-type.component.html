@@ -67,9 +67,10 @@
               checked="checked"
               [(ngModel)]="snoop"
               name="snoop"
+              [disabled]="snoopDisabled$ | async"
             />
             <span></span>
-            Snooping
+            Start snoop
           </label>
           <small class="text-muted"
             >Before defining a complete mapping with substitutions you can snoop

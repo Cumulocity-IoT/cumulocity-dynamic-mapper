@@ -52,7 +52,8 @@ import {
   SharedService,
   MappingDeployed,
   PATH_MAPPING_DEPLOYED_ENDPOINT,
-  MappingEnriched
+  MappingEnriched,
+  MAPPING_TYPE_DESCRIPTION
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -167,6 +168,8 @@ export class MappingService {
           mappingsEnriched.push({
             id: m.id,
             mapping: m,
+            snoopSupported:
+              MAPPING_TYPE_DESCRIPTION[m.mappingType].snoopSupported,
             deployedToConnectors: mappingsDeployed[m.ident]
           });
         });

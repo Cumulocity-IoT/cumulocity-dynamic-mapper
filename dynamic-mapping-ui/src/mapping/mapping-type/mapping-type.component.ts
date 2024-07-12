@@ -29,7 +29,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { C8yStepper, ModalLabels } from '@c8y/ngx-components';
-import { Subject } from 'rxjs';
+import { Subject, BehaviorSubject } from 'rxjs';
 import { Direction, MAPPING_TYPE_DESCRIPTION, MappingType } from '../../shared';
 import { isDisabled } from '../shared/util';
 
@@ -48,6 +48,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   isDisabled = isDisabled;
   formGroupStep: FormGroup;
   snoop: boolean = false;
+  snoopDisabled$: Subject<boolean> = new BehaviorSubject(!MAPPING_TYPE_DESCRIPTION[MappingType.JSON].snoopSupported);
   canOpenInBrowser: boolean = false;
   errorMessage: string;
   MappingType = MappingType;
@@ -84,13 +85,18 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    this.closeSubject.next({ mappingType: this.mappingType, snoop: this.snoop });
+	const snoopSupported = !MAPPING_TYPE_DESCRIPTION[this.mappingType].snoopSupported;
+    this.closeSubject.next({
+      mappingType: this.mappingType,
+      snoop: this.snoop && snoopSupported
+    });
     this.closeSubject.complete();
   }
 
   onSelectMappingType(t) {
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
+    this.snoopDisabled$.next(!MAPPING_TYPE_DESCRIPTION[t].snoopSupported);
   }
 
   //   onSelectMappingType(t) {
