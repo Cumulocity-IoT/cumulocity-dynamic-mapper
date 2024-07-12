@@ -116,19 +116,6 @@
                       >
                     </div>
                   </div>
-                  <!-- <div
-                    *ngIf="
-                      !stepperConfiguration.showEditorSource
-                    "
-                  >
-                    <label>Template Source - {{ sourceSystem }}</label>
-                    <div class="p-t-48">
-                      <span
-                        >Template is described internally by the chosen mapping
-                        type</span
-                      >
-                    </div>
-                  </div> -->
                 </div>
                 <div class="col-lg-5 column-left-border">
                   <div class="form-group">
@@ -242,20 +229,7 @@
                       </select>
                     </div>
                   </div>
-                  <div
-                    *ngIf="
-                      !stepperConfiguration.showEditorSource &&
-                      !stepperConfiguration.showProcessorExtensions
-                    "
-                  >
-                    <label>Template Source - {{ sourceSystem }}</label>
-                    <div class="p-t-48">
-                      <span
-                        >Template is described internally by the chosen mapping
-                        type</span
-                      >
-                    </div>
-                  </div>
+
                 </div>
                 <div class="col-lg-5 column-left-border">
                   <div class="form-group">
@@ -395,16 +369,16 @@
                   </div>
                   <div
                     *ngIf="
-                      !stepperConfiguration.showEditorSource &&
-                      !stepperConfiguration.showProcessorExtensions
+                      !stepperConfiguration.showEditorSource
                     "
                   >
                     <label>Template Source - {{ sourceSystem }}</label>
                     <div class="p-t-48">
-                      <span
+						<small
+                        class="text-muted"
+                        *ngIf="!stepperConfiguration.showEditorSource"
                         >Template is described internally by the chosen mapping
-                        type</span
-                      >
+                        type</small>
                     </div>
                   </div>
                 </div>

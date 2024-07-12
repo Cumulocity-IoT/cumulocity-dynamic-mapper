@@ -21,18 +21,20 @@
 
 package dynamic.mapping;
 
+import java.util.Date;
+
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAckReturnCode;
 
-import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter;
-import dynamic.mapping.processor.extension.internal.InternalCustomAlarmOuter.InternalCustomAlarm;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter;
-import dynamic.mapping.processor.processor.fixed.StaticCustomMeasurementOuter.StaticCustomMeasurement;
+import dynamic.mapping.processor.extension.external.CustomEventOuter;
+import dynamic.mapping.processor.extension.external.CustomEventOuter.CustomEvent;
 
-public class ProtobufPahoClient {
+public class ProtobufMqttClient {
     Mqtt3BlockingClient testClient;
     static String broker_host = System.getenv("broker_host");
     static Integer broker_port = Integer.valueOf(System.getenv("broker_port"));
@@ -40,7 +42,7 @@ public class ProtobufPahoClient {
     static String broker_username = System.getenv("broker_username");
     static String broker_password = System.getenv("broker_password");
 
-    public ProtobufPahoClient(Mqtt3BlockingClient sampleClient) {
+    public ProtobufMqttClient(Mqtt3BlockingClient sampleClient) {
         testClient = sampleClient;
     }
 
@@ -55,59 +57,45 @@ public class ProtobufPahoClient {
                 .simpleAuth(simpleAuth)
                 .sslWithDefaultConfig()
                 .buildBlocking();
-        ProtobufPahoClient client = new ProtobufPahoClient(sampleClient);
-        client.testSendMeasurement();
-        client.testSendAlarm();
-
+        ProtobufMqttClient client = new ProtobufMqttClient(sampleClient);
+        client.testSendEvent();
     }
 
-    private void testSendMeasurement() {
+    private void testSendEvent() {
+        String topic = "protobuf/event";
 
-        String topic = "protobuf/measurement";
         System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
-        testClient.connect();
+
+        // testClient.connect();
+        Mqtt3ConnAck ack = testClient.connectWith()
+                .cleanSession(true)
+                .keepAlive(60)
+                .send();
+        if (!ack.getReturnCode().equals(Mqtt3ConnAckReturnCode.SUCCESS)) {
+            // throw new ConnectorException("Tenant " + tenant + " - Error connecting to
+            // broker:"
+            // + mqttClient.getConfig().getServerHost() + ". Errorcode: "
+            // + ack.getReturnCode().name());
+            System.out.println("Error connecting to broker:"
+                    + broker_host + ". Errorcode: "
+                    + ack.getReturnCode().name());
+        }
 
         System.out.println("Publishing message on topic" + topic);
 
-        StaticCustomMeasurementOuter.StaticCustomMeasurement proto = StaticCustomMeasurement.newBuilder()
+        CustomEventOuter.CustomEvent proto = CustomEvent.newBuilder()
                 .setExternalIdType("c8y_Serial")
                 .setExternalId("berlin_01")
-                .setUnit("C")
-                .setMeasurementType("c8y_GenericMeasurement")
-                .setValue(99.7F)
-                .build();
-
-        Mqtt3AsyncClient sampleClientAsync = testClient.toAsync();
-        sampleClientAsync.publishWith().topic(topic).qos(MqttQos.AT_LEAST_ONCE).payload(proto.toByteArray()).send();
-
-        System.out.println("Message published");
-        testClient.disconnect();
-        System.out.println("Disconnected");
-
-    }
-
-    private void testSendAlarm() {
-
-        String topic = "protobuf/alarm";
-        System.out.println("Connecting to broker: ssl://" + broker_host + ":" + broker_port);
-        testClient.connect();
-
-        System.out.println("Publishing message on topic" + topic);
-
-        InternalCustomAlarmOuter.InternalCustomAlarm proto = InternalCustomAlarm.newBuilder()
-                .setExternalIdType("c8y_Serial")
-                .setExternalId("berlin_01")
-                .setTxt("Dummy Text")
+                .setTxt("Stop at petrol station: " + (new Date().toString()))
+                .setEventType("c8y_ProtobufEventType")
                 .setTimestamp(System.currentTimeMillis())
-                .setAlarmType("c8y_ProtobufAlarmType")
                 .build();
+
         Mqtt3AsyncClient sampleClientAsync = testClient.toAsync();
         sampleClientAsync.publishWith().topic(topic).qos(MqttQos.AT_LEAST_ONCE).payload(proto.toByteArray()).send();
 
         System.out.println("Message published");
         testClient.disconnect();
         System.out.println("Disconnected");
-
     }
-
 }
