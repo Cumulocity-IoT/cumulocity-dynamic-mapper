@@ -78,7 +78,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public brokerConfigurationService: BrokerConfigurationService,
-    public alert: AlertService,
+    public alertService: AlertService,
     private sharedService: SharedService
   ) {}
 
@@ -95,9 +95,11 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
       outboundMappingEnabled: new FormControl('')
     });
     this.feature = await this.sharedService.getFeatures();
-	if (!this.feature.userHasMappingAdminRole) {
-		this.alert.warning('The configuration on this tab is not editable, as you don\'t have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user.');
-	}
+    if (!this.feature.userHasMappingAdminRole) {
+      this.alertService.warning(
+        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+      );
+    }
     this.specifications =
       await this.brokerConfigurationService.getConnectorSpecifications();
     this.brokerConfigurationService
@@ -129,9 +131,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     );
     // console.log('Details reconnect2NotificationEndpoint', response1);
     if (response1.status === 201) {
-      this.alert.success(gettext('Reconnected successfully.'));
+      this.alertService.success(gettext('Reconnected successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to reconnect!'));
+      this.alertService.danger(gettext('Failed to reconnect!'));
     }
   }
 
@@ -163,9 +165,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Updated successfully.'));
+          this.alertService.success(gettext('Updated successfully.'));
         } else {
-          this.alert.danger(
+          this.alertService.danger(
             gettext('Failed to update connector configuration')
           );
         }
@@ -178,7 +180,7 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const configuration = _.clone(this.configurations[index]);
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
-    this.alert.warning(
+    this.alertService.warning(
       gettext(
         'Review properties, e.g. client_id must be different across different client connectors to the same broker.'
       )
@@ -209,9 +211,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Updated successfully.'));
+          this.alertService.success(gettext('Updated successfully.'));
         } else {
-          this.alert.danger(
+          this.alertService.danger(
             gettext('Failed to update connector configuration!')
           );
         }
@@ -244,9 +246,9 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
               configuration.ident
             );
           if (response.status < 300) {
-            this.alert.success(gettext('Deleted successfully.'));
+            this.alertService.success(gettext('Deleted successfully.'));
           } else {
-            this.alert.danger(
+            this.alertService.danger(
               gettext('Failed to delete connector configuration')
             );
           }
@@ -289,9 +291,11 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
             clonedConfiguration
           );
         if (response.status < 300) {
-          this.alert.success(gettext('Added successfully configuration'));
+          this.alertService.success(
+            gettext('Added successfully configuration')
+          );
         } else {
-          this.alert.danger(
+          this.alertService.danger(
             gettext('Failed to update connector configuration')
           );
         }
@@ -309,48 +313,13 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     // console.log('Details toggle activation to broker', response1);
     if (response1.status === 201) {
       // if (response1.status === 201 && response2.status === 201) {
-      this.alert.success(gettext('Connection updated successfully.'));
+      this.alertService.success(gettext('Connection updated successfully.'));
     } else {
-      this.alert.danger(gettext('Failed to establish connection!'));
+      this.alertService.danger(gettext('Failed to establish connection!'));
     }
     await this.loadData();
     this.sharedService.refreshMappings(Direction.INBOUND);
     this.sharedService.refreshMappings(Direction.OUTBOUND);
-  }
-
-  async resetStatusMapping() {
-    const initialState = {
-      title: 'Reset mapping statistic',
-      message:
-        'You are about to delete the mapping statistic. Do you want to proceed?',
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (result: boolean) => {
-        // console.log('Confirmation result:', result);
-        if (result) {
-          const res = await this.brokerConfigurationService.runOperation(
-            Operation.RESET_STATUS_MAPPING
-          );
-          if (res.status < 300) {
-            this.alert.success(
-              gettext('Mapping statistic reset successfully.')
-            );
-          } else {
-            this.alert.danger(gettext('Failed to reset statistic.'));
-          }
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
   }
 
   async clickedSaveServiceConfiguration() {
@@ -360,9 +329,11 @@ export class BrokerConfigurationComponent implements OnInit, OnDestroy {
     const response =
       await this.brokerConfigurationService.updateServiceConfiguration(conf);
     if (response.status < 300) {
-      this.alert.success(gettext('Update successful'));
+      this.alertService.success(gettext('Update successful'));
     } else {
-      this.alert.danger(gettext('Failed to update service configuration'));
+      this.alertService.danger(
+        gettext('Failed to update service configuration')
+      );
     }
   }
 

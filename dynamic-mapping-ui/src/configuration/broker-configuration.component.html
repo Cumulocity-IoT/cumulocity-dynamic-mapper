@@ -30,15 +30,7 @@
     <i c8yIcon="disconnected"></i>
     {{ 'Reconnect notification endpoint' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Reset monitoring' | translate }}"
-    (click)="resetStatusMapping()"
-    [disabled]="!feature?.userHasMappingAdminRole"
-  >
-    <i c8yIcon="reset"></i>
-    {{ 'Reset monitoring' | translate }}
-  </button>
+
   <button
     class="btn btn-link"
     title="{{ 'Refresh' | translate }}"

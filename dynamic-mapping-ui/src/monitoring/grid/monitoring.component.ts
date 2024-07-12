@@ -25,15 +25,17 @@ import {
   Column,
   ColumnDataType,
   DisplayOptions,
+  gettext,
   Pagination
 } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { BrokerConfigurationService, Operation } from '../../configuration';
+import { BrokerConfigurationService, Feature, Operation } from '../../configuration';
 import { NameRendererComponent } from '../../mapping';
-import { MappingStatus } from '../../shared';
+import { ConfirmationModalComponent, MappingStatus, SharedService } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
 import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -50,7 +52,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     striped: true,
     filter: false,
     gridHeader: true,
-	hover: true
+    hover: true
   };
 
   columns: Column[] = [
@@ -131,17 +133,21 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     pageSize: 5,
     currentPage: 1
   };
+  feature: Feature;
 
   actionControls: ActionControl[] = [];
 
   constructor(
     public monitoringService: MonitoringService,
     public brokerConfigurationService: BrokerConfigurationService,
-    public alertService: AlertService
+    public alertService: AlertService,
+	public bsModalService: BsModalService,
+	private sharedService: SharedService
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.initializeMonitoringService();
+	this.feature = await this.sharedService.getFeatures();
   }
 
   async refreshMappingStatus(): Promise<void> {
@@ -156,6 +162,41 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     this.monitoringService
       .getCurrentMappingStatus()
       .subscribe((status) => this.mappingStatus$.next(status));
+  }
+
+  async resetStatusMapping() {
+    const initialState = {
+      title: 'Reset mapping statistic',
+      message:
+        'You are about to delete the mapping statistic. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        // console.log('Confirmation result:', result);
+        if (result) {
+          const res = await this.brokerConfigurationService.runOperation(
+            Operation.RESET_STATUS_MAPPING
+          );
+          if (res.status < 300) {
+            this.alertService.success(
+              gettext('Mapping statistic reset successfully.')
+            );
+          } else {
+            this.alertService.danger(gettext('Failed to reset statistic.'));
+          }
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 
   ngOnDestroy(): void {
