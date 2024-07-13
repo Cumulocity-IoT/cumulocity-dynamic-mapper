@@ -64,14 +64,14 @@
         <div class="card-block p-b-0">
           <div class="container">
             <div [formGroup]="templateForm">
-              <div class="row" #buttons>
+              <div class="row" #buttonsStep2>
                 <div class="col-lg-5 col-lg-offset-1 column-right-border">
                   <div class="form-group">
                     <div class="d-flex">
                       <button
                         type="button"
                         name="sample"
-                        class="btn btn-default animated btn-sm"
+                        class="btn btn-default btn-sm"
                         (click)="onSnoopedSourceTemplates()"
                         translate
                         title="Use snooped templates"
@@ -93,27 +93,14 @@
                         Using snooped template {{ snoopedTemplateCounter }} of
                         {{ mapping.snoopedTemplates.length }}</small
                       >
-
-                      <small
-                        *ngIf="mapping.snoopedTemplates.length > 0"
-                        class="text-muted m-l-8 m-t-8"
-                      >
-                        Using snooped template {{ snoopedTemplateCounter }} of
-                        {{ mapping.snoopedTemplates.length }}</small
-                      >
                     </div>
                     <div>
-                      <small
-                        class="text-muted"
-                        *ngIf="stepperConfiguration.showEditorSource"
-                        >Use snooped templates in the source template.</small
-                      >
-                      <small
-                        class="text-muted"
-                        *ngIf="!stepperConfiguration.showEditorSource"
-                        >Template is described internally by the chosen mapping
-                        type</small
-                      >
+                      <small class="text-muted">{{
+                        stepperConfiguration.showEditorSource
+                          ? 'Use snooped templates in the source template.'
+                          : 'Template is described internally by the chosen mapping
+                        type'
+                      }}</small>
                     </div>
                   </div>
                 </div>
@@ -147,8 +134,11 @@
                   </div>
                 </div>
               </div>
-              <div class="row" #editors>
-                <div class="col-lg-5 col-lg-offset-1 column-right-border">
+              <div class="row" #editorsStep2>
+                <div
+                  class="col-lg-5 col-lg-offset-1 column-right-border"
+                  #leftTemplateStep2
+                >
                   <div class="form-group">
                     <div>
                       <label translate
@@ -167,71 +157,79 @@
                       #editorSource
                       id="editorSource"
                     ></d11r-mapping-json-editor2>
-                  </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Extensions for {{ mapping.mappingType }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exName"
-                        #extensionName
-                        (change)="onSelectExtension(templateForm.value.exName)"
-                        required
-                      >
-                        <option [ngValue]="null" disabled>
-                          Select an extension
-                        </option>
-                        <option
-                          *ngFor="let ex of extensions | keyvalue"
-                          [ngValue]="ex.key"
-                          [selected]="ex.key === mapping.extension?.name"
+                    <div *ngIf="stepperConfiguration.showProcessorExtensions">
+                      <div class="form-group">
+                        <label translate
+                          >Extensions for {{ mapping.mappingType }}</label
                         >
-                          {{ ex.key }}
-                        </option>
-                      </select>
+                        <div
+                          class="c8y-select-wrapper"
+                          style="max-height: 300px; overflow: auto !important"
+                        >
+                          <select
+                            class="form-control"
+                            formControlName="exName"
+                            #extensionName
+                            (change)="
+                              onSelectExtension(templateForm.value.exName)
+                            "
+                            required
+                          >
+                            <option [ngValue]="null" disabled>
+                              Select an extension
+                            </option>
+                            <option
+                              *ngFor="let ex of extensions | keyvalue"
+                              [ngValue]="ex.key"
+                              [selected]="ex.key === mapping.extension?.name"
+                            >
+                              {{ ex.key }}
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label translate
+                          >Events for {{ mapping.extension.name }}</label
+                        >
+                        <div
+                          class="c8y-select-wrapper"
+                          style="max-height: 300px; overflow: auto !important"
+                        >
+                          <select
+                            class="form-control"
+                            formControlName="exEvent"
+                            #extensionEvent
+                            required
+                          >
+                            <option [ngValue]="null" disabled>
+                              Select an event
+                            </option>
+                            <option
+                              *ngFor="let ev of extensionEvents$ | async"
+                              [ngValue]="ev"
+                              [selected]="ev === mapping.extension?.event"
+                            >
+                              {{ ev }}
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="p-t-48">
+                      <small
+                        class="text-muted"
+                        *ngIf="
+                          !stepperConfiguration.showEditorSource &&
+                          !stepperConfiguration.showProcessorExtensions
+                        "
+                        >Template is described internally by the chosen mapping
+                        type</small
+                      >
                     </div>
                   </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Events for {{ mapping.extension.name }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exEvent"
-                        #extensionEvent
-                        required
-                      >
-                        <option [ngValue]="null" disabled>
-                          Select an event
-                        </option>
-                        <option
-                          *ngFor="let ev of extensionEvents$ | async"
-                          [ngValue]="ev"
-                          [selected]="ev === mapping.extension?.event"
-                        >
-                          {{ ev }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-
                 </div>
-                <div class="col-lg-5 column-left-border">
+                <div class="col-lg-5 column-left-border" #rightTemplateStep2>
                   <div class="form-group">
                     <div class="d-flex j-c-between">
                       <div class="d-flex">
@@ -274,18 +272,19 @@
         <div class="card-block p-b-0">
           <div class="container">
             <div [formGroup]="templateForm">
-              <div class="row">
-                <div class="col-lg-5 col-lg-offset-1 column-right-border">
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showEditorSource"
-                  >
+              <div class="row" #editorsStep3>
+                <div
+                  class="col-lg-5 col-lg-offset-1 column-right-border"
+                  #leftTemplateStep3
+                >
+                  <div class="form-group">
                     <div class="d-flex j-c-between">
                       <label translate
                         >Template Source - {{ sourceSystem }}</label
                       >
                     </div>
                     <d11r-mapping-json-editor2
+                      *ngIf="stepperConfiguration.showEditorSource"
                       [schemaUpdate]="schemaUpdateSource"
                       [options]="editorOptionsSource"
                       [class]="'jse-main-small'"
@@ -296,9 +295,87 @@
                       #editorSource
                       id="editorSource"
                     ></d11r-mapping-json-editor2>
+                    <div
+                      *ngIf="
+                        stepperConfiguration.showProcessorExtensions &&
+                        !stepperConfiguration.showEditorSource
+                      "
+                    >
+                      <div class="form-group">
+                        <label translate
+                          >Extensions for {{ mapping.mappingType }}</label
+                        >
+                        <div
+                          class="c8y-select-wrapper"
+                          style="max-height: 300px; overflow: auto !important"
+                        >
+                          <select
+                            class="form-control"
+                            formControlName="exName"
+                            #extensionName
+                            (change)="
+                              onSelectExtension(templateForm.value.exName)
+                            "
+                            required
+                          >
+                            <option [ngValue]="null" disabled>
+                              Select an extension
+                            </option>
+                            <option
+                              *ngFor="let ex of extensions | keyvalue"
+                              [ngValue]="ex.key"
+                              [selected]="ex.key === mapping.extension?.name"
+                            >
+                              {{ ex.key }}
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label translate
+                          >Events for {{ mapping.extension.name }}</label
+                        >
+                        <div
+                          class="c8y-select-wrapper"
+                          style="max-height: 300px; overflow: auto !important"
+                        >
+                          <select
+                            class="form-control"
+                            formControlName="exEvent"
+                            #extensionEvent
+                            required
+                          >
+                            <option [ngValue]="null" disabled>
+                              Select an event
+                            </option>
+                            <option
+                              *ngFor="let ev of extensionEvents$ | async"
+                              [ngValue]="ev"
+                              [selected]="ev === mapping.extension?.event"
+                            >
+                              {{ ev }}
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="p-t-48">
+                      <small
+                        class="text-muted"
+                        *ngIf="
+                          !stepperConfiguration.showEditorSource &&
+                          !stepperConfiguration.showProcessorExtensions
+                        "
+                        >Template is described internally by the chosen mapping
+                        type</small
+                      >
+                    </div>
                     <c8y-messages class="text-left">
                       <c8y-message
-                        *ngIf="substitutionModel.pathSource === ''"
+                        *ngIf="
+                          substitutionModel.pathSource === '' &&
+                          stepperConfiguration.showEditorSource
+                        "
                         translate
                         ><span class="text-warning"
                           >Select source node to define substitution!</span
@@ -306,83 +383,8 @@
                       </c8y-message>
                     </c8y-messages>
                   </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Extensions for {{ mapping.mappingType }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exName"
-                        #extensionName
-                        (change)="onSelectExtension(templateForm.value.exName)"
-                        required
-                      >
-                        <option [ngValue]="null" disabled>
-                          Select an extension
-                        </option>
-                        <option
-                          *ngFor="let ex of extensions | keyvalue"
-                          [ngValue]="ex.key"
-                          [selected]="ex.key === mapping.extension?.name"
-                        >
-                          {{ ex.key }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div
-                    class="form-group"
-                    *ngIf="stepperConfiguration.showProcessorExtensions"
-                  >
-                    <label translate
-                      >Events for {{ mapping.extension.name }}</label
-                    >
-                    <div
-                      class="c8y-select-wrapper"
-                      style="max-height: 300px; overflow: auto !important"
-                    >
-                      <select
-                        class="form-control"
-                        formControlName="exEvent"
-                        #extensionEvent
-                        required
-                      >
-                        <option [ngValue]="null" disabled>
-                          Select an event
-                        </option>
-                        <option
-                          *ngFor="let ev of extensionEvents$ | async"
-                          [ngValue]="ev"
-                          [selected]="ev === mapping.extension?.event"
-                        >
-                          {{ ev }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                  <div
-                    *ngIf="
-                      !stepperConfiguration.showEditorSource
-                    "
-                  >
-                    <label>Template Source - {{ sourceSystem }}</label>
-                    <div class="p-t-48">
-						<small
-                        class="text-muted"
-                        *ngIf="!stepperConfiguration.showEditorSource"
-                        >Template is described internally by the chosen mapping
-                        type</small>
-                    </div>
-                  </div>
                 </div>
-                <div class="col-lg-5 column-left-border">
+                <div class="col-lg-5 column-left-border" #rightTemplateStep3>
                   <div class="form-group">
                     <div class="d-flex j-c-between">
                       <div class="d-flex">
