@@ -36,7 +36,8 @@ import { BrokerConfigurationService } from '../../configuration';
 import { Direction, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { countDeviceIdentifiers, isDisabled } from '../shared/util';
-import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper-model';
+import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { SnoopStatus } from '../../shared/model/shared.model';
 
 @Component({

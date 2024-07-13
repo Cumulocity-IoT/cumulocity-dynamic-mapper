@@ -42,7 +42,8 @@ import {
   getExternalTemplate
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper-model';
+import { StepperConfiguration } from 'src/shared/model/shared.model';
 import {
   checkTopicsInboundAreValidWithOption,
   checkTopicsOutboundAreValid,

@@ -1,4 +1,5 @@
 import { ConnectorConfiguration } from '../../configuration';
+import { EditorMode } from '../../mapping/shared/stepper-model';
 
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
@@ -109,6 +110,17 @@ export enum QOS {
   EXACTLY_ONCE = 'EXACTLY_ONCE'
 }
 
+export interface StepperConfiguration {
+	showEditorSource?: boolean;
+	showProcessorExtensions?: boolean;
+	editorMode?: EditorMode;
+	allowNoDefinedIdentifier?: boolean;
+	allowDefiningSubstitutions?: boolean;
+	allowTestTransformation?: boolean;
+	allowTestSending?: boolean;
+	direction?: Direction;
+}
+
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
@@ -126,6 +138,7 @@ export interface MappingTypeDescriptionInterface {
   key: MappingType;
   description: string;
   properties: Record<Direction, MappingTypeProperties>;
+  stepperConfiguration:StepperConfiguration;
 }
 
 export const MAPPING_TYPE_DESCRIPTION: Record<
@@ -138,7 +151,15 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: true }
-    }
+    },
+	stepperConfiguration: {
+		showEditorSource: true,
+		allowNoDefinedIdentifier: false,
+		allowDefiningSubstitutions: true,
+		showProcessorExtensions: false,
+		allowTestTransformation: true,
+		allowTestSending: true,
+	}
   },
   [MappingType.FLAT_FILE]: {
     key: MappingType.FLAT_FILE,
@@ -153,7 +174,15 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
-    }
+    },
+	stepperConfiguration: {
+		showEditorSource: true,
+		allowNoDefinedIdentifier: false,
+		allowDefiningSubstitutions: true,
+		showProcessorExtensions: false,
+		allowTestTransformation: true,
+		allowTestSending: true,
+	}
   },
   [MappingType.GENERIC_BINARY]: {
     key: MappingType.GENERIC_BINARY,
@@ -162,7 +191,15 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
     properties: {
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
-    }
+    },
+	stepperConfiguration: {
+		showEditorSource: true,
+		allowNoDefinedIdentifier: false,
+		allowDefiningSubstitutions: true,
+		showProcessorExtensions: false,
+		allowTestTransformation: true,
+		allowTestSending: true,
+	}
   },
   [MappingType.PROTOBUF_STATIC]: {
     key: MappingType.PROTOBUF_STATIC,
@@ -170,7 +207,15 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
-    }
+    },
+	stepperConfiguration: {
+		showProcessorExtensions: false,
+        allowDefiningSubstitutions: false,
+        showEditorSource: false,
+        allowNoDefinedIdentifier: true,
+        allowTestTransformation: false,
+        allowTestSending: true
+	}
   },
   [MappingType.PROCESSOR_EXTENSION]: {
     key: MappingType.PROCESSOR_EXTENSION,
@@ -179,7 +224,15 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
     properties: {
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
-    }
+    },
+	stepperConfiguration: {
+        showProcessorExtensions: true,
+        allowDefiningSubstitutions: false,
+        showEditorSource: false,
+        allowNoDefinedIdentifier: true,
+        allowTestTransformation: false,
+        allowTestSending: true
+	}
   }
 };
 

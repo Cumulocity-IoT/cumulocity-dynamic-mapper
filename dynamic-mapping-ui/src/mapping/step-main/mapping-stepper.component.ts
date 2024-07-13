@@ -65,7 +65,8 @@ import {
   reduceTargetTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
-import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper-model';
+import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 import { MessageField } from '../shared/formly/message.type.component';
 import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';

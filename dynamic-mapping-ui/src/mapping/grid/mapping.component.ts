@@ -68,7 +68,8 @@ import { NameRendererComponent } from '../renderer/name.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { EditorMode, StepperConfiguration } from '../shared/stepper-model';
+import { EditorMode } from '../shared/stepper-model';
+import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from 'src/shared/model/shared.model';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
@@ -97,16 +98,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
 
-  stepperConfiguration: StepperConfiguration = {
-    showEditorSource: true,
-    allowNoDefinedIdentifier: false,
-    allowDefiningSubstitutions: true,
-    showProcessorExtensions: false,
-    allowTestTransformation: true,
-    allowTestSending: true,
-    editorMode: EditorMode.UPDATE,
-    direction: Direction.INBOUND
-  };
+  stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
   titleSubscription: string = 'Subscription on devices for mapping outbound';
 
@@ -389,16 +381,11 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async addMapping() {
-    this.stepperConfiguration = {
-      ...this.stepperConfiguration,
-      showEditorSource: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
-      allowTestTransformation: true,
-      allowTestSending: true,
-      editorMode: EditorMode.CREATE
-    };
+    this.setStepperConfiguration(
+      this.mappingType,
+      this.stepperConfiguration.direction,
+      EditorMode.CREATE
+    );
 
     const ident = uuidCustom();
     const sub: MappingSubstitution[] = [];
@@ -474,10 +461,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         message: undefined
       };
     }
-    this.setStepperConfiguration(
-      this.mappingType,
-      this.stepperConfiguration.direction
-    );
 
     this.mappingToUpdate = mapping;
     if (
@@ -507,22 +490,20 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   updateMapping(m: MappingEnriched) {
     const { mapping } = m;
-    if (!mapping.direction)
-      this.stepperConfiguration.direction = Direction.INBOUND;
-    this.stepperConfiguration = {
-      ...this.stepperConfiguration,
-      showEditorSource: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
-      allowTestTransformation: true,
-      allowTestSending: true,
-      editorMode: EditorMode.UPDATE
-    };
+
     if (mapping.active) {
-      this.stepperConfiguration.editorMode = EditorMode.READ_ONLY;
+      this.setStepperConfiguration(
+        mapping.mappingType,
+        this.stepperConfiguration.direction,
+        EditorMode.READ_ONLY
+      );
+    } else {
+      this.setStepperConfiguration(
+        mapping.mappingType,
+        this.stepperConfiguration.direction,
+        EditorMode.UPDATE
+      );
     }
-    this.setStepperConfiguration(mapping.mappingType, mapping.direction);
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping));
 
@@ -545,17 +526,11 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   copyMapping(m: MappingEnriched) {
     const { mapping } = m;
-    this.stepperConfiguration = {
-      ...this.stepperConfiguration,
-      showEditorSource: true,
-      allowNoDefinedIdentifier: false,
-      allowDefiningSubstitutions: true,
-      showProcessorExtensions: false,
-      allowTestTransformation: true,
-      allowTestSending: true,
-      editorMode: EditorMode.COPY
-    };
-    this.setStepperConfiguration(mapping.mappingType, mapping.direction);
+    this.setStepperConfiguration(
+      mapping.mappingType,
+      mapping.direction,
+      EditorMode.COPY
+    );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = JSON.parse(JSON.stringify(mapping)) as Mapping;
     this.mappingToUpdate.snoopStatus = SnoopStatus.NONE;
@@ -852,28 +827,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  setStepperConfiguration(mappingType: MappingType, direction: Direction) {
-    if (mappingType == MappingType.PROTOBUF_STATIC) {
-      this.stepperConfiguration = {
-        ...this.stepperConfiguration,
-        showProcessorExtensions: false,
-        allowDefiningSubstitutions: false,
-        showEditorSource: false,
-        allowNoDefinedIdentifier: true,
-        allowTestTransformation: false,
-        allowTestSending: true
-      };
-    } else if (mappingType == MappingType.PROCESSOR_EXTENSION) {
-      this.stepperConfiguration = {
-        ...this.stepperConfiguration,
-        showProcessorExtensions: true,
-        allowDefiningSubstitutions: false,
-        showEditorSource: false,
-        allowNoDefinedIdentifier: true,
-        allowTestTransformation: false,
-        allowTestSending: true
-      };
-    }
+  setStepperConfiguration(
+    mappingType: MappingType,
+    direction: Direction,
+    editorMode: EditorMode
+  ) {
+    this.stepperConfiguration = MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
+	this.stepperConfiguration.direction = direction;
+    this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
   }
