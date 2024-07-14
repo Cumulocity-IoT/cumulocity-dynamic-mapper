@@ -22,9 +22,9 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from './shared.service';
-import { NODE1 } from './model/util';
+import { NODE1, NODE2 } from './model/util';
 @Injectable()
-export class MappingTab1Factory implements TabFactory {
+export class MappingTabFactory implements TabFactory {
   constructor(
     public router: Router,
     private sharedService: SharedService
@@ -63,6 +63,24 @@ export class MappingTab1Factory implements TabFactory {
           orientation: 'horizontal'
         } as Tab);
       }
+    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
+      // if (feature?.userHasMappingAdminRole) {
+
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,
+        priority: 700,
+        label: 'Test device',
+        icon: 'reflector-bulb',
+        orientation: 'horizontal'
+      } as Tab);
+    } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3/g)) {
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/extension`,
+        priority: 500,
+        label: 'Processor extension',
+        icon: 'plugin',
+        orientation: 'horizontal'
+      } as Tab);
     }
     return tabs;
   }

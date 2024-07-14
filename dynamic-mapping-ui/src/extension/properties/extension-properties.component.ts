@@ -24,6 +24,7 @@ import { ActivatedRoute } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components';
 import { ExtensionService } from '../share/extension.service';
+import { NODE3 } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-extension-properties',
@@ -33,6 +34,7 @@ export class ExtensionPropertiesComponent {
   extensionsEntryForm: FormGroup;
   extension: IManagedObject;
   isLoading: boolean = true;
+  LINK = `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`;
   breadcrumbConfig: { icon: string; label: string; path: string };
 
   constructor(
@@ -63,7 +65,7 @@ export class ExtensionPropertiesComponent {
     this.breadcrumbConfig = {
       icon: 'c8y-modules',
       label: gettext('Extensions'),
-      path: 'sag-ps-pkg-dynamic-mapping/node2/extension'
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`
     };
   }
 }

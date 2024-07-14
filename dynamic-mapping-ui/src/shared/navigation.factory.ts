@@ -28,7 +28,7 @@ import {
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { SharedService } from './shared.service';
-import { NODE1, NODE2 } from './model/util';
+import { NODE1, NODE2, NODE3 } from './model/util';
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
@@ -62,18 +62,26 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Mapping'),
       icon: 'file-type-document',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-      priority: 99,
+      priority: 500,
+      preventDuplicates: true
+    });
+    const mappingMonitoring = new NavigatorNode({
+      parent: gettext('Dynamic Mapping'),
+      label: gettext('Monitoring'),
+      icon: 'pie-chart',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+      priority: 400,
       preventDuplicates: true
     });
     const mappingExtension = new NavigatorNode({
       parent: gettext('Dynamic Mapping'),
-      label: gettext('Monitoring'),
-      icon: 'pie-chart',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/chart`,
-      priority: 99,
+      label: gettext('Extension'),
+      icon: 'plugin',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
+      priority: 300,
       preventDuplicates: true
     });
-    const navs = [parentMapping, mapping, mappingExtension];
+    const navs = [parentMapping, mapping, mappingMonitoring, mappingExtension];
 
     const feature: any = this.sharedService.getFeatures();
     return this.applicationService

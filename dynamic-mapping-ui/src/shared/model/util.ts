@@ -381,3 +381,4 @@ export function nextIdAndPad(id: number, padding: number): string {
 
 export const NODE1 = 'node1';
 export const NODE2 = 'node2';
+export const NODE3 = 'node3';
