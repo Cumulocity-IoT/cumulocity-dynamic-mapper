@@ -378,3 +378,6 @@ export function uuidCustom(): string {
 export function nextIdAndPad(id: number, padding: number): string {
   return (id + 1).toString(10).padStart(padding, '0');
 }
+
+export const NODE1 = 'node1';
+export const NODE2 = 'node2';

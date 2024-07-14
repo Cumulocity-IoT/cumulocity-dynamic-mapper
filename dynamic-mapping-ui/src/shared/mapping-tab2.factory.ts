@@ -21,22 +21,41 @@
 import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
-import { NODE2 } from '../shared';
+import { SharedService } from './shared.service';
+import { NODE2 } from './model/util';
 @Injectable()
-export class TreeTabFactory implements TabFactory {
-  constructor(public router: Router) {}
+export class MappingTab2Factory implements TabFactory {
+  constructor(
+    public router: Router,
+    private sharedService: SharedService
+  ) {}
 
   async get() {
-    // console.log("MonitoringTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
+    // console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const feature = await this.sharedService.getFeatures();
+
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
+      // if (feature?.userHasMappingAdminRole) {
+
       tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/tree`,
-        priority: 600,
-        label: 'Mapping tree inbound',
-        icon: 'tree-structure',
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,
+        priority: 700,
+        label: 'Test device',
+        icon: 'reflector-bulb',
         orientation: 'horizontal'
       } as Tab);
+
+      // if (feature?.userHasMappingAdminRole) {
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/extension`,
+        priority: 500,
+        label: 'Processor extension',
+        icon: 'plugin',
+        orientation: 'horizontal'
+      } as Tab);
+      //  }
     }
     return tabs;
   }

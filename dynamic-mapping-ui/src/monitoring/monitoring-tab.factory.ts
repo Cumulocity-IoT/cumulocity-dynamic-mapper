@@ -30,16 +30,16 @@ export class MonitoringTabFactory implements TabFactory {
   async get() {
     // console.log("MonitoringTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
     const tabs: Tab[] = [];
-    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
+    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring/grid',
+        path: 'sag-ps-pkg-dynamic-mapping/node2/monitoring/grid',
         priority: 810,
         label: 'Monitoring',
         icon: 'monitoring',
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/monitoring/chart',
+        path: 'sag-ps-pkg-dynamic-mapping/node2/monitoring/chart',
         priority: 800,
         label: 'Monitoring chart',
         icon: 'pie-chart',

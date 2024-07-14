@@ -22,8 +22,9 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from './shared.service';
+import { NODE1 } from './model/util';
 @Injectable()
-export class MappingTabFactory implements TabFactory {
+export class MappingTab1Factory implements TabFactory {
   constructor(
     public router: Router,
     private sharedService: SharedService
@@ -34,10 +35,10 @@ export class MappingTabFactory implements TabFactory {
     const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];
-    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping/g)) {
+    if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node1/g)) {
       // if (feature?.userHasMappingAdminRole) {
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/configuration',
+        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/configuration`,
         priority: 930,
         label: 'Connector',
         icon: 'cog',
@@ -46,7 +47,7 @@ export class MappingTabFactory implements TabFactory {
       // }
 
       tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
+        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
         priority: 920,
         label: 'Mapping inbound',
         icon: 'swipe-right',
@@ -55,31 +56,13 @@ export class MappingTabFactory implements TabFactory {
 
       if (feature?.outputMappingEnabled) {
         tabs.push({
-          path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+          path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
           priority: 910,
           label: 'Mapping outbound',
           icon: 'swipe-left',
           orientation: 'horizontal'
         } as Tab);
       }
-
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/testing',
-        priority: 700,
-        label: 'Test device',
-        icon: 'reflector-bulb',
-        orientation: 'horizontal'
-      } as Tab);
-
-      // if (feature?.userHasMappingAdminRole) {
-      tabs.push({
-        path: 'sag-ps-pkg-dynamic-mapping/extension',
-        priority: 500,
-        label: 'Processor extension',
-        icon: 'plugin',
-        orientation: 'horizontal'
-      } as Tab);
-      //  }
     }
     return tabs;
   }

@@ -150,7 +150,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('constructor');
     const href = this.router.url;
     this.stepperConfiguration.direction = href.match(
-      /sag-ps-pkg-dynamic-mapping\/mappings\/inbound/g
+      /sag-ps-pkg-dynamic-mapping\/node1\/mappings\/inbound/g
     )
       ? Direction.INBOUND
       : Direction.OUTBOUND;

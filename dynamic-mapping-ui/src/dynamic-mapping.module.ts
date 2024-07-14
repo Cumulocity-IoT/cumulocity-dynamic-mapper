@@ -38,7 +38,8 @@ import { FormlyPresetModule } from '@ngx-formly/core/preset';
 
 import {
   MappingNavigationFactory,
-  MappingTabFactory,
+  MappingTab1Factory,
+  MappingTab2Factory,
   OverviewGuard,
   SharedModule
 } from './shared';
@@ -79,7 +80,8 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
     OverviewGuard,
     BsModalService,
     hookNavigator(MappingNavigationFactory),
-    hookTab(MappingTabFactory),
+    hookTab(MappingTab1Factory),
+    hookTab(MappingTab2Factory),
     {
       provide: FORMLY_CONFIG,
       multi: true,

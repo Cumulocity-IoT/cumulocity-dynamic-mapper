@@ -91,11 +91,11 @@ import { SnoopingStepperComponent } from './snooping/snooping-stepper.component'
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
+      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/inbound',
       component: MappingComponent
     }),
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/outbound',
       component: MappingComponent
     }),
   ]

@@ -23,7 +23,7 @@ import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { SharedModule } from '../shared';
+import { NODE2, SharedModule } from '../shared';
 import { ExtensionCardComponent } from './extension-card/extension-card.component';
 import { AddExtensionComponent } from './extension-modal/add-extension.component';
 import { ExtensionComponent } from './grid/extension.component';
@@ -41,7 +41,7 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/extension',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE2}/extension`,
       children: [
         {
           path: '',
