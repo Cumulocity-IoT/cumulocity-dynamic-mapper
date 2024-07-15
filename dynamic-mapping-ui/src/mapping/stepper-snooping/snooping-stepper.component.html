@@ -35,8 +35,26 @@
   <ng-template c8yStepperIcon="final">
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
+  <cdk-step label="Specify connector">
+    <d11r-mapping-connector
+      [stepperConfiguration]="stepperConfiguration"
+    ></d11r-mapping-connector>
 
-  <cdk-step label="Properties snooping" state="final" [stepControl]="propertyFormly">
+    <div>
+      <c8y-stepper-buttons
+        class="d-block card-footer p-24 separator"
+        (onCancel)="cancel.emit()"
+        (onNext)="onNextStep($event)"
+        [labels]="labels"
+      >
+      </c8y-stepper-buttons>
+    </div>
+  </cdk-step>
+  <cdk-step
+    label="Properties snooping"
+    state="final"
+    [stepControl]="propertyFormly"
+  >
     <d11r-mapping-properties
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"

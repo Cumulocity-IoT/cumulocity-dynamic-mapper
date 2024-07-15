@@ -44,14 +44,14 @@ import { TemplateRendererComponent } from './renderer/template.renderer.componen
 import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
-import { MappingStepperComponent } from './step-main/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './step-main/substitution/substitution-renderer.component';
+import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
+import { SubstitutionRendererComponent } from './stepper-mapping/substitution/substitution-renderer.component';
 import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
-import { SnoopingStepperComponent } from './snooping/snooping-stepper.component';
+import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 
 @NgModule({

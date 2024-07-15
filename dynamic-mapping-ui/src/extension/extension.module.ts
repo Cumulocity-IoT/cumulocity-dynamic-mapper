@@ -28,6 +28,7 @@ import { ExtensionCardComponent } from './extension-card/extension-card.componen
 import { AddExtensionComponent } from './extension-modal/add-extension.component';
 import { ExtensionComponent } from './grid/extension.component';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
+import { extensionResolver } from './utils';
 
 @NgModule({
   declarations: [
@@ -37,7 +38,12 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
     ExtensionCardComponent,
     ExtensionPropertiesComponent
   ],
-  imports: [CoreModule, BsDropdownModule.forRoot(), CollapseModule.forRoot(), SharedModule],
+  imports: [
+    CoreModule,
+    BsDropdownModule.forRoot(),
+    CollapseModule.forRoot(),
+    SharedModule
+  ],
   exports: [],
   providers: [
     hookRoute({
@@ -46,12 +52,13 @@ import { ExtensionPropertiesComponent } from './properties/extension-properties.
         {
           path: '',
           pathMatch: 'full',
-          component: ExtensionComponent,
+          component: ExtensionComponent
           // canActivate: [AdminGuard]
         },
         {
           path: 'properties/:id',
-          component: ExtensionPropertiesComponent
+          component: ExtensionPropertiesComponent,
+          resolve: { extensions: extensionResolver }
         }
       ]
     })

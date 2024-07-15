@@ -18,26 +18,11 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { NODE3 } from '../../shared';
-import { IManagedObject } from '@c8y/client';
+import { inject } from '@angular/core';
+import { ResolveFn } from '@angular/router';
+import { MappingTreeService } from './tree.service';
 
-@Component({
-  selector: 'd11r-mapping-extension-properties',
-  templateUrl: './extension-properties.component.html'
-})
-export class ExtensionPropertiesComponent implements OnInit {
-  extensionsEntryForm: FormGroup;
-  extension: IManagedObject;
-  LINK = `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`;
-  breadcrumbConfig: { icon: string; label: string; path: string };
-
-  constructor(private route: ActivatedRoute) {}
-
-  ngOnInit() {
-    const {extensions} = this.route.snapshot.data;
-    this.extension = extensions[0];
-  }
-}
+export const treeResolver: ResolveFn<JSON > = () => {
+  const mappingTreeService = inject(MappingTreeService);
+  return mappingTreeService.loadMappingTree();
+};

@@ -29,7 +29,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { AlertService } from '@c8y/ngx-components';
+import { AlertService, C8yStepper } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, Mapping, SharedService } from '../../shared';
@@ -38,6 +38,7 @@ import { countDeviceIdentifiers, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
 import { SnoopStatus } from '../../shared/model/shared.model';
+import { CdkStep } from '@angular/cdk/stepper';
 
 @Component({
   selector: 'd11r-snooping-stepper',
@@ -66,6 +67,10 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   snoopedTemplateCounter: number = 0;
   step: any;
   onDestroy$ = new Subject<void>();
+  labels: any = {
+    next: 'Next',
+    cancel: 'Cancel'
+  };
 
   constructor(
     public bsModalService: BsModalService,
@@ -76,20 +81,10 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    // console.log('Formly to be updated:', this.configService);
     // set value for backward compatibility
     if (!this.mapping.direction) this.mapping.direction = Direction.INBOUND;
-    // console.log(
-    //  'Mapping to be updated:',
-    //  this.mapping,
-    //  this.stepperConfiguration
-    // );
 
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
-
-    // this.extensionEvents$.subscribe((events) => {
-    //   console.log('New events from extension', events);
-    // });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -106,6 +101,19 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
 
   async onCancelButton() {
     this.cancel.emit();
+  }
+
+  async onNextStep(event: {
+    stepper: C8yStepper;
+    step: CdkStep;
+  }): Promise<void> {
+    // ('OnNextStep', event.step.label, this.mapping);
+    this.step = event.step.label;
+    if (this.step == 'Properties snooping') {
+      event.stepper.next();
+    } else {
+      event.stepper.next();
+    }
   }
 
   ngOnDestroy() {
