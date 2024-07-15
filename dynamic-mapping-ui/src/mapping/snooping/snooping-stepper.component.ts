@@ -32,8 +32,7 @@ import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { BrokerConfigurationService } from '../../configuration';
-import { Direction, Mapping } from '../../shared';
+import { Direction, Mapping, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { countDeviceIdentifiers, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
@@ -71,7 +70,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
-    public brokerConfigurationService: BrokerConfigurationService,
+    public sharedService: SharedService,
     private alertService: AlertService,
     private elementRef: ElementRef
   ) {}

@@ -36,11 +36,6 @@ import {
   take
 } from 'rxjs';
 import {
-  BrokerConfigurationService,
-  Operation,
-  StatusEventTypes
-} from '../../configuration';
-import {
   BASE_URL,
   MAPPING_FRAGMENT,
   MAPPING_TYPE,
@@ -53,7 +48,9 @@ import {
   MappingDeployed,
   PATH_MAPPING_DEPLOYED_ENDPOINT,
   MappingEnriched,
-  MAPPING_TYPE_DESCRIPTION
+  MAPPING_TYPE_DESCRIPTION,
+  Operation,
+  StatusEventTypes
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -65,12 +62,13 @@ import {
 import { C8YAPISubscription } from '../shared/mapping.model';
 import { AlertService } from '@c8y/ngx-components';
 import { Realtime } from '@c8y/ngx-components/api';
+import { ConnectorConfigurationService } from '../../connector';
 
 @Injectable({ providedIn: 'root' })
 export class MappingService {
   constructor(
     private inventory: InventoryService,
-    private brokerConfigurationService: BrokerConfigurationService,
+    private brokerConnectorService: ConnectorConfigurationService,
     private jsonProcessorInbound: JSONProcessorInbound,
     private jsonProcessorOutbound: JSONProcessorOutbound,
     private sharedService: SharedService,
@@ -100,34 +98,34 @@ export class MappingService {
 
   async changeActivationMapping(parameter: any) {
     const conf =
-      await this.brokerConfigurationService.getConnectorConfigurations();
+      await this.brokerConnectorService.getConnectorConfigurations();
     if (parameter.active && conf.length == 0) {
       this.alertService.warning(
         'Mapping was activated, but no connector is configured. Please add connector on the Connector tab!'
       );
     }
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.ACTIVATE_MAPPING,
       parameter
     );
   }
 
   async changeDebuggingMapping(parameter: any) {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.DEBUG_MAPPING,
       parameter
     );
   }
 
   async changeSnoopStatusMapping(parameter: any) {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.SNOOP_MAPPING,
       parameter
     );
   }
 
   async resetSnoop(parameter: any) {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.SNOOP_RESET,
       parameter
     );

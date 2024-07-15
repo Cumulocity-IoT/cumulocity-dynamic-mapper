@@ -1,0 +1,143 @@
+<!--
+  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+  -->
+
+  <div>
+	<table
+	  class="table table-condensed table-striped fixTableHead"
+	  id="connectorConfigurations"
+	>
+	  <thead>
+		<tr>
+		  <th>#</th>
+		  <th>Type</th>
+		  <th>Name</th>
+		  <th>Enabled</th>
+		  <th>Status</th>
+		  <th>Action</th>
+		</tr>
+	  </thead>
+	  <tbody>
+		<tr *ngFor="let con of configurations; let i = index">
+		  <td width="5%" style="padding-top: 12px">
+			{{ i }}
+		  </td>
+		  <td width="10%" style="padding-top: 12px">
+			<span class="text-12">{{ con?.connectorType }} </span>
+		  </td>
+		  <td width="40%" style="padding-top: 12px">
+			{{ con?.name }}
+		  </td>
+		  <td width="5%" style="padding-top: 12px">
+			<i
+			  style="text-align: center; width: 100%"
+			  [c8yIcon]="!con?.enabled ? 'inactive-state' : 'check'"
+			  class="m-r-5"
+			></i>
+		  </td>
+		  <td width="20%" style="padding-top: 12px">
+			<div class="c8y-realtime">
+			  <span
+				class="c8y-pulse animated pulse animation-slow"
+				[ngClass]="{
+				  active: (con.status$ | async) === 'CONNECTED',
+				  inactive: (con.status$ | async) !== 'CONNECTED'
+				}"
+			  ></span
+			  >{{ con.status$ | async }}
+			</div>
+		  </td>
+		  <td width="10%" id="{{ 'connector_' + con?.ident }}">
+			<div class="d-flex" style="position: absolute">
+			  <button
+				container="body"
+				style="padding-bottom: 6px"
+				title="{{ 'Toggle Activation' | translate }}"
+				class="btn btn-dot"
+				[disabled]="!feature?.userHasMappingAdminRole"
+				(click)="onConfigurationToggle(i)"
+			  >
+				<i
+				  [c8yIcon]="con?.enabled ? 'toggle-on' : 'toggle-off'"
+				></i>
+			  </button>
+			  <div placement="bottom right" class="dropdown" dropdown>
+				<button
+				  *ngIf="feature?.userHasMappingAdminRole"
+				  type="button"
+				  style="padding-top: 6px"
+				  title="Actions"
+				  dropdownToggle
+				  class="dropdown-toggle c8y-dropdown"
+				>
+				  <i c8yIcon="ellipsis-v"></i>
+				</button>
+				<button
+				  *ngIf="!feature?.userHasMappingAdminRole"
+				  type="button"
+				  style="padding-top: 6px"
+				  title="Actions"
+				  class="dropdown-toggle c8y-dropdown"
+				>
+				  <i c8yIcon="ellipsis-v"></i>
+				</button>
+				<ul
+				  class="dropdown-menu dropdown-menu-right"
+				  *dropdownMenu
+				>
+				  <li>
+					<button
+					  id="update"
+					  type="button"
+					  (click)="onConfigurationUpdate(i)"
+					>
+					  <i c8yIcon="pencil"></i>
+					  Update configuration
+					</button>
+				  </li>
+				  <li>
+					<button
+					  id="copy"
+					  type="button"
+					  (click)="onConfigurationCopy(i)"
+					>
+					  <i c8yIcon="copy"></i>
+					  Copy configuration
+					</button>
+				  </li>
+				  <li>
+					<button
+					  id="delete"
+					  type="button"
+					  (click)="onConfigurationDelete(i)"
+					  [disabled]="con?.enabled"
+					>
+					  <i c8yIcon="trash-o"></i>
+					  Delete configuration
+					</button>
+				  </li>
+				</ul>
+			  </div>
+			</div>
+		  </td>
+		</tr>
+	  </tbody>
+	</table>
+  </div>

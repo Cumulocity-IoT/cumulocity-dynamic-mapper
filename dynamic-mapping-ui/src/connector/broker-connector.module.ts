@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
  * and/or its subsidiaries and/or its affiliates and/or their licensors.
@@ -21,12 +22,12 @@
 
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { NODE3, SharedModule } from '../shared';
-import { BrokerConfigurationComponent } from './broker-configuration.component';
+import { SharedModule } from '../shared';
+import { BrokerConnectorComponent } from './broker-connector.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
-  declarations: [BrokerConfigurationComponent],
+  declarations: [BrokerConnectorComponent],
   imports: [
     CoreModule,
     SharedModule,
@@ -35,10 +36,10 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
   exports: [],
   providers: [
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
-      component: BrokerConfigurationComponent,
+      path: 'sag-ps-pkg-dynamic-mapping/node1/configuration',
+      component: BrokerConnectorComponent,
       // canActivate: [AdminGuard]
     })
   ]
 })
-export class BrokerConfigurationModule {}
+export class BrokerConnectorModule {}

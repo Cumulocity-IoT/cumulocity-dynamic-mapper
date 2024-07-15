@@ -37,7 +37,7 @@ import {
 } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
-import { ExtensionService } from '../share/extension.service';
+import { ExtensionService } from '../extension.service';
 
 @Component({
   selector: 'd11r-mapping-add-extension',

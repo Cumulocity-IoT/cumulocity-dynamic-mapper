@@ -27,6 +27,10 @@ import { ConfirmationModalComponent } from './confirmation/confirmation-modal.co
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
 import { DisableDirective } from './disable.directive';
+import { ConnectorStatusComponent } from './connector-status/connector-status.component';
+import { ConnectorConfigurationComponent } from './connector-configuration/connector-configuration.component';
+import { ConfigurationConfigurationModalComponent } from './connector-configuration/connector-configuration-modal.component';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
   declarations: [
@@ -34,15 +38,40 @@ import { DisableDirective } from './disable.directive';
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
-	DisableDirective
+    DisableDirective,
+    ConnectorStatusComponent,
+    ConnectorConfigurationComponent,
+    ConfigurationConfigurationModalComponent
   ],
-  imports: [CoreModule, BsDatepickerModule, PaginationModule],
+  imports: [
+    CoreModule,
+    BsDatepickerModule,
+    PaginationModule,
+    BsDropdownModule.forRoot()
+  ],
   exports: [
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,
-	DisableDirective
+    DisableDirective,
+    ConnectorStatusComponent,
+    ConnectorConfigurationComponent,
+    ConfigurationConfigurationModalComponent
   ]
 })
 export class SharedModule {}
+
+export enum Operation {
+  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
+  CONNECT = 'CONNECT',
+  DISCONNECT = 'DISCONNECT',
+  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
+  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
+  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
+  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
+  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
+  DEBUG_MAPPING = 'DEBUG_MAPPING',
+  SNOOP_MAPPING = 'SNOOP_MAPPING',
+  SNOOP_RESET = 'SNOOP_RESET'
+}

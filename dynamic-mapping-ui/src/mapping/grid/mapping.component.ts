@@ -38,7 +38,6 @@ import {
   gettext
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
-import { BrokerConfigurationService, Operation } from '../../configuration';
 import {
   API,
   ConfirmationModalComponent,
@@ -47,6 +46,7 @@ import {
   MappingEnriched,
   MappingSubstitution,
   MappingType,
+  Operation,
   QOS,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
@@ -73,6 +73,7 @@ import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from 'src/shared/model
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
+import { SharedService } from '../../shared/shared.service';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -142,7 +143,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   constructor(
     public mappingService: MappingService,
-    public brokerConfigurationService: BrokerConfigurationService,
+    public shareService: SharedService,
     public alertService: AlertService,
     private bsModalService: BsModalService,
     private router: Router
@@ -815,7 +816,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private async reloadMappingsInBackend() {
-    const response2 = await this.brokerConfigurationService.runOperation(
+    const response2 = await this.shareService.runOperation(
       Operation.RELOAD_MAPPINGS
     );
     // console.log('Activate mapping response:', response2);

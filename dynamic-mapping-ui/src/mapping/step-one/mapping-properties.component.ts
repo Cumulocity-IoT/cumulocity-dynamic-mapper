@@ -31,7 +31,6 @@ import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
 import { BehaviorSubject } from 'rxjs';
-import { BrokerConfigurationService } from '../../configuration';
 import {
   API,
   Direction,
@@ -51,6 +50,7 @@ import {
 } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveMappingTopicFromTopic } from '../shared/util';
+import { SharedService } from '../../shared/shared.service';
 
 @Component({
   selector: 'd11r-mapping-properties',
@@ -78,7 +78,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   constructor(
     mappingService: MappingService,
-    configurationService: BrokerConfigurationService,
+    sharedService: SharedService,
     private alertService: AlertService,
     private configService: FormlyConfig
   ) {}

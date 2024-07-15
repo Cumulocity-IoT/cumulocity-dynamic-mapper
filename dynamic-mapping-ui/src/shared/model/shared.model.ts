@@ -1,5 +1,5 @@
-import { ConnectorConfiguration } from '../../configuration';
 import { EditorMode } from '../../mapping/shared/stepper-model';
+import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
 /*
  * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
@@ -291,3 +291,9 @@ export const API = {
   },
   ALL: { name: 'ALL', identifier: '*', notificationFilter: '*' }
 };
+export interface Feature {
+	outputMappingEnabled: boolean;
+	externalExtensionsEnabled: boolean;
+	userHasMappingCreateRole: boolean;
+	userHasMappingAdminRole: boolean;
+}

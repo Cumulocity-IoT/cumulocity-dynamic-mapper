@@ -29,13 +29,13 @@ import {
   Pagination
 } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
-import { BrokerConfigurationService, Feature, Operation } from '../../configuration';
-import { NameRendererComponent } from '../../mapping';
-import { ConfirmationModalComponent, MappingStatus, SharedService } from '../../shared';
+import { ConfirmationModalComponent, Feature, MappingStatus, Operation, SharedService } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
 import { NumberRendererComponent } from '../renderer/number.renderer.component';
 import { DirectionRendererComponent } from '../renderer/direction.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { ConnectorConfigurationService } from '../../connector';
+import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
@@ -139,7 +139,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   constructor(
     public monitoringService: MonitoringService,
-    public brokerConfigurationService: BrokerConfigurationService,
+    public brokerConnectorService: ConnectorConfigurationService,
     public alertService: AlertService,
 	public bsModalService: BsModalService,
 	private sharedService: SharedService
@@ -151,7 +151,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
   }
 
   async refreshMappingStatus(): Promise<void> {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.REFRESH_STATUS_MAPPING
     );
   }
@@ -183,7 +183,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       async (result: boolean) => {
         // console.log('Confirmation result:', result);
         if (result) {
-          const res = await this.brokerConfigurationService.runOperation(
+          const res = await this.sharedService.runOperation(
             Operation.RESET_STATUS_MAPPING
           );
           if (res.status < 300) {

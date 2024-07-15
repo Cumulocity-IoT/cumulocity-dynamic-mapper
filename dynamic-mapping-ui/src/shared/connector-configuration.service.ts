@@ -24,73 +24,51 @@ import {
   FetchClient,
   IEvent,
   IFetchResponse,
-  Realtime
 } from '@c8y/client';
 import {
   BASE_URL,
   CONNECTOR_FRAGMENT,
+  ConnectorConfiguration,
+  ConnectorSpecification,
+  ConnectorStatus,
+  ConnectorStatusEvent,
   Extension,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
-  PATH_CONFIGURATION_SERVICE_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
-  PATH_OPERATION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-  SharedService
-} from '../../shared';
+  SharedService,
+  StatusEventTypes
+} from '.';
 
 import {
   BehaviorSubject,
   combineLatest,
   forkJoin,
   from,
-  merge,
   Observable,
   Subject
 } from 'rxjs';
-import { filter, map, scan, switchMap } from 'rxjs/operators';
-import {
-  ConnectorConfiguration,
-  ConnectorSpecification,
-  ConnectorStatus,
-  ConnectorStatusEvent,
-  Operation,
-  ServiceConfiguration,
-  StatusEventTypes
-} from './configuration.model';
+import { map, switchMap } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
-export class BrokerConfigurationService {
+export class ConnectorConfigurationService {
   constructor(
     private client: FetchClient,
     private eventService: EventService,
     private sharedService: SharedService
   ) {
-    this.realtime = new Realtime(this.client);
-    this.initConnectorLogsRealtime();
     this.initConnectorConfigurations();
     // console.log("Constructor:BrokerConfigurationService");
   }
 
   private _connectorConfigurations: ConnectorConfiguration[];
-  private _serviceConfiguration: ServiceConfiguration;
   private _connectorSpecifications: ConnectorSpecification[];
   private _agentId: string;
-  private realtime: Realtime;
-  private subscriptionEvents: any;
-  private filterStatusLog = {
-    eventType: 'ALL',
-    // eventType: StatusEventTypes.STATUS_CONNECTOR_EVENT_TYPE,
-    connectorIdent: 'ALL'
-  };
+
   private triggerLogs$: Subject<any> = new Subject();
   private triggerConfigurations$: Subject<string> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
-  private statusLogs$: Observable<any[]>;
-
-  getStatusLogs(): Observable<any[]> {
-    return this.statusLogs$;
-  }
 
   getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
     return this.connectorConfigurations$;
@@ -100,31 +78,11 @@ export class BrokerConfigurationService {
     // console.log('Calling: BrokerConfigurationService.resetCache()');
     this._connectorConfigurations = [];
     this._connectorSpecifications = undefined;
-    this._serviceConfiguration = undefined;
   }
 
   startConnectorConfigurations() {
     this.triggerConfigurations$.next('');
     this.incomingRealtime$.next({} as any);
-  }
-
-  startConnectorStatusCheck() {
-    this.startConnectorStatusSubscriptions();
-    this.triggerLogs$.next([{ type: 'reset' }]);
-    this.incomingRealtime$.next({} as any);
-  }
-
-  updateStatusLogs(filter: any) {
-    this.triggerLogs$.next([{ type: 'reset' }]);
-    this.filterStatusLog = filter;
-  }
-
-  async stopConnectorStatusSubscriptions() {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Stop subscriptions:', this._agentId);
-    this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
   initConnectorConfigurations() {
@@ -178,120 +136,10 @@ export class BrokerConfigurationService {
     );
   }
 
-  async initConnectorLogsRealtime() {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log(
-    //  'Calling: BrokerConfigurationService.initConnectorLogsRealtime()',
-    //  this._agentId
-    // );
-    const sourceList$ = this.triggerLogs$.pipe(
-      // tap((x) => console.log('TriggerLogs In', x)),
-      switchMap(() => {
-        const filter = {
-          pageSize: 5,
-          withTotalPages: false,
-          source: this._agentId
-        };
-        if (this.filterStatusLog.eventType !== 'ALL') {
-          filter['type'] = this.filterStatusLog.eventType;
-        }
-        return this.eventService.list(filter);
-      }),
-      map((data) => data.data),
-      map((events) =>
-        events.filter( ev => ev[CONNECTOR_FRAGMENT]).map((event) => {
-          event[CONNECTOR_FRAGMENT].type = event.type;
-          return event[CONNECTOR_FRAGMENT];
-        })
-      ),
-      map((events) =>
-        events.filter((event) => {
-          return this.filterStatusLog.connectorIdent == 'ALL'
-            ? true
-            : event.connectorIdent == this.filterStatusLog.connectorIdent;
-        })
-      )
-      // tap((x) => console.log('TriggerLogs Out', x))
-    );
-
-    const sourceRealtime$ = this.incomingRealtime$.pipe(
-      // tap((x) => console.log('IncomingRealtime In', x)),
-      filter((event) => {
-        return (
-          Object.keys(event).length !== 0 &&
-          (this.filterStatusLog.eventType == 'ALL'
-            ? true
-            : event.type == this.filterStatusLog.eventType) &&
-          (this.filterStatusLog.connectorIdent == 'ALL'
-            ? true
-            : event[CONNECTOR_FRAGMENT]?.connectorIdent ==
-              this.filterStatusLog.connectorIdent)
-        );
-      }),
-      map((event) => {
-        event[CONNECTOR_FRAGMENT].type = event?.type;
-        return [event[CONNECTOR_FRAGMENT]];
-      })
-    );
-
-    this.statusLogs$ = merge(
-      sourceList$,
-      sourceRealtime$,
-      this.triggerLogs$
-    ).pipe(
-      // tap((i) => console.log('Items', i)),
-      scan((acc, val) => {
-        let sortedAcc;
-        if (val[0]?.type == 'reset') {
-          // console.log('Reset loaded logs!');
-          sortedAcc = [];
-        } else {
-          sortedAcc = val.concat(acc);
-        }
-        sortedAcc = sortedAcc.slice(0, 9);
-        return sortedAcc;
-      }, [])
-    );
-  }
-
-  async startConnectorStatusSubscriptions(): Promise<void> {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Started subscriptions:', this._agentId);
-
-    // subscribe to event stream
-    this.subscriptionEvents = this.realtime.subscribe(
-      `/events/${this._agentId}`,
-      this.updateConnectorStatus
-    );
-  }
-
   private updateConnectorStatus = async (p: object) => {
     const payload = p['data']['data'];
     this.incomingRealtime$.next(payload);
   };
-
-  async runOperation(op: Operation, parameter?: any): Promise<IFetchResponse> {
-    let body: any = {
-      operation: op
-    };
-    if (parameter) {
-      body = {
-        ...body,
-        parameter: parameter
-      };
-    }
-    return this.client.fetch(`${BASE_URL}/${PATH_OPERATION_ENDPOINT}`, {
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(body),
-      method: 'POST'
-    });
-  }
 
   async getProcessorExtensions(): Promise<unknown> {
     const response: IFetchResponse = await this.client.fetch(
@@ -363,38 +211,6 @@ export class BrokerConfigurationService {
       this._connectorSpecifications = await response.json();
     }
     return this._connectorSpecifications;
-  }
-
-  async getServiceConfiguration(): Promise<ServiceConfiguration> {
-    if (!this._serviceConfiguration) {
-      const response = await this.client.fetch(
-        `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
-        {
-          headers: {
-            accept: 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-      this._serviceConfiguration = await response.json();
-    }
-
-    return this._serviceConfiguration;
-  }
-
-  async updateServiceConfiguration(
-    configuration: ServiceConfiguration
-  ): Promise<IFetchResponse> {
-    return this.client.fetch(
-      `${BASE_URL}/${PATH_CONFIGURATION_SERVICE_ENDPOINT}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(configuration),
-        method: 'PUT'
-      }
-    );
   }
 
   async getConnectorStatus(): Promise<ConnectorStatus> {

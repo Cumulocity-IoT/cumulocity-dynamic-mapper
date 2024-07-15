@@ -24,11 +24,10 @@ import { IManagedObject } from '@c8y/client';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
-import { ExtensionService } from '../share/extension.service';
-import { BrokerConfigurationService, Feature, Operation } from '../../configuration';
+import { ExtensionService } from '../extension.service';
 import { AddExtensionComponent } from '../extension-modal/add-extension.component';
 import { AlertService } from '@c8y/ngx-components';
-import { SharedService } from '../../shared';
+import { Feature, Operation, SharedService } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-extension',
@@ -48,7 +47,6 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
-    private brokerConfigurationService: BrokerConfigurationService,
     private alertService: AlertService,
     private sharedService: SharedService
   ) {}
@@ -70,7 +68,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
     this.loadExtensions();
     this.extensions$.subscribe();
     this.externalExtensionEnabled = (
-      await this.brokerConfigurationService.getServiceConfiguration()
+      await this.sharedService.getServiceConfiguration()
     ).externalExtensionEnabled;
   }
 
@@ -79,7 +77,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   }
 
   async reloadExtensions() {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.RELOAD_EXTENSIONS
     );
     this.alertService.success('Extensions reloaded');

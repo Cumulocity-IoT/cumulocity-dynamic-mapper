@@ -75,9 +75,9 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     });
     const mappingExtension = new NavigatorNode({
       parent: gettext('Dynamic Mapping'),
-      label: gettext('Extension'),
-      icon: 'plugin',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
+      label: gettext('Configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
       priority: 300,
       preventDuplicates: true
     });

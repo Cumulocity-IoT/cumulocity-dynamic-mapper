@@ -22,7 +22,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from './shared.service';
-import { NODE1, NODE2 } from './model/util';
+import { NODE1, NODE2, NODE3 } from './model/util';
 @Injectable()
 export class MappingTabFactory implements TabFactory {
   constructor(
@@ -36,19 +36,9 @@ export class MappingTabFactory implements TabFactory {
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node1/g)) {
-      // if (feature?.userHasMappingAdminRole) {
-      tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/configuration`,
-        priority: 930,
-        label: 'Connector',
-        icon: 'cog',
-        orientation: 'horizontal'
-      } as Tab);
-      // }
-
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-        priority: 920,
+        priority: 930,
         label: 'Mapping inbound',
         icon: 'swipe-right',
         orientation: 'horizontal'
@@ -57,12 +47,21 @@ export class MappingTabFactory implements TabFactory {
       if (feature?.outputMappingEnabled) {
         tabs.push({
           path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
-          priority: 910,
+          priority: 920,
           label: 'Mapping outbound',
           icon: 'swipe-left',
           orientation: 'horizontal'
         } as Tab);
       }
+      // if (feature?.userHasMappingAdminRole) {
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/configuration`,
+        priority: 910,
+        label: 'Connector',
+        icon: 'cog',
+        orientation: 'horizontal'
+      } as Tab);
+      // }
     } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
       // if (feature?.userHasMappingAdminRole) {
 
@@ -75,10 +74,17 @@ export class MappingTabFactory implements TabFactory {
       } as Tab);
     } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node3/g)) {
       tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE2}/extension`,
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/extension`,
         priority: 500,
         label: 'Processor extension',
         icon: 'plugin',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
+        priority: 500,
+        label: 'Configuration',
+        icon: 'cog',
         orientation: 'horizontal'
       } as Tab);
     }

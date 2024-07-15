@@ -20,9 +20,7 @@
  */
 import {
   AfterViewInit,
-  ChangeDetectorRef,
   Component,
-  NgZone,
   OnInit,
   ViewChild,
   ViewEncapsulation

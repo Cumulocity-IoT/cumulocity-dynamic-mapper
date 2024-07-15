@@ -20,60 +20,60 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import {
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  OnInit,
-  Output,
-  ViewChild,
-  ViewEncapsulation
+	Component,
+	ElementRef,
+	EventEmitter,
+	Input,
+	OnDestroy,
+	OnInit,
+	Output,
+	ViewChild,
+	ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
-import { FormlyConfig, FormlyFieldConfig } from '@ngx-formly/core';
+import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { BrokerConfigurationService } from '../../configuration';
+import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { Content } from 'vanilla-jsoneditor';
+import { ExtensionService } from '../../extension';
 import {
-  API,
-  COLOR_HIGHLIGHTED,
-  Direction,
-  Extension,
-  Mapping,
-  MappingSubstitution,
-  RepairStrategy,
-  SAMPLE_TEMPLATES_C8Y,
-  getExternalTemplate,
-  getSchema,
-  whatIsIt
+	API,
+	COLOR_HIGHLIGHTED,
+	Direction,
+	Extension,
+	Mapping,
+	MappingSubstitution,
+	RepairStrategy,
+	SAMPLE_TEMPLATES_C8Y,
+	SnoopStatus,
+	getExternalTemplate,
+	getSchema,
+	whatIsIt
 } from '../../shared';
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
 import { EditSubstitutionComponent } from '../edit/edit-substitution-modal.component';
 import { C8YRequest } from '../processor/processor.model';
-import { ValidationError } from '../shared/mapping.model';
-import {
-  countDeviceIdentifiers,
-  definesDeviceIdentifier,
-  expandC8YTemplate,
-  expandExternalTemplate,
-  isDisabled,
-  reduceSourceTemplate,
-  reduceTargetTemplate,
-  splitTopicExcludingSeparator
-} from '../shared/util';
-import { EditorMode } from '../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
-import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
+import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
+import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
 import { MessageField } from '../shared/formly/message.type.component';
 import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
-import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
-import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
-import { SnoopStatus } from '../../shared/model/shared.model';
-import { Content } from 'vanilla-jsoneditor';
+import { ValidationError } from '../shared/mapping.model';
+import { EditorMode } from '../shared/stepper-model';
+import {
+	countDeviceIdentifiers,
+	definesDeviceIdentifier,
+	expandC8YTemplate,
+	expandExternalTemplate,
+	isDisabled,
+	reduceSourceTemplate,
+	reduceTargetTemplate,
+	splitTopicExcludingSeparator
+} from '../shared/util';
+import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -152,10 +152,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
-    public brokerConfigurationService: BrokerConfigurationService,
+    public extensionService: ExtensionService,
     private alertService: AlertService,
-    private elementRef: ElementRef,
-    private configService: FormlyConfig
+    private elementRef: ElementRef
   ) {}
 
   ngOnInit() {
@@ -635,7 +634,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     //   );
       this.expandTemplates();
       this.extensions =
-        (await this.brokerConfigurationService.getProcessorExtensions()) as any;
+        (await this.extensionService.getProcessorExtensions()) as any;
       if (this.mapping?.extension?.name) {
         if (!this.extensions[this.mapping.extension.name]) {
           const msg = `The extension ${this.mapping.extension.name} with event ${this.mapping.extension.event} is not loaded. Please load the extension or choose a different one.`;

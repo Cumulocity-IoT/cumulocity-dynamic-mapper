@@ -20,39 +20,46 @@
  */
 
 import { EventEmitter, Injectable } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import {
   IManagedObject,
   IManagedObjectBinary,
   InventoryBinaryService,
   InventoryService
 } from '@c8y/client';
-
+import { FetchClient, IFetchResponse, Realtime } from '@c8y/client';
+import {
+  BASE_URL,
+  Extension,
+  ExtensionStatus,
+  PATH_EXTENSION_ENDPOINT,
+  PROCESSOR_EXTENSION_TYPE
+} from '../shared';
+import * as _ from 'lodash';
 import {
   AlertService,
   gettext,
   ModalService,
   Status
 } from '@c8y/ngx-components';
-import * as _ from 'lodash';
-
-import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
-import { PROCESSOR_EXTENSION_TYPE, ExtensionStatus } from '../../shared';
-import { BrokerConfigurationService } from '../../configuration';
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
   appDeleted = new EventEmitter<IManagedObject>();
   progress: BehaviorSubject<number> = new BehaviorSubject<number>(null);
-
   constructor(
+    private client: FetchClient,
     private modal: ModalService,
     private alertService: AlertService,
     private translateService: TranslateService,
     private inventoryService: InventoryService,
-    private inventoryBinaryService: InventoryBinaryService,
-    private brokerConfigurationService: BrokerConfigurationService
+    private inventoryBinaryService: InventoryBinaryService
   ) {}
+
+  private _agentId: string;
+  private realtime: Realtime;
+  private subscriptionEvents: any;
 
   async getExtensions(extensionId: string): Promise<IManagedObject[]> {
     const filter: object = {
@@ -70,11 +77,67 @@ export class ExtensionService {
     return result;
   }
 
+  async getProcessorExtensions(): Promise<unknown> {
+    const response: IFetchResponse = await this.client.fetch(
+      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}`,
+      {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    return response.json();
+  }
+
+  async getProcessorExtension(name: string): Promise<Extension> {
+    const response: IFetchResponse = await this.client.fetch(
+      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`,
+      {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    // let result =  (await response.json()) as string[];
+    return response.json();
+  }
+
+  async deleteProcessorExtension(name: string): Promise<string> {
+    const response: IFetchResponse = await this.client.fetch(
+      `${BASE_URL}/${PATH_EXTENSION_ENDPOINT}/${name}`,
+      {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json'
+        },
+        method: 'DELETE'
+      }
+    );
+
+    if (response.status != 200) {
+      return undefined;
+    }
+    // let result =  (await response.json()) as string[];
+    return response.json();
+  }
+
   async getExtensionsEnriched(extensionId: string): Promise<IManagedObject[]> {
     const listOfExtensionsInventory: Promise<IManagedObject[]> =
       this.getExtensions(extensionId);
     const listOfExtensionsBackend: Promise<unknown> =
-      this.brokerConfigurationService.getProcessorExtensions();
+      this.getProcessorExtensions();
     const combinedResult = Promise.all([
       listOfExtensionsInventory,
       listOfExtensionsBackend
@@ -111,7 +174,7 @@ export class ExtensionService {
     );
     // TODO this needs to be changed: create
     // await this.inventoryBinaryService.delete(app.id);
-    await this.brokerConfigurationService.deleteProcessorExtension(app['name']);
+    await this.deleteProcessorExtension(app['name']);
     this.alertService.success(gettext('Extension deleted.'));
     this.appDeleted.emit(app);
   }

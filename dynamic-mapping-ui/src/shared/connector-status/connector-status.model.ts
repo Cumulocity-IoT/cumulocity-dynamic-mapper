@@ -19,26 +19,25 @@
  * @authors Christof Strack
  */
 
-import { NgModule } from '@angular/core';
-import { CoreModule, hookRoute } from '@c8y/ngx-components';
-import { NODE3, SharedModule } from '../shared';
-import { BrokerConfigurationComponent } from './broker-configuration.component';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
-@NgModule({
-  declarations: [BrokerConfigurationComponent],
-  imports: [
-    CoreModule,
-    SharedModule,
-    BsDropdownModule.forRoot()
-  ],
-  exports: [],
-  providers: [
-    hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
-      component: BrokerConfigurationComponent,
-      // canActivate: [AdminGuard]
-    })
-  ]
-})
-export class BrokerConfigurationModule {}
+export interface ConnectorStatusEvent {
+	status: ConnectorStatus;
+	message: string;
+}export enum ConnectorStatus {
+	UNKNOWN = 'UNKNOWN',
+	CONFIGURED = 'CONFIGURED',
+	ENABLED = 'ENABLED',
+	CONNECTING = 'CONNECTING',
+	CONNECTED = 'CONNECTED',
+	DISCONNECTED = 'DISCONNECTED',
+	DISCONNECTING = 'DISCONNECTING',
+	FAILED = 'FAILED'
+}
+export enum StatusEventTypes {
+	STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
+	STATUS_MAPPING_CHANGED_EVENT_TYPE = 'd11r_mappingChangedEvent',
+	STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
+	STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
+	ALL = 'ALL'
+}
+

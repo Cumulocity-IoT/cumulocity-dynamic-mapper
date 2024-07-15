@@ -5,7 +5,6 @@ import { Subject } from 'rxjs';
 import { Direction, MappingStatus } from '../../shared';
 import { map } from 'rxjs/operators';
 import { MonitoringService } from '../shared/monitoring.service';
-import { BrokerConfigurationService } from '../../configuration';
 Chart.register(...registerables);
 // Chart.defaults.font.family = 'Roboto, Helvetica, Arial, sans-serif';
 // Chart.defaults.color = 'green';
@@ -18,8 +17,7 @@ Chart.register(...registerables);
 export class MonitoringChartComponent implements OnInit, OnDestroy {
   constructor(
     private el: ElementRef,
-    public monitoringService: MonitoringService,
-    public brokerConfigurationService: BrokerConfigurationService
+    public monitoringService: MonitoringService
   ) {}
 
   mappingStatus$: Subject<MappingStatus[]> = new Subject<MappingStatus[]>();

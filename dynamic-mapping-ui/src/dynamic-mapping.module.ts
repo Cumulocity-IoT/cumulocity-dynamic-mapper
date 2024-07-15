@@ -54,6 +54,7 @@ import { MessageField } from './mapping/shared/formly/message.type.component';
 import { FormlyTextField } from './mapping/shared/formly/text.type.component';
 import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.component';
 import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-field.wrapper.component';
+import { BrokerConnectorModule } from './connector';
 
 @NgModule({
   imports: [
@@ -63,6 +64,7 @@ import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-fiel
     MappingTreeModule,
     MonitoringModule,
     BrokerConfigurationModule,
+    BrokerConnectorModule,
     ExtensionModule,
     FormsModule,
     ModalModule,

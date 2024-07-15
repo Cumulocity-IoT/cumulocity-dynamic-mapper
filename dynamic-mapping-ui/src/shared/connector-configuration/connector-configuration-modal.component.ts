@@ -5,10 +5,10 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import { FormGroup } from '@angular/forms';
 import {
   ConnectorConfiguration,
+  ConnectorPropertyType,
   ConnectorSpecification,
-  ConnectorPropertyType
-} from '../shared/configuration.model';
-import { nextIdAndPad } from '../../shared';
+  nextIdAndPad
+} from '..';
 import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.component';
 
 @Component({
@@ -51,7 +51,7 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
     </div>
   </c8y-modal>`
 })
-export class EditConfigurationComponent implements OnInit {
+export class ConfigurationConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
@@ -106,12 +106,12 @@ export class EditConfigurationComponent implements OnInit {
   }
 
   onDismiss() {
-    //console.log('Dismiss');
+    // console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
   onSave() {
-    //console.log('Save');
+    // console.log('Save');
     this.closeSubject.next(this.configuration);
   }
 

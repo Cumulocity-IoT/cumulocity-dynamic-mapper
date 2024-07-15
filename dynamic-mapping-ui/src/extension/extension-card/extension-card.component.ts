@@ -22,10 +22,9 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
 import { AlertService } from '@c8y/ngx-components';
-import { ConfirmationModalComponent, ExtensionStatus, SharedService } from '../../shared';
-import { ExtensionService } from '../share/extension.service';
+import { ConfirmationModalComponent, ExtensionStatus, Feature, SharedService } from '../../shared';
+import { ExtensionService } from '../extension.service';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Feature } from '../../configuration';
 
 @Component({
   selector: 'd11r-mapping-extension-card',
@@ -53,7 +52,7 @@ export class ExtensionCardComponent implements OnInit {
   }
 
   async detail() {
-    // this.router.navigateByUrl(`/sag-ps-pkg-dynamic-mapping/node2/extension/${this.app.id}`);
+    // this.router.navigateByUrl(`/sag-ps-pkg-dynamic-mapping/node3/extension/${this.app.id}`);
     this.router.navigate(['properties/', this.app.id], {
       relativeTo: this.activatedRoute
     });
