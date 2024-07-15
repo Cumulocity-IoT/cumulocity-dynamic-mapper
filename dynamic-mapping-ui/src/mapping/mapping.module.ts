@@ -52,6 +52,7 @@ import { MappingSubscriptionComponent } from './subscription/mapping-subscriptio
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
 import { SnoopingStepperComponent } from './snooping/snooping-stepper.component';
+import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
 
 @NgModule({
   declarations: [
@@ -77,7 +78,8 @@ import { SnoopingStepperComponent } from './snooping/snooping-stepper.component'
     MessageField,
     WrapperFormlyHorizontal,
     WrapperCustomFormField,
-    FieldInputCustom
+    FieldInputCustom,
+	MappingConnectorComponent
   ],
   imports: [
     CoreModule,

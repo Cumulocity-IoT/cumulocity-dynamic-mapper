@@ -27,13 +27,19 @@ import packageJson from '../../../package.json';
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../connector-configuration.service';
-import { ConnectorStatus, StatusEventTypes } from '../connector-status/connector-status.model';
+import {
+  ConnectorStatus,
+  StatusEventTypes
+} from '../connector-status/connector-status.model';
 import { Direction, Feature } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
 import { Operation } from '../shared.module';
 import { SharedService } from '../shared.service';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration-modal.component';
-import { ConnectorConfiguration, ConnectorSpecification } from './connector.model';
+import {
+  ConnectorConfiguration,
+  ConnectorSpecification
+} from './connector.model';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -102,9 +108,12 @@ export class ConnectorConfigurationComponent implements OnInit {
       configuration: configuration,
       specifications: this.specifications
     };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
+    const modalRef = this.bsModalService.show(
+      ConfigurationConfigurationModalComponent,
+      {
+        initialState
+      }
+    );
     modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
       // console.log('Configuration after edit:', editedConfiguration);
       if (editedConfiguration) {
@@ -148,9 +157,12 @@ export class ConnectorConfigurationComponent implements OnInit {
       configuration: configuration,
       specifications: this.specifications
     };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
+    const modalRef = this.bsModalService.show(
+      ConfigurationConfigurationModalComponent,
+      {
+        initialState
+      }
+    );
     modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
       // console.log('Configuration after edit:', editedConfiguration);
       if (editedConfiguration) {
@@ -217,50 +229,6 @@ export class ConnectorConfigurationComponent implements OnInit {
     await this.loadData();
   }
 
-  async onConfigurationAdd() {
-    const configuration: Partial<ConnectorConfiguration> = {
-      properties: {},
-      ident: uuidCustom()
-    };
-    const initialState = {
-      add: true,
-      configuration: configuration,
-      specifications: this.specifications,
-      configurationsCount: this.configurations.length
-    };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
-    modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
-      // console.log('Configuration after edit:', addedConfiguration);
-      if (addedConfiguration) {
-        this.configurations.push(addedConfiguration);
-        // avoid to include status$
-        const clonedConfiguration = {
-          ident: addedConfiguration.ident,
-          connectorType: addedConfiguration.connectorType,
-          enabled: addedConfiguration.enabled,
-          name: addedConfiguration.name,
-          properties: addedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(
-            gettext('Added successfully configuration')
-          );
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-    });
-    await this.loadData();
-  }
-
   async onConfigurationToggle(index) {
     const configuration = this.configurations[index];
     const response1 = await this.sharedService.runOperation(
@@ -278,5 +246,4 @@ export class ConnectorConfigurationComponent implements OnInit {
     this.sharedService.refreshMappings(Direction.INBOUND);
     this.sharedService.refreshMappings(Direction.OUTBOUND);
   }
-
 }
