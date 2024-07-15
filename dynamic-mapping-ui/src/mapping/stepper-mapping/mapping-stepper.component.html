@@ -38,7 +38,7 @@
     <span [c8yIcon]="'hand-peace-o'"></span>
   </ng-template>
 
-  <cdk-step label="Specify connector">
+  <cdk-step label="Add configuration">
     <d11r-mapping-connector
       [stepperConfiguration]="stepperConfiguration"
     ></d11r-mapping-connector>
@@ -74,7 +74,17 @@
   </cdk-step>
 
   <cdk-step label="Select templates" [stepControl]="templateForm">
-    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12"></div>
+    <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
+      <div class="row">
+        <div class="col-lg-6 col-lg-offset-3">
+          <h4 class="text-medium">
+            <div class="text-center">
+              Define templates for source & target payload
+            </div>
+          </h4>
+        </div>
+      </div>
+    </div>
     <div class="col-lg-12 flex-grow no-gutter">
       <div class="card-inner-scroll fit-h">
         <div class="card-block p-b-0">
@@ -232,13 +242,14 @@
                         </div>
                       </div>
                     </div>
-                    <div class="p-t-48">
-                      <small
-                        class="text-muted"
-                        *ngIf="
-                          !stepperConfiguration.showEditorSource &&
-                          !stepperConfiguration.showProcessorExtensions
-                        "
+                    <div
+                      class="p-t-48"
+                      *ngIf="
+                        !stepperConfiguration.showEditorSource &&
+                        !stepperConfiguration.showProcessorExtensions
+                      "
+                    >
+                      <small class="text-muted"
                         >Template is described internally by the chosen mapping
                         type</small
                       >
@@ -375,13 +386,14 @@
                         </div>
                       </div>
                     </div>
-                    <div class="p-t-48">
-                      <small
-                        class="text-muted"
-                        *ngIf="
-                          !stepperConfiguration.showEditorSource &&
-                          !stepperConfiguration.showProcessorExtensions
-                        "
+                    <div
+                      class="p-t-48"
+                      *ngIf="
+                        !stepperConfiguration.showEditorSource &&
+                        !stepperConfiguration.showProcessorExtensions
+                      "
+                    >
+                      <small class="text-muted"
                         >Template is described internally by the chosen mapping
                         type</small
                       >
@@ -436,7 +448,7 @@
                       id="editorTarget"
                     >
                     </d11r-mapping-json-editor2>
-                    <c8y-messages class="text-right">
+                    <c8y-messages class="text-left">
                       <c8y-message
                         *ngIf="substitutionModel.pathTarget === ''"
                         translate
@@ -456,6 +468,9 @@
                   [fields]="substitutionFormlyFields"
                   [model]="substitutionModel"
                 ></formly-form>
+              </div>
+              <div class="legend form-block col-lg-10 col-lg-offset-1">
+                Substitutions
               </div>
               <div class="row">
                 <div class="col-lg-2 col-lg-offset-1">
@@ -503,10 +518,6 @@
               </div>
             </div>
             <div [formGroup]="templateForm">
-              <div class="legend form-block col-lg-10 col-lg-offset-1">
-                Substitutions
-              </div>
-
               <div class="row">
                 <div class="col-lg-10 col-lg-offset-1">
                   <div style="min-height: 32px">
