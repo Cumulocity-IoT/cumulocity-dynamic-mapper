@@ -88,6 +88,6 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.connectorStatusService.stopConnectorStatusSubscriptions();
+    this.connectorStatusService.stopConnectorStatusLogs();
   }
 }

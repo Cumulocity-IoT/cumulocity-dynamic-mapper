@@ -30,16 +30,13 @@ import {
 
 import { merge, Observable, Subject } from 'rxjs';
 import { filter, map, scan, switchMap } from 'rxjs/operators';
-import { ConnectorConfigurationService } from './connector-configuration.service';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorStatusService {
   constructor(
     private client: FetchClient,
     private eventService: EventService,
-    private sharedService: SharedService,
-    private brokerConnectorService: ConnectorConfigurationService
-
+    private sharedService: SharedService
   ) {
     this.realtime = new Realtime(this.client);
     this.initConnectorLogsRealtime();
@@ -73,11 +70,7 @@ export class ConnectorStatusService {
     this.filterStatusLog = filter;
   }
 
-  async stopConnectorStatusSubscriptions() {
-    if (!this._agentId) {
-      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
-    }
-    // console.log('Stop subscriptions:', this._agentId);
+  async stopConnectorStatusLogs() {
     this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
