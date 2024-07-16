@@ -37,7 +37,6 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     hookRoute({
       path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
       component: BrokerConfigurationComponent,
-      // canActivate: [AdminGuard]
     })
   ]
 })

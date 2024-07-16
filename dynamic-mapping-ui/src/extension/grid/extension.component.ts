@@ -53,11 +53,11 @@ export class ExtensionComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
-    if (!this.feature.userHasMappingAdminRole) {
-      this.alertService.warning(
-        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-      );
-    }
+    // if (!this.feature.userHasMappingAdminRole) {
+    //   this.alertService.warning(
+    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+    //   );
+    // }
     this.extensions$ = this.reload$.pipe(
       tap(() => (this.reloading = true)),
       switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),

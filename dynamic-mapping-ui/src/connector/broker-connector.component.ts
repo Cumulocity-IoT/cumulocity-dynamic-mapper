@@ -60,11 +60,11 @@ export class BrokerConnectorComponent implements OnInit {
   async ngOnInit() {
     // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
-    if (!this.feature.userHasMappingAdminRole) {
-      this.alertService.warning(
-        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-      );
-    }
+    // if (!this.feature.userHasMappingAdminRole) {
+    //   this.alertService.warning(
+    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+    //   );
+    // }
     this.specifications =
       await this.connectorConfigurationService.getConnectorSpecifications();
     this.connectorConfigurationService

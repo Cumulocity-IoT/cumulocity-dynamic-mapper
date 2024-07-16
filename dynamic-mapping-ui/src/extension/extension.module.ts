@@ -53,7 +53,6 @@ import { extensionResolver } from './utils';
           path: '',
           pathMatch: 'full',
           component: ExtensionComponent
-          // canActivate: [AdminGuard]
         },
         {
           path: 'properties/:id',

@@ -26,7 +26,17 @@
   >
     <thead>
       <tr>
-        <th>#</th>
+        <th *ngIf="selectable" style="padding-top: 12px">
+          <label class="c8y-checkbox" title="Checkbox all">
+            <input
+              type="checkbox"
+              [checked]="isSelectedAll()"
+              (click)="onSelectToggleAll()"
+            />
+            <span></span>
+          </label>
+        </th>
+        <!-- <th>#</th> -->
         <th>Type</th>
         <th>Name</th>
         <th>Enabled</th>
@@ -36,9 +46,20 @@
     </thead>
     <tbody>
       <tr *ngFor="let con of configurations; let i = index">
-        <td width="5%" style="padding-top: 12px">
-          {{ i }}
+        <td *ngIf="selectable" width="2.5%" style="padding-top: 12px">
+          <label class="c8y-checkbox" title="Checkbox">
+            <input
+              type="checkbox"
+              id="{{ con?.ident }}"
+              [checked]="(selected$ | async).includes(con?.ident)"
+              (click)="onSelectToggle(con?.ident)"
+            />
+            <span></span>
+          </label>
         </td>
+        <!-- <td width="5%" style="padding-top: 12px">
+          {{ i }}
+        </td> -->
         <td width="10%" style="padding-top: 12px">
           <span class="text-12">{{ con?.connectorType }} </span>
         </td>
@@ -76,7 +97,12 @@
             >
               <i [c8yIcon]="con?.enabled ? 'toggle-on' : 'toggle-off'"></i>
             </button>
-            <div placement="bottom right" class="dropdown" dropdown container="body">
+            <div
+              placement="bottom right"
+              class="dropdown"
+              dropdown
+              container="body"
+            >
               <button
                 *ngIf="feature?.userHasMappingAdminRole"
                 type="button"
@@ -84,7 +110,6 @@
                 title="Actions"
                 dropdownToggle
                 class="dropdown-toggle c8y-dropdown"
-                
               >
                 <i c8yIcon="ellipsis-v"></i>
               </button>

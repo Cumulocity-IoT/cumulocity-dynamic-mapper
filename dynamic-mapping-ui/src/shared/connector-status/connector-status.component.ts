@@ -70,11 +70,11 @@ export class ConnectorStatusComponent implements OnInit, OnDestroy {
       .subscribe((confs) => {
         this.configurations = confs;
       });
-    if (!this.feature.userHasMappingAdminRole) {
-      this.alertService.warning(
-        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-      );
-    }
+    // if (!this.feature.userHasMappingAdminRole) {
+    //   this.alertService.warning(
+    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+    //   );
+    // }
 
     this.connectorStatusService.getStatusLogs()?.subscribe((logs) => {
       this.statusLogs = logs;

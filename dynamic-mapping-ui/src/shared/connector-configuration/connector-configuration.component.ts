@@ -18,11 +18,10 @@
  *
  * @authors Christof Strack
  */
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Observable } from 'rxjs';
-import packageJson from '../../../package.json';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -47,7 +46,11 @@ import {
   templateUrl: 'connector-configuration.component.html'
 })
 export class ConnectorConfigurationComponent implements OnInit {
-  version: string = packageJson.version;
+  @Input() selectable = true;
+  @Input() deploy: string[];
+  selected: string[] = [];
+  selected$: Subject<string[]> = new BehaviorSubject([]);
+  selectedAll: boolean = false;
   monitoring$: Observable<ConnectorStatus>;
   feature: Feature;
   specifications: ConnectorSpecification[] = [];
@@ -62,13 +65,12 @@ export class ConnectorConfigurationComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    // console.log('Running version', this.version);
     this.feature = await this.sharedService.getFeatures();
-    if (!this.feature.userHasMappingAdminRole) {
-      this.alertService.warning(
-        "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-      );
-    }
+    // if (!this.feature.userHasMappingAdminRole) {
+    //   this.alertService.warning(
+    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+    //   );
+    // }
     this.specifications =
       await this.connectorConfigurationService.getConnectorSpecifications();
     this.connectorConfigurationService
@@ -78,6 +80,34 @@ export class ConnectorConfigurationComponent implements OnInit {
       });
 
     await this.loadData();
+  }
+
+  public onSelectToggle(id: string) {
+    if (this.isSelected(id)) {
+      this.selected = this.selected.filter((ident) => id !== ident);
+    } else {
+      this.selected.push(id);
+    }
+    this.selected$.next(this.selected);
+  }
+
+  public isSelected(id: string): boolean {
+    return this.selected.includes(id);
+  }
+
+  public onSelectToggleAll() {
+    if (this.isSelectedAll()) {
+      this.selectedAll = false;
+      this.selected = [];
+    } else {
+      this.selectedAll = true;
+      this.configurations.forEach((con) => this.selected.push(con.ident));
+    }
+    this.selected$.next(this.selected);
+  }
+
+  public isSelectedAll(): boolean {
+    return this.selectedAll;
   }
 
   async refresh() {
