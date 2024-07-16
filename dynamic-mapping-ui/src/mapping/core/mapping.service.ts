@@ -50,7 +50,10 @@ import {
   MappingEnriched,
   MAPPING_TYPE_DESCRIPTION,
   Operation,
-  StatusEventTypes
+  StatusEventTypes,
+  DeploymentMapEntry,
+  PATH_DEPLOYMENT_MAP_ENDPOINT,
+  DeploymentMap
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -150,6 +153,55 @@ export class MappingService {
     if (!data.ok) throw new Error(data.statusText)!;
     const mappings: Promise<MappingDeployed[]> = await data.json();
     return mappings;
+  }
+
+  async getDeploymentMapEntry(mappingIdent: string): Promise<DeploymentMapEntry> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}/${mappingIdent}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const mapEntry: Promise<DeploymentMapEntry> = await data.json();
+    return mapEntry;
+  }
+
+  async getDeploymentMap(): Promise<DeploymentMap> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        method: 'GET'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const map: Promise<DeploymentMap> = await data.json();
+    return map;
+  }
+
+  async updateDeploymentMapEntry(entry: DeploymentMapEntry): Promise<any> {
+    const response = this.client.fetch(
+      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}/${entry.ident}`,
+      {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(entry.connectors),
+        method: 'PUT'
+      }
+    );
+    const data = await response;
+    if (!data.ok) throw new Error(data.statusText)!;
+    const m = await data.text();
+    return m;
   }
 
   initializeMappingsEnriched() {

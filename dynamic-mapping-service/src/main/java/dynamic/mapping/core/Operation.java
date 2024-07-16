@@ -33,4 +33,5 @@ public enum Operation {
     DEBUG_MAPPING,
     SNOOP_MAPPING,
 	SNOOP_RESET,
+	RESET_DEPLOYMENT_MAP
 }

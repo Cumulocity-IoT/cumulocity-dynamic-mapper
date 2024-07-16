@@ -118,18 +118,6 @@ export class ConnectorConfigurationComponent implements OnInit {
     await this.connectorConfigurationService.startConnectorConfigurations();
   }
 
-  async clickedReconnect2NotificationEndpoint() {
-    const response1 = await this.sharedService.runOperation(
-      Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS
-    );
-    // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === 201) {
-      this.alertService.success(gettext('Reconnected successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to reconnect!'));
-    }
-  }
-
   async onConfigurationUpdate(index) {
     const configuration = this.configurations[index];
 

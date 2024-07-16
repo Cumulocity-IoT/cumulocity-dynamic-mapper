@@ -340,6 +340,46 @@ public class MappingRestController {
 		}
 	}
 
+	@RequestMapping(value = "/deploymentMap/{mappingIdent}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
+			@Valid @RequestBody List<String> deployment) {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Update deployment for mapping: {} : {}", tenant, mappingIdent, deployment);
+		try {
+			mappingComponent.updateDeploymentMapEntry(tenant, mappingIdent, deployment);
+			return ResponseEntity.status(HttpStatus.CREATED).build();
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error updating deployment for mapping: {}", tenant, mappingIdent, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
+	@RequestMapping(value = "/deploymentMap/{mappingIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
+		try {
+			List<String> map = mappingComponent.getDeploymentMapEntry(tenant, mappingIdent);
+			return new ResponseEntity<List<String>>(map, HttpStatus.OK);
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error getting deployment for mapping: {}", tenant, mappingIdent, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
+	@RequestMapping(value = "/deploymentMap", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String,List<String>>> getDeploymentMap() {
+		String tenant = contextService.getContext().getTenant();
+		log.info("Tenant {} - Get complete deployment", tenant);
+		try {
+			Map<String,List<String>> map = mappingComponent.getDeploymentMap(tenant);
+			return new ResponseEntity<Map<String,List<String>>>(map, HttpStatus.OK);
+		} catch (Exception ex) {
+			log.error("Tenant {} - Error getting complete deployment!", tenant, ex);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+		}
+	}
+
 	@RequestMapping(value = "/operation", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<HttpStatus> runOperation(@Valid @RequestBody ServiceOperation operation) {
 		String tenant = contextService.getContext().getTenant();
@@ -382,6 +422,8 @@ public class MappingRestController {
 			} else if (operation.getOperation().equals(Operation.REFRESH_STATUS_MAPPING)) {
 				mappingComponent.sendMappingStatus(tenant);
 			} else if (operation.getOperation().equals(Operation.RESET_STATUS_MAPPING)) {
+				mappingComponent.initializeMappingStatus(tenant, true);
+			} else if (operation.getOperation().equals(Operation.RESET_DEPLOYMENT_MAP)) {
 				mappingComponent.initializeMappingStatus(tenant, true);
 			} else if (operation.getOperation().equals(Operation.RELOAD_EXTENSIONS)) {
 				configurationRegistry.getC8yAgent().reloadExtensions(tenant);

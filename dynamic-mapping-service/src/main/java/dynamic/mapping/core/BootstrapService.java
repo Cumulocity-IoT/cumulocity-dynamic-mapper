@@ -121,6 +121,7 @@ public class BootstrapService {
                         MappingServiceRepresentation.class);
         configurationRegistry.getMappingServiceRepresentations().put(tenant, mappingServiceRepresentation);
         mappingComponent.initializeMappingStatus(tenant, false);
+        mappingComponent.initializeDeploymentMap(tenant, false);
         mappingComponent.initializeMappingCaches(tenant);
         mappingComponent.rebuildMappingOutboundCache(tenant);
         mappingComponent.rebuildMappingInboundCache(tenant);

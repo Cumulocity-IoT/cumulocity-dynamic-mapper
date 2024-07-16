@@ -31,6 +31,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.validation.Valid;
+
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,9 @@ public class MappingComponent {
 
 	// structure: <tenant, < mappingId , status>>
 	private Map<String, Map<String, MappingStatus>> tenantStatusMapping = new HashMap<>();
+
+	// structure: <tenant, < mappingId ,list of connectorId>>
+	private Map<String, Map<String, List<String>>> tenantDeploymentMap = new HashMap<>();
 
 	private Map<String, Set<Mapping>> dirtyMappings = new HashMap<>();
 
@@ -131,6 +136,21 @@ public class MappingComponent {
 			cacheMappingInbound.put(tenant, new HashMap<>());
 		if (cacheMappingOutbound.get(tenant) == null)
 			cacheMappingOutbound.put(tenant, new HashMap<>());
+	}
+
+	public void initializeDeploymentMap(String tenant, boolean reset) {
+		MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+				.getMappingServiceRepresentations().get(tenant);
+		if (mappingServiceRepresentation.getDeploymentMap() != null && !reset) {
+			log.debug("Tenant {} - Initializing deploymentMap: {}, {} ", tenant,
+					mappingServiceRepresentation.getDeploymentMap(),
+					(mappingServiceRepresentation.getDeploymentMap() == null
+							|| mappingServiceRepresentation.getDeploymentMap().size() == 0 ? 0
+									: mappingServiceRepresentation.getDeploymentMap().size()));
+			tenantDeploymentMap.put(tenant, mappingServiceRepresentation.getDeploymentMap());
+		} else {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
 	}
 
 	public void cleanMappingStatus(String tenant) {
@@ -575,6 +595,30 @@ public class MappingComponent {
 					DateTime.now(), configurationRegistry.getMappingServiceRepresentations().get(tenant), tenant,
 					null);
 		}
+	}
+
+	public void updateDeploymentMapEntry(String tenant, String mappingIdent, @Valid List<String> deployment) {
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
+		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
+		map.put(mappingIdent, deployment);
+	}
+
+	public List<String> getDeploymentMapEntry(String tenant, String mappingIdent) {
+		Map<String, List<String>> map = getDeploymentMap(tenant);
+		if (!map.containsKey(mappingIdent)) {
+			map.put(mappingIdent, new ArrayList<>());
+		}
+		return map.get(mappingIdent);
+	}
+
+	public Map<String,List<String>> getDeploymentMap(String tenant) {
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			tenantDeploymentMap.put(tenant, new HashMap<>());
+		}
+		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
+		return map;
 	}
 
 }

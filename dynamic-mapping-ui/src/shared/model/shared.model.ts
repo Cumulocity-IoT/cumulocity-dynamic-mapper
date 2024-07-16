@@ -30,6 +30,15 @@ export interface MappingSubstitution {
   resolve2ExternalId: boolean;
 }
 
+export interface DeploymentMapEntry {
+  ident: string;
+  connectors: string[];
+}
+
+export interface DeploymentMap {
+	[x: string]: DeploymentMapEntry;
+  }
+
 export interface Mapping {
   [x: string]: any;
   name: string;
@@ -111,14 +120,14 @@ export enum QOS {
 }
 
 export interface StepperConfiguration {
-	showEditorSource?: boolean;
-	showProcessorExtensions?: boolean;
-	editorMode?: EditorMode;
-	allowNoDefinedIdentifier?: boolean;
-	allowDefiningSubstitutions?: boolean;
-	allowTestTransformation?: boolean;
-	allowTestSending?: boolean;
-	direction?: Direction;
+  showEditorSource?: boolean;
+  showProcessorExtensions?: boolean;
+  editorMode?: EditorMode;
+  allowNoDefinedIdentifier?: boolean;
+  allowDefiningSubstitutions?: boolean;
+  allowTestTransformation?: boolean;
+  allowTestSending?: boolean;
+  direction?: Direction;
 }
 
 export enum MappingType {
@@ -138,7 +147,7 @@ export interface MappingTypeDescriptionInterface {
   key: MappingType;
   description: string;
   properties: Record<Direction, MappingTypeProperties>;
-  stepperConfiguration:StepperConfiguration;
+  stepperConfiguration: StepperConfiguration;
 }
 
 export const MAPPING_TYPE_DESCRIPTION: Record<
@@ -152,14 +161,14 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: true }
     },
-	stepperConfiguration: {
-		showEditorSource: true,
-		allowNoDefinedIdentifier: false,
-		allowDefiningSubstitutions: true,
-		showProcessorExtensions: false,
-		allowTestTransformation: true,
-		allowTestSending: true,
-	}
+    stepperConfiguration: {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
+      showProcessorExtensions: false,
+      allowTestTransformation: true,
+      allowTestSending: true
+    }
   },
   [MappingType.FLAT_FILE]: {
     key: MappingType.FLAT_FILE,
@@ -175,14 +184,14 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
-	stepperConfiguration: {
-		showEditorSource: true,
-		allowNoDefinedIdentifier: false,
-		allowDefiningSubstitutions: true,
-		showProcessorExtensions: false,
-		allowTestTransformation: true,
-		allowTestSending: true,
-	}
+    stepperConfiguration: {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
+      showProcessorExtensions: false,
+      allowTestTransformation: true,
+      allowTestSending: true
+    }
   },
   [MappingType.GENERIC_BINARY]: {
     key: MappingType.GENERIC_BINARY,
@@ -192,14 +201,14 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
       [Direction.INBOUND]: { snoopSupported: true, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
-	stepperConfiguration: {
-		showEditorSource: true,
-		allowNoDefinedIdentifier: false,
-		allowDefiningSubstitutions: true,
-		showProcessorExtensions: false,
-		allowTestTransformation: true,
-		allowTestSending: true,
-	}
+    stepperConfiguration: {
+      showEditorSource: true,
+      allowNoDefinedIdentifier: false,
+      allowDefiningSubstitutions: true,
+      showProcessorExtensions: false,
+      allowTestTransformation: true,
+      allowTestSending: true
+    }
   },
   [MappingType.PROTOBUF_STATIC]: {
     key: MappingType.PROTOBUF_STATIC,
@@ -208,14 +217,14 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
-	stepperConfiguration: {
-		showProcessorExtensions: false,
-        allowDefiningSubstitutions: false,
-        showEditorSource: false,
-        allowNoDefinedIdentifier: true,
-        allowTestTransformation: false,
-        allowTestSending: true
-	}
+    stepperConfiguration: {
+      showProcessorExtensions: false,
+      allowDefiningSubstitutions: false,
+      showEditorSource: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: true
+    }
   },
   [MappingType.PROCESSOR_EXTENSION]: {
     key: MappingType.PROCESSOR_EXTENSION,
@@ -225,14 +234,14 @@ export const MAPPING_TYPE_DESCRIPTION: Record<
       [Direction.INBOUND]: { snoopSupported: false, directionSupported: true },
       [Direction.OUTBOUND]: { snoopSupported: false, directionSupported: false }
     },
-	stepperConfiguration: {
-        showProcessorExtensions: true,
-        allowDefiningSubstitutions: false,
-        showEditorSource: false,
-        allowNoDefinedIdentifier: true,
-        allowTestTransformation: false,
-        allowTestSending: true
-	}
+    stepperConfiguration: {
+      showProcessorExtensions: true,
+      allowDefiningSubstitutions: false,
+      showEditorSource: false,
+      allowNoDefinedIdentifier: true,
+      allowTestTransformation: false,
+      allowTestSending: true
+    }
   }
 };
 
@@ -292,8 +301,8 @@ export const API = {
   ALL: { name: 'ALL', identifier: '*', notificationFilter: '*' }
 };
 export interface Feature {
-	outputMappingEnabled: boolean;
-	externalExtensionsEnabled: boolean;
-	userHasMappingCreateRole: boolean;
-	userHasMappingAdminRole: boolean;
+  outputMappingEnabled: boolean;
+  externalExtensionsEnabled: boolean;
+  userHasMappingCreateRole: boolean;
+  userHasMappingAdminRole: boolean;
 }

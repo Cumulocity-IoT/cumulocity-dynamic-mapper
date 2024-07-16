@@ -308,6 +308,7 @@ export const PATH_FEATURE_ENDPOINT = 'feature';
 export const PATH_EXTENSION_ENDPOINT = 'extension';
 export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
 export const PATH_MAPPING_DEPLOYED_ENDPOINT = 'mappingDeployed';
+export const PATH_DEPLOYMENT_MAP_ENDPOINT = 'deploymentMap';
 export const PATH_SUBSCRIPTIONS_ENDPOINT = 'subscriptions';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 

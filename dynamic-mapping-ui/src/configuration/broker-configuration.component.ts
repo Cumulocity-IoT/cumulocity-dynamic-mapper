@@ -92,6 +92,18 @@ export class BrokerConfigurationComponent implements OnInit {
     }
   }
 
+  async clickedResetDeploymentMapEndpoint() {
+    const response1 = await this.sharedService.runOperation(
+      Operation.RESET_DEPLOYMENT_MAP
+    );
+    // console.log('Details reconnect2NotificationEndpoint', response1);
+    if (response1.status === 201) {
+      this.alertService.success(gettext('Reset deploymentMap.'));
+    } else {
+      this.alertService.danger(gettext('Failed to reset deploymentMap!'));
+    }
+  }
+
   async clickedSaveServiceConfiguration() {
     const conf: ServiceConfiguration = {
       ...this.serviceConfiguration

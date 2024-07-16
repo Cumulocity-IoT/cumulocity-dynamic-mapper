@@ -39,9 +39,9 @@
         <!-- <th>#</th> -->
         <th>Type</th>
         <th>Name</th>
-        <th>Enabled</th>
+        <th>Activation</th>
         <th>Status</th>
-        <th>Action</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -66,12 +66,21 @@
         <td width="40%" style="padding-top: 12px">
           {{ con?.name }}
         </td>
-        <td width="5%" style="padding-top: 12px">
-          <i
+        <td width="5%" style="padding-top: 6px">
+          <button
+            container="body"
+            style="padding-bottom: 6px"
+            title="{{ 'Toggle Activation' | translate }}"
+            class="btn btn-dot"
+            (click)="onConfigurationToggle(i)"
+          >
+            <i [c8yIcon]="con?.enabled ? 'toggle-on' : 'toggle-off'"></i>
+          </button>
+          <!-- <i
             style="text-align: center; width: 100%"
             [c8yIcon]="!con?.enabled ? 'inactive-state' : 'check'"
             class="m-r-5"
-          ></i>
+          ></i> -->
         </td>
         <td width="20%" style="padding-top: 12px">
           <div class="c8y-realtime">
@@ -87,16 +96,6 @@
         </td>
         <td width="10%" id="{{ 'connector_' + con?.ident }}">
           <div class="d-flex" style="position: absolute">
-            <button
-              container="body"
-              style="padding-bottom: 6px"
-              title="{{ 'Toggle Activation' | translate }}"
-              class="btn btn-dot"
-
-              (click)="onConfigurationToggle(i)"
-            >
-              <i [c8yIcon]="con?.enabled ? 'toggle-on' : 'toggle-off'"></i>
-            </button>
             <div
               placement="bottom right"
               class="dropdown"
@@ -108,14 +107,6 @@
                 style="padding-top: 6px"
                 title="Actions"
                 dropdownToggle
-                class="dropdown-toggle c8y-dropdown"
-              >
-                <i c8yIcon="ellipsis-v"></i>
-              </button>
-              <button
-                type="button"
-                style="padding-top: 6px"
-                title="Actions"
                 class="dropdown-toggle c8y-dropdown"
               >
                 <i c8yIcon="ellipsis-v"></i>

@@ -22,7 +22,8 @@
 package dynamic.mapping.model;
 
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -35,27 +36,30 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class  MappingServiceRepresentation implements Serializable  {
+public class MappingServiceRepresentation implements Serializable {
 
-  public static final String AGENT_ID = "d11r_mappingService";
-  public static final String AGENT_NAME = "Dynamic Mapping Service";
-  public static final String AGENT_TYPE = "d11r_mappingService_type";
+	public static final String AGENT_ID = "d11r_mappingService";
+	public static final String AGENT_NAME = "Dynamic Mapping Service";
+	public static final String AGENT_TYPE = "d11r_mappingService_type";
 
-  @JsonProperty("id")
-  private String id;
+	@JsonProperty("id")
+	private String id;
 
-  @JsonProperty("type")
-  private String type;
+	@JsonProperty("type")
+	private String type;
 
-  @JsonProperty(value = "name")
-  private String name;
+	@JsonProperty(value = "name")
+	private String name;
 
-  @JsonProperty(value = "description")
-  private String description;
+	@JsonProperty(value = "description")
+	private String description;
 
-  @JsonProperty(value = C8YAgent.MAPPING_FRAGMENT)
-  private ArrayList<MappingStatus> mappingStatus;
+	@JsonProperty(value = C8YAgent.MAPPING_FRAGMENT)
+	private List<MappingStatus> mappingStatus;
 
-  @JsonProperty(value = C8YAgent.CONNECTOR_FRAGMENT)
-  private ConnectorStatusEvent connectorStatus;
+	@JsonProperty(value = C8YAgent.CONNECTOR_FRAGMENT)
+	private ConnectorStatusEvent connectorStatus;
+
+	@JsonProperty(value = C8YAgent.DEPLOYMENT_MAP_FRAGMENT)
+	private Map<String, List<String>> deploymentMap;
 }
