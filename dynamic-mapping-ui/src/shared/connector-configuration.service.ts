@@ -20,7 +20,6 @@
  */
 import { Injectable } from '@angular/core';
 import {
-  EventService,
   FetchClient,
   IEvent,
   IFetchResponse,
@@ -36,7 +35,6 @@ import {
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_EXTENSION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
-  SharedService,
   StatusEventTypes
 } from '.';
 
@@ -53,9 +51,7 @@ import { map, switchMap } from 'rxjs/operators';
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
   constructor(
-    private client: FetchClient,
-    private eventService: EventService,
-    private sharedService: SharedService
+    private client: FetchClient
   ) {
     this.initConnectorConfigurations();
     // console.log("Constructor:BrokerConfigurationService");

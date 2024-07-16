@@ -21,21 +21,10 @@
 
 <c8y-title>Connector </c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <!-- <button
-    class="btn btn-link"
-    title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()"
-    [disabled]="!feature?.userHasMappingAdminRole"
-  >
-    <i c8yIcon="disconnected"></i>
-    {{ 'Reconnect notification endpoint' | translate }}
-  </button> -->
-
   <button
     class="btn btn-link"
     title="{{ 'Refresh' | translate }}"
     (click)="refresh()"
-    [disabled]="!feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
@@ -60,14 +49,13 @@
               class="btn btn-default btn-sm"
               (click)="onConfigurationAdd()"
               translate
-              [disabled]="!feature?.userHasMappingAdminRole"
               title="Add configuration"
             >
               <i c8yIcon="plus-circle-o"></i>&nbsp;Add configuration
             </button>
           </div>
         </div>
-		<d11r-mapping-connector-configuration></d11r-mapping-connector-configuration>
+		<d11r-mapping-connector-configuration [selectable]="false"></d11r-mapping-connector-configuration>
       </div>
 
       <d11r-mapping-connector-status></d11r-mapping-connector-status>

@@ -25,7 +25,6 @@
     class="btn btn-link"
     title="{{ 'Reset monitoring' | translate }}"
     (click)="resetStatusMapping()"
-    [disabled]="!feature?.userHasMappingAdminRole"
   >
     <i c8yIcon="reset"></i>
     {{ 'Reset monitoring' | translate }}

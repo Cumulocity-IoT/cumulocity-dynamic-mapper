@@ -92,7 +92,7 @@
               style="padding-bottom: 6px"
               title="{{ 'Toggle Activation' | translate }}"
               class="btn btn-dot"
-              [disabled]="!feature?.userHasMappingAdminRole"
+
               (click)="onConfigurationToggle(i)"
             >
               <i [c8yIcon]="con?.enabled ? 'toggle-on' : 'toggle-off'"></i>
@@ -104,7 +104,6 @@
               container="body"
             >
               <button
-                *ngIf="feature?.userHasMappingAdminRole"
                 type="button"
                 style="padding-top: 6px"
                 title="Actions"
@@ -114,7 +113,6 @@
                 <i c8yIcon="ellipsis-v"></i>
               </button>
               <button
-                *ngIf="!feature?.userHasMappingAdminRole"
                 type="button"
                 style="padding-top: 6px"
                 title="Actions"

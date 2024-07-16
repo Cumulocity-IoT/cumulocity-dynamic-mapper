@@ -55,7 +55,6 @@ export class ConnectorStatusService {
     connectorIdent: 'ALL'
   };
   private triggerLogs$: Subject<any> = new Subject();
-  private triggerConfigurations$: Subject<string> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
   private statusLogs$: Observable<any[]>;
 
@@ -63,12 +62,7 @@ export class ConnectorStatusService {
     return this.statusLogs$;
   }
 
-  startConnectorConfigurations() {
-    this.triggerConfigurations$.next('');
-    this.incomingRealtime$.next({} as any);
-  }
-
-  startConnectorStatusCheck() {
+  startConnectorStatusLogs() {
     this.startConnectorStatusSubscriptions();
     this.triggerLogs$.next([{ type: 'reset' }]);
     this.incomingRealtime$.next({} as any);

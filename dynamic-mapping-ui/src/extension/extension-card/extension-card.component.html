@@ -61,7 +61,6 @@
   <div class="card-actions m-t-0">
     <div class="dropdown" dropdown>
       <button
-        *ngIf="feature?.userHasMappingAdminRole"
         class="dropdown-toggle c8y-dropdown"
         dropdownToggle
         title="{{ 'Settings' | translate }}"
@@ -69,7 +68,6 @@
         <i c8yIcon="ellipsis-v"></i>
       </button>
       <button
-        *ngIf="!feature?.userHasMappingAdminRole"
         class="dropdown-toggle c8y-dropdown"
         title="{{ 'Settings' | translate }}"
       >
