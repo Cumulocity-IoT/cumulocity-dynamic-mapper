@@ -550,7 +550,7 @@ public class MappingRestController {
 					subscribedMappings.forEach(ident -> {
 						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
 								new DeploymentMapEntryDetailed(ident));
-						mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
+						mappingDeployed.getConnectors().add(cleanedConfiguration);
 						mappingsDeployed.put(ident, mappingDeployed);
 					});
 				}
