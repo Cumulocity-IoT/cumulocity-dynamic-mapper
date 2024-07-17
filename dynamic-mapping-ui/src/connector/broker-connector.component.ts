@@ -20,22 +20,18 @@
  */
 import { Component, OnInit } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { Observable } from 'rxjs';
+import { BsModalService } from 'ngx-bootstrap/modal';
+import { from, Observable } from 'rxjs';
 import packageJson from '../../package.json';
 import {
-  ConfirmationModalComponent,
   ConnectorConfiguration,
   ConnectorSpecification,
   ConnectorStatus,
-  Direction,
   Feature,
-  Operation,
   SharedService,
   uuidCustom
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/connector-configuration.service';
-import * as _ from 'lodash';
 import { ConfigurationConfigurationModalComponent } from '../shared';
 
 @Component({
@@ -57,154 +53,27 @@ export class BrokerConnectorComponent implements OnInit {
     private sharedService: SharedService
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
     // console.log('Running version', this.version);
-    this.feature = await this.sharedService.getFeatures();
-    // if (!this.feature.userHasMappingAdminRole) {
-    //   this.alertService.warning(
-    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-    //   );
-    // }
-    this.specifications =
-      await this.connectorConfigurationService.getConnectorSpecifications();
+    from(
+      this.connectorConfigurationService.getConnectorSpecifications()
+    ).subscribe((specs) => {
+      this.specifications = specs;
+    });
     this.connectorConfigurationService
       .getConnectorConfigurationsLive()
       .subscribe((confs) => {
         this.configurations = confs;
       });
-
-    await this.loadData();
+    this.loadData();
   }
 
-  async refresh() {
+  refresh() {
     this.connectorConfigurationService.resetCache();
-    await this.loadData();
+    this.loadData();
   }
-  async loadData(): Promise<void> {
-    await this.connectorConfigurationService.startConnectorConfigurations();
-  }
-
-  async onConfigurationUpdate(index) {
-    const configuration = this.configurations[index];
-
-    const initialState = {
-      add: false,
-      configuration: configuration,
-      specifications: this.specifications
-    };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
-    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      // console.log('Configuration after edit:', editedConfiguration);
-      if (editedConfiguration) {
-        this.configurations[index] = editedConfiguration;
-        // avoid to include status$
-        const clonedConfiguration = {
-          ident: editedConfiguration.ident,
-          connectorType: editedConfiguration.connectorType,
-          enabled: editedConfiguration.enabled,
-          name: editedConfiguration.name,
-          properties: editedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.updateConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(gettext('Updated successfully.'));
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration')
-          );
-        }
-      }
-      await this.loadData();
-    });
-  }
-
-  async onConfigurationCopy(index) {
-    const configuration = _.clone(this.configurations[index]);
-    configuration.ident = uuidCustom();
-    configuration.name = `${configuration.name}_copy`;
-    this.alertService.warning(
-      gettext(
-        'Review properties, e.g. client_id must be different across different client connectors to the same broker.'
-      )
-    );
-
-    const initialState = {
-      add: false,
-      configuration: configuration,
-      specifications: this.specifications
-    };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
-    modalRef.content.closeSubject.subscribe(async (editedConfiguration) => {
-      // console.log('Configuration after edit:', editedConfiguration);
-      if (editedConfiguration) {
-        this.configurations[index] = editedConfiguration;
-        // avoid to include status$
-        const clonedConfiguration = {
-          ident: editedConfiguration.ident,
-          connectorType: editedConfiguration.connectorType,
-          enabled: editedConfiguration.enabled,
-          name: editedConfiguration.name,
-          properties: editedConfiguration.properties
-        };
-        const response =
-          await this.connectorConfigurationService.createConnectorConfiguration(
-            clonedConfiguration
-          );
-        if (response.status < 300) {
-          this.alertService.success(gettext('Updated successfully.'));
-        } else {
-          this.alertService.danger(
-            gettext('Failed to update connector configuration!')
-          );
-        }
-      }
-      await this.loadData();
-    });
-  }
-
-  async onConfigurationDelete(index) {
-    const configuration = this.configurations[index];
-
-    const initialState = {
-      title: 'Delete connector',
-      message: 'You are about to delete a connector. Do you want to proceed?',
-      labels: {
-        ok: 'Delete',
-        cancel: 'Cancel'
-      }
-    };
-    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
-      ConfirmationModalComponent,
-      { initialState }
-    );
-    confirmDeletionModalRef.content.closeSubject.subscribe(
-      async (result: boolean) => {
-        // console.log('Confirmation result:', result);
-        if (result) {
-          const response =
-            await this.connectorConfigurationService.deleteConnectorConfiguration(
-              configuration.ident
-            );
-          if (response.status < 300) {
-            this.alertService.success(gettext('Deleted successfully.'));
-          } else {
-            this.alertService.danger(
-              gettext('Failed to delete connector configuration')
-            );
-          }
-          await this.loadData();
-        }
-        confirmDeletionModalRef.hide();
-      }
-    );
-    await this.loadData();
+  loadData(): void {
+    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   async onConfigurationAdd() {
@@ -218,13 +87,15 @@ export class BrokerConnectorComponent implements OnInit {
       specifications: this.specifications,
       configurationsCount: this.configurations.length
     };
-    const modalRef = this.bsModalService.show(ConfigurationConfigurationModalComponent, {
-      initialState
-    });
+    const modalRef = this.bsModalService.show(
+      ConfigurationConfigurationModalComponent,
+      {
+        initialState
+      }
+    );
     modalRef.content.closeSubject.subscribe(async (addedConfiguration) => {
       // console.log('Configuration after edit:', addedConfiguration);
       if (addedConfiguration) {
-        this.configurations.push(addedConfiguration);
         // avoid to include status$
         const clonedConfiguration = {
           ident: addedConfiguration.ident,
@@ -248,25 +119,6 @@ export class BrokerConnectorComponent implements OnInit {
         }
       }
     });
-    await this.loadData();
+    this.loadData();
   }
-
-  async onConfigurationToggle(index) {
-    const configuration = this.configurations[index];
-    const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorIdent: configuration.ident }
-    );
-    // console.log('Details toggle activation to broker', response1);
-    if (response1.status === 201) {
-      // if (response1.status === 201 && response2.status === 201) {
-      this.alertService.success(gettext('Connection updated successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to establish connection!'));
-    }
-    await this.loadData();
-    this.sharedService.refreshMappings(Direction.INBOUND);
-    this.sharedService.refreshMappings(Direction.OUTBOUND);
-  }
-
 }

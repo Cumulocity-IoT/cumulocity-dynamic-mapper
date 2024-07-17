@@ -21,7 +21,7 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, from, Observable, Subject } from 'rxjs';
 
 import * as _ from 'lodash';
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
@@ -30,7 +30,7 @@ import {
   ConnectorStatus,
   StatusEventTypes
 } from '../connector-status/connector-status.model';
-import { DeploymentMapEntry, Direction, Feature } from '../model/shared.model';
+import { DeploymentMapEntry, Direction } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
 import { Operation } from '../shared.module';
 import { SharedService } from '../shared.service';
@@ -62,9 +62,9 @@ export class ConnectorConfigurationComponent implements OnInit {
   selected$: Subject<string[]> = new BehaviorSubject([]);
   selectedAll: boolean = false;
   monitoring$: Observable<ConnectorStatus>;
-  feature: Feature;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[];
+  configurations$: Subject<ConnectorConfiguration[]> = new Subject();
   StatusEventTypes = StatusEventTypes;
 
   constructor(
@@ -74,31 +74,31 @@ export class ConnectorConfigurationComponent implements OnInit {
     private sharedService: SharedService
   ) {}
 
-  async ngOnInit() {
-	// console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
-    this.feature = await this.sharedService.getFeatures();
-    // if (!this.feature.userHasMappingAdminRole) {
-    //   this.alertService.warning(
-    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-    //   );
-    // }
-    this.selected = this.deploymentMapEntry?.connectors?? [];
-	this.selected$.next(this.selected);
-    this.specifications =
-      await this.connectorConfigurationService.getConnectorSpecifications();
-    this.connectorConfigurationService
-      .getConnectorConfigurationsLive()
-      .subscribe((confs) => {
-        this.configurations = confs;
-      });
+  ngOnInit() {
+    // console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
 
+    this.selected = this.deploymentMapEntry?.connectors ?? [];
+    this.selected$.next(this.selected);
     this.selected$.subscribe((se) => {
-		if (this.selectable){
-			this.deploymentMapEntry.connectors = se;
-		}
+      if (this.selectable) {
+        this.deploymentMapEntry.connectors = se;
+      }
     });
 
-    await this.loadData();
+    from(
+      this.connectorConfigurationService.getConnectorSpecifications()
+    ).subscribe((specs) => {
+      this.specifications = specs;
+    });
+
+    this.connectorConfigurationService
+      .getConnectorConfigurationsLive()
+      .subscribe((confs) => this.configurations$.next(confs));
+
+    this.configurations$.subscribe((confs) => {
+      this.configurations = confs;
+    });
+    this.loadData();
   }
 
   public onSelectToggle(id: string) {
@@ -129,12 +129,19 @@ export class ConnectorConfigurationComponent implements OnInit {
     return this.selectedAll;
   }
 
-  async refresh() {
+  refresh() {
     this.connectorConfigurationService.resetCache();
-    await this.loadData();
+    this.loadData();
   }
-  async loadData(): Promise<void> {
-    await this.connectorConfigurationService.startConnectorConfigurations();
+
+  //   ngAfterViewInit() {
+  //     setTimeout(() => {
+  //       this.connectorConfigurationService.startConnectorConfigurations();
+  //     }, 0);
+  //   }
+
+  loadData(): void {
+    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   async onConfigurationUpdate(index) {
@@ -175,7 +182,7 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      await this.loadData();
+      this.loadData();
     });
   }
 
@@ -224,7 +231,7 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      await this.loadData();
+      this.loadData();
     });
   }
 

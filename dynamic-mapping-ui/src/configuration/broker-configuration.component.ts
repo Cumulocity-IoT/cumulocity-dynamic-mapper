@@ -25,6 +25,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import packageJson from '../../package.json';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
+import { ConnectorConfigurationService } from '../connector';
 
 @Component({
   selector: 'd11r-mapping-broker-configuration',
@@ -50,10 +51,11 @@ export class BrokerConfigurationComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public alertService: AlertService,
-    private sharedService: SharedService
+    private sharedService: SharedService,
+	public connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
-  async ngOnInit() {
+  ngOnInit() {
     // console.log('Running version', this.version);
     this.serviceForm = new FormGroup({
       logPayload: new FormControl(''),
@@ -65,19 +67,14 @@ export class BrokerConfigurationComponent implements OnInit {
       sendNotificationLifecycle: new FormControl(''),
       outboundMappingEnabled: new FormControl('')
     });
-    this.feature = await this.sharedService.getFeatures();
-    // if (!this.feature.userHasMappingAdminRole) {
-    //   this.alertService.warning(
-    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
-    //   );
-    // }
 
-    await this.loadData();
+    this.loadData();
   }
 
   async loadData(): Promise<void> {
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
+	// this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   async clickedReconnect2NotificationEndpoint() {

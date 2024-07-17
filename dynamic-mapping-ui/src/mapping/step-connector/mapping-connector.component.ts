@@ -135,8 +135,8 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
     await this.loadData();
   }
 
-  async loadData(): Promise<void> {
-    await this.connectorConfigurationService.startConnectorConfigurations();
+  loadData(): void {
+    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   ngOnDestroy() {

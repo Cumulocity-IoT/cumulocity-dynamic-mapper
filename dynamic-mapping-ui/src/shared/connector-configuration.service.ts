@@ -71,6 +71,10 @@ export class ConnectorConfigurationService {
     this.incomingRealtime$.next({} as any);
   }
 
+  refreshConnectorConfigurations() {
+    this.triggerConfigurations$.next('');
+  }
+
   initConnectorConfigurations() {
     // console.log(
     //   'Calling BrokerConfigurationService.initConnectorConfigurations()'
@@ -190,6 +194,7 @@ export class ConnectorConfigurationService {
         method: 'DELETE'
       }
     );
+
   }
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {

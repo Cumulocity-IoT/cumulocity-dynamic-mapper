@@ -44,8 +44,9 @@
         <th></th>
       </tr>
     </thead>
+	
     <tbody>
-      <tr *ngFor="let con of configurations; let i = index">
+      <tr *ngFor="let con of (configurations$| async); let i = index">
         <td *ngIf="selectable" width="2.5%" style="padding-top: 12px">
           <label class="c8y-checkbox" title="Checkbox">
             <input
