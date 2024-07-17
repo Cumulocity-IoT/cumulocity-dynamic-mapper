@@ -37,7 +37,7 @@ Please check the [Installation Guide](/INSTALLATION.md) to find out how you can 
 
 Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Mapper.
 
-## Architecure
+## Architecture
 
 Please check the [Architecture overview](/ARCHITECTURE.md) if your eager to understand how it is implemented.
 
@@ -47,7 +47,7 @@ Please check the [REST API](/API.md) provided by the Dynamic Mapper.
 
 ## Extensions
 
-The Dynamic Mapper can be extended on multiple layers. Check out the [Extenions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors. 
+The Dynamic Mapper can be extended on multiple layers. Check out the [Extensions Guide](/EXTENSIONS.md) if you want to add customer mapper or connectors. 
 
 ## Limitations
 
