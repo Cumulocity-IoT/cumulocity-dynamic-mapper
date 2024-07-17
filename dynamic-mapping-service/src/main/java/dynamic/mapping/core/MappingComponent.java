@@ -605,8 +605,8 @@ public class MappingComponent {
 			tenantDeploymentMap.put(tenant, new HashMap<>());
 		}
 		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
-		saveDeploymentMap(tenant);
 		map.put(mappingIdent, deployment);
+		saveDeploymentMap(tenant);
 	}
 
 	public List<String> getDeploymentMapEntry(String tenant, String mappingIdent) {
