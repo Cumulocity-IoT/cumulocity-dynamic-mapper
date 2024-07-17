@@ -77,7 +77,7 @@ import dynamic.mapping.model.MappingTreeNode;
 import dynamic.mapping.model.SnoopStatus;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
-import dynamic.mapping.model.MappingDeployment;
+import dynamic.mapping.model.DeploymentMapEntryDetailed;
 
 @Slf4j
 @RestController
@@ -534,9 +534,9 @@ public class MappingRestController {
 	}
 
 	@RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, MappingDeployment>> getMappingsDeployed() {
+	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
-		Map<String, MappingDeployment> mappingsDeployed = new HashMap<>();
+		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
 		try {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);
@@ -548,8 +548,8 @@ public class MappingRestController {
 							.collect(Collectors.toList());
 					// iterate over all mappings for specific client
 					subscribedMappings.forEach(ident -> {
-						MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
-								new MappingDeployment(ident));
+						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
+								new DeploymentMapEntryDetailed(ident));
 						mappingDeployed.getDeployedToConnectors().add(cleanedConfiguration);
 						mappingsDeployed.put(ident, mappingDeployed);
 					});

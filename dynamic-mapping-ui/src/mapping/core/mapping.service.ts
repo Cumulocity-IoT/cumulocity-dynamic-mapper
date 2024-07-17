@@ -45,7 +45,7 @@ import {
   Direction,
   Mapping,
   SharedService,
-  MappingDeployed,
+  DeploymentMapEntryDetailed,
   PATH_MAPPING_DEPLOYED_ENDPOINT,
   MappingEnriched,
   MAPPING_TYPE_DESCRIPTION,
@@ -129,7 +129,7 @@ export class MappingService {
     // this._mappingsOutbound = undefined;
   }
 
-  async getMappingsDeployed(): Promise<MappingDeployed[]> {
+  async getMappingsDeployed(): Promise<DeploymentMapEntryDetailed[]> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_DEPLOYED_ENDPOINT}`,
       {
@@ -141,7 +141,7 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    const mappings: Promise<MappingDeployed[]> = await data.json();
+    const mappings: Promise<DeploymentMapEntryDetailed[]> = await data.json();
     return mappings;
   }
 
@@ -218,7 +218,7 @@ export class MappingService {
               MAPPING_TYPE_DESCRIPTION[m.mappingType].properties[
                 Direction.INBOUND
               ].snoopSupported,
-            deployedToConnectors: mappingsDeployed[m.ident]
+            connectors: mappingsDeployed[m.ident]
           });
         });
         return mappingsEnriched;

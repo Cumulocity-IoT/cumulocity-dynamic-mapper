@@ -75,13 +75,13 @@ export interface Mapping {
 export interface MappingEnriched {
   id: string;
   mapping: Mapping;
-  deployedToConnectors?: ConnectorConfiguration[];
+  connectors?: ConnectorConfiguration[];
   snoopSupported?: boolean;
 }
 
-export interface MappingDeployed {
+export interface DeploymentMapEntryDetailed {
   ident: string;
-  deployedToConnectors?: ConnectorConfiguration[];
+  connectors?: ConnectorConfiguration[];
 }
 
 export enum RepairStrategy {

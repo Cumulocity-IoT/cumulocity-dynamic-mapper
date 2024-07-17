@@ -306,7 +306,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       {
         header: 'Active for connectors',
         name: 'connectors',
-        path: 'deployedToConnectors',
+        path: 'connectors',
         filterable: true,
         sortable: false,
         cellRendererComponent: MappingDeploymentRendererComponent
