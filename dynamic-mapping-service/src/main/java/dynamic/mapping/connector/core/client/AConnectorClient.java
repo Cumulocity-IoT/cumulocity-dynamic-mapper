@@ -133,6 +133,7 @@ public abstract class AConnectorClient {
 	// wildcards
 	// structure < ident, mapping >
 	@Getter
+	@Setter
 	private Map<String, Mapping> mappingsDeployed = new ConcurrentHashMap<>();
 
 	private Instant start = Instant.now();
@@ -340,7 +341,7 @@ public abstract class AConnectorClient {
 			MutableInt activeSubs = getActiveSubscriptions()
 					.get(mapping.subscriptionTopic);
 			activeSubs.subtract(1);
-			mappingsDeployed.remove(mapping.ident);
+			getMappingsDeployed().remove(mapping.ident);
 			if (activeSubs.intValue() <= 0) {
 				try {
 					unsubscribe(mapping.subscriptionTopic);
@@ -400,7 +401,12 @@ public abstract class AConnectorClient {
 				if (!getActiveSubscriptions().containsKey(mapping.subscriptionTopic)) {
 					getActiveSubscriptions().put(mapping.subscriptionTopic, new MutableInt(0));
 				}
-				if (mapping.active) {
+				List<String> deploymentMapEntry = mappingComponent.getDeploymentMapEntry(tenant, mapping.ident);
+				boolean isDeployed = false;
+				if (deploymentMapEntry != null) {
+					isDeployed = deploymentMapEntry.contains(getConnectorIdent());
+				}
+				if (mapping.active && isDeployed) {
 					getMappingsDeployed().put(mapping.ident, mapping);
 				} else {
 					getMappingsDeployed().remove(mapping.ident);
@@ -470,7 +476,7 @@ public abstract class AConnectorClient {
 	 **/
 	public void updateActiveSubscriptions(List<Mapping> updatedMappings, boolean reset) {
 
-		mappingsDeployed = new ConcurrentHashMap<>();
+		setMappingsDeployed(new ConcurrentHashMap<>());
 		if (reset) {
 			activeSubscriptions = new HashMap<String, MutableInt>();
 		}
@@ -492,7 +498,7 @@ public abstract class AConnectorClient {
 					}
 					MutableInt activeSubs = updatedSubscriptionCache.get(mapping.subscriptionTopic);
 					activeSubs.add(1);
-					mappingsDeployed.put(mapping.ident, mapping);
+					getMappingsDeployed().put(mapping.ident, mapping);
 				}
 			});
 

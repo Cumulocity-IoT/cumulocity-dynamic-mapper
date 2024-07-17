@@ -541,10 +541,12 @@ public class MappingRestController {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);
 			if (connectorMap != null) {
+				// iterate over all clients
 				for (AConnectorClient client : connectorMap.values()) {
 					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
 					List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
 							.collect(Collectors.toList());
+					// iterate over all mappings for specific client
 					subscribedMappings.forEach(ident -> {
 						MappingDeployment mappingDeployed = mappingsDeployed.getOrDefault(ident,
 								new MappingDeployment(ident));
