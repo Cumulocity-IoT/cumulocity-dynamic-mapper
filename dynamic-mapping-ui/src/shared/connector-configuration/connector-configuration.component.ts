@@ -82,7 +82,7 @@ export class ConnectorConfigurationComponent implements OnInit {
     //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
     //   );
     // }
-    this.selected = this.deploymentMapEntry.connectors?? [];
+    this.selected = this.deploymentMapEntry?.connectors?? [];
 	this.selected$.next(this.selected);
     this.specifications =
       await this.connectorConfigurationService.getConnectorSpecifications();
