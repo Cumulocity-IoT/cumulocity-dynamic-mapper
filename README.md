@@ -55,7 +55,7 @@ Please check the current [Limitations](/LIMITATIONS.md) of the Dynamic Mapper.
 
 ## Contribution
 
-We are always looking for additional contributors.
+We are always looking for additional [contribution](/CONTRIBUTING.md).
 
 ## Build & Deploy
 
