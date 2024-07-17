@@ -72,6 +72,7 @@ export class BrokerConnectorComponent implements OnInit {
     this.connectorConfigurationService.resetCache();
     this.loadData();
   }
+
   loadData(): void {
     this.connectorConfigurationService.startConnectorConfigurations();
   }
@@ -117,8 +118,8 @@ export class BrokerConnectorComponent implements OnInit {
             gettext('Failed to update connector configuration')
           );
         }
+        this.loadData();
       }
     });
-    this.loadData();
   }
 }

@@ -86,6 +86,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
       .subscribe((confs) => {
         this.configurations = confs;
       });
+    this.loadData();
   }
 
   async onConfigurationAdd() {
@@ -97,7 +98,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
       add: true,
       configuration: configuration,
       specifications: this.specifications,
-      configurationsCount: this.configurations.length
+      configurationsCount: this.configurations?.length
     };
     const modalRef = this.bsModalService.show(
       ConfigurationConfigurationModalComponent,
@@ -131,8 +132,8 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
           );
         }
       }
+      this.loadData();
     });
-    await this.loadData();
   }
 
   loadData(): void {
