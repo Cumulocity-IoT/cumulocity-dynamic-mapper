@@ -93,7 +93,9 @@ export class ConnectorConfigurationComponent implements OnInit {
       });
 
     this.selected$.subscribe((se) => {
-      this.deploymentMapEntry.connectors = se;
+		if (this.selectable){
+			this.deploymentMapEntry.connectors = se;
+		}
     });
 
     await this.loadData();
