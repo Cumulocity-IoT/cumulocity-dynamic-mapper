@@ -33,6 +33,7 @@ import java.util.stream.StreamSupport;
 
 import javax.validation.Valid;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -251,6 +252,8 @@ public class MappingComponent {
 			deleteMappingStatus(tenant, id);
 			return m.getC8yMQTTMapping();
 		});
+		if (result != null)
+			removeMappingFromDeploymentMap(tenant, result.ident);
 		// log.info("Tenant {} - Deleted Mapping: {}", tenant, id);
 		return result;
 	}
@@ -602,6 +605,7 @@ public class MappingComponent {
 			tenantDeploymentMap.put(tenant, new HashMap<>());
 		}
 		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
+		saveDeploymentMap(tenant);
 		map.put(mappingIdent, deployment);
 	}
 
@@ -613,12 +617,53 @@ public class MappingComponent {
 		return map.get(mappingIdent);
 	}
 
-	public Map<String,List<String>> getDeploymentMap(String tenant) {
+	public Map<String, List<String>> getDeploymentMap(String tenant) {
 		if (!tenantDeploymentMap.containsKey(tenant)) {
 			tenantDeploymentMap.put(tenant, new HashMap<>());
 		}
 		Map<String, List<String>> map = tenantDeploymentMap.get(tenant);
 		return map;
+	}
+
+	public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdent) {
+		MutableBoolean result = new MutableBoolean(false);
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			return result.booleanValue();
+		}
+		for (List<String> deploymentList : tenantDeploymentMap.get(tenant).values()) {
+			result.setValue(deploymentList.remove(connectorIdent) || result.booleanValue());
+		}
+		if (result.getValue())
+			saveDeploymentMap(tenant);
+		return result.booleanValue();
+	}
+
+	public boolean removeMappingFromDeploymentMap(String tenant, String mappingIdent) {
+		MutableBoolean result = new MutableBoolean(false);
+		if (!tenantDeploymentMap.containsKey(tenant)) {
+			saveDeploymentMap(tenant);
+		}
+		List<String> remove = tenantDeploymentMap.get(tenant).remove(mappingIdent);
+		result.setValue(remove != null && remove.size() > 0);
+		if (result.getValue())
+			saveDeploymentMap(tenant);
+		return result.booleanValue();
+	}
+
+	public void saveDeploymentMap(String tenant) {
+		subscriptionsService.runForTenant(tenant, () -> {
+			MappingServiceRepresentation mappingServiceRepresentation = configurationRegistry
+					.getMappingServiceRepresentations().get(tenant);
+			// avoid sending empty monitoring events
+			log.info("Tenant {} - Saving deploymentMap: {}", tenant, tenantDeploymentMap.get(tenant).size());
+			Map<String, Object> map = new HashMap<String, Object>();
+			Map<String, List<String>> deploymentMapPerTenant = tenantDeploymentMap.get(tenant);
+			map.put(C8YAgent.DEPLOYMENT_MAP_FRAGMENT, deploymentMapPerTenant);
+			ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+			updateMor.setId(GId.asGId(mappingServiceRepresentation.getId()));
+			updateMor.setAttrs(map);
+			this.inventoryApi.update(updateMor);
+		});
 	}
 
 }

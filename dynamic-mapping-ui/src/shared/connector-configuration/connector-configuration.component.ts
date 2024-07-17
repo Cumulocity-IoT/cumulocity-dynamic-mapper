@@ -18,7 +18,7 @@
  *
  * @authors Christof Strack
  */
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
@@ -30,7 +30,7 @@ import {
   ConnectorStatus,
   StatusEventTypes
 } from '../connector-status/connector-status.model';
-import { Direction, Feature } from '../model/shared.model';
+import { DeploymentMapEntry, Direction, Feature } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
 import { Operation } from '../shared.module';
 import { SharedService } from '../shared.service';
@@ -48,6 +48,16 @@ import {
 export class ConnectorConfigurationComponent implements OnInit {
   @Input() selectable = true;
   @Input() deploy: string[];
+  private _deploymentMapEntry: DeploymentMapEntry;
+  @Input()
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this._deploymentMapEntry;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this._deploymentMapEntry = value;
+    this.deploymentMapEntryChange.emit(value);
+  }
+  @Output() deploymentMapEntryChange = new EventEmitter<any>();
   selected: string[] = [];
   selected$: Subject<string[]> = new BehaviorSubject([]);
   selectedAll: boolean = false;
@@ -58,19 +68,22 @@ export class ConnectorConfigurationComponent implements OnInit {
   StatusEventTypes = StatusEventTypes;
 
   constructor(
-    public bsModalService: BsModalService,
-    public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
+    private bsModalService: BsModalService,
+    private connectorConfigurationService: ConnectorConfigurationService,
+    private alertService: AlertService,
     private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
+	// console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
     this.feature = await this.sharedService.getFeatures();
     // if (!this.feature.userHasMappingAdminRole) {
     //   this.alertService.warning(
     //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
     //   );
     // }
+    this.selected = this.deploymentMapEntry.connectors?? [];
+	this.selected$.next(this.selected);
     this.specifications =
       await this.connectorConfigurationService.getConnectorSpecifications();
     this.connectorConfigurationService
@@ -78,6 +91,10 @@ export class ConnectorConfigurationComponent implements OnInit {
       .subscribe((confs) => {
         this.configurations = confs;
       });
+
+    this.selected$.subscribe((se) => {
+      this.deploymentMapEntry.connectors = se;
+    });
 
     await this.loadData();
   }

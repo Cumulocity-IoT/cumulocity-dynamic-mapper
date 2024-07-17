@@ -20,9 +20,11 @@
  */
 import {
   Component,
+  EventEmitter,
   Input,
   OnDestroy,
   OnInit,
+  Output,
   ViewEncapsulation
 } from '@angular/core';
 import { AlertService, gettext } from '@c8y/ngx-components';
@@ -31,6 +33,7 @@ import {
   ConfigurationConfigurationModalComponent,
   ConnectorConfiguration,
   ConnectorSpecification,
+  DeploymentMapEntry,
   Direction,
   Feature,
   StepperConfiguration,
@@ -49,6 +52,16 @@ import { ConnectorConfigurationService } from '../../connector';
 })
 export class MappingConnectorComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
+  private _deploymentMapEntry: DeploymentMapEntry;
+  @Input()
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this._deploymentMapEntry;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this._deploymentMapEntry = value;
+    this.deploymentMapEntryChange.emit(value);
+  }
+  @Output() deploymentMapEntryChange = new EventEmitter<any>();
   Direction = Direction;
   EditorMode = EditorMode;
   feature: Feature;

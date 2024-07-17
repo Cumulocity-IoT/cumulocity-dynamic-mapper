@@ -51,7 +51,10 @@
         >
           <i c8yIcon="plus-circle-o"></i>&nbsp;Add configuration
         </button>
-        <d11r-mapping-connector-configuration [selectable]="true"></d11r-mapping-connector-configuration>
+        <d11r-mapping-connector-configuration
+          [selectable]="true"
+          [(deploymentMapEntry)]="deploymentMapEntry"
+        ></d11r-mapping-connector-configuration>
       </div>
     </div>
   </div>

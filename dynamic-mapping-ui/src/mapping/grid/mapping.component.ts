@@ -69,11 +69,12 @@ import { StatusActivationRendererComponent } from '../renderer/status-activation
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
 import { EditorMode } from '../shared/stepper-model';
-import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from 'src/shared/model/shared.model';
+import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
 import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
 import { SharedService } from '../../shared/shared.service';
+import { DeploymentMapEntry } from '../../shared/model/shared.model';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -102,6 +103,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   stepperConfiguration: StepperConfiguration = {};
   titleMapping: string;
   titleSubscription: string = 'Subscription on devices for mapping outbound';
+  deploymentMapEntry: DeploymentMapEntry;
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -464,6 +466,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
 
     this.mappingToUpdate = mapping;
+    this.deploymentMapEntry = { ident: mapping.ident, connectors: [] };
     if (
       mapping.snoopStatus === SnoopStatus.NONE ||
       mapping.snoopStatus === SnoopStatus.STOPPED
@@ -489,7 +492,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  updateMapping(m: MappingEnriched) {
+  async updateMapping(m: MappingEnriched) {
     const { mapping } = m;
 
     if (mapping.active) {
@@ -514,6 +517,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingToUpdate.direction == null
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
+    const deploymentMapEntry = await this.mappingService.getDeploymentMapEntry(
+      mapping.ident
+    );
+    this.deploymentMapEntry = {
+      ident: this.mappingToUpdate.ident,
+      connectors: deploymentMapEntry.connectors
+    };
     // console.log('Editing mapping', this.mappingToUpdate);
     if (
       mapping.snoopStatus === SnoopStatus.NONE ||
@@ -525,7 +535,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  copyMapping(m: MappingEnriched) {
+  async copyMapping(m: MappingEnriched) {
     const { mapping } = m;
     this.setStepperConfiguration(
       mapping.mappingType,
@@ -540,6 +550,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     this.mappingToUpdate.active = false;
+    const deploymentMapEntry = await this.mappingService.getDeploymentMapEntry(
+      mapping.ident
+    );
+    this.deploymentMapEntry = {
+      ident: this.mappingToUpdate.ident,
+      connectors: deploymentMapEntry.connectors
+    };
     // console.log('Copying mapping', this.mappingToUpdate);
     if (
       mapping.snoopStatus === SnoopStatus.NONE ||
@@ -703,6 +720,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
 
+    this.mappingService.updateDeploymentMapEntry(this.deploymentMapEntry);
+
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
   }
@@ -833,12 +852,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     direction: Direction,
     editorMode: EditorMode
   ) {
-    this.stepperConfiguration = MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
-	this.stepperConfiguration.direction = direction;
+    this.stepperConfiguration =
+      MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
+    this.stepperConfiguration.direction = direction;
     this.stepperConfiguration.editorMode = editorMode;
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
   }
+
 
   ngOnDestroy() {
     this.destroy$.next(true);

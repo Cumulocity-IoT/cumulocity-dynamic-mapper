@@ -20,7 +20,6 @@
  */
 import {
   Component,
-  ElementRef,
   EventEmitter,
   Input,
   OnDestroy,
@@ -29,14 +28,14 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { AlertService, C8yStepper } from '@c8y/ngx-components';
+import { C8yStepper } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Direction, Mapping, SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { countDeviceIdentifiers, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { SnoopStatus } from '../../shared/model/shared.model';
 import { CdkStep } from '@angular/cdk/stepper';
 
@@ -49,6 +48,17 @@ import { CdkStep } from '@angular/cdk/stepper';
 export class SnoopingStepperComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
+  private _deploymentMapEntry: DeploymentMapEntry;
+
+  @Input()
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this._deploymentMapEntry;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this._deploymentMapEntry = value;
+    this.deploymentMapEntryChange.emit(value);
+  }
+  @Output() deploymentMapEntryChange = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
 
@@ -75,9 +85,7 @@ export class SnoopingStepperComponent implements OnInit, OnDestroy {
   constructor(
     public bsModalService: BsModalService,
     public mappingService: MappingService,
-    public sharedService: SharedService,
-    private alertService: AlertService,
-    private elementRef: ElementRef
+    public sharedService: SharedService
   ) {}
 
   ngOnInit() {

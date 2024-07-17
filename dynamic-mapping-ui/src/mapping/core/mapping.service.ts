@@ -100,8 +100,7 @@ export class MappingService {
   reloadOutbound$: Subject<void>; // = new Subject<void>();
 
   async changeActivationMapping(parameter: any) {
-    const conf =
-      await this.brokerConnectorService.getConnectorConfigurations();
+    const conf = await this.brokerConnectorService.getConnectorConfigurations();
     if (parameter.active && conf.length == 0) {
       this.alertService.warning(
         'Mapping was activated, but no connector is configured. Please add connector on the Connector tab!'
@@ -114,24 +113,15 @@ export class MappingService {
   }
 
   async changeDebuggingMapping(parameter: any) {
-    await this.sharedService.runOperation(
-      Operation.DEBUG_MAPPING,
-      parameter
-    );
+    await this.sharedService.runOperation(Operation.DEBUG_MAPPING, parameter);
   }
 
   async changeSnoopStatusMapping(parameter: any) {
-    await this.sharedService.runOperation(
-      Operation.SNOOP_MAPPING,
-      parameter
-    );
+    await this.sharedService.runOperation(Operation.SNOOP_MAPPING, parameter);
   }
 
   async resetSnoop(parameter: any) {
-    await this.sharedService.runOperation(
-      Operation.SNOOP_RESET,
-      parameter
-    );
+    await this.sharedService.runOperation(Operation.SNOOP_RESET, parameter);
   }
 
   resetCache() {
@@ -155,7 +145,9 @@ export class MappingService {
     return mappings;
   }
 
-  async getDeploymentMapEntry(mappingIdent: string): Promise<DeploymentMapEntry> {
+  async getDeploymentMapEntry(
+    mappingIdent: string
+  ): Promise<DeploymentMapEntry> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}/${mappingIdent}`,
       {
@@ -167,8 +159,12 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    const mapEntry: Promise<DeploymentMapEntry> = await data.json();
-    return mapEntry;
+    const mapEntry: string[] = await data.json();
+    const result: DeploymentMapEntry = {
+      ident: mappingIdent,
+      connectors: mapEntry
+    };
+    return result;
   }
 
   async getDeploymentMap(): Promise<DeploymentMap> {

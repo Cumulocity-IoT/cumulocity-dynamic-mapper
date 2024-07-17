@@ -217,6 +217,7 @@ public class MappingRestController {
 			client.disconnect();
 			bootstrapService.shutdownConnector(tenant, ident);
 			connectorConfigurationComponent.deleteConnectorConfiguration(ident);
+			mappingComponent.removeConnectorFromDeploymentMap(tenant, ident);
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());

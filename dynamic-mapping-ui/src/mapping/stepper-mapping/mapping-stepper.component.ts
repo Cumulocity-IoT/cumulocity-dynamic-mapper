@@ -20,15 +20,15 @@
  */
 import { CdkStep } from '@angular/cdk/stepper';
 import {
-	Component,
-	ElementRef,
-	EventEmitter,
-	Input,
-	OnDestroy,
-	OnInit,
-	Output,
-	ViewChild,
-	ViewEncapsulation
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  ViewChild,
+  ViewEncapsulation
 } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService, C8yStepper } from '@c8y/ngx-components';
@@ -36,22 +36,22 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { StepperConfiguration } from 'src/shared/model/shared.model';
+import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { Content } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
-	API,
-	COLOR_HIGHLIGHTED,
-	Direction,
-	Extension,
-	Mapping,
-	MappingSubstitution,
-	RepairStrategy,
-	SAMPLE_TEMPLATES_C8Y,
-	SnoopStatus,
-	getExternalTemplate,
-	getSchema,
-	whatIsIt
+  API,
+  COLOR_HIGHLIGHTED,
+  Direction,
+  Extension,
+  Mapping,
+  MappingSubstitution,
+  RepairStrategy,
+  SAMPLE_TEMPLATES_C8Y,
+  SnoopStatus,
+  getExternalTemplate,
+  getSchema,
+  whatIsIt
 } from '../../shared';
 import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component';
 import { MappingService } from '../core/mapping.service';
@@ -64,14 +64,14 @@ import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
 import {
-	countDeviceIdentifiers,
-	definesDeviceIdentifier,
-	expandC8YTemplate,
-	expandExternalTemplate,
-	isDisabled,
-	reduceSourceTemplate,
-	reduceTargetTemplate,
-	splitTopicExcludingSeparator
+  countDeviceIdentifiers,
+  definesDeviceIdentifier,
+  expandC8YTemplate,
+  expandExternalTemplate,
+  isDisabled,
+  reduceSourceTemplate,
+  reduceTargetTemplate,
+  splitTopicExcludingSeparator
 } from '../shared/util';
 import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
 
@@ -86,6 +86,17 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<Mapping>();
+  private _deploymentMapEntry: DeploymentMapEntry;
+
+  @Input()
+  get deploymentMapEntry(): DeploymentMapEntry {
+    return this._deploymentMapEntry;
+  }
+  set deploymentMapEntry(value: DeploymentMapEntry) {
+    this._deploymentMapEntry = value;
+    this.deploymentMapEntryChange.emit(value);
+  }
+  @Output() deploymentMapEntryChange = new EventEmitter<any>();
 
   ValidationError = ValidationError;
   Direction = Direction;
@@ -158,6 +169,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+	// console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
     if (
       this.mapping.snoopStatus === SnoopStatus.NONE ||
       this.mapping.snoopStatus === SnoopStatus.STOPPED
@@ -495,23 +507,23 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onTemplateSourceChanged(content: Content) {
-	if ( _.has(content,'text') && content['text']) {
-		this.templateSource = JSON.parse(content['text']);
-		// this.mapping.source = content['text'];‚
-	} else {
-		this.templateSource = content['json'];
-		// this.mapping.source = JSON.stringify(content['json']);
-	}
+    if (_.has(content, 'text') && content['text']) {
+      this.templateSource = JSON.parse(content['text']);
+      // this.mapping.source = content['text'];‚
+    } else {
+      this.templateSource = content['json'];
+      // this.mapping.source = JSON.stringify(content['json']);
+    }
   }
 
   onTemplateTargetChanged(content: Content) {
-	if ( _.has(content,'text') && content['text']) {
-		this.templateTarget = JSON.parse(content['text']);
-		// this.mapping.target = content['text'];
-	} else {
-		this.templateTarget = content['json'];
-		// this.mapping.target = JSON.stringify(content['json']);
-	}
+    if (_.has(content, 'text') && content['text']) {
+      this.templateTarget = JSON.parse(content['text']);
+      // this.mapping.target = content['text'];
+    } else {
+      this.templateTarget = content['json'];
+      // this.mapping.target = JSON.stringify(content['json']);
+    }
   }
 
   async updateTargetExpressionResult() {
@@ -626,12 +638,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       //  isWildcardTopic(this.mapping.direction == Direction.INBOUND? this.mapping.subscriptionTopic :this.mapping.publishTopic ),
       //  this.mapping.substitutions.length
       // );
-    //   console.log(
-    //     'Templates from mapping:',
-    //     this.mapping.target,
-    //     this.mapping.source,
-    //     this.mapping
-    //   );
+      //   console.log(
+      //     'Templates from mapping:',
+      //     this.mapping.target,
+      //     this.mapping.source,
+      //     this.mapping
+      //   );
       this.expandTemplates();
       this.extensions =
         (await this.extensionService.getProcessorExtensions()) as any;
