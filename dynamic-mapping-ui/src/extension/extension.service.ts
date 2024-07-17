@@ -57,10 +57,6 @@ export class ExtensionService {
     private inventoryBinaryService: InventoryBinaryService
   ) {}
 
-  private _agentId: string;
-  private realtime: Realtime;
-  private subscriptionEvents: any;
-
   async getExtensions(extensionId: string): Promise<IManagedObject[]> {
     const filter: object = {
       pageSize: 100,

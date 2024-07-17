@@ -23,7 +23,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
   template: `
-    <div *ngFor="let con of context.value?.deployedToConnectors">
+    <div *ngFor="let con of context.value?.connectors">
         <span class="text-10 label label-primary">{{ con.name }}</span
         >
     </div>
