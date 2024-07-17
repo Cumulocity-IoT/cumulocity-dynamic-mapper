@@ -449,7 +449,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
+        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
         QOS usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
         if (usedQOS.equals(null))
@@ -471,7 +471,7 @@ public class MQTTClient extends AConnectorClient {
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
                 .thenRun(() -> {
-                    log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+                    log.info("Tenant {} - Successfully subscribed on topic: {} for connector {}", tenant, topic, connectorName);
                 }).exceptionally(throwable -> {
                     log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
                             throwable.getMessage());
@@ -482,7 +482,15 @@ public class MQTTClient extends AConnectorClient {
     public void unsubscribe(String topic) throws Exception {
         log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
-        mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
+        Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+        asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
+            log.info("Tenant {} - Successfully unsubscribed on topic: {} for connector {}", tenant, topic, connectorName);
+        }).exceptionally(throwable -> {
+            log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
+                    throwable.getMessage());
+            return null;
+        });
+        //mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {

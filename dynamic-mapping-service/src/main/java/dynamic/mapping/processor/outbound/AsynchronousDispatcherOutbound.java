@@ -132,9 +132,9 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
         // is not connected
         if ("CREATE".equals(notification.getNotificationHeaders().get(1)) && connectorClient.isConnected()) {
             String tenant = getTenantFromNotificationHeaders(notification.getNotificationHeaders());
-            log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant, notification.getMessage(),
-                    notification.getNotificationHeaders(), connectorClient.connectorConfiguration.name,
-                    connectorClient.isConnected());
+            //log.info("Tenant {} - Notification received: <{}>, <{}>, <{}>, <{}>", tenant, notification.getMessage(),
+            //        notification.getNotificationHeaders(), connectorClient.connectorConfiguration.name,
+            //        connectorClient.isConnected());
             C8YMessage c8yMessage = new C8YMessage();
             c8yMessage.setPayload(notification.getMessage());
             c8yMessage.setApi(notification.getApi());
