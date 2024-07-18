@@ -304,7 +304,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '7%'
       },
       {
-        header: 'Active for connectors',
+        header: 'Effective deployment',
         name: 'connectors',
         path: 'connectors',
         filterable: true,
@@ -517,7 +517,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingToUpdate.direction == null
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
-    const deploymentMapEntry = await this.mappingService.getDeploymentMapEntry(
+    const deploymentMapEntry = await this.mappingService.getDefinedDeploymentMapEntry(
       mapping.ident
     );
     this.deploymentMapEntry = {
@@ -550,7 +550,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     this.mappingToUpdate.active = false;
-    const deploymentMapEntry = await this.mappingService.getDeploymentMapEntry(
+    const deploymentMapEntry = await this.mappingService.getDefinedDeploymentMapEntry(
       mapping.ident
     );
     this.deploymentMapEntry = {
@@ -720,7 +720,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.mappingService.updateDeploymentMapEntry(this.deploymentMapEntry);
+    this.mappingService.updateDefinedDeploymentMapEntry(this.deploymentMapEntry);
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;

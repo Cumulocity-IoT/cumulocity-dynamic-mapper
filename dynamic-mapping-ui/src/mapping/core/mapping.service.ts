@@ -46,14 +46,14 @@ import {
   Mapping,
   SharedService,
   DeploymentMapEntryDetailed,
-  PATH_MAPPING_DEPLOYED_ENDPOINT,
+  PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT,
   MappingEnriched,
   MAPPING_TYPE_DESCRIPTION,
   Operation,
   StatusEventTypes,
   DeploymentMapEntry,
-  PATH_DEPLOYMENT_MAP_ENDPOINT,
-  DeploymentMap
+  DeploymentMap,
+  PATH_DEPLOYMENT_DEFINED_ENDPOINT
 } from '../../shared';
 import { JSONProcessorInbound } from '../processor/impl/json-processor-inbound.service';
 import { JSONProcessorOutbound } from '../processor/impl/json-processor-outbound.service';
@@ -129,9 +129,9 @@ export class MappingService {
     // this._mappingsOutbound = undefined;
   }
 
-  async getMappingsDeployed(): Promise<DeploymentMapEntryDetailed[]> {
+  async getEffectiveDeploymentMap(): Promise<DeploymentMapEntryDetailed[]> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_DEPLOYED_ENDPOINT}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -145,11 +145,11 @@ export class MappingService {
     return mappings;
   }
 
-  async getDeploymentMapEntry(
+  async getDefinedDeploymentMapEntry(
     mappingIdent: string
   ): Promise<DeploymentMapEntry> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}/${mappingIdent}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${mappingIdent}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -167,9 +167,9 @@ export class MappingService {
     return result;
   }
 
-  async getDeploymentMap(): Promise<DeploymentMap> {
+  async getDefinedDeploymentMap(): Promise<DeploymentMap> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -183,9 +183,9 @@ export class MappingService {
     return map;
   }
 
-  async updateDeploymentMapEntry(entry: DeploymentMapEntry): Promise<any> {
+  async updateDefinedDeploymentMapEntry(entry: DeploymentMapEntry): Promise<any> {
     const response = this.client.fetch(
-      `${BASE_URL}/${PATH_DEPLOYMENT_MAP_ENDPOINT}/${entry.ident}`,
+      `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.ident}`,
       {
         headers: {
           'content-type': 'application/json'
@@ -205,7 +205,7 @@ export class MappingService {
       switchMap(() =>
         combineLatest([
           this.getMappings(Direction.INBOUND),
-          this.getMappingsDeployed()
+          this.getEffectiveDeploymentMap()
         ])
       ),
       map(([mappings, mappingsDeployed]) => {

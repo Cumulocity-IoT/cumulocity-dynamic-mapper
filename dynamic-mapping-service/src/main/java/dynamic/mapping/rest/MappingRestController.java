@@ -341,7 +341,39 @@ public class MappingRestController {
 		}
 	}
 
-	@RequestMapping(value = "/deploymentMap/{mappingIdent}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
+
+	@RequestMapping(value = "/deployment/effective", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
+		String tenant = contextService.getContext().getTenant();
+		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
+		try {
+			Map<String, AConnectorClient> connectorMap = connectorRegistry
+					.getClientsForTenant(tenant);
+			if (connectorMap != null) {
+				// iterate over all clients
+				for (AConnectorClient client : connectorMap.values()) {
+					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
+					List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
+							.collect(Collectors.toList());
+					// iterate over all mappings for specific client
+					subscribedMappings.forEach(ident -> {
+						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
+								new DeploymentMapEntryDetailed(ident));
+						mappingDeployed.getConnectors().add(cleanedConfiguration);
+						mappingsDeployed.put(ident, mappingDeployed);
+					});
+				}
+			}
+
+			log.debug("Tenant {} - Get active subscriptions!", tenant);
+			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
+		} catch (ConnectorRegistryException e) {
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<HttpStatus> updateDeploymentMapEntry(@PathVariable String mappingIdent,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
@@ -355,7 +387,7 @@ public class MappingRestController {
 		}
 	}
 
-	@RequestMapping(value = "/deploymentMap/{mappingIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(value = "/deployment/defined/{mappingIdent}", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<String>> getDeploymentMapEntry(@PathVariable String mappingIdent) {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get deployment for mapping: {}", tenant, mappingIdent);
@@ -368,7 +400,7 @@ public class MappingRestController {
 		}
 	}
 
-	@RequestMapping(value = "/deploymentMap", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(value = "/deployment/defined", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String,List<String>>> getDeploymentMap() {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get complete deployment", tenant);
@@ -533,36 +565,6 @@ public class MappingRestController {
 
 	}
 
-	@RequestMapping(value = "/mappingDeployed", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
-		String tenant = contextService.getContext().getTenant();
-		Map<String, DeploymentMapEntryDetailed> mappingsDeployed = new HashMap<>();
-		try {
-			Map<String, AConnectorClient> connectorMap = connectorRegistry
-					.getClientsForTenant(tenant);
-			if (connectorMap != null) {
-				// iterate over all clients
-				for (AConnectorClient client : connectorMap.values()) {
-					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-					List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
-							.collect(Collectors.toList());
-					// iterate over all mappings for specific client
-					subscribedMappings.forEach(ident -> {
-						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
-								new DeploymentMapEntryDetailed(ident));
-						mappingDeployed.getConnectors().add(cleanedConfiguration);
-						mappingsDeployed.put(ident, mappingDeployed);
-					});
-				}
-			}
-
-			log.debug("Tenant {} - Get active subscriptions!", tenant);
-			return ResponseEntity.status(HttpStatus.OK).body(mappingsDeployed);
-		} catch (ConnectorRegistryException e) {
-			throw new RuntimeException(e);
-		}
-
-	}
 
 	@RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<Mapping>> getMappings() {
