@@ -279,7 +279,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: NameRendererComponent,
         sortOrder: 'asc',
-        visible: true
+        visible: true,
+        gridTrackSize: '10%'
       },
       {
         header: 'Subscription topic',
@@ -517,9 +518,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingToUpdate.direction == null
     )
       this.mappingToUpdate.direction = Direction.INBOUND;
-    const deploymentMapEntry = await this.mappingService.getDefinedDeploymentMapEntry(
-      mapping.ident
-    );
+    const deploymentMapEntry =
+      await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
     this.deploymentMapEntry = {
       ident: this.mappingToUpdate.ident,
       connectors: deploymentMapEntry.connectors
@@ -550,9 +550,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.mappingToUpdate.ident = uuidCustom();
     this.mappingToUpdate.id = this.mappingToUpdate.ident;
     this.mappingToUpdate.active = false;
-    const deploymentMapEntry = await this.mappingService.getDefinedDeploymentMapEntry(
-      mapping.ident
-    );
+    const deploymentMapEntry =
+      await this.mappingService.getDefinedDeploymentMapEntry(mapping.ident);
     this.deploymentMapEntry = {
       ident: this.mappingToUpdate.ident,
       connectors: deploymentMapEntry.connectors
@@ -720,7 +719,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.mappingService.updateDefinedDeploymentMapEntry(this.deploymentMapEntry);
+    this.mappingService.updateDefinedDeploymentMapEntry(
+      this.deploymentMapEntry
+    );
 
     this.showConfigMapping = false;
     this.showSnoopingMapping = false;
@@ -859,7 +860,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     if (direction == Direction.OUTBOUND)
       this.stepperConfiguration.allowTestSending = false;
   }
-
 
   ngOnDestroy() {
     this.destroy$.next(true);
