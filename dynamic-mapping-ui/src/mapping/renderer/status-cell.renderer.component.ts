@@ -23,6 +23,7 @@ import { CellRendererContext } from '@c8y/ngx-components';
 import { SnoopStatus } from '../../shared';
 
 @Component({
+	selector: 'd11r-mapping-renderer-status',
   template: `
     <div class="d-inline-flex">
       <!-- <div class="c8y-realtime" title="Tested">

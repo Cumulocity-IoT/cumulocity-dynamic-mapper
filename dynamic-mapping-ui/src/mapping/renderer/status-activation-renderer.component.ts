@@ -31,31 +31,38 @@ import { Direction } from '../../shared';
  */
 @Component({
   encapsulation: ViewEncapsulation.None,
-    template: `
-        <div >
-          <label
-            title="{{ 'Toggle mapping activation' | translate }}"
-            class="c8y-switch"
-          >
-            <input
-              type="checkbox"
-              [checked]="context.value"
-              (change)="activateMapping()"
-            />
-            <span></span>
-            <span
-              class="text-capitalize"
-              title="{{ context.value ? 'active': 'inactive'| translate | lowercase }}"
-            >
-              {{ context.value ? 'active': 'inactive' | translate }}
-            </span>
-          </label>
-        </div>
+  selector: 'd11r-mapping-renderer-activation',
+  template: `
+    <div>
+      <label
+        title="{{ 'Toggle mapping activation' | translate }}"
+        class="c8y-switch"
+      >
+        <input
+          type="checkbox"
+          [checked]="context.value"
+          (change)="activateMapping()"
+        />
+        <span></span>
+        <span
+          class="text-capitalize"
+          title="{{
+            context.value ? 'active' : ('inactive' | translate | lowercase)
+          }}"
+        >
+          {{ context.value ? 'active' : ('inactive' | translate) }}
+        </span>
+      </label>
+    </div>
   `
 })
 export class StatusActivationRendererComponent {
-  constructor(public context: CellRendererContext, public alertService:AlertService, public mappingService: MappingService) {
-     // console.log('Status', context, context.value);
+  constructor(
+    public context: CellRendererContext,
+    public alertService: AlertService,
+    public mappingService: MappingService
+  ) {
+    // console.log('Status', context, context.value);
   }
 
   async activateMapping() {

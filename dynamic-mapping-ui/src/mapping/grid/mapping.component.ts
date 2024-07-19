@@ -250,7 +250,6 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
-      console.log('mappings', maps);
     });
     this.mappingService.startChangedMappingEvents();
   }

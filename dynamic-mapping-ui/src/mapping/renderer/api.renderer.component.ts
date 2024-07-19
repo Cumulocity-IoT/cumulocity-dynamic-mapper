@@ -22,6 +22,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
+  selector: 'd11r-mapping-renderer-api',
   template: `
     <span title="{{ context.value }}">{{
       context.value?.length > 0 ? context.value.charAt(0) : 0

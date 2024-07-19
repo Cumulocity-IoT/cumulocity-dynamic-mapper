@@ -22,6 +22,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
+	selector: 'd11r-mapping-renderer-name',
   template: ' <span title="{{ context.item.id }}">{{ context.value }}</span> '
 })
 export class NameRendererComponent {
