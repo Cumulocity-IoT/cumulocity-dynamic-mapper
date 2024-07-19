@@ -28,7 +28,6 @@ import {
   ConnectorSpecification,
   ConnectorStatus,
   Feature,
-  SharedService,
   uuidCustom
 } from '../shared';
 import { ConnectorConfigurationService } from '../shared/connector-configuration.service';
@@ -49,8 +48,7 @@ export class BrokerConnectorComponent implements OnInit {
   constructor(
     public bsModalService: BsModalService,
     public connectorConfigurationService: ConnectorConfigurationService,
-    public alertService: AlertService,
-    private sharedService: SharedService
+    public alertService: AlertService
   ) {}
 
   ngOnInit() {
