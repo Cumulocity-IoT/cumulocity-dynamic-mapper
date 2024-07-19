@@ -19,40 +19,40 @@
  * @authors Christof Strack
  */
 import {
-  Component,
-  OnDestroy,
-  OnInit,
-  ViewChild,
-  ViewEncapsulation
+	Component,
+	OnDestroy,
+	OnInit,
+	ViewChild,
+	ViewEncapsulation
 } from '@angular/core';
 import {
-  ActionControl,
-  AlertService,
-  BuiltInActionType,
-  BulkActionControl,
-  Column,
-  ColumnDataType,
-  DataGridComponent,
-  DisplayOptions,
-  Pagination,
-  gettext
+	ActionControl,
+	AlertService,
+	BuiltInActionType,
+	BulkActionControl,
+	Column,
+	ColumnDataType,
+	DataGridComponent,
+	DisplayOptions,
+	Pagination,
+	gettext
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
-  API,
-  ConfirmationModalComponent,
-  Direction,
-  Mapping,
-  MappingEnriched,
-  MappingSubstitution,
-  MappingType,
-  Operation,
-  QOS,
-  SAMPLE_TEMPLATES_C8Y,
-  SnoopStatus,
-  getExternalTemplate,
-  nextIdAndPad,
-  uuidCustom
+	API,
+	ConfirmationModalComponent,
+	Direction,
+	Mapping,
+	MappingEnriched,
+	MappingSubstitution,
+	MappingType,
+	Operation,
+	QOS,
+	SAMPLE_TEMPLATES_C8Y,
+	SnoopStatus,
+	getExternalTemplate,
+	nextIdAndPad,
+	uuidCustom
 } from '../../shared';
 
 import { Router } from '@angular/router';
@@ -68,13 +68,13 @@ import { NameRendererComponent } from '../renderer/name.renderer.component';
 import { StatusActivationRendererComponent } from '../renderer/status-activation-renderer.component';
 import { StatusRendererComponent } from '../renderer/status-cell.renderer.component';
 // import { TemplateRendererComponent } from '../renderer/template.renderer.component';
-import { EditorMode } from '../shared/stepper-model';
 import { MAPPING_TYPE_DESCRIPTION, StepperConfiguration } from '../../shared';
-import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
+import { DeploymentMapEntry } from '../../shared/model/shared.model';
+import { SharedService } from '../../shared/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
-import { SharedService } from '../../shared/shared.service';
-import { DeploymentMapEntry } from '../../shared/model/shared.model';
+import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
+import { EditorMode } from '../shared/stepper-model';
 
 @Component({
   selector: 'd11r-mapping-mapping-grid',
@@ -141,6 +141,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   };
   actionControls: ActionControl[] = [];
   actionControlSubscription: ActionControl[] = [];
+  bulkActionControlSubscription: BulkActionControl[] = [];
   bulkActionControls: BulkActionControl[] = [];
 
   constructor(
@@ -240,6 +241,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.exportMappingBulk.bind(this)
       }
     );
+    this.bulkActionControlSubscription.push({
+      type: BuiltInActionType.Delete,
+      callback: this.deleteSubscriptionBulkWithConfirmation.bind(this)
+    });
     this.actionControlSubscription.push({
       type: BuiltInActionType.Delete,
       callback: this.deleteSubscription.bind(this)
@@ -304,7 +309,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '7%'
       },
       {
-        header: 'Effective deployment',
+        header: 'Effective connectors',
         name: 'connectors',
         path: 'connectors',
         filterable: true,
@@ -478,6 +483,59 @@ export class MappingComponent implements OnInit, OnDestroy {
         gettext('Failed to delete subscription:') + error
       );
     }
+  }
+
+  private async deleteSubscriptionBulkWithConfirmation(ids: string[]) {
+    let continueDelete: boolean = false;
+    for (let index = 0; index < ids.length; index++) {
+      const device2Delete = this.subscription?.devices.find(
+        (de) => de.id == ids[index]
+      );
+      if (device2Delete) {
+        continueDelete = await this.deleteSubscriptionWithConfirmation(
+          device2Delete,
+          true,
+          true
+        );
+      } else if (continueDelete) {
+        this.deleteSubscription(device2Delete);
+      }
+    }
+    this.isConnectionToMQTTEstablished = true;
+    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    this.mappingGrid.setAllItemsSelected(false);
+  }
+
+  private async deleteSubscriptionWithConfirmation(
+    device2Delete: IIdentified,
+    confirmation: boolean = true,
+    multiple: boolean = false
+  ): Promise<boolean | PromiseLike<boolean>> {
+    let result: boolean = false;
+    // const { mapping } = m;
+    // console.log('Deleting mapping before confirmation:', mapping);
+    if (confirmation) {
+      const initialState = {
+        title: multiple ? 'Delete subscriptions' : 'Delete subscription',
+        message: multiple
+          ? 'You are about to delete subscriptions. Do you want to proceed to delete ALL?'
+          : 'You are about to delete a subscription. Do you want to proceed?',
+        labels: {
+          ok: 'Delete',
+          cancel: 'Cancel'
+        }
+      };
+      const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+        ConfirmationModalComponent,
+        { initialState }
+      );
+
+      result = await confirmDeletionModalRef.content.closeSubject.toPromise();
+      if (result) {
+        await this.deleteSubscription(device2Delete);
+      }
+    }
+    return result;
   }
 
   async updateMapping(m: MappingEnriched) {

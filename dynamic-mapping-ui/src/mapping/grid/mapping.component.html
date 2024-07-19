@@ -118,11 +118,14 @@
 >
   <div class="card-block">
     <c8y-data-grid
+      #subscriptionGrid
+      [selectable]="'true'"
       [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions"
       [rows]="subscription?.devices"
       [pagination]="pagination"
       [actionControls]="actionControlSubscription"
+      [bulkActionControls]="bulkActionControlSubscription"
     >
     </c8y-data-grid>
   </div>
