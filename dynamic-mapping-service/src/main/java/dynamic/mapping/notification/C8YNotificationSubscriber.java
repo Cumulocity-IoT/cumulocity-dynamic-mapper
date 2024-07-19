@@ -175,14 +175,18 @@ public class C8YNotificationSubscriber {
 					}
 				}
 				for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
-					ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
-							.resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
+					if ( subscription != null && subscription.getSource() != null) {
+						ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
+								.resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
 
-					if (extId == null) {
-						extId = new ExternalIDRepresentation();
-						extId.setExternalId(String.format("NOT_EXISTING_EXTERNAL_ID-%s!", subscription.getSource().getId()));
+						if (extId == null) {
+							extId = new ExternalIDRepresentation();
+							extId.setExternalId(String.format("NOT_EXISTING_EXTERNAL_ID-%s!", subscription.getSource().getId()));
+						}
+						activatePushConnectivityStatus(tenant, extId.getExternalId());
+					} else  {
+						log.warn("Tenant {} - Error initializing initDeviceClient: {}", tenant, subscription);
 					}
-					activatePushConnectivityStatus(tenant, extId.getExternalId());
 
 				}
 

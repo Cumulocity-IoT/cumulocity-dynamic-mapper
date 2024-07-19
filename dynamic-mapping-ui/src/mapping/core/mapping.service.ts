@@ -183,7 +183,9 @@ export class MappingService {
     return map;
   }
 
-  async updateDefinedDeploymentMapEntry(entry: DeploymentMapEntry): Promise<any> {
+  async updateDefinedDeploymentMapEntry(
+    entry: DeploymentMapEntry
+  ): Promise<any> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_DEFINED_ENDPOINT}/${entry.ident}`,
       {
@@ -226,13 +228,19 @@ export class MappingService {
       shareReplay(1)
     );
     this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
-      switchMap(() => this.getMappings(Direction.OUTBOUND)),
-      map((mappings) => {
+      switchMap(() =>
+        combineLatest([
+          this.getMappings(Direction.OUTBOUND),
+          this.getEffectiveDeploymentMap()
+        ])
+      ),
+      map(([mappings, mappingsDeployed]) => {
         const mappingsEnriched = [];
         mappings.forEach((m) => {
           mappingsEnriched.push({
             id: m.id,
-            mapping: m
+            mapping: m,
+            connectors: mappingsDeployed[m.ident]
           });
         });
         return mappingsEnriched;

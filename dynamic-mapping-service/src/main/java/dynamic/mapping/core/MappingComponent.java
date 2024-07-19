@@ -372,7 +372,7 @@ public class MappingComponent {
 		}
 	}
 
-	public void rebuildMappingOutboundCache(String tenant) {
+	public List<Mapping> rebuildMappingOutboundCache(String tenant) {
 		// only add outbound mappings to the cache
 		List<Mapping> updatedMappings = getMappings(tenant).stream()
 				.filter(m -> Direction.OUTBOUND.equals(m.direction))
@@ -382,6 +382,7 @@ public class MappingComponent {
 				.collect(Collectors.toMap(Mapping::getId, Function.identity())));
 		resolverMappingOutbound.replace(tenant, updatedMappings.stream()
 				.collect(Collectors.groupingBy(Mapping::getFilterOutbound)));
+		return updatedMappings;
 	}
 
 	public List<Mapping> resolveMappingOutbound(String tenant, JsonNode message, API api) throws ResolveException {

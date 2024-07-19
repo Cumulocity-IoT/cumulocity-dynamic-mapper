@@ -159,21 +159,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       : Direction.OUTBOUND;
 
     this.columnsMappings = this.getColumnsMappings();
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.columnsMappings[1] = {
-        header: 'Publish topic',
-        name: 'publishTopic',
-        path: 'mapping.publishTopic',
-        filterable: true
-      };
-      this.columnsMappings[2] = {
-        header: 'Publish topic sample',
-        name: 'publishTopicSample',
-        path: 'mapping.publishTopicSample',
-        filterable: true
-      };
-      this.columnsMappings.splice(4, 2);
-    }
     this.titleMapping = `Mapping ${this.stepperConfiguration.direction.toLowerCase()}`;
     this.loadSubscriptions();
   }
@@ -265,12 +250,13 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.mappingsEnriched$.subscribe((maps) => {
       this.mappingsCount = maps.length;
+      console.log('mappings', maps);
     });
     this.mappingService.startChangedMappingEvents();
   }
 
   getColumnsMappings(): Column[] {
-    let cols: Column[] = [
+    const cols: Column[] = [
       {
         name: 'name',
         header: 'Name',
@@ -282,18 +268,32 @@ export class MappingComponent implements OnInit, OnDestroy {
         visible: true,
         gridTrackSize: '10%'
       },
-      {
-        header: 'Subscription topic',
-        name: 'subscriptionTopic',
-        path: 'mapping.subscriptionTopic',
-        filterable: true
-      },
-      {
-        header: 'Mapping topic',
-        name: 'mappingTopic',
-        path: 'mapping.mappingTopic',
-        filterable: true
-      },
+      this.stepperConfiguration.direction === Direction.INBOUND
+        ? {
+            header: 'Subscription topic',
+            name: 'subscriptionTopic',
+            path: 'mapping.subscriptionTopic',
+            filterable: true
+          }
+        : {
+            header: 'Publish topic',
+            name: 'publishTopic',
+            path: 'mapping.publishTopic',
+            filterable: true
+          },
+      this.stepperConfiguration.direction === Direction.INBOUND
+        ? {
+            header: 'Mapping topic',
+            name: 'mappingTopic',
+            path: 'mapping.mappingTopic',
+            filterable: true
+          }
+        : {
+            header: 'Publish topic sample',
+            name: 'publishTopicSample',
+            path: 'mapping.publishTopicSample',
+            filterable: true
+          },
       {
         name: 'targetAPI',
         header: 'API',
@@ -313,7 +313,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
-        // header: 'Test/Debug/Snoop',
         header: 'Debug/Snoop',
         name: 'tested',
         path: 'mapping',
@@ -323,25 +322,19 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellCSSClassName: 'text-align-center',
         gridTrackSize: '10%'
       },
-      {
-        // header: 'Test/Debug/Snoop',
-        header: 'Templates snooped',
-        name: 'snoopedTemplates',
-        path: 'mapping',
-        filterable: false,
-        sortable: false,
-        cellCSSClassName: 'text-align-center',
-        cellRendererComponent: SnoopedTemplateRendererComponent,
-        gridTrackSize: '8%'
-      },
-      //   {
-      //     header: 'QOS',
-      //     name: 'qos',
-      //     path: 'mapping.qos',
-      //     filterable: true,
-      //     sortable: false,
-      //     cellRendererComponent: QOSRendererComponent
-      //   },
+      this.stepperConfiguration.direction === Direction.INBOUND
+        ? {
+            // header: 'Test/Debug/Snoop',
+            header: 'Templates snooped',
+            name: 'snoopedTemplates',
+            path: 'mapping',
+            filterable: false,
+            sortable: false,
+            cellCSSClassName: 'text-align-center',
+            cellRendererComponent: SnoopedTemplateRendererComponent,
+            gridTrackSize: '8%'
+          }
+        : undefined,
       {
         header: 'Active',
         name: 'active',
@@ -352,11 +345,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '9%'
       }
     ];
-
-    // remove column 'Templates snooped' for outbound, as this is not supported
-    if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
-      cols = cols.filter((col) => col.name !== 'snoopedTemplates');
-    }
     return cols;
   }
 

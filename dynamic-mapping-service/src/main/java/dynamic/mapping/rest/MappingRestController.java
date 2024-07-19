@@ -341,7 +341,6 @@ public class MappingRestController {
 		}
 	}
 
-
 	@RequestMapping(value = "/deployment/effective", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, DeploymentMapEntryDetailed>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
@@ -353,10 +352,19 @@ public class MappingRestController {
 				// iterate over all clients
 				for (AConnectorClient client : connectorMap.values()) {
 					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-					List<String> subscribedMappings = client.getMappingsDeployed().keySet().stream()
+					List<String> subscribedMappingsInbound = client.getMappingsDeployedInbound().keySet().stream()
 							.collect(Collectors.toList());
 					// iterate over all mappings for specific client
-					subscribedMappings.forEach(ident -> {
+					subscribedMappingsInbound.forEach(ident -> {
+						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
+								new DeploymentMapEntryDetailed(ident));
+						mappingDeployed.getConnectors().add(cleanedConfiguration);
+						mappingsDeployed.put(ident, mappingDeployed);
+					});
+					List<String> subscribedMappingsOutbound = client.getMappingsDeployedOutbound().keySet().stream()
+							.collect(Collectors.toList());
+					// iterate over all mappings for specific client
+					subscribedMappingsOutbound.forEach(ident -> {
 						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
 								new DeploymentMapEntryDetailed(ident));
 						mappingDeployed.getConnectors().add(cleanedConfiguration);
@@ -401,12 +409,12 @@ public class MappingRestController {
 	}
 
 	@RequestMapping(value = "/deployment/defined", method = RequestMethod.GET, consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String,List<String>>> getDeploymentMap() {
+	public ResponseEntity<Map<String, List<String>>> getDeploymentMap() {
 		String tenant = contextService.getContext().getTenant();
 		log.info("Tenant {} - Get complete deployment", tenant);
 		try {
-			Map<String,List<String>> map = mappingComponent.getDeploymentMap(tenant);
-			return new ResponseEntity<Map<String,List<String>>>(map, HttpStatus.OK);
+			Map<String, List<String>> map = mappingComponent.getDeploymentMap(tenant);
+			return new ResponseEntity<Map<String, List<String>>>(map, HttpStatus.OK);
 		} catch (Exception ex) {
 			log.error("Tenant {} - Error getting complete deployment!", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -424,11 +432,16 @@ public class MappingRestController {
 				// sync, the ActiveSubscriptionMappingInbound is build on the
 				// previously used updatedMappings
 
-				List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
+				List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
 				Map<String, AConnectorClient> connectorMap = connectorRegistry
 						.getClientsForTenant(tenant);
 				for (AConnectorClient client : connectorMap.values()) {
-					client.updateActiveSubscriptions(updatedMappings, false);
+					client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false);
+				}
+				List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+
+				for (AConnectorClient client : connectorMap.values()) {
+					client.updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 				}
 			} else if (operation.getOperation().equals(Operation.CONNECT)) {
 				String connectorIdent = operation.getParameter().get("connectorIdent");
@@ -469,9 +482,11 @@ public class MappingRestController {
 						.getClientsForTenant(tenant);
 				// subscribe/unsubscribe respective subscriptionTopic of mapping only for
 				// outbound mapping
-				if (updatedMapping.direction == Direction.INBOUND) {
-					for (AConnectorClient client : connectorMap.values()) {
-						client.updateActiveSubscription(updatedMapping, false, true);
+				for (AConnectorClient client : connectorMap.values()) {
+					if (updatedMapping.direction == Direction.INBOUND) {
+						client.updateActiveSubscriptionInbound(updatedMapping, false, true);
+					} else {
+						client.updateActiveSubscriptionOutbound(updatedMapping);
 					}
 				}
 			} else if (operation.getOperation().equals(Operation.DEBUG_MAPPING)) {
@@ -489,7 +504,9 @@ public class MappingRestController {
 				configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
 			}
 			return ResponseEntity.status(HttpStatus.CREATED).build();
-		} catch (Exception ex) {
+		} catch (
+
+		Exception ex) {
 			log.error("Tenant {} - Error getting mqtt broker configuration {}", tenant, ex);
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
@@ -565,7 +582,6 @@ public class MappingRestController {
 
 	}
 
-
 	@RequestMapping(value = "/mapping", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<Mapping>> getMappings() {
 		String tenant = contextService.getContext().getTenant();
@@ -632,7 +648,7 @@ public class MappingRestController {
 				// occur in all of them.
 				Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
 				clients.keySet().stream().forEach(connector -> {
-					clients.get(connector).updateActiveSubscription(createdMapping, true, false);
+					clients.get(connector).updateActiveSubscriptionInbound(createdMapping, true, false);
 				});
 				mappingComponent.deleteFromCacheMappingInbound(tenant, createdMapping);
 				mappingComponent.addToCacheMappingInbound(tenant, createdMapping);
@@ -660,7 +676,7 @@ public class MappingRestController {
 			} else {
 				Map<String, AConnectorClient> clients = connectorRegistry.getClientsForTenant(tenant);
 				clients.keySet().stream().forEach(connector -> {
-					clients.get(connector).updateActiveSubscription(updatedMapping, false, false);
+					clients.get(connector).updateActiveSubscriptionInbound(updatedMapping, false, false);
 				});
 				mappingComponent.deleteFromCacheMappingInbound(tenant, mapping);
 				mappingComponent.addToCacheMappingInbound(tenant, mapping);

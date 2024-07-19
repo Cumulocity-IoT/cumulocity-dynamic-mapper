@@ -41,8 +41,8 @@ describe('Specs for connector configuration', () => {
     ).as('getConnectorSpecifications');
   });
 
-  it('Add configuration', function () {
-    // click button 'Add configuration'
+  it('Add connector', function () {
+    // click button 'Add connector'
     cy.get('#addConfiguration').should('exist').click();
     cy.wait('@getConnectorSpecifications');
     // cy.get('#connectorType').should('exist').should('be.visible');

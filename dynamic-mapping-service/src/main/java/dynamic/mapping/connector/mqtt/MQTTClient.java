@@ -331,8 +331,10 @@ public class MQTTClient extends AConnectorClient {
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptions(updatedMappings, true);
+                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+					List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
@@ -435,8 +437,10 @@ public class MQTTClient extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptions(updatedMappings, true);
+            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+			List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+			updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }
