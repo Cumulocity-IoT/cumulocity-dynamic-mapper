@@ -122,7 +122,7 @@ public class AsynchronousDispatcherOutbound implements NotificationCallback {
     @Override
     public void onOpen(URI serverUri) {
         log.info("Tenant {} - Connector {} connected to Cumulocity notification service over Web Socket",
-                connectorClient.getTenant(), connectorClient.getConnectorIdent());
+                connectorClient.getTenant(), connectorClient.getConnectorName());
         notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 200);
     }
 

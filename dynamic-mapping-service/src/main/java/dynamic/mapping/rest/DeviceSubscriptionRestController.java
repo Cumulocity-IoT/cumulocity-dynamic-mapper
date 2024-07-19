@@ -51,7 +51,7 @@ public class DeviceSubscriptionRestController {
                 ManagedObjectRepresentation mor = c8yAgent
                         .getManagedObjectForId(contextService.getContext().getTenant(), managedObject.getId());
                 if (mor != null) {
-                    List<Device> allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, null);
+                    List<Device> allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, null, false);
                     for (Device device : allChildDevices) {
                         ManagedObjectRepresentation childDeviceMor = c8yAgent
                                 .getManagedObjectForId(contextService.getContext().getTenant(), device.getId());
@@ -103,7 +103,7 @@ public class DeviceSubscriptionRestController {
                 if (mor != null) {
                     try {
                         // Creates subscription for each connector
-                        List<Device> allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, null);
+                        List<Device> allChildDevices = configurationRegistry.getNotificationSubscriber().findAllRelatedDevicesByMO(mor, null, false);
                         for (Device childDevice : allChildDevices) {
                             // Creates subscription for each connector
                             ManagedObjectRepresentation childDeviceMor = c8yAgent.getManagedObjectForId(tenant, childDevice.getId());

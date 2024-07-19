@@ -291,8 +291,6 @@ public class C8YNotificationSubscriber {
 		/* Connect to all devices */
 		String tenant = subscriptionsService.getTenant();
 		String deviceName = mor.getName();
-		log.info("Tenant {} - Creating new Subscription for Device {} with ID {}", tenant, deviceName,
-				mor.getId().getValue());
 		CompletableFuture<NotificationSubscriptionRepresentation> notificationFut = new CompletableFuture<NotificationSubscriptionRepresentation>();
 		subscriptionsService.runForTenant(tenant, () -> {
 			Map<String, String> deviceTokens = deviceTokenPerConnector.get(tenant);
@@ -316,6 +314,8 @@ public class C8YNotificationSubscriber {
 								+ additionalSubscriptionIdTest;
 						String token = createToken(DEVICE_SUBSCRIPTION,
 								tokenSeed);
+						log.info("Tenant {} - Creating new Subscription for Device {} with ID {} for Connector {}", tenant, deviceName,
+								mor.getId().getValue(),dispatcherOutbound.getConnectorClient().getConnectorName());
 						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
 						CustomWebSocketClient client = connect(token, dispatcherOutbound);
 						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
@@ -627,13 +627,13 @@ public class C8YNotificationSubscriber {
 		});
 	}
 
-	public List<Device> findAllRelatedDevicesByMO(ManagedObjectRepresentation mor, List<Device> devices) {
+	public List<Device> findAllRelatedDevicesByMO(ManagedObjectRepresentation mor, List<Device> devices, boolean isChildDevice) {
 		if (devices == null)
 			devices = new ArrayList<>();
 		String tenant = subscriptionsService.getTenant();
-		if (mor.hasProperty("c8y_IsDevice")) {
+		if (mor.hasProperty("c8y_IsDevice") || isChildDevice) {
 			//MO is already a device - just check for child devices
-			log.info("Tenant {} - Adding child Device {} to be subscribed to", tenant, mor.getId());
+			log.debug("Tenant {} - Adding child Device {} to be subscribed to", tenant, mor.getId());
 			Device device = new Device();
 			device.setId(mor.getId().getValue());
 			device.setName(mor.getName());
@@ -642,17 +642,7 @@ public class C8YNotificationSubscriber {
 			while (childDeviceIt.hasNext()) {
 				ManagedObjectRepresentation currentChild = childDeviceIt.next().getManagedObject();
 				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant, currentChild.getId().getValue());
-				if (currentChild.hasProperty("c8y_IsDevice")) {
-					log.info("Tenant {} - Adding child Device {} to be subscribed to", tenant, currentChild.getId());
-					//Only add devices
-					device = new Device();
-					device.setId(currentChild.getId().getValue());
-					device.setName(currentChild.getName());
-					devices.add(device);
-					//Now check for potential child devices
-					if (currentChild.getChildDevices().iterator().hasNext())
-						devices = findAllRelatedDevicesByMO(currentChild, devices);
-				}
+				devices = findAllRelatedDevicesByMO(currentChild, devices, true);
 			}
 		} else if (mor.hasProperty("c8y_IsDeviceGroup")) {
 			//MO is a group check for subgroups or child devices
@@ -660,21 +650,7 @@ public class C8YNotificationSubscriber {
 			while (childAssetIt.hasNext()) {
 				ManagedObjectRepresentation currentChild = childAssetIt.next().getManagedObject();
 				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant, currentChild.getId().getValue());
-				if (currentChild.hasProperty("c8y_IsDevice")) {
-					log.info("Tenant {} - Adding child Device {} to be subscribed to", tenant, currentChild.getId());
-					//Only add devices
-					Device device = new Device();
-					device.setId(currentChild.getId().getValue());
-					device.setName(currentChild.getName());
-					devices.add(device);
-					//Now check for potential child devices
-					if (currentChild.getChildDevices().iterator().hasNext())
-						devices = findAllRelatedDevicesByMO(currentChild, devices);
-				} else {
-					if (currentChild.getChildAssets().iterator().hasNext()) {
-						devices = findAllRelatedDevicesByMO(currentChild, devices);
-					}
-				}
+				devices = findAllRelatedDevicesByMO(currentChild, devices, false);
 			}
 		}
 		return devices;
