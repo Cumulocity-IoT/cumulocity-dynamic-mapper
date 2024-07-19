@@ -18,8 +18,22 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  inject
+} from '@angular/core';
+import {
+  ActionControl,
+  AlertService,
+  BuiltInActionType,
+  Column,
+  gettext,
+  Pagination
+} from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, from, Observable, Subject } from 'rxjs';
 
@@ -39,6 +53,7 @@ import {
   ConnectorConfiguration,
   ConnectorSpecification
 } from './connector.model';
+import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -66,6 +81,12 @@ export class ConnectorConfigurationComponent implements OnInit {
   configurations: ConnectorConfiguration[];
   configurations$: Subject<ConnectorConfiguration[]> = new Subject();
   StatusEventTypes = StatusEventTypes;
+  pagination: Pagination = {
+    pageSize: 30,
+    currentPage: 1
+  };
+  columns: Column[] = [];
+  actionControls: ActionControl[] = [];
 
   constructor(
     private bsModalService: BsModalService,
@@ -77,6 +98,61 @@ export class ConnectorConfigurationComponent implements OnInit {
   ngOnInit() {
     // console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
 
+    this.actionControls.push(
+      {
+        type: BuiltInActionType.Edit,
+        callback: this.onConfigurationUpdate.bind(this)
+      },
+      {
+        text: 'Copy',
+        type: 'COPY',
+        icon: 'copy',
+        callback: this.onConfigurationCopy.bind(this)
+      },
+      {
+        type: BuiltInActionType.Delete,
+        callback: this.onConfigurationDelete.bind(this),
+        showIf: (item) => !item['enabled']
+      }
+    );
+
+    this.columns.push(
+      {
+        name: 'ident',
+        header: 'Ident',
+        path: 'ident',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: false,
+        gridTrackSize: '10%'
+      },
+      {
+        name: 'name',
+        header: 'Name',
+        path: 'name',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: true
+      },
+      {
+        name: 'connectorType',
+        header: 'Type',
+        path: 'connectorType',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: true,
+        gridTrackSize: '15%'
+      },
+      {
+        header: 'Enabled',
+        name: 'enabled',
+        path: 'enabled',
+        filterable: false,
+        sortable: true,
+        cellRendererComponent: StatusEnabledRendererComponent,
+        gridTrackSize: '15%'
+      }
+    );
     this.selected = this.deploymentMapEntry?.connectors ?? [];
     this.selected$.next(this.selected);
     this.selected$.subscribe((se) => {
@@ -144,9 +220,11 @@ export class ConnectorConfigurationComponent implements OnInit {
     this.connectorConfigurationService.startConnectorConfigurations();
   }
 
-  async onConfigurationUpdate(index) {
-    const configuration = this.configurations[index];
-
+  async onConfigurationUpdate(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
+    const configuration = _.clone(this.configurations[index]);
     const initialState = {
       add: false,
       configuration: configuration,
@@ -186,8 +264,12 @@ export class ConnectorConfigurationComponent implements OnInit {
     });
   }
 
-  async onConfigurationCopy(index) {
+  async onConfigurationCopy(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
     const configuration = _.clone(this.configurations[index]);
+    // const configuration = _.clone(config);
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alertService.warning(
@@ -235,8 +317,11 @@ export class ConnectorConfigurationComponent implements OnInit {
     });
   }
 
-  async onConfigurationDelete(index) {
-    const configuration = this.configurations[index];
+  async onConfigurationDelete(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
+    const configuration = _.clone(this.configurations[index]);
 
     const initialState = {
       title: 'Delete connector',
@@ -273,8 +358,11 @@ export class ConnectorConfigurationComponent implements OnInit {
     await this.loadData();
   }
 
-  async onConfigurationToggle(index) {
-    const configuration = this.configurations[index];
+  async onConfigurationToggle(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
+    const configuration = _.clone(this.configurations[index]);
     const response1 = await this.sharedService.runOperation(
       configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
       { connectorIdent: configuration.ident }

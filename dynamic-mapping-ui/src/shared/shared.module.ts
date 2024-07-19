@@ -31,6 +31,7 @@ import { ConnectorStatusComponent } from './connector-status/connector-status.co
 import { ConnectorConfigurationComponent } from './connector-configuration/connector-configuration.component';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
 
 @NgModule({
   declarations: [
@@ -41,7 +42,8 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     DisableDirective,
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent
+    ConfigurationConfigurationModalComponent,
+	StatusEnabledRendererComponent
   ],
   imports: [
     CoreModule,
