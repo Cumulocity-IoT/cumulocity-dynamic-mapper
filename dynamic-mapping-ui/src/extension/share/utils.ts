@@ -21,7 +21,7 @@
 import { inject } from '@angular/core';
 import { ResolveFn } from '@angular/router';
 import { IManagedObject } from '@c8y/client';
-import { ExtensionService } from './extension.service';
+import { ExtensionService } from '../extension.service';
 
 export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
   const extensionService = inject(ExtensionService);

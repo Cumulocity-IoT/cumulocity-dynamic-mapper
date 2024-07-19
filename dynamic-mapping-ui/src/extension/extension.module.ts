@@ -24,11 +24,11 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { NODE3, SharedModule } from '../shared';
-import { ExtensionCardComponent } from './extension-card/extension-card.component';
-import { AddExtensionComponent } from './extension-modal/add-extension.component';
+import { ExtensionCardComponent } from './card/extension-card.component';
+import { AddExtensionComponent } from './add/add-extension-modal.component';
 import { ExtensionComponent } from './grid/extension.component';
 import { ExtensionPropertiesComponent } from './properties/extension-properties.component';
-import { extensionResolver } from './utils';
+import { extensionResolver } from './share/utils';
 
 @NgModule({
   declarations: [

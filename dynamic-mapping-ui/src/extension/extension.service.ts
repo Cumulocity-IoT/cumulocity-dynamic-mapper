@@ -156,20 +156,6 @@ export class ExtensionService {
   }
 
   async deleteExtension(app: IManagedObject): Promise<void> {
-    const { name } = app;
-    await this.modal.confirm(
-      gettext('Delete extension'),
-      this.translateService.instant(
-        gettext(
-          'You are about to delete extension "{{name}}". Do you want to proceed?'
-        ),
-        { name }
-      ),
-      Status.DANGER,
-      { ok: gettext('Delete'), cancel: gettext('Cancel') }
-    );
-    // TODO this needs to be changed: create
-    // await this.inventoryBinaryService.delete(app.id);
     await this.deleteProcessorExtension(app['name']);
     this.alertService.success(gettext('Extension deleted.'));
     this.appDeleted.emit(app);
