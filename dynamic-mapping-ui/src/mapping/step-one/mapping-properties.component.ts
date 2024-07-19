@@ -81,7 +81,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     sharedService: SharedService,
     private alertService: AlertService,
     private configService: FormlyConfig
-  ) {}
+  ) {
+  }
 
   ngOnInit() {
     // set value for backward compatiblility
