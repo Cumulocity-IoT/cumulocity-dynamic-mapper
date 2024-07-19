@@ -26,14 +26,14 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
-import { Direction, MappingSubstitution } from '../../../shared';
-import { definesDeviceIdentifier, isDisabled } from '../../shared/util';
-import { EditorMode } from '../../shared/stepper-model';
+import { Direction, MappingSubstitution } from '../../shared';
+import { definesDeviceIdentifier, isDisabled } from '../shared/util';
+import { EditorMode } from '../shared/stepper-model';
 
 @Component({
-  selector: 'd11r-mapping-substitution-renderer',
-  templateUrl: 'substitution-renderer.component.html',
-  styleUrls: ['./substitution-renderer.style.css'],
+  selector: 'd11r-mapping-substitution-grid',
+  templateUrl: 'substitution-grid.component.html',
+  styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class SubstitutionRendererComponent {
@@ -58,7 +58,7 @@ export class SubstitutionRendererComponent {
   constructor(private elementRef: ElementRef) {}
 
   onSubstitutionSelect(index: number) {
-    //console.log('Selected substitution:', index);
+    // console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
   }
@@ -69,15 +69,20 @@ export class SubstitutionRendererComponent {
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
       ix = 0;
     }
-    //console.log('Scroll to:', ix);
+    // console.log('Scroll to:', ix);
     this.elementRef.nativeElement
       .querySelector(`#sub-${this.id}-${ix}`)
       .scrollIntoView();
   }
 
   onSubstitutionDelete(index: number) {
-    //console.log('Delete substitution:', index);
+    // console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.deleteSub.emit(index);
+  }
+
+  onSubstitutionEdit(index: number) {
+    this.settings.selectedSubstitutionIndex = index;
+    this.editSub.emit(index);
   }
 }

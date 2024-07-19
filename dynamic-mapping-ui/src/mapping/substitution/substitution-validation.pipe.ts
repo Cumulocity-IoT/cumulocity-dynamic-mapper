@@ -18,29 +18,15 @@
  *
  * @authors Christof Strack
  */
+import { Pipe, PipeTransform } from '@angular/core';
+import { Mapping } from '../../shared';
+import { definesDeviceIdentifier } from '../shared/util';
 
-/* not working
-div:has(>c8y-li-body ) {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-} */
-
-.c8y-list__item__body:has(> c8y-li-body) {
-  padding-top: 6px;
-  padding-bottom: 4px;
-}
-
-.fixTableHead {
-  overflow-y: auto;
-  /* height: 110px;  */
-}
-
-tbody tr td button i {
-  position: unset !important;
-}
-
-.fixTableHead thead tr th {
-  background-color: white;
-  position: sticky;
-  top: 0;
+@Pipe({ name: 'countDeviceIdentifiers', pure: true })
+export class CountDeviceIdentifiersPipe implements PipeTransform {
+  transform(mapping: Mapping) {
+    return mapping.substitutions.filter((sub) =>
+      definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+    ).length;
+  }
 }

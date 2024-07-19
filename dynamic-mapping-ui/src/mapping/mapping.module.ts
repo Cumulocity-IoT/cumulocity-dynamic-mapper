@@ -44,7 +44,7 @@ import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.comp
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
 import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './stepper-mapping/substitution/substitution-renderer.component';
+import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
 import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
 import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';

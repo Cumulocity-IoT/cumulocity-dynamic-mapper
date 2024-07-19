@@ -73,7 +73,7 @@ import {
   reduceTargetTemplate,
   splitTopicExcludingSeparator
 } from '../shared/util';
-import { SubstitutionRendererComponent } from './substitution/substitution-renderer.component';
+import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 
 @Component({
   selector: 'd11r-mapping-stepper',
@@ -169,7 +169,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-	// console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
+    // console.log('mapping-stepper', this._deploymentMapEntry, this.deploymentMapEntry);
     if (
       this.mapping.snoopStatus === SnoopStatus.NONE ||
       this.mapping.snoopStatus === SnoopStatus.STOPPED

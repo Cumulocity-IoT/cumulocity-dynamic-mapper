@@ -48,8 +48,8 @@
         </th>
         <th>Expand as array</th>
         <th>Resolve to externalId</th>
-        <th>Respair strategy</th>
-        <th>Action</th>
+        <th>Repair strategy</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -88,6 +88,7 @@
           {{ sub.repairStrategy }}
         </td>
         <td width="8%" >
+
           <button
             title="{{ 'Remove' | translate }}"
             class="btn btn-icon btn-clean"
@@ -96,7 +97,7 @@
               isDisabled(settings.editorMode === EditorMode.READ_ONLY)
             "
           >
-            <i c8yIcon="trash-o" class="text-danger"></i>
+            <i c8yIcon="trash-o"></i>
             <span class="sr-only" translate>Remove</span>
           </button>
         </td>

@@ -522,7 +522,7 @@
               <div class="row">
                 <div class="col-lg-10 col-lg-offset-1">
                   <div style="min-height: 32px">
-                    <d11r-mapping-substitution-renderer
+                    <d11r-mapping-substitution-grid
                       [substitutions]="mapping.substitutions"
                       [targetAPI]="mapping.targetAPI"
                       [settings]="{
@@ -533,9 +533,9 @@
                       [direction]="mapping.direction"
                       (selectSub)="onSelectSubstitution($event)"
                       (deleteSub)="onDeleteSubstitution($event)"
-                      (editSub)="onUpdateSubstitution()"
+                      (editSub)="onUpdateSubstitutionFromGrid($event)"
                     >
-                    </d11r-mapping-substitution-renderer>
+                    </d11r-mapping-substitution-grid>
                   </div>
                   <c8y-messages class="text-right">
                     <c8y-message
