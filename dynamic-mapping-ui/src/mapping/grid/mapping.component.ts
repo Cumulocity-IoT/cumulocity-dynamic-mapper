@@ -60,7 +60,7 @@ import { IIdentified } from '@c8y/client';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { Observable, Subject, take } from 'rxjs';
 import { MappingService } from '../core/mapping.service';
-import { ImportMappingsComponent } from '../import-modal/import.component';
+import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingTypeComponent } from '../mapping-type/mapping-type.component';
 import { APIRendererComponent } from '../renderer/api.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';

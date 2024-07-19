@@ -31,9 +31,8 @@ import { BrokerConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
 import { EditSubstitutionComponent } from './edit/edit-substitution-modal.component';
 import { MappingComponent } from './grid/mapping.component';
-import { ImportMappingsComponent } from './import-modal/import.component';
+import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { OverwriteSubstitutionModalComponent } from './overwrite/overwrite-substitution-modal.component';
 import { APIRendererComponent } from './renderer/api.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
@@ -62,7 +61,6 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     MappingSubscriptionComponent,
-    OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
