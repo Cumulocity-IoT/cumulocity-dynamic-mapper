@@ -23,38 +23,20 @@ import { CellRendererContext } from '@c8y/ngx-components';
 import { SnoopStatus } from '../../shared';
 
 @Component({
-	selector: 'd11r-mapping-renderer-status',
+  selector: 'd11r-mapping-renderer-status',
   template: `
     <div class="d-inline-flex">
-      <!-- <div class="c8y-realtime" title="Tested">
-        <span
-          class="c8y-pulse animated-slow pulse"
-          [ngClass]="{
-            active: context.value.tested,
-            inactive: !context.value.tested
-          }"
-        ></span>
-      </div> -->
-      <div class="c8y-realtime" [title]="'Debug:' + context.value.debug">
-        <span
-          class="c8y-pulse animated-slow  pulse"
-          [ngClass]="{
-            active: context.value.debug,
-            inactive: !context.value.debug
-          }"
-        ></span>
+      <div *ngIf="context.value.debug">
+        <span class="text-10 label label-primary">{{ 'debug' }}</span>
       </div>
-      <div class="c8y-realtime" [title]="'Snooping:' + context.value.snoopStatus">
-        <span
-          class="c8y-pulse animated-slow pulse"
-          [ngClass]="{
-            active:
-              context.value.snoopStatus === 'STARTED',
-            inactive:
-              context.value.snoopStatus === 'NONE' ||
-              context.value.snoopStatus === 'STOPPED'
-          }"
-        ></span>
+      <div *ngIf="context.value.snoopStatus === 'STARTED'">
+        <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
+      </div>
+      <div *ngIf="context.value.snoopStatus === 'STOPPED'">
+        <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
+      </div>
+      <div *ngIf="context.value.snoopStatus === 'ENABLED'">
+        <span class="text-10 label label-primary">{{ 'snoop: enabled' }}</span>
       </div>
     </div>
   `,

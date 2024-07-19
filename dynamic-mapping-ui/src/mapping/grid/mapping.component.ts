@@ -318,7 +318,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         cellRendererComponent: MappingDeploymentRendererComponent
       },
       {
-        header: 'Debug/Snoop',
+        header: 'Status',
         name: 'tested',
         path: 'mapping',
         filterable: false,
