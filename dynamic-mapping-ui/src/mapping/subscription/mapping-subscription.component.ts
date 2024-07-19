@@ -22,7 +22,6 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnInit,
   Output,
   ViewEncapsulation
 } from '@angular/core';
@@ -34,15 +33,11 @@ import { IIdentified } from '@c8y/client';
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class MappingSubscriptionComponent implements OnInit {
+export class MappingSubscriptionComponent {
   @Input() deviceList: IIdentified[];
 
   @Output() cancel = new EventEmitter<any>();
   @Output() commit = new EventEmitter<IIdentified[]>();
-
-  ngOnInit(): void {
-    console.log('MappingSubscription:', this.deviceList);
-  }
 
   selectionChanged(e) {
     console.log(e);

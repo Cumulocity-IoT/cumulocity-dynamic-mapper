@@ -19,40 +19,40 @@
  * @authors Christof Strack
  */
 import {
-	Component,
-	OnDestroy,
-	OnInit,
-	ViewChild,
-	ViewEncapsulation
+  Component,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  ViewEncapsulation
 } from '@angular/core';
 import {
-	ActionControl,
-	AlertService,
-	BuiltInActionType,
-	BulkActionControl,
-	Column,
-	ColumnDataType,
-	DataGridComponent,
-	DisplayOptions,
-	Pagination,
-	gettext
+  ActionControl,
+  AlertService,
+  BuiltInActionType,
+  BulkActionControl,
+  Column,
+  ColumnDataType,
+  DataGridComponent,
+  DisplayOptions,
+  Pagination,
+  gettext
 } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import {
-	API,
-	ConfirmationModalComponent,
-	Direction,
-	Mapping,
-	MappingEnriched,
-	MappingSubstitution,
-	MappingType,
-	Operation,
-	QOS,
-	SAMPLE_TEMPLATES_C8Y,
-	SnoopStatus,
-	getExternalTemplate,
-	nextIdAndPad,
-	uuidCustom
+  API,
+  ConfirmationModalComponent,
+  Direction,
+  Mapping,
+  MappingEnriched,
+  MappingSubstitution,
+  MappingType,
+  Operation,
+  QOS,
+  SAMPLE_TEMPLATES_C8Y,
+  SnoopStatus,
+  getExternalTemplate,
+  nextIdAndPad,
+  uuidCustom
 } from '../../shared';
 
 import { Router } from '@angular/router';
@@ -84,6 +84,7 @@ import { EditorMode } from '../shared/stepper-model';
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid: DataGridComponent;
+  @ViewChild('subscriptionGrid') subscriptionGrid: DataGridComponent;
   isSubstitutionValid: boolean;
 
   showConfigMapping: boolean = false;
@@ -247,7 +248,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     });
     this.actionControlSubscription.push({
       type: BuiltInActionType.Delete,
-      callback: this.deleteSubscription.bind(this)
+      callback: this.deleteSubscriptionWithConfirmation.bind(this)
     });
     this.mappingsEnriched$ = this.mappingService.getMappingsObservable(
       this.stepperConfiguration.direction
@@ -491,7 +492,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       const device2Delete = this.subscription?.devices.find(
         (de) => de.id == ids[index]
       );
-      if (device2Delete) {
+      if (index == 0 ) {
         continueDelete = await this.deleteSubscriptionWithConfirmation(
           device2Delete,
           true,
@@ -503,7 +504,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
     this.isConnectionToMQTTEstablished = true;
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    this.mappingGrid.setAllItemsSelected(false);
+    this.subscriptionGrid.setAllItemsSelected(false);
   }
 
   private async deleteSubscriptionWithConfirmation(
@@ -512,8 +513,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     multiple: boolean = false
   ): Promise<boolean | PromiseLike<boolean>> {
     let result: boolean = false;
-    // const { mapping } = m;
-    // console.log('Deleting mapping before confirmation:', mapping);
     if (confirmation) {
       const initialState = {
         title: multiple ? 'Delete subscriptions' : 'Delete subscription',
@@ -535,6 +534,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         await this.deleteSubscription(device2Delete);
       }
     }
+    this.subscriptionGrid.setAllItemsSelected(false);
     return result;
   }
 
