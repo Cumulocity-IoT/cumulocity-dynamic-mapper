@@ -19,8 +19,13 @@
  * @authors Christof Strack
  */
 import { Component, ViewEncapsulation } from '@angular/core';
-import { AlertService, CellRendererContext, gettext } from '@c8y/ngx-components';
+import {
+  AlertService,
+  CellRendererContext,
+  gettext
+} from '@c8y/ngx-components';
 import { Direction, Operation, SharedService } from '..';
+import { ConnectorConfigurationService } from '../connector-configuration.service';
 
 /**
  * The example component for custom cell renderer.
@@ -30,27 +35,31 @@ import { Direction, Operation, SharedService } from '..';
  */
 @Component({
   encapsulation: ViewEncapsulation.None,
-    template: `
-        <div >
-          <label
-            title="{{ 'Toggle connection activation' | translate }}"
-            class="c8y-switch"
-          >
-            <input
-              type="checkbox"
-              [checked]="context.value"
-              (change)="onConfigurationToggle()"
-            />
-            <span></span>
-          </label>
-        </div>
+  template: `
+    <div>
+      <label
+        title="{{ 'Toggle connection activation' | translate }}"
+        class="c8y-switch"
+      >
+        <input
+          type="checkbox"
+          [checked]="context.value"
+          (change)="onConfigurationToggle()"
+        />
+        <span></span>
+      </label>
+    </div>
   `
 })
 export class StatusEnabledRendererComponent {
-  constructor(public context: CellRendererContext, public alertService:AlertService, public sharedService: SharedService) {
-     // console.log('Status', context, context.value);
+  constructor(
+    public context: CellRendererContext,
+    public alertService: AlertService,
+    public sharedService: SharedService,
+    private connectorConfigurationService: ConnectorConfigurationService
+  ) {
+    // console.log('Status', context, context.value);
   }
-
 
   async onConfigurationToggle() {
     const configuration = this.context.item;
@@ -65,8 +74,11 @@ export class StatusEnabledRendererComponent {
     } else {
       this.alertService.danger(gettext('Failed to establish connection!'));
     }
-    // await this.loadData();
+    this.reloadData();
     this.sharedService.refreshMappings(Direction.INBOUND);
     this.sharedService.refreshMappings(Direction.OUTBOUND);
+  }
+  reloadData(): void {
+    this.connectorConfigurationService.reloadConnectorConfigurations();
   }
 }

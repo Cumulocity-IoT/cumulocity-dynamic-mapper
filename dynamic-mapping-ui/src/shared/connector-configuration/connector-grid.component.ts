@@ -24,7 +24,7 @@ import {
   Input,
   OnInit,
   Output,
-  inject
+  OnDestroy
 } from '@angular/core';
 import {
   ActionControl,
@@ -43,10 +43,9 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
 import {
   ConnectorStatus,
   StatusEventTypes
-} from '../connector-status/connector-status.model';
-import { DeploymentMapEntry, Direction } from '../model/shared.model';
+} from '../connector-log/connector-status.model';
+import { DeploymentMapEntry } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
-import { Operation } from '../shared.module';
 import { SharedService } from '../shared.service';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration-modal.component';
 import {
@@ -54,13 +53,14 @@ import {
   ConnectorSpecification
 } from './connector.model';
 import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-status.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
-  styleUrls: ['./connector-configuration.component.style.css'],
-  templateUrl: 'connector-configuration.component.html'
+  styleUrls: ['./connector-grid.component.style.css'],
+  templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent implements OnInit {
+export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
   @Input() selectable = true;
   @Input() deploy: string[];
   private _deploymentMapEntry: DeploymentMapEntry;
@@ -144,6 +144,15 @@ export class ConnectorConfigurationComponent implements OnInit {
         gridTrackSize: '15%'
       },
       {
+        header: 'Status',
+        name: 'status',
+        path: 'status',
+        filterable: false,
+        sortable: true,
+        cellRendererComponent: ConnectorStatusRendererComponent,
+        gridTrackSize: '15%'
+      },
+      {
         header: 'Enabled',
         name: 'enabled',
         path: 'enabled',
@@ -206,18 +215,17 @@ export class ConnectorConfigurationComponent implements OnInit {
   }
 
   refresh() {
+    this.connectorConfigurationService.stopConnectorConfigurations();
     this.connectorConfigurationService.resetCache();
-    this.loadData();
+	this.connectorConfigurationService.startConnectorConfigurations();
   }
-
-  //   ngAfterViewInit() {
-  //     setTimeout(() => {
-  //       this.connectorConfigurationService.startConnectorConfigurations();
-  //     }, 0);
-  //   }
 
   loadData(): void {
     this.connectorConfigurationService.startConnectorConfigurations();
+  }
+
+  reloadData(): void {
+    this.connectorConfigurationService.reloadConnectorConfigurations();
   }
 
   async onConfigurationUpdate(config: ConnectorConfiguration) {
@@ -260,7 +268,7 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      this.loadData();
+      this.reloadData();
     });
   }
 
@@ -313,7 +321,7 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      this.loadData();
+      this.reloadData();
     });
   }
 
@@ -350,32 +358,14 @@ export class ConnectorConfigurationComponent implements OnInit {
               gettext('Failed to delete connector configuration')
             );
           }
-          await this.loadData();
+          await this.reloadData();
         }
         confirmDeletionModalRef.hide();
       }
     );
-    await this.loadData();
   }
 
-  async onConfigurationToggle(config: ConnectorConfiguration) {
-    const index = this.configurations.findIndex(
-      (conf) => conf.ident == config.ident
-    );
-    const configuration = _.clone(this.configurations[index]);
-    const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorIdent: configuration.ident }
-    );
-    // console.log('Details toggle activation to broker', response1);
-    if (response1.status === 201) {
-      // if (response1.status === 201 && response2.status === 201) {
-      this.alertService.success(gettext('Connection updated successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to establish connection!'));
-    }
-    await this.loadData();
-    this.sharedService.refreshMappings(Direction.INBOUND);
-    this.sharedService.refreshMappings(Direction.OUTBOUND);
+  ngOnDestroy(): void {
+    this.connectorConfigurationService.stopConnectorConfigurations();
   }
 }
