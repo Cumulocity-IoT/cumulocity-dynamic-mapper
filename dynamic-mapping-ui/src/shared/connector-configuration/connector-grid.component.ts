@@ -150,7 +150,7 @@ export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
         filterable: false,
         sortable: true,
         cellRendererComponent: ConnectorStatusRendererComponent,
-        gridTrackSize: '15%'
+        gridTrackSize: '20%'
       },
       {
         header: 'Enabled',
