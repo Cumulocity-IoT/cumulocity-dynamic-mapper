@@ -160,7 +160,9 @@ public class MappingRestController {
 					"Insufficient Permission, user does not have required permission to access this API");
 		}
 		// Remove sensitive data before printing to log
-		ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
+		ConnectorSpecification connectorSpecification = connectorRegistry
+		.getConnectorSpecification(configuration.connectorType);
+		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
 			connectorConfigurationComponent.saveConnectorConfiguration(configuration);
@@ -186,8 +188,9 @@ public class MappingRestController {
 
 			// Remove sensitive data before sending to UI
 			for (ConnectorConfiguration config : configurations) {
-				ConnectorConfiguration clonedConfig = (ConnectorConfiguration) config.clone();
-				ConnectorConfiguration cleanedConfig = getCleanedConfig(clonedConfig);
+				ConnectorSpecification connectorSpecification = connectorRegistry
+				.getConnectorSpecification(config.connectorType);
+				ConnectorConfiguration cleanedConfig = config.getCleanedConfig(connectorSpecification);
 				modifiedConfigs.add(cleanedConfig);
 			}
 			return ResponseEntity.ok(modifiedConfigs);
@@ -240,15 +243,15 @@ public class MappingRestController {
 					"Insufficient Permission, user does not have required permission to access this API");
 		}
 		// Remove sensitive data before printing to log
-		ConnectorConfiguration clonedConfig = getCleanedConfig(configuration);
+		ConnectorSpecification connectorSpecification = connectorRegistry
+		.getConnectorSpecification(configuration.connectorType);
+		ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
 		log.info("Tenant {} - Post Connector configuration: {}", tenant, clonedConfig.toString());
 		try {
 			// check if password filed was touched, e.g. != "****", then use password from
 			// new payload, otherwise copy password from previously saved configuration
 			ConnectorConfiguration originalConfiguration = connectorConfigurationComponent
 					.getConnectorConfiguration(configuration.ident, tenant);
-			ConnectorSpecification connectorSpecification = connectorRegistry
-					.getConnectorSpecification(configuration.connectorType);
 
 			for (String property : configuration.getProperties().keySet()) {
 				if (connectorSpecification.isPropertySensitive(property)
@@ -270,18 +273,6 @@ public class MappingRestController {
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
 		}
 		return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
-	}
-
-	private ConnectorConfiguration getCleanedConfig(ConnectorConfiguration configuration) {
-		ConnectorConfiguration clonedConfig = (ConnectorConfiguration) configuration.clone();
-		ConnectorSpecification connectorSpecification = connectorRegistry
-				.getConnectorSpecification(configuration.connectorType);
-		for (String property : clonedConfig.getProperties().keySet()) {
-			if (connectorSpecification.isPropertySensitive(property)) {
-				clonedConfig.getProperties().replace(property, "****");
-			}
-		}
-		return clonedConfig;
 	}
 
 	@RequestMapping(value = "/configuration/service", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -351,25 +342,7 @@ public class MappingRestController {
 			if (connectorMap != null) {
 				// iterate over all clients
 				for (AConnectorClient client : connectorMap.values()) {
-					ConnectorConfiguration cleanedConfiguration = getCleanedConfig(client.getConnectorConfiguration());
-					List<String> subscribedMappingsInbound = client.getMappingsDeployedInbound().keySet().stream()
-							.collect(Collectors.toList());
-					// iterate over all mappings for specific client
-					subscribedMappingsInbound.forEach(ident -> {
-						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
-								new DeploymentMapEntryDetailed(ident));
-						mappingDeployed.getConnectors().add(cleanedConfiguration);
-						mappingsDeployed.put(ident, mappingDeployed);
-					});
-					List<String> subscribedMappingsOutbound = client.getMappingsDeployedOutbound().keySet().stream()
-							.collect(Collectors.toList());
-					// iterate over all mappings for specific client
-					subscribedMappingsOutbound.forEach(ident -> {
-						DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
-								new DeploymentMapEntryDetailed(ident));
-						mappingDeployed.getConnectors().add(cleanedConfiguration);
-						mappingsDeployed.put(ident, mappingDeployed);
-					});
+					client.collectSubscribedMappingsAll(mappingsDeployed);
 				}
 			}
 
