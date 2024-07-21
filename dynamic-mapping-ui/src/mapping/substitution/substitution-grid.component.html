@@ -19,12 +19,12 @@
   ~ @authors Christof Strack
   -->
 
-<div style="height: 200px; overflow-y: auto;">
-  <table class="table table-condensed table-striped fixTableHead">
+<div style="height: 200px; overflow-y: auto; padding-top:8px">
+  <table class="table table-condensed table-striped fixTableHead ">
     <thead>
       <tr>
-        <th style="width: 2.5%">#</th>
-        <th style="width: 47.5%">
+        <th class="bg-level-1" style="width: 2.5%">#</th>
+        <th class="bg-level-1" style="width: 47.5%">
           <div>
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
             <span class="hidden-xs hidden-sm m-l-4">
@@ -46,10 +46,10 @@
             </span>
           </div>
         </th>
-        <th style="width: 12.5%">Expand as array</th>
-        <th style="width: 12.5%">Resolve externalId</th>
-        <th style="width: 12.5%">Repair strategy</th>
-        <th style="width: 7.5%"></th>
+        <th class="bg-level-1" style="width: 12.5%">Expand as array</th>
+        <th class="bg-level-1" style="width: 12.5%">Resolve externalId</th>
+        <th class="bg-level-1" style="width: 12.5%">Repair strategy</th>
+        <th class="bg-level-1" style="width: 7.5%"></th>
       </tr>
     </thead>
     <tbody>
@@ -61,20 +61,20 @@
         "
         (click)="onSubstitutionSelect(i)"
       >
-      <td width="4%">
-        {{ i }}
-      </td>
+        <td width="4%">
+          {{ i }}
+        </td>
         <td>
           <span *ngIf="!sub.registeredType" class="text-12"
             >{{
-              "[ " +
+              '[ ' +
                 (definesDeviceIdentifier(targetAPI, sub, direction)
-                  ? "* "
-                  : "") +
+                  ? '* '
+                  : '') +
                 sub.pathSource +
-                " &#8212;> " +
+                ' &#8212;> ' +
                 sub.pathTarget +
-                " ]"
+                ' ]'
             }}
           </span>
         </td>
@@ -87,11 +87,11 @@
         <td>
           {{ sub.repairStrategy }}
         </td>
-        <td width="8%" >
-
+        <td width="8%">
           <button
             title="{{ 'Remove' | translate }}"
             class="btn btn-icon btn-clean"
+            style="height: 24px"
             (click)="onSubstitutionDelete(i)"
             [attr.disabled]="
               isDisabled(settings.editorMode === EditorMode.READ_ONLY)
