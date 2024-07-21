@@ -9,7 +9,7 @@ import { FieldWrapper } from '@ngx-formly/core';
 export class WrapperCustomFormField extends FieldWrapper implements OnInit {
   maxHelpBlockLength = 64;
   showDescriptionAsPopup: boolean;
-  customClass: string;
+  customWrapperClass: string;
   classes: string;
 
   ngOnInit() {
@@ -19,7 +19,7 @@ export class WrapperCustomFormField extends FieldWrapper implements OnInit {
       (this.props.description &&
         this.props.description.length > this.maxHelpBlockLength);
     // Get the custom class from the field's templateOptions
-    this.customClass = this.field.props?.['customClass'] || '';
-    this.classes = `form-group ${this.customClass}`;
+    this.customWrapperClass = this.field.props?.['customWrapperClass'] || '';
+    this.classes = `form-group ${this.customWrapperClass}`;
   }
 }

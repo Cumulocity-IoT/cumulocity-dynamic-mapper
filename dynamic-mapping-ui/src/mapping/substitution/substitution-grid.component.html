@@ -19,11 +19,11 @@
   ~ @authors Christof Strack
   -->
 
-<div style="height: 200px; overflow-y: auto; padding-top:8px">
-  <table class="table table-condensed table-striped fixTableHead ">
+<div style="height: 200px; overflow-y: auto; padding-top: 8px">
+  <table class="table table-condensed table-striped fixTableHead">
     <thead>
       <tr>
-        <th class="bg-level-1" style="width: 2.5%">#</th>
+        <th class="bg-level-1" style="width: 2.5%"></th>
         <th class="bg-level-1" style="width: 47.5%">
           <div>
             <span>Substitution [ pathSource &#8212;> pathTarget ]</span>
@@ -56,13 +56,17 @@
       <tr
         *ngFor="let sub of substitutions; let i = index"
         id="{{ 'sub-' + id + '-' + i }}"
-        [style.background]="
-          i === settings.selectedSubstitutionIndex ? settings.color : 'none'
-        "
-        (click)="onSubstitutionSelect(i)"
+
       >
         <td width="4%">
-          {{ i }}
+          <label class="c8y-checkbox" title="Checkbox">
+            <input
+              type="checkbox"
+              (click)="onSubstitutionSelect(i)"
+			  [checked]="settings.selectedSubstitutionIndex == i"
+            />
+            <span></span>
+          </label>
         </td>
         <td>
           <span *ngIf="!sub.registeredType" class="text-12"

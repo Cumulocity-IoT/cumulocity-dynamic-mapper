@@ -26,9 +26,14 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
-import { Direction, MappingSubstitution } from '../../shared';
+import {
+  ConfirmationModalComponent,
+  Direction,
+  MappingSubstitution
+} from '../../shared';
 import { definesDeviceIdentifier, isDisabled } from '../shared/util';
 import { EditorMode } from '../shared/stepper-model';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'd11r-mapping-substitution-grid',
@@ -55,7 +60,10 @@ export class SubstitutionRendererComponent {
   isDisabled = isDisabled;
   EditorMode = EditorMode;
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(
+    private elementRef: ElementRef,
+    private bsModalService: BsModalService
+  ) {}
 
   onSubstitutionSelect(index: number) {
     // console.log('Selected substitution:', index);
@@ -75,14 +83,34 @@ export class SubstitutionRendererComponent {
       .scrollIntoView();
   }
 
-  onSubstitutionDelete(index: number) {
+  onSubstitutionEdit(index: number) {
     // console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.deleteSub.emit(index);
+    this.editSub.emit(index);
   }
 
-  onSubstitutionEdit(index: number) {
-    this.settings.selectedSubstitutionIndex = index;
-    this.editSub.emit(index);
+  onSubstitutionDelete(index: number) {
+    const initialState = {
+      title: 'Delete substitution',
+      message:
+        'You are about to delete a substitution. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        if (result) {
+          this.settings.selectedSubstitutionIndex = index;
+          this.deleteSub.emit(index);
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 }
