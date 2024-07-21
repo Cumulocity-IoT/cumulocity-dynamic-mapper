@@ -229,6 +229,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             templateOptions: {
               label: 'Evaluate Expression on Source',
               class: 'input-sm animate-background',
+              customClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -275,6 +276,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             wrappers: [WrapperCustomFormField], // ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Target',
+              customClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
@@ -348,7 +350,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             templateOptions: {
               class: 'input',
               disabled: true,
-              readonly: true
+              readonly: true,
+              customClass: 'm-b-4'
             },
             expressionProperties: {
               'templateOptions.label': () =>
@@ -367,7 +370,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             templateOptions: {
               class: 'input',
               disabled: true,
-              readonly: true
+              readonly: true,
+              customClass: 'm-b-4'
             },
             expressionProperties: {
               'templateOptions.label': () =>
