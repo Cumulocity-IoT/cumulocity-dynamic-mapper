@@ -36,8 +36,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
 })
 export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {
-	console.log(`Connector: ${context.item.name}`, context.item);
-	const status$ = context.item?.status$;
-	status$.subscribe( n => console.log(`Connector new status: ${n}`));
+	// console.log(`Connector: ${context.item.name}`, context.item);
+	// const status$ = context.item?.status$;
+	// status$.subscribe( n => console.log(`Connector new status: ${n}`));
   }
 }

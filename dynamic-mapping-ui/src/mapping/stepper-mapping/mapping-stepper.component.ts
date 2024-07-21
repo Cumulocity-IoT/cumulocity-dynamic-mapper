@@ -36,12 +36,12 @@ import { FormlyFieldConfig } from '@ngx-formly/core';
 import * as _ from 'lodash';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { DeploymentMapEntry, StepperConfiguration } from '../../shared';
 import { Content } from 'vanilla-jsoneditor';
 import { ExtensionService } from '../../extension';
 import {
   API,
   COLOR_HIGHLIGHTED,
+  DeploymentMapEntry,
   Direction,
   Extension,
   Mapping,
@@ -49,6 +49,7 @@ import {
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SnoopStatus,
+  StepperConfiguration,
   getExternalTemplate,
   getSchema,
   whatIsIt
@@ -57,10 +58,6 @@ import { JsonEditor2Component } from '../../shared/editor2/jsoneditor2.component
 import { MappingService } from '../core/mapping.service';
 import { EditSubstitutionComponent } from '../edit/edit-substitution-modal.component';
 import { C8YRequest } from '../processor/processor.model';
-import { WrapperCustomFormField } from '../shared/formly/custom-form-field.wrapper.component';
-import { FieldInputCustom } from '../shared/formly/input-custom.type.component';
-import { MessageField } from '../shared/formly/message.type.component';
-import { FieldTextareaCustom } from '../shared/formly/textarea.type.component';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
 import {
@@ -224,8 +221,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace column-right-border',
             key: 'pathSource',
-            type: FieldInputCustom, // 'input-custom',
-            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
+            type: 'input-custom',
+            wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Evaluate Expression on Source',
               class: 'input-sm animate-background',
@@ -272,8 +269,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-5 text-monospace column-left-border',
             key: 'pathTarget',
-            type: FieldInputCustom, // 'input-custom',
-            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
+            type: 'input-custom',
+            wrappers: ['custom-form-wrapper'],
             templateOptions: {
               label: 'Evaluate Expression on Target',
               customWrapperClass: 'm-b-24',
@@ -315,7 +312,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             className:
               'col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24',
-            type: MessageField, //  'message-field',
+            type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.sourceExpression.msgTxt,
@@ -327,7 +324,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           {
             // message field target
             className: 'col-lg-5 reduced-top column-left-border not-p-b-24',
-            type: MessageField, //  'message-field',
+            type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
                 model.targetExpression.msgTxt,
@@ -345,8 +342,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
             key: 'sourceExpression.result',
-            type: FieldTextareaCustom, // 'textarea-custom',
-            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
+            type: 'textarea-custom',
+            wrappers: ['custom-form-wrapper'],
             templateOptions: {
               class: 'input',
               disabled: true,
@@ -365,8 +362,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             className:
               'col-lg-5 text-monospace font-smaller column-left-border',
             key: 'targetExpression.result',
-            type: FieldTextareaCustom, // 'textarea-custom',
-            wrappers: [WrapperCustomFormField], // ['custom-form-field'],
+            type: 'textarea-custom',
+            wrappers: ['custom-form-wrapper'],
             templateOptions: {
               class: 'input',
               disabled: true,

@@ -52,6 +52,9 @@ import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrappe
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
 import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
 import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
+import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './shared/util';
 
 @NgModule({
   declarations: [
@@ -77,7 +80,7 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
     WrapperFormlyHorizontal,
     WrapperCustomFormField,
     FieldInputCustom,
-	MappingConnectorComponent
+    MappingConnectorComponent
   ],
   imports: [
     CoreModule,
@@ -86,7 +89,7 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    BrokerConfigurationModule,
+    BrokerConfigurationModule
   ],
   exports: [],
   providers: [
@@ -98,7 +101,42 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
       path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/outbound',
       component: MappingComponent
     }),
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        types: [
+          {
+            name: 'textarea-custom',
+            component: FieldTextareaCustom
+          },
+          {
+            name: 'input-custom',
+            component: FieldInputCustom
+          },
+          {
+            name: 'message-field',
+            component: MessageField
+          }
+        ],
+        wrappers: [
+          {
+            name: 'custom-form-wrapper',
+            component: WrapperCustomFormField
+          }
+        ],
+        validators: [
+          {
+            name: 'checkTopicsInboundAreValid',
+            validation: checkTopicsInboundAreValid
+          },
+          {
+            name: 'checkTopicsOutboundAreValid',
+            validation: checkTopicsOutboundAreValid
+          }
+        ]
+      }
+    }
   ]
 })
 export class MappingModule {}
-

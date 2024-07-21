@@ -27,7 +27,7 @@ import { FieldWrapper } from '@ngx-formly/core';
     <div class="form-group row">
       <label [attr.for]="id" class="col-sm-2 col-form-label" *ngIf="props.label">
         {{ props.label }}
-        <ng-container *ngIf="props.required && props.hideRequiredMarker !== true"
+        <ng-container *ngIf="props.required && props['hideRequiredMarker'] !== true"
           >*</ng-container
         >
       </label>
