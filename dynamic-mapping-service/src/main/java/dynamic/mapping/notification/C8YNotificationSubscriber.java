@@ -633,13 +633,14 @@ public class C8YNotificationSubscriber {
 		String tenant = subscriptionsService.getTenant();
 		if (mor.hasProperty("c8y_IsDevice") || isChildDevice) {
 			//MO is already a device - just check for child devices
-			log.debug("Tenant {} - Adding child Device {} to be subscribed to", tenant, mor.getId());
 
 			Device device = new Device();
 			device.setId(mor.getId().getValue());
 			device.setName(mor.getName());
-			if(!devices.contains(device))
+			if(!devices.contains(device)) {
+				log.info("Tenant {} - Adding child Device {} to be subscribed to", tenant, mor.getId());
 				devices.add(device);
+			}
 			Iterator<ManagedObjectReferenceRepresentation> childDeviceIt = mor.getChildDevices().iterator();
 			while (childDeviceIt.hasNext()) {
 				ManagedObjectRepresentation currentChild = childDeviceIt.next().getManagedObject();
