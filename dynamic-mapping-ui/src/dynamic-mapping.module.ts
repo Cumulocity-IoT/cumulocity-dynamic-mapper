@@ -45,7 +45,7 @@ import {
 import { TestingModule } from './testing-device/testing.module';
 import './shared/styles/shared.css';
 import {
-  checkTopicsInboundAreValidWithOption,
+  checkTopicsInboundAreValid,
   checkTopicsOutboundAreValid
 } from './mapping/shared/util';
 import { WrapperFormlyHorizontal } from './mapping/shared/formly/horizontal.wrapper.component';
@@ -89,7 +89,7 @@ import { BrokerConnectorModule } from './connector';
         validators: [
           {
             name: 'checkTopicsInboundAreValid',
-            validation: checkTopicsInboundAreValidWithOption
+            validation: checkTopicsInboundAreValid
           },
           {
             name: 'checkTopicsOutboundAreValid',

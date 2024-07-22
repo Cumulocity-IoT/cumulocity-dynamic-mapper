@@ -106,7 +106,7 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        specification = new ConnectorSpecification(description, connectorType, configProps, false);
+        connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, false);
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -392,8 +392,8 @@ public class MQTTClient extends AConnectorClient {
             return false;
         }
         // check if all required properties are set
-        for (String property : getSpecification().getProperties().keySet()) {
-            if (getSpecification().getProperties().get(property).required
+        for (String property : getConnectorSpecification().getProperties().keySet()) {
+            if (getConnectorSpecification().getProperties().get(property).required
                     && configuration.getProperties().get(property) == null) {
                 return false;
             }

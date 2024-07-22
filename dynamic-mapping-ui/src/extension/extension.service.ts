@@ -42,7 +42,7 @@ import {
   ModalService,
   Status
 } from '@c8y/ngx-components';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, forkJoin, from, map, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionService {
@@ -129,47 +129,36 @@ export class ExtensionService {
     return response.json();
   }
 
-  async getExtensionsEnriched(extensionId: string): Promise<IManagedObject[]> {
-    const listOfExtensionsInventory: Promise<IManagedObject[]> =
-      this.getExtensions(extensionId);
-    const listOfExtensionsBackend: Promise<unknown> =
-      this.getProcessorExtensions();
-    const combinedResult = Promise.all([
-      listOfExtensionsInventory,
-      listOfExtensionsBackend
-    ]).then(([listOfExtensionsInventory, listOfExtensionsBackend]) => {
-      listOfExtensionsInventory.forEach((ext) => {
-        if (listOfExtensionsBackend[ext['name']]?.loaded) {
-          ext['loaded'] = listOfExtensionsBackend[ext['name']].loaded;
-          ext['external'] = listOfExtensionsBackend[ext['name']].external;
-          const exts = _.values(
-            listOfExtensionsBackend[ext['name']].extensionEntries
-          );
-          ext['extensionEntries'] = exts;
-        } else {
-          ext['loaded'] = ExtensionStatus.UNKNOWN;
-        }
-      });
-      return listOfExtensionsInventory;
-    });
-    return combinedResult;
+  getExtensionsEnriched(extensionId: string): Observable<IManagedObject[]> {
+    const listOfExtensionsInventory$ = from(this.getExtensions(extensionId));
+    const listOfExtensionsBackend$ = from(this.getProcessorExtensions());
+
+    return forkJoin({
+      inventory: listOfExtensionsInventory$,
+      backend: listOfExtensionsBackend$
+    }).pipe(
+      map(({ inventory, backend }) => {
+        return inventory.map((ext) => {
+          const backendExt = backend[ext['name']];
+          if (backendExt?.loaded) {
+            return {
+              ...ext,
+              loaded: backendExt.loaded,
+              external: backendExt.external,
+              extensionEntries: _.values(backendExt.extensionEntries)
+            };
+          } else {
+            return {
+              ...ext,
+              loaded: ExtensionStatus.UNKNOWN
+            };
+          }
+        });
+      })
+    );
   }
 
   async deleteExtension(app: IManagedObject): Promise<void> {
-    const { name } = app;
-    await this.modal.confirm(
-      gettext('Delete extension'),
-      this.translateService.instant(
-        gettext(
-          'You are about to delete extension "{{name}}". Do you want to proceed?'
-        ),
-        { name }
-      ),
-      Status.DANGER,
-      { ok: gettext('Delete'), cancel: gettext('Cancel') }
-    );
-    // TODO this needs to be changed: create
-    // await this.inventoryBinaryService.delete(app.id);
     await this.deleteProcessorExtension(app['name']);
     this.alertService.success(gettext('Extension deleted.'));
     this.appDeleted.emit(app);

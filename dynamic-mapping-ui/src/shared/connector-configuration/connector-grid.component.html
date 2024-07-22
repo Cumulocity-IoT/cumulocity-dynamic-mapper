@@ -19,22 +19,14 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-confirm-modal
-  [title]="title"
-  [status]="status"
-  [labels]="labels"
-  #overwriteSubstitutionRef
+<c8y-data-grid
+  #connectorGrid
+  [title]="'Connector'"
+  [selectable]="selectable"
+  [columns]="columns"
+  [selectionPrimaryKey]="'ident'"
+  [rows]="configurations$ | async"
+  [pagination]="pagination"
+  [actionControls]="actionControls"
 >
-  <div>
-    <span>{{ message1 | translate }}</span>
-  </div>
-  <br />
-  <!--   <div style = "text-align: center;"><span>{{ substitutionText }}</span></div> -->
-  <div style="text-align: center">
-    <pre>{{ substitutionText }}</pre>
-  </div>
-  <br />
-  <div>
-    <span>{{ message2 | translate }}</span>
-  </div>
-</c8y-confirm-modal>
+</c8y-data-grid>

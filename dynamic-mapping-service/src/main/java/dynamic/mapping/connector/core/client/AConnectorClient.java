@@ -37,8 +37,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import dynamic.mapping.connector.core.ConnectorSpecification;
+import dynamic.mapping.model.DeploymentMapEntryDetailed;
 import dynamic.mapping.model.Direction;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingServiceRepresentation;
@@ -67,6 +69,7 @@ import dynamic.mapping.core.ConnectorStatusEvent;
 import dynamic.mapping.core.MappingComponent;
 import dynamic.mapping.core.ConnectorStatus;
 import dynamic.mapping.processor.model.ProcessingContext;
+import dynamic.mapping.rest.MappingRestController;
 
 @Slf4j
 public abstract class AConnectorClient {
@@ -83,7 +86,7 @@ public abstract class AConnectorClient {
 
 	@Getter
 	@Setter
-	public ConnectorSpecification specification;
+	public ConnectorSpecification connectorSpecification;
 
 	@Getter
 	@Setter
@@ -176,7 +179,7 @@ public abstract class AConnectorClient {
 	public void loadConfiguration() {
 		connectorConfiguration = connectorConfigurationComponent.getConnectorConfiguration(this.getConnectorIdent(),
 				tenant);
-		this.connectorConfiguration.copyPredefinedValues(getSpecification());
+		this.connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 		// get the latest serviceConfiguration from the Cumulocity backend in case
 		// someone changed it in the meantime
 		// update the in the registry
@@ -667,5 +670,27 @@ public abstract class AConnectorClient {
 		} else {
 			getMappingsDeployedOutbound().remove(mapping.ident);
 		}
+	}
+
+	public void collectSubscribedMappingsAll(Map<String, DeploymentMapEntryDetailed> mappingsDeployed) {
+		ConnectorConfiguration cleanedConfiguration = getConnectorConfiguration().getCleanedConfig(connectorSpecification);
+		List<String> subscribedMappingsInbound = getMappingsDeployedInbound().keySet().stream()
+				.collect(Collectors.toList());
+		// iterate over all mappings for specific client
+		subscribedMappingsInbound.forEach(ident -> {
+			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
+					new DeploymentMapEntryDetailed(ident));
+			mappingDeployed.getConnectors().add(cleanedConfiguration);
+			mappingsDeployed.put(ident, mappingDeployed);
+		});
+		List<String> subscribedMappingsOutbound = getMappingsDeployedOutbound().keySet().stream()
+				.collect(Collectors.toList());
+		// iterate over all mappings for specific client
+		subscribedMappingsOutbound.forEach(ident -> {
+			DeploymentMapEntryDetailed mappingDeployed = mappingsDeployed.getOrDefault(ident,
+					new DeploymentMapEntryDetailed(ident));
+			mappingDeployed.getConnectors().add(cleanedConfiguration);
+			mappingsDeployed.put(ident, mappingDeployed);
+		});
 	}
 }

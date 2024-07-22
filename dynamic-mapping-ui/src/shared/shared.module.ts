@@ -27,10 +27,12 @@ import { ConfirmationModalComponent } from './confirmation/confirmation-modal.co
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
 import { DisableDirective } from './disable.directive';
-import { ConnectorStatusComponent } from './connector-status/connector-status.component';
-import { ConnectorConfigurationComponent } from './connector-configuration/connector-configuration.component';
+import { ConnectorStatusComponent } from './connector-log/connector-status.component';
+import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration/connector-configuration-modal.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
 
 @NgModule({
   declarations: [
@@ -41,7 +43,9 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
     DisableDirective,
     ConnectorStatusComponent,
     ConnectorConfigurationComponent,
-    ConfigurationConfigurationModalComponent
+    ConfigurationConfigurationModalComponent,
+	StatusEnabledRendererComponent,
+	ConnectorStatusRendererComponent
   ],
   imports: [
     CoreModule,

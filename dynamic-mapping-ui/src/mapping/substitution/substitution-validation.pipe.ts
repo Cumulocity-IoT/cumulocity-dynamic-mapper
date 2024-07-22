@@ -18,13 +18,15 @@
  *
  * @authors Christof Strack
  */
-import { inject } from '@angular/core';
-import { ResolveFn } from '@angular/router';
-import { IManagedObject } from '@c8y/client';
-import { ExtensionService } from './extension.service';
+import { Pipe, PipeTransform } from '@angular/core';
+import { Mapping } from '../../shared';
+import { definesDeviceIdentifier } from '../shared/util';
 
-export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
-  const extensionService = inject(ExtensionService);
-  const id = route.paramMap.get('id');
-  return extensionService.getExtensionsEnriched(id);
-};
+@Pipe({ name: 'countDeviceIdentifiers', pure: true })
+export class CountDeviceIdentifiersPipe implements PipeTransform {
+  transform(mapping: Mapping) {
+    return mapping.substitutions.filter((sub) =>
+      definesDeviceIdentifier(mapping.targetAPI, sub, mapping.direction)
+    ).length;
+  }
+}

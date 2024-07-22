@@ -26,14 +26,19 @@ import {
   Output,
   ViewEncapsulation
 } from '@angular/core';
-import { Direction, MappingSubstitution } from '../../../shared';
-import { definesDeviceIdentifier, isDisabled } from '../../shared/util';
-import { EditorMode } from '../../shared/stepper-model';
+import {
+  ConfirmationModalComponent,
+  Direction,
+  MappingSubstitution
+} from '../../shared';
+import { definesDeviceIdentifier, isDisabled } from '../shared/util';
+import { EditorMode } from '../shared/stepper-model';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 
 @Component({
-  selector: 'd11r-mapping-substitution-renderer',
-  templateUrl: 'substitution-renderer.component.html',
-  styleUrls: ['./substitution-renderer.style.css'],
+  selector: 'd11r-mapping-substitution-grid',
+  templateUrl: 'substitution-grid.component.html',
+  styleUrls: ['./substitution-grid.style.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class SubstitutionRendererComponent {
@@ -55,10 +60,13 @@ export class SubstitutionRendererComponent {
   isDisabled = isDisabled;
   EditorMode = EditorMode;
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(
+    private elementRef: ElementRef,
+    private bsModalService: BsModalService
+  ) {}
 
   onSubstitutionSelect(index: number) {
-    //console.log('Selected substitution:', index);
+    // console.log('Selected substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
   }
@@ -69,15 +77,40 @@ export class SubstitutionRendererComponent {
     if (!ix || ix < 0 || ix >= this.substitutions.length) {
       ix = 0;
     }
-    //console.log('Scroll to:', ix);
+    // console.log('Scroll to:', ix);
     this.elementRef.nativeElement
       .querySelector(`#sub-${this.id}-${ix}`)
       .scrollIntoView();
   }
 
-  onSubstitutionDelete(index: number) {
-    //console.log('Delete substitution:', index);
+  onSubstitutionEdit(index: number) {
+    // console.log('Delete substitution:', index);
     this.settings.selectedSubstitutionIndex = index;
-    this.deleteSub.emit(index);
+    this.editSub.emit(index);
+  }
+
+  onSubstitutionDelete(index: number) {
+    const initialState = {
+      title: 'Delete substitution',
+      message:
+        'You are about to delete a substitution. Do you want to proceed?',
+      labels: {
+        ok: 'Delete',
+        cancel: 'Cancel'
+      }
+    };
+    const confirmDeletionModalRef: BsModalRef = this.bsModalService.show(
+      ConfirmationModalComponent,
+      { initialState }
+    );
+    confirmDeletionModalRef.content.closeSubject.subscribe(
+      async (result: boolean) => {
+        if (result) {
+          this.settings.selectedSubstitutionIndex = index;
+          this.deleteSub.emit(index);
+        }
+        confirmDeletionModalRef.hide();
+      }
+    );
   }
 }

@@ -128,9 +128,9 @@ public class BootstrapService {
 
         try {
             // TODO Add other clients static property definition here
-            connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getSpecification());
-            connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getSpecification());
-            connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getSpecification());
+            connectorRegistry.registerConnector(ConnectorType.MQTT, new MQTTClient().getConnectorSpecification());
+            connectorRegistry.registerConnector(ConnectorType.MQTT_SERVICE, new MQTTServiceClient().getConnectorSpecification());
+            connectorRegistry.registerConnector(ConnectorType.KAFKA, new KafkaClient().getConnectorSpecification());
             if (serviceConfiguration != null) {
                 List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationComponent
                         .getConnectorConfigurations(tenant);

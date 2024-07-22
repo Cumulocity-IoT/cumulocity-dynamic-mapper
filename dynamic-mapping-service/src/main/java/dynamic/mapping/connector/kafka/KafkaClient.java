@@ -97,7 +97,7 @@ public class KafkaClient extends AConnectorClient {
         String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
-        specification = new ConnectorSpecification(description, connectorType, configProps, true);
+        connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, true);
     }
 
     private static String removeDateCommentLine(String pt) {

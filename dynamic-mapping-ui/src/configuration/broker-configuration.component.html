@@ -29,148 +29,230 @@
     <i c8yIcon="disconnected"></i>
     {{ 'Reconnect notification endpoint' | translate }}
   </button>
-  <button
-    class="btn btn-link"
-    title="{{ 'Reset deployment map ' | translate }}"
-    (click)="clickedResetDeploymentMapEndpoint()"
-  >
-    <i c8yIcon="disconnected"></i>
-    {{ 'Reconnect notification endpoint' | translate }}
-  </button>
 </c8y-action-bar-item>
 
-<div class="d-flex flex-wrap">
-  <div class="col-lg-6">
-    <div class="card">
-      <div class="card-header p-l-32 separator j-c-between">
-        <h4 class="card-title">
-          {{ 'Service configuration' | translate }}
-        </h4>
-      </div>
-      <div class="inner-scroll">
-        <div class="card-block">
-          <div [formGroup]="serviceForm">
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="logPayload"
-                  [(ngModel)]="serviceConfiguration.logPayload"
-                />
-                <span></span>
-                <span>
-                  {{ 'Log payload' }}
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="logSubstitution"
-                  [(ngModel)]="serviceConfiguration.logSubstitution"
-                />
-                <span></span>
-                <span>
-                  {{ 'Log substitution' }}
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="logConnectorErrorInBackend"
-                  [(ngModel)]="serviceConfiguration.logConnectorErrorInBackend"
-                />
-                <span></span>
-                <span>
-                  {{ 'Log connector errors' }}
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="sendConnectorLifecycle"
-                  [(ngModel)]="serviceConfiguration.sendConnectorLifecycle"
-                />
-                <span></span>
-                <span>
-                  {{ 'Send connector lifecycle' }} <i c8yIcon="euro"></i>
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="sendMappingStatus"
-                  [(ngModel)]="serviceConfiguration.sendMappingStatus"
-                />
-                <span></span>
-                <span>
-                  {{ 'Send mapping status' }} <i c8yIcon="euro"></i>
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="sendSubscriptionEvents"
-                  [(ngModel)]="serviceConfiguration.sendSubscriptionEvents"
-                />
-                <span></span>
-                <span>
-                  {{ 'Send events on topic subscriptions' }}
-                  <i c8yIcon="euro"></i>
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="sendNotificationLifecycle"
-                  [(ngModel)]="serviceConfiguration.sendNotificationLifecycle"
-                />
-                <span></span>
-                <span>
-                  {{ 'Send notification lifcycle' }} <i c8yIcon="euro"></i>
-                </span>
-              </label>
-            </c8y-form-group>
-            <c8y-form-group class="m-b-0">
-              <label class="c8y-checkbox">
-                <input
-                  type="checkbox"
-                  formControlName="outboundMappingEnabled"
-                  [(ngModel)]="serviceConfiguration.outboundMappingEnabled"
-                />
-                <span></span>
-                <span>
-                  {{ 'Outbound mapping enabled' }}
-                </span>
-              </label>
-            </c8y-form-group>
-          </div>
-        </div>
-        <div class="card-footer">
-          <div class="form-group">
-            <button
-              type="button"
-              name="update"
-              class="btn btn-primary"
-              (click)="clickedSaveServiceConfiguration()"
-              translate
+<div class="card card--fullpage">
+  <div class="card-header p-l-32 separator j-c-between">
+    <h4 class="card-title">
+      {{ 'Service configuration' | translate }}
+    </h4>
+  </div>
+  <div class="card-block">
+    <div class="col-lg-8 col-lg-offset-2">
+      <c8y-list-group data-cy="c8y-alarms-details--audit-logs">
+        <c8y-li>
+          <c8y-li-icon icon="file-type-document"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Log payload' | translate }}</p>
+              <p>
+                <small translate>Log payload in microservice log file.</small>
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Log payload' | translate }}"
             >
-              Save
-            </button>
+              <input
+                name="logPayload"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.logPayload"
+              />
+              <span></span>
+            </label>
           </div>
-        </div>
-      </div>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-icon icon="replace"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Log substitution' | translate }}</p>
+              <p>
+                <small translate
+                  >Log substitution in microservice log file when applying a
+                  mapping.</small
+                >
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Log substitution' | translate }}"
+            >
+              <input
+                name="logSubstitution"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.logSubstitution"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-icon icon="bug1"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Log connector errors' | translate }}</p>
+              <p>
+                <small translate
+                  >Log errors when connecting in microservice log file.</small
+                >
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Log connector errors' | translate }}"
+            >
+              <input
+                name="logConnectorErrorInBackend"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.logConnectorErrorInBackend"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+        <c8y-li>
+          <c8y-li-icon icon="process"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Send connector lifecycle' | translate }}</p>
+              <p>
+                <small translate
+                  >Send events when status of a connector changes. Be aware this
+                  can cause additional costs </small
+                ><i c8yIcon="euro"></i>
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Send connector lifecycle' | translate }}"
+            >
+              <input
+                name="sendMappingStatus"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.sendConnectorLifecycle"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="c8y-usage-statistics"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Send mapping statistics' | translate }}</p>
+              <p>
+                <small translate
+                  >Send statics about how often a mapping was applied. Be aware
+                  this can cause additional costs </small
+                ><i c8yIcon="euro"></i>
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Send mapping status' | translate }}"
+            >
+              <input
+                name="sendMappingStatus"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.sendMappingStatus"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="subscription"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Send events on topic subscriptions' | translate }}</p>
+              <p>
+                <small translate
+                  >Send events when the subscription for a topic changes. Be
+                  aware this can cause additional costs </small
+                ><i c8yIcon="euro"></i>
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Send events on topic subscriptions' | translate }}"
+            >
+              <input
+                name="sendSubscriptionEvents"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.sendSubscriptionEvents"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="process"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{ 'Send notification lifecycle' | translate }}</p>
+              <p>
+                <small translate
+                  >Send events when status for outbound notifications changes.
+                  Be aware this can cause additional costs </small
+                ><i c8yIcon="euro"></i>
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{ 'Send notification lifecycle' | translate }}"
+            >
+              <input
+                name="sendNotificationLifecycle"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.sendNotificationLifecycle"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+
+        <c8y-li>
+          <c8y-li-icon icon="swipe-left"></c8y-li-icon>
+          <div class="d-flex a-i-center">
+            <div>
+              <p>{{  'Outbound mapping enabled' | translate }}</p>
+              <p>
+                <small translate
+                  >Enable outbound mappings</small
+                >
+              </p>
+            </div>
+            <label
+              class="c8y-switch c8y-switch--inline m-l-auto"
+              title="{{  'Outbound mapping enabled' | translate }}"
+            >
+              <input
+                name="sendNotificationLifecycle"
+                type="checkbox"
+                [(ngModel)]="serviceConfiguration.sendNotificationLifecycle"
+              />
+              <span></span>
+            </label>
+          </div>
+        </c8y-li>
+      </c8y-list-group>
+    </div>
+  </div>
+  <div class="card-footer">
+    <div class="form-group">
+      <button
+        type="button"
+        name="update"
+        class="btn btn-primary"
+        (click)="clickedSaveServiceConfiguration()"
+        translate
+      >
+        Save
+      </button>
     </div>
   </div>
 </div>

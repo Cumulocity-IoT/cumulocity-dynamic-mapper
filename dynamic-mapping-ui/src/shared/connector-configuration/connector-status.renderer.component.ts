@@ -20,31 +20,24 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
-import { SnoopStatus } from '../../shared';
 
 @Component({
-  selector: 'd11r-mapping-renderer-status',
-  template: `
-    <div class="d-inline-flex">
-      <div *ngIf="context.value.debug">
-        <span class="text-10 label label-primary">{{ 'debug' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'STARTED'">
-        <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'STOPPED'">
-        <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'ENABLED'">
-        <span class="text-10 label label-primary">{{ 'snoop: enabled' }}</span>
-      </div>
-    </div>
-  `,
-  styles: ['.animated-slow { animation-duration: 10s;}']
+  selector: 'd11r-mapping-renderer-qos',
+  template: `<div class="c8y-realtime p-l-8">
+    <span
+      class="c8y-pulse animated pulse animation-slow"
+      [ngClass]="{
+        active: (context.item?.status$ | async) === 'CONNECTED',
+        inactive: (context.item?.status$ | async) !== 'CONNECTED'
+      }"
+    ></span
+    >{{ context.item?.status$ | async }}
+  </div>`
 })
-export class StatusRendererComponent {
+export class ConnectorStatusRendererComponent {
   constructor(public context: CellRendererContext) {
-    // console.log('StatusRenderer:', context.item, context.value);
+	// console.log(`Connector: ${context.item.name}`, context.item);
+	// const status$ = context.item?.status$;
+	// status$.subscribe( n => console.log(`Connector new status: ${n}`));
   }
-  SnoopStatus: SnoopStatus;
 }

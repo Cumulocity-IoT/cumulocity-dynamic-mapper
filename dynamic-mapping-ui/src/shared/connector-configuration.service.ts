@@ -29,6 +29,7 @@ import {
   ConnectorStatusEvent,
   PATH_CONFIGURATION_CONNECTION_ENDPOINT,
   PATH_STATUS_CONNECTORS_ENDPOINT,
+  SharedService,
   StatusEventTypes
 } from '.';
 
@@ -41,11 +42,16 @@ import {
   Subject
 } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
+import { Realtime } from '@c8y/ngx-components/api';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
-  constructor(private client: FetchClient) {
+  constructor(
+    private client: FetchClient,
+    private sharedService: SharedService
+  ) {
     this.initConnectorConfigurations();
+    this.realtime = new Realtime(this.client);
     // console.log("Constructor:BrokerConfigurationService");
   }
 
@@ -55,6 +61,10 @@ export class ConnectorConfigurationService {
   private triggerConfigurations$: Subject<string> = new Subject();
   private incomingRealtime$: Subject<IEvent> = new Subject();
   private connectorConfigurations$: Observable<ConnectorConfiguration[]>;
+
+  private _agentId: string;
+  private realtime: Realtime;
+  private subscriptionEvents: any;
 
   getConnectorConfigurationsLive(): Observable<ConnectorConfiguration[]> {
     return this.connectorConfigurations$;
@@ -69,6 +79,15 @@ export class ConnectorConfigurationService {
   startConnectorConfigurations() {
     this.triggerConfigurations$.next('');
     this.incomingRealtime$.next({} as any);
+	this.startConnectorStatusSubscriptions();
+  }
+
+  reloadConnectorConfigurations() {
+    this.triggerConfigurations$.next('');
+  }
+
+  stopConnectorConfigurations() {
+    this.realtime.unsubscribe(this.subscriptionEvents);
   }
 
   refreshConnectorConfigurations() {
@@ -194,7 +213,6 @@ export class ConnectorConfigurationService {
         method: 'DELETE'
       }
     );
-
   }
 
   async getConnectorConfigurations(): Promise<ConnectorConfiguration[]> {
@@ -211,4 +229,22 @@ export class ConnectorConfigurationService {
 
     return this._connectorConfigurations;
   }
+
+  async startConnectorStatusSubscriptions(): Promise<void> {
+    if (!this._agentId) {
+      this._agentId = await this.sharedService.getDynamicMappingServiceAgent();
+    }
+    // console.log('Started subscriptions:', this._agentId);
+
+    // subscribe to event stream
+    this.subscriptionEvents = this.realtime.subscribe(
+      `/events/${this._agentId}`,
+      this.updateConnectorStatus
+    );
+  }
+
+  private updateConnectorStatus = async (p: object) => {
+    const payload = p['data']['data'];
+    this.incomingRealtime$.next(payload);
+  };
 }

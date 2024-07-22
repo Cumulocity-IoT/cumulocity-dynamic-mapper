@@ -18,29 +18,13 @@
  *
  * @authors Christof Strack
  */
+import { inject } from '@angular/core';
+import { ResolveFn } from '@angular/router';
+import { IManagedObject } from '@c8y/client';
+import { ExtensionService } from '../extension.service';
 
-/* not working
-div:has(>c8y-li-body ) {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-} */
-
-.c8y-list__item__body:has(> c8y-li-body) {
-  padding-top: 6px;
-  padding-bottom: 4px;
-}
-
-.fixTableHead {
-  overflow-y: auto;
-  /* height: 110px;  */
-}
-
-tbody tr td button i {
-  position: unset !important;
-}
-
-.fixTableHead thead tr th {
-  background-color: white;
-  position: sticky;
-  top: 0;
-}
+export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {
+  const extensionService = inject(ExtensionService);
+  const id = route.paramMap.get('id');
+  return extensionService.getExtensionsEnriched(id);
+};

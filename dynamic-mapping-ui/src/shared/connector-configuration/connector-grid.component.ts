@@ -18,8 +18,22 @@
  *
  * @authors Christof Strack
  */
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
-import { AlertService, gettext } from '@c8y/ngx-components';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  OnDestroy
+} from '@angular/core';
+import {
+  ActionControl,
+  AlertService,
+  BuiltInActionType,
+  Column,
+  gettext,
+  Pagination
+} from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, from, Observable, Subject } from 'rxjs';
 
@@ -29,23 +43,24 @@ import { ConnectorConfigurationService } from '../connector-configuration.servic
 import {
   ConnectorStatus,
   StatusEventTypes
-} from '../connector-status/connector-status.model';
-import { DeploymentMapEntry, Direction } from '../model/shared.model';
+} from '../connector-log/connector-status.model';
+import { DeploymentMapEntry } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
-import { Operation } from '../shared.module';
 import { SharedService } from '../shared.service';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
   ConnectorSpecification
 } from './connector.model';
+import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-status.renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
-  styleUrls: ['./connector-configuration.component.style.css'],
-  templateUrl: 'connector-configuration.component.html'
+  styleUrls: ['./connector-grid.component.style.css'],
+  templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent implements OnInit {
+export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
   @Input() selectable = true;
   @Input() deploy: string[];
   private _deploymentMapEntry: DeploymentMapEntry;
@@ -66,6 +81,12 @@ export class ConnectorConfigurationComponent implements OnInit {
   configurations: ConnectorConfiguration[];
   configurations$: Subject<ConnectorConfiguration[]> = new Subject();
   StatusEventTypes = StatusEventTypes;
+  pagination: Pagination = {
+    pageSize: 30,
+    currentPage: 1
+  };
+  columns: Column[] = [];
+  actionControls: ActionControl[] = [];
 
   constructor(
     private bsModalService: BsModalService,
@@ -77,6 +98,70 @@ export class ConnectorConfigurationComponent implements OnInit {
   ngOnInit() {
     // console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
 
+    this.actionControls.push(
+      {
+        type: BuiltInActionType.Edit,
+        callback: this.onConfigurationUpdate.bind(this)
+      },
+      {
+        text: 'Copy',
+        type: 'COPY',
+        icon: 'copy',
+        callback: this.onConfigurationCopy.bind(this)
+      },
+      {
+        type: BuiltInActionType.Delete,
+        callback: this.onConfigurationDelete.bind(this),
+        showIf: (item) => !item['enabled']
+      }
+    );
+
+    this.columns.push(
+      {
+        name: 'ident',
+        header: 'Ident',
+        path: 'ident',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: false,
+        gridTrackSize: '10%'
+      },
+      {
+        name: 'name',
+        header: 'Name',
+        path: 'name',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: true
+      },
+      {
+        name: 'connectorType',
+        header: 'Type',
+        path: 'connectorType',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: true,
+        gridTrackSize: '15%'
+      },
+      {
+        header: 'Status',
+        name: 'status',
+        path: 'status',
+        filterable: false,
+        sortable: true,
+        cellRendererComponent: ConnectorStatusRendererComponent,
+        gridTrackSize: '20%'
+      },
+      {
+        header: 'Enabled',
+        name: 'enabled',
+        path: 'enabled',
+        filterable: false,
+        sortable: true,
+        cellRendererComponent: StatusEnabledRendererComponent,
+        gridTrackSize: '15%'
+      }
+    );
     this.selected = this.deploymentMapEntry?.connectors ?? [];
     this.selected$.next(this.selected);
     this.selected$.subscribe((se) => {
@@ -130,23 +215,24 @@ export class ConnectorConfigurationComponent implements OnInit {
   }
 
   refresh() {
+    this.connectorConfigurationService.stopConnectorConfigurations();
     this.connectorConfigurationService.resetCache();
-    this.loadData();
+	this.connectorConfigurationService.startConnectorConfigurations();
   }
-
-  //   ngAfterViewInit() {
-  //     setTimeout(() => {
-  //       this.connectorConfigurationService.startConnectorConfigurations();
-  //     }, 0);
-  //   }
 
   loadData(): void {
     this.connectorConfigurationService.startConnectorConfigurations();
   }
 
-  async onConfigurationUpdate(index) {
-    const configuration = this.configurations[index];
+  reloadData(): void {
+    this.connectorConfigurationService.reloadConnectorConfigurations();
+  }
 
+  async onConfigurationUpdate(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
+    const configuration = _.clone(this.configurations[index]);
     const initialState = {
       add: false,
       configuration: configuration,
@@ -182,12 +268,16 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      this.loadData();
+      this.reloadData();
     });
   }
 
-  async onConfigurationCopy(index) {
+  async onConfigurationCopy(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
     const configuration = _.clone(this.configurations[index]);
+    // const configuration = _.clone(config);
     configuration.ident = uuidCustom();
     configuration.name = `${configuration.name}_copy`;
     this.alertService.warning(
@@ -231,12 +321,15 @@ export class ConnectorConfigurationComponent implements OnInit {
           );
         }
       }
-      this.loadData();
+      this.reloadData();
     });
   }
 
-  async onConfigurationDelete(index) {
-    const configuration = this.configurations[index];
+  async onConfigurationDelete(config: ConnectorConfiguration) {
+    const index = this.configurations.findIndex(
+      (conf) => conf.ident == config.ident
+    );
+    const configuration = _.clone(this.configurations[index]);
 
     const initialState = {
       title: 'Delete connector',
@@ -265,29 +358,14 @@ export class ConnectorConfigurationComponent implements OnInit {
               gettext('Failed to delete connector configuration')
             );
           }
-          await this.loadData();
+          await this.reloadData();
         }
         confirmDeletionModalRef.hide();
       }
     );
-    await this.loadData();
   }
 
-  async onConfigurationToggle(index) {
-    const configuration = this.configurations[index];
-    const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? Operation.DISCONNECT : Operation.CONNECT,
-      { connectorIdent: configuration.ident }
-    );
-    // console.log('Details toggle activation to broker', response1);
-    if (response1.status === 201) {
-      // if (response1.status === 201 && response2.status === 201) {
-      this.alertService.success(gettext('Connection updated successfully.'));
-    } else {
-      this.alertService.danger(gettext('Failed to establish connection!'));
-    }
-    await this.loadData();
-    this.sharedService.refreshMappings(Direction.INBOUND);
-    this.sharedService.refreshMappings(Direction.OUTBOUND);
+  ngOnDestroy(): void {
+    this.connectorConfigurationService.stopConnectorConfigurations();
   }
 }
