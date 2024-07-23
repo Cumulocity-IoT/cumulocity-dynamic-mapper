@@ -176,13 +176,13 @@ public class C8YNotificationSubscriber {
 					}
 				}
 				for (NotificationSubscriptionRepresentation subscription : deviceSubList) {
-					if ( subscription != null && subscription.getSource() != null) {
+					if (subscription != null && subscription.getSource() != null) {
 						ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
 								.resolveGlobalId2ExternalId(tenant, subscription.getSource().getId(), null, null);
 
 						if (extId != null)
 							activatePushConnectivityStatus(tenant, extId.getExternalId());
-					} else  {
+					} else {
 						log.warn("Tenant {} - Error initializing initDeviceClient: {}", tenant, subscription);
 					}
 
@@ -246,9 +246,11 @@ public class C8YNotificationSubscriber {
 
 	public void deactivatePushConnectivityStatus(String tenant, String deviceId) {
 		Map<String, Mqtt3Client> clients = activePushConnections.get(tenant);
-		if(clients.get(deviceId) != null && clients.get(deviceId).getState().isConnected())
-			clients.get(deviceId).toBlocking().disconnect();
-		activePushConnections.get(tenant).remove(deviceId);
+		if (clients != null) {
+			if (clients.get(deviceId) != null && clients.get(deviceId).getState().isConnected())
+				clients.get(deviceId).toBlocking().disconnect();
+			activePushConnections.get(tenant).remove(deviceId);
+		}
 	}
 
 	//
@@ -314,8 +316,9 @@ public class C8YNotificationSubscriber {
 								+ additionalSubscriptionIdTest;
 						String token = createToken(DEVICE_SUBSCRIPTION,
 								tokenSeed);
-						log.info("Tenant {} - Creating new Subscription for Device {} with ID {} for Connector {}", tenant, deviceName,
-								mor.getId().getValue(),dispatcherOutbound.getConnectorClient().getConnectorName());
+						log.info("Tenant {} - Creating new Subscription for Device {} with ID {} for Connector {}",
+								tenant, deviceName,
+								mor.getId().getValue(), dispatcherOutbound.getConnectorClient().getConnectorName());
 						deviceTokens.put(dispatcherOutbound.getConnectorClient().getConnectorIdent(), token);
 						CustomWebSocketClient client = connect(token, dispatcherOutbound);
 						deviceClientMap.get(tenant).put(dispatcherOutbound.getConnectorClient().getConnectorIdent(),
@@ -329,7 +332,7 @@ public class C8YNotificationSubscriber {
 			}
 			ExternalIDRepresentation extId = configurationRegistry.getC8yAgent().resolveGlobalId2ExternalId(tenant,
 					mor.getId(), null, null);
-			if(extId != null)
+			if (extId != null)
 				activatePushConnectivityStatus(tenant, extId.getExternalId());
 		});
 		return notificationFut;
@@ -627,32 +630,35 @@ public class C8YNotificationSubscriber {
 		});
 	}
 
-	public List<Device> findAllRelatedDevicesByMO(ManagedObjectRepresentation mor, List<Device> devices, boolean isChildDevice) {
+	public List<Device> findAllRelatedDevicesByMO(ManagedObjectRepresentation mor, List<Device> devices,
+			boolean isChildDevice) {
 		if (devices == null)
 			devices = new ArrayList<>();
 		String tenant = subscriptionsService.getTenant();
 		if (mor.hasProperty("c8y_IsDevice") || isChildDevice) {
-			//MO is already a device - just check for child devices
+			// MO is already a device - just check for child devices
 
 			Device device = new Device();
 			device.setId(mor.getId().getValue());
 			device.setName(mor.getName());
-			if(!devices.contains(device)) {
+			if (!devices.contains(device)) {
 				log.info("Tenant {} - Adding child Device {} to be subscribed to", tenant, mor.getId());
 				devices.add(device);
 			}
 			Iterator<ManagedObjectReferenceRepresentation> childDeviceIt = mor.getChildDevices().iterator();
 			while (childDeviceIt.hasNext()) {
 				ManagedObjectRepresentation currentChild = childDeviceIt.next().getManagedObject();
-				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant, currentChild.getId().getValue());
+				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
+						currentChild.getId().getValue());
 				devices = findAllRelatedDevicesByMO(currentChild, devices, true);
 			}
 		} else if (mor.hasProperty("c8y_IsDeviceGroup")) {
-			//MO is a group check for subgroups or child devices
+			// MO is a group check for subgroups or child devices
 			Iterator<ManagedObjectReferenceRepresentation> childAssetIt = mor.getChildAssets().iterator();
 			while (childAssetIt.hasNext()) {
 				ManagedObjectRepresentation currentChild = childAssetIt.next().getManagedObject();
-				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant, currentChild.getId().getValue());
+				currentChild = configurationRegistry.getC8yAgent().getManagedObjectForId(tenant,
+						currentChild.getId().getValue());
 				devices = findAllRelatedDevicesByMO(currentChild, devices, false);
 			}
 		}
