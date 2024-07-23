@@ -62,7 +62,7 @@ import {
   ProcessingType,
   SubstituteValue
 } from '../processor/processor.model';
-import { C8YAPISubscription } from '../shared/mapping.model';
+import { C8YNotificationSubscription } from '../shared/mapping.model';
 import { AlertService } from '@c8y/ngx-components';
 import { Realtime } from '@c8y/ngx-components/api';
 import { ConnectorConfigurationService } from '../../connector';
@@ -306,7 +306,7 @@ export class MappingService {
     }
   }
 
-  async updateSubscriptions(sub: C8YAPISubscription): Promise<any> {
+  async updateSubscriptions(sub: C8YNotificationSubscription): Promise<C8YNotificationSubscription> {
     const response = this.client.fetch(
       `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
       {
@@ -319,7 +319,7 @@ export class MappingService {
     );
     const data = await response;
     if (!data.ok) throw new Error(data.statusText)!;
-    const m = await data.text();
+    const m = await data.json();
     return m;
   }
 
@@ -339,7 +339,7 @@ export class MappingService {
     return m;
   }
 
-  async getSubscriptions(): Promise<C8YAPISubscription> {
+  async getSubscriptions(): Promise<C8YNotificationSubscription> {
     const feature = await this.sharedService.getFeatures();
 
     if (feature?.outputMappingEnabled) {

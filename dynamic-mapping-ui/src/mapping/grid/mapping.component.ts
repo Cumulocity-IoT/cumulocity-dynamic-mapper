@@ -73,7 +73,7 @@ import { DeploymentMapEntry } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
-import { C8YAPISubscription, PayloadWrapper } from '../shared/mapping.model';
+import { C8YNotificationSubscription, PayloadWrapper } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
 
 @Component({
@@ -96,7 +96,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingsEnriched$: Observable<MappingEnriched[]>;
   mappingsCount: number = 0;
   mappingToUpdate: Mapping;
-  subscription: C8YAPISubscription;
+  subscription: C8YNotificationSubscription;
   devices: IIdentified[] = [];
   snoopStatus: SnoopStatus = SnoopStatus.NONE;
   Direction = Direction;
@@ -785,7 +785,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
-      await this.mappingService.updateSubscriptions(this.subscription);
+		this.subscription = await this.mappingService.updateSubscriptions(this.subscription);
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
