@@ -231,9 +231,15 @@ export class MappingComponent implements OnInit, OnDestroy {
       },
       {
         type: 'ACTIVATE',
-        text: 'Toggle activation',
+        text: 'Activate',
         icon: 'toggle-on',
         callback: this.activateMappingBulk.bind(this)
+      },
+      {
+        type: 'DEACTIVATE',
+        text: 'Deactivate',
+        icon: 'toggle-off',
+        callback: this.deactivateMappingBulk.bind(this)
       },
       {
         type: 'EXPORT',
@@ -492,7 +498,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       const device2Delete = this.subscription?.devices.find(
         (de) => de.id == ids[index]
       );
-      if (index == 0 ) {
+      if (index == 0) {
         continueDelete = await this.deleteSubscriptionWithConfirmation(
           device2Delete,
           true,
@@ -817,9 +823,25 @@ export class MappingComponent implements OnInit, OnDestroy {
         .map((me) => me.mapping);
       for (let index = 0; index < mappings2Activate.length; index++) {
         const m = mappings2Activate[index];
-        const newActive = !m.active;
-        const action = newActive ? 'Activated' : 'Deactivated';
-        const parameter = { id: m.id, active: newActive };
+        const action = 'Activated';
+        const parameter = { id: m.id, active: true };
+        await this.mappingService.changeActivationMapping(parameter);
+        this.alertService.success(`${action} mapping: ${m.id}`);
+      }
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    });
+    this.mappingGrid.setAllItemsSelected(false);
+  }
+
+  private deactivateMappingBulk(ids: string[]) {
+    this.mappingsEnriched$.pipe(take(1)).subscribe(async (ms) => {
+      const mappings2Activate = ms
+        .filter((m) => ids.includes(m.id))
+        .map((me) => me.mapping);
+      for (let index = 0; index < mappings2Activate.length; index++) {
+        const m = mappings2Activate[index];
+        const action = 'Deactivated';
+        const parameter = { id: m.id, active: false };
         await this.mappingService.changeActivationMapping(parameter);
         this.alertService.success(`${action} mapping: ${m.id}`);
       }
