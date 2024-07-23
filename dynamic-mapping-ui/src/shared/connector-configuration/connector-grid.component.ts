@@ -24,13 +24,16 @@ import {
   Input,
   OnInit,
   Output,
-  OnDestroy
+  OnDestroy,
+  ViewChild,
+  AfterViewInit
 } from '@angular/core';
 import {
   ActionControl,
   AlertService,
   BuiltInActionType,
   Column,
+  DataGridComponent,
   gettext,
   Pagination
 } from '@c8y/ngx-components';
@@ -46,7 +49,6 @@ import {
 } from '../connector-log/connector-status.model';
 import { DeploymentMapEntry } from '../model/shared.model';
 import { uuidCustom } from '../model/util';
-import { SharedService } from '../shared.service';
 import { ConfigurationConfigurationModalComponent } from './connector-configuration-modal.component';
 import {
   ConnectorConfiguration,
@@ -60,7 +62,9 @@ import { ConnectorStatusRendererComponent } from './connector-status.renderer.co
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html'
 })
-export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
+export class ConnectorConfigurationComponent
+  implements OnInit, OnDestroy, AfterViewInit
+{
   @Input() selectable = true;
   @Input() deploy: string[];
   private _deploymentMapEntry: DeploymentMapEntry;
@@ -88,12 +92,18 @@ export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
   columns: Column[] = [];
   actionControls: ActionControl[] = [];
 
+  @ViewChild('connectorGrid', { static: false })
+  connectorGrid: DataGridComponent;
+
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService,
-    private sharedService: SharedService
+    private alertService: AlertService
   ) {}
+
+  ngAfterViewInit(): void {
+    this.connectorGrid.setItemsSelected(this.selected, true);
+  }
 
   ngOnInit() {
     // console.log('connector-configuration', this._deploymentMapEntry, this.deploymentMapEntry);
@@ -163,6 +173,7 @@ export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
       }
     );
     this.selected = this.deploymentMapEntry?.connectors ?? [];
+
     this.selected$.next(this.selected);
     this.selected$.subscribe((se) => {
       if (this.selectable) {
@@ -209,6 +220,10 @@ export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
     }
     this.selected$.next(this.selected);
   }
+  public onSelectionChanged(selected: any ) {
+	this.selected = selected;
+    this.selected$.next(this.selected);
+  }
 
   public isSelectedAll(): boolean {
     return this.selectedAll;
@@ -217,7 +232,7 @@ export class ConnectorConfigurationComponent implements OnInit, OnDestroy {
   refresh() {
     this.connectorConfigurationService.stopConnectorConfigurations();
     this.connectorConfigurationService.resetCache();
-	this.connectorConfigurationService.startConnectorConfigurations();
+    this.connectorConfigurationService.startConnectorConfigurations();
   }
 
   loadData(): void {

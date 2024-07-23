@@ -28,5 +28,6 @@
   [rows]="configurations$ | async"
   [pagination]="pagination"
   [actionControls]="actionControls"
+  (itemsSelect)="onSelectionChanged($event)"
 >
 </c8y-data-grid>
