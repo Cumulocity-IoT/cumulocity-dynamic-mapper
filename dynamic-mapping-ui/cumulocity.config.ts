@@ -60,8 +60,8 @@ export default {
         to: 'README.md'
       },
       {
-        from: '../resources/image/Generic_Mapping_AddMapping.png',
-        to: 'image/Generic_Mapping_AddMapping.png'
+        from: '../resources/image/Generic_Mapping_MappingAdd.png',
+        to: 'image/Generic_Mapping_MappingAdd.png'
       },
       {
         from: '../resources/image/Generic_Mapping_MappingTemplate.png',
