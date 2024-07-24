@@ -109,7 +109,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_AddMapping.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingAdd.png"  style="width: 70%;" />
 </p>
 <br/>
 
