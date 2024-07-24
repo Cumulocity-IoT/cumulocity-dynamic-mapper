@@ -66,6 +66,7 @@ export class ConnectorConfigurationComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
   @Input() selectable = true;
+  @Input() readOnly = true;
   @Input() deploy: string[];
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()

@@ -140,6 +140,10 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
     this.connectorConfigurationService.startConnectorConfigurations();
   }
 
+  findNameByIdent(ident: string): string {
+    return this.configurations?.find((conf) => conf.ident == ident)?.name;
+  }
+
   ngOnDestroy() {
     this.selectedResult$.complete();
   }

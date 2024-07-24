@@ -54,9 +54,10 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   errorMessage: string;
   MappingType = MappingType;
   Direction = Direction;
-  mappingType: MappingType.JSON;
+  mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
     MAPPING_TYPE_DESCRIPTION[MappingType.JSON].description;
+	valid: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -94,6 +95,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onSelectMappingType(t) {
+	this.valid = true;
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
     this.snoopDisabled$.next(
