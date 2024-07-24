@@ -25,7 +25,7 @@ Here are the **core features** summarized:
 
 <br/>
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapper.jpg"  style="width: 80%;" />
+<img src="resources/image/Dynamic_Mapper_Mapper.jpg"  style="width: 100%;" />
 </p>
 <br/>
 
@@ -33,13 +33,13 @@ Here are the **core features** summarized:
 
 Please check the [Installation Guide](/INSTALLATION.md) to find out how you can install the Dynamic Mapper.
 
-## User Gide
+## User Guide
 
 Please check the [User Guide](/USERGUIDE.md) to find a comprehensive guidance how to use the Dynamic Mapper.
 
 ## Architecture
 
-Please check the [Architecture overview](/ARCHITECTURE.md) if your eager to understand how it is implemented.
+Please check the [Architecture overview](/ARCHITECTURE.md) if you are eager to understand how it is implemented.
 
 ## API
 
