@@ -22,7 +22,7 @@
 <c8y-data-grid
   #connectorGrid
   [title]="'Connector'"
-  [selectable]="selectable"
+  [selectable]="selectable && !readOnly"
   [columns]="columns"
   [selectionPrimaryKey]="'ident'"
   [rows]="configurations$ | async"

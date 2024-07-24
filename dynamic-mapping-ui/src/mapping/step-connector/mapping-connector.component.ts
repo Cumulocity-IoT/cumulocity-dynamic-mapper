@@ -65,6 +65,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   Direction = Direction;
   EditorMode = EditorMode;
   feature: Feature;
+  readOnly: boolean;
 
   selectedResult$: BehaviorSubject<number> = new BehaviorSubject<number>(0);
   specifications: ConnectorSpecification[] = [];
@@ -78,6 +79,7 @@ export class MappingConnectorComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
+	this.readOnly = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
     this.feature = await this.sharedService.getFeatures();
     this.specifications =
       await this.connectorConfigurationService.getConnectorSpecifications();

@@ -26,7 +26,10 @@ import {
   Output,
   OnDestroy,
   ViewChild,
-  AfterViewInit
+  AfterViewInit,
+  ElementRef,
+  Renderer2,
+  AfterViewChecked
 } from '@angular/core';
 import {
   ActionControl,
@@ -56,6 +59,7 @@ import {
 } from './connector.model';
 import { StatusEnabledRendererComponent } from './status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-status.renderer.component';
+import { CheckedRendererComponent } from './checked-renderer.component';
 
 @Component({
   selector: 'd11r-mapping-connector-configuration',
@@ -63,10 +67,10 @@ import { ConnectorStatusRendererComponent } from './connector-status.renderer.co
   templateUrl: 'connector-grid.component.html'
 })
 export class ConnectorConfigurationComponent
-  implements OnInit, OnDestroy, AfterViewInit
+  implements OnInit, OnDestroy, AfterViewInit, AfterViewChecked
 {
   @Input() selectable = true;
-  @Input() readOnly = true;
+  @Input() readOnly = false;
   @Input() deploy: string[];
   private _deploymentMapEntry: DeploymentMapEntry;
   @Input()
@@ -99,11 +103,32 @@ export class ConnectorConfigurationComponent
   constructor(
     private bsModalService: BsModalService,
     private connectorConfigurationService: ConnectorConfigurationService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private el: ElementRef,
+    private renderer: Renderer2
   ) {}
+  // eslint-disable-next-line @angular-eslint/no-empty-lifecycle-method
+  ngAfterViewChecked(): void {
+    // if (this.readOnly) this.updateCheckboxState();
+  }
 
   ngAfterViewInit(): void {
-    this.connectorGrid.setItemsSelected(this.selected, true);
+    setTimeout(async () => {
+      if (this.selectable && !this.readOnly) {
+        this.connectorGrid.setItemsSelected(this.selected, true);
+      }
+    }, 0);
+  }
+
+  private updateCheckboxState() {
+    if (this.connectorGrid && this.el && this.el.nativeElement) {
+      const checkboxes = this.el.nativeElement.querySelectorAll(
+        'label.c8y-checkbox > input[type="checkbox"]'
+      );
+      checkboxes.forEach((checkbox: HTMLInputElement) => {
+        this.renderer.setProperty(checkbox, 'disabled', this.readOnly);
+      });
+    }
   }
 
   ngOnInit() {
@@ -118,16 +143,27 @@ export class ConnectorConfigurationComponent
         text: 'Copy',
         type: 'COPY',
         icon: 'copy',
-        callback: this.onConfigurationCopy.bind(this)
+        callback: this.onConfigurationCopy.bind(this),
+        showIf: (item) => !item['enabled'] && !this.readOnly
       },
       {
         type: BuiltInActionType.Delete,
         callback: this.onConfigurationDelete.bind(this),
-        showIf: (item) => !item['enabled']
+        showIf: (item) => !item['enabled'] && !this.readOnly
       }
     );
 
     this.columns.push(
+      {
+        name: ' ',
+        header: '',
+        path: 'checked',
+        filterable: false,
+        sortOrder: 'asc',
+        visible: this.selectable && this.readOnly,
+        gridTrackSize: '7%',
+        cellRendererComponent: CheckedRendererComponent
+      },
       {
         name: 'ident',
         header: 'Ident',
@@ -194,6 +230,10 @@ export class ConnectorConfigurationComponent
 
     this.configurations$.subscribe((confs) => {
       this.configurations = confs;
+      if (this.selectable && this.readOnly)
+        this.configurations?.forEach(
+          (conf) => (conf['checked'] = this.selected.includes(conf.ident))
+        );
     });
     this.loadData();
   }
@@ -221,8 +261,8 @@ export class ConnectorConfigurationComponent
     }
     this.selected$.next(this.selected);
   }
-  public onSelectionChanged(selected: any ) {
-	this.selected = selected;
+  public onSelectionChanged(selected: any) {
+    this.selected = selected;
     this.selected$.next(this.selected);
   }
 
@@ -252,7 +292,8 @@ export class ConnectorConfigurationComponent
     const initialState = {
       add: false,
       configuration: configuration,
-      specifications: this.specifications
+      specifications: this.specifications,
+      readOnly: this.readOnly
     };
     const modalRef = this.bsModalService.show(
       ConfigurationConfigurationModalComponent,

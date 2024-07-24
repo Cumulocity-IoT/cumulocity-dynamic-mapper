@@ -27,10 +27,10 @@
           type="button"
           name="addConfiguration"
           id="addConfiguration"
-          class="btn btn-default btn-sm"
+          class="btn btn-default btn-sm m-b-24"
           (click)="onConfigurationAdd()"
           translate
-          [disabled]="!feature?.userHasMappingAdminRole"
+          [disabled]="stepperConfiguration.editorMode == EditorMode.READ_ONLY"
           title="Add connector"
         >
           <i c8yIcon="plus-circle-o"></i>&nbsp;Add connector
@@ -38,6 +38,7 @@
         <d11r-mapping-connector-configuration
           #connectorConfigurationStepper
           [selectable]="true"
+          [readOnly]="readOnly"
           [(deploymentMapEntry)]="deploymentMapEntry"
         ></d11r-mapping-connector-configuration>
       </div>

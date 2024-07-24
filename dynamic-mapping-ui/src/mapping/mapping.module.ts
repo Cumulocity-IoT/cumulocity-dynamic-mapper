@@ -58,6 +58,7 @@ import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './share
 
 @NgModule({
   declarations: [
+
     MappingComponent,
     MappingStepperComponent,
     SnoopingStepperComponent,

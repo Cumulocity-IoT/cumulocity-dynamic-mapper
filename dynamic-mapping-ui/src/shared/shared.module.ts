@@ -33,9 +33,11 @@ import { ConfigurationConfigurationModalComponent } from './connector-configurat
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
+import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
 
 @NgModule({
   declarations: [
+	CheckedRendererComponent,
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,

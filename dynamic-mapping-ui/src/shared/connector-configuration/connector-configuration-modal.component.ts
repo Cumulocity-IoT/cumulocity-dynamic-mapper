@@ -18,6 +18,7 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
     (onClose)="onSave()"
     (onDismiss)="onDismiss()"
     [labels]="labels"
+	[disabled]="readOnly"
     [headerClasses]="'modal-header dialog-header'"
   >
     <div class="card-block">
@@ -53,6 +54,7 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
 })
 export class ConfigurationConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
+  @Input() readOnly: boolean;
   @Input() configuration: Partial<ConnectorConfiguration>;
   @Input() specifications: ConnectorSpecification[];
   @Input() configurationsCount: number;
