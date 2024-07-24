@@ -73,6 +73,7 @@ After successful deployment you can find the Dynamic-mapping App in the Applicat
 <img src="resources/image/BlueprintApp.png" style="width: 60%;" />
 
 #### Manual
+
 If you made changes or your want to upload the plugin manually you can do that by following these steps:
 
 1. In "Administration" App go to "Ecosystem" -> "Packages" and click on "Add Application" on the top right.

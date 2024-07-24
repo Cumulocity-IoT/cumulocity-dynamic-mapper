@@ -21,17 +21,18 @@ The available tabs for `ROLE_MAPPING_ADMIN` are as follows:
 The available tabs for `ROLE_MAPPING_CREATE` are as follows:
 ![ROLE_MAPPING_CREATE](./resources/image/Generic_Mapping_UI_CreateRole_Tabs.png)
 
-## Configuration connector to broker
+## Connector configuration to broker
 
-The configurations are persisted as tenant options in the Cumulocity Tenant and can be manged using the following UI.\
+The configurations of connectors are persisted as tenant options in the Cumulocity Tenant and can be manged using the following UI.\
 The table of configured connectors to different brokers can be:
 * deleted
 * enabled / disabled
 * updated / copied
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Connector_Overview.png"  style="width: 70%;" />
+<img src="resources/image/ConnectorOverview.png"  style="width: 100%;" />
 </p>
+
 <br/>
 
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
