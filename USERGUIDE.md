@@ -11,7 +11,7 @@ The solution differentiates between two different roles:
    1.3 `DELETE /extension/{extensionName}`
 
    are accessible.
-2. `No Role assigend` or `ROLE_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
+2. `No Role assigned` or `ROLE_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
 
 The two roles have to be assigned in the Web UI **Adminisitration**, see [here](https://cumulocity.com/guides/users-guide/administration/#managing-permissions).
 
