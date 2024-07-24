@@ -35,7 +35,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <revision>4.4.0-SNAPSHOT</revision>
+        <revision>4.4.0</revision>
         <c8y.version>1020.107.0</c8y.version>
         <lombok.version>1.18.34</lombok.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -100,7 +100,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>4.1.110.Final</version>
+                <version>4.1.112.Final</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.jsonata4java</groupId>
@@ -132,7 +132,7 @@
             <dependency>
                 <groupId>org.java-websocket</groupId>
                 <artifactId>Java-WebSocket</artifactId>
-                <version>1.5.6</version>
+                <version>1.5.7</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -147,17 +147,17 @@
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
-                <version>3.7.0</version>
+                <version>3.7.1</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-aspects</artifactId>
-                <version>6.1.10</version>
+                <version>6.1.11</version>
             </dependency>
             <dependency>
                 <groupId>io.opentelemetry</groupId>
                 <artifactId>opentelemetry-bom</artifactId>
-                <version>1.39.0</version>
+                <version>1.40.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

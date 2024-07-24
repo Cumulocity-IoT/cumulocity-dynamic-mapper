@@ -179,7 +179,7 @@ public class MappingRestController {
 	@RequestMapping(value = "/configuration/connector/instances", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<List<ConnectorConfiguration>> getConnectionConfigurations() {
 		String tenant = contextService.getContext().getTenant();
-		log.info("Tenant {} - Get connection details", tenant);
+		log.debug("Tenant {} - Get connection details", tenant);
 
 		try {
 			List<ConnectorConfiguration> configurations = connectorConfigurationComponent

@@ -3,17 +3,18 @@
 ## Permissions
 The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
 
-## Configuration connector to broker
+## Connector configuration to broker
 
-The configurations are persisted as tenant options in the Cumulocity Tenant and can be manged using the following UI.\
+The configurations of connectors are persisted as tenant options in the Cumulocity Tenant and can be managed using the following UI.\
 The table of configured connectors to different brokers can be:
 * deleted
 * enabled / disabled
 * updated / copied
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Connector_Overview.png"  style="width: 70%;" />
+<img src="resources/image/ConnectorOverview.png"  style="width: 100%;" />
 </p>
+
 <br/>
 
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog you have to first select the type of connector. Currently we support the following connectors:
@@ -53,7 +54,7 @@ Once the connection to a broker is configured and successfully enabled you can s
 4. Importing new mappings
 5. Exporting defined mappings
 
-To change a mapping it has to be deactivated.After changes are made the mapping needs to be activated again. The updated version of the mapping is deployed automatically and applied immediately when new messages are sent to the configure mapping topic.
+To change a mapping it has to be deactivated. After changes are made the mapping needs to be activated again. The updated version of the mapping is deployed automatically and applied immediately when new messages are sent to the configure mapping topic.
 
 ### Define mappings from source to target format (Cumulocity REST format)
 
@@ -80,7 +81,6 @@ Further example for JSONata expressions are:
     becomes <code>$sum(Account.Product.(Price * Quantity))</code>
 
 ### Wizard to define a mapping
-
 Creation of the new mapping starts by pressing `Add Mapping`. On the next modal UI you can choose the mapping type depending on the structure of your payload. Currently there is support for:
 1. `JSON`: if your payload is in JSON format
 1. `FLAT_FILE`: if your payload is in a CSV format
@@ -88,9 +88,8 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 1. `PROTOBUF_STATIC`: if your payload is a serialized protobuf message
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
-
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingAdd.png"  style="width: 70%;" />
+<img src="resources/image/DynamicMapper_MappingAdd.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -128,15 +127,23 @@ Using appropriate JSONata expression you can parse the payload:
 ```
 $number(message) & " C"
 ```
-
-> **Please Note:** Currently this works only with a pached version of the [JSONata library](https://github.com/IBM/JSONata4Java)  due to the missing support for hexadecimal number in the current in the original version. The original implementation of the `$number()` function only works for decimal numbers. An [issue](https://github.com/IBM/JSONata4Java/issues/305) is pending for resolution.
-The JSONata function `$parseInteger()` is not supported by [JSONata library](https://github.com/IBM/JSONata4Java) and can't be used.
-
 ___
 
 1. Define the properties of the topic and API to be used
 2. Define the templates for the source and target, in JSON format. The source payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 3. Test the mapping by applying the transformation and send the result to a test device.
+
+Also you can decide if you want to start with snooping messages on specific topics before defining your mapping in detail by checking `Start snoop`.
+
+#### Connector selection
+As a next step you need to create or select the connectors the mapping should be effective for.
+
+<p align="center">
+<img src="resources/image/DynamicMapper_SelectConnector.png"  style="width: 80%;" />
+</p>
+
+Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be effective for them.
+For creating a new connector please review the [connector configuration guide](#connector-configuration-to-broker)
 
 #### Define topic properties
 
