@@ -1,25 +1,7 @@
 # User Guide
 
 ## Permissions
-The solution differentiates between two different roles:
-1. `ROLE_MAPPING_ADMIN`: can use/access all tabs, including **Configuration**, **Processor Extension**. In addition, the relevant endpoints in `MappingRestController`:
-
-   1.1. `POST /configuration/connection`
-
-   1.2. `POST /configuration/service`
-
-   1.3 `DELETE /extension/{extensionName}`
-
-   are accessible.
-2. `ROLE_MAPPING_CREATE`: can't use/access tabs **Configuration**, **Processor Extension**.
-
-The two roles have to be assigned in the Web UI **Adminisitration**, see [here](https://cumulocity.com/guides/users-guide/administration/#managing-permissions).
-
-The available tabs for `ROLE_MAPPING_ADMIN` are as follows:
-![ROLE_MAPPING_ADMIN](./resources/image/Generic_Mapping_UI_AdminRole_Tabs.png)
-
-The available tabs for `ROLE_MAPPING_CREATE` are as follows:
-![ROLE_MAPPING_CREATE](./resources/image/Generic_Mapping_UI_CreateRole_Tabs.png)
+The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
 
 ## Configuration connector to broker
 
@@ -378,7 +360,7 @@ To send the transformed payload to a test device, press the button ```Send test 
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_SendTestMessageToCumulocity.png"  style="width: 70%;" />
+<img src="resources/image/Generic_Mapping_MappingTemplate_SendTestMessage.png"  style="width: 70%;" />
 </p>
 <br/>
 

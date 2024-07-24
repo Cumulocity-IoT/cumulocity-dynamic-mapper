@@ -920,6 +920,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     direction: Direction,
     editorMode: EditorMode
   ) {
+	console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
+	console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
     this.stepperConfiguration =
       MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
     this.stepperConfiguration.direction = direction;
