@@ -57,7 +57,7 @@
             (click)="onSelectMappingType(q.value)"
           >
             <i [c8yIcon]="'rules m-r-4'"></i>
-            <span>{{ q.value }}</span>
+            <span>{{ q.value | humanize }}</span>
           </button>
         </ng-container>
       </div>

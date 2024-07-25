@@ -67,6 +67,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   description: string;
 
   ngOnInit(): void {
+	const humanize = new HumanizePipe();
     this.setConnectorDescription();
 
     this.brokerFormlyFields = [
@@ -80,7 +81,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
           label: 'Connector type',
           options: this.specifications.map((sp) => {
             return {
-              label: sp.connectorType,
+              label: humanize.transform(sp.connectorType) ,
               value: sp.connectorType
             };
           }),

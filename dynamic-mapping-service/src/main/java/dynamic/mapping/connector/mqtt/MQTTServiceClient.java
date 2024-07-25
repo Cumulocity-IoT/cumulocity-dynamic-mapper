@@ -70,14 +70,14 @@ public class MQTTServiceClient extends MQTTClient {
         configProps.put("supportsWildcardInTopic",
                 new ConnectorProperty(false, 9, ConnectorPropertyType.BOOLEAN_PROPERTY, true, true, false, null));
         String description = "Specific connector for connecting to Cumulocity MQTT Service. The MQTT Service does not support wildcards, i.e. '+', '#'. The QOS 'exactly once' is reduced to 'at least once'.";
-        connectorType = ConnectorType.MQTT_SERVICE;
+        connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE;
         connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, false);
     }
 
     private static Random random = new Random();
 
     private static String nextId() {
-        return "MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
+        return "CUMULOCITY_MQTT_SERVICE" + Integer.toString(random.nextInt(Integer.MAX_VALUE - 100000) + 100000, 36);
     }
     // return random.nextInt(max - min) + min;
 
