@@ -43,7 +43,7 @@ The Web App is part of the community store and should be available directly in y
 Go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".
 
 <p align="center">
-<img src="resources/image/Dynamic_MapperDuplicateApp.png" style="width: 40%;" />
+<img src="resources/image/Dynamic_Mapper_DuplicateApp.png" style="width: 40%;" />
 </p>
 <br/>
 

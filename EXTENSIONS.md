@@ -30,6 +30,6 @@ The following diagram shows how the dispatcher handles messages with different f
 
 TODO Replace picture
 <p align="center">
-<img src="resources/image/Dynamic_MapperDispatcher.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Dispatcher.png"  style="width: 70%;" />
 </p>
 <br/>
