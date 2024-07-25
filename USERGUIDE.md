@@ -220,7 +220,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Snooping_Enable.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Table_Snooping_Enable.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -321,7 +321,7 @@ When you define an expression or a path in the source payload for a substitution
 This is illustrated on the following diagram:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_SubstitutionType.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_SubstitutionType.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -347,7 +347,7 @@ To iterate and show all results press the button ```Show Next Test Result```.
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_TestTransformation.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -356,7 +356,7 @@ All generated test devices have a fragment ```d11r_testDevice```.
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_TestDevices.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Monitoring_TestDevices.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -450,7 +450,7 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 A chart shows a summary with numbers of all successfully processed messages and those raising errors.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_MonitoringChart.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Monitoring_Chart.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -461,7 +461,7 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_MappingTree.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Monitoring_Tree.png"  style="width: 70%;" />
 </p>
 <br/>
 
