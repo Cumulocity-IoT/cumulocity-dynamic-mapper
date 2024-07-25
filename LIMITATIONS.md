@@ -16,4 +16,4 @@ A mapping is defined of mapping properties and substitutions. The substitutions 
 
 Differences in more advanced expressions can occur. Please test your expressions before you use advanced elements.
 
-For MQTT Service currently now wildcards topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.
+For MQTT Service currently no wildcards topics (e.g. `topic/#` or `topic/+` ) for Inbound Mappings / Subscriptions are allowed.

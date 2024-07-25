@@ -220,7 +220,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Table_Snooping_Enable.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Snooping_Enable.png"  style="width: 70%;" />
 </p>
 <br/>
 

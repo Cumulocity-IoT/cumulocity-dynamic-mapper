@@ -70,8 +70,9 @@ Enter an application key and path and click on "Deploy".
 
 After successful deployment you can find the Dynamic-mapping App in the Application Switcher
 
+<p align="center">
 <img src="resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 60%;" />
-
+</p>
 #### Manual
 
 If you made changes or your want to upload the plugin manually you can do that by following these steps:
