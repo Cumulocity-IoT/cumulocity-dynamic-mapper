@@ -12,7 +12,7 @@ The table of configured connectors to different brokers can be:
 * updated / copied
 
 <p align="center">
-<img src="resources/image/ConnectorOverview.png"  style="width: 100%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Overview.png"  style="width: 100%;" />
 </p>
 
 <br/>
@@ -25,21 +25,21 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Connector_Edit.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 70%;" />
 </p>
 <br/>
 
 
 When you add or change a connection configuration it happens very often that the parameter are incorrect and the connection fails. In this case the connection to the MQTT broker cannot be established and the reason is not known. To identify the incorrect parameter you can follows the error messages in the connections logs on the same UI:
 <p align="center">
-<img src="resources/image/Generic_Mapping_Connector_Monitoring.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Monitoring.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -89,7 +89,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
-<img src="resources/image/DynamicMapper_MappingAdd.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Add_Modal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -139,7 +139,7 @@ Also you can decide if you want to start with snooping messages on specific topi
 As a next step you need to create or select the connectors the mapping should be effective for.
 
 <p align="center">
-<img src="resources/image/DynamicMapper_SelectConnector.png"  style="width: 80%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Select.png"  style="width: 80%;" />
 </p>
 
 Make sure to select at least one connector before you proceed to the next step. You can select multiple connectors if your mapping should be effective for them.
@@ -149,7 +149,7 @@ For creating a new connector please review the [connector configuration guide](#
 
 In the first wizard step properties for the topic are defined.
 <p align="center">
-<img src="resources/image/Generic_Mapping_TopicDefinition.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_Definition.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -162,7 +162,7 @@ For outbound mappings the properties are slightly different. Most important are 
 2. `publishTopic`: MQTT topic to publish outbound messages to.
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_TopicDefinition_Outbound.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_Outbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -170,7 +170,7 @@ For an outbound mapping to be applied two conditions have to be fulfilled:
 1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_Outbound_subscription.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Outbound_subscription.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -189,7 +189,7 @@ Examples are: "device/+/data, "device/express/+", "device/+"\
 In order to use sample data instead of the wildcard you can add a Mapping Topic Sample, which must have the same structure, i.e. same level in the topic and when explicit name are used at a topic level in the Mapping Topic they must exactly be the same in the Mapping Topic Sample.
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Diagram_Map.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_Map.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -220,7 +220,7 @@ To enable snooping select ```ENABLED``` in the drop down as shown in the screens
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_EnableSnooping.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Snooping_Enable.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -237,7 +237,7 @@ In the second wizard step, shown on the screenshot below the mapping is further 
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -247,7 +247,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -273,7 +273,7 @@ required since this can overwrite mandatory Cumulocity attributes, e.g. <code>so
         *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
         *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_EditModal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Edit_Modal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -288,7 +288,7 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_SchemaValidation_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_SchemaValidation_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -321,7 +321,7 @@ When you define an expression or a path in the source payload for a substitution
 This is illustrated on the following diagram:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_SubstitutionType.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_SubstitutionType.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -347,7 +347,7 @@ To iterate and show all results press the button ```Show Next Test Result```.
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_TestTransformation.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_TestTransformation.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -356,7 +356,7 @@ All generated test devices have a fragment ```d11r_testDevice```.
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_TestDevices.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_TestDevices.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -367,7 +367,7 @@ To send the transformed payload to a test device, press the button ```Send test 
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_SendTestMessage.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_SendTestMessage.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -378,7 +378,7 @@ In order to use a previously snooped payload click the button
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_Snooping_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Snooping_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -388,14 +388,14 @@ To avoid inconsistencies when updating the properties of a mapping, active mappi
 This can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_TopicDefinition_ReadOnly.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_ReadOnly.png"  style="width: 70%;" />
 </p>
 <br/>
 
 To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTable_annotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Annotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -406,7 +406,7 @@ You can as well export all or a single mapping.
 The import dialog can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTable_Import.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Import.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -417,21 +417,21 @@ The import dialog can be seen on the following screenshot:
 When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTemplate_ProtobufMessage_annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Template_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
 Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice has to be re-subscribed in order to load the extensions. This does not happen dynamically.
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_ProcessorExtensionInbound.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_ProcessorExtensionInbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -443,14 +443,14 @@ On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping p
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_Monitoring.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Monitoring.png"  style="width: 70%;" />
 </p>
 <br/>
 
 A chart shows a summary with numbers of all successfully processed messages and those raising errors.
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MonitoringChart.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_MonitoringChart.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -461,7 +461,7 @@ On the tab ```Mapping Tree``` you can see how the registered mappings are organi
 
 
 <p align="center">
-<img src="resources/image/Generic_Mapping_MappingTree.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_MappingTree.png"  style="width: 70%;" />
 </p>
 <br/>
 

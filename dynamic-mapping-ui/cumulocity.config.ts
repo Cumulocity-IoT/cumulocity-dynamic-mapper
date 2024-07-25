@@ -60,12 +60,12 @@ export default {
         to: 'README.md'
       },
       {
-        from: '../resources/image/Generic_Mapping_MappingAdd.png',
-        to: 'image/Generic_Mapping_MappingAdd.png'
+        from: '../resources/image/Dynamic_MapperMapping_Add.png',
+        to: 'image/Dynamic_MapperMapping_Add.png'
       },
       {
-        from: '../resources/image/Generic_Mapping_MappingTemplate.png',
-        to: 'image/Generic_Mapping_MappingTemplate.png'
+        from: '../resources/image/Dynamic_MapperMappingTemplate.png',
+        to: 'image/Dynamic_MapperMappingTemplate.png'
       },
       {
         from: '../resources/image/DM_App-Icon_03.png',
