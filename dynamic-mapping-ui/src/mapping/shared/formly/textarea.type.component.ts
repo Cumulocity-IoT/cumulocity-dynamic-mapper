@@ -26,7 +26,6 @@ import { FieldType } from '@ngx-formly/core';
   selector: 'd11r-formly-field-textarea',
   template: `
     <textarea
-      autosize
       [readonly]="readonly"
       [class]="class"
       [cols]="cols"

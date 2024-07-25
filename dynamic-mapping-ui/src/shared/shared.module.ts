@@ -26,20 +26,59 @@ import { PaginationModule } from 'ngx-bootstrap/pagination';
 import { ConfirmationModalComponent } from './confirmation/confirmation-modal.component';
 import { CamelCasePipe } from './camel-case.pipe';
 import { CapitalizeCasePipe } from './capitazilze-case.pipe';
+import { DisableDirective } from './disable.directive';
+import { ConnectorStatusComponent } from './connector-log/connector-status.component';
+import { ConnectorConfigurationComponent } from './connector-configuration/connector-grid.component';
+import { ConfigurationConfigurationModalComponent } from './connector-configuration/connector-configuration-modal.component';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
+import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
+import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
 
 @NgModule({
   declarations: [
+	CheckedRendererComponent,
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
-    CapitalizeCasePipe
+    CapitalizeCasePipe,
+    DisableDirective,
+    ConnectorStatusComponent,
+    ConnectorConfigurationComponent,
+    ConfigurationConfigurationModalComponent,
+	StatusEnabledRendererComponent,
+	ConnectorStatusRendererComponent
   ],
-  imports: [CoreModule, BsDatepickerModule, PaginationModule],
+  imports: [
+    CoreModule,
+    BsDatepickerModule,
+    PaginationModule,
+    BsDropdownModule.forRoot()
+  ],
   exports: [
     JsonEditor2Component,
     ConfirmationModalComponent,
     CamelCasePipe,
-    CapitalizeCasePipe
+    CapitalizeCasePipe,
+    DisableDirective,
+    ConnectorStatusComponent,
+    ConnectorConfigurationComponent,
+    ConfigurationConfigurationModalComponent
   ]
 })
 export class SharedModule {}
+
+export enum Operation {
+  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
+  CONNECT = 'CONNECT',
+  DISCONNECT = 'DISCONNECT',
+  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
+  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
+  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
+  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
+  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
+  DEBUG_MAPPING = 'DEBUG_MAPPING',
+  SNOOP_MAPPING = 'SNOOP_MAPPING',
+  SNOOP_RESET = 'SNOOP_RESET',
+  RESET_DEPLOYMENT_MAP = 'RESET_DEPLOYMENT_MAP',
+}

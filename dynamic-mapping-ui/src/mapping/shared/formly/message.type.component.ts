@@ -26,8 +26,8 @@ import { FieldType } from '@ngx-formly/core';
   selector: 'd11r-formly-field-message',
   template: `
     <c8y-messages>
-      <c8y-message [class]="props.textClass" *ngIf="props.enabled">
-        {{ props.content }}
+      <c8y-message [class]="props['textClass']" *ngIf="props['enabled']">
+        {{ props['content'] }}
       </c8y-message>
     </c8y-messages>
   `

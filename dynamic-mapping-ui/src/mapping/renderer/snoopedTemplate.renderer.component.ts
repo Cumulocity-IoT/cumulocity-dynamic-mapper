@@ -22,7 +22,8 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
-  template: '<span>{{ context.item.snoopedTemplates.length }}</span>'
+  selector: 'd11r-mapping-renderer-snooped',
+  template: '<span>{{ context.value.snoopedTemplates ? context.value.snoopedTemplates.length: "" }}</span>'
 })
 export class SnoopedTemplateRendererComponent {
   constructor(public context: CellRendererContext) {}

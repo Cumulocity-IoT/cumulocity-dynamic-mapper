@@ -15,7 +15,7 @@ export default {
     name: 'dynamic-mapping',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
-      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_02.png)'
+      url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
     },
     key: 'sag-ps-pkg-dynamic-mapping-key',
     contentSecurityPolicy:
@@ -54,24 +54,22 @@ export default {
     // comment end
   },
   buildTime: {
-    // extraWebpackConfig: './extra-webpack.config.js',
-    entryModule: './app.module.ts',
     copy: [
       {
         from: 'README.md',
         to: 'README.md'
       },
       {
-        from: '../resources/image/Generic_Mapping_AddMapping.png',
-        to: 'image/Generic_Mapping_AddMapping.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Add.png'
       },
       {
-        from: '../resources/image/Generic_Mapping_MappingTemplate.png',
-        to: 'image/Generic_Mapping_MappingTemplate.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Template.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Template.png'
       },
       {
-        from: '../resources/image/DM_App-Icon_02.png',
-        to: 'image/DM_App-Icon_02.png'
+        from: '../resources/image/DM_App-Icon_03.png',
+        to: 'image/DM_App-Icon_03.png'
       }
     ],
     federation: [

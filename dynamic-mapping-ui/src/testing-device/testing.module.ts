@@ -32,7 +32,7 @@ import { SharedModule } from '../shared';
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/testing',
+      path: 'sag-ps-pkg-dynamic-mapping/node2/testing',
       component: TestingComponent
     })
   ]

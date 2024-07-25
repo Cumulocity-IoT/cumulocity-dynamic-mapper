@@ -18,42 +18,6 @@
  *
  * @authors Christof Strack
  */
-export enum ConnectorPropertyType {
-  ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
-  STRING_PROPERTY = 'STRING_PROPERTY',
-  SENSITIVE_STRING_PROPERTY = 'SENSITIVE_STRING_PROPERTY',
-  NUMERIC_PROPERTY = 'NUMERIC_PROPERTY',
-  BOOLEAN_PROPERTY = 'BOOLEAN_PROPERTY',
-  OPTION_PROPERTY = 'OPTION_PROPERTY',
-  STRING_LARGE_PROPERTY = 'STRING_LARGE_PROPERTY'
-}
-
-export interface ConnectorProperty {
-  required: boolean;
-  order: number;
-  readonly: boolean;
-  hidden: boolean;
-  defaultValue?: any;
-  type: ConnectorPropertyType;
-}
-
-export interface ConnectorConfiguration {
-  ident: string;
-  connectorType: string;
-  enabled: boolean;
-  status?: any;
-  status$?: any;
-  name: string;
-  properties: { [name: string]: any };
-}
-
-export interface ConnectorSpecification {
-  description: string;
-  connectorType: string;
-  supportsWildcardInTopic: boolean;
-  properties: { [name: string]: ConnectorProperty };
-}
-
 export interface ServiceConfiguration {
   logPayload: boolean;
   logSubstitution: boolean;
@@ -64,46 +28,4 @@ export interface ServiceConfiguration {
   sendNotificationLifecycle: boolean;
   externalExtensionEnabled?: boolean;
   outboundMappingEnabled: boolean;
-}
-
-export interface ConnectorStatusEvent {
-  status: ConnectorStatus;
-  message: string;
-}
-
-export interface Feature {
-  outputMappingEnabled: boolean;
-  externalExtensionsEnabled: boolean;
-  userHasMappingCreateRole: boolean;
-  userHasMappingAdminRole: boolean;
-}
-
-export enum ConnectorStatus {
-  UNKNOWN = 'UNKNOWN',
-  CONFIGURED = 'CONFIGURED',
-  ENABLED = 'ENABLED',
-  CONNECTING = 'CONNECTING',
-  CONNECTED = 'CONNECTED',
-  DISCONNECTED = 'DISCONNECTED',
-  DISCONNECTING = 'DISCONNECTING',
-  FAILED = 'FAILED'
-}
-
-export enum Operation {
-  ACTIVATE_MAPPING = 'ACTIVATE_MAPPING',
-  CONNECT = 'CONNECT',
-  DISCONNECT = 'DISCONNECT',
-  REFRESH_STATUS_MAPPING = 'REFRESH_STATUS_MAPPING',
-  RELOAD_EXTENSIONS = 'RELOAD_EXTENSIONS',
-  RELOAD_MAPPINGS = 'RELOAD_MAPPINGS',
-  RESET_STATUS_MAPPING = 'RESET_STATUS_MAPPING',
-  REFRESH_NOTIFICATIONS_SUBSCRIPTIONS = 'REFRESH_NOTIFICATIONS_SUBSCRIPTIONS',
-  DEBUG_MAPPING = 'DEBUG_MAPPING'
-}
-
-export enum StatusEventTypes {
-  STATUS_CONNECTOR_EVENT_TYPE = 'd11r_connectorStatusEvent',
-  STATUS_SUBSCRIPTION_EVENT_TYPE = 'd11r_subscriptionEvent',
-  STATUS_NOTIFICATION_EVENT_TYPE = 'd11r_notificationStatusEvent',
-  ALL = 'ALL'
 }

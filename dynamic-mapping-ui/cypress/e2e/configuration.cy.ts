@@ -42,7 +42,7 @@ describe('Specs for connector configuration', () => {
   });
 
   it('Add connector', function () {
-    // click button 'Add configuration'
+    // click button 'Add connector'
     cy.get('#addConfiguration').should('exist').click();
     cy.wait('@getConnectorSpecifications');
     // cy.get('#connectorType').should('exist').should('be.visible');

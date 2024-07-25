@@ -20,11 +20,8 @@
   -->
 
 <c8y-title translate
-  >Mapping {{ stepperConfiguration.direction | lowercase}}</c8y-title
+  >Mapping {{ stepperConfiguration.direction | lowercase }}</c8y-title
 >
-<!-- <mapping-help src="../../shared/help/help-mapping.html"></mapping-help> -->
-<!-- <mapping-help src="/apps/mqtt-mapping/assets/help/help-mapping.html"></mapping-help> -->
-<!-- <mapping-help src="."></mapping-help> -->
 <c8y-action-bar-item [placement]="'right'">
   <button
     class="btn btn-link"
@@ -78,13 +75,14 @@
 </c8y-action-bar-item>
 <div class="card">
   <div class="card-block">
-    <c8y-data-grid #mappingGrid
+    <c8y-data-grid
+      #mappingGrid
       [title]="titleMapping | translate"
       [selectable]="true"
       [columns]="columnsMappings"
       [bulkActionControls]="bulkActionControls"
       [rows]="mappingsEnriched$ | async"
-      [pagination]="pagination" 
+      [pagination]="pagination"
       [actionControls]="actionControls"
     >
     </c8y-data-grid>
@@ -120,11 +118,14 @@
 >
   <div class="card-block">
     <c8y-data-grid
+      #subscriptionGrid
+      [selectable]="'true'"
       [title]="titleSubscription | translate"
       [columns]="columnsSubscriptions"
       [rows]="subscription?.devices"
       [pagination]="pagination"
       [actionControls]="actionControlSubscription"
+      [bulkActionControls]="bulkActionControlSubscription"
     >
     </c8y-data-grid>
   </div>
@@ -138,8 +139,23 @@
       (commit)="onCommitMapping($event)"
       [mapping]="mappingToUpdate"
       [stepperConfiguration]="stepperConfiguration"
+      [(deploymentMapEntry)]="deploymentMapEntry"
     >
     </d11r-mapping-stepper>
+  </div>
+</div>
+
+<div [ngClass]="{ drawerOpen: showSnoopingMapping }">
+  <div class="bottom-drawer">
+    <d11r-snooping-stepper
+      *ngIf="showSnoopingMapping"
+      (cancel)="showSnoopingMapping = false"
+      (commit)="onCommitMapping($event)"
+      [mapping]="mappingToUpdate"
+      [stepperConfiguration]="stepperConfiguration"
+      [(deploymentMapEntry)]="deploymentMapEntry"
+    >
+    </d11r-snooping-stepper>
   </div>
 </div>
 

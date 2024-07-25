@@ -31,9 +31,8 @@ import { BrokerConfigurationModule } from '../configuration';
 import { SharedModule } from '../shared';
 import { EditSubstitutionComponent } from './edit/edit-substitution-modal.component';
 import { MappingComponent } from './grid/mapping.component';
-import { ImportMappingsComponent } from './import-modal/import.component';
+import { ImportMappingsComponent } from './import/import-modal.component';
 import { MappingTypeComponent } from './mapping-type/mapping-type.component';
-import { OverwriteSubstitutionModalComponent } from './overwrite/overwrite-substitution-modal.component';
 import { APIRendererComponent } from './renderer/api.renderer.component';
 import { NameRendererComponent } from './renderer/name.renderer.component';
 import { QOSRendererComponent } from './renderer/qos-cell.renderer.component';
@@ -44,23 +43,28 @@ import { TemplateRendererComponent } from './renderer/template.renderer.componen
 import { WrapperFormlyHorizontal } from './shared/formly/horizontal.wrapper.component';
 import { FieldInputCustom } from './shared/formly/input-custom.type.component';
 import { MessageField } from './shared/formly/message.type.component';
-import { SnoopingModalComponent } from './snooping/snooping-modal.component';
-import { MappingStepperComponent } from './step-main/mapping-stepper.component';
-import { SubstitutionRendererComponent } from './step-main/substitution/substitution-renderer.component';
-import { MappingStepPropertiesComponent } from './step-one/mapping-properties.component';
-import { MappingStepTestingComponent } from './step-three/mapping-testing.component';
+import { MappingStepperComponent } from './stepper-mapping/mapping-stepper.component';
+import { SubstitutionRendererComponent } from './substitution/substitution-grid.component';
+import { MappingStepPropertiesComponent } from './step-topic/mapping-properties.component';
+import { MappingStepTestingComponent } from './step-testing/mapping-testing.component';
 import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { WrapperCustomFormField } from './shared/formly/custom-form-field.wrapper.component';
 import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment.renderer.component';
+import { SnoopingStepperComponent } from './stepper-snooping/snooping-stepper.component';
+import { MappingConnectorComponent } from './step-connector/mapping-connector.component';
+import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
+import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './shared/util';
 
 @NgModule({
   declarations: [
+
     MappingComponent,
     MappingStepperComponent,
+    SnoopingStepperComponent,
     MappingStepTestingComponent,
     MappingStepPropertiesComponent,
     MappingSubscriptionComponent,
-    OverwriteSubstitutionModalComponent,
     EditSubstitutionComponent,
     ImportMappingsComponent,
     StatusRendererComponent,
@@ -72,12 +76,12 @@ import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment
     StatusActivationRendererComponent,
     APIRendererComponent,
     NameRendererComponent,
-    SnoopingModalComponent,
     MappingTypeComponent,
     MessageField,
     WrapperFormlyHorizontal,
     WrapperCustomFormField,
-    FieldInputCustom
+    FieldInputCustom,
+    MappingConnectorComponent
   ],
   imports: [
     CoreModule,
@@ -86,19 +90,54 @@ import { MappingDeploymentRendererComponent } from './renderer/mappingDeployment
     DynamicFormsModule,
     ModalModule,
     SharedModule,
-    BrokerConfigurationModule,
+    BrokerConfigurationModule
   ],
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/mappings/inbound',
+      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/inbound',
       component: MappingComponent
     }),
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/mappings/outbound',
+      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/outbound',
       component: MappingComponent
     }),
+    {
+      provide: FORMLY_CONFIG,
+      multi: true,
+      useValue: {
+        types: [
+          {
+            name: 'textarea-custom',
+            component: FieldTextareaCustom
+          },
+          {
+            name: 'input-custom',
+            component: FieldInputCustom
+          },
+          {
+            name: 'message-field',
+            component: MessageField
+          }
+        ],
+        wrappers: [
+          {
+            name: 'custom-form-wrapper',
+            component: WrapperCustomFormField
+          }
+        ],
+        validators: [
+          {
+            name: 'checkTopicsInboundAreValid',
+            validation: checkTopicsInboundAreValid
+          },
+          {
+            name: 'checkTopicsOutboundAreValid',
+            validation: checkTopicsOutboundAreValid
+          }
+        ]
+      }
+    }
   ]
 })
 export class MappingModule {}
-

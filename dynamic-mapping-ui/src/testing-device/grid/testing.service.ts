@@ -271,7 +271,7 @@ export class TestingDeviceService {
     };
     await this.inventoryService.delete(m.id, params);
     this.refreshData$.next(true);
-    this.alert.success('Test Devices are deleted!');
+    this.alert.success('Test devices are deleted!');
   }
 
   async onItemsDelete(ms: string[]): Promise<void> {
@@ -285,6 +285,6 @@ export class TestingDeviceService {
     Promise.all(deletePromises).then(() => {
       this.refreshData$.next(true);
     });
-    this.alert.success('Test Devices are deleted!');
+    this.alert.success('Test devices are deleted!');
   }
 }

@@ -24,10 +24,10 @@ import { IManagedObject } from '@c8y/client';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { shareReplay, switchMap, tap } from 'rxjs/operators';
-import { ExtensionService } from '../share/extension.service';
-import { BrokerConfigurationService, Operation } from '../../configuration';
-import { AddExtensionComponent } from '../extension-modal/add-extension.component';
+import { ExtensionService } from '../extension.service';
+import { AddExtensionComponent } from '../add/add-extension-modal.component';
 import { AlertService } from '@c8y/ngx-components';
+import { Feature, Operation, SharedService } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-extension',
@@ -42,28 +42,33 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   extensions$: Observable<IManagedObject[]>;
 
   listClass: string;
+  feature: Feature;
 
   constructor(
     private bsModalService: BsModalService,
     private extensionService: ExtensionService,
-    private brokerConfigurationService: BrokerConfigurationService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private sharedService: SharedService
   ) {}
 
   async ngOnInit() {
+    this.feature = await this.sharedService.getFeatures();
+    // if (!this.feature.userHasMappingAdminRole) {
+    //   this.alertService.warning(
+    //     "The configuration on this tab is not editable, as you don't have Mapping ADMIN permissions. Please assign Mapping ADMIN permissions to your user."
+    //   );
+    // }
     this.extensions$ = this.reload$.pipe(
-        tap(() => (this.reloading = true)),
-        switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
-        tap(console.log),
-        tap(() => (this.reloading = false)),
-        shareReplay()
-      );
+      tap(() => (this.reloading = true)),
+      switchMap(() => this.extensionService.getExtensionsEnriched(undefined)),
+      // tap(console.log),
+      tap(() => (this.reloading = false)),
+      shareReplay()
+    );
     this.loadExtensions();
-    this.extensions$.subscribe((exts) => {
-      console.log('New extensions:', exts);
-    });
+    this.extensions$.subscribe();
     this.externalExtensionEnabled = (
-      await this.brokerConfigurationService.getServiceConfiguration()
+      await this.sharedService.getServiceConfiguration()
     ).externalExtensionEnabled;
   }
 
@@ -72,7 +77,7 @@ export class ExtensionComponent implements OnInit, OnDestroy {
   }
 
   async reloadExtensions() {
-    await this.brokerConfigurationService.runOperation(
+    await this.sharedService.runOperation(
       Operation.RELOAD_EXTENSIONS
     );
     this.alertService.success('Extensions reloaded');

@@ -20,17 +20,17 @@
  */
 import { Injectable } from '@angular/core';
 import { CanActivate } from '@angular/router';
-import { BrokerConfigurationService } from '../../configuration';
+import { SharedService } from '../../shared';
 
 @Injectable({ providedIn: 'root' })
 export class ExtensionGuard implements CanActivate {
   private activateExtensionNavigationPromise: Promise<boolean>;
 
-  constructor(private brokerConfigurationService: BrokerConfigurationService) {}
+  constructor(private sharedService: SharedService) {}
 
   canActivate(): Promise<boolean> {
     if (!this.activateExtensionNavigationPromise) {
-      this.activateExtensionNavigationPromise = this.brokerConfigurationService
+      this.activateExtensionNavigationPromise = this.sharedService
         .getServiceConfiguration()
         .then((conf) => {
           console.log('External Extension :', conf.externalExtensionEnabled);

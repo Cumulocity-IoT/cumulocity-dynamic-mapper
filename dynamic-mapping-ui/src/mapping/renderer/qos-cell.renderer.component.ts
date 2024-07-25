@@ -22,6 +22,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
+selector: 'd11r-mapping-renderer-qos',
   template: `<span>{{
     context.item.value === 'AT_MOST_ONCE'
       ? 'At most once'

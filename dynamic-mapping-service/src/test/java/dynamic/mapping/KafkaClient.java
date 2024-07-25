@@ -29,7 +29,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 public class KafkaClient {
     KafkaProducer<String, String> testClient;
-    static String broker_host = System.getenv("broker_host");
+    static String kafka_broker_host = System.getenv("kafka_broker_host");
     static String broker_username = System.getenv("broker_username");
     static String broker_password = System.getenv("broker_password");
     static String group_id = System.getenv("group_id");
@@ -52,7 +52,7 @@ public class KafkaClient {
         props.put("sasl.mechanism", "SCRAM-SHA-256");
         props.put("linger.ms", 1);
         props.put("enable.idempotence", false);
-        props.put("bootstrap.servers", broker_host);
+        props.put("bootstrap.servers", kafka_broker_host);
         props.put("group.id",group_id);
         props.put("sasl.jaas.config", jaasCfg);
 
@@ -64,7 +64,7 @@ public class KafkaClient {
     private void testSendMeasurement() {
 
         String topic = KafkaClient.topic;
-        System.out.println("Connecting to Kafka broker: " + broker_host + "!");
+        System.out.println("Connecting to Kafka broker: " + kafka_broker_host + "!");
 
         System.out.println("Publishing message on topic: " + topic);
 

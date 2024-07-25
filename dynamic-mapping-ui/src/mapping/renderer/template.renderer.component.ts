@@ -22,6 +22,7 @@ import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
 
 @Component({
+  selector: 'd11r-mapping-renderer-template',
   template: `
     <textarea
       class="text-monospace font-smaller"

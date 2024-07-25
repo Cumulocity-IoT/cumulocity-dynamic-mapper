@@ -106,7 +106,7 @@ public class MQTTClient extends AConnectorClient {
                 new ConnectorProperty(false, 10, ConnectorPropertyType.STRING_PROPERTY, false, false, null, null));
         String description = "Generic connector for connecting to external MQTT broker over tcp or websocket.";
         connectorType = ConnectorType.MQTT;
-        specification = new ConnectorSpecification(description, connectorType, configProps, false);
+        connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, false);
     }
 
     public MQTTClient(ConfigurationRegistry configurationRegistry,
@@ -223,17 +223,12 @@ public class MQTTClient extends AConnectorClient {
         int mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
-        boolean useWSS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useWSS", false);
+        //boolean useWSS = (Boolean) connectorConfiguration.getProperties().getOrDefault("useWSS", false);
 
         Mqtt3ClientBuilder partialBuilder;
-        if (useWSS) {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).webSocketWithDefaultConfig()
-                    .serverPort(mqttPort)
+        partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
                     .identifier(clientId + additionalSubscriptionIdTest);
-        } else {
-            partialBuilder = Mqtt3Client.builder().serverHost(mqttHost).serverPort(mqttPort)
-                    .identifier(clientId + additionalSubscriptionIdTest);
-        }
+
 
         // is username & password used
         if (!StringUtils.isEmpty(user)) {
@@ -255,10 +250,13 @@ public class MQTTClient extends AConnectorClient {
 
         // websocket configuration
         if ("ws://".equals(protocol) || "wss://".equals(protocol)) {
+            partialBuilder = partialBuilder.webSocketWithDefaultConfig();
             String serverPath = (String) connectorConfiguration.getProperties().get("serverPath");
-            partialBuilder = partialBuilder.webSocketConfig()
-                    .serverPath(serverPath)
-                    .applyWebSocketConfig();
+            if (serverPath != null) {
+                partialBuilder = partialBuilder.webSocketConfig()
+                        .serverPath(serverPath)
+                        .applyWebSocketConfig();
+            }
             log.debug("Tenant {} - Using websocket: {}", tenant, serverPath);
         }
 
@@ -333,8 +331,10 @@ public class MQTTClient extends AConnectorClient {
                     log.info("Tenant {} - Successfully connected to broker {}", tenant,
                             mqttClient.getConfig().getServerHost());
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
-                    List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptions(updatedMappings, true);
+                    List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+					List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+                    updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
                 } catch (Exception e) {
                     log.error("Tenant {} - Failed to connect to broker {}, {}, {}, {}", tenant,
@@ -392,8 +392,8 @@ public class MQTTClient extends AConnectorClient {
             return false;
         }
         // check if all required properties are set
-        for (String property : getSpecification().getProperties().keySet()) {
-            if (getSpecification().getProperties().get(property).required
+        for (String property : getConnectorSpecification().getProperties().keySet()) {
+            if (getConnectorSpecification().getProperties().get(property).required
                     && configuration.getProperties().get(property) == null) {
                 return false;
             }
@@ -437,8 +437,10 @@ public class MQTTClient extends AConnectorClient {
                         e);
             }
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
-            List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptions(updatedMappings, true);
+            List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
+            updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
+			List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+			updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
             log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
                     mqttClient.getConfig().getServerHost());
         }
@@ -451,7 +453,7 @@ public class MQTTClient extends AConnectorClient {
 
     @Override
     public void subscribe(String topic, QOS qos) throws ConnectorException {
-        log.debug("Tenant {} - Subscribing on topic: {}", tenant, topic);
+        log.debug("Tenant {} - Subscribing on topic: {} for connector {}", tenant, topic, connectorName);
         QOS usedQOS = qos;
         sendSubscriptionEvents(topic, "Subscribing");
         if (usedQOS.equals(null))
@@ -473,7 +475,7 @@ public class MQTTClient extends AConnectorClient {
         Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
         asyncMqttClient.subscribeWith().topicFilter(topic).qos(MqttQos.fromCode(usedQOS.ordinal())).send()
                 .thenRun(() -> {
-                    log.debug("Tenant {} - Successfully subscribed on topic: {}", tenant, topic);
+                    log.info("Tenant {} - Successfully subscribed on topic: {} for connector {}", tenant, topic, connectorName);
                 }).exceptionally(throwable -> {
                     log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
                             throwable.getMessage());
@@ -484,7 +486,15 @@ public class MQTTClient extends AConnectorClient {
     public void unsubscribe(String topic) throws Exception {
         log.debug("Tenant {} - Unsubscribing from topic: {}", tenant, topic);
         sendSubscriptionEvents(topic, "Unsubscribing");
-        mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
+        Mqtt3AsyncClient asyncMqttClient = mqttClient.toAsync();
+        asyncMqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build()).thenRun(() -> {
+            log.info("Tenant {} - Successfully unsubscribed on topic: {} for connector {}", tenant, topic, connectorName);
+        }).exceptionally(throwable -> {
+            log.error("Tenant {} - Failed to subscribe on topic {} with error: ", tenant, topic,
+                    throwable.getMessage());
+            return null;
+        });
+        //mqttClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build());
     }
 
     public void publishMEAO(ProcessingContext<?> context) {

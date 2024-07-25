@@ -97,7 +97,7 @@ public class KafkaClient extends AConnectorClient {
         String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
-        specification = new ConnectorSpecification(description, connectorType, configProps, true);
+        connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, true);
     }
 
     private static String removeDateCommentLine(String pt) {
@@ -242,7 +242,7 @@ public class KafkaClient extends AConnectorClient {
                     connectionState.setTrue();
                     updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
                     List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-                    updateActiveSubscriptions(updatedMappings, true);
+                    updateActiveSubscriptionsInbound(updatedMappings, true);
                 }
                 successful = true;
             } catch (Exception e) {
@@ -286,7 +286,7 @@ public class KafkaClient extends AConnectorClient {
             connectionState.setFalse();
             updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
             List<Mapping> updatedMappings = mappingComponent.rebuildMappingInboundCache(tenant);
-            updateActiveSubscriptions(updatedMappings, true);
+            updateActiveSubscriptionsInbound(updatedMappings, true);
             kafkaProducer.close();
             log.info("Tenant {} - Disconnected from from broker: {}", tenant, getConnectorName(),
                     bootstrapServers);
@@ -323,10 +323,10 @@ public class KafkaClient extends AConnectorClient {
 
         // for (Iterator<Map.Entry<String, Mapping>> me =
         // getMappingsDeployed().entrySet().iterator(); me.hasNext();) {
-        Iterator<String> it = getMappingsDeployed().keySet().iterator();
+        Iterator<String> it = getMappingsDeployedInbound().keySet().iterator();
         while (it.hasNext()) {
             String mapIdent = it.next();
-            Mapping map = getMappingsDeployed().get(mapIdent);
+            Mapping map = getMappingsDeployedInbound().get(mapIdent);
             // test if topicConsumer was started successfully
             if (consumerList.containsKey(map.subscriptionTopic)) {
                 TopicConsumer kafkaConsumer = consumerList.get(map.subscriptionTopic);
@@ -334,7 +334,7 @@ public class KafkaClient extends AConnectorClient {
                     try {
                         // kafkaConsumer.close();
                         unsubscribe(mapIdent);
-                        getMappingsDeployed().remove(map.ident);
+                        getMappingsDeployedInbound().remove(map.ident);
                         log.warn(
                                 "Tenant {} - Failed to subscribe to subscriptionTopic {} for mapping {} in connector {}!",
                                 tenant, map.subscriptionTopic, map, getConnectorName());
