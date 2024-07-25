@@ -18,7 +18,7 @@ The mapper processes messages in both directions:
 Different mappings types can be used:
 <br>
 <br>
-![Add mapping](image/Dynamic_MapperMapping_Add.png)
+![Add mapping](image/Dynamic_MapperMapping_Table_Add.png)
 <br>
 <br>
 Mappings are defined in a graphical editor using JSONata expressions:

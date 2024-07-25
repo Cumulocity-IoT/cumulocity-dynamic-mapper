@@ -11,7 +11,7 @@ The solution is composed of two major components:
 The architecture of the components consists of the following components:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Architecture.png"  style="width: 100%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_Architecture.png"  style="width: 100%;" />
 </p>
 <br/>
 The light blue components are part of this project which are:

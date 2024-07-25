@@ -89,7 +89,7 @@ Creation of the new mapping starts by pressing `Add Mapping`. On the next modal 
 1. `PROCESSOR_EXTENSION`: if you want to process the message yourself, by registering a processor extension
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Add_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -149,7 +149,7 @@ For creating a new connector please review the [connector configuration guide](#
 
 In the first wizard step properties for the topic are defined.
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_Definition.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -162,7 +162,7 @@ For outbound mappings the properties are slightly different. Most important are 
 2. `publishTopic`: MQTT topic to publish outbound messages to.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_Outbound.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -170,7 +170,7 @@ For an outbound mapping to be applied two conditions have to be fulfilled:
 1. the Cumulocity MEAO message has to have a fragment that is defined in property `filterOutbound`
 2. for the device a Notification 2.0 subscription has to be created. This is done using the following dialog:
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Outbound_subscription.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -231,13 +231,13 @@ Connected devices send their data using an external device identifier, e.g. IMEI
 
 #### Define templates and substitutions for source and target payload
 
-In the second wizard step, shown on the screenshot below the mapping is further defined:
+In the third wizard step, shown on the screenshot below the mapping is further defined:
 1. Editing the source template directly
 2. Editing the target template directly
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Template.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -247,7 +247,7 @@ In order to define a substitution (a substitution substitutes values in the targ
 3. Delete an existing substitution, by pressing the button with the red minus
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -273,7 +273,7 @@ required since this can overwrite mandatory Cumulocity attributes, e.g. <code>so
         *  ```REMOVE_IF_MISSING```: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
         *  ```REMOVE_IF_NULL```: When the left side of the mapping returns ```null```, then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.d. ```airsensor: undefined```
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Edit_Modal.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -288,7 +288,7 @@ In the sample below, e.g. a warning is shown since the required property ```sour
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_SchemaValidation_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SchemaValidation_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -367,7 +367,7 @@ To send the transformed payload to a test device, press the button ```Send test 
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_SendTestMessage.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -378,7 +378,7 @@ In order to use a previously snooped payload click the button
 
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Snooping_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -388,7 +388,7 @@ To avoid inconsistencies when updating the properties of a mapping, active mappi
 This can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_Topic_ReadOnly.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_ReadOnly.png"  style="width: 70%;" />
 </p>
 <br/>
 
@@ -417,7 +417,7 @@ The import dialog can be seen on the following screenshot:
 When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defining your mapping changes. On the second step you are not be able to change the source format of the inbound message and define substitutions. This is done by the processor extension. Instead you are able to choose a processor extension by selecting the respective message in the dropdown:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Template_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_ProtobufMessage_Annnotated.png"  style="width: 70%;" />
 </p>
 <br/>
 

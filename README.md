@@ -25,7 +25,7 @@ Here are the **core features** summarized:
 
 <br/>
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Substitution.png"  style="width: 80%;" />
+<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png"  style="width: 80%;" />
 </p>
 <br/>
 
