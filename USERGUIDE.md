@@ -1,7 +1,34 @@
 # User Guide
 
-## Permissions
-The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
+- [User Guide](#user-guide)
+  * [Connector configuration to broker](#connector-configuration-to-broker)
+  * [Definition and Activation of mappings](#definition-and-activation-of-mappings)
+    + [Table of mappings](#table-of-mappings)
+    + [Define mappings from source to target format (Cumulocity REST format)](#define-mappings-from-source-to-target-format--cumulocity-rest-format-)
+      - [Expression Language](#expression-language)
+    + [Wizard to define a mapping](#wizard-to-define-a-mapping)
+      - [Connector selection](#connector-selection)
+      - [Define topic properties](#define-topic-properties)
+      - [Subscription Topic](#subscription-topic)
+      - [Mapping Topic](#mapping-topic)
+      - [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
+      - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
+      - [Map Device Identifier](#map-device-identifier)
+      - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
+      - [Different type of substitutions](#different-type-of-substitutions)
+    + [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
+    + [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
+    + [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
+    + [Update existing Mapping](#update-existing-mapping)
+    + [Import & Export Mappings](#import---export-mappings)
+  * [Configuration](#configuration)
+    + [Microservice configuration](#microservice-configuration)
+    + [Processing Extensions](#processing-extensions)
+  * [Monitoring](#monitoring)
+    + [Mapping Tree Inbound](#mapping-tree-inbound)
+
+
+
 
 ## Connector configuration to broker
 
@@ -43,7 +70,7 @@ When you add or change a connection configuration it happens very often that the
 </p>
 <br/>
 
-## Definition and Activation of  mappings
+## Definition and Activation of mappings
 
 ### Table of mappings
 
@@ -410,7 +437,16 @@ The import dialog can be seen on the following screenshot:
 </p>
 <br/>
 
+## Configuration
 
+### Microservice configuration
+
+The configuration of the microservice can be changed using the following UI:
+
+<p align="center">
+<img src="resources/image/Dynamic_Mapper_Configuration_Configuration.png"  style="width: 70%;" />
+</p>
+<br/>
 
 ### Processing Extensions
 
@@ -421,23 +457,23 @@ When you choose the mapping type  ```PROCESSOR_EXTENSION``` the wizard for defin
 </p>
 <br/>
 
-Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice has to be re-subscribed in order to load the extensions. This does not happen dynamically.
+Using the tab ```Processor Extension``` you can upload your own processor extension. After the upload the mircroservice  load the extensions dynamically.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_ProcessorExtensionInbound.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionInbound.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionInbound_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 
 
 
-### Monitoring
+## Monitoring
 
 On the monitoring tab ```Monitoring``` you can see how a specific MQTT mapping performs since the last activation in the microservice.
 
@@ -454,7 +490,7 @@ A chart shows a summary with numbers of all successfully processed messages and 
 </p>
 <br/>
 
-### Mapping Tree
+### Mapping Tree Inbound
 
 On the tab ```Mapping Tree``` you can see how the registered mappings are organised in a tree. This can be very helpful in case of tracing any errors.
 

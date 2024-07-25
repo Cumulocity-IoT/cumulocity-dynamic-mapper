@@ -16,6 +16,9 @@ You need to install two components to your Cumulocity IoT Tenant:
 Both are provided as binaries in [releases](https://github.com/SoftwareAG/cumulocity-dynamic-mapper/releases).
 Download the binaries from the latest release and upload them to your Cumulocity IoT Tenant.
 
+## Permissions
+The solution defines one role:`ROLE_MAPPING_ADMIN` that must be assigned to the user accessing the Dynamic Mapping app.
+
 ### Microservice
 
 In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
@@ -50,7 +53,7 @@ Go to "All Applications" and click on "Add Application". Select "Duplicate exist
 Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Mapper Widget"
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Plugin.png" style="width: 50%;" />
+<img src="resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />
 </p>
 <br/>
 
