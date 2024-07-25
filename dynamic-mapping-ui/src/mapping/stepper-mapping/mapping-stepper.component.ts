@@ -549,7 +549,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         this.substitutionModel,
         this.mapping.direction
       );
-      if (definesDI) {
+      if (definesDI && this.mapping.mapDeviceIdentifier) {
         this.substitutionModel.targetExpression.msgTxt = `${
           API[this.mapping.targetAPI].identifier
         } is resolved using the external Id ${

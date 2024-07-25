@@ -77,22 +77,22 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
     this.disabled$.next(this.duplicateSubstitution);
     // console.log("Repair Options:", this.repairStrategyOptions);
-    //console.log('Existing substitution:', this.existingSubstitution);
+    // console.log('Existing substitution:', this.existingSubstitution);
   }
 
   onDismiss() {
-    //console.log('Dismiss');
+    // console.log('Dismiss');
     this.closeSubject.next(undefined);
   }
 
   onSave() {
-    //console.log('Save');
+    // console.log('Save');
     this.closeSubject.next(this.editedSubstitution);
   }
 
   onOverrideChanged() {
     const result = this.duplicateSubstitution && !this.override;
-    //console.log('Override:', result);
+    // console.log('Override:', result);
     this.disabled$.next(result);
   }
 
