@@ -94,10 +94,11 @@ public class KafkaClient extends AConnectorClient {
                 new ConnectorProperty(false, 5, ConnectorPropertyType.STRING_LARGE_PROPERTY, true, false,
                         removeDateCommentLine(writerConsumer.getBuffer().toString()), null));
 
-        String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
+        String name = "Kafka";
+		String description = "Generic connector to receive and send messages to a external Kafka broker. Inbound mappings allow to extract values from the payload and the  key and map these to the Cumulocity payload. The relevant setting in a mapping is 'supportsMessageContext'.\n In outbound mappings the any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record.";
         connectorType = ConnectorType.KAFKA;
         supportsMessageContext = true;
-        connectorSpecification = new ConnectorSpecification(description, connectorType, configProps, true);
+        connectorSpecification = new ConnectorSpecification(name, description, connectorType, configProps, true);
     }
 
     private static String removeDateCommentLine(String pt) {

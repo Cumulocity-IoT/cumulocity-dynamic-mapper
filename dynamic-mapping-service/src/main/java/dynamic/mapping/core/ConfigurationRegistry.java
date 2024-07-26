@@ -137,7 +137,7 @@ public class ConfigurationRegistry {
                     additionalSubscriptionIdTest, tenant);
             log.info("Tenant {} - Initializing MQTT Connector with ident {}", tenant,
                     connectorConfiguration.getIdent());
-        } else if (ConnectorType.MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
+        } else if (ConnectorType.CUMULOCITY_MQTT_SERVICE.equals(connectorConfiguration.getConnectorType())) {
             connectorClient = new MQTTServiceClient(this, connectorConfiguration,
                     null,
                     additionalSubscriptionIdTest, tenant);

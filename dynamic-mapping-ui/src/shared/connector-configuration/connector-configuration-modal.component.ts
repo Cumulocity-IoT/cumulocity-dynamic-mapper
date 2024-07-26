@@ -18,7 +18,7 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
     (onClose)="onSave()"
     (onDismiss)="onDismiss()"
     [labels]="labels"
-	[disabled]="readOnly"
+    [disabled]="readOnly"
     [headerClasses]="'modal-header dialog-header'"
   >
     <div class="card-block">
@@ -80,7 +80,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
           label: 'Connector type',
           options: this.specifications.map((sp) => {
             return {
-              label: sp.connectorType,
+              label: sp.name,
               value: sp.connectorType
             };
           }),

@@ -188,7 +188,7 @@ export class ConnectorConfigurationComponent
         filterable: false,
         sortOrder: 'asc',
         visible: true,
-        gridTrackSize: '15%'
+        gridTrackSize: '20%'
       },
       {
         header: 'Status',
