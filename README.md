@@ -7,7 +7,7 @@ It can connect to multiple message brokers likes **MQTT**, **MQTT Service** , **
 
 Per default the followings connectors are supported
 * **MQTT** - any MQTT Broker
-* **MQTT Service** - MQTT Broker 
+* **Cumulocity IoT MQTT Service** - Cumulocity IoT built-in MQTT Broker 
 * **Kafka** - Kafka Broker
 
 Using the Cumulocity Dynamic Mapper you are able to connect to almost any message broker and map any payload on any topic dynamically to
