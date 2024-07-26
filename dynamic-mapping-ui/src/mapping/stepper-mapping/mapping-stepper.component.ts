@@ -143,6 +143,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   snoopedTemplateCounter: number = 0;
   step: any;
+  powermode: boolean = false;
   templatesInitialized: boolean = false;
 
   @ViewChild('editorSource', { static: false })
@@ -355,7 +356,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 `Result Type [${this.substitutionModel.sourceExpression.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.sourceExpression.result}`;
-              }
+              },
+
+            },
+            hideExpression: (model) => {
+              console.log('sHello',model);
+              return this.powermode;
             }
           },
           {
@@ -376,7 +382,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               'templateOptions.value': () => {
                 return `${this.substitutionModel.targetExpression.result}`;
               }
-            }
+            },
+            hideExpression: () => this.powermode
           }
         ]
       }
@@ -824,6 +831,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
     // console.log('Deleted substitution', this.mapping.substitutions.length);
+  }
+  togglePowermode() {
+    this.powermode = !this.powermode;
   }
 
   onUpdateSubstitution() {

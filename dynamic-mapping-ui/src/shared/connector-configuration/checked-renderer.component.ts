@@ -44,6 +44,6 @@ export class CheckedRendererComponent {
     public context: CellRendererContext,
     public alertService: AlertService
   ) {
-     console.log('Checked', context, context.value);
+     // console.log('Checked', context, context.value);
   }
 }

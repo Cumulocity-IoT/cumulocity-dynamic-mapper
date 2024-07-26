@@ -36,19 +36,19 @@ export default {
     //   ? []
     //   : [
     //       {
-    //         name: 'Dynamic Mapping Widget',
+    //         name: 'Dynamic Data Mapper',
     //         module: 'DynamicMappingModule',
     //         path: './src/dynamic-mapping.module',
-    //         description: 'Adds a Dynamic Mapping Plugin'
+    //         description: 'Adds a Dynamic Data Mapper Plugin'
     //       }
     //     ]
     // isPackage: true,
     exports: [
       {
-        name: 'Dynamic Mapping Widget',
+        name: 'Dynamic Mapping Mapper Plugin',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Plugin'
+        description: 'Adds a Dynamic Mapping Mapper Plugin'
       }
     ]
     // comment end

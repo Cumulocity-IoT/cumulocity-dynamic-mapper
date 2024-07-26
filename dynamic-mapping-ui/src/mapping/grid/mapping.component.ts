@@ -73,7 +73,10 @@ import { DeploymentMapEntry } from '../../shared/model/shared.model';
 import { SharedService } from '../../shared/shared.service';
 import { MappingDeploymentRendererComponent } from '../renderer/mappingDeployment.renderer.component';
 import { SnoopedTemplateRendererComponent } from '../renderer/snoopedTemplate.renderer.component';
-import { C8YNotificationSubscription, PayloadWrapper } from '../shared/mapping.model';
+import {
+  C8YNotificationSubscription,
+  PayloadWrapper
+} from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper-model';
 
 @Component({
@@ -174,12 +177,19 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
-        callback: this.updateMapping.bind(this)
+        callback: this.updateMapping.bind(this),
+        showIf: (item) => !item['mapping']['active']
       },
       {
-        text: 'Copy',
-        type: 'COPY',
-        icon: 'copy',
+        type: 'VIEW',
+        icon: 'eye',
+        callback: this.updateMapping.bind(this),
+        showIf: (item) => item['mapping']['active']
+      },
+      {
+        text: 'Duplicate',
+        type: 'DUPLICATE',
+        icon: 'duplicate',
         callback: this.copyMapping.bind(this)
       },
       {
@@ -188,25 +198,55 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) => !item['mapping']['active']
       },
       {
-        type: 'ACTIVATE',
-        text: 'Toggle activation',
+        type: 'ACTIVATE_MAPPING',
+        text: 'Activate',
         icon: 'toggle-on',
-        callback: this.activateMapping.bind(this)
+        callback: this.activateMapping.bind(this),
+        showIf: (item) => !item['mapping']['active']
       },
       {
-        type: 'DEBUG',
-        text: 'Toggle debugging',
+        type: 'DEACTIVATE_MAPPING',
+        text: 'Deactivate',
+        icon: 'toggle-off',
+        callback: this.activateMapping.bind(this),
+        showIf: (item) => item['mapping']['active']
+      },
+      {
+        type: 'ENABLE_DEBUG',
+        text: 'Enable debugging',
         icon: 'bug1',
-        callback: this.toggleDebugMapping.bind(this)
+        callback: this.toggleDebugMapping.bind(this),
+        showIf: (item) => !item['mapping']['debug']
       },
       {
-        type: 'SNOOPING',
-        text: 'Toggle snooping',
+        type: 'ENABLE_DEBUG',
+        text: 'Disable debugging',
+        icon: 'bug1',
+        callback: this.toggleDebugMapping.bind(this),
+        showIf: (item) => item['mapping']['debug']
+      },
+      {
+        type: 'ENABLE_SNOOPING',
+        text: 'Enable snooping',
         icon: 'mic',
         callback: this.toggleSnoopStatusMapping.bind(this),
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
-          item['snoopSupported']
+          item['snoopSupported'] &&
+          item['mapping']['direction']
+      },
+      {
+        type: 'DISABLE_SNOOPING',
+        text: 'Disable snooping',
+        icon: 'mic',
+        callback: this.toggleSnoopStatusMapping.bind(this),
+        showIf: (item) =>
+          item['mapping']['direction'] === Direction.INBOUND &&
+          item['snoopSupported'] &&
+          !(
+            item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
+          )
       },
       {
         type: 'RESET_SNOOP',
@@ -215,7 +255,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.resetSnoop.bind(this),
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
-          item['snoopSupported']
+          item['snoopSupported'] &&
+          (item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED)
       },
       {
         type: 'EXPORT',
@@ -316,7 +358,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '7%'
       },
       {
-        header: 'Effective connectors',
+        header: 'For connectors',
         name: 'connectors',
         path: 'connectors',
         filterable: true,
@@ -330,7 +372,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         filterable: false,
         sortable: false,
         cellRendererComponent: StatusRendererComponent,
-        cellCSSClassName: 'text-align-center',
         gridTrackSize: '10%'
       },
       this.stepperConfiguration.direction === Direction.INBOUND
@@ -785,7 +826,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     };
     // console.log('Changed deviceList:', this.subscription.devices);
     try {
-		this.subscription = await this.mappingService.updateSubscriptions(this.subscription);
+      this.subscription = await this.mappingService.updateSubscriptions(
+        this.subscription
+      );
       this.alertService.success(gettext('Subscriptions updated successfully'));
     } catch (error) {
       this.alertService.danger(
@@ -920,8 +963,8 @@ export class MappingComponent implements OnInit, OnDestroy {
     direction: Direction,
     editorMode: EditorMode
   ) {
-	console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
-	console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
+    // console.log('DEBUG I', MAPPING_TYPE_DESCRIPTION);
+    // console.log('DEBUG II', MAPPING_TYPE_DESCRIPTION[mappingType]);
     this.stepperConfiguration =
       MAPPING_TYPE_DESCRIPTION[mappingType].stepperConfiguration;
     this.stepperConfiguration.direction = direction;

@@ -39,7 +39,7 @@
       <span [c8yIcon]="'hand-peace-o'"></span>
     </ng-template>
 
-    <cdk-step label="Add connector">
+    <cdk-step label="Add and select connector">
       <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
         <div class="row">
           <div class="col-lg-10 col-lg-offset-1">
@@ -487,10 +487,10 @@
                     [model]="substitutionModel"
                   ></formly-form>
                 </div>
-                <div class="legend form-block col-lg-10 col-lg-offset-1 p-l-0 p-r-0">
+                <!-- <div class="legend form-block col-lg-10 col-lg-offset-1 p-l-0 p-r-0">
                   Substitutions
-                </div>
-                <div class="row">
+                </div> -->
+                <div class="row p-t-8">
                   <div class="col-lg-2 col-lg-offset-1">
                     <button
                       type="button"
@@ -533,6 +533,19 @@
                       ><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>
+				  <div class="col-lg-2 p-l-0">
+                    <button
+                      type="submit"
+                      name="togglePowermode"
+                      class="btn btn-default btn-sm"
+                      (click)="togglePowermode()"
+                      translate
+                      title="Powermode"
+                    >
+                      <i c8yIcon="critical-thinking"></i
+                      ><span id="updateButton">&nbsp;Powermode</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div [formGroup]="templateForm">
@@ -550,7 +563,6 @@
                         [direction]="mapping.direction"
                         (selectSub)="onSelectSubstitution($event)"
                         (deleteSub)="onDeleteSubstitution($event)"
-                        (editSub)="onUpdateSubstitutionFromGrid($event)"
                       >
                       </d11r-mapping-substitution-grid>
                     </div>

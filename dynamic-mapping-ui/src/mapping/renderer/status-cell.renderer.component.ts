@@ -25,22 +25,19 @@ import { SnoopStatus } from '../../shared';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-    <div class="d-inline-flex">
-      <div *ngIf="context.value.debug">
-        <span class="text-10 label label-primary">{{ 'debug' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'STARTED'">
-        <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'STOPPED'">
-        <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
-      </div>
-      <div *ngIf="context.value.snoopStatus === 'ENABLED'">
-        <span class="text-10 label label-primary">{{ 'snoop: enabled' }}</span>
-      </div>
+    <div *ngIf="context.value.debug">
+      <span class="text-10 label label-primary">{{ 'debug' }}</span>
     </div>
-  `,
-  styles: ['.animated-slow { animation-duration: 10s;}']
+    <div *ngIf="context.value.snoopStatus === 'STARTED'">
+      <span class="text-10 label label-primary">{{ 'snoop: started' }}</span>
+    </div>
+    <div *ngIf="context.value.snoopStatus === 'STOPPED'">
+      <span class="text-10 label label-primary">{{ 'snoop: stopped' }}</span>
+    </div>
+    <div *ngIf="context.value.snoopStatus === 'ENABLED'">
+      <span class="text-10 label label-primary">{{ 'snoop: enabled' }}</span>
+    </div>
+  `
 })
 export class StatusRendererComponent {
   constructor(public context: CellRendererContext) {

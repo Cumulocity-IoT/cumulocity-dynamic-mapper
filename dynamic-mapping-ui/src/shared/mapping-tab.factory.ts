@@ -39,7 +39,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
         priority: 930,
-        label: 'Mapping inbound',
+        label: 'Inbound mapping',
         icon: 'swipe-right',
         orientation: 'horizontal'
       } as Tab);
@@ -48,7 +48,7 @@ export class MappingTabFactory implements TabFactory {
         tabs.push({
           path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
           priority: 920,
-          label: 'Mapping outbound',
+          label: 'Outbound mapping',
           icon: 'swipe-left',
           orientation: 'horizontal'
         } as Tab);
@@ -58,7 +58,7 @@ export class MappingTabFactory implements TabFactory {
         path: `sag-ps-pkg-dynamic-mapping/${NODE1}/configuration`,
         priority: 910,
         label: 'Connector',
-        icon: 'cog',
+        icon: 'connected',
         orientation: 'horizontal'
       } as Tab);
       // }
@@ -83,7 +83,7 @@ export class MappingTabFactory implements TabFactory {
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
         priority: 500,
-        label: 'Configuration',
+        label: 'Service configuration',
         icon: 'cog',
         orientation: 'horizontal'
       } as Tab);

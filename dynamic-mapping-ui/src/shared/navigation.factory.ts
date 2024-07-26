@@ -51,31 +51,31 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
 
   get() {
     const parentMapping = new NavigatorNode({
-      label: gettext('Dynamic Mapping'),
-      icon: 'card-exchange',
+      label: gettext('Dynamic Data Mapper'),
+      icon: 'compare',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       priority: 99,
       preventDuplicates: true
     });
     const mapping = new NavigatorNode({
-      parent: gettext('Dynamic Mapping'),
-      label: gettext('Mapping'),
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Mappings'),
       icon: 'file-type-document',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       priority: 500,
       preventDuplicates: true
     });
     const mappingMonitoring = new NavigatorNode({
-      parent: gettext('Dynamic Mapping'),
-      label: gettext('Monitoring'),
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Service monitoring'),
       icon: 'pie-chart',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
       priority: 400,
       preventDuplicates: true
     });
     const mappingExtension = new NavigatorNode({
-      parent: gettext('Dynamic Mapping'),
-      label: gettext('Configuration'),
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Service configuration'),
       icon: 'cog',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
       priority: 300,
