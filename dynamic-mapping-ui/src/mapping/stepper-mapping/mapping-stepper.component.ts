@@ -316,9 +316,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
-                model.sourceExpression.msgTxt,
+                model.sourceExpression?.msgTxt,
               'templateOptions.textClass': (model) =>
-                model.sourceExpression.severity,
+                model.sourceExpression?.severity,
               'templateOptions.enabled': () => true
             }
           },
@@ -328,9 +328,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
-                model.targetExpression.msgTxt,
+                model.targetExpression?.msgTxt,
               'templateOptions.textClass': (model) =>
-                model.targetExpression.severity,
+                model.targetExpression?.severity,
               'templateOptions.enabled': () => true
             }
           }
@@ -353,15 +353,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.sourceExpression.resultType}]`,
+                `Result Type [${this.substitutionModel.sourceExpression?.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.sourceExpression.result}`;
               },
 
-            },
-            hideExpression: (model) => {
-              console.log('sHello',model);
-              return this.powermode;
             }
           },
           {
@@ -378,12 +374,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.targetExpression.resultType}]`,
+                `Result Type [${this.substitutionModel.targetExpression?.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.targetExpression.result}`;
               }
-            },
-            hideExpression: () => this.powermode
+            }
           }
         ]
       }
@@ -446,7 +441,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathSourceChanged(path: string) {
-    this.substitutionFormly.get('pathSource').setValue(path);
+    if (this.powermode) this.substitutionFormly.get('pathSource').setValue(path);
+	this.substitutionModel.pathSource = path;
   }
 
   onEditorSourceInitialized() {
@@ -501,9 +497,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   isSubstitutionValid() {
     const r1 =
-      this.substitutionModel.sourceExpression.severity != 'text-danger';
+      this.substitutionModel.sourceExpression?.severity != 'text-danger';
     const r2 =
-      this.substitutionModel.targetExpression.severity != 'text-danger';
+      this.substitutionModel.targetExpression?.severity != 'text-danger';
     const r3 = this.substitutionModel.pathSource != '';
     const r4 = this.substitutionModel.pathTarget != '';
     const result = r1 && r2 && r3 && r4;
@@ -511,7 +507,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathTargetChanged(path: string) {
-    this.substitutionFormly.get('pathTarget').setValue(path);
+	if (this.powermode) this.substitutionFormly.get('pathTarget').setValue(path);
+	this.substitutionModel.pathTarget = path;
   }
 
   onTemplateSourceChanged(content: Content) {

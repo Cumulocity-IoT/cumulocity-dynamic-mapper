@@ -480,13 +480,6 @@
                 </div>
               </div>
               <div [formGroup]="substitutionFormly">
-                <div class="row">
-                  <formly-form
-                    [form]="substitutionFormly"
-                    [fields]="substitutionFormlyFields"
-                    [model]="substitutionModel"
-                  ></formly-form>
-                </div>
                 <!-- <div class="legend form-block col-lg-10 col-lg-offset-1 p-l-0 p-r-0">
                   Substitutions
                 </div> -->
@@ -533,8 +526,8 @@
                       ><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>
-				  <div class="col-lg-2 p-l-0">
-                    <button
+                  <div class="col-lg-2 p-l-0">
+                    <!-- <button
                       type="submit"
                       name="togglePowermode"
                       class="btn btn-default btn-sm"
@@ -544,9 +537,27 @@
                     >
                       <i c8yIcon="critical-thinking"></i
                       ><span id="updateButton">&nbsp;Powermode</span>
-                    </button>
+                    </button> -->
+                    <label class="c8y-switch">
+                      <input
+                        type="checkbox"
+                        [value]="powermode"
+                        (change)="togglePowermode()"
+                      />
+                      <span></span>
+                      <span>
+                        {{ 'Powermode' | translate }}
+                      </span>
+                    </label>
                   </div>
                 </div>
+				<div class="row" *ngIf="powermode">
+					<formly-form
+					  [form]="substitutionFormly"
+					  [fields]="substitutionFormlyFields"
+					  [model]="substitutionModel"
+					></formly-form>
+				  </div>
               </div>
               <div [formGroup]="templateForm">
                 <div class="row">
