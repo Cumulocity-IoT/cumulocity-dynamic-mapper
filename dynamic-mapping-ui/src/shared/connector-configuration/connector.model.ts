@@ -48,6 +48,7 @@ export interface ConnectorConfiguration {
 }
 
 export interface ConnectorSpecification {
+  name: string;
   description: string;
   connectorType: string;
   supportsWildcardInTopic: boolean;

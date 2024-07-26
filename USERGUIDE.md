@@ -59,7 +59,7 @@ The configuration properties are dynamically adapted to the configuration parame
 The settings for the Kafka connector can be seen on the following screenshot:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Connector_Edit.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Connector_Kafka.png"  style="width: 70%;" />
 </p>
 <br/>
 
