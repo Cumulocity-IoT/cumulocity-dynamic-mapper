@@ -20,11 +20,12 @@
  * @authors Christof Strack
  */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction } from '../shared';
+import { Direction, JsonEditor3Component } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
+
 
 @Component({
   selector: 'd11r-landing',
@@ -36,14 +37,18 @@ export class LandingComponent implements OnInit {
     private connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
+  @ViewChild('editorTest', { static: false }) editorTest: JsonEditor3Component;
+
   ROUTE_INBOUND: string = '#/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
   ROUTE_OUTBOUND: string =
     '#/sag-ps-pkg-dynamic-mapping/node1/mappings/outbound';
-	ROUTE_CONNECTORS: string =
-    '#/sag-ps-pkg-dynamic-mapping/node1/configuration';
+  ROUTE_CONNECTORS: string = '#/sag-ps-pkg-dynamic-mapping/node1/configuration';
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
+
+  testPayload: any = { montag: 'montag', dienstag: 'dienstag' };
+  editorOptionsTest: any = {};
 
   ngOnInit(): void {
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
@@ -61,5 +66,9 @@ export class LandingComponent implements OnInit {
     ).subscribe((count) =>
       this.countConnector$.next(!count ? 'no' : count.length)
     );
+  }
+
+  async setPath() {
+    await this.editorTest?.setSelectionToPath('montag');
   }
 }

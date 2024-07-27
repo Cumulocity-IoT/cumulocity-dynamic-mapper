@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+ * and/or its subsidiaries and/or its affiliates and/or their licensors.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
+svg {
+  width: unset !important;
+  height: unset !important;
+}
+
+body .jsoneditor2 {
+  --jse-theme-color: var(--c8y-root-component-background-default);
+  --jse-menu-color: var(--c8y-root-component-color-default);
+  /*--jse-theme-color-highlight: var(
+    --brand-complementary,
+    var(--c8y-brand-complementary)
+  ) !important; */
+  /* --jse-navigation-bar-background: var(--c8y-root-component-background-default) !important;
+  --jse-navigation-bar-background-highlight: var(--c8y-brand-primary) !important;
+  --jse-navigation-bar-dropdown-color: var(--c8y-root-component-color-default) !important; */
+  --jse-font-size: var(--c8y-font-size-small);
+  --jse-font-size-mono: var(--c8y-font-size-small);
+}
+
+.jse-menu {
+  border-bottom: 1px solid var(--c8y-root-component-separator-color);
+}
+
+.jse-main-small {
+  height: 300px;
+  overflow: auto;
+}
+
+.jse-main-tiny {
+  height: 250px;
+  overflow: auto;
+}
+
+.jse-main-large {
+  height: 600px;
+  overflow: auto;
+}
+/* remove the 'transform' option from the context menu */
+/* div.jse-absolute-popup div:nth-child(5) > div:nth-child(1) > button:nth-child(4) {
+  display:none;
+} */
