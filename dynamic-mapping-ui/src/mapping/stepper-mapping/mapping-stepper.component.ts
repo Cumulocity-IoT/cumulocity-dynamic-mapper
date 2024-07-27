@@ -112,6 +112,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templateModel: any = {};
   substitutionModel: any = {};
   templateSource: any;
+  pathSource$: Subject<string> = new BehaviorSubject<string>('');
+  pathTarget$: Subject<string> = new BehaviorSubject<string>('');
   templateTarget: any;
 
   testingModel: {
@@ -355,7 +357,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               'templateOptions.label': () =>
                 `Result Type [${this.substitutionModel.sourceExpression?.resultType}]`,
               'templateOptions.value': () => {
-                return `${this.substitutionModel.sourceExpression.result}`;
+                return `${this.substitutionModel.sourceExpression?.result}`;
               },
 
             }
@@ -376,7 +378,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
               'templateOptions.label': () =>
                 `Result Type [${this.substitutionModel.targetExpression?.resultType}]`,
               'templateOptions.value': () => {
-                return `${this.substitutionModel.targetExpression.result}`;
+                return `${this.substitutionModel.targetExpression?.result}`;
               }
             }
           }
@@ -443,6 +445,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   onSelectedPathSourceChanged(path: string) {
     if (this.powermode) this.substitutionFormly.get('pathSource').setValue(path);
 	this.substitutionModel.pathSource = path;
+	this.pathSource$.next(path);
   }
 
   onEditorSourceInitialized() {

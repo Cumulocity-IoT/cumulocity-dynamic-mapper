@@ -43,6 +43,7 @@ import {
   JSONContent,
   isMultiSelection,
   createMultiSelection,
+  createKeySelection,
   TextContent,
   isValueSelection,
   ContextMenuItem
@@ -119,7 +120,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.content = updatedContent;
           this.contentChanged.emit(updatedContent);
         },
-        onSelect: this.onSelect.bind(this),
+        // onSelect: this.onSelect.bind(this),
         onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
           // console.log("MenuItems:", items);
           // remove buttons for table-mode, transform, sort
@@ -210,7 +211,8 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     // console.log('Set selection to path:', pathString, path);
-    const selection: any = createMultiSelection(path, path);
+    // const selection: any = createMultiSelection(path, path);
+    const selection: any = createKeySelection(path, false);
     // marker to ignore emitting change events when the path was set programmatically
     selection.triggeredSelection = true;
 

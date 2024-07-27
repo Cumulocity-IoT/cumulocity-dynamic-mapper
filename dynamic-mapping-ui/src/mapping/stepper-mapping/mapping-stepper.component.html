@@ -416,18 +416,22 @@
                           mapping type</small
                         >
                       </div>
-                      <c8y-messages class="text-left">
-                        <c8y-message
-                          *ngIf="
-                            substitutionModel.pathSource === '' &&
-                            stepperConfiguration.showEditorSource
-                          "
-                          translate
-                          ><span class="text-warning"
-                            >Select source node to define substitution!</span
-                          >
-                        </c8y-message>
-                      </c8y-messages>
+                      <span
+                        class="text-warning text-12 p-l-8"
+                        *ngIf="substitutionModel.pathSource === '' &&stepperConfiguration.showEditorSource"
+                        >Select source node to define substitution!</span
+                      >
+                      <span
+                        class="text-info text-12 p-l-8"
+                        *ngIf="
+                          substitutionModel.pathSource !== '' &&
+                          stepperConfiguration.showEditorSource
+                        "
+                        >{{
+                          'Selected source node: ' +
+                            substitutionModel.pathSource
+                        }}</span
+                      >
                     </div>
                   </div>
                   <div class="col-lg-5 column-left-border" #rightTemplateStep3>
@@ -466,15 +470,22 @@
                         id="editorTarget"
                       >
                       </d11r-mapping-json-editor2>
-                      <c8y-messages class="text-left">
-                        <c8y-message
-                          *ngIf="substitutionModel.pathTarget === ''"
-                          translate
-                          ><span class="text-warning"
-                            >Select target node to define substitution!</span
-                          >
-                        </c8y-message>
-                      </c8y-messages>
+                      <span
+                        class="text-warning text-12 p-l-8"
+                        *ngIf="substitutionModel.pathTarget === '' &&stepperConfiguration.showEditorSource"
+                        >Select target node to define substitution!</span
+                      >
+                      <span
+                        class="text-info text-12 p-l-8"
+                        *ngIf="
+                          substitutionModel.pathTarget !== '' &&
+                          stepperConfiguration.showEditorSource
+                        "
+                        >{{
+                          'Selected target node: ' +
+                            substitutionModel.pathTarget
+                        }}</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -551,13 +562,13 @@
                     </label>
                   </div>
                 </div>
-				<div class="row" *ngIf="powermode">
-					<formly-form
-					  [form]="substitutionFormly"
-					  [fields]="substitutionFormlyFields"
-					  [model]="substitutionModel"
-					></formly-form>
-				  </div>
+                <div class="row" *ngIf="powermode">
+                  <formly-form
+                    [form]="substitutionFormly"
+                    [fields]="substitutionFormlyFields"
+                    [model]="substitutionModel"
+                  ></formly-form>
+                </div>
               </div>
               <div [formGroup]="templateForm">
                 <div class="row">
