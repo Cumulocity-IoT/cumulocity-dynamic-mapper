@@ -12,7 +12,7 @@ export default {
     description,
     license,
     version,
-    name: 'dynamic-mapping',
+    name: 'dynamic-mapper',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
       url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
@@ -64,8 +64,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Add.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Template.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Template.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
       },
       {
         from: '../resources/image/DM_App-Icon_03.png',

@@ -222,7 +222,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroup: [
           {
             className:
-              'col-lg-5 col-lg-offset-1 text-monospace column-right-border',
+              'col-lg-5 col-lg-offset-1 text-monospace',
             key: 'pathSource',
             type: 'input-custom',
             wrappers: ['custom-form-field'],
@@ -270,7 +270,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             }
           },
           {
-            className: 'col-lg-5 text-monospace column-left-border',
+            className: 'col-lg-5 text-monospace',
             key: 'pathTarget',
             type: 'input-custom',
             wrappers: ['custom-form-wrapper'],
@@ -314,7 +314,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroup: [
           {
             className:
-              'col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24',
+              'col-lg-5 reduced-top col-lg-offset-1 not-p-b-24',
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
@@ -326,7 +326,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           },
           {
             // message field target
-            className: 'col-lg-5 reduced-top column-left-border not-p-b-24',
+            className: 'col-lg-5 reduced-top not-p-b-24',
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
@@ -343,7 +343,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroup: [
           {
             className:
-              'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
+              'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
             key: 'sourceExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],
@@ -364,7 +364,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
           },
           {
             className:
-              'col-lg-5 text-monospace font-smaller column-left-border',
+              'col-lg-5 text-monospace font-smaller',
             key: 'targetExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],

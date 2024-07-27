@@ -200,7 +200,6 @@
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
                         #editorSourceStep2
-                        id="editorSource"
                       ></d11r-mapping-json-editor2>
                       <div *ngIf="stepperConfiguration.showProcessorExtensions">
                         <div class="form-group">
@@ -291,7 +290,6 @@
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
                         #editorTargetStep3
-                        id="editorTarget"
                       >
                       </d11r-mapping-json-editor2>
                     </div>
@@ -338,7 +336,6 @@
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
                         #editorSource
-                        id="editorSource"
                       ></d11r-mapping-json-editor2>
                       <div
                         *ngIf="
@@ -470,7 +467,6 @@
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
                         #editorTarget
-                        id="editorTarget"
                       >
                       </d11r-mapping-json-editor2>
                       <span
@@ -501,7 +497,7 @@
                   Substitutions
                 </div> -->
                 <div class="row p-t-8">
-                  <div class="col-lg-2 col-lg-offset-1">
+                  <div class="col-lg-3 col-lg-offset-1 p-l-48">
                     <button
                       type="button"
                       name="addSubstitution"
@@ -521,7 +517,7 @@
                       <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
                     </button>
                   </div>
-                  <div class="col-lg-2 p-l-0">
+                  <div class="col-lg-3 col-lg-offset-1">
                     <button
                       type="button"
                       name="updateSubstitution"
@@ -543,7 +539,7 @@
                       ><span id="updateButton">&nbsp;Update substitution</span>
                     </button>
                   </div>
-                  <div class="col-lg-2 p-l-0">
+                  <div class="col-lg-3 col-lg-offset-1">
                     <!-- <button
                       type="submit"
                       name="togglePowermode"
