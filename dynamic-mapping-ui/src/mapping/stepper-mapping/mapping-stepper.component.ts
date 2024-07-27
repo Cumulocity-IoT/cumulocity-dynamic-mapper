@@ -227,7 +227,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: 'input-custom',
             wrappers: ['custom-form-field'],
             templateOptions: {
-              label: 'Evaluate Expression on Source',
+              label: 'Source Expression',
               class: 'input-sm animate-background',
               customWrapperClass: 'm-b-24',
               disabled:
@@ -275,7 +275,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             type: 'input-custom',
             wrappers: ['custom-form-wrapper'],
             templateOptions: {
-              label: 'Evaluate Expression on Target',
+              label: 'Target Expression',
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
@@ -355,7 +355,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.sourceExpression?.resultType}]`,
+                `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.sourceExpression?.result}`;
               },
@@ -376,7 +376,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.targetExpression?.resultType}]`,
+                `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.targetExpression?.result}`;
               }
