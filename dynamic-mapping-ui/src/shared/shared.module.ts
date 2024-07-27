@@ -34,13 +34,11 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { StatusEnabledRendererComponent } from './connector-configuration/status-enabled-renderer.component';
 import { ConnectorStatusRendererComponent } from './connector-configuration/connector-status.renderer.component';
 import { CheckedRendererComponent } from './connector-configuration/checked-renderer.component';
-import { JsonEditor3Component } from './editor3/jsoneditor3.component';
 
 @NgModule({
   declarations: [
 	CheckedRendererComponent,
     JsonEditor2Component,
-    JsonEditor3Component,
     ConfirmationModalComponent,
     CamelCasePipe,
     CapitalizeCasePipe,

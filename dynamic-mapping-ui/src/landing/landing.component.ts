@@ -22,7 +22,7 @@
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, JsonEditor3Component } from '../shared';
+import { Direction, JsonEditor2Component } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 
@@ -37,7 +37,7 @@ export class LandingComponent implements OnInit {
     private connectorConfigurationService: ConnectorConfigurationService
   ) {}
 
-  @ViewChild('editorTest', { static: false }) editorTest: JsonEditor3Component;
+  @ViewChild('editorTest', { static: false }) editorTest: JsonEditor2Component;
 
   ROUTE_INBOUND: string = '#/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
   ROUTE_OUTBOUND: string =

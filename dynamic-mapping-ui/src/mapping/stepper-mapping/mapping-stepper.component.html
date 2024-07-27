@@ -199,7 +199,7 @@
                         (pathChanged)="onSelectedPathSourceChanged($event)"
                         (initialized)="onEditorSourceInitialized()"
                         [data]="templateSource"
-                        #editorSource
+                        #editorSourceStep2
                         id="editorSource"
                       ></d11r-mapping-json-editor2>
                       <div *ngIf="stepperConfiguration.showProcessorExtensions">
@@ -290,7 +290,7 @@
                         (pathChanged)="onSelectedPathTargetChanged($event)"
                         (initialized)="onEditorTargetInitialized()"
                         [data]="templateTarget"
-                        #editorTarget
+                        #editorTargetStep3
                         id="editorTarget"
                       >
                       </d11r-mapping-json-editor2>

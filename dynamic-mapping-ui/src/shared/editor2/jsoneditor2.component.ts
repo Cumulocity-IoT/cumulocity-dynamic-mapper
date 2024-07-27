@@ -211,10 +211,10 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
   async setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     // console.log('Set selection to path:', pathString, path);
-    // const selection: any = createMultiSelection(path, path);
-    const selection: any = createKeySelection(path, false);
+    const selection: any = createMultiSelection(path, path);
+    // const selection: any = createKeySelection(path, false);
     // marker to ignore emitting change events when the path was set programmatically
-    // selection.triggeredSelection = false;
+    selection.triggeredSelection = false;
 
     try {
       await this.editor.select(selection);
