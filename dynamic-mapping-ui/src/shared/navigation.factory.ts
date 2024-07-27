@@ -53,7 +53,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     const parentMapping = new NavigatorNode({
       label: gettext('Dynamic Data Mapper'),
       icon: 'compare',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+      path: `/sag-ps-pkg-dynamic-mapping/landing`,
       priority: 99,
       preventDuplicates: true
     });

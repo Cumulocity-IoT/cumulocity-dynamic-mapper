@@ -25,6 +25,7 @@ import {
   CoreModule,
   DynamicFormsModule,
   hookNavigator,
+  hookRoute,
   hookTab
 } from '@c8y/ngx-components';
 import { BsModalService, ModalModule } from 'ngx-bootstrap/modal';
@@ -55,6 +56,7 @@ import { FormlyTextField } from './mapping/shared/formly/text.type.component';
 import { FieldTextareaCustom } from './mapping/shared/formly/textarea.type.component';
 import { WrapperCustomFormField } from './mapping/shared/formly/custom-form-field.wrapper.component';
 import { BrokerConnectorModule } from './connector';
+import { LandingComponent } from './landing/landing.component';
 
 @NgModule({
   imports: [
@@ -73,7 +75,7 @@ import { BrokerConnectorModule } from './connector';
     CommonModule,
     DynamicFormsModule,
     FormlyPresetModule,
-    SharedModule
+    SharedModule,
   ],
   exports: [],
   declarations: [],
@@ -82,6 +84,10 @@ import { BrokerConnectorModule } from './connector';
     BsModalService,
     hookNavigator(MappingNavigationFactory),
     hookTab(MappingTabFactory),
+    hookRoute({
+      path: 'sag-ps-pkg-dynamic-mapping/landing',
+      component: LandingComponent
+    }),
     {
       provide: FORMLY_CONFIG,
       multi: true,
@@ -106,7 +112,7 @@ import { BrokerConnectorModule } from './connector';
         ],
         wrappers: [
           { name: 'form-field-horizontal', component: WrapperFormlyHorizontal },
-          { name: 'custom-form-field', component: WrapperCustomFormField },
+          { name: 'custom-form-field', component: WrapperCustomFormField }
         ]
       }
     }
