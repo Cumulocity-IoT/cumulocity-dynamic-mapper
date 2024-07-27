@@ -145,7 +145,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   snoopedTemplateCounter: number = 0;
   step: any;
-  powermode: boolean = false;
+  expertMode: boolean = false;
   templatesInitialized: boolean = false;
 
   @ViewChild('editorSource', { static: false })
@@ -443,7 +443,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathSourceChanged(path: string) {
-    if (this.powermode) this.substitutionFormly.get('pathSource').setValue(path);
+    if (this.expertMode) this.substitutionFormly.get('pathSource').setValue(path);
 	this.substitutionModel.pathSource = path;
 	this.pathSource$.next(path);
   }
@@ -510,7 +510,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathTargetChanged(path: string) {
-	if (this.powermode) this.substitutionFormly.get('pathTarget').setValue(path);
+	if (this.expertMode) this.substitutionFormly.get('pathTarget').setValue(path);
 	this.substitutionModel.pathTarget = path;
   }
 
@@ -833,7 +833,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     // console.log('Deleted substitution', this.mapping.substitutions.length);
   }
   togglePowermode() {
-    this.powermode = !this.powermode;
+    this.expertMode = !this.expertMode;
   }
 
   onUpdateSubstitution() {
@@ -903,13 +903,13 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     });
   }
 
-  onSelectSubstitution(selected: number) {
+  async onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      this.editorSource?.setSelectionToPath(this.substitutionModel.pathSource);
-      this.editorTarget.setSelectionToPath(this.substitutionModel.pathTarget);
+      await this.editorSource?.setSelectionToPath(this.substitutionModel.pathSource);
+      await this.editorTarget.setSelectionToPath(this.substitutionModel.pathTarget);
     }
   }
 

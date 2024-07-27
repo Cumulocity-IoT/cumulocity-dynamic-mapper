@@ -120,7 +120,7 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
           this.content = updatedContent;
           this.contentChanged.emit(updatedContent);
         },
-        // onSelect: this.onSelect.bind(this),
+        onSelect: this.onSelect.bind(this),
         onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
           // console.log("MenuItems:", items);
           // remove buttons for table-mode, transform, sort
@@ -208,16 +208,16 @@ export class JsonEditor2Component implements OnInit, OnDestroy {
     this.editor?.updateProps({ validator: validator });
   }
 
-  setSelectionToPath(pathString: string) {
+  async setSelectionToPath(pathString: string) {
     const path = parseJSONPath(pathString);
     // console.log('Set selection to path:', pathString, path);
     // const selection: any = createMultiSelection(path, path);
     const selection: any = createKeySelection(path, false);
     // marker to ignore emitting change events when the path was set programmatically
-    selection.triggeredSelection = true;
+    // selection.triggeredSelection = false;
 
     try {
-      this.editor.select(selection);
+      await this.editor.select(selection);
     } catch (error) {
       console.warn('Set selection to path not possible:', pathString, error);
     }
