@@ -20,17 +20,46 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { MappingService } from '../mapping/core/mapping.service';
+import { Direction } from '../shared';
+import { BehaviorSubject, from, Subject } from 'rxjs';
+import { ConnectorConfigurationService } from '../connector';
 
 @Component({
   selector: 'd11r-landing',
   templateUrl: './landing.component.html'
 })
-export class LandingComponent implements OnInit, OnDestroy {
-  ngOnInit(): void {
-    // console.log("Repair Options:", this.repairStrategyOptions);
-    // console.log('Existing substitution:', this.existingSubstitution);
-  }
+export class LandingComponent implements OnInit {
+  constructor(
+    private mappingService: MappingService,
+    private connectorConfigurationService: ConnectorConfigurationService
+  ) {}
 
-  ngOnDestroy(): void {}
+  ROUTE_INBOUND: string = '#/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
+  ROUTE_OUTBOUND: string =
+    '#/sag-ps-pkg-dynamic-mapping/node1/mappings/outbound';
+	ROUTE_CONNECTORS: string =
+    '#/sag-ps-pkg-dynamic-mapping/node1/configuration';
+  countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
+  countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
+  countConnector$: Subject<any> = new BehaviorSubject<any>(0);
+
+  ngOnInit(): void {
+    from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
+      (mappings) => {
+        this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
+      }
+    );
+
+    from(this.mappingService.getMappings(Direction.OUTBOUND)).subscribe(
+      (count) => this.countMappingOutbound$.next(!count ? 'no' : count.length)
+    );
+
+    from(
+      this.connectorConfigurationService.getConnectorConfigurations()
+    ).subscribe((count) =>
+      this.countConnector$.next(!count ? 'no' : count.length)
+    );
+  }
 }

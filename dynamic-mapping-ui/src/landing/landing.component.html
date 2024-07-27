@@ -21,4 +21,47 @@
 
 <c8y-title>{{ 'Landing' | translate }}</c8y-title>
 
-<span>Landing</span>
+<div class="card card--fullpage">
+  <div class="card-header p-l-32 separator j-c-between">
+    <h4 class="card-title">
+      {{ 'How to get started with the Dynamic Data Mapper ...' | translate }}
+    </h4>
+  </div>
+  <div class="card-block">
+    <ul>
+      <li>
+        Documentation for the
+        <a
+          href="https://github.com/SoftwareAG/cumulocity-dynamic-mapper"
+          target="_blank"
+          >Dynamic Data Mapper</a
+        >
+        can be found in the Git repository.
+      </li>
+      <li>
+        The mappings use JSONata, a Lightweight query and transformation
+        language for JSON data. Documentation can be found the
+        <a href="https://jsonata.org/" target="_blank">here</a>.
+      </li>
+      <li>
+        Currently {{ countMappingInbound$ | async }}
+        <a [href]="ROUTE_INBOUND">inbound</a> mappings and
+        {{ countMappingOutbound$ | async }}
+        <a [href]="ROUTE_OUTBOUND">outbound</a>
+        mappings are defined.
+      </li>
+      <li>
+        Currently {{ countConnector$ | async }}
+        <a [href]="ROUTE_CONNECTORS">connectors</a> are defined.
+      </li>
+    </ul>
+  </div>
+  <div class="card-block">
+    <img
+      width="50%"
+      class="m-l-48 m-b-48"
+      src="image/Generic_Mapping_MappingTemplate.png"
+      alt="Define substitutions"
+    />
+  </div>
+</div>
