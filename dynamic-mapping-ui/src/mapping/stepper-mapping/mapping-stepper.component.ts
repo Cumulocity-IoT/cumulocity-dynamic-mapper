@@ -143,7 +143,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   selectedSubstitution: number = -1;
 
-  snoopedTemplateCounter: number = 0;
+  snoopedTemplateCounter: number = -1;
   step: any;
   expertMode: boolean = false;
   templatesInitialized: boolean = false;
@@ -795,6 +795,35 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
     this.mapping.snoopStatus = SnoopStatus.STOPPED;
     this.snoopedTemplateCounter++;
+  }
+
+  async onSelectSnoopedSourceTemplate(index : any) {
+    try {
+      this.templateSource = JSON.parse(
+        this.mapping.snoopedTemplates[index]
+      );
+    } catch (error) {
+      this.templateSource = {
+        message: this.mapping.snoopedTemplates[index]
+      };
+      console.warn(
+        'The payload was not in JSON format, now wrap it:',
+        this.templateSource
+      );
+    }
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      this.templateSource = expandExternalTemplate(
+        this.templateSource,
+        this.mapping,
+        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+      );
+    } else {
+      this.templateSource = expandC8YTemplate(
+        this.templateSource,
+        this.mapping
+      );
+    }
+    this.mapping.snoopStatus = SnoopStatus.STOPPED;
   }
 
   async onTargetTemplateChanged(templateTarget) {
