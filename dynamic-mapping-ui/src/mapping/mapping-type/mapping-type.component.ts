@@ -84,9 +84,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    const snoopSupported =
-      !MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction]
-        .snoopSupported;
+    const {snoopSupported} = MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
     this.closeSubject.next({
       mappingType: this.mappingType,
       snoop: this.snoop && snoopSupported

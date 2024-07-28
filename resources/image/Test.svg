@@ -1,0 +1,34 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+	<style>
+		/* #callout {
+			transition: opacity 0.3s;
+		}
+
+		#bubble:hover+#callout {
+			opacity: 1;
+		} */
+
+		.callout {
+			transition: opacity 0.3s;
+		}
+
+		.bubble:hover+.callout {
+			opacity: 1;
+		}
+	</style>
+
+	<g>
+		<rect class="bubble" id="bubble" x="10" y="10" width="100" height="50" fill="blue" />
+		<g class="callout" id="callout" opacity="0">
+			<text class="callout" id="callout" x="120" y="40" fill="red" >Description</text>
+		</g>
+	</g>
+
+	<!-- <g class="callout" id="callout" opacity="0">
+		<text class="callout" id="callout" x="120" y="40" fill="red" >Description</text>
+	</g> -->
+
+	<!-- <g>
+		<text class="callout" id="callout" x="120" y="40" fill="red" opacity="0">Description</text>
+	</g> -->
+</svg>

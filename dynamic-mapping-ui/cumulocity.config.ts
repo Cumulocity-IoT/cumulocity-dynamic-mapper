@@ -70,6 +70,14 @@ export default {
       {
         from: '../resources/image/DM_App-Icon_03.png',
         to: 'image/DM_App-Icon_03.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Process.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.png'
       }
     ],
     federation: [
