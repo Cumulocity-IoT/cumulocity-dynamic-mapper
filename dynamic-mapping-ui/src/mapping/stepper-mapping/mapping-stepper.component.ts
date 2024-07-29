@@ -221,8 +221,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className:
-              'col-lg-5 col-lg-offset-1 text-monospace',
+            className: 'col-lg-5 col-lg-offset-1 text-monospace',
             key: 'pathSource',
             type: 'input-custom',
             wrappers: ['custom-form-field'],
@@ -281,7 +280,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
-              expressions as in the source template. In addition you can use <code>$</code> to merge the 
+              expressions as for the source template. In addition you can use <code>$</code> to merge the 
               result of the source expression with the existing target template. Special care is 
               required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
               required: true
@@ -313,8 +312,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className:
-              'col-lg-5 reduced-top col-lg-offset-1 not-p-b-24',
+            className: 'col-lg-5 reduced-top col-lg-offset-1 not-p-b-24',
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
@@ -342,8 +340,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className:
-              'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
+            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
             key: 'sourceExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],
@@ -358,13 +355,11 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
                 `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
               'templateOptions.value': () => {
                 return `${this.substitutionModel.sourceExpression?.result}`;
-              },
-
+              }
             }
           },
           {
-            className:
-              'col-lg-5 text-monospace font-smaller',
+            className: 'col-lg-5 text-monospace font-smaller',
             key: 'targetExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],
@@ -443,9 +438,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathSourceChanged(path: string) {
-    if (this.expertMode) this.substitutionFormly.get('pathSource').setValue(path);
-	this.substitutionModel.pathSource = path;
-	this.pathSource$.next(path);
+    if (this.expertMode)
+      this.substitutionFormly.get('pathSource').setValue(path);
+    this.substitutionModel.pathSource = path;
+    this.pathSource$.next(path);
   }
 
   onEditorSourceInitialized() {
@@ -510,8 +506,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathTargetChanged(path: string) {
-	if (this.expertMode) this.substitutionFormly.get('pathTarget').setValue(path);
-	this.substitutionModel.pathTarget = path;
+    if (this.expertMode)
+      this.substitutionFormly.get('pathTarget').setValue(path);
+    this.substitutionModel.pathTarget = path;
   }
 
   onTemplateSourceChanged(content: Content) {
@@ -797,11 +794,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.snoopedTemplateCounter++;
   }
 
-  async onSelectSnoopedSourceTemplate(index : any) {
+  async onSelectSnoopedSourceTemplate(index: any) {
     try {
-      this.templateSource = JSON.parse(
-        this.mapping.snoopedTemplates[index]
-      );
+      this.templateSource = JSON.parse(this.mapping.snoopedTemplates[index]);
     } catch (error) {
       this.templateSource = {
         message: this.mapping.snoopedTemplates[index]
@@ -916,20 +911,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration
     };
-    const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
-      initialState
-    });
-    // modalRef.content.closeSubject.subscribe((result) => {
-    //   console.log('results:', result);
-    // });
-    modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
-      // console.log('About to add new substitution:', newSub);
-      if (newSub && !duplicateSubstitution) {
-        this.mapping.substitutions.push(newSub);
-      } else if (newSub && duplicateSubstitution) {
-        this.mapping.substitutions[existingSubstitution] = newSub;
-      }
-    });
+    if (this.expertMode || duplicateSubstitution) {
+      const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
+        initialState
+      });
+      // modalRef.content.closeSubject.subscribe((result) => {
+      //   console.log('results:', result);
+      // });
+      modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
+        // console.log('About to add new substitution:', newSub);
+        if (newSub && !duplicateSubstitution) {
+          this.mapping.substitutions.push(newSub);
+        } else if (newSub && duplicateSubstitution) {
+          this.mapping.substitutions[existingSubstitution] = newSub;
+        }
+      });
+    } else {
+      this.mapping.substitutions.push(sub);
+    }
   }
 
   async onSelectSubstitution(selected: number) {
@@ -937,8 +936,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      await this.editorSource?.setSelectionToPath(this.substitutionModel.pathSource);
-      await this.editorTarget.setSelectionToPath(this.substitutionModel.pathTarget);
+      await this.editorSource?.setSelectionToPath(
+        this.substitutionModel.pathSource
+      );
+      await this.editorTarget.setSelectionToPath(
+        this.substitutionModel.pathTarget
+      );
     }
   }
 

@@ -425,6 +425,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async addMapping() {
+	// console.log('Snoop status:', this.snoopStatus);
     this.setStepperConfiguration(
       this.mappingType,
       this.stepperConfiguration.direction,
