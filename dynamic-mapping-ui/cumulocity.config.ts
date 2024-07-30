@@ -78,7 +78,15 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.png',
         to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.png'
-      }
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
+      },
+	  {
+        from: '../resources/image/Test.svg',
+        to: 'image/Test.svg'
+      },
     ],
     federation: [
       '@angular/animations',

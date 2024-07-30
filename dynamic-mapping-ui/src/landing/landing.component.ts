@@ -25,18 +25,23 @@ import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, JsonEditor2Component } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
-
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'd11r-landing',
-  templateUrl: './landing.component.html'
+  templateUrl: './landing.component.html',
+  styleUrl: './landing.component.css'
 })
 export class LandingComponent implements OnInit {
   constructor(
     private mappingService: MappingService,
-    private connectorConfigurationService: ConnectorConfigurationService
-  ) {}
-
+    private connectorConfigurationService: ConnectorConfigurationService,
+    private sanitizer: DomSanitizer
+  ) {
+    this.linkSVG = this.sanitizer.bypassSecurityTrustUrl(
+      'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
+    );
+  }
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditor2Component;
 
   ROUTE_INBOUND: string = '#/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
@@ -46,11 +51,11 @@ export class LandingComponent implements OnInit {
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
-
-  testPayload: any = { montag: 'montag', dienstag: 'dienstag' };
-  editorOptionsTest: any = {};
+  linkSnoopProcess: string = '';
+  linkSVG: SafeResourceUrl;
 
   ngOnInit(): void {
+    this.linkSnoopProcess = 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
         this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
@@ -68,7 +73,4 @@ export class LandingComponent implements OnInit {
     );
   }
 
-  async setPath() {
-    await this.editorTest?.setSelectionToPath('montag');
-  }
 }
