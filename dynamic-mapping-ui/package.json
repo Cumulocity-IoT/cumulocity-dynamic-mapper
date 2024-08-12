@@ -29,7 +29,7 @@
     "@angular/platform-server": "^17.3.0",
     "@angular/router": "^17.3.0",
     "@angular/upgrade": "^17.3.0",
-    "@c8y/bootstrap": "^1020.8.0",
+    "@c8y/bootstrap": "^1020.14.7",
     "@c8y/ngx-components": "^1020.8.0",
     "@c8y/options": "^1020.8.0",
     "@ngx-translate/core": "15.0.0",
