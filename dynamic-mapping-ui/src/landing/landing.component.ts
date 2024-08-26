@@ -55,7 +55,7 @@ export class LandingComponent implements OnInit {
   linkSVG: SafeResourceUrl;
 
   ngOnInit(): void {
-    this.linkSnoopProcess = 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
+    this.linkSnoopProcess = '/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Snooping_Stepper_Process.svg';
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => {
         this.countMappingInbound$.next(!mappings ? 'no' : mappings.length);
