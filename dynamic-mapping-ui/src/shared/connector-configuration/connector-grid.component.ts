@@ -137,12 +137,19 @@ export class ConnectorConfigurationComponent
     this.actionControls.push(
       {
         type: BuiltInActionType.Edit,
-        callback: this.onConfigurationUpdate.bind(this)
+        callback: this.onConfigurationUpdate.bind(this),
+        showIf: (item) => !item['enabled'] && !this.readOnly
+      },
+	  {
+        type: 'VIEW',
+        icon: 'eye',
+        callback: this.onConfigurationUpdate.bind(this),
+        showIf: (item) => item['enabled']
       },
       {
-        text: 'Copy',
-        type: 'COPY',
-        icon: 'copy',
+        text: 'Duplicate',
+        type: 'duplicate',
+        icon: 'duplicate',
         callback: this.onConfigurationCopy.bind(this),
         showIf: (item) => !item['enabled'] && !this.readOnly
       },

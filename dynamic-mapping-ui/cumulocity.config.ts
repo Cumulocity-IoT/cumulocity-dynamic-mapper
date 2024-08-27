@@ -12,7 +12,7 @@ export default {
     description,
     license,
     version,
-    name: 'dynamic-mapping',
+    name: 'dynamic-mapper',
     contextPath: 'sag-ps-pkg-dynamic-mapping',
     icon: {
       url: 'url(/apps/sag-ps-pkg-dynamic-mapping/image/DM_App-Icon_03.png)'
@@ -36,19 +36,19 @@ export default {
     //   ? []
     //   : [
     //       {
-    //         name: 'Dynamic Mapping Widget',
+    //         name: 'Dynamic Data Mapper',
     //         module: 'DynamicMappingModule',
     //         path: './src/dynamic-mapping.module',
-    //         description: 'Adds a Dynamic Mapping Plugin'
+    //         description: 'Adds a Dynamic Data Mapper Plugin'
     //       }
     //     ]
     // isPackage: true,
     exports: [
       {
-        name: 'Dynamic Mapping Widget',
+        name: 'Dynamic Mapping Mapper Plugin',
         module: 'DynamicMappingModule',
         path: './src/dynamic-mapping.module',
-        description: 'Adds a Dynamic Mapping Plugin'
+        description: 'Adds a Dynamic Mapping Mapper Plugin'
       }
     ]
     // comment end
@@ -64,12 +64,28 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Add.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Template.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Template.png'
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
       },
       {
         from: '../resources/image/DM_App-Icon_03.png',
         to: 'image/DM_App-Icon_03.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Process.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.png',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Snooping_Stepper_Process.svg',
+        to: 'image/Dynamic_Mapper_Snooping_Stepper_Process.svg'
+      },
+      {
+        from: '../resources/image/Test.svg',
+        to: 'image/Test.svg'
       }
     ],
     federation: [

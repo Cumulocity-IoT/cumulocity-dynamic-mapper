@@ -19,7 +19,8 @@
   ~ @authors Christof Strack
   -->
 
-<div style="height: 200px; overflow-y: auto; padding-top: 8px">
+<div style="height: 200px; overflow-y: auto; padding-top: 16px">
+  <div class="h5 m-l-16 m-b-8">Substitutions</div>
   <table class="table table-condensed table-striped fixTableHead">
     <thead>
       <tr>
@@ -56,14 +57,13 @@
       <tr
         *ngFor="let sub of substitutions; let i = index"
         id="{{ 'sub-' + id + '-' + i }}"
-
       >
         <td width="4%">
-          <label class="c8y-checkbox" title="Checkbox">
+          <label class="c8y-radio" title="Checkbox">
             <input
-              type="checkbox"
+              type="radio"
               (click)="onSubstitutionSelect(i)"
-			  [checked]="settings.selectedSubstitutionIndex == i"
+              [checked]="settings.selectedSubstitutionIndex == i"
             />
             <span></span>
           </label>
@@ -83,10 +83,10 @@
           </span>
         </td>
         <td width="8%">
-          {{ sub.expandArray }}
+          {{ sub.expandArray ? 'on' : 'off' }}
         </td>
         <td width="8%">
-          {{ sub.resolve2ExternalId }}
+          {{ sub.resolve2ExternalId ? 'on' : 'off' }}
         </td>
         <td>
           {{ sub.repairStrategy }}

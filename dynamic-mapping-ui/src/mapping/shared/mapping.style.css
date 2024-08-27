@@ -85,3 +85,7 @@ json-editor > div {
 .c8y-switch > button {
   display: none;
 }
+.not-p-b-24 {
+	padding-bottom: 6px;
+	padding-left: 0px;
+}

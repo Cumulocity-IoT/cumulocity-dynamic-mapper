@@ -43,7 +43,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
-  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
+  labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   override: boolean = false;
   repairStrategyOptions: any[];
   substitutionText: string;

@@ -13,44 +13,46 @@ import { FieldTextareaCustom } from '../../mapping/shared/formly/textarea.type.c
 
 @Component({
   selector: 'd11r-edit-connector-modal',
-  template: ` <c8y-modal
-    title="Edit connector configuration"
-    (onClose)="onSave()"
-    (onDismiss)="onDismiss()"
-    [labels]="labels"
-    [disabled]="readOnly"
-    [headerClasses]="'modal-header dialog-header'"
-  >
-    <div class="card-block">
-      <div [formGroup]="brokerFormly" *ngIf="add">
-        <formly-form
-          [form]="brokerFormly"
-          [fields]="brokerFormlyFields"
-          s
-        ></formly-form>
-      </div>
-      <c8y-form-group style="margin-left: 12px; margin-right: 12px;">
-        <label style="margin-left: 4px;">
-          <span>
-            {{ 'Description' | translate }}
-          </span>
-        </label>
-        <textarea
-          rows="3"
-          class="form-control"
-          placeholder="choose connector ..."
-          >{{ description }}</textarea
-        >
-      </c8y-form-group>
-      <div [formGroup]="dynamicFormly">
-        <formly-form
-          [form]="dynamicFormly"
-          [fields]="dynamicFormlyFields"
-          [model]="configuration"
-        ></formly-form>
-      </div>
+  template: ` <div class="modal-header dialog-header animated fadeIn">
+      <h1 c8yIcon="connected"></h1>
+      <h4>Edit connector configuration</h4>
     </div>
-  </c8y-modal>`
+    <c8y-modal
+      (onClose)="onSave()"
+      (onDismiss)="onDismiss()"
+      [labels]="labels"
+      [disabled]="readOnly"
+    >
+      <div class="card-block">
+        <div [formGroup]="brokerFormly" *ngIf="add">
+          <formly-form
+            [form]="brokerFormly"
+            [fields]="brokerFormlyFields"
+            s
+          ></formly-form>
+        </div>
+        <c8y-form-group style="margin-left: 12px; margin-right: 12px;">
+          <label style="margin-left: 4px;">
+            <span>
+              {{ 'Description' | translate }}
+            </span>
+          </label>
+          <textarea
+            rows="3"
+            class="form-control"
+            placeholder="choose connector ..."
+            >{{ description }}</textarea
+          >
+        </c8y-form-group>
+        <div [formGroup]="dynamicFormly">
+          <formly-form
+            [form]="dynamicFormly"
+            [fields]="dynamicFormlyFields"
+            [model]="configuration"
+          ></formly-form>
+        </div>
+      </div>
+    </c8y-modal>`
 })
 export class ConfigurationConfigurationModalComponent implements OnInit {
   @Input() add: boolean;
@@ -63,7 +65,7 @@ export class ConfigurationConfigurationModalComponent implements OnInit {
   brokerFormly: FormGroup = new FormGroup({});
   dynamicFormlyFields: FormlyFieldConfig[] = [];
   dynamicFormly: FormGroup = new FormGroup({});
-  labels: ModalLabels = { ok: 'Save', cancel: 'Dismiss' };
+  labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
   description: string;
 
   ngOnInit(): void {

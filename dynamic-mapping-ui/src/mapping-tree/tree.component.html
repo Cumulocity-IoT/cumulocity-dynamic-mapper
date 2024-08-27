@@ -19,7 +19,7 @@
   ~ @authors Christof Strack
   -->
 
-<c8y-title>Mapping tree inbound</c8y-title>
+<c8y-title>Service monitoring</c8y-title>
 <c8y-action-bar-item placement="right">
   <button
     class="btn btn-link"
@@ -33,7 +33,7 @@
 <div class="card">
   <div class="card-header p-l-32 separator j-c-between">
     <h4 class="card-title">
-      {{ 'Mapping tree inbound' | translate }}
+      {{ 'Inbound mapping tree' | translate }}
     </h4>
   </div>
 
@@ -44,7 +44,6 @@
         [data]="mappingTree"
         [class]="'jse-main-large'"
         #editorTree
-        id="editorTree"
       ></d11r-mapping-json-editor2>
       <c8y-messages class="text-left">
         <c8y-message *ngIf="false"

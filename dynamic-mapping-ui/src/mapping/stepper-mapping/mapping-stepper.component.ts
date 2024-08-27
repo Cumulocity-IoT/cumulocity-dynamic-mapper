@@ -112,6 +112,8 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   templateModel: any = {};
   substitutionModel: any = {};
   templateSource: any;
+  pathSource$: Subject<string> = new BehaviorSubject<string>('');
+  pathTarget$: Subject<string> = new BehaviorSubject<string>('');
   templateTarget: any;
 
   testingModel: {
@@ -141,8 +143,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   selectedSubstitution: number = -1;
 
-  snoopedTemplateCounter: number = 0;
+  snoopedTemplateCounter: number = -1;
   step: any;
+  expertMode: boolean = false;
   templatesInitialized: boolean = false;
 
   @ViewChild('editorSource', { static: false })
@@ -218,13 +221,12 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className:
-              'col-lg-5 col-lg-offset-1 text-monospace column-right-border',
+            className: 'col-lg-5 col-lg-offset-1 text-monospace',
             key: 'pathSource',
             type: 'input-custom',
             wrappers: ['custom-form-field'],
             templateOptions: {
-              label: 'Evaluate Expression on Source',
+              label: 'Source Expression',
               class: 'input-sm animate-background',
               customWrapperClass: 'm-b-24',
               disabled:
@@ -267,18 +269,18 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             }
           },
           {
-            className: 'col-lg-5 text-monospace column-left-border',
+            className: 'col-lg-5 text-monospace',
             key: 'pathTarget',
             type: 'input-custom',
             wrappers: ['custom-form-wrapper'],
             templateOptions: {
-              label: 'Evaluate Expression on Target',
+              label: 'Target Expression',
               customWrapperClass: 'm-b-24',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
                 !this.stepperConfiguration.allowDefiningSubstitutions,
               description: `Use the same <a href="https://jsonata.org" target="_blank">JSONata</a>
-              expressions as in the source template. In addition you can use <code>$</code> to merge the 
+              expressions as for the source template. In addition you can use <code>$</code> to merge the 
               result of the source expression with the existing target template. Special care is 
               required since this can overwrite mandatory Cumulocity attributes, e.g. <code>source.id</code>.  This can result in API calls that are rejected by the Cumulocity backend!`,
               required: true
@@ -310,26 +312,25 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className:
-              'col-lg-5 reduced-top col-lg-offset-1 column-right-border not-p-b-24',
+            className: 'col-lg-5 reduced-top col-lg-offset-1 not-p-b-24',
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
-                model.sourceExpression.msgTxt,
+                model.sourceExpression?.msgTxt,
               'templateOptions.textClass': (model) =>
-                model.sourceExpression.severity,
+                model.sourceExpression?.severity,
               'templateOptions.enabled': () => true
             }
           },
           {
             // message field target
-            className: 'col-lg-5 reduced-top column-left-border not-p-b-24',
+            className: 'col-lg-5 reduced-top not-p-b-24',
             type: 'message-field',
             expressionProperties: {
               'templateOptions.content': (model) =>
-                model.targetExpression.msgTxt,
+                model.targetExpression?.msgTxt,
               'templateOptions.textClass': (model) =>
-                model.targetExpression.severity,
+                model.targetExpression?.severity,
               'templateOptions.enabled': () => true
             }
           }
@@ -339,8 +340,7 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       {
         fieldGroup: [
           {
-            className:
-              'col-lg-5 col-lg-offset-1 text-monospace font-smaller column-right-border',
+            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
             key: 'sourceExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],
@@ -352,15 +352,14 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.sourceExpression.resultType}]`,
+                `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
               'templateOptions.value': () => {
-                return `${this.substitutionModel.sourceExpression.result}`;
+                return `${this.substitutionModel.sourceExpression?.result}`;
               }
             }
           },
           {
-            className:
-              'col-lg-5 text-monospace font-smaller column-left-border',
+            className: 'col-lg-5 text-monospace font-smaller',
             key: 'targetExpression.result',
             type: 'textarea-custom',
             wrappers: ['custom-form-wrapper'],
@@ -372,9 +371,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
             },
             expressionProperties: {
               'templateOptions.label': () =>
-                `Result Type [${this.substitutionModel.targetExpression.resultType}]`,
+                `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
               'templateOptions.value': () => {
-                return `${this.substitutionModel.targetExpression.result}`;
+                return `${this.substitutionModel.targetExpression?.result}`;
               }
             }
           }
@@ -439,7 +438,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathSourceChanged(path: string) {
-    this.substitutionFormly.get('pathSource').setValue(path);
+    if (this.expertMode)
+      this.substitutionFormly.get('pathSource').setValue(path);
+    this.substitutionModel.pathSource = path;
+    this.pathSource$.next(path);
   }
 
   onEditorSourceInitialized() {
@@ -494,9 +496,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   isSubstitutionValid() {
     const r1 =
-      this.substitutionModel.sourceExpression.severity != 'text-danger';
+      this.substitutionModel.sourceExpression?.severity != 'text-danger';
     const r2 =
-      this.substitutionModel.targetExpression.severity != 'text-danger';
+      this.substitutionModel.targetExpression?.severity != 'text-danger';
     const r3 = this.substitutionModel.pathSource != '';
     const r4 = this.substitutionModel.pathTarget != '';
     const result = r1 && r2 && r3 && r4;
@@ -504,7 +506,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
   }
 
   onSelectedPathTargetChanged(path: string) {
-    this.substitutionFormly.get('pathTarget').setValue(path);
+    if (this.expertMode)
+      this.substitutionFormly.get('pathTarget').setValue(path);
+    this.substitutionModel.pathTarget = path;
   }
 
   onTemplateSourceChanged(content: Content) {
@@ -790,6 +794,33 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     this.snoopedTemplateCounter++;
   }
 
+  async onSelectSnoopedSourceTemplate(index: any) {
+    try {
+      this.templateSource = JSON.parse(this.mapping.snoopedTemplates[index]);
+    } catch (error) {
+      this.templateSource = {
+        message: this.mapping.snoopedTemplates[index]
+      };
+      console.warn(
+        'The payload was not in JSON format, now wrap it:',
+        this.templateSource
+      );
+    }
+    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+      this.templateSource = expandExternalTemplate(
+        this.templateSource,
+        this.mapping,
+        splitTopicExcludingSeparator(this.mapping.mappingTopicSample)
+      );
+    } else {
+      this.templateSource = expandC8YTemplate(
+        this.templateSource,
+        this.mapping
+      );
+    }
+    this.mapping.snoopStatus = SnoopStatus.STOPPED;
+  }
+
   async onTargetTemplateChanged(templateTarget) {
     this.templateTarget = templateTarget;
   }
@@ -824,6 +855,9 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
     }
     this.countDeviceIdentifiers$.next(countDeviceIdentifiers(this.mapping));
     // console.log('Deleted substitution', this.mapping.substitutions.length);
+  }
+  togglePowermode() {
+    this.expertMode = !this.expertMode;
   }
 
   onUpdateSubstitution() {
@@ -877,29 +911,37 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration
     };
-    const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
-      initialState
-    });
-    // modalRef.content.closeSubject.subscribe((result) => {
-    //   console.log('results:', result);
-    // });
-    modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
-      // console.log('About to add new substitution:', newSub);
-      if (newSub && !duplicateSubstitution) {
-        this.mapping.substitutions.push(newSub);
-      } else if (newSub && duplicateSubstitution) {
-        this.mapping.substitutions[existingSubstitution] = newSub;
-      }
-    });
+    if (this.expertMode || duplicateSubstitution) {
+      const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
+        initialState
+      });
+      // modalRef.content.closeSubject.subscribe((result) => {
+      //   console.log('results:', result);
+      // });
+      modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
+        // console.log('About to add new substitution:', newSub);
+        if (newSub && !duplicateSubstitution) {
+          this.mapping.substitutions.push(newSub);
+        } else if (newSub && duplicateSubstitution) {
+          this.mapping.substitutions[existingSubstitution] = newSub;
+        }
+      });
+    } else {
+      this.mapping.substitutions.push(sub);
+    }
   }
 
-  onSelectSubstitution(selected: number) {
+  async onSelectSubstitution(selected: number) {
     if (selected < this.mapping.substitutions.length && selected > -1) {
       this.selectedSubstitution = selected;
       this.substitutionModel = _.clone(this.mapping.substitutions[selected]);
       this.substitutionModel.stepperConfiguration = this.stepperConfiguration;
-      this.editorSource?.setSelectionToPath(this.substitutionModel.pathSource);
-      this.editorTarget.setSelectionToPath(this.substitutionModel.pathTarget);
+      await this.editorSource?.setSelectionToPath(
+        this.substitutionModel.pathSource
+      );
+      await this.editorTarget.setSelectionToPath(
+        this.substitutionModel.pathTarget
+      );
     }
   }
 

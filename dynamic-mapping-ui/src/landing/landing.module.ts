@@ -18,20 +18,30 @@
  *
  * @authors Christof Strack
  */
-import { Component } from '@angular/core';
-import { CellRendererContext } from '@c8y/ngx-components';
 
-@Component({
-  selector: 'd11r-mapping-renderer-api',
-  template: `
-	<div >
-        <span class="text-10 label label-primary">{{ context.value}}</span
-        >
-    </div>
-  `
+import { NgModule } from '@angular/core';
+import { CoreModule, hookRoute } from '@c8y/ngx-components';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { SharedModule } from '../shared';
+import { MappingModule } from '../mapping/mapping.module';
+import { LandingComponent } from './landing.component';
+
+@NgModule({
+  declarations: [LandingComponent],
+  imports: [
+    CoreModule,
+    BsDropdownModule.forRoot(),
+    CollapseModule.forRoot(),
+    MappingModule,
+    SharedModule
+  ],
+  exports: [],
+  providers: [
+    hookRoute({
+      path: 'sag-ps-pkg-dynamic-mapping/landing',
+      component: LandingComponent
+    })
+  ]
 })
-export class APIRendererComponent {
-  constructor(public context: CellRendererContext) {
-    // console.log("Context:", context.item, context)
-  }
-}
+export class LandingModule {}
