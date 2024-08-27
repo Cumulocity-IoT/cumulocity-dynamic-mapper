@@ -118,7 +118,7 @@
                                     dynamic/mapping/processor/extension/ProcessorExtensionOutbound.java</include></includes></configuration></plugin> -->
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.3.0</version>
+				<version>3.4.2</version>
 				<configuration>
 					<includes>
 						<include>dynamic/mapping/model/*</include>
