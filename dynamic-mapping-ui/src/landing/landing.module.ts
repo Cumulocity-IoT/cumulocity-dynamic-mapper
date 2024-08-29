@@ -26,7 +26,7 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { SharedModule } from '../shared';
 import { MappingModule } from '../mapping/mapping.module';
 import { LandingComponent } from './landing.component';
-import { MappingComponent } from '../mapping/grid/mapping.component';
+import { RouterModule } from '@angular/router';
 
 @NgModule({
   declarations: [LandingComponent],
@@ -35,7 +35,8 @@ import { MappingComponent } from '../mapping/grid/mapping.component';
     BsDropdownModule.forRoot(),
     CollapseModule.forRoot(),
     MappingModule,
-    SharedModule
+    SharedModule,
+	RouterModule
   ],
   exports: [],
   providers: [

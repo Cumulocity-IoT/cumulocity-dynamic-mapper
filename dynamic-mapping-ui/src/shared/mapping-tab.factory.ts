@@ -31,7 +31,7 @@ export class MappingTabFactory implements TabFactory {
   ) {}
 
   async get() {
-    // console.log("MappingTabFactory",this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
+    console.log('MappingTabFactory',this.router.url, this.router.url.match(/sag-ps-pkg-dynamic-mapping/g));
     const feature = await this.sharedService.getFeatures();
 
     const tabs: Tab[] = [];

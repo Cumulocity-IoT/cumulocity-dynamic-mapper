@@ -45,14 +45,14 @@
       </li>
       <li>
         Currently {{ countMappingInbound$ | async }}
-        <a [href]="ROUTE_INBOUND">inbound</a> and
+        <a [routerLink]="ROUTE_INBOUND">inbound</a> and
         {{ countMappingOutbound$ | async }}
-        <a [href]="ROUTE_OUTBOUND">outbound</a>
+        <a [routerLink]="ROUTE_OUTBOUND">outbound</a>
         mappings are defined.
       </li>
       <li>
         Currently {{ countConnector$ | async }}
-        <a [href]="ROUTE_CONNECTORS">connectors</a> are defined.
+        <a [routerLink]="ROUTE_CONNECTORS">connectors</a> are defined.
       </li>
     </ul>
   </div>
