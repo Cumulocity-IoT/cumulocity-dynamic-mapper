@@ -28,6 +28,7 @@ import { NumberRendererComponent } from './renderer/number.renderer.component';
 import { DirectionRendererComponent } from './renderer/direction.renderer.component';
 import { MonitoringChartComponent } from './chart/chart.component';
 import { MonitoringTabFactory } from './monitoring-tab.factory';
+import { NODE2 } from '../shared/model/util';
 
 @NgModule({
   declarations: [
@@ -41,11 +42,11 @@ import { MonitoringTabFactory } from './monitoring-tab.factory';
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/node2/monitoring/grid',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
       component: MonitoringComponent
     }),
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/node2/monitoring/chart',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/chart`,
       component: MonitoringChartComponent
     }),
     hookTab(MonitoringTabFactory)

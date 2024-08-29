@@ -45,14 +45,20 @@
           <div class="col-lg-10 col-lg-offset-1">
             <h4 class="text-medium">
               <div class="text-center">
-                Select connector for mapping (at least one is required)&nbsp;
                 <span
+                  *ngIf="
+                    stepperConfiguration.editorMode !== EditorMode.READ_ONLY
+                  "
+                  >Select connector for mapping (at least one is required)</span
+                >
+                <div
                   *ngIf="
                     stepperConfiguration.editorMode === EditorMode.READ_ONLY
                   "
-                  class="label label-primary"
-                  >{{ 'Read Only' }}</span
                 >
+                  Selected connectors
+                  <span class="label label-primary">{{ 'Read Only' }}</span>
+                </div>
               </div>
             </h4>
           </div>
@@ -72,7 +78,7 @@
       ></c8y-stepper-buttons>
     </cdk-step>
 
-    <cdk-step label="Properties mapping" [stepControl]="propertyFormly">
+    <cdk-step label="General settings" [stepControl]="propertyFormly">
       <div class="col-xs-12 flex-grow no-gutter">
         <d11r-mapping-properties
           [mapping]="mapping"
@@ -112,7 +118,7 @@
                 <div class="row" #buttonsStep2>
                   <div class="col-lg-5 col-lg-offset-1 column-right-border">
                     <div class="form-group">
-                      <div class="c8y-select-wrapper" style="width:50%">
+                      <div class="c8y-select-wrapper" style="width: 50%">
                         <select
                           class="form-control"
                           (change)="

@@ -29,6 +29,7 @@ import {
 } from '@c8y/ngx-components';
 import { SharedService } from './shared.service';
 import { NODE1, NODE2, NODE3 } from './model/util';
+import { Router } from '@angular/router';
 
 @Injectable()
 export class MappingNavigationFactory implements NavigatorNodeFactory {
@@ -36,57 +37,90 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     'dynamic-mapping-service';
 
   appName: string;
+  isPackage: boolean = false;
 
   constructor(
     private applicationService: ApplicationService,
     private alertService: AlertService,
     private sharedService: SharedService,
-    private appStateService: AppStateService
+    private appStateService: AppStateService,
+    public router: Router
   ) {
-    this.appStateService.currentApplication.subscribe((c) => {
-      // console.log(c);
-      this.appName = c.name;
+    this.appStateService.currentApplication.subscribe((cur) => {
+      console.log('AppName in MappingNavigationFactory', cur, this.router.url);
+      if (cur?.manifest?.isPackage) {
+        this.isPackage = cur?.manifest?.isPackage;
+      }
+      this.appName = cur.name;
     });
   }
 
   get() {
-    const parentMapping = new NavigatorNode({
-      label: gettext('Dynamic Data Mapper'),
-      icon: 'compare',
-      path: '/sag-ps-pkg-dynamic-mapping/landing',
-      priority: 99,
-      preventDuplicates: true
-    });
-    const mappingConfiguration = new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
-      label: gettext('Configuration'),
-      icon: 'cog',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
-      priority: 500,
-      preventDuplicates: true
-    });
-    const mapping = new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
-      label: gettext('Mapping'),
-      icon: 'file-type-document',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-      priority: 400,
-      preventDuplicates: true
-    });
-    const mappingMonitoring = new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
-      label: gettext('Service monitoring'),
-      icon: 'pie-chart',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
-      priority: 300,
-      preventDuplicates: true
-    });
-    const navs = [
-      parentMapping,
-      mapping,
-      mappingMonitoring,
-      mappingConfiguration
-    ];
+    let navs;
+    if (this.isPackage) {
+      const parentMapping = new NavigatorNode({
+        label: gettext('Home'),
+        icon: 'home',
+        path: '/sag-ps-pkg-dynamic-mapping/landing',
+        priority: 600,
+        preventDuplicates: true
+      });
+      const mappingConfiguration = new NavigatorNode({
+        label: gettext('Configuration'),
+        icon: 'cog',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 500,
+        preventDuplicates: true
+      });
+      const mapping = new NavigatorNode({
+        label: gettext('Mapping'),
+        icon: 'file-type-document',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+        priority: 400,
+        preventDuplicates: true
+      });
+      const mappingMonitoring = new NavigatorNode({
+        label: gettext('Service monitoring'),
+        icon: 'pie-chart',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+        priority: 300,
+        preventDuplicates: true
+      });
+      navs = [parentMapping, mapping, mappingMonitoring, mappingConfiguration];
+    } else {
+      const parentMapping = new NavigatorNode({
+        label: gettext('Dynamic Data Mapper'),
+        icon: 'compare',
+        path: '/sag-ps-pkg-dynamic-mapping/landing',
+        priority: 99,
+        preventDuplicates: true
+      });
+      const mappingConfiguration = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Configuration'),
+        icon: 'cog',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 500,
+        preventDuplicates: true
+      });
+      const mapping = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Mapping'),
+        icon: 'file-type-document',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
+        priority: 400,
+        preventDuplicates: true
+      });
+      const mappingMonitoring = new NavigatorNode({
+        parent: gettext('Dynamic Data Mapper'),
+        label: gettext('Service monitoring'),
+        icon: 'pie-chart',
+        path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
+        priority: 300,
+        preventDuplicates: true
+      });
+      navs = [parentMapping, mapping, mappingMonitoring, mappingConfiguration];
+    }
 
     const feature: any = this.sharedService.getFeatures();
     return this.applicationService

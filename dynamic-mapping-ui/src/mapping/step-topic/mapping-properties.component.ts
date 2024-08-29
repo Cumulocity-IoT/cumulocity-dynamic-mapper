@@ -43,9 +43,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { EditorMode } from '../shared/stepper-model';
 import { StepperConfiguration } from 'src/shared/model/shared.model';
-import {
-  isDisabled
-} from '../shared/util';
+import { isDisabled } from '../shared/util';
 import { ValidationError } from '../shared/mapping.model';
 import { deriveMappingTopicFromTopic } from '../shared/util';
 import { SharedService } from '../../shared/shared.service';
@@ -314,8 +312,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
           {
             className: 'col-lg-6',
             key: 'createNonExistingDevice',
-            type: 'switch',
-            wrappers: ['c8y-form-field'],
+            type: 'checkbox',
+            wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Create non existing device',
               disabled:
@@ -324,7 +322,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
               required: false,
               switchMode: true,
-              indeterminate: false
+              indeterminate: false,
+              hideLabel: true
             },
             hideExpression: () =>
               this.stepperConfiguration.direction == Direction.OUTBOUND ||
@@ -334,7 +333,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'updateExistingDevice',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Update Existing Device',
               disabled:
@@ -342,7 +341,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description: 'Update Existing Device.',
               required: false,
               switchMode: true,
-              indeterminate: false
+              indeterminate: false,
+              hideLabel: true
             },
             hideExpression: () =>
               this.stepperConfiguration.direction == Direction.OUTBOUND ||
@@ -353,7 +353,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'autoAckOperation',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Auto acknowledge',
               disabled:
@@ -361,7 +361,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               description: 'Auto acknowledge outbound operation.',
               required: false,
               switchMode: true,
-              indeterminate: false
+              indeterminate: false,
+              hideLabel: true
             },
             hideExpression: () =>
               this.stepperConfiguration.direction == Direction.INBOUND ||
@@ -397,15 +398,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'mapDeviceIdentifier',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['custom-form-field'],
             templateOptions: {
               label: 'Map device identifier',
+              switchMode: true,
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              switchMode: true,
               description:
                 'If this is enabled then the device id is treated as an external id which is looked up and translated using th externalIdType.',
-              indeterminate: false
+              indeterminate: false,
+              hideLabel: true
             }
           },
           {
@@ -429,14 +431,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'supportsMessageContext',
             type: 'switch',
-            wrappers: ['c8y-form-field'],
+            wrappers: ['custom-form-field'],
             templateOptions: {
               switchMode: true,
               label: 'Supports key message context',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
-                'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.'
+                'Supports key from message context, e.g. partition keys for Kafka. This property only applies to certain connectors.',
+              hideLabel: true
             }
           }
         ]

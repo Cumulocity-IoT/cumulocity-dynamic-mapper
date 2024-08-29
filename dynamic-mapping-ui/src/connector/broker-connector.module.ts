@@ -25,6 +25,7 @@ import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { SharedModule } from '../shared';
 import { BrokerConnectorComponent } from './broker-connector.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
+import { NODE3 } from '../shared/model/util';
 
 @NgModule({
   declarations: [BrokerConnectorComponent],
@@ -36,7 +37,7 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/node3/connectorConfiguration',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
       component: BrokerConnectorComponent,
     })
   ]

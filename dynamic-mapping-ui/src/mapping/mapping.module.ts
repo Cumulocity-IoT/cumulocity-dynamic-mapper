@@ -55,6 +55,7 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
 import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './shared/util';
+import { NODE1, NODE3 } from '../shared/model/util';
 
 @NgModule({
   declarations: [
@@ -94,11 +95,11 @@ import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './share
   exports: [],
   providers: [
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/inbound',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
       component: MappingComponent
     }),
     hookRoute({
-      path: 'sag-ps-pkg-dynamic-mapping/node1/mappings/outbound',
+      path: `sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/outbound`,
       component: MappingComponent
     }),
     {

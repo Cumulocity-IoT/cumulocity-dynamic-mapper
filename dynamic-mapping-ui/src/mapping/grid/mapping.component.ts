@@ -233,7 +233,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         showIf: (item) =>
           item['mapping']['direction'] === Direction.INBOUND &&
           item['snoopSupported'] &&
-          item['mapping']['direction']
+          (
+            item['mapping']['snoopStatus'] === SnoopStatus.NONE ||
+            item['mapping']['snoopStatus'] === SnoopStatus.STOPPED
+          )
       },
       {
         type: 'DISABLE_SNOOPING',
@@ -388,7 +391,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           }
         : undefined,
       {
-        header: 'Active',
+        header: 'Activate',
         name: 'active',
         path: 'mapping.active',
         filterable: false,
@@ -401,6 +404,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   onAddMapping() {
+	this.snoopStatus = SnoopStatus.NONE;
     const initialState = {
       direction: this.stepperConfiguration.direction
     };
