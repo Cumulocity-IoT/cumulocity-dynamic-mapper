@@ -33,7 +33,7 @@
 >
   <div>
     <p
-      class="p-b-16 text-center text-medium text-16 separator-bottom sticky-top bg-white"
+      class="text-center text-medium text-16 sticky-top bg-white"
     >
       {{
         'Select mapping type for ' +
@@ -41,7 +41,22 @@
       }}
     </p>
     <div class="p-24 modal-inner-scroll animated fadeIn">
-      <div
+      <c8y-list-group class="separator-top">
+        <c8y-li *ngFor="let q of MappingType | keyvalue">
+          <c8y-li-radio
+            *ngIf="
+              MAPPING_TYPE_DESCRIPTION[q.key].properties[direction]
+                .directionSupported
+            "
+            #liRadioOption1
+            name="mapping_type_group"
+            title="{{ q.value }}"
+            (click)="onSelectMappingType(q.value)"
+          ></c8y-li-radio>
+          <span>{{ q.value | humanize }}</span>
+        </c8y-li>
+      </c8y-list-group>
+      <!-- <div
         #mappingTypes
         class="list-group list-group-links"
         [formGroup]="formGroupStep"
@@ -60,10 +75,14 @@
             <span>{{ q.value | humanize }}</span>
           </button>
         </ng-container>
-      </div>
+      </div> -->
       <div class="card-block separator-top">
-        <c8y-form-group class="p-t-16" *ngIf="direction === Direction.INBOUND">
-          <label class="c8y-switch">
+        <c8y-form-group
+          *ngIf="
+            direction === Direction.INBOUND && (snoopDisabled$ | async) == false
+          "
+        >
+          <label class="c8y-checkbox">
             <input
               title="{{ 'Start snooping for payloads ...' | translate }}"
               type="checkbox"
@@ -79,8 +98,9 @@
             >Before defining a complete mapping with substitutions you can snoop
             (record) messages from the source system (Step 1). These can be use
             in a second step (Step 2) for defining the substitutions from the
-            source payload in the target payload. To continue with Step 2 you
-            have to stop the snooping for the respective mapping.</small
+            source payload in the target payload. To continue after Step 2 to
+            defining a complete mapping, incl. substitutions you have to stop
+            the snooping for the respective mapping.</small
           >
         </c8y-form-group>
         <!-- <label>Mapping type description</label> -->

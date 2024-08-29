@@ -1,6 +1,12 @@
-<ng-template #popTemplate><div [innerHtml]="props.description"></div></ng-template>
+<ng-template #popTemplate
+  ><div [innerHtml]="props.description"></div
+></ng-template>
 <div [class]="classes" [class.has-error]="showError">
-  <label *ngIf="props.label && props.hideLabel !== true" [attr.for]="id" class="text-pre-wrap">
+  <label
+    *ngIf="props.label && props.hideLabel !== true"
+    [attr.for]="id"
+    class="text-pre-wrap"
+  >
     {{ props.label | humanize }}
     <i
       *ngIf="props.tooltip"
@@ -12,12 +18,14 @@
       class="btn-help btn-help--sm m-t-auto m-b-auto"
       type="button"
       [attr.aria-label]="'Help' | translate"
-
       [popover]="popTemplate"
       triggers="focus"
       placement="right"
       *ngIf="props.description && showDescriptionAsPopup"
     ></button>
+  </label>
+  <label *ngIf="props.hideLabel === true" [attr.for]="id" class="text-pre-wrap">
+    <span>&nbsp;</span>
   </label>
   <div class="d-flex">
     <div class="flex-grow">

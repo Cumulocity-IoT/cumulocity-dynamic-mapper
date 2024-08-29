@@ -57,7 +57,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   mappingType: MappingType = MappingType.JSON;
   mappingTypeDescription: string =
     MAPPING_TYPE_DESCRIPTION[MappingType.JSON].description;
-	valid: boolean = false;
+  valid: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -72,10 +72,11 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
     this.formGroupStep = this.fb.group({
       mappingType: ['', Validators.required]
     });
-    this.snoopDisabled$ = new BehaviorSubject(
-      !MAPPING_TYPE_DESCRIPTION[MappingType.JSON].properties[this.direction]
-        .snoopSupported
-    );
+    // this.snoopDisabled$ = new BehaviorSubject(
+    //   !MAPPING_TYPE_DESCRIPTION[MappingType.JSON].properties[this.direction]
+    //     .snoopSupported
+    // );
+    this.snoopDisabled$ = new BehaviorSubject(true);
   }
 
   onDismiss() {
@@ -84,7 +85,8 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
-    const {snoopSupported} = MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
+    const { snoopSupported } =
+      MAPPING_TYPE_DESCRIPTION[this.mappingType].properties[this.direction];
     this.closeSubject.next({
       mappingType: this.mappingType,
       snoop: this.snoop && snoopSupported
@@ -93,7 +95,7 @@ export class MappingTypeComponent implements OnInit, OnDestroy {
   }
 
   onSelectMappingType(t) {
-	this.valid = true;
+    this.valid = true;
     this.mappingType = t;
     this.mappingTypeDescription = MAPPING_TYPE_DESCRIPTION[t].description;
     this.snoopDisabled$.next(
