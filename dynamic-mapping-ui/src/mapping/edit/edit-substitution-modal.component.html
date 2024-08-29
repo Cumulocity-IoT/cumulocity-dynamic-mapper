@@ -23,41 +23,17 @@
   <h1 c8yIcon="pencil"></h1>
   <h4>Edit properties of substitution</h4>
 </div>
-<c8y-modal
-  (onClose)="onSave()"
-  (onDismiss)="onDismiss()"
-  [labels]="labels"
-  [disabled]="disabled$ | async"
->
-  <div class="p-24">
-    <c8y-form-group *ngIf="duplicateSubstitution">
-      <div>
-        <span>{{
-          'You are about to overwrite the existing substitution: #' +
-            existingSubstitution | translate
-        }}</span>
-      </div>
-      <br />
-      <!--   <div style = "text-align: center;"><span>{{ substitutionText }}</span></div> -->
-      <div style="text-align: center">
-        <pre>{{ substitutionText }}</pre>
-      </div>
-      <br />
-      <div>
-        <span>{{ 'Do you want to proceed?' | translate }}</span>
-      </div>
-      <label class="c8y-switch">
-        <input
-          type="checkbox"
-          [(ngModel)]="override"
-          (change)="onOverrideChanged()"
-        />
-        <span></span>
-        <span>
-          {{ 'Overwrite existing subscription' | translate }}
-        </span>
-      </label>
-    </c8y-form-group>
+<c8y-modal (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels">
+  <div class="p-b-24 p-l-24 p-r-24">
+    <div *ngIf="duplicateSubstitution">
+      <p class="text-medium">
+        {{
+			'You are about to overwrite the existing substitution: # ' + &nbsp; + 
+			  existingSubstitution | translate
+        }}
+      </p>
+	  <br>
+    </div>
     <c8y-form-group>
       <label>
         <span>

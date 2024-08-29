@@ -43,7 +43,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
-  labels: ModalLabels = { ok: 'Save', cancel: 'Cancel' };
+  labels: ModalLabels;
   override: boolean = false;
   repairStrategyOptions: any[];
   substitutionText: string;
@@ -51,6 +51,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   ngOnInit(): void {
+	this.labels = { ok: this.duplicateSubstitution ? 'Overwrite': 'Save', cancel: 'Cancel' };
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
