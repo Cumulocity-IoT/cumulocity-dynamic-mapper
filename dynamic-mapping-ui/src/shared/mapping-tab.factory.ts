@@ -53,17 +53,7 @@ export class MappingTabFactory implements TabFactory {
           orientation: 'horizontal'
         } as Tab);
       }
-      // if (feature?.userHasMappingAdminRole) {
-      tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE1}/configuration`,
-        priority: 910,
-        label: 'Connector',
-        icon: 'connected',
-        orientation: 'horizontal'
-      } as Tab);
-      // }
     } else if (this.router.url.match(/sag-ps-pkg-dynamic-mapping\/node2/g)) {
-      // if (feature?.userHasMappingAdminRole) {
 
       tabs.push({
         path: `sag-ps-pkg-dynamic-mapping/${NODE2}/testing`,
@@ -81,10 +71,17 @@ export class MappingTabFactory implements TabFactory {
         orientation: 'horizontal'
       } as Tab);
       tabs.push({
-        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
         priority: 500,
         label: 'Service configuration',
         icon: 'cog',
+        orientation: 'horizontal'
+      } as Tab);
+      tabs.push({
+        path: `sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+        priority: 910,
+        label: 'Connector',
+        icon: 'connected',
         orientation: 'horizontal'
       } as Tab);
     }

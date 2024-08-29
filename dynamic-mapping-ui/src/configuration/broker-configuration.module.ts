@@ -35,7 +35,7 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
   exports: [],
   providers: [
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
       component: BrokerConfigurationComponent,
     })
   ]

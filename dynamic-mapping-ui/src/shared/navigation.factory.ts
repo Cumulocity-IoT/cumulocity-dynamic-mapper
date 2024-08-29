@@ -53,16 +53,24 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     const parentMapping = new NavigatorNode({
       label: gettext('Dynamic Data Mapper'),
       icon: 'compare',
-      path: `/sag-ps-pkg-dynamic-mapping/landing`,
+      path: '/sag-ps-pkg-dynamic-mapping/landing',
       priority: 99,
+      preventDuplicates: true
+    });
+    const mappingConfiguration = new NavigatorNode({
+      parent: gettext('Dynamic Data Mapper'),
+      label: gettext('Configuration'),
+      icon: 'cog',
+      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/connectorConfiguration`,
+      priority: 500,
       preventDuplicates: true
     });
     const mapping = new NavigatorNode({
       parent: gettext('Dynamic Data Mapper'),
-      label: gettext('Mappings'),
+      label: gettext('Mapping'),
       icon: 'file-type-document',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
-      priority: 500,
+      priority: 400,
       preventDuplicates: true
     });
     const mappingMonitoring = new NavigatorNode({
@@ -70,18 +78,15 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       label: gettext('Service monitoring'),
       icon: 'pie-chart',
       path: `/sag-ps-pkg-dynamic-mapping/${NODE2}/monitoring/grid`,
-      priority: 400,
-      preventDuplicates: true
-    });
-    const mappingExtension = new NavigatorNode({
-      parent: gettext('Dynamic Data Mapper'),
-      label: gettext('Service configuration'),
-      icon: 'cog',
-      path: `/sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
       priority: 300,
       preventDuplicates: true
     });
-    const navs = [parentMapping, mapping, mappingMonitoring, mappingExtension];
+    const navs = [
+      parentMapping,
+      mapping,
+      mappingMonitoring,
+      mappingConfiguration
+    ];
 
     const feature: any = this.sharedService.getFeatures();
     return this.applicationService
