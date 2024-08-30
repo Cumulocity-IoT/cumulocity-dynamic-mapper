@@ -20,6 +20,7 @@
  */
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
+import * as _ from 'lodash';
 import {
   AlertService,
   AppStateService,
@@ -37,7 +38,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
     'dynamic-mapping-service';
 
   appName: string;
-  isPackage: boolean = false;
+  isStandaloneApp: boolean = false;
 
   constructor(
     private applicationService: ApplicationService,
@@ -48,8 +49,9 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
   ) {
     this.appStateService.currentApplication.subscribe((cur) => {
       console.log('AppName in MappingNavigationFactory', cur, this.router.url);
-      if (cur?.manifest?.isPackage) {
-        this.isPackage = cur?.manifest?.isPackage;
+
+      if (_.has(cur?.manifest , 'exports')) {
+        this.isStandaloneApp = true;
       }
       this.appName = cur.name;
     });
@@ -57,7 +59,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
 
   get() {
     let navs;
-    if (this.isPackage) {
+    if (this.isStandaloneApp) {
       const parentMapping = new NavigatorNode({
         label: gettext('Home'),
         icon: 'home',
