@@ -897,21 +897,24 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
 
   private addSubstitution(ns: MappingSubstitution) {
     const sub: MappingSubstitution = _.clone(ns);
-    let existingSubstitution = -1;
+    let duplicateSubstitutionIndex = -1;
+    let duplicate;
     this.mapping.substitutions.forEach((s, index) => {
       if (sub.pathTarget == s.pathTarget) {
-        existingSubstitution = index;
+        duplicateSubstitutionIndex = index;
+		duplicate = this.mapping.substitutions[index];
       }
     });
-    const duplicateSubstitution = existingSubstitution != -1;
+    const isDuplicate = duplicateSubstitutionIndex != -1;
     const initialState = {
-      duplicateSubstitution,
-      existingSubstitution,
+      isDuplicate,
+      duplicate,
+      duplicateSubstitutionIndex,
       substitution: sub,
       mapping: this.mapping,
       stepperConfiguration: this.stepperConfiguration
     };
-    if (this.expertMode || duplicateSubstitution) {
+    if (this.expertMode || isDuplicate) {
       const modalRef = this.bsModalService.show(EditSubstitutionComponent, {
         initialState
       });
@@ -920,10 +923,10 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
       // });
       modalRef.content.closeSubject.subscribe((newSub: MappingSubstitution) => {
         // console.log('About to add new substitution:', newSub);
-        if (newSub && !duplicateSubstitution) {
+        if (newSub && !isDuplicate) {
           this.mapping.substitutions.push(newSub);
-        } else if (newSub && duplicateSubstitution) {
-          this.mapping.substitutions[existingSubstitution] = newSub;
+        } else if (newSub && isDuplicate) {
+          this.mapping.substitutions[duplicateSubstitutionIndex] = newSub;
         }
       });
     } else {

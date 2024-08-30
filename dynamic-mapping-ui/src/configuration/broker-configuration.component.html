@@ -219,21 +219,21 @@
           <c8y-li-icon icon="swipe-left"></c8y-li-icon>
           <div class="d-flex a-i-center">
             <div>
-              <p>{{  'Outbound mapping enabled' | translate }}</p>
+              <p>{{  'Outbound mapping' | translate }}</p>
               <p>
                 <small translate
-                  >Enable outbound mappings</small
+                  >Outbound mappings</small
                 >
               </p>
             </div>
             <label
               class="c8y-switch c8y-switch--inline m-l-auto"
-              title="{{  'Outbound mapping enabled' | translate }}"
+              title="{{  'Outbound mapping' | translate }}"
             >
               <input
                 name="sendNotificationLifecycle"
                 type="checkbox"
-                [(ngModel)]="serviceConfiguration.sendNotificationLifecycle"
+                [(ngModel)]="serviceConfiguration.outboundMappingEnabled"
               />
               <span></span>
             </label>
