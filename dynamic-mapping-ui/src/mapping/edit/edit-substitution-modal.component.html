@@ -25,14 +25,17 @@
 </div>
 <c8y-modal (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels">
   <div class="p-b-24 p-l-24 p-r-24">
-    <div *ngIf="duplicateSubstitution">
+    <div *ngIf="isDuplicate">
       <p class="text-medium">
         {{
 			'You are about to overwrite the existing substitution: # ' + &nbsp; + 
-			  existingSubstitution | translate
+			duplicateSubstitutionIndex | translate
         }}
       </p>
 	  <br>
+	  <div style="text-align: center">
+        <pre>{{ substitutionText }}</pre>
+      </div>
     </div>
     <c8y-form-group>
       <label>
@@ -96,7 +99,7 @@
       </div>
     </c8y-form-group>
 
-    <c8y-form-group>
+    <c8y-form-group *ngIf = "mapping.direction === Direction.OUTBOUND">
       <label
         class="c8y-switch d-inline"
         title="Resolve to externalId"

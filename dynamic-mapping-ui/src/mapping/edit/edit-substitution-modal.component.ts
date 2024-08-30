@@ -38,8 +38,9 @@ import { definesDeviceIdentifier } from '../shared/util';
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
   @Input() substitution: MappingSubstitution;
-  @Input() duplicateSubstitution: boolean;
-  @Input() existingSubstitution: number;
+  @Input() duplicate: MappingSubstitution;
+  @Input() isDuplicate: boolean;
+  @Input() duplicateSubstitutionIndex: number;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() mapping: Mapping;
   closeSubject: Subject<MappingSubstitution> = new Subject();
@@ -49,9 +50,13 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   substitutionText: string;
   editedSubstitution: MappingSubstitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
+  Direction = Direction;
 
   ngOnInit(): void {
-	this.labels = { ok: this.duplicateSubstitution ? 'Overwrite': 'Save', cancel: 'Cancel' };
+    this.labels = {
+      ok: this.isDuplicate ? 'Overwrite' : 'Save',
+      cancel: 'Cancel'
+    };
     this.editedSubstitution = this.substitution;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != 'IGNORE' && key != 'CREATE_IF_MISSING')
@@ -75,8 +80,8 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     )
       ? '* '
       : '';
-    this.substitutionText = `[ ${marksDeviceIdentifier}${this.substitution.pathSource} -> ${this.substitution.pathTarget} ]`;
-    this.disabled$.next(this.duplicateSubstitution);
+    this.substitutionText = `[ ${marksDeviceIdentifier}${this.duplicate.pathSource} -> ${this.duplicate.pathTarget} ]`;
+    this.disabled$.next(this.isDuplicate);
     // console.log("Repair Options:", this.repairStrategyOptions);
     // console.log('Existing substitution:', this.existingSubstitution);
   }
@@ -92,7 +97,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   }
 
   onOverrideChanged() {
-    const result = this.duplicateSubstitution && !this.override;
+    const result = this.isDuplicate && !this.override;
     // console.log('Override:', result);
     this.disabled$.next(result);
   }
