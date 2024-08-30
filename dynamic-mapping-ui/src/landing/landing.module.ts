@@ -36,12 +36,17 @@ import { RouterModule } from '@angular/router';
     CollapseModule.forRoot(),
     MappingModule,
     SharedModule,
-	RouterModule
+    RouterModule
   ],
   exports: [],
   providers: [
     hookRoute({
       path: 'sag-ps-pkg-dynamic-mapping/landing',
+      component: LandingComponent
+    }),
+    hookRoute({
+      path: '',
+      pathMatch: 'full',
       component: LandingComponent
     })
   ]
