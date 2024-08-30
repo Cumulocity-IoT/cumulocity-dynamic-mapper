@@ -155,7 +155,7 @@ public abstract class BasePayloadProcessorOutbound<T> {
                             payloadTarget.jsonString(),
                             null, mapping.targetAPI, null));
             try {
-                if (connectorClient.isConnected() && context.isSendPayload()) {
+                if (connectorClient.isConnected() && context.isSendPayload() ) {
                     connectorClient.publishMEAO(context);
                 } else {
                     log.warn("Tenant {} - Not sending message: connected {}, sendPayload {}", tenant,

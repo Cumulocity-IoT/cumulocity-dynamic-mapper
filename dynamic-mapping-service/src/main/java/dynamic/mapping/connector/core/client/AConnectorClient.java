@@ -140,6 +140,7 @@ public abstract class AConnectorClient {
 	@Setter
 	private Map<String, Mapping> mappingsDeployedInbound = new ConcurrentHashMap<>();
 
+	// structure < ident, mapping >
 	@Getter
 	@Setter
 	private Map<String, Mapping> mappingsDeployedOutbound = new ConcurrentHashMap<>();
