@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapping.model.Mapping;
 import dynamic.mapping.model.MappingStatus;
 import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
@@ -103,7 +102,6 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 		ServiceConfiguration serviceConfiguration;
 		Timer inboundProcessingTimer;
 		Counter inboundProcessingCounter;
-		AConnectorClient connectorClient;
 		AConnectorClient connectorClient;
 
 		public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
