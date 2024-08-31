@@ -44,10 +44,10 @@ export class LandingComponent implements OnInit {
   }
   @ViewChild('editorTest', { static: false }) editorTest: JsonEditor2Component;
 
-  ROUTE_INBOUND: string = '#/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
+  ROUTE_INBOUND: string = '/sag-ps-pkg-dynamic-mapping/node1/mappings/inbound';
   ROUTE_OUTBOUND: string =
-    '#/sag-ps-pkg-dynamic-mapping/node1/mappings/outbound';
-  ROUTE_CONNECTORS: string = '#/sag-ps-pkg-dynamic-mapping/node1/configuration';
+    '/sag-ps-pkg-dynamic-mapping/node1/mappings/outbound';
+  ROUTE_CONNECTORS: string = '/sag-ps-pkg-dynamic-mapping/node3/connectorConfiguration';
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
