@@ -216,13 +216,30 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             hideExpression:
               this.stepperConfiguration.direction == Direction.OUTBOUND
           },
-          // filler when template topic is not shown
           {
             className: 'col-lg-6',
-            template: '<div class="form-group row" style="height:80px"></div>',
+            key: 'filterOutbound',
+            type: 'input',
+            templateOptions: {
+              label: 'Filter Outbound',
+              placeholder: 'e.g. custom_OperationFragment',
+              disabled:
+                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
+              description:
+                'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value',
+              required:
+                this.stepperConfiguration.direction == Direction.OUTBOUND
+            },
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
           },
+          // filler when template topic is not shown
+          //   {
+          //     className: 'col-lg-6',
+          //     template: '<div class="form-group row" style="height:80px"></div>',
+          //     hideExpression:
+          //       this.stepperConfiguration.direction != Direction.OUTBOUND
+          //   },
           {
             className: 'col-lg-6',
             key: 'mappingTopicSample',
@@ -258,23 +275,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             },
             hideExpression:
               this.stepperConfiguration.direction != Direction.OUTBOUND
-          },
-          {
-            className: 'col-lg-12',
-            key: 'filterOutbound',
-            type: 'input',
-            templateOptions: {
-              label: 'Filter Outbound',
-              placeholder: 'e.g. custom_OperationFragment',
-              disabled:
-                this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
-              description:
-                'The Filter Outbound can contain one fragment name to associate a mapping to a Cumulocity MEAO. If the Cumulocity MEAO contains this fragment, the mapping is applied. Specify nested elements as follows: custom_OperationFragment.value',
-              required:
-                this.stepperConfiguration.direction == Direction.OUTBOUND
-            },
-            hideExpression:
-              this.stepperConfiguration.direction != Direction.OUTBOUND
           }
         ]
       },
@@ -282,7 +282,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'targetAPI',
             type: 'select',
             wrappers: ['c8y-form-field'],
@@ -310,12 +310,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             }
           },
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'createNonExistingDevice',
-            type: 'checkbox',
+            type: 'switch',
             wrappers: ['custom-form-field'],
             templateOptions: {
-              label: 'Create non existing device',
+              label: 'Create device',
               disabled:
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY,
               description:
@@ -330,7 +330,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               this.mapping.targetAPI == API.INVENTORY.name
           },
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
             wrappers: ['custom-form-field'],
@@ -350,7 +350,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 this.mapping.targetAPI != API.INVENTORY.name)
           },
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
             wrappers: ['custom-form-field'],
@@ -368,12 +368,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               this.stepperConfiguration.direction == Direction.INBOUND ||
               (this.stepperConfiguration.direction == Direction.OUTBOUND &&
                 this.mapping.targetAPI != API.OPERATION.name)
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
+          },
+          // filler
+          {
+            className: 'col-lg-3',
+            template: '<div class="form-group row" style="height:80px"></div>',
+            hideExpression: () =>
+              this.stepperConfiguration.direction == Direction.INBOUND ||
+              (this.stepperConfiguration.direction == Direction.OUTBOUND &&
+                this.mapping.targetAPI == API.OPERATION.name)
+          },
           {
             className: 'col-lg-6',
             key: 'qos',
@@ -395,7 +399,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'mapDeviceIdentifier',
             type: 'switch',
             wrappers: ['custom-form-field'],
@@ -411,7 +415,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             }
           },
           {
-            className: 'col-lg-6',
+            className: 'col-lg-3',
             key: 'externalIdType',
             type: 'input',
             defaultValue: 'c8y_Serial',
@@ -421,6 +425,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
             },
             hideExpression: (model) => !model.mapDeviceIdentifier
+          },
+          // filler
+          {
+            className: 'col-lg-3',
+            template: '<div class="form-group row" style="height:80px"></div>',
+            hideExpression: (model) => model.mapDeviceIdentifier
+          },
+          {
+            className: 'col-lg-6',
+            template: '<div class="form-group row" style="height:80px"></div>'
           }
         ]
       },
