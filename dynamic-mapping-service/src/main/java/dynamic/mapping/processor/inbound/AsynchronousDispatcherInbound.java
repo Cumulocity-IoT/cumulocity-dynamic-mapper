@@ -104,6 +104,7 @@ public class AsynchronousDispatcherInbound implements GenericMessageCallback {
 		Timer inboundProcessingTimer;
 		Counter inboundProcessingCounter;
 		AConnectorClient connectorClient;
+		AConnectorClient connectorClient;
 
 		public MappingInboundTask(ConfigurationRegistry configurationRegistry, List<Mapping> resolvedMappings,
 				ConnectorMessage message, AConnectorClient connectorClient) {
