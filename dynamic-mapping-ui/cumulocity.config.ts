@@ -76,6 +76,10 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Animated.gif',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Animated.gif'
+      },
+      {
         from: '../resources/image/DM_App-Icon_03.png',
         to: 'image/DM_App-Icon_03.png'
       },
