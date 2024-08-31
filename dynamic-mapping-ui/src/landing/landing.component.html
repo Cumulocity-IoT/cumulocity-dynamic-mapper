@@ -1,26 +1,24 @@
 <!--
-  ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
-  ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
-  ~
-  ~ SPDX-License-Identifier: Apache-2.0
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  ~
-  ~ @authors Christof Strack
-  -->
-
+   ~ Copyright (c) 2022 Software AG, Darmstadt, Germany and/or Software AG USA Inc., Reston, VA, USA,
+   ~ and/or its subsidiaries and/or its affiliates and/or their licensors.
+   ~
+   ~ SPDX-License-Identifier: Apache-2.0
+   ~
+   ~ Licensed under the Apache License, Version 2.0 (the "License");
+   ~ you may not use this file except in compliance with the License.
+   ~ You may obtain a copy of the License at
+   ~
+   ~      http://www.apache.org/licenses/LICENSE-2.0
+   ~
+   ~ Unless required by applicable law or agreed to in writing, software
+   ~ distributed under the License is distributed on an "AS IS" BASIS,
+   ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   ~ See the License for the specific language governing permissions and
+   ~ limitations under the License.
+   ~
+   ~ @authors Christof Strack
+   -->
 <c8y-title>{{ 'Getting started' | translate }}</c8y-title>
-
 <div class="card">
   <div class="card-header p-l-32 separator j-c-between">
     <h5 class="card-title">
@@ -28,6 +26,12 @@
     </h5>
   </div>
   <div class="card-block">
+    <div class="p-b-8">
+      Using the Cumulocity Dynamic Data Mapper you are able to connect to almost any
+      message broker. <br>
+	  And map any payload received on a topic dynamically to the
+      Cumulocity IoT Domain Model in a graphical editor.
+    </div>
     <ul>
       <li>
         Documentation for the
@@ -56,35 +60,92 @@
       </li>
     </ul>
   </div>
-  <div class="card-header p-l-32 separator j-c-between">
+  <div class="card-header">
     <h5 class="card-title">
-      {{ 'How to define a substitution ...' | translate }}
+      {{ 'How to define a mapping ...' | translate }}
     </h5>
   </div>
   <div class="card-block">
+    <div class="p-b-8">
+	  The Dynamic Data Mapper offers you the choice to use different types of mappings: JSON, Generic Binary, Flat File, Processor Extension. <br>
+	  So before defining the actual mapping you have to choose which type of mapping to use. <br>
+	  In most cases this will be JSON if you want to map your custom JSON payload from your device to the Cumulocity JSON format.<br>
+	  You start the stepper by clicking on <b>Add mapping</b> to add a mapping (Mapping -> Inbound Mapping -> Action Add mapping).<br>
+	  <br>
+      The stepper leads you through the steps to define a mapping:
+    </div>
+    <ol>
+      <li>
+        Add or select an existing connector for your mapping, where payloads
+        could come from
+      </li>
+      <li>
+        Define general settings, like the topic name this mapping should be
+        linked to
+      </li>
+      <li>
+        Select or enter the template for the expected source payload. This is
+        used as the source path of an substitution in the next step
+      </li>
+      <li>
+        Define substitution for copying content from the source to the target
+        payload. The will be applied later at runtime on the actual payload
+      </li>
+      <li>
+        Test the mapping by applying the substitutions and save the mapping
+      </li>
+    </ol>
+	<br>
     <img
       width="70%"
       class="m-l-48 m-b-48"
       src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution.png"
       alt="Define substitutions"
     />
+    <div class="p-b-8"></div>
+    <div class="card-header">
+      <h5 class="card-title">
+        {{ 'How to define a substitution ...' | translate }}
+      </h5>
+    </div>
+    <div class="card-block">
+      <p>
+        A substitution is a rule copy content from the source payload (most of
+        the time your custom JSON payload) to the target payload ( Cumulocity
+        JSON payload).<br />
+        When defining the substitution templates for the source and target
+        payload are used.<br />
+        At runtime these rules are applied to the actual payload received from
+        your defined broker. Defining a substitution consists of the following
+        steps:
+      </p>
+      <ol>
+        <li>
+          Select an node in the source payload. In the screenshot below this is:
+          _TOPIC_LEVEL_[0]
+        </li>
+        <li>
+          Select an node in the target payload. In the screenshot below this is:
+          source.id
+        </li>
+        <li>Press Add substitution</li>
+      </ol>
+      <p>
+        At runtime this substitution copies the value extracted at the path
+        _TOPIC_LEVEL_[0] to the target payload at path source.id<br />
+      </p>
+    </div>
   </div>
 
-  <div class="card-header p-l-32 separator j-c-between">
-    <h5 class="card-title">
-      {{ 'How to define a mapping ...' | translate }}
-    </h5>
-  </div>
   <div class="card-block">
     <img
       width="70%"
       class="m-l-48 m-b-48"
-      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Process.png"
+      src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png"
       alt="Define mapping"
     />
   </div>
-
-  <div class="card-header p-l-32 separator j-c-between">
+  <div class="card-header">
     <h5 class="card-title">
       {{
         "How to you start when you don't know what your source payload looks like ..."
@@ -93,6 +154,35 @@
     </h5>
   </div>
   <div class="card-block">
-	<img [src]="linkSnoopProcess" alt="SVG description"  width="700" height="250">
+	<div class="p-b-8">
+		If you don't know the payload of your device you start by snooping the payload as a first step. <br>
+		Snooping will record the messages and you can use these in the next step as source templates . <br>
+		When you select a mapping type you can enable snooping <b>Enable snooping</b> for this mapping.<br>
+		You start the stepper by clicking on <b>Add mapping</b> (Mapping -> Inbound Mapping -> Action Add mapping).<br>
+		<br>
+		The stepper when snooping leads you through the two steps:
+	  </div>
+	  <ol>
+		<li>
+		  Add or select an existing connector for your mapping, where messages
+		  are snooped (recorded)
+		</li>
+		<li>
+		  Define general settings, like the topic name this mapping should be
+		  linked to
+		</li>
+	  </ol>
+	<img
+	width="70%"
+	class="m-l-48 m-b-48"
+	src="/apps/sag-ps-pkg-dynamic-mapping/image/Dynamic_Mapper_Mapping_Stepper_Snooping.png"
+	alt="Snoop process "
+  />
+    <!-- <img
+      [src]="linkSnoopProcess"
+      alt="SVG description"
+      width="700"
+      height="250"
+    /> -->
   </div>
 </div>

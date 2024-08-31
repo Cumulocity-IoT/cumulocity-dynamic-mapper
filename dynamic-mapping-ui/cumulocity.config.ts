@@ -68,6 +68,14 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution.png'
       },
       {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Annotated.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping.png'
+      },
+      {
         from: '../resources/image/DM_App-Icon_03.png',
         to: 'image/DM_App-Icon_03.png'
       },
