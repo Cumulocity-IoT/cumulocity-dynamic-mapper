@@ -22,11 +22,11 @@
 import { NgModule } from '@angular/core';
 import { CoreModule, hookRoute } from '@c8y/ngx-components';
 import { NODE3, SharedModule } from '../shared';
-import { BrokerConfigurationComponent } from './broker-configuration.component';
+import { ServiceConfigurationComponent } from './service-configuration.component';
 import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 
 @NgModule({
-  declarations: [BrokerConfigurationComponent],
+  declarations: [ServiceConfigurationComponent],
   imports: [
     CoreModule,
     SharedModule,
@@ -35,8 +35,8 @@ import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
   exports: [],
   providers: [
     hookRoute({
-      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/configuration`,
-      component: BrokerConfigurationComponent,
+      path: `sag-ps-pkg-dynamic-mapping/${NODE3}/serviceConfiguration`,
+      component: ServiceConfigurationComponent,
     })
   ]
 })
