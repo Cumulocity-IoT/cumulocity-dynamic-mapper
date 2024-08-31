@@ -76,7 +76,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
       });
       const mapping = new NavigatorNode({
         label: gettext('Mapping'),
-        icon: 'file-type-document',
+        icon: 'rules',
         path: `/sag-ps-pkg-dynamic-mapping/${NODE1}/mappings/inbound`,
         priority: 400,
         preventDuplicates: true
