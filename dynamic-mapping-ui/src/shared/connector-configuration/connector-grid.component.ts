@@ -140,7 +140,7 @@ export class ConnectorConfigurationComponent
         callback: this.onConfigurationUpdate.bind(this),
         showIf: (item) => !item['enabled'] && !this.readOnly
       },
-	  {
+      {
         type: 'VIEW',
         icon: 'eye',
         callback: this.onConfigurationUpdate.bind(this),
