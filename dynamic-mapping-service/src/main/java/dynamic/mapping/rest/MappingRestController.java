@@ -411,7 +411,7 @@ public class MappingRestController {
 				for (AConnectorClient client : connectorMap.values()) {
 					client.updateActiveSubscriptionsInbound(updatedMappingsInbound, false);
 				}
-				List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+				List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
 
 				for (AConnectorClient client : connectorMap.values()) {
 					client.updateActiveSubscriptionsOutbound(updatedMappingsOutbound);

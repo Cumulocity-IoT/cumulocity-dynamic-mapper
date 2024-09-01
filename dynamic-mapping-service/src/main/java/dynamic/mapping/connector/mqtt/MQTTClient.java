@@ -208,7 +208,7 @@ public class MQTTClient extends AConnectorClient {
 
 	@Override
 	public void connect() {
-		updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, true);
+		updateConnectorStatusAndSend(ConnectorStatus.CONNECTING, true, shouldConnect());
 		log.info("Tenant {} - Trying to connect to {} - phase I: (isConnected:shouldConnect) ({}:{})",
 				tenant, getConnectorName(), isConnected(),
 				shouldConnect());
@@ -334,7 +334,7 @@ public class MQTTClient extends AConnectorClient {
 					updateConnectorStatusAndSend(ConnectorStatus.CONNECTED, true, true);
 					List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
 					updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
-					List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+					List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
 					updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 
 				} catch (Exception e) {
@@ -385,7 +385,7 @@ public class MQTTClient extends AConnectorClient {
 	public boolean isConfigValid(ConnectorConfiguration configuration) {
 		if (configuration == null)
 			return false;
-		// if using selfsignied certificate additional properties have to be set
+		// if using self signed certificate additional properties have to be set
 		Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
 				.getOrDefault("useSelfSignedCertificate", false);
 		if (useSelfSignedCertificate && (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null
@@ -440,7 +440,7 @@ public class MQTTClient extends AConnectorClient {
 			updateConnectorStatusAndSend(ConnectorStatus.DISCONNECTED, true, true);
 			List<Mapping> updatedMappingsInbound = mappingComponent.rebuildMappingInboundCache(tenant);
 			updateActiveSubscriptionsInbound(updatedMappingsInbound, true);
-			List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingInboundCache(tenant);
+			List<Mapping> updatedMappingsOutbound = mappingComponent.rebuildMappingOutboundCache(tenant);
 			updateActiveSubscriptionsOutbound(updatedMappingsOutbound);
 			log.info("Tenant {} - Disconnected from MQTT broker II: {}", tenant,
 					mqttClient.getConfig().getServerHost());
