@@ -337,48 +337,48 @@ export class MappingStepperComponent implements OnInit, OnDestroy {
         ]
       },
 
-      {
-        fieldGroup: [
-          {
-            className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
-            key: 'sourceExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-wrapper'],
-            templateOptions: {
-              class: 'input',
-              disabled: true,
-              readonly: true,
-              customWrapperClass: 'm-b-4'
-            },
-            expressionProperties: {
-              'templateOptions.label': () =>
-                `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
-              'templateOptions.value': () => {
-                return `${this.substitutionModel.sourceExpression?.result}`;
-              }
-            }
-          },
-          {
-            className: 'col-lg-5 text-monospace font-smaller',
-            key: 'targetExpression.result',
-            type: 'textarea-custom',
-            wrappers: ['custom-form-wrapper'],
-            templateOptions: {
-              class: 'input',
-              disabled: true,
-              readonly: true,
-              customWrapperClass: 'm-b-4'
-            },
-            expressionProperties: {
-              'templateOptions.label': () =>
-                `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
-              'templateOptions.value': () => {
-                return `${this.substitutionModel.targetExpression?.result}`;
-              }
-            }
-          }
-        ]
-      }
+    //   {
+    //     fieldGroup: [
+    //       {
+    //         className: 'col-lg-5 col-lg-offset-1 text-monospace font-smaller',
+    //         key: 'sourceExpression.result',
+    //         type: 'textarea-custom',
+    //         wrappers: ['custom-form-wrapper'],
+    //         templateOptions: {
+    //           class: 'no-resize',
+    //           disabled: false,
+    //           readonly: false,
+    //           customWrapperClass: 'm-b-4'
+    //         },
+    //         expressionProperties: {
+    //           'templateOptions.label': () =>
+    //             `Source Result [${this.substitutionModel.sourceExpression?.resultType}]`,
+    //           'templateOptions.value': () => {
+    //             return `${this.substitutionModel.sourceExpression?.result}`;
+    //           }
+    //         }
+    //       },
+    //       {
+    //         className: 'col-lg-5 text-monospace font-smaller',
+    //         key: 'targetExpression.result',
+    //         type: 'textarea-custom',
+    //         wrappers: ['custom-form-wrapper'],
+    //         templateOptions: {
+    //           class: 'input',
+    //           disabled: true,
+    //           readonly: true,
+    //           customWrapperClass: 'm-b-4'
+    //         },
+    //         expressionProperties: {
+    //           'templateOptions.label': () =>
+    //             `Target Result [${this.substitutionModel.targetExpression?.resultType}]`,
+    //           'templateOptions.value': () => {
+    //             return `${this.substitutionModel.targetExpression?.result}`;
+    //           }
+    //         }
+    //       }
+    //     ]
+    //   }
     ];
 
     this.setTemplateForm();

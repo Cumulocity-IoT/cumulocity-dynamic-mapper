@@ -20,6 +20,7 @@
  */
 import { NgModule } from '@angular/core';
 import {
+	CommonModule,
   CoreModule,
   DynamicFormsModule,
   hookRoute,
@@ -55,7 +56,7 @@ import { MappingConnectorComponent } from './step-connector/mapping-connector.co
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { FieldTextareaCustom } from './shared/formly/textarea.type.component';
 import { checkTopicsOutboundAreValid, checkTopicsInboundAreValid } from './shared/util';
-import { NODE1, NODE3 } from '../shared/model/util';
+import { NODE1 } from '../shared/model/util';
 
 @NgModule({
   declarations: [
@@ -85,6 +86,7 @@ import { NODE1, NODE3 } from '../shared/model/util';
   ],
   imports: [
     CoreModule,
+	CommonModule,
     AssetSelectorModule,
     PopoverModule,
     DynamicFormsModule,
