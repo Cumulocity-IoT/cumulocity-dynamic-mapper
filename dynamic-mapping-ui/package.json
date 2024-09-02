@@ -52,7 +52,7 @@
     "@angular/language-service": "^18.2.1",
     "@angular/localize": "^17.3.0",
     "@angular/service-worker": "^17.3.0",
-    "@c8y/devkit": "^1020.18.1",
+    "@c8y/devkit": "^1020.18.3",
     "@c8y/package-blueprint": "^1020.18.1",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "cumulocity-cypress": "^0.4.6",
